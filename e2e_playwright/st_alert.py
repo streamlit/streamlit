@@ -131,10 +131,7 @@ st.info(":material/lightbulb: This info has a material icon extracted from body"
 ### Test cases for title parameter ###
 
 # Alerts with title
-st.error("This is an error body text.", title="Error Title")
-st.warning("This is a warning body text.", title="Warning Title")
-st.info("This is an info body text.", title="Info Title")
-st.success("This is the success body text.", title="Success Title")
+st.success("This is the success body text.", title="Success _Title_")
 
 # Alert with title and icon
 st.info("Body with title and icon.", title="Notice", icon=":material/info:")

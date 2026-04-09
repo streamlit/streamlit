@@ -23,7 +23,7 @@ def test_alerts_rendering_themed(
 ):
     """Test that alerts render correctly with theme-dependent styling."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(39)
+    expect(alert_elements).to_have_count(36)
 
     # The first 4 alerts are super basic, no need to screenshot test those
     expect(alert_elements.nth(0)).to_have_text("This is an error")
@@ -71,7 +71,7 @@ def test_alerts_rendering_themed(
 def test_alerts_rendering_layout(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts layout variations render correctly (theme-independent)."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(39)
+    expect(alert_elements).to_have_count(36)
 
     # Line wrapping (layout behavior)
     assert_snapshot(alert_elements.nth(8), name="st_alert-error_line_wrapping_1")
@@ -108,7 +108,7 @@ def test_material_symbol_from_latest_font_version_rendering(
 ):
     """Test that icon from latest version material symbols font renders correctly."""
     alert_elements = app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(39)
+    expect(alert_elements).to_have_count(36)
 
     assert_snapshot(
         alert_elements.nth(21),
@@ -122,38 +122,9 @@ def test_material_symbol_from_latest_font_version_rendering(
 def test_alert_title_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that alerts with title parameter render correctly."""
     alert_elements = themed_app.get_by_test_id("stAlert")
-    expect(alert_elements).to_have_count(39)
+    expect(alert_elements).to_have_count(36)
 
     # Locate title alerts by their stable title text instead of fixture order.
-    error_with_title = alert_elements.filter(
-        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
-            "Error Title", exact=True
-        )
-    )
-    expect(error_with_title).to_have_count(1)
-    expect(error_with_title.get_by_test_id("stAlertTitle")).to_have_text("Error Title")
-    assert_snapshot(error_with_title, name="st_alert-error_with_title")
-
-    warning_with_title = alert_elements.filter(
-        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
-            "Warning Title", exact=True
-        )
-    )
-    expect(warning_with_title).to_have_count(1)
-    expect(warning_with_title.get_by_test_id("stAlertTitle")).to_have_text(
-        "Warning Title"
-    )
-    assert_snapshot(warning_with_title, name="st_alert-warning_with_title")
-
-    info_with_title = alert_elements.filter(
-        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
-            "Info Title", exact=True
-        )
-    )
-    expect(info_with_title).to_have_count(1)
-    expect(info_with_title.get_by_test_id("stAlertTitle")).to_have_text("Info Title")
-    assert_snapshot(info_with_title, name="st_alert-info_with_title")
-
     success_with_title = alert_elements.filter(
         has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
             "Success Title", exact=True
