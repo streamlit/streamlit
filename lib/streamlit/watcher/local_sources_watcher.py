@@ -161,17 +161,16 @@ class LocalSourcesWatcher:
             for wm in self._watched_modules.values()
             if wm.module_name is not None and wm.module_name in sys.modules
         }
-        all_to_evict: set[str] = set()
-        for name in modules_to_evict:
-            all_to_evict.add(name)
-            prefix = f"{name}."
+        if modules_to_evict:
+            prefixes = tuple(f"{name}." for name in modules_to_evict)
+            all_to_evict = modules_to_evict.copy()
             for key in list(sys.modules.keys()):
-                if key.startswith(prefix):
+                if key.startswith(prefixes):
                     all_to_evict.add(key)
 
-        for name in all_to_evict:
-            if name in sys.modules:
-                del sys.modules[name]
+            for name in all_to_evict:
+                if name in sys.modules:
+                    del sys.modules[name]
 
         for cb in self._on_path_changed:
             cb(filepath)

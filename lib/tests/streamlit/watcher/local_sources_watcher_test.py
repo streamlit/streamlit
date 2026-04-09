@@ -314,15 +314,23 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             script_real: local_sources_watcher.WatchedModule(MagicMock(), "myns"),
         }
 
+        myns_extra = types.ModuleType("myns_extra")
+
         with patch.dict(
             sys.modules,
-            {"myns": myns, "myns.core": myns_core, "myns.spec": myns_spec},
+            {
+                "myns": myns,
+                "myns.core": myns_core,
+                "myns.spec": myns_spec,
+                "myns_extra": myns_extra,
+            },
         ):
             lsw.on_path_changed(trigger_path)
 
             assert "myns" not in sys.modules
             assert "myns.core" not in sys.modules
             assert "myns.spec" not in sys.modules
+            assert "myns_extra" in sys.modules
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_module_caching(self, _fob):
