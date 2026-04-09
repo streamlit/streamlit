@@ -272,10 +272,11 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     return is_version_less_than(pa.__version__, v)
 
 
-# Minimum PyArrow version that supports the PyCapsule Interface (C Data Interface).
-# This was introduced in PyArrow 14.0.0.
+# Minimum PyArrow version that supports consuming PyCapsule Interface via from_stream.
+# While the PyCapsule Interface dunder methods (__arrow_c_stream__, etc.) were added in
+# PyArrow 14.0.0, RecordBatchReader.from_stream() was introduced in PyArrow 15.0.0.
 # https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
-_MIN_PYARROW_PYCAPSULE_VERSION: Final = "14.0.0"
+_MIN_PYARROW_PYCAPSULE_VERSION: Final = "15.0.0"
 
 
 def _is_arrow_pycapsule_supported() -> bool:
@@ -736,8 +737,9 @@ def convert_anything_to_pandas_df(
             table = pa.RecordBatchReader.from_stream(data).read_all()
             data_df = cast("pd.DataFrame", table.to_pandas())
             return data_df.copy() if ensure_copy else data_df
-        except pa.ArrowInvalid:
-            # Object exports a non-struct type (e.g., pandas Series). Fall back.
+        except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError):
+            # Object exports a non-struct type (e.g., pandas Series) or has a
+            # partial __arrow_c_stream__ implementation. Fall back to other methods.
             pass
 
     # Check for dataframe interchange protocol (deprecated, prefer PyCapsule above)
