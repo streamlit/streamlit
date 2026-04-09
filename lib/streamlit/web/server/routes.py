@@ -24,6 +24,7 @@ from streamlit import config, file_util
 from streamlit.web.server.server_util import (
     allowlisted_origins,
     emit_endpoint_deprecation_notice,
+    extract_nested_subpath,
     is_xsrf_enabled,
 )
 
@@ -100,6 +101,12 @@ class StaticFileHandler(tornado.web.StaticFileHandler):
                     url_path = url_path.replace(os.path.sep, "/")
                 if any(url_path.endswith(x) for x in self._reserved_paths):
                     raise
+
+                static_subpath = extract_nested_subpath(url_path, marker="/static/")
+                if static_subpath:
+                    self.path = self.parse_url_path(static_subpath)
+                    absolute_path = self.get_absolute_path(self.root, self.path)
+                    return super().validate_absolute_path(root, absolute_path)
 
                 self.path = self.parse_url_path(self.default_filename or "index.html")
                 absolute_path = self.get_absolute_path(self.root, self.path)
