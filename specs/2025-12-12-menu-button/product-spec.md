@@ -92,7 +92,7 @@ A combination of `st.button` and `st.selectbox` parameters with the same semanti
 
 ### Behavior
 
-- The button displays a chevron icon on the right side (same as `st.popover`) to indicate it opens a menu
+- The button displays a chevron icon on the right side (same as `st.popover`) to indicate it opens a menu, unless the label is a menu-style icon (`:material/menu:`, `:material/more_vert:`, or `:material/more_horiz:`), in which case the chevron is hidden since the icon itself already indicates a menu
 - Clicking the button opens a dropdown menu displaying all options
 - Selecting an option closes the menu, triggers a rerun, and returns the selected option value
 - The button label remains unchanged after selection (unlike selectbox)
