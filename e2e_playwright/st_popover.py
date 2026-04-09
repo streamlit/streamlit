@@ -84,6 +84,19 @@ with st.popover("popover 18 (primary)", type="primary"):
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
 
+# Menu-style icons (chevron should be hidden)
+with st.container(key="menu_style_icons_container"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        with st.popover(":material/menu:", key="menu_icon_popover"):
+            st.markdown("Menu popover content")
+    with col2:
+        with st.popover(":material/more_vert:", key="more_vert_icon_popover"):
+            st.markdown("More vert popover content")
+    with col3:
+        with st.popover(":material/more_horiz:", key="more_horiz_icon_popover"):
+            st.markdown("More horiz popover content")
+
 # ============================================================================
 # Dynamic Popover Tests (on_change="rerun")
 # ============================================================================

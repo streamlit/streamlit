@@ -24,6 +24,7 @@ import {
   extractLeadingMaterialIcon,
   getFilledStarIconSrc,
   isMaterialIcon,
+  isMenuStyleIconLabel,
 } from "./DynamicIcon"
 
 const getProps = (
@@ -117,4 +118,33 @@ describe("extractLeadingMaterialIcon", () => {
       expect(result.text).toBe(expectedText)
     }
   )
+})
+
+describe("isMenuStyleIconLabel", () => {
+  it.each([
+    // Menu-style icons without separate icon prop should return true
+    [undefined, ":material/menu:", true],
+    [undefined, ":material/more_vert:", true],
+    [undefined, ":material/more_horiz:", true],
+    [undefined, " :material/menu: ", true],
+
+    // When icon prop is set, should return false (not icon-only)
+    [":material/edit:", ":material/menu:", false],
+    ["some-icon", ":material/more_vert:", false],
+
+    // Non-menu-style icons should return false
+    [undefined, ":material/edit:", false],
+    [undefined, ":material/settings:", false],
+
+    // Labels with text (not icon-only) should return false
+    [undefined, ":material/menu: Menu", false],
+    [undefined, "Menu", false],
+
+    // Edge cases
+    [undefined, undefined, false],
+    [undefined, "", false],
+    ["", ":material/menu:", true],
+  ])("isMenuStyleIconLabel(%s, %s) returns %s", (icon, label, expected) => {
+    expect(isMenuStyleIconLabel(icon, label)).toBe(expected)
+  })
 })

@@ -5,11 +5,7 @@ on:
     branches:
       - "develop"
   pull_request:
-    types: [opened, synchronize, reopened]
-    paths-ignore:
-      # Don't run CI if changes are only in documentation/spec folders:
-      - "specs/**"
-      - "wiki/**"
+    types: [labeled]
 
   # Allows workflow to be called from other workflows
   workflow_call:
@@ -18,15 +14,63 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: read
+
 # Avoid duplicate workflows on same branch
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}-performance
   cancel-in-progress: true
 
 jobs:
+  prepare:
+    if: |
+      github.event_name == 'workflow_call' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'pull_request' && github.event.action == 'labeled' && github.event.label.name == 'run-performance')
+    # Keep label cleanup in a lightweight coordination job before checking out PR code.
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    outputs:
+      checkout_ref: ${{ steps.compute.outputs.checkout_ref }}
+      sha_short: ${{ steps.compute.outputs.sha_short }}
+    steps:
+      - name: Remove run-performance label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh api "repos/$REPOSITORY/issues/$PR_NUMBER/labels/run-performance" \
+            --method DELETE || true
+      - name: Compute checkout inputs
+        id: compute
+        shell: bash
+        env:
+          INPUT_REF: ${{ inputs.ref }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_SHA: ${{ github.sha }}
+          EVENT_PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [[ -n "$INPUT_REF" ]]; then
+            echo "checkout_ref=$INPUT_REF" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            echo "sha_short=${EVENT_PR_HEAD_SHA:0:6}" >> "$GITHUB_OUTPUT"
+          else
+            echo "sha_short=${EVENT_SHA:0:6}" >> "$GITHUB_OUTPUT"
+          fi
+
   performance:
+    needs: prepare
+    if: needs.prepare.result == 'success'
     runs-on: ubuntu-latest-8-cores
     timeout-minutes: 25
+    permissions:
+      contents: read
 
     defaults:
       run:
@@ -34,9 +78,17 @@ jobs:
 
     steps:
       - name: Checkout Streamlit code
+        if: needs.prepare.outputs.checkout_ref != ''
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref }}
+          ref: ${{ needs.prepare.outputs.checkout_ref }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 2
+      - name: Checkout Streamlit code
+        if: needs.prepare.outputs.checkout_ref == ''
+        uses: actions/checkout@v6
+        with:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
@@ -61,21 +113,13 @@ jobs:
         run: make python-performance-tests
       - name: Run make lighthouse-tests
         run: make lighthouse-tests
-      - name: Get short SHA
-        id: short_sha
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "sha_short=$(echo ${{ github.event.pull_request.head.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
-          else
-            echo "sha_short=$(echo ${{ github.sha }} | cut -c1-6)" >> $GITHUB_OUTPUT
-          fi
       - name: Set MY_DATE_TIME env var
         run: echo "MY_DATE_TIME=$(date +'%Y%m%d%H%M%S')" >> $GITHUB_ENV
       - name: Upload failed test results
         uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: playwright_test_results_${{ steps.short_sha.outputs.sha_short }}
+          name: playwright_test_results_${{ needs.prepare.outputs.sha_short }}
           path: e2e_playwright/test-results
       - name: Upload Performance results
         uses: actions/upload-artifact@v7

@@ -306,6 +306,12 @@ class UvicornServer:
                     continue
                 raise
 
+            # Port 0 means the OS assigns an ephemeral port. Read it back
+            # so that config and displayed URLs reflect the real port.
+            if port == 0:
+                port = self._socket.getsockname()[1]
+                uvicorn_config.port = port
+
             self._server = uvicorn.Server(uvicorn_config)
             config.set_option("server.port", port, ConfigOption.STREAMLIT_DEFINITION)
             _LOGGER.debug(

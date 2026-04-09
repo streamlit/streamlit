@@ -1285,16 +1285,23 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
     Pandas uses a variety of values to represent missing values, including np.nan,
     NaT, None, and pd.NA. This function replaces all of these values with None,
-    which is the only missing value type that is supported by all data
+    which is the only missing value type that is supported by all data types
+    when serializing to JSON-compatible formats.
     """
     import numpy as np
     import pandas as pd
 
-    # Replace all recognized nulls (np.nan, pd.NA, NaT) with None
-    # then infer objects without creating a separate copy:
-    # For performance reasons, we could use copy=False here.
-    # However, this is only available in pandas >=2.
-    return df.replace([pd.NA, pd.NaT, np.nan], None).infer_objects()  # type: ignore
+    # Replace all recognized nulls (np.nan, pd.NA, NaT) with None.
+    result = df.replace([pd.NA, pd.NaT, np.nan], None)  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
+
+    # infer_objects() improves column type correctness (e.g., int instead of float,
+    # string instead of object). However, in pandas 3.0+ it converts None back to
+    # np.nan, which defeats the purpose of this function. Only call it for older
+    # pandas versions. See: https://github.com/streamlit/streamlit/issues/14693
+    if is_pandas_version_less_than("3.0.0"):
+        result = result.infer_objects()
+
+    return result
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:

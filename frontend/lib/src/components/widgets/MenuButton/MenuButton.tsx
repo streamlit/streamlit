@@ -45,6 +45,7 @@ import { StyledHighlightWrapper } from "~lib/components/shared/Highlight/styled-
 import {
   DynamicIcon,
   extractLeadingMaterialIcon,
+  isMenuStyleIconLabel,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -147,6 +148,9 @@ function MenuButton(props: Props): ReactElement {
   const buttonDisabled =
     disabled || element.disabled || element.options.length === 0
 
+  // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
+  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+
   const handleItemSelect = useCallback(
     (params: { item: { value: string } }) => {
       setIsOpen(false)
@@ -234,21 +238,23 @@ function MenuButton(props: Props): ReactElement {
               aria-haspopup="menu"
               aria-expanded={isOpen}
             >
-              <StyledMenuButtonLabelContainer>
+              <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
                 <DynamicButtonLabel
                   icon={element.icon}
                   label={element.label}
                 />
-                <StyledMenuButtonExpansionIcon aria-hidden="true">
-                  <DynamicIcon
-                    iconValue={
-                      isOpen
-                        ? ":material/expand_less:"
-                        : ":material/expand_more:"
-                    }
-                    size="lg"
-                  />
-                </StyledMenuButtonExpansionIcon>
+                {!hideChevron && (
+                  <StyledMenuButtonExpansionIcon aria-hidden="true">
+                    <DynamicIcon
+                      iconValue={
+                        isOpen
+                          ? ":material/expand_less:"
+                          : ":material/expand_more:"
+                      }
+                      size="lg"
+                    />
+                  </StyledMenuButtonExpansionIcon>
+                )}
               </StyledMenuButtonLabelContainer>
             </BaseButton>
           </BaseButtonTooltip>

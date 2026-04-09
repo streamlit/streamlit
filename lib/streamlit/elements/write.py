@@ -513,6 +513,7 @@ class WriteMixin:
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
                 or type_util.is_pydantic_model(arg)
+                or type_util.is_sequence_of_pydantic_models(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)
