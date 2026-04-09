@@ -76,12 +76,14 @@ function CheckboxColumn(
         )
       }
 
-      // We are not setting isMissingValue here because the checkbox column
-      // does not work with the missing cell rendering.
+      const isMissing = isNullOrUndefined(cellData)
       return {
         ...cellTemplate,
         data: cellData,
-        isMissingValue: isNullOrUndefined(cellData),
+        isMissingValue: isMissing,
+        // Missing values render as empty; glide-data-grid shows an editable
+        // hover checkbox when readonly is false, so keep those cells readonly.
+        readonly: !props.isEditable || isMissing,
       } as BooleanCell
     },
     getCellValue(cell: BooleanCell): boolean | null {

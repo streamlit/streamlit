@@ -22,7 +22,7 @@ import { mockTheme } from "~lib/mocks/mockTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
 import CheckboxColumn from "./CheckboxColumn"
-import { isErrorCell } from "./utils"
+import { isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_CHECKBOX_COLUMN_PROPS = {
   id: "1",
@@ -108,6 +108,18 @@ describe("CheckboxColumn", () => {
       expect(isErrorCell(cell)).toEqual(true)
     }
   )
+
+  it("uses readonly cells for null values when column is editable (avoids hover checkbox)", () => {
+    const editableProps = { ...MOCK_CHECKBOX_COLUMN_PROPS, isEditable: true }
+    const mockColumn = CheckboxColumn(editableProps, mockTheme.emotion)
+
+    const missingCell = mockColumn.getCell(null) as BooleanCell
+    expect(missingCell.readonly).toEqual(true)
+    expect(isMissingValueCell(missingCell)).toEqual(true)
+
+    expect((mockColumn.getCell(true) as BooleanCell).readonly).toEqual(false)
+    expect((mockColumn.getCell(false) as BooleanCell).readonly).toEqual(false)
+  })
 
   it("applies themeOverride roundingRadius based on theme radii", () => {
     const mockColumn = CheckboxColumn(
