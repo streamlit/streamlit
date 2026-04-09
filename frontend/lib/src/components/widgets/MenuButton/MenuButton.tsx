@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 import type { Key } from "@react-types/shared"
-import type { CSSProperties } from "react"
+import type { CSSProperties, HTMLAttributes } from "react"
 import {
   memo,
   ReactElement,
@@ -44,7 +44,10 @@ import { useMenuTriggerState } from "react-stately"
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { Box } from "~lib/components/shared/Base/styled-components"
+import {
+  Box,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
@@ -205,6 +208,7 @@ function MenuButton(props: Props): ReactElement {
               shouldFlip: true,
               containerPadding: isInSidebar ? 0 : 12,
               style: {
+                ...getPopoverContainerStyle(theme),
                 "--trigger-width": buttonWidth ?? undefined,
               } as CSSProperties,
               "aria-labelledby": menuProps["aria-labelledby"],
@@ -248,14 +252,21 @@ function MenuButton(props: Props): ReactElement {
           <Menu
             selectionMode="none"
             onAction={handleAction}
+            // react-aria-components Menu renders a div by default; e2e tests expect ul/li.
+            {...({
+              render: (props: HTMLAttributes<HTMLUListElement>) => (
+                <ul {...props} />
+              ),
+            } as object)}
             style={{
               backgroundColor: theme.colors.bgColor,
               paddingTop: theme.spacing.threeXS,
               paddingBottom: theme.spacing.threeXS,
               paddingLeft: theme.spacing.xs,
               paddingRight: theme.spacing.xs,
-              boxShadow: "none",
               outline: "none",
+              listStyle: "none",
+              margin: theme.spacing.none,
             }}
           >
             {menuItems.map(item => {
@@ -265,6 +276,7 @@ function MenuButton(props: Props): ReactElement {
                   key={item.value}
                   id={item.value}
                   textValue={text}
+                  render={props => <li {...props} />}
                 >
                   {({ isFocused }) => (
                     <MenuOptionContent item={item} isFocused={isFocused} />

@@ -18,6 +18,7 @@ import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import styled from "@emotion/styled"
 import {
   FC,
+  HTMLAttributes,
   KeyboardEvent,
   memo,
   useCallback,
@@ -153,7 +154,6 @@ const StyledPopover = styled(Popover)(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
   overflow: "hidden",
-  boxShadow: "none",
   marginTop: convertRemToPx(theme.spacing.twoXS),
 }))
 
@@ -165,6 +165,8 @@ const StyledListBox = styled(ListBox)(({ theme }) => ({
   paddingBottom: theme.spacing.none,
   paddingLeft: theme.spacing.none,
   paddingRight: theme.spacing.none,
+  listStyle: "none",
+  margin: theme.spacing.none,
 }))
 
 const StyledListBoxItem = styled(ListBoxItem)(({ theme }) => ({
@@ -506,6 +508,12 @@ const Selectbox: FC<Props> = ({
           </StyledGroup>
           <StyledPopover>
             <StyledListBox
+              // react-aria-components ListBox renders a div by default; e2e tests expect ul/li.
+              {...({
+                render: (props: HTMLAttributes<HTMLUListElement>) => (
+                  <ul {...props} />
+                ),
+              } as object)}
               renderEmptyState={() => "No results"}
               data-testid="stSelectboxVirtualDropdown"
             >
@@ -514,6 +522,7 @@ const Selectbox: FC<Props> = ({
                   id={item.id}
                   textValue={item.label}
                   data-creatable={item.isCreatable ? true : undefined}
+                  render={props => <li {...props} />}
                 >
                   {item.label}
                 </StyledListBoxItem>
