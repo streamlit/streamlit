@@ -30,6 +30,7 @@ import {
 } from "@floating-ui/react"
 import {
   FC,
+  FocusEvent,
   KeyboardEvent,
   memo,
   useCallback,
@@ -206,17 +207,35 @@ const Selectbox: FC<Props> = ({
     setInputValue(propValue ?? "")
   }, [propValue])
 
-  const handleFocus = useCallback(() => {
-    setFocused(true)
-    firstEditAfterFocusRef.current = true
-    // Use parent prop so session_state / proto updates are reflected immediately
-    // (local `value` can lag one interaction behind in edge cases).
-    setInputValue(propValue ?? "")
-    setSearchFilter("")
-    if (!selectDisabled) {
-      setOpen(true)
-    }
-  }, [selectDisabled, propValue])
+  const handleFocus = useCallback(
+    (e: FocusEvent<HTMLInputElement>) => {
+      setFocused(true)
+      firstEditAfterFocusRef.current = true
+      // Use parent prop so session_state / proto updates are reflected immediately
+      // (local `value` can lag one interaction behind in edge cases).
+      const text = propValue ?? ""
+      setInputValue(text)
+      setSearchFilter("")
+      if (!selectDisabled) {
+        setOpen(true)
+      }
+      // When a committed value is shown, move the caret to the end after focus.
+      // Skip if empty: a deferred setSelectionRange can run after the first search
+      // keystroke and corrupt the filter string (unit tests + clearable empty select).
+      if (text.length > 0) {
+        const el = e.currentTarget
+        requestAnimationFrame(() => {
+          try {
+            const len = text.length
+            el.setSelectionRange(len, len)
+          } catch {
+            // setSelectionRange not supported on some input types
+          }
+        })
+      }
+    },
+    [selectDisabled, propValue]
+  )
 
   const { refs, floatingStyles, context } = useFloating({
     open: open && !selectDisabled,
@@ -275,6 +294,20 @@ const Selectbox: FC<Props> = ({
       const floatEl = refs.floating.current
       if ((refEl && refEl.contains(t)) || (floatEl && floatEl.contains(t))) {
         e.preventDefault()
+        if (open) {
+          // index=None selectboxes are clearable: Escape clears while the menu is open.
+          // index set (non-clearable): Escape only closes the menu and keeps the value.
+          if (clearable && propValue !== null && propValue !== "") {
+            commitSelection(null)
+          } else {
+            setOpen(false)
+            setSearchFilter("")
+            requestAnimationFrame(() => {
+              inputRef.current?.blur()
+            })
+          }
+          return
+        }
         if (clearable && propValue !== null && propValue !== "") {
           commitSelection(null)
         } else {
@@ -410,8 +443,11 @@ const Selectbox: FC<Props> = ({
     (!focused || inputValue === "" || selectDisabled)
 
   const inputDisplay = (() => {
+    // Keep the committed value in the DOM even when the visible label is drawn by
+    // StyledDisplayedValue (transparent input). Otherwise the field is literally ""
+    // until the next paint after focus, and Backspace/type operate on empty text (e2e).
     if (showCollapsedValue) {
-      return ""
+      return value ?? ""
     }
     if (!focused && !open) {
       return value ?? ""

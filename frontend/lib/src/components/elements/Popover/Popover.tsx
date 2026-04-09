@@ -34,6 +34,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -157,10 +158,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     if (open) {
       setBodyMounted(true)
     } else {
-      const id = requestAnimationFrame(() => {
-        setBodyMounted(false)
+      // Defer unmount past blur + widget commit: two rAFs so nested inputs process
+      // blur before the popover body unmounts (setTimeout(0) alone can still be early).
+      let raf2 = 0
+      const raf1 = window.requestAnimationFrame(() => {
+        raf2 = window.requestAnimationFrame(() => {
+          setBodyMounted(false)
+        })
       })
-      return () => cancelAnimationFrame(id)
+      return () => {
+        window.cancelAnimationFrame(raf1)
+        window.cancelAnimationFrame(raf2)
+      }
     }
   }, [open])
 
@@ -197,26 +206,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
-  const handleClose = useCallback((): void => {
-    setOpen(false)
-
-    if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        false,
-        { fromUi: true },
-        fragmentId
-      )
-    } else if (isPassivelyKeyed) {
-      setStoredOpen(false)
-    }
-  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
+  const handleCloseRef = useRef<() => void>(() => {})
 
   const { refs, floatingStyles, context } = useFloating({
     open,
     onOpenChange: next => {
       if (!next) {
-        handleClose()
+        handleCloseRef.current()
       }
     },
     placement: "bottom-start",
@@ -230,6 +226,41 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       shift({ padding: 8 }),
     ],
   })
+
+  const handleClose = useCallback((): void => {
+    const floatEl = refs.floating.current
+    const active = document.activeElement
+    if (
+      floatEl &&
+      active &&
+      floatEl.contains(active) &&
+      active instanceof HTMLElement
+    ) {
+      active.blur()
+    }
+
+    setOpen(false)
+
+    if (widgetId) {
+      widgetMgr?.setBoolValue(
+        { id: widgetId },
+        false,
+        { fromUi: true },
+        fragmentId
+      )
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(false)
+    }
+  }, [
+    refs.floating,
+    widgetMgr,
+    widgetId,
+    fragmentId,
+    isPassivelyKeyed,
+    setStoredOpen,
+  ])
+
+  handleCloseRef.current = handleClose
 
   const dismiss = useDismiss(context, {
     outsidePress: true,
