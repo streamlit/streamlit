@@ -178,7 +178,7 @@ def test_extract_dataframes_from_dict():
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})
     data = {"key1": "value1", "dataframe": df, "key2": 123}
 
-    arrow_blobs = {}
+    arrow_blobs: dict[str, bytes] = {}
     processed_data = _extract_dataframes_from_dict(data, arrow_blobs)
 
     assert "key1" in processed_data
@@ -186,6 +186,75 @@ def test_extract_dataframes_from_dict():
     assert "dataframe" in processed_data
     assert "__streamlit_arrow_ref__" in processed_data["dataframe"]
     assert len(arrow_blobs) == 1
+
+
+def test_extract_single_dataframe_uses_counter_ref():
+    """Single DataFrame should use a counter-based ref, not an MD5 hash."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    arrow_blobs: dict[str, bytes] = {}
+
+    processed_data = _extract_dataframes_from_dict({"df": df}, arrow_blobs)
+
+    ref_id = processed_data["df"]["__streamlit_arrow_ref__"]
+    assert ref_id == "ref_0"
+    assert "ref_0" in arrow_blobs
+
+
+def test_extract_two_dataframes_different_sizes_uses_counter_refs():
+    """Two DataFrames with different byte sizes should both use counter refs."""
+    df_small = pd.DataFrame({"a": [1]})
+    df_large = pd.DataFrame({"a": range(100), "b": range(100)})
+    arrow_blobs: dict[str, bytes] = {}
+
+    processed_data = _extract_dataframes_from_dict(
+        {"small": df_small, "large": df_large}, arrow_blobs
+    )
+
+    ref_small = processed_data["small"]["__streamlit_arrow_ref__"]
+    ref_large = processed_data["large"]["__streamlit_arrow_ref__"]
+    assert ref_small == "ref_0"
+    assert ref_large == "ref_1"
+    assert len(arrow_blobs) == 2
+
+
+def test_extract_identical_dataframes_deduplicates():
+    """Two identical DataFrames should be deduped to a single blob via MD5."""
+    df = pd.DataFrame({"a": [1, 2, 3]})
+    arrow_blobs: dict[str, bytes] = {}
+
+    processed_data = _extract_dataframes_from_dict({"df1": df, "df2": df}, arrow_blobs)
+
+    ref1 = processed_data["df1"]["__streamlit_arrow_ref__"]
+    ref2 = processed_data["df2"]["__streamlit_arrow_ref__"]
+    # Both should resolve to the same MD5 hash (dedup)
+    assert ref1 == ref2
+    assert len(arrow_blobs) == 1
+
+
+def test_extract_different_dataframes_same_size_stores_separately():
+    """Two different DataFrames that happen to serialize to the same byte length
+    should be stored as separate blobs with MD5-based refs."""
+    # Create two DataFrames with same shape but different values
+    df1 = pd.DataFrame({"x": [1, 2, 3]})
+    df2 = pd.DataFrame({"x": [4, 5, 6]})
+
+    from streamlit.dataframe_util import convert_anything_to_arrow_bytes
+
+    bytes1 = convert_anything_to_arrow_bytes(df1)
+    bytes2 = convert_anything_to_arrow_bytes(df2)
+
+    # Only run the collision test if they happen to be the same size
+    if len(bytes1) == len(bytes2):
+        arrow_blobs: dict[str, bytes] = {}
+        processed_data = _extract_dataframes_from_dict(
+            {"df1": df1, "df2": df2}, arrow_blobs
+        )
+
+        ref1 = processed_data["df1"]["__streamlit_arrow_ref__"]
+        ref2 = processed_data["df2"]["__streamlit_arrow_ref__"]
+        # Different content → different MD5 hashes → separate blobs
+        assert ref1 != ref2
+        assert len(arrow_blobs) == 2
 
 
 def test_serialize_mixed_data_with_dataframe():

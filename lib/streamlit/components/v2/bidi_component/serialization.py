@@ -60,16 +60,46 @@ def _extract_dataframes_from_dict(
         arrow_blobs = {}
 
     processed_data = {}
+    counter = 0
+    # Track blob sizes to avoid hashing unless two blobs share the same size.
+    # Maps size → the counter-based ref_id assigned to the first blob of that size.
+    seen_sizes: dict[int, str] = {}
 
     for key, value in data.items():
         if is_dataframe_like(value):
             # This is a dataframe-like object, serialize it to Arrow
             try:
                 arrow_bytes = convert_anything_to_arrow_bytes(value)
-                # Use deterministic, content-addressed ref IDs so placeholders
-                # are stable for identical content on each run. This also provides
-                # natural deduplication - identical DataFrames share a single blob.
-                ref_id = calc_md5(arrow_bytes)
+                size = len(arrow_bytes)
+
+                if size in seen_sizes:
+                    # Another blob has the same size — hash the new one.
+                    new_hash = calc_md5(arrow_bytes)
+
+                    # If the first blob with this size was assigned a counter
+                    # ref, retroactively re-key it by its hash for correct dedup.
+                    prev_ref = seen_sizes[size]
+                    if prev_ref in arrow_blobs:
+                        prev_hash = calc_md5(arrow_blobs[prev_ref])
+                        if prev_ref != prev_hash:
+                            arrow_blobs[prev_hash] = arrow_blobs.pop(prev_ref)
+                            # Fix the placeholder in processed_data
+                            for v in processed_data.values():
+                                if (
+                                    isinstance(v, dict)
+                                    and v.get(ARROW_REF_KEY) == prev_ref
+                                ):
+                                    v[ARROW_REF_KEY] = prev_hash
+                            seen_sizes[size] = prev_hash
+
+                    ref_id = new_hash
+                else:
+                    # Unique size — use a sequential counter to avoid
+                    # hashing large buffers.
+                    ref_id = f"ref_{counter}"
+                    counter += 1
+                    seen_sizes[size] = ref_id
+
                 arrow_blobs[ref_id] = arrow_bytes
                 processed_data[key] = {ARROW_REF_KEY: ref_id}
             except Exception as e:
