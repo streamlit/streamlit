@@ -86,12 +86,13 @@ After the script finishes, commit & push all the snapshots that are expected to 
 
 The following **utility methods** are available within `conftest.py`:
 
-| Function                              | Description                                                              |
-| ------------------------------------- | ------------------------------------------------------------------------ |
-| `wait_for_app_run(app: Page)`         | Wait for an app run to finish.                                           |
-| `wait_for_app_loaded(app: Page)`      | Wait for the app to fully load during its first execution.               |
-| `rerun_app(app: Page)`                | Triggers an app rerun and waits for the run to be finished.              |
-| `wait_until(app: Page, fn: callable)` | Run a test function in a loop until it evaluates to `True` or times out. |
+| Function                              | Description                                                                             |
+| ------------------------------------- | --------------------------------------------------------------------------------------- |
+| `wait_for_app_run(app: Page)`         | Wait for an app run to finish.                                                          |
+| `wait_for_app_loaded(app: Page)`      | Wait for the app to fully load during its first execution.                               |
+| `rerun_app(app: Page)`                | Triggers an app rerun and waits for the run to be finished.                              |
+| `wait_until(app: Page, fn: callable)` | Run a test function in a loop until it evaluates to `True` or times out.                 |
+| `build_app_url(...)`                  | URL builder to compose paths/query/fragment from `app_base_url`. Use instead of string concatenation. |
 
 The following pytest **fixtures** are available within `conftest.py`:
 
@@ -99,6 +100,8 @@ The following pytest **fixtures** are available within `conftest.py`:
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `app: Page`             | Loads the Streamlit app with light mode.                                                                                                                                                                                        |
 | `themed_app: Page`      | Loads the Streamlit app with light & dark mode.                                                                                                                                                                                 |
+| `app_target: AppTarget` | App interaction wrapper that abstracts whether the app DOM is at the top-level (`Page`) or inside a host page (`FrameLocator`). Prefer over bare `Page` for external test compatibility.                                        |
+| `app_base_url: str`     | Base URL for app navigation (external or localhost). Use with `build_app_url(...)` instead of hardcoding localhost URLs.                                                                                                         |
 | `assert_snapshot`       | For screenshot testing of elements (locator objects). E.g.: `assert_snapshot(element, name="name-of-snapshot")` <br><br> The suggested naming schema for snapshots that are related to a command: `st_command-test_description` |
 | `app_with_query_params` | Loads the Streamlit app with a configured set of query parameters.                                                                                                                                                              |
 

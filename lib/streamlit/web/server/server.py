@@ -21,6 +21,7 @@ import sys
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
 
+import tornado.netutil
 import tornado.web
 from tornado.httpserver import HTTPServer
 
@@ -237,8 +238,6 @@ def start_listening_unix_socket(http_server: HTTPServer) -> None:
     address = config.get_option("server.address")
     file_name = os.path.expanduser(address[len(UNIX_SOCKET_PREFIX) :])
 
-    import tornado.netutil
-
     if hasattr(tornado.netutil, "bind_unix_socket"):
         unix_socket = tornado.netutil.bind_unix_socket(file_name)
         http_server.add_socket(unix_socket)
@@ -258,7 +257,18 @@ def start_listening_tcp_socket(http_server: HTTPServer) -> None:
         port = config.get_option("server.port")
 
         try:
-            http_server.listen(port, address)
+            sockets = tornado.netutil.bind_sockets(port, address)
+            http_server.add_sockets(sockets)
+
+            # When binding to port 0, Tornado asks the OS for an ephemeral port.
+            # Update server.port with the actual bound port so displayed URLs are correct.
+            if port == 0:
+                actual_port = sockets[0].getsockname()[1]
+                config.set_option(
+                    "server.port", actual_port, ConfigOption.STREAMLIT_DEFINITION
+                )
+                port = actual_port
+
             break  # It worked! So let's break out of the loop.
 
         except OSError as e:

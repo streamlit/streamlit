@@ -1038,7 +1038,7 @@ class DataEditorMixin:
 
         # Deactivate editing for columns that are not compatible with arrow
         for column_name, column_data in data_df.items():
-            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+            if dataframe_util.determine_arrow_column_fix(column_data) is not None:
                 update_column_config(
                     column_config_mapping, str(column_name), {"disabled": True}
                 )

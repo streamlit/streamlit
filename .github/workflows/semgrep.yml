@@ -10,6 +10,6 @@ permissions:
 
 jobs:
   run-semgrep-reusable-workflow:
-    uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@main
+    uses: snowflakedb/reusable-workflows/.github/workflows/semgrep-v2.yml@863ab71d1133652ae3e7d1480ca7a4cb0b4f240c # main
     secrets:
       token: ${{ secrets.SEMGREP_APP_TOKEN }}

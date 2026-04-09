@@ -522,6 +522,91 @@ class TestStartStarletteServer:
         assert call_args[0] == "192.168.1.100"
 
 
+class TestDynamicPort:
+    """Tests for server.port=0 (ephemeral port) support in UvicornServer."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        Runtime._instance = None
+        self.original_port = config.get_option("server.port")
+        config.set_option("server.port", 0)
+        self.loop = asyncio.new_event_loop()
+
+    def tearDown(self) -> None:
+        """Tear down test fixtures."""
+        Runtime._instance = None
+        config.set_option("server.port", self.original_port)
+        self.loop.close()
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> None:
+        """Pytest fixture for setup and teardown."""
+        self.setUp()
+        yield
+        self.tearDown()
+
+    def _create_server(self) -> Server:
+        """Create a Server instance for testing."""
+        server = Server("mock/script/path", is_hello=False)
+        server._runtime._eventloop = self.loop
+        return server
+
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
+        """Run an async coroutine in the test event loop."""
+        self.loop.run_until_complete(coro)
+
+    def test_updates_config_port_when_binding_to_zero(self) -> None:
+        """Test that config is updated with the actual port when port=0."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+        mock_socket.getsockname.return_value = ("127.0.0.1", 54321)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        assert config.get_option("server.port") == 54321
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.port == 54321
+
+    def test_does_not_call_getsockname_for_nonzero_port(self) -> None:
+        """Test that getsockname is not called when a specific port is configured."""
+        config.set_option("server.port", 8501)
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server._start_starlette())
+
+        mock_socket.getsockname.assert_not_called()
+        assert config.get_option("server.port") == 8501
+
+
 class TestServerLifecycle:
     """Tests for server lifecycle behavior required by bootstrap.
 

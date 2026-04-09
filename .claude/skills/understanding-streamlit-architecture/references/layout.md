@@ -1,8 +1,3 @@
----
-status: stable
-last_updated: 2025-11-05
----
-
 # Overview
 
 This document includes details of the implementation of the layout feature for Streamlit.

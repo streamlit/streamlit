@@ -15,6 +15,7 @@
  */
 
 import { fireEvent, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { Audio as AudioProto } from "@streamlit/protobuf"
 
@@ -121,6 +122,25 @@ describe("Audio Element", () => {
     expect(mockSetElementState).not.toHaveBeenCalled()
   })
 
+  it("does not autoplay when element has no id even if autoplay is true", () => {
+    render(<Audio {...getProps({ autoplay: true })} />)
+    expect(screen.getByTestId("stAudio")).not.toHaveAttribute("autoPlay")
+    expect(mockGetElementState).not.toHaveBeenCalled()
+    expect(mockSetElementState).not.toHaveBeenCalled()
+  })
+
+  it("treats undefined stored preventAutoplay state as falsy and records prevention", () => {
+    mockGetElementState.mockReturnValueOnce(undefined)
+    const props = getProps({ autoplay: true, id: "audio-undefined-state" })
+    render(<Audio {...props} />)
+    expect(mockSetElementState).toHaveBeenCalledWith(
+      "audio-undefined-state",
+      "preventAutoplay",
+      true
+    )
+    expect(screen.getByTestId("stAudio")).toHaveAttribute("autoPlay")
+  })
+
   it("updates time when the prop is changed", () => {
     const props = getProps({
       url: "http://localhost:80/media/sound.wav",
@@ -137,6 +157,129 @@ describe("Audio Element", () => {
     audioElement = screen.getByTestId("stAudio")
 
     expect(audioElement.currentTime).toBe(10)
+  })
+
+  it("seeks to startTime when loadedmetadata fires", () => {
+    const props = getProps({ startTime: 14 })
+    render(<Audio {...props} />)
+    const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
+    audioElement.currentTime = 0
+    fireEvent.loadedMetadata(audioElement)
+    expect(audioElement.currentTime).toBe(14)
+  })
+
+  it("removes loadedmetadata listener on unmount", () => {
+    const removeSpy = vi.spyOn(
+      HTMLMediaElement.prototype,
+      "removeEventListener"
+    )
+    const { unmount } = render(<Audio {...getProps({ startTime: 3 })} />)
+    unmount()
+    expect(removeSpy).toHaveBeenCalledWith(
+      "loadedmetadata",
+      expect.any(Function)
+    )
+    removeSpy.mockRestore()
+  })
+
+  it("pauses when playback reaches endTime and loop is false", () => {
+    const pauseSpy = vi.spyOn(HTMLMediaElement.prototype, "pause")
+    render(<Audio {...getProps({ endTime: 5, loop: false, startTime: 0 })} />)
+    const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
+    audioElement.currentTime = 5.1
+    fireEvent.timeUpdate(audioElement)
+    expect(pauseSpy).toHaveBeenCalledTimes(1)
+    pauseSpy.mockRestore()
+  })
+
+  it("only pauses once when timeupdate keeps firing past endTime", () => {
+    const pauseSpy = vi.spyOn(HTMLMediaElement.prototype, "pause")
+    render(<Audio {...getProps({ endTime: 5, loop: false, startTime: 0 })} />)
+    const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
+    audioElement.currentTime = 5.2
+    fireEvent.timeUpdate(audioElement)
+    fireEvent.timeUpdate(audioElement)
+    expect(pauseSpy).toHaveBeenCalledTimes(1)
+    pauseSpy.mockRestore()
+  })
+
+  it("loops to startTime and plays when endTime is reached and loop is true", () => {
+    const playSpy = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue(undefined as never)
+    render(
+      <Audio
+        {...getProps({
+          endTime: 5,
+          loop: true,
+          startTime: 2,
+        })}
+      />
+    )
+    const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
+    audioElement.currentTime = 5
+    fireEvent.timeUpdate(audioElement)
+    expect(audioElement.currentTime).toBe(2)
+    expect(playSpy).toHaveBeenCalled()
+    playSpy.mockRestore()
+  })
+
+  it("removes timeupdate listener on unmount when endTime is set", () => {
+    const removeSpy = vi.spyOn(
+      HTMLMediaElement.prototype,
+      "removeEventListener"
+    )
+    const { unmount } = render(
+      <Audio {...getProps({ endTime: 9, loop: false, startTime: 0 })} />
+    )
+    unmount()
+    expect(removeSpy).toHaveBeenCalledWith("timeupdate", expect.any(Function))
+    removeSpy.mockRestore()
+  })
+
+  it("loops on ended when loop is true, using startTime 0 when startTime is unset", () => {
+    const playSpy = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue(undefined as never)
+    render(<Audio {...getProps({ loop: true, startTime: 0 })} />)
+    const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
+    audioElement.currentTime = 8
+    fireEvent.ended(audioElement)
+    expect(audioElement.currentTime).toBe(0)
+    expect(playSpy).toHaveBeenCalled()
+    playSpy.mockRestore()
+  })
+
+  it("does not seek or play on ended when loop is false", () => {
+    const playSpy = vi
+      .spyOn(HTMLMediaElement.prototype, "play")
+      .mockResolvedValue(undefined as never)
+    render(<Audio {...getProps({ loop: false, startTime: 3 })} />)
+    const audioElement: HTMLAudioElement = screen.getByTestId("stAudio")
+    audioElement.currentTime = 8
+    fireEvent.ended(audioElement)
+    expect(audioElement.currentTime).toBe(8)
+    expect(playSpy).not.toHaveBeenCalled()
+    playSpy.mockRestore()
+  })
+
+  it("removes ended listener on unmount", () => {
+    const removeSpy = vi.spyOn(
+      HTMLMediaElement.prototype,
+      "removeEventListener"
+    )
+    const { unmount } = render(<Audio {...getProps()} />)
+    unmount()
+    expect(removeSpy).toHaveBeenCalledWith("ended", expect.any(Function))
+    removeSpy.mockRestore()
+  })
+
+  it("handles user click on the audio control", async () => {
+    const user = userEvent.setup()
+    render(<Audio {...getProps()} />)
+    const audioElement = screen.getByTestId("stAudio")
+    await user.click(audioElement)
+    expect(audioElement).toBeVisible()
   })
 
   it("sends an CLIENT_ERROR message when the audio source fails to load", () => {

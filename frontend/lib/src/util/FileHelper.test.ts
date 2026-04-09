@@ -18,6 +18,7 @@ import {
   BYTE_CONVERSION_SIZE,
   FileSize,
   formatTypeForDisplay,
+  formatTypesForDisplay,
   getSizeDisplay,
   isFileTypeAllowed,
   isMimeType,
@@ -276,5 +277,59 @@ describe("isFileTypeAllowed", () => {
       const jpegFile = createFile("photo.jpg", "image/jpeg")
       expect(isFileTypeAllowed(jpegFile, normalizedTypes)).toBe(true)
     })
+  })
+})
+
+describe("formatTypesForDisplay", () => {
+  it("formats a list of types separated by commas", () => {
+    expect(formatTypesForDisplay([".png", ".pdf"])).toBe("PNG, PDF")
+    expect(formatTypesForDisplay(["image/*", ".json"])).toBe("image, JSON")
+  })
+
+  // Backend sends both extensions in each pair when user specifies either
+  it.each([
+    // [input, expected, description]
+    [[".jpg", ".jpeg"], "JPG", "jpg/jpeg pair (dotted)"],
+    [[".jpeg", ".jpg"], "JPG", "jpeg/jpg pair reversed (dotted)"],
+    [[".tif", ".tiff"], "TIF", "tif/tiff pair (dotted)"],
+    [[".tiff", ".tif"], "TIF", "tiff/tif pair reversed (dotted)"],
+    [[".htm", ".html"], "HTML", "htm/html pair (dotted)"],
+    [[".html", ".htm"], "HTML", "html/htm pair reversed (dotted)"],
+    [[".mpg", ".mpeg"], "MPG", "mpg/mpeg pair (dotted)"],
+    [[".mpeg", ".mpg"], "MPG", "mpeg/mpg pair reversed (dotted)"],
+    [[".mp4", ".mpeg4"], "MP4", "mp4/mpeg4 pair (dotted)"],
+    [[".mpeg4", ".mp4"], "MP4", "mpeg4/mp4 pair reversed (dotted)"],
+    [["jpg", "jpeg"], "JPG", "jpg/jpeg pair (dotless)"],
+    [["tif", "tiff", "png"], "TIF, PNG", "tif/tiff pair with extra type"],
+    [[".png", ".jpg", ".jpeg"], "PNG, JPG", "jpg/jpeg pair with leading type"],
+    [[".jpg", "jpg"], "JPG", "mixed dotted/dotless same extension"],
+    [["jpg", ".jpeg"], "JPG", "mixed dotted/dotless equivalent pair"],
+    [[".png", ".jpg", "jpg"], "PNG, JPG", "mixed with leading type"],
+    [[".JPG", ".jpeg"], "JPG", "mixed case uppercase first"],
+    [[".JPEG", ".jpg"], "JPG", "mixed case uppercase alias"],
+  ])(
+    "deduplicates equivalent extensions: %s -> %s (%s)",
+    (input, expected) => {
+      expect(formatTypesForDisplay(input)).toBe(expected)
+    }
+  )
+
+  it("preserves MIME types without deduplication", () => {
+    expect(formatTypesForDisplay(["image/jpeg", "image/png"])).toBe(
+      "image/jpeg, image/png"
+    )
+    expect(formatTypesForDisplay(["image/*", ".jpg", ".jpeg"])).toBe(
+      "image, JPG"
+    )
+  })
+
+  it("deduplicates multiple pairs in one list", () => {
+    expect(
+      formatTypesForDisplay([".jpg", ".jpeg", ".tif", ".tiff", ".png"])
+    ).toBe("JPG, TIF, PNG")
+  })
+
+  it("returns empty string for empty array", () => {
+    expect(formatTypesForDisplay([])).toBe("")
   })
 })

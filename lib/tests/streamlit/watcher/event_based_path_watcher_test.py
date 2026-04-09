@@ -16,11 +16,17 @@ from __future__ import annotations
 
 import threading
 import unittest
+from typing import TYPE_CHECKING, Any
 from unittest import mock
 
+import pytest
 from watchdog import events
 
+from streamlit.errors import StreamlitMaxRetriesError
 from streamlit.watcher import event_based_path_watcher
+
+if TYPE_CHECKING:
+    from collections.abc import Generator
 
 
 class EventBasedPathWatcherTest(unittest.TestCase):
@@ -793,3 +799,337 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         assert self.mock_util.calc_md5_with_blocking_retries.call_count == 1
 
         ro.close()
+
+
+@pytest.fixture
+def ebpw_mocks() -> Generator[tuple[mock.MagicMock, mock.MagicMock], None, None]:
+    """Patch Observer/util and reset the ``_MultiPathWatcher`` singleton around tests."""
+    if event_based_path_watcher._MultiPathWatcher._singleton is not None:
+        event_based_path_watcher._MultiPathWatcher.get_singleton().close()
+        event_based_path_watcher._MultiPathWatcher._singleton = None
+
+    with (
+        mock.patch(
+            "streamlit.watcher.event_based_path_watcher.Observer"
+        ) as mock_observer_class,
+        mock.patch("streamlit.watcher.event_based_path_watcher.util") as mock_util,
+    ):
+        yield mock_observer_class, mock_util
+
+        if event_based_path_watcher._MultiPathWatcher._singleton is not None:
+            fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+            fo.close()
+            fo._observer.start.reset_mock()
+            fo._observer.schedule.reset_mock()
+            event_based_path_watcher._MultiPathWatcher._singleton = None
+
+
+def _folder_handler_after_simulated_change(
+    mock_util: mock.MagicMock, watched_path: str
+) -> tuple[Any, mock.Mock]:
+    """Register a file watcher and set default before/after mtime and MD5 values."""
+    mock_util.path_modification_time = lambda *args, **kwargs: 101.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "1"
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher(watched_path, cb)
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    folder_handler = fo._observer.schedule.call_args[0][0]
+    mock_util.path_modification_time = lambda *args, **kwargs: 102.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "2"
+    return folder_handler, cb
+
+
+def test_event_based_path_watcher_repr(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """``EventBasedPathWatcher.__repr__`` returns a readable class-based string."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+
+    watcher = event_based_path_watcher.EventBasedPathWatcher(
+        "/tmp/watched.py", lambda _p: None
+    )
+    assert "EventBasedPathWatcher" in repr(watcher)
+    watcher.close()
+
+
+def test_multi_path_watcher_direct_ctor_raises_when_singleton_exists(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """Constructing ``_MultiPathWatcher`` directly must fail once the singleton exists."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+
+    event_based_path_watcher._MultiPathWatcher.get_singleton()
+    with pytest.raises(RuntimeError, match=r"Use \.get_singleton\(\) instead"):
+        event_based_path_watcher._MultiPathWatcher()
+
+
+def test_multi_path_watcher_repr(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """``_MultiPathWatcher.__repr__`` identifies the singleton instance."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    assert "_MultiPathWatcher" in repr(fo)
+
+
+def test_event_based_path_watcher_close_all(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """``EventBasedPathWatcher.close_all`` stops the shared observer."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+
+    event_based_path_watcher.EventBasedPathWatcher("/q/z.py", mock.Mock())
+    event_based_path_watcher.EventBasedPathWatcher.close_all()
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    fo._observer.stop.assert_called()
+
+
+@pytest.mark.parametrize(
+    "schedule_error",
+    [FileNotFoundError(), RuntimeError("schedule failed")],
+    ids=["file_not_found", "generic_exception"],
+)
+def test_watch_path_observer_schedule_failure_skips_registration(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+    schedule_error: BaseException,
+) -> None:
+    """If ``Observer.schedule`` fails, the folder handler is not registered."""
+    mock_observer_class, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_observer_class.return_value.schedule.side_effect = schedule_error
+
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher("/missing/parent/file.txt", cb)
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    assert fo._folder_handlers == {}
+
+
+def test_stop_watching_path_no_op_when_folder_not_registered(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """``stop_watching_path`` returns quietly when the folder was never scheduled."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+
+    event_based_path_watcher.EventBasedPathWatcher("/alpha/file.py", mock.Mock())
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+
+    fo.stop_watching_path("/omega/other.py", mock.Mock())
+
+
+def test_folder_event_handler_repr(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """``_FolderEventHandler.__repr__`` includes the handler class name."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+
+    event_based_path_watcher.EventBasedPathWatcher("/x/y.py", mock.Mock())
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    folder_handler = fo._observer.schedule.call_args[0][0]
+    assert "_FolderEventHandler" in repr(folder_handler)
+
+
+def test_add_path_skipped_when_initial_md5_raises_max_retries(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """If initial MD5 calculation fails, the path is not added and events are ignored."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = mock.Mock(
+        side_effect=StreamlitMaxRetriesError("locked")
+    )
+
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher("/only/path.py", cb)
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    folder_handler = fo._observer.schedule.call_args[0][0]
+    assert folder_handler.is_watching_paths() is False
+
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "2"
+    mock_util.path_modification_time = lambda *args, **kwargs: 2.0
+    ev = events.FileSystemEvent("/only/path.py")
+    ev.event_type = events.EVENT_TYPE_MODIFIED
+    folder_handler.on_modified(ev)
+
+    cb.assert_not_called()
+
+
+def test_stop_watching_unregistered_path_in_same_folder_is_no_op(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """Removing a listener for a path that was never registered does nothing."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 1.0
+    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "1"
+
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+
+    fo.stop_watching_path("/this/is/my/other.py", mock.Mock())
+
+
+def test_moved_event_uses_destination_path(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """Move events compare MD5 against the destination file path."""
+    _, mock_util = ebpw_mocks
+    dest = "/this/is/my/file.py"
+    folder_handler, cb = _folder_handler_after_simulated_change(mock_util, dest)
+
+    ev = events.FileSystemMovedEvent("/this/is/my/old.py", dest)
+    folder_handler.on_moved(ev)
+
+    cb.assert_called_once_with(dest)
+
+
+def test_modified_event_ignores_editor_backup_suffix(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """Paths ending with ``~`` are treated as editor backups and ignored."""
+    _, mock_util = ebpw_mocks
+    folder_handler, cb = _folder_handler_after_simulated_change(
+        mock_util, "/this/is/my/file.py"
+    )
+
+    ev = events.FileSystemEvent("/this/is/my/file.py~")
+    ev.event_type = events.EVENT_TYPE_MODIFIED
+    folder_handler.on_modified(ev)
+
+    cb.assert_not_called()
+
+
+@mock.patch("streamlit.env_util.IS_WINDOWS", True)
+@mock.patch("time.sleep", mock.Mock())
+def test_windows_stability_md5_verification_max_retries_keeps_initial_change(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """If the stability re-read fails, the first new MD5 is still applied."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 101.0
+    mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    folder_handler = fo._observer.schedule.call_args[0][0]
+
+    mock_util.path_modification_time = lambda *args, **kwargs: 102.0
+
+    md5_phase = 0
+
+    def md5_side_effect(*_args: object, **_kwargs: object) -> str:
+        nonlocal md5_phase
+        md5_phase += 1
+        if md5_phase == 1:
+            return "2"
+        raise StreamlitMaxRetriesError("verification failed")
+
+    mock_util.calc_md5_with_blocking_retries = mock.Mock(side_effect=md5_side_effect)
+
+    ev = events.FileSystemEvent("/this/is/my/file.py")
+    ev.event_type = events.EVENT_TYPE_MODIFIED
+    folder_handler.on_modified(ev)
+
+    cb.assert_called_once_with("/this/is/my/file.py")
+
+
+@mock.patch("streamlit.env_util.IS_WINDOWS", True)
+@mock.patch("time.sleep", mock.Mock())
+def test_windows_stability_uses_post_delay_md5_when_it_differs_from_both(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """When verification reads a third hash, that value becomes the stored MD5."""
+    _, mock_util = ebpw_mocks
+    mock_util.path_modification_time = lambda *args, **kwargs: 101.0
+    mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    folder_handler = fo._observer.schedule.call_args[0][0]
+
+    mock_util.path_modification_time = lambda *args, **kwargs: 102.0
+    sequence = iter(["2", "3"])
+
+    def md5_side_effect(*_args: object, **_kwargs: object) -> str:
+        return next(sequence)
+
+    mock_util.calc_md5_with_blocking_retries = mock.Mock(side_effect=md5_side_effect)
+
+    ev = events.FileSystemEvent("/this/is/my/file.py")
+    ev.event_type = events.EVENT_TYPE_MODIFIED
+    folder_handler.on_modified(ev)
+
+    cb.assert_called_once_with("/this/is/my/file.py")
+
+
+@mock.patch(
+    "streamlit.watcher.event_based_path_watcher.os.path.isdir",
+    return_value=False,
+)
+def test_nested_file_event_ignores_unrelated_file_watcher(
+    mock_is_dir: mock.Mock,
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """When only a file is watched, sibling file events skip the dir-walk branch."""
+    _, mock_util = ebpw_mocks
+    folder_handler, cb = _folder_handler_after_simulated_change(
+        mock_util, "/this/is/my/file.py"
+    )
+
+    ev = events.FileSystemEvent("/this/is/my/other.py")
+    ev.event_type = events.EVENT_TYPE_MODIFIED
+    folder_handler.on_modified(ev)
+
+    cb.assert_not_called()
+
+
+def test_handle_path_change_ignores_event_when_md5_raises_max_retries(
+    ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
+) -> None:
+    """``StreamlitMaxRetriesError`` during change MD5 calculation drops the event."""
+    _, mock_util = ebpw_mocks
+    md5_calls = 0
+
+    def md5_fn(*_args: object, **_kwargs: object) -> str:
+        nonlocal md5_calls
+        md5_calls += 1
+        if md5_calls == 1:
+            return "1"
+        raise StreamlitMaxRetriesError("cannot read")
+
+    mock_util.path_modification_time = lambda *args, **kwargs: 101.0
+    mock_util.calc_md5_with_blocking_retries = md5_fn
+
+    cb = mock.Mock()
+    event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
+
+    fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
+    folder_handler = fo._observer.schedule.call_args[0][0]
+
+    mock_util.path_modification_time = lambda *args, **kwargs: 102.0
+
+    ev = events.FileSystemEvent("/this/is/my/file.py")
+    ev.event_type = events.EVENT_TYPE_MODIFIED
+    folder_handler.on_modified(ev)
+
+    cb.assert_not_called()

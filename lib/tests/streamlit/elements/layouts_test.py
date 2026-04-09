@@ -833,6 +833,37 @@ class ContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
 
+    @parameterized.expand(
+        [
+            ("true_with_height", True, 300, True),
+            ("false_with_height", False, 300, False),
+        ],
+    )
+    def test_autoscroll_sets_proto_field(
+        self,
+        _name: str,
+        autoscroll: bool,
+        height: int,
+        expected_value: bool,
+    ) -> None:
+        """Test that explicit autoscroll values set the proto field."""
+        st.container(height=height, autoscroll=autoscroll)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.HasField("autoscroll")
+        assert container_block.add_block.autoscroll is expected_value
+
+    def test_autoscroll_none_does_not_set_field(self) -> None:
+        """Test that autoscroll=None (default) does not set the proto field."""
+        st.container(height=300)
+        container_block = self.get_delta_from_queue()
+        assert not container_block.add_block.HasField("autoscroll")
+
+    def test_autoscroll_without_height(self) -> None:
+        """Test that autoscroll can be set without a fixed height."""
+        st.container(autoscroll=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.autoscroll is True
+
 
 class PopoverContainerTest(DeltaGeneratorTestCase):
     def test_label_required(self):

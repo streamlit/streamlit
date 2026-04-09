@@ -1,16 +1,16 @@
 {
   "name": "@streamlit/utils",
-  "version": "1.55.0",
+  "version": "1.56.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "main": "./dist/streamlit-utils.cjs.js",
   "module": "./dist/streamlit-utils.es.js",
   "browser": "./dist/streamlit-utils.umd.js",
-  "types": "./dist/index.d.ts",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./dist/src/index.d.ts",
       "import": "./dist/streamlit-utils.es.js",
       "require": "./dist/streamlit-utils.cjs.js",
       "default": "./dist/streamlit-utils.umd.js"
@@ -34,7 +34,7 @@
     "vite": "^8.0.1",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0"
+    "vitest": "^4.1.1"
   },
   "browserslist": [
     ">0.2%",

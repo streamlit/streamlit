@@ -15,9 +15,9 @@
  */
 
 import {
-    configDefaults,
-    coverageConfigDefaults,
-    defineConfig,
+  configDefaults,
+  coverageConfigDefaults,
+  defineConfig,
 } from "vitest/config"
 
 export default defineConfig({
@@ -29,7 +29,14 @@ export default defineConfig({
     // Global coverage configuration
     coverage: {
       provider: "v8",
-      reporter: ["text-summary", "json-summary", "html"],
+      reportsDirectory: "coverage",
+      reporter: [
+        "text-summary",
+        "json-summary",
+        "html",
+        // Add full JSON report when COVERAGE_JSON=1 (used by AI coverage workflows)
+        ...(process.env.COVERAGE_JSON ? (["json"] as const) : []),
+      ],
       include: ["*/src/**/*.{js,jsx,ts,tsx}"],
       exclude: [
         "**/*.d.ts",

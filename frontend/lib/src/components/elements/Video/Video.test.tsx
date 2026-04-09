@@ -15,6 +15,7 @@
  */
 
 import { fireEvent, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 
 import { Video as VideoProto } from "@streamlit/protobuf"
 
@@ -65,6 +66,7 @@ describe("Video Element", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
 
     vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
       elementRef: { current: null },
@@ -113,25 +115,39 @@ describe("Video Element", () => {
     )
   })
 
-  beforeEach(() => {
-    vi.clearAllMocks()
-    mockGetElementState.mockReturnValue(false) // By default, assume autoplay is not prevented
-  })
-
   it("does not autoplay if preventAutoplay is set", async () => {
     mockGetElementState.mockReturnValueOnce(true) // Autoplay should be prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
-    const audioElement = await screen.findByTestId("stVideo")
-    expect(audioElement).not.toHaveAttribute("autoPlay")
+    const videoElement = await screen.findByTestId("stVideo")
+    expect(videoElement).not.toHaveAttribute("autoPlay")
   })
 
   it("autoplays if preventAutoplay is not set and autoplay is true", async () => {
     mockGetElementState.mockReturnValueOnce(false) // Autoplay is not prevented
     const props = getProps({ autoplay: true, id: "uniqueVideoId" })
     render(<Video {...props} />)
-    const audioElement = await screen.findByTestId("stVideo")
-    expect(audioElement).toHaveAttribute("autoPlay")
+    const videoElement = await screen.findByTestId("stVideo")
+    expect(videoElement).toHaveAttribute("autoPlay")
+  })
+
+  it("treats undefined stored preventAutoplay state as falsy and records prevention", async () => {
+    mockGetElementState.mockReturnValueOnce(undefined)
+    const props = getProps({ autoplay: true, id: "uniqueVideoId" })
+    render(<Video {...props} />)
+    expect(await screen.findByTestId("stVideo")).toHaveAttribute("autoPlay")
+    expect(mockSetElementState).toHaveBeenCalledWith(
+      props.element.id,
+      "preventAutoplay",
+      true
+    )
+  })
+
+  it("does not autoplay when the element has no id even if autoplay is true", async () => {
+    render(<Video {...getProps({ autoplay: true })} />)
+    expect(await screen.findByTestId("stVideo")).not.toHaveAttribute(
+      "autoPlay"
+    )
   })
 
   it("calls setElementState to prevent future autoplay on first autoplay", () => {
@@ -181,6 +197,41 @@ describe("Video Element", () => {
         "https://www.w3schools.com/html/mov_bbb.mp4?start=10"
       )
     })
+
+    it("adds end, loop, playlist, autoplay, and mute query params to the embed URL", async () => {
+      const props = getProps({
+        type: VideoProto.Type.YOUTUBE_IFRAME,
+        url: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        startTime: 5,
+        endTime: 99,
+        loop: true,
+        autoplay: true,
+        muted: true,
+      })
+      render(<Video {...props} />)
+      const iframe = await screen.findByTestId("stVideo")
+      expect(iframe).toBeInstanceOf(HTMLIFrameElement)
+      const src = new URL(iframe.getAttribute("src") ?? "")
+      expect(src.searchParams.get("start")).toBe("5")
+      expect(src.searchParams.get("end")).toBe("99")
+      expect(src.searchParams.get("loop")).toBe("1")
+      expect(src.searchParams.get("playlist")).toBe("dQw4w9WgXcQ")
+      expect(src.searchParams.get("autoplay")).toBe("1")
+      expect(src.searchParams.get("mute")).toBe("1")
+    })
+
+    it("does not append playlist when the embed path has no video id", async () => {
+      const props = getProps({
+        type: VideoProto.Type.YOUTUBE_IFRAME,
+        url: "https://www.youtube.com/embed/",
+        loop: true,
+      })
+      render(<Video {...props} />)
+      const iframe = await screen.findByTestId("stVideo")
+      const src = new URL(iframe.getAttribute("src") ?? "")
+      expect(src.searchParams.get("loop")).toBe("1")
+      expect(src.searchParams.get("playlist")).toBeNull()
+    })
   })
 
   describe("updateTime", () => {
@@ -202,6 +253,79 @@ describe("Video Element", () => {
       rerender(<Video {...getProps({ startTime: 10 })} />)
       expect(videoElement.currentTime).toBe(10)
     })
+
+    it("sets currentTime from startTime on loadedmetadata", async () => {
+      const { rerender } = render(<Video {...getProps({ startTime: 12 })} />)
+      const video: HTMLVideoElement = await screen.findByTestId("stVideo")
+      video.currentTime = 0
+      fireEvent.loadedMetadata(video)
+      expect(video.currentTime).toBe(12)
+
+      rerender(<Video {...getProps({ startTime: 3 })} />)
+      video.currentTime = 0
+      fireEvent.loadedMetadata(video)
+      expect(video.currentTime).toBe(3)
+    })
+  })
+
+  describe("endTime and loop (timeupdate / ended)", () => {
+    it("pauses once when playback reaches endTime without loop", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ endTime: 10, startTime: 2, loop: false })
+      render(<Video {...props} />)
+      const video: HTMLVideoElement = await screen.findByTestId("stVideo")
+      const pauseSpy = vi.spyOn(video, "pause").mockImplementation(() => {})
+
+      await user.click(video)
+      video.currentTime = 9
+      fireEvent.timeUpdate(video)
+      expect(pauseSpy).not.toHaveBeenCalled()
+
+      video.currentTime = 10
+      fireEvent.timeUpdate(video)
+      expect(pauseSpy).toHaveBeenCalledTimes(1)
+
+      fireEvent.timeUpdate(video)
+      expect(pauseSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("seeks to startTime and plays when endTime is reached with loop", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        endTime: 10,
+        startTime: 4,
+        loop: true,
+      })
+      render(<Video {...props} />)
+      const video: HTMLVideoElement = await screen.findByTestId("stVideo")
+      const playSpy = vi.spyOn(video, "play").mockResolvedValue(undefined)
+
+      await user.click(video)
+      video.currentTime = 10
+      fireEvent.timeUpdate(video)
+      expect(video.currentTime).toBe(4)
+      expect(playSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("seeks and plays on ended when loop is enabled", async () => {
+      const user = userEvent.setup()
+      const props = getProps({ loop: true, startTime: 7 })
+      render(<Video {...props} />)
+      const video: HTMLVideoElement = await screen.findByTestId("stVideo")
+      const playSpy = vi.spyOn(video, "play").mockResolvedValue(undefined)
+
+      await user.click(video)
+      video.currentTime = 99
+      fireEvent.ended(video)
+      expect(video.currentTime).toBe(7)
+      expect(playSpy).toHaveBeenCalledTimes(1)
+    })
+
+    it("unmounts cleanly when endTime is set (timeupdate listener cleanup)", () => {
+      const props = getProps({ endTime: 5 })
+      const { unmount } = render(<Video {...props} />)
+      expect(() => unmount()).not.toThrow()
+    })
   })
 
   describe("subtitles", () => {
@@ -215,11 +339,9 @@ describe("Video Element", () => {
       props.endpoints.buildMediaURL = vi.fn(url => url)
       render(<Video {...props} />)
 
-      // check that track elements are rendered
       const trackElements = screen.getAllByTestId("stVideoSubtitle")
       expect(trackElements).toHaveLength(2)
 
-      // check that the track element has the correct src
       expect(trackElements[0]).toHaveAttribute(
         "src",
         "https://mock.subtitle.url"
@@ -259,6 +381,33 @@ describe("Video Element", () => {
       render(<Video {...props} />)
       expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
     })
+
+    it("does not call checkSourceUrlResponse when subtitles is unset on the element", () => {
+      const base = VideoProto.create({
+        url: "https://www.w3schools.com/html/mov_bbb.mp4",
+        type: VideoProto.Type.UNUSED,
+        startTime: 0,
+      })
+      Reflect.deleteProperty(base, "subtitles")
+      const props: VideoProps = {
+        element: base,
+        endpoints: mockEndpoints({
+          buildMediaURL: buildMediaURL,
+          sendClientErrorToHost: sendClientErrorToHost,
+        }),
+        elementMgr: elementMgrMock as unknown as ElementStateManager,
+      }
+      render(<Video {...props} />)
+      expect(props.endpoints.checkSourceUrlResponse).not.toHaveBeenCalled()
+    })
+  })
+
+  describe("muted", () => {
+    it("passes muted through to the video element", async () => {
+      render(<Video {...getProps({ muted: true })} />)
+      const video: HTMLVideoElement = await screen.findByTestId("stVideo")
+      expect(video.muted).toBe(true)
+    })
   })
 
   describe("crossOrigin attribute", () => {
@@ -281,23 +430,23 @@ describe("Video Element", () => {
     )
 
     it("sets crossOrigin to 'anonymous' when in dev mode with subtitles regardless of resourceCrossOriginMode", async () => {
-      // Store original NODE_ENV
       const originalNodeEnv = process.env.NODE_ENV
       process.env.NODE_ENV = "development"
 
-      const props = getProps({
-        subtitles: [{ url: "https://mock.subtitle.url" }],
-      })
-      renderWithContexts(<Video {...props} />, {
-        libConfigContext: {
-          resourceCrossOriginMode: undefined,
-        },
-      })
-      const videoElement = await screen.findByTestId("stVideo")
-      expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
-
-      // Restore original NODE_ENV
-      process.env.NODE_ENV = originalNodeEnv
+      try {
+        const props = getProps({
+          subtitles: [{ url: "https://mock.subtitle.url" }],
+        })
+        renderWithContexts(<Video {...props} />, {
+          libConfigContext: {
+            resourceCrossOriginMode: undefined,
+          },
+        })
+        const videoElement = await screen.findByTestId("stVideo")
+        expect(videoElement).toHaveAttribute("crossOrigin", "anonymous")
+      } finally {
+        process.env.NODE_ENV = originalNodeEnv
+      }
     })
 
     describe("with BACKEND_BASE_URL set", () => {
