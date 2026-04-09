@@ -20,14 +20,16 @@ Auto-detect the current state and act accordingly:
 git branch --show-current
 git status
 git log --oneline -5
+git branch -vv
 ```
 
 **If already on a feature branch with changes committed and pushed:**
-Verify the branch tracks a remote (`git branch -vv`) and proceed to Step 2.
+Verify the branch tracks a remote and is up to date (check the `git branch -vv` output above) and proceed to Step 2.
 
 **If changes need committing/pushing:**
 
 ```bash
+git checkout develop && git pull origin develop  # ensure branching from latest develop
 git checkout -b {type}/{descriptive-name}   # if not already on a feature branch
 git add <files>
 git commit -m "{imperative-verb} {what} {where}"
@@ -94,12 +96,23 @@ Check the matching boxes in the PR template. If no test files changed, explain w
 
 ### 2.4 Create PR
 
-Show the complete PR title, labels, and description in chat for visibility, then create the PR directly:
+Show the complete PR title, labels, and description in chat for visibility, then create the PR directly. Substitute the actual title, description, and labels generated in steps 2.1–2.3:
 
 ```bash
 gh pr create \
-  --title "[type] Description of change" \
-  --body "PR description" \
+  --title "[feature] Add height parameter to plotly charts" \
+  --body "$(cat <<'EOF'
+## Summary
+
+Adds `height` parameter to `st.plotly_chart()` using `Height` type system.
+- Deprecates `use_container_height` (removed after 2025-12-31)
+
+## Testing
+
+- [x] Python unit tests
+- [x] E2E tests
+EOF
+)" \
   --base develop \
   --label "impact:users,change:feature" \
   --draft
