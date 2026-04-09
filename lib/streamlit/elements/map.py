@@ -271,12 +271,13 @@ class MapMixin:
                 width = "stretch"
             # For use_container_width=False, preserve any integer width that was set.
 
+        layout_config = create_layout_config(width=width, height=height)
+
         map_proto = DeckGlJsonChartProto()
         deck_gl_json = to_deckgl_json(data, latitude, longitude, size, color, zoom)
 
         marshall(map_proto, deck_gl_json)
 
-        layout_config = create_layout_config(width=width, height=height)
         return self.dg._enqueue(
             "deck_gl_json_chart", map_proto, layout_config=layout_config
         )

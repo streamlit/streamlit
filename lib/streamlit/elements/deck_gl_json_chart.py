@@ -509,6 +509,8 @@ class PydeckMixin:
                 width = "stretch"
             # Otherwise keep the provided width.
 
+        layout_config = create_layout_config(width=width, height=height)
+
         pydeck_proto = PydeckProto()
 
         ctx = get_script_run_ctx()
@@ -589,14 +591,12 @@ class PydeckMixin:
                 value_type="string_value",
             )
 
-            layout_config = create_layout_config(width=width, height=height)
             self.dg._enqueue(
                 "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
             )
 
             return widget_state.value
 
-        layout_config = create_layout_config(width=width, height=height)
         return self.dg._enqueue(
             "deck_gl_json_chart", pydeck_proto, layout_config=layout_config
         )

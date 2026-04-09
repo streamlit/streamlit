@@ -359,6 +359,13 @@ class TableMixin:
            height: 250px
 
         """
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
+
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
 
@@ -388,14 +395,6 @@ class TableMixin:
         # when the position of the element is changed.
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
-
-        # Create layout configuration for width and height
-        layout_config = create_layout_config(
-            width=width,
-            height=height,
-            allow_content_width=True,
-            allow_content_height=True,
-        )
 
         proto = TableProto()
         marshall_table(proto.arrow_data, data, default_uuid)
