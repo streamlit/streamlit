@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { Combobox } from "@ark-ui/react/combobox"
+import { Combobox, useComboboxContext } from "@ark-ui/react/combobox"
 import {
   createListCollection,
   type ListCollection,
@@ -32,6 +32,7 @@ import {
   useState,
   type FocusEvent,
   type KeyboardEvent,
+  type ReactNode,
 } from "react"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -77,6 +78,22 @@ function itemToValue(item: SelectItem): string {
 
 function itemToString(item: SelectItem): string {
   return item.isCreatable ? `Add: ${item.optionValue}` : item.label
+}
+
+/** Portal dropdown surface: test id only while open (avoids strict-mode collisions). */
+function SelectboxDropdownContent({
+  children,
+}: {
+  children: ReactNode
+}): JSX.Element {
+  const api = useComboboxContext()
+  return (
+    <StyledContent
+      data-testid={api.open ? "stSelectboxVirtualDropdown" : undefined}
+    >
+      {children}
+    </StyledContent>
+  )
 }
 
 const Selectbox: FC<Props> = ({
@@ -381,7 +398,7 @@ const Selectbox: FC<Props> = ({
         </StyledControl>
         <Portal>
           <Combobox.Positioner data-testid="stSelectboxPositioner">
-            <StyledContent data-testid="stSelectboxContent">
+            <SelectboxDropdownContent>
               <Combobox.List css={cssList(theme)}>
                 {collection.items.map(item => (
                   <Combobox.Item
@@ -401,7 +418,7 @@ const Selectbox: FC<Props> = ({
                 ))}
               </Combobox.List>
               <Combobox.Empty css={cssEmpty(theme)}>No results</Combobox.Empty>
-            </StyledContent>
+            </SelectboxDropdownContent>
           </Combobox.Positioner>
         </Portal>
       </Combobox.Root>

@@ -39,6 +39,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  type KeyboardEvent,
 } from "react"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
@@ -271,8 +272,6 @@ function DateInput({
       )
       if (errorType) {
         setError(createErrorMessage(errorType))
-        setIsEmpty(!newDates.length)
-        return
       }
       setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates.length)
@@ -290,10 +289,22 @@ function DateInput({
   const handleClose = useCallback((): void => {
     if (!isEmpty) return
 
+    // Range: a cleared field must stay empty (()) rather than snapping back to the
+    // proto default range. Single-date widgets still reset to default when empty.
+    if (element.isRange) {
+      return
+    }
+
     const newValue = stringsToDates(element.default)
     setValueWithSource({ value: newValue, fromUi: true })
     setIsEmpty(!newValue.length)
   }, [isEmpty, element, setValueWithSource])
+
+  /** Commit an empty range from Escape without clearing validation error UI (e2e parity). */
+  const commitEmptyRangeKeepError = useCallback((): void => {
+    setValueWithSource({ value: [], fromUi: true })
+    setIsEmpty(true)
+  }, [setValueWithSource])
 
   const timeZone = getLocalTimeZone()
   const minCal = useMemo(() => toCalendarDate(minDate), [minDate])
@@ -430,8 +441,10 @@ function DateInput({
               dateFormat={dateFormat}
               loadedLocale={loadedLocale}
               element={element}
+              clearable={clearable}
               handleChange={handleChange}
               handleClose={handleClose}
+              commitEmptyRangeKeepError={commitEmptyRangeKeepError}
               setIsEmpty={setIsEmpty}
               error={error}
               draftResetSeq={draftResetSeq}
@@ -445,6 +458,7 @@ function DateInput({
               momentFormat={element.format}
               dateFormat={dateFormat}
               loadedLocale={loadedLocale}
+              clearable={clearable}
               handleChange={handleChange}
               handleClose={handleClose}
               setIsEmpty={setIsEmpty}
@@ -468,12 +482,21 @@ function DateInput({
 
         <Portal>
           <DatePicker.Positioner>
-            <StyledContent>
-              <DatePicker.Context>
-                {datePicker => (
+            <DatePicker.Context>
+              {datePicker => (
+                <StyledContent
+                  data-testid={
+                    datePicker.open ? "stDateInputCalendar" : undefined
+                  }
+                >
                   <>
                     {enableQuickSelect && (
                       <StyledQuickSelect
+                        data-testid={
+                          datePicker.open
+                            ? "stDateInputQuickSelect"
+                            : undefined
+                        }
                         aria-label="Quick select date range"
                         defaultValue=""
                         onChange={e => {
@@ -522,9 +545,9 @@ function DateInput({
                       </DatePicker.Table>
                     </DatePicker.View>
                   </>
-                )}
-              </DatePicker.Context>
-            </StyledContent>
+                </StyledContent>
+              )}
+            </DatePicker.Context>
           </DatePicker.Positioner>
         </Portal>
       </DatePicker.Root>
@@ -540,6 +563,7 @@ function SingleTextField({
   momentFormat,
   dateFormat,
   loadedLocale,
+  clearable,
   handleChange,
   handleClose,
   setIsEmpty,
@@ -553,6 +577,7 @@ function SingleTextField({
   momentFormat: string
   dateFormat: string
   loadedLocale: import("date-fns").Locale
+  clearable: boolean
   handleChange: (args: {
     date: Date | (Date | null | undefined)[] | null | undefined
   }) => void
@@ -602,6 +627,24 @@ function SingleTextField({
           handleChange({ date: d })
         }
 
+        const handleInputKeyDown = (
+          e: KeyboardEvent<HTMLInputElement>
+        ): void => {
+          if (e.key === "Enter") {
+            e.preventDefault()
+            e.currentTarget.blur()
+            return
+          }
+          if (e.key === "Escape") {
+            e.preventDefault()
+            dp.setOpen(false)
+            if (clearable) {
+              setDraft(null)
+              handleChange({ date: null })
+            }
+          }
+        }
+
         return (
           <StyledRangeInput
             $hasError={Boolean(error)}
@@ -632,6 +675,7 @@ function SingleTextField({
               }
               commitSingle(raw)
             }}
+            onKeyDown={handleInputKeyDown}
           />
         )
       }}
@@ -647,8 +691,10 @@ function RangeTextField({
   dateFormat,
   loadedLocale,
   element,
+  clearable,
   handleChange,
   handleClose,
+  commitEmptyRangeKeepError,
   setIsEmpty,
   error,
   draftResetSeq,
@@ -660,10 +706,12 @@ function RangeTextField({
   dateFormat: string
   loadedLocale: import("date-fns").Locale
   element: DateInputProto
+  clearable: boolean
   handleChange: (args: {
     date: Date | (Date | null | undefined)[] | null | undefined
   }) => void
   handleClose: () => void
+  commitEmptyRangeKeepError: () => void
   setIsEmpty: (v: boolean) => void
   error: string | null
   draftResetSeq: number
@@ -731,6 +779,27 @@ function RangeTextField({
           handleChange({ date: [d0, d1] })
         }
 
+        const handleRangeKeyDown = (
+          e: KeyboardEvent<HTMLInputElement>
+        ): void => {
+          if (e.key === "Enter") {
+            e.preventDefault()
+            e.currentTarget.blur()
+            return
+          }
+          if (e.key === "Escape") {
+            e.preventDefault()
+            dp.setOpen(false)
+            if (clearable) {
+              setDraft(null)
+              handleChange({ date: null })
+            } else if (error) {
+              setDraft(null)
+              commitEmptyRangeKeepError()
+            }
+          }
+        }
+
         return (
           <StyledRangeInput
             $hasError={Boolean(error)}
@@ -761,6 +830,7 @@ function RangeTextField({
               }
               commitRange(raw)
             }}
+            onKeyDown={handleRangeKeyDown}
           />
         )
       }}
