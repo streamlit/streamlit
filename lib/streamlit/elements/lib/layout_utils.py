@@ -132,16 +132,13 @@ def create_layout_config(
     """
     actual_width: Width | None = None
     if width is not _UNSET:
-        # Intentionally passes the raw value (including None) so validate_width
-        # rejects invalid types at runtime.
-        validate_width(width, allow_content=allow_content_width)  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+        validate_width(width, allow_content=allow_content_width)
         actual_width = width
 
     actual_height: Height | None = None
     if height is not _UNSET:
-        # Same as above — lets validate_height reject None at runtime.
         validate_height(
-            height,  # type: ignore[arg-type]  # ty: ignore[invalid-argument-type]
+            height,
             allow_content=allow_content_height,
             allow_stretch=allow_stretch_height,
             additional_allowed=additional_allowed_height,
@@ -155,7 +152,7 @@ def create_layout_config(
     )
 
 
-def validate_width(width: Width, allow_content: bool = False) -> None:
+def validate_width(width: Width | None, allow_content: bool = False) -> None:
     """Validate the width parameter.
 
     Parameters
@@ -185,7 +182,7 @@ def validate_width(width: Width, allow_content: bool = False) -> None:
 
 
 def validate_height(
-    height: Height | Literal["auto"],
+    height: Height | Literal["auto"] | None,
     allow_content: bool = False,
     allow_stretch: bool = True,
     additional_allowed: list[str] | None = None,
