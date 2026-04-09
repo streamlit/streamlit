@@ -64,6 +64,8 @@ def _extract_dataframes_from_dict(
     # Track blob sizes to avoid hashing unless two blobs share the same size.
     # Maps size → the counter-based ref_id assigned to the first blob of that size.
     seen_sizes: dict[int, str] = {}
+    # Track placeholder dicts we created so re-keying only mutates our own objects.
+    placeholders: list[dict[str, str]] = []
 
     for key, value in data.items():
         if is_dataframe_like(value):
@@ -83,13 +85,10 @@ def _extract_dataframes_from_dict(
                         prev_hash = calc_md5(arrow_blobs[prev_ref])
                         if prev_ref != prev_hash:
                             arrow_blobs[prev_hash] = arrow_blobs.pop(prev_ref)
-                            # Fix the placeholder in processed_data
-                            for v in processed_data.values():
-                                if (
-                                    isinstance(v, dict)
-                                    and v.get(ARROW_REF_KEY) == prev_ref
-                                ):
-                                    v[ARROW_REF_KEY] = prev_hash
+                            # Fix only the placeholder dicts we created
+                            for p in placeholders:
+                                if p.get(ARROW_REF_KEY) == prev_ref:
+                                    p[ARROW_REF_KEY] = prev_hash
                             seen_sizes[size] = prev_hash
 
                     ref_id = new_hash
@@ -101,7 +100,9 @@ def _extract_dataframes_from_dict(
                     seen_sizes[size] = ref_id
 
                 arrow_blobs[ref_id] = arrow_bytes
-                processed_data[key] = {ARROW_REF_KEY: ref_id}
+                placeholder = {ARROW_REF_KEY: ref_id}
+                placeholders.append(placeholder)
+                processed_data[key] = placeholder
             except Exception as e:
                 # If Arrow serialization fails, keep the original value for JSON
                 # serialization attempt downstream.

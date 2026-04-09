@@ -231,30 +231,42 @@ def test_extract_identical_dataframes_deduplicates():
     assert len(arrow_blobs) == 1
 
 
-def test_extract_different_dataframes_same_size_stores_separately():
-    """Two different DataFrames that happen to serialize to the same byte length
+def test_extract_different_dataframes_same_size_stores_separately(monkeypatch):
+    """Two different DataFrames that serialize to the same byte length
     should be stored as separate blobs with MD5-based refs."""
-    # Create two DataFrames with same shape but different values
-    df1 = pd.DataFrame({"x": [1, 2, 3]})
-    df2 = pd.DataFrame({"x": [4, 5, 6]})
+    from streamlit.components.v2.bidi_component import serialization as ser
 
-    from streamlit.dataframe_util import convert_anything_to_arrow_bytes
+    # Force same-length but different-content Arrow bytes to guarantee a collision.
+    blob_a = b"aaaa_arrow_data_1234"
+    blob_b = b"bbbb_arrow_data_5678"
+    assert len(blob_a) == len(blob_b)
 
-    bytes1 = convert_anything_to_arrow_bytes(df1)
-    bytes2 = convert_anything_to_arrow_bytes(df2)
+    call_count = 0
 
-    # Only run the collision test if they happen to be the same size
-    if len(bytes1) == len(bytes2):
-        arrow_blobs: dict[str, bytes] = {}
-        processed_data = _extract_dataframes_from_dict(
-            {"df1": df1, "df2": df2}, arrow_blobs
-        )
+    def _fake_arrow_bytes(value: object) -> bytes:
+        nonlocal call_count
+        call_count += 1
+        return blob_a if call_count % 2 == 1 else blob_b
 
-        ref1 = processed_data["df1"]["__streamlit_arrow_ref__"]
-        ref2 = processed_data["df2"]["__streamlit_arrow_ref__"]
-        # Different content → different MD5 hashes → separate blobs
-        assert ref1 != ref2
-        assert len(arrow_blobs) == 2
+    monkeypatch.setattr(ser, "convert_anything_to_arrow_bytes", _fake_arrow_bytes)
+    monkeypatch.setattr(ser, "is_dataframe_like", lambda v: isinstance(v, pd.DataFrame))
+
+    df1 = pd.DataFrame({"x": [1]})
+    df2 = pd.DataFrame({"x": [2]})
+
+    arrow_blobs: dict[str, bytes] = {}
+    processed_data = _extract_dataframes_from_dict(
+        {"df1": df1, "df2": df2}, arrow_blobs
+    )
+
+    ref1 = processed_data["df1"]["__streamlit_arrow_ref__"]
+    ref2 = processed_data["df2"]["__streamlit_arrow_ref__"]
+    # Different content → different MD5 hashes → separate blobs
+    assert ref1 != ref2
+    assert len(arrow_blobs) == 2
+    # Both refs should be MD5 hashes (not counter refs)
+    assert not ref1.startswith("ref_")
+    assert not ref2.startswith("ref_")
 
 
 def test_serialize_mixed_data_with_dataframe():
