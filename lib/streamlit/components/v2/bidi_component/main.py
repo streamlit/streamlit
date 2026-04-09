@@ -254,12 +254,20 @@ class BidiComponentMixin:
             identity["mixed_json"] = self._canonical_json_digest_for_identity(
                 mixed.json
             )
-            # Add the sorted content fingerprints of the Arrow blobs to the identity.
-            # We hash each blob's content rather than relying on ref keys, since
-            # ref keys may be sequential counters (ref_0, ref_1) that don't
-            # reflect content differences.
+            # Use a cheap fingerprint (size + head/tail sample) rather than a
+            # full MD5 hash of each blob. This is O(1) regardless of blob size.
+            # Arrow IPC stores schema in the header and values at the tail, so
+            # we sample both ends to catch differences in either.
+            # In the rare event of a false collision, the user sees a clear
+            # DuplicateElementId error telling them to add a `key` argument.
+
+            def _cheap_fingerprint(data: bytes) -> str:
+                head = data[:64].hex()
+                tail = data[-64:].hex() if len(data) > 64 else ""
+                return f"{len(data)}:{head}:{tail}"
+
             blob_fingerprints = sorted(
-                calc_md5(blob.data) for blob in mixed.arrow_blobs.values()
+                _cheap_fingerprint(blob.data) for blob in mixed.arrow_blobs.values()
             )
             identity["mixed_arrow_blobs"] = ",".join(blob_fingerprints)
         else:

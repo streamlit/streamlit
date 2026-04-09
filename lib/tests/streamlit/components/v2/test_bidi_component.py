@@ -1275,8 +1275,15 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         assert identity["mixed_json"] == calc_md5("{}")
-        # Identity uses sorted MD5 hashes of blob content, not ref key names.
-        expected = ",".join(sorted([calc_md5(b"a"), calc_md5(b"b")]))
+        # Identity uses cheap fingerprints (size + head/tail hex), sorted.
+        expected = ",".join(
+            sorted(
+                [
+                    f"{len(b'a')}:{b'a'[:64].hex()}:",
+                    f"{len(b'b')}:{b'b'[:64].hex()}:",
+                ]
+            )
+        )
         assert identity["mixed_arrow_blobs"] == expected
 
     def test_identity_kwargs_json_canonicalizes_order(self):
