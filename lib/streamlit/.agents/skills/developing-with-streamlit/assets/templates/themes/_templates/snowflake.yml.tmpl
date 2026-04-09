@@ -1,0 +1,25 @@
+# DO NOT EDIT — managed by manage.py, edit _templates/snowflake.yml.tmpl instead
+definition_version: 2
+entities:
+  theme_{{identifier}}:
+    type: streamlit
+    identifier:
+      name: theme_{{identifier}}
+      database: <FROM_CONNECTION>   # Use actual database from connection
+      schema: <FROM_CONNECTION>     # Use actual schema from connection
+    title: "{{title}} Theme"
+    query_warehouse: <FROM_CONNECTION>  # Use actual warehouse from connection
+    # List available compute pools: SHOW COMPUTE POOLS;
+    # Common pool: STREAMLIT_DEDICATED_POOL (verify it exists in your account)
+    compute_pool: <YOUR_COMPUTE_POOL>
+    runtime_name: SYSTEM$ST_CONTAINER_RUNTIME_PY3_11
+    # List available integrations: SHOW EXTERNAL ACCESS INTEGRATIONS;
+    # Common name: PYPI_ACCESS_INTEGRATION (verify it exists in your account)
+    external_access_integrations:
+      - <YOUR_PYPI_INTEGRATION>     # For pip installs (if needed)
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - pyproject.toml
+      - .streamlit/config.toml
+      - static/*

@@ -117,6 +117,28 @@ For **building a dashboard**, read:
 1. `references/dashboards.md`
 2. `references/data-display.md`
 
+**IMPORTANT - Use templates:**
+
+When creating a **new dashboard app**, prefer starting from a template in `assets/templates/apps/`:
+- If a template closely matches the request, copy it and adapt:
+  - `dashboard-metrics` / `dashboard-metrics-snowflake` — KPI cards with time-series charts
+  - `dashboard-companies` — company/entity comparison
+  - `dashboard-compute` / `dashboard-compute-snowflake` — resource/credit monitoring
+  - `dashboard-feature-usage` — feature adoption tracking
+  - `dashboard-seattle-weather` — public dataset exploration (local only)
+  - `dashboard-stock-peers` / `dashboard-stock-peers-snowflake` — financial peer analysis
+- If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
+- See `assets/templates/apps/README.md` for template descriptions
+
+When **editing an existing app**, use templates as reference for best practices:
+- Check `assets/templates/apps/` for caching patterns, layout structure, and Snowflake integration
+- Apply consistent patterns from templates to improve the existing code
+
+When applying a **custom theme**, use a template from `assets/templates/themes/`:
+- Copy a theme directory (snowflake, dracula, nord, stripe, solarized-light, spotify, github, minimal)
+- Themes include bundled fonts for Snowflake deployment compatibility
+- See `assets/templates/themes/README.md` for theme previews
+
 For **performance optimization**, read:
 1. `references/performance.md`
 

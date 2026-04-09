@@ -1,0 +1,18 @@
+definition_version: 2
+entities:
+  DASHBOARD_STOCK_PEERS_SNOWFLAKE:
+    type: streamlit
+    identifier:
+      name: DASHBOARD_STOCK_PEERS_SNOWFLAKE
+      database: <FROM_CONNECTION>   # Use: snow connection list
+      schema: <FROM_CONNECTION>
+    query_warehouse: <FROM_CONNECTION>
+    runtime_name: SYSTEM$ST_CONTAINER_RUNTIME_PY3_11
+    # List available: SHOW EXTERNAL ACCESS INTEGRATIONS;
+    # Common: PYPI_ACCESS_INTEGRATION (verify exists)
+    external_access_integrations:
+      - <YOUR_PYPI_INTEGRATION>
+    main_file: streamlit_app.py
+    artifacts:
+      - streamlit_app.py
+      - pyproject.toml

@@ -1,0 +1,68 @@
+[server]
+enableStaticServing = true
+
+# Spotify Theme for Streamlit
+# Bold, energetic, high contrast with signature green
+[theme]
+base = "dark"
+primaryColor = "#1DB954"
+backgroundColor = "#191414"
+secondaryBackgroundColor = "#282828"
+codeBackgroundColor = "#282828"
+textColor = "#ffffff"
+linkColor = "#1DB954"
+borderColor = "#404040"
+showWidgetBorder = false
+showSidebarBorder = false
+baseRadius = "8px"
+buttonRadius = "full"
+font = "Inter"
+codeFont = "FiraCode"
+codeFontSize = "0.85rem"
+baseFontSize = 16
+baseFontWeight = 400
+headingFontWeights = [800, 700, 700, 600, 600, 600]
+headingFontSizes = ["48px", "36px", "28px", "22px", "18px", "16px"]
+chartCategoricalColors = ["#1DB954", "#1ED760", "#B3B3B3", "#535353", "#191414", "#FFFFFF", "#509BF5"]
+
+# Spotify color palette
+greenColor = "#1DB954"
+blueColor = "#509BF5"
+grayColor = "#B3B3B3"
+
+[theme.sidebar]
+backgroundColor = "#000000"
+secondaryBackgroundColor = "#282828"
+codeBackgroundColor = "#282828"
+borderColor = "#333333"
+
+# Local font files
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Medium.ttf"
+weight = 500
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-SemiBold.ttf"
+weight = 600
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Bold.ttf"
+weight = 700
+
+[[theme.fontFaces]]
+family = "FiraCode"
+url = "app/static/FiraCode-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "FiraCode"
+url = "app/static/FiraCode-Medium.ttf"
+weight = 500

@@ -1,0 +1,7 @@
+# BEGIN managed by manage.py
+*/.streamlit/config.toml linguist-generated
+*/streamlit_app.py linguist-generated
+*/pyproject.toml linguist-generated
+*/snowflake.yml linguist-generated
+*/static/*.ttf linguist-generated
+# END managed by manage.py

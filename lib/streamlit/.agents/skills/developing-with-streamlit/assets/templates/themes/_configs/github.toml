@@ -1,0 +1,71 @@
+[server]
+enableStaticServing = true
+
+# GitHub Theme for Streamlit
+# Clean, developer-friendly, functional with signature blue accents
+[theme]
+primaryColor = "#0969da"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f8fa"
+codeBackgroundColor = "#f6f8fa"
+textColor = "#1F2328"
+linkColor = "#0969da"
+borderColor = "#d0d7de"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "6px"
+buttonRadius = "6px"
+font = "Inter"
+codeFont = "JetBrainsMono"
+codeFontSize = "0.85rem"
+codeTextColor = "#1F2328"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+linkUnderline = false
+chartCategoricalColors = ["#0969da", "#1a7f37", "#bf3989", "#8250df", "#cf222e", "#bf8700", "#57606a"]
+
+# GitHub color palette
+blueColor = "#0969da"
+greenColor = "#1a7f37"
+redColor = "#cf222e"
+violetColor = "#8250df"
+orangeColor = "#bf8700"
+
+[theme.sidebar]
+backgroundColor = "#f6f8fa"
+secondaryBackgroundColor = "#eaeef2"
+codeBackgroundColor = "#eaeef2"
+borderColor = "#d0d7de"
+
+# Local font files
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Medium.ttf"
+weight = 500
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-SemiBold.ttf"
+weight = 600
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Bold.ttf"
+weight = 700
+
+[[theme.fontFaces]]
+family = "JetBrainsMono"
+url = "app/static/JetBrainsMono-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "JetBrainsMono"
+url = "app/static/JetBrainsMono-Medium.ttf"
+weight = 500

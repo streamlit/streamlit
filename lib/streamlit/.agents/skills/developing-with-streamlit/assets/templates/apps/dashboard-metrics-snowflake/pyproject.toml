@@ -1,0 +1,11 @@
+[project]
+name = "dashboard-metrics-snowflake"
+version = "1.0.0"
+description = "A metrics dashboard template using Snowflake for data storage and retrieval"
+requires-python = ">=3.11"
+dependencies = [
+    "altair>=5.5.0",
+    "pandas>=2.2.3",
+    "snowflake-connector-python>=3.3.0",
+    "streamlit[snowflake]>=1.54.0",
+]

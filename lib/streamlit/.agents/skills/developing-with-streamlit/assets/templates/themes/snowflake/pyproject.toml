@@ -1,0 +1,12 @@
+# DO NOT EDIT — managed by manage.py, edit _templates/pyproject.toml.tmpl instead
+[project]
+name = "theme-snowflake"
+version = "1.0.0"
+description = "Snowflake theme for Streamlit"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=1.26.0",
+    "pandas>=2.2.3",
+    "snowflake-connector-python>=3.3.0",
+    "streamlit[snowflake]>=1.54.0",
+]

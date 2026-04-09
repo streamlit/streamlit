@@ -1,0 +1,76 @@
+[server]
+enableStaticServing = true
+
+# Snowflake Theme for Streamlit
+# The Data Cloud company aesthetic - clean, professional, icy blue branding
+[theme]
+primaryColor = "#29B5E8"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f4f9fc"
+codeBackgroundColor = "#e8f4f8"
+textColor = "#11567F"
+linkColor = "#29B5E8"
+borderColor = "#d0e8f2"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "8px"
+buttonRadius = "8px"
+font = "Inter"
+codeFont = "JetBrainsMono"
+codeFontSize = "13px"
+codeTextColor = "#11567F"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
+headingFontWeights = [600, 600, 600, 500, 500, 500]
+linkUnderline = false
+chartCategoricalColors = ["#29B5E8", "#FF8B00", "#36B37E", "#6554C0", "#DE350B", "#11567F", "#FFAB00", "#00A3BF"]
+
+# Snowflake color palette
+blueColor = "#29B5E8"
+greenColor = "#36B37E"
+yellowColor = "#FFAB00"
+orangeColor = "#FF8B00"
+redColor = "#DE350B"
+violetColor = "#6554C0"
+
+dataframeBorderColor = "#d0e8f2"
+dataframeHeaderBackgroundColor = "#e8f4f8"
+
+[theme.sidebar]
+backgroundColor = "#11567F"
+secondaryBackgroundColor = "#174D6A"
+codeBackgroundColor = "#0E4D6B"
+textColor = "#ffffff"
+borderColor = "#1E6D94"
+
+# Local font files
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Medium.ttf"
+weight = 500
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-SemiBold.ttf"
+weight = 600
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Bold.ttf"
+weight = 700
+
+[[theme.fontFaces]]
+family = "JetBrainsMono"
+url = "app/static/JetBrainsMono-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "JetBrainsMono"
+url = "app/static/JetBrainsMono-Medium.ttf"
+weight = 500

@@ -1,0 +1,73 @@
+[server]
+enableStaticServing = true
+
+# Dracula Theme for Streamlit
+# Popular dark theme with vibrant colors on dark background
+[theme]
+base = "dark"
+primaryColor = "#bd93f9"
+backgroundColor = "#282a36"
+secondaryBackgroundColor = "#21222c"
+codeBackgroundColor = "#21222c"
+textColor = "#f8f8f2"
+linkColor = "#8be9fd"
+borderColor = "#44475a"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "8px"
+buttonRadius = "8px"
+font = "FiraSans"
+codeFont = "JetBrainsMono"
+codeFontSize = "0.875rem"
+codeTextColor = "#f8f8f2"
+baseFontSize = 14
+baseFontWeight = 400
+headingFontSizes = ["32px", "24px", "20px", "16px", "14px", "12px"]
+headingFontWeights = [700, 600, 600, 600, 600, 600]
+linkUnderline = false
+chartCategoricalColors = ["#bd93f9", "#50fa7b", "#ff79c6", "#8be9fd", "#ffb86c", "#ff5555", "#f1fa8c"]
+
+# Dracula color palette
+violetColor = "#bd93f9"
+greenColor = "#50fa7b"
+redColor = "#ff5555"
+blueColor = "#8be9fd"
+yellowColor = "#f1fa8c"
+orangeColor = "#ffb86c"
+
+[theme.sidebar]
+backgroundColor = "#21222c"
+secondaryBackgroundColor = "#191a21"
+codeBackgroundColor = "#191a21"
+borderColor = "#44475a"
+
+# Local font files
+[[theme.fontFaces]]
+family = "FiraSans"
+url = "app/static/FiraSans-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "FiraSans"
+url = "app/static/FiraSans-Medium.ttf"
+weight = 500
+
+[[theme.fontFaces]]
+family = "FiraSans"
+url = "app/static/FiraSans-SemiBold.ttf"
+weight = 600
+
+[[theme.fontFaces]]
+family = "FiraSans"
+url = "app/static/FiraSans-Bold.ttf"
+weight = 700
+
+[[theme.fontFaces]]
+family = "JetBrainsMono"
+url = "app/static/JetBrainsMono-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "JetBrainsMono"
+url = "app/static/JetBrainsMono-Medium.ttf"
+weight = 500

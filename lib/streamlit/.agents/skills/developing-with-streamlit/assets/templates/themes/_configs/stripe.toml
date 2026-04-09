@@ -1,0 +1,69 @@
+[server]
+enableStaticServing = true
+
+# Stripe Theme for Streamlit
+# Polished, professional, modern with signature purple/indigo gradients
+[theme]
+primaryColor = "#635bff"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f6f9fc"
+codeBackgroundColor = "#f7f9fc"
+textColor = "#425466"
+linkColor = "#635bff"
+borderColor = "#e3e8ee"
+showWidgetBorder = true
+showSidebarBorder = true
+baseRadius = "8px"
+buttonRadius = "8px"
+font = "Inter"
+codeFont = "SourceCodePro"
+codeFontSize = "0.85rem"
+codeTextColor = "#425466"
+baseFontSize = 15
+baseFontWeight = 400
+headingFontSizes = ["40px", "32px", "24px", "20px", "16px", "14px"]
+headingFontWeights = [600, 600, 600, 600, 600, 600]
+linkUnderline = false
+chartCategoricalColors = ["#635bff", "#00d4ff", "#0a2540", "#adbdcc", "#80e9ff", "#7a73ff", "#425466"]
+
+# Stripe color palette
+violetColor = "#635bff"
+blueColor = "#00d4ff"
+grayColor = "#adbdcc"
+
+[theme.sidebar]
+backgroundColor = "#f6f9fc"
+secondaryBackgroundColor = "#ebeef1"
+codeBackgroundColor = "#ebeef1"
+borderColor = "#e3e8ee"
+
+# Local font files
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Medium.ttf"
+weight = 500
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-SemiBold.ttf"
+weight = 600
+
+[[theme.fontFaces]]
+family = "Inter"
+url = "app/static/Inter-Bold.ttf"
+weight = 700
+
+[[theme.fontFaces]]
+family = "SourceCodePro"
+url = "app/static/SourceCodePro-Regular.ttf"
+weight = 400
+
+[[theme.fontFaces]]
+family = "SourceCodePro"
+url = "app/static/SourceCodePro-Medium.ttf"
+weight = 500
