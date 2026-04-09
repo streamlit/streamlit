@@ -355,6 +355,13 @@ const Selectbox: FC<Props> = ({
     [propDerivedLabel]
   )
 
+  const handleInputFocus = useCallback(() => {
+    userEditedInputThisFocusRef.current = false
+    // Keep the committed option label in the input on focus; Ark can emit an empty
+    // controlled value before input-change reconciliation (e2e: edit "male" with backspace).
+    setInputQuery(propDerivedLabel)
+  }, [propDerivedLabel])
+
   const onOpenChange = useCallback(
     (d: { open: boolean }) => {
       comboboxOpenRef.current = d.open
@@ -479,9 +486,7 @@ const Selectbox: FC<Props> = ({
               data-testid="stSelectboxInput"
               readOnly={inputReadOnly === "readonly"}
               css={cssInput(theme, selectDisabled)}
-              onFocus={() => {
-                userEditedInputThisFocusRef.current = false
-              }}
+              onFocus={handleInputFocus}
               onKeyDownCapture={onInputKeyDown}
             />
             {clearable && (

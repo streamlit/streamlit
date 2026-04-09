@@ -150,11 +150,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           setStoredOpen(false)
         }
         // Defer closing so inputs inside the popover receive blur/change before hide.
-        window.requestAnimationFrame(() => {
-          window.requestAnimationFrame(() => {
-            setOpen(false)
-          })
-        })
+        window.setTimeout(() => {
+          setOpen(false)
+        }, 0)
         return
       }
 

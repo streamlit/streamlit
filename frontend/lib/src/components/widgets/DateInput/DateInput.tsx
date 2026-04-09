@@ -619,8 +619,12 @@ function SingleTextField({
       lastNativeValueRef.current = el.value
     }
     el.addEventListener("input", syncNative, { capture: true })
+    el.addEventListener("change", syncNative, { capture: true })
     syncNative()
-    return () => el.removeEventListener("input", syncNative, { capture: true })
+    return () => {
+      el.removeEventListener("input", syncNative, { capture: true })
+      el.removeEventListener("change", syncNative, { capture: true })
+    }
   }, [valueSyncKey, draftResetSeq])
 
   return (
@@ -690,8 +694,9 @@ function SingleTextField({
             e.preventDefault()
             e.stopPropagation()
             const el = e.currentTarget
-            // Prefer native tracker (fill() may not update React state before keydown).
-            const v = lastNativeValueRef.current || el.value
+            // Prefer live DOM value; lastNativeValueRef can still hold the pre-fill value
+            // when Playwright fill() updated the input without our tracker seeing it first.
+            const v = el.value || lastNativeValueRef.current
             commitSingleIfDistinct(v)
             el.blur()
             return
