@@ -21,6 +21,7 @@ import dataclasses
 import inspect
 import math
 import re
+import warnings
 from collections import ChainMap, UserDict, UserList, deque
 from collections.abc import ItemsView, Iterable, Mapping, Sequence
 from enum import Enum, EnumMeta, auto
@@ -749,7 +750,10 @@ def convert_anything_to_pandas_df(
         has_callable_attr(data, "__dataframe__")
         and is_pandas_version_less_than("1.5.0") is False
     ):
-        data_df = pd.api.interchange.from_dataframe(data)
+        # Suppress the Pandas4Warning about deprecated interchange protocol
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "The Dataframe Interchange Protocol")
+            data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
     # Support for generator functions
