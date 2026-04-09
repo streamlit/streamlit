@@ -53,9 +53,9 @@ def _check_expected_elements_disabled(app: Page):
         "disabled", ""
     )
     # Selectbox
-    expect(app.get_by_test_id("stSelectbox").locator("input")).to_have_attribute(
-        "disabled", ""
-    )
+    expect(
+        app.get_by_test_id("stSelectbox").get_by_test_id("stSelectboxComboboxInput")
+    ).to_have_attribute("disabled", "")
     # Time input
     expect(app.get_by_test_id("stTimeInput").locator("input")).to_have_attribute(
         "disabled", ""

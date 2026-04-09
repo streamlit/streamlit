@@ -23,6 +23,7 @@ import { format, isValid, parse } from "date-fns"
 import moment from "moment"
 import {
   memo,
+  type MouseEvent,
   ReactElement,
   useCallback,
   useContext,
@@ -518,6 +519,8 @@ function DateInput({
         )}
       </WidgetLabel>
       <DatePicker.Root
+        lazyMount
+        unmountOnExit
         locale={safeLocaleTag}
         timeZone={timeZone}
         selectionMode={element.isRange ? "range" : "single"}
@@ -554,58 +557,72 @@ function DateInput({
       >
         <StyledControlRow>
           <DatePicker.Control>
-            <StyledFieldRow $hasError={Boolean(error)}>
-              <MainDateInputField
-                disabled={disabled}
-                error={error}
-                placeholderText={placeholderText}
-                textValue={textValue}
-                onTextChange={handleTextChange}
-                onBlurField={(currentValue: string) => {
-                  if (currentValue.trim() === "") {
-                    setIsEmpty(true)
-                    const newValue = stringsToDates(element.default)
-                    setValueWithSource({ value: newValue, fromUi: true })
-                    setTextValue(formatDatesForDisplay(newValue))
-                    setIsEmpty(!newValue.length)
-                  }
-                }}
-              />
-              {error && (
-                <Tooltip
-                  content={
-                    <StreamlitMarkdown source={error} allowHTML={false} />
-                  }
-                  placement={Placement.TOP_RIGHT}
-                  error
-                >
-                  <Icon content={ErrorOutline} size="lg" />
-                </Tooltip>
+            <DatePicker.Context>
+              {api => (
+                <>
+                  <StyledFieldRow $hasError={Boolean(error)}>
+                    <MainDateInputField
+                      disabled={disabled}
+                      error={error}
+                      placeholderText={placeholderText}
+                      textValue={textValue}
+                      onTextChange={handleTextChange}
+                      onBlurField={(currentValue: string) => {
+                        if (currentValue.trim() === "") {
+                          setIsEmpty(true)
+                          const newValue = stringsToDates(element.default)
+                          setValueWithSource({ value: newValue, fromUi: true })
+                          setTextValue(formatDatesForDisplay(newValue))
+                          setIsEmpty(!newValue.length)
+                        }
+                      }}
+                      onInputClick={e => {
+                        if (e.isTrusted) {
+                          api.setOpen(true)
+                        }
+                      }}
+                    />
+                    {error && (
+                      <Tooltip
+                        content={
+                          <StreamlitMarkdown
+                            source={error}
+                            allowHTML={false}
+                          />
+                        }
+                        placement={Placement.TOP_RIGHT}
+                        error
+                      >
+                        <Icon content={ErrorOutline} size="lg" />
+                      </Tooltip>
+                    )}
+                    {clearable && (
+                      <DatePicker.ClearTrigger
+                        onClick={() => {
+                          allowEmptyPickerCommitRef.current = true
+                        }}
+                      />
+                    )}
+                  </StyledFieldRow>
+                  <DatePicker.Trigger
+                    data-testid="stDateInputCalendarTrigger"
+                    disabled={disabled}
+                    style={{
+                      cursor: "pointer",
+                      border: "none",
+                      background: "transparent",
+                      padding: spacing.twoXS,
+                      minWidth: sizes.numberInputControlsWidth,
+                      minHeight: sizes.numberInputControlsWidth,
+                      flexShrink: 0,
+                    }}
+                    type="button"
+                  >
+                    <span aria-hidden>{"\u200b"}</span>
+                  </DatePicker.Trigger>
+                </>
               )}
-              {clearable && (
-                <DatePicker.ClearTrigger
-                  onClick={() => {
-                    allowEmptyPickerCommitRef.current = true
-                  }}
-                />
-              )}
-            </StyledFieldRow>
-            <DatePicker.Trigger
-              data-testid="stDateInputCalendarTrigger"
-              disabled={disabled}
-              style={{
-                cursor: "pointer",
-                border: "none",
-                background: "transparent",
-                padding: spacing.twoXS,
-                minWidth: sizes.numberInputControlsWidth,
-                minHeight: sizes.numberInputControlsWidth,
-                flexShrink: 0,
-              }}
-              type="button"
-            >
-              <span aria-hidden>{"\u200b"}</span>
-            </DatePicker.Trigger>
+            </DatePicker.Context>
           </DatePicker.Control>
         </StyledControlRow>
         <DatePicker.Positioner
@@ -617,7 +634,7 @@ function DateInput({
             }),
           }}
         >
-          <DatePicker.Content>
+          <DatePicker.Content data-testid="stDateInputCalendar">
             <StyledCalendarInner
               fontSize={fontSizes.sm}
               paddingRight={spacing.sm}
@@ -627,6 +644,7 @@ function DateInput({
             >
               {enableQuickSelect && (
                 <StyledQuickSelect
+                  data-testid="stDateInputQuickSelect"
                   aria-label="Choose a date range"
                   defaultValue=""
                   onChange={e => {
@@ -763,6 +781,7 @@ function MainDateInputField({
   textValue,
   onTextChange,
   onBlurField,
+  onInputClick,
 }: {
   disabled: boolean
   error: string | null
@@ -770,6 +789,7 @@ function MainDateInputField({
   textValue: string
   onTextChange: (v: string) => void
   onBlurField: (currentValue: string) => void
+  onInputClick: (e: MouseEvent<HTMLInputElement>) => void
 }): ReactElement {
   return (
     <StyledTextInput
@@ -779,6 +799,7 @@ function MainDateInputField({
       placeholder={placeholderText}
       value={textValue}
       $hasError={Boolean(error)}
+      onClick={onInputClick}
       onChange={e => {
         onTextChange(e.target.value)
       }}

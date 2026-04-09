@@ -45,7 +45,7 @@ describe("VirtualDropdown element", () => {
     render(<VirtualDropdown />)
 
     expect(
-      screen.getByTestId("stSelectboxVirtualDropdownEmpty")
+      screen.getByTestId("stMultiselectVirtualDropdownEmpty")
     ).toBeInTheDocument()
   })
 
@@ -57,7 +57,7 @@ describe("VirtualDropdown element", () => {
     )
 
     expect(
-      screen.getByTestId("stSelectboxVirtualDropdownEmpty")
+      screen.getByTestId("stMultiselectVirtualDropdownEmpty")
     ).toBeInTheDocument()
   })
 
@@ -69,7 +69,7 @@ describe("VirtualDropdown element", () => {
     )
 
     expect(
-      screen.getByTestId("stSelectboxVirtualDropdown")
+      screen.getByTestId("stMultiselectVirtualDropdown")
     ).toBeInTheDocument()
 
     // each option will have a tooltip attached to it
@@ -85,7 +85,7 @@ describe("VirtualDropdown element", () => {
     )
 
     expect(
-      screen.getByTestId("stSelectboxVirtualDropdown")
+      screen.getByTestId("stMultiselectVirtualDropdown")
     ).toBeInTheDocument()
 
     expect(screen.getAllByTestId("stTooltipHoverTarget")).toHaveLength(2)

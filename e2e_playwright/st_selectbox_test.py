@@ -52,7 +52,7 @@ def get_selectbox_input(
     Locator
         The input of the element.
     """
-    return get_selectbox(locator, label).locator("input").first
+    return get_selectbox(locator, label).get_by_test_id("stSelectboxComboboxInput")
 
 
 def test_selectbox_widget_rendering(
@@ -153,7 +153,7 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     assert_snapshot(selection_dropdown, name="st_selectbox-selection_dropdown")
     # Select last option:
     selection_dropdown.locator("li").nth(1).click()
@@ -183,7 +183,7 @@ def test_shows_correct_options_via_fuzzy_search(
     selectbox_input.type("exp")
 
     # Check filtered options
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
@@ -216,7 +216,7 @@ def test_keeps_value_on_selection_close(app: Page):
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
 
     # Click outside to close the dropdown:
     app.get_by_test_id("stMarkdown").first.click()
@@ -234,7 +234,7 @@ def test_handles_callback_on_change_correctly(app: Page):
     get_selectbox_input(app, "selectbox 8 (with callback, help)").click()
 
     # Select last option:
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     selection_dropdown.locator("li").first.click()
 
     # Check that selection worked:
@@ -335,7 +335,7 @@ def test_dismiss_change_by_clicking_away(app: Page):
 
     # Get selectbox input
     selectbox_element = get_selectbox(app, "selectbox 14 (test dismiss behavior)")
-    selectbox_input = selectbox_element.locator("input")
+    selectbox_input = selectbox_element.get_by_test_id("stSelectboxComboboxInput")
 
     # Click to focus the input
     selectbox_input.click()
@@ -411,7 +411,7 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
     selectbox_elem = get_selectbox(
         app, "selectbox 17 - empty options with accept_new_options"
     )
-    selectbox_input = selectbox_elem.locator("input")
+    selectbox_input = selectbox_elem.get_by_test_id("stSelectboxComboboxInput")
 
     # Verify the initial placeholder shows a message about adding an option
     expect(selectbox_elem).to_contain_text("Add an option")
@@ -465,7 +465,7 @@ def test_selectbox_session_state_sync_after_open_close(app: Page):
     selectbox_input.click()
 
     # Verify dropdown is open
-    expect(app.locator('[data-baseweb="popover"]').first).to_be_visible()
+    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
 
     # Close by pressing Escape without making a selection
     app.keyboard.press("Escape")
@@ -480,7 +480,7 @@ def test_selectbox_prefix_filter_mode_matches_prefix_only(app: Page):
     selectbox_input = get_selectbox_input(app, "selectbox 21 (filter_mode='prefix')")
     selectbox_input.type("A123")
 
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(2)
     expect(options.nth(0)).to_have_text("A123")
@@ -495,7 +495,7 @@ def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
     selectbox_input = get_selectbox_input(app, "selectbox 22 (filter_mode='contains')")
     selectbox_input.type("EXAMPLE")
 
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(2)
     expect(options.nth(0)).to_have_text("alice@example.com")
@@ -511,7 +511,7 @@ def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Pag
     expect(selectbox_input).to_have_attribute("readonly", "")
 
     selectbox_input.click()
-    selection_dropdown = app.locator('[data-baseweb="popover"]').first
+    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
 

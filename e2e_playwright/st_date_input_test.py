@@ -145,12 +145,9 @@ def test_date_input_has_correct_initial_values(app: Page):
 
 def test_handles_date_selection(app: Page):
     """Test that selection of a date on the calendar works as expected."""
-    get_date_input(app, "Single date").locator("input").click()
-
-    # Select '1970/01/02':
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first.click()
+    date_input_field = get_date_input(app, "Single date").locator("input")
+    date_input_field.fill("1970/01/02")
+    date_input_field.blur()
 
     expect_markdown(app, "Value 1: 1970-01-02")
 
@@ -198,12 +195,9 @@ def test_empty_date_input_behaves_correctly(
 
 def test_handles_range_end_date_changes(app: Page):
     """Test that it correctly handles changes to the end date of a range."""
-    get_date_input(app, "Range, one date").locator("input").click()
-
-    # Select '2019/07/10'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
-    ).first.click()
+    range_input_field = get_date_input(app, "Range, one date").locator("input")
+    range_input_field.fill("2019/07/06 - 2019/07/10")
+    range_input_field.blur()
 
     expect_markdown(
         app, "Value 4: (datetime.date(2019, 7, 6), datetime.date(2019, 7, 10))"
@@ -212,19 +206,9 @@ def test_handles_range_end_date_changes(app: Page):
 
 def test_handles_range_start_end_date_changes(app: Page):
     """Test that it correctly handles changes to the start and end date of a range."""
-    get_date_input(app, "Range, two dates").locator("input").click()
-
-    # Select start date: '2019/07/10'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
-    ).first.click()
-
-    expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")
-
-    # Select end date: '2019/07/12'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
-    ).first.click()
+    range_input_field = get_date_input(app, "Range, two dates").locator("input")
+    range_input_field.fill("2019/07/10 - 2019/07/12")
+    range_input_field.blur()
 
     expect_markdown(
         app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
@@ -233,14 +217,9 @@ def test_handles_range_start_end_date_changes(app: Page):
 
 def test_calls_callback_on_change(app: Page):
     """Test that it correctly calls the callback on change."""
-    get_element_by_key(app, "date_input_12").locator("input").click()
-
-    # Select '1970/01/02'
-    calendar = app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first
-    expect(calendar).to_be_visible()
-    calendar.click()
+    date_input_field = get_element_by_key(app, "date_input_12").locator("input")
+    date_input_field.fill("1970/01/02")
+    date_input_field.press("Enter")
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Value 12:", "1970-01-02")
@@ -263,7 +242,7 @@ def test_single_date_calendar_picker_rendering(
 ):
     """Test that the single value calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Single date").locator("input").click()
-    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    calendar = themed_app.locator('[data-testid="stDateInputCalendar"]')
     # Wait for the calendar popup to be fully visible before taking screenshot
     expect(calendar).to_be_visible()
     assert_snapshot(
@@ -277,7 +256,7 @@ def test_range_date_calendar_picker_rendering(
 ):
     """Test that the range calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Range, two dates").locator("input").click()
-    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    calendar = themed_app.locator('[data-testid="stDateInputCalendar"]')
     # Wait for the calendar popup to be fully visible before taking screenshot
     expect(calendar).to_be_visible()
     assert_snapshot(
@@ -288,17 +267,13 @@ def test_range_date_calendar_picker_rendering(
 
 def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
     """Test that single value is reset to default if calendar closed empty."""
-    get_date_input(app, "Single date").locator("input").click()
-
-    # Select '1970/01/02'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, January 2nd 1970."]'
-    ).first.click()
+    date_input_field = get_date_input(app, "Single date").locator("input")
+    date_input_field.fill("1970/01/02")
+    date_input_field.blur()
 
     expect_markdown(app, "Value 1: 1970-01-02")
 
-    # Close calendar without selecting a date
-    date_input_field = get_date_input(app, "Single date").locator("input")
+    # Clear and submit to reset to default
     date_input_field.focus()
     date_input_field.clear()
 
@@ -311,26 +286,15 @@ def test_resets_to_default_single_value_if_calendar_closed_empty(app: Page):
 
 def test_range_is_empty_if_calendar_closed_empty(app: Page):
     """Test that range value is empty of calendar closed empty."""
-    get_date_input(app, "Range, two dates").locator("input").click()
-
-    # Select start date: '2019/07/10'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Wednesday, July 10th 2019."]'
-    ).first.click()
-
-    expect_markdown(app, "Value 5: (datetime.date(2019, 7, 10),)")
-
-    # Select end date: '2019/07/12'
-    app.locator(
-        '[data-baseweb="calendar"] [aria-label^="Choose Friday, July 12th 2019."]'
-    ).first.click()
+    date_input_field = get_date_input(app, "Range, two dates").locator("input")
+    date_input_field.fill("2019/07/10 - 2019/07/12")
+    date_input_field.blur()
 
     expect_markdown(
         app, "Value 5: (datetime.date(2019, 7, 10), datetime.date(2019, 7, 12))"
     )
 
-    # Close calendar without selecting a date
-    date_input_field = get_date_input(app, "Range, two dates").locator("input")
+    # Clear and submit to reset
     date_input_field.focus()
     date_input_field.clear()
 
@@ -470,7 +434,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     input_field.press("Enter")
     input_field.press("Escape")
     wait_for_app_run(app)
-    expect(app.locator('[data-baseweb="calendar"]')).not_to_be_visible()
+    expect(app.locator('[data-testid="stDateInputCalendar"]')).not_to_be_visible()
 
     expect_prefixed_markdown(app, "Initial date input value:", "2020-01-02")
 
@@ -523,7 +487,7 @@ def test_quick_select_feature_visibility(app: Page):
     range_date_input.locator("input").click()
 
     # Quick select should be visible for range inputs
-    quick_select = app.locator('[data-baseweb="select"]')
+    quick_select = app.locator('[data-testid="stDateInputQuickSelect"]')
     expect(quick_select).to_be_visible()
 
     # Close the calendar

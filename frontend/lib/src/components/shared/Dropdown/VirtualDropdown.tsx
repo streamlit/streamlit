@@ -111,6 +111,8 @@ interface VirtualDropdownProps {
   children?: React.ReactNode
   /** Base UI Selectbox path: virtualize explicit rows (e.g. Combobox.Item cells). */
   selectboxVirtualRows?: SelectboxVirtualRow[]
+  /** When set (e.g. dropdown open), avoids duplicate test ids across closed popovers. */
+  selectboxListDataTestId?: string
   renderSelectboxRow?: (args: {
     row: SelectboxVirtualRow
     index: number
@@ -161,7 +163,7 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
       return (
         <SelectboxVirtualListRoot
           ref={ref}
-          data-testid="stSelectboxVirtualDropdown"
+          data-testid={props.selectboxListDataTestId}
         >
           <FixedSizeList
             width="100%"
@@ -208,7 +210,7 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
             overflow: "hidden",
           }}
           ref={ref}
-          data-testid="stSelectboxVirtualDropdownEmpty"
+          data-testid="stMultiselectVirtualDropdownEmpty"
         >
           <StyledEmptyState
             $style={{
@@ -265,7 +267,7 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
           // one on the popover, so we need to remove it here.
           boxShadow: "none",
         }}
-        data-testid="stSelectboxVirtualDropdown"
+        data-testid="stMultiselectVirtualDropdown"
       >
         <FixedSizeList
           width="100%"

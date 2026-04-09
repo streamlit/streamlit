@@ -486,6 +486,7 @@ const Selectbox: FC<Props> = ({
                 <SelectionMirror>{value}</SelectionMirror>
               )}
               <StyledComboboxInput
+                data-testid="stSelectboxComboboxInput"
                 $disabled={selectDisabled}
                 disabled={selectDisabled}
                 readOnly={inputReadOnly != null}
@@ -534,6 +535,9 @@ const Selectbox: FC<Props> = ({
               <Combobox.List>
                 {displayRows.length === 0 ? (
                   <Combobox.Empty
+                    data-testid={
+                      open ? "stSelectboxVirtualDropdown" : undefined
+                    }
                     style={{
                       padding: theme.spacing.md,
                       color: theme.colors.fadedText60,
@@ -543,6 +547,9 @@ const Selectbox: FC<Props> = ({
                   </Combobox.Empty>
                 ) : (
                   <VirtualDropdown
+                    selectboxListDataTestId={
+                      open ? "stSelectboxVirtualDropdown" : undefined
+                    }
                     selectboxVirtualRows={displayRows}
                     renderSelectboxRow={renderSelectboxRow}
                   />

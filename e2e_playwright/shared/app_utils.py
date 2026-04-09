@@ -253,7 +253,7 @@ def select_selectbox_option(
 
     # Type to filter the dropdown (handles virtualized lists where options
     # may not be rendered until scrolled into view)
-    selectbox_input = selectbox.locator("input")
+    selectbox_input = selectbox.get_by_test_id("stSelectboxComboboxInput")
     selectbox_input.click()
 
     # Wait for dropdown to be visible before typing

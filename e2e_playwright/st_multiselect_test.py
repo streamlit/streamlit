@@ -406,7 +406,7 @@ def test_multiselect_accept_new_options(app: Page):
 
     # Try to add a fourth option (dropdown still open) - prevented by max_selections
     expect(
-        app.get_by_test_id("stSelectboxVirtualDropdownEmpty").locator("li")
+        app.get_by_test_id("stMultiselectVirtualDropdownEmpty").locator("li")
     ).to_have_text(
         "You can only select up to 3 options. Remove an option first.",
         use_inner_text=True,
