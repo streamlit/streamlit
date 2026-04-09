@@ -120,7 +120,7 @@ return wrapped_fragment()
 
 # Proposed:
 if parallel:
-    _dispatch_parallel_fragment(ctx, wrapped_fragment)
+    _dispatch_parallel_fragment(ctx, fragment_id, wrapped_fragment)
     return None
 else:
     return wrapped_fragment()
@@ -141,7 +141,7 @@ def _dispatch_parallel_fragment(
     parent_context = contextvars.copy_context()
     thread = threading.Thread(
         target=_run_parallel_fragment,
-        args=(wrapped_fragment, fragment_id, parent_context),
+        args=(ctx.parallel_coordinator, wrapped_fragment, fragment_id, parent_context),
         name=f"parallel_fragment_{_short_id(fragment_id)}",
     )
     add_script_run_ctx(thread, ctx)
