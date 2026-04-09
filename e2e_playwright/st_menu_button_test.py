@@ -49,7 +49,7 @@ def select_menu_option(page: Page, label: str, option: str):
     wait_for_app_run(page)
 
 
-TOTAL_MENU_BUTTONS = 16  # Including sidebar and fragment
+TOTAL_MENU_BUTTONS = 19  # Including sidebar, fragment, and menu-style icons
 
 
 def test_menu_button_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -264,3 +264,32 @@ def test_menu_button_in_fragment(app: Page):
 
     # Fragment should show the selected value
     expect_markdown(app, "menu_button-in-fragment selection: Fragment B")
+
+
+def test_menu_button_menu_style_icons_hide_chevron(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that menu-style icon labels hide the chevron (expand/collapse icon)."""
+    container = get_element_by_key(app, "menu_style_icons_container")
+
+    # Verify all three menu buttons are visible
+    menu_buttons = container.get_by_test_id("stMenuButton")
+    expect(menu_buttons).to_have_count(3)
+
+    # Check that chevron icons are NOT present in these buttons
+    # The chevron uses expand_more/expand_less material icons
+    menu_icon_button = get_element_by_key(app, "menu_icon_button")
+    more_vert_button = get_element_by_key(app, "more_vert_icon_button")
+    more_horiz_button = get_element_by_key(app, "more_horiz_icon_button")
+
+    # None of these buttons should have expand_more or expand_less icons
+    expect(menu_icon_button.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_vert_button.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_horiz_button.get_by_text("expand_more")).not_to_be_visible()
+
+    # Verify that regular buttons DO have the chevron (for contrast)
+    regular_button = get_menu_button(app, "Actions")
+    expect(regular_button.get_by_text("expand_more")).to_be_visible()
+
+    # Snapshot the container with all three menu-style icon buttons
+    assert_snapshot(container, name="st_menu_button-menu_style_icons")

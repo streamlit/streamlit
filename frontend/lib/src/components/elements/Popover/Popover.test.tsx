@@ -381,3 +381,55 @@ describe("passive state persistence", () => {
     expect(trigger).toHaveAttribute("aria-expanded", "false")
   })
 })
+
+describe("Popover chevron visibility", () => {
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when label is menu-style icon %s", async label => {
+    const user = userEvent.setup()
+    const props = getProps({ label })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+
+    // Chevron should not be present when closed
+    expect(button).not.toHaveTextContent("expand_more")
+
+    // Open popover and check chevron is still not shown
+    await user.click(button)
+    expect(button).not.toHaveTextContent("expand_less")
+  })
+
+  it("shows chevron for regular labels", () => {
+    const props = getProps({ label: "Actions" })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent("expand_more")
+  })
+
+  it("shows chevron when label is menu icon but icon prop is also set", () => {
+    const props = getProps({
+      label: ":material/menu:",
+      icon: ":material/edit:",
+    })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent("expand_more")
+  })
+})

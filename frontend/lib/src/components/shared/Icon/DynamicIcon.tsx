@@ -87,6 +87,31 @@ export function extractLeadingMaterialIcon(
   return { icon: null, text: label }
 }
 
+/** Icons that indicate a menu-style trigger where the chevron should be hidden. */
+const MENU_STYLE_ICONS = new Set([
+  ":material/menu:",
+  ":material/more_vert:",
+  ":material/more_horiz:",
+])
+
+/**
+ * Checks if a label is a menu-style icon-only label (no separate icon prop, no text).
+ * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
+ *
+ * @param icon - The icon prop (from element.icon)
+ * @param label - The label prop (from element.label)
+ * @returns true if label is exactly one of the menu-style icons with no additional text
+ */
+export function isMenuStyleIconLabel(
+  icon: string | undefined,
+  label: string | undefined
+): boolean {
+  if (icon) {
+    return false
+  }
+  return Boolean(label && MENU_STYLE_ICONS.has(label.trim()))
+}
+
 /**
  *
  * @returns returns an img tag with a yellow filled star icon svg as base64 data
