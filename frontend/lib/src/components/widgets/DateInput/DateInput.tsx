@@ -948,12 +948,20 @@ const EndEnhancer = styled.div(({ theme }) => ({
 }))
 
 const ClearButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   border: "none",
   background: "transparent",
   cursor: "pointer",
   color: theme.colors.grayTextColor,
   padding: theme.spacing.threeXS,
+  height: theme.sizes.clearIconSize,
+  width: theme.sizes.clearIconSize,
   lineHeight: 1,
+  "&:hover": {
+    color: theme.colors.bodyText,
+  },
 }))
 
 const CalendarPopover = styled.div({})
