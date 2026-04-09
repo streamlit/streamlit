@@ -81,7 +81,7 @@ Options: `"left"` (default), `"center"`, `"right"`, `"distribute"`
 
 ## Bordered containers
 
-Use `border=True` on containers for visual grouping. See `building-streamlit-dashboards` for dashboard-specific patterns like KPI cards.
+Use `border=True` on containers for visual grouping. See `dashboards.md` for dashboard-specific patterns like KPI cards.
 
 ```python
 with st.container(border=True):

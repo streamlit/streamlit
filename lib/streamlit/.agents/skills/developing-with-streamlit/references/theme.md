@@ -115,22 +115,6 @@ st.html("""
 
 **Never use CSS for theming (colors, backgrounds, fonts) unless explicitly asked. Use config.toml instead.**
 
-## Theme templates
-
-Ready-to-use themes with bundled fonts are available in `assets/templates/themes/`:
-
-| Theme | Base | Primary Color | Fonts |
-|-------|------|---------------|-------|
-| **snowflake** | Light | `#29B5E8` (cyan) | Inter, JetBrains Mono |
-| **dracula** | Dark | `#BD93F9` (purple) | Fira Sans, JetBrains Mono |
-| **nord** | Dark | `#88C0D0` (frost blue) | Inter, JetBrains Mono |
-| **stripe** | Light | `#635BFF` (indigo) | Inter, Source Code Pro |
-| **solarized-light** | Light | `#268BD2` (blue) | Source Sans 3, Source Code Pro |
-| **spotify** | Dark | `#1DB954` (green) | Inter, Fira Code |
-| **github** | Light | `#0969DA` (blue) | Inter, JetBrains Mono |
-| **minimal** | Dark | `#6366f1` (indigo) | Inter, JetBrains Mono |
-
-Each theme includes local font files for Snowflake deployment. See `assets/templates/themes/README.md`.
 
 ## References
 

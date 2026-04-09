@@ -23,7 +23,9 @@ st.dataframe(df)
 - Handles reconnection
 - Works with st.secrets
 
-## Caller's rights connection (Streamlit 1.53+)
+## Caller's rights connection (Streamlit in Snowflake only)
+
+> **Prerequisite:** This feature requires running your app inside Snowflake (Streamlit in Snowflake). It is not available for OSS Streamlit deployments.
 
 For apps running in Snowflake, use caller's rights to run queries with the viewer's permissions instead of the app owner's:
 
@@ -127,7 +129,9 @@ prod_conn = st.connection("snowflake")
 staging_conn = st.connection("snowflake_staging")
 ```
 
-## Chat with Cortex
+## Chat with Cortex (Snowflake Cortex required)
+
+> **Prerequisite:** This feature requires the `snowflake.cortex` package and a Snowflake account with Cortex access. It is primarily used in Streamlit in Snowflake deployments.
 
 Build a chat interface using Snowflake Cortex LLMs:
 
@@ -163,7 +167,7 @@ if prompt := st.chat_input("Ask anything"):
     st.session_state.messages.append({"role": "assistant", "content": response})
 ```
 
-See `building-streamlit-chat-ui` for more chat patterns (avatars, suggestions, history management).
+See `chat-ui.md` for more chat patterns (avatars, suggestions, history management).
 
 ## Python 3.12+ dependency caveat
 

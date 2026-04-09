@@ -243,7 +243,7 @@ st.metric(
 
 **Note:** Sparklines only show y-values and ignore x-axis spacing. Use them for evenly-spaced data (like daily or weekly snapshots). For irregularly-spaced time series, use a proper chart instead.
 
-See `building-streamlit-dashboards` for composing metrics into dashboard layouts.
+See `dashboards.md` for composing metrics into dashboard layouts.
 
 ## References
 

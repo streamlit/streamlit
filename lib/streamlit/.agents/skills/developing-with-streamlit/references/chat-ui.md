@@ -157,8 +157,8 @@ if prompt and prompt.audio:
 
 ## Related skills
 
-- `connecting-streamlit-to-snowflake`: Database queries and Cortex chat example
-- `optimizing-streamlit-performance`: Caching strategies for LLM calls
+- `snowflake-connection.md`: Database queries and Cortex chat example
+- `performance.md`: Caching strategies for LLM calls
 
 ## References
 
