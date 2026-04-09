@@ -186,7 +186,7 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
-  const { colors, fontSizes, spacing, zIndices } = useEmotionTheme()
+  const { colors, fontSizes, spacing, zIndices, sizes } = useEmotionTheme()
 
   const { locale: localeTag } = useContext(LibConfigContext)
 
@@ -597,9 +597,9 @@ function DateInput({
                 cursor: "pointer",
                 border: "none",
                 background: "transparent",
-                padding: 4,
-                minWidth: "2rem",
-                minHeight: "2rem",
+                padding: spacing.twoXS,
+                minWidth: sizes.numberInputControlsWidth,
+                minHeight: sizes.numberInputControlsWidth,
                 flexShrink: 0,
               }}
               type="button"

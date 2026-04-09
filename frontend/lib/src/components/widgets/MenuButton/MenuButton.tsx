@@ -93,7 +93,7 @@ const MenuOptionRow = memo(function MenuOptionRow({
       label={text}
       onClick={() => onSelect(item.value)}
       render={(props, state) => (
-        <StyledMenuItem {...props} as="div">
+        <StyledMenuItem {...props}>
           <StyledHighlightWrapper $isHighlighted={state.highlighted}>
             <StyledMenuOptionLabel>
               {icon && (

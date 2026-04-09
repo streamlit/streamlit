@@ -391,21 +391,24 @@ const Selectbox: FC<Props> = ({
           value={row.value}
           index={index}
           style={style}
-        >
-          <ThemedStyledDropdownListItem
-            $isCreatable={row.isCreatable}
-            style={style}
-          >
-            <StyledHighlightWrapper $isHighlighted={false}>
-              <OverflowTooltip
-                content={displayLabel}
-                placement={Placement.AUTO}
+          render={itemProps => (
+            <li {...itemProps}>
+              <ThemedStyledDropdownListItem
+                as="div"
+                $isCreatable={row.isCreatable}
               >
-                {displayLabel}
-              </OverflowTooltip>
-            </StyledHighlightWrapper>
-          </ThemedStyledDropdownListItem>
-        </Combobox.Item>
+                <StyledHighlightWrapper $isHighlighted={false}>
+                  <OverflowTooltip
+                    content={displayLabel}
+                    placement={Placement.AUTO}
+                  >
+                    {displayLabel}
+                  </OverflowTooltip>
+                </StyledHighlightWrapper>
+              </ThemedStyledDropdownListItem>
+            </li>
+          )}
+        />
       )
     },
     []
