@@ -268,8 +268,9 @@ def select_selectbox_option(
 
     wait_for_app_run(page)
 
-    # Verify the selection was applied
-    expect(selectbox).to_contain_text(option)
+    # Verify the selection was applied (combobox value lives on the input; subtree text
+    # of stSelectbox does not include input values for Playwright to_contain_text).
+    expect(selectbox.locator("input")).to_have_value(option)
 
 
 def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:

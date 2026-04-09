@@ -168,7 +168,8 @@ describe("Selectbox widget", () => {
 
   it("filters options based on label with case insensitive", async () => {
     const user = userEvent.setup()
-    render(<Selectbox {...props} />)
+    const currProps = getProps({ value: null })
+    render(<Selectbox {...currProps} />)
     const selectbox = screen.getByRole("combobox")
 
     await user.type(selectbox, "b")
@@ -218,7 +219,8 @@ describe("Selectbox widget", () => {
 
     // Lowercase avoids Shift-key sequences in userEvent, which can interact poorly
     // with the combobox state machine in JSDOM; matching is case-insensitive for contains.
-    await user.type(selectboxInput, "ap")
+    await user.click(selectboxInput)
+    await user.type(selectboxInput, "ap", { skipClick: true })
 
     await waitFor(() => {
       expect(screen.queryAllByRole("option")).toHaveLength(2)
@@ -340,21 +342,13 @@ describe("Selectbox widget", () => {
 
     const selectboxInput = screen.getByRole("combobox")
 
-    // Simulate deleting a character
-    act(() => {
-      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent.keyboard("{Backspace}") causes a timeout with this BaseWeb combobox
-      fireEvent.keyDown(selectboxInput, {
-        key: "Backspace",
-        keyCode: 8,
-        code: "Backspace",
-      })
+    // Simulate deleting the selected label without committing (real browsers emit input events).
+    await act(async () => {
+      fireEvent.input(selectboxInput, { target: { value: "" } })
     })
 
-    // Wait for async Popover state updates to complete
     await waitFor(() => {
-      // ensure that onChange was not called for the remove
       expect(props.onChange).toHaveBeenCalledTimes(0)
-      // ensure that the input value was updated
       expect(
         within(selectbox).queryByDisplayValue(props.options[0])
       ).not.toBeInTheDocument()
@@ -441,6 +435,24 @@ describe("Selectbox widget", () => {
     await user.type(selectboxInput, "hello world!")
     await user.keyboard("{enter}")
     expect(props.onChange).toHaveBeenCalledTimes(0)
+  })
+
+  it("commits an exact option when typing a different long option from a selected value", async () => {
+    const user = userEvent.setup()
+    const first = "e2e/scripts/components_iframe.py"
+    const second = "e2e/scripts/st_warning.py"
+    props = getProps({
+      acceptNewOptions: false,
+      value: first,
+      options: [first, second],
+    })
+    render(<Selectbox {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+    await user.type(selectboxInput, second)
+    await user.keyboard("{Enter}")
+    await waitFor(() => {
+      expect(props.onChange).toHaveBeenCalledWith(second)
+    })
   })
 })
 

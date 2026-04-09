@@ -690,6 +690,7 @@ function SingleTextField({
             e.preventDefault()
             e.stopPropagation()
             const el = e.currentTarget
+            // Prefer native tracker (fill() may not update React state before keydown).
             const v = lastNativeValueRef.current || el.value
             commitSingleIfDistinct(v)
             el.blur()
@@ -795,11 +796,17 @@ function RangeTextField({
       return
     }
     const syncNative = (): void => {
-      lastNativeRangeValueRef.current = el.value
+      const v = el.value
+      lastNativeRangeValueRef.current = v
+      setDraft(v)
     }
     el.addEventListener("input", syncNative, { capture: true })
+    el.addEventListener("change", syncNative, { capture: true })
     syncNative()
-    return () => el.removeEventListener("input", syncNative, { capture: true })
+    return () => {
+      el.removeEventListener("input", syncNative, { capture: true })
+      el.removeEventListener("change", syncNative, { capture: true })
+    }
   }, [valueSyncKey, draftResetSeq])
 
   return (

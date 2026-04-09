@@ -16,7 +16,6 @@
 
 import {
   FC,
-  type FocusEvent,
   type KeyboardEvent,
   memo,
   type ReactNode,
@@ -48,8 +47,11 @@ import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLa
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme/utils"
-import { getSelectFilterMode } from "~lib/util/fuzzyFilterSelectOptions"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import {
+  isNullOrUndefined,
+  LabelVisibilityOptions,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 
 export interface Props {
   value: string | null
@@ -118,6 +120,11 @@ const Selectbox: FC<Props> = ({
   const clearIntentRef = useRef(false)
   const [inputQuery, setInputQuery] = useState("")
   const [isFocused, setIsFocused] = useState(false)
+  const comboboxOpenRef = useRef(false)
+  /** True after the user has changed the input this focus session (vs spurious empty from the combobox on focus). */
+  const userEditedInputThisFocusRef = useRef(false)
+  /** Next input-change "" right after close should show the committed label, not a blank field. */
+  const suppressEmptyInputAfterCloseRef = useRef(false)
 
   useLayoutEffect(() => {
     setValue(propValue ?? null)
@@ -163,28 +170,6 @@ const Selectbox: FC<Props> = ({
     }
     valueBeforeRemovalRef.current = null
   }, [selectOptions])
-
-  const normalizedFilterMode = useMemo(
-    () => getSelectFilterMode(filterMode),
-    [filterMode]
-  )
-
-  const shouldSelectAllOnFocus = useMemo(
-    () =>
-      !inputReadOnly &&
-      normalizedFilterMode !==
-        streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
-    [inputReadOnly, normalizedFilterMode]
-  )
-
-  const handleInputFocus = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
-      if (shouldSelectAllOnFocus) {
-        e.currentTarget.select()
-      }
-    },
-    [shouldSelectAllOnFocus]
-  )
 
   const filterOptions = useMemo(
     () => createFilterOptions(),
@@ -295,27 +280,91 @@ const Selectbox: FC<Props> = ({
 
   const onInputValueChange = useCallback(
     (d: { inputValue: string; reason?: string }) => {
-      setInputQuery(d.inputValue)
       if (d.reason === "item-select" || d.reason === "clear-trigger") {
+        setInputQuery(d.inputValue)
         return
       }
-      // Only treat empty input as clearing the selection when the user edited the
-      // field (not when Zag/Ark syncs input during focus/open).
+      if (d.reason === "input-change") {
+        if (
+          d.inputValue === "" &&
+          notNullOrUndefined(value) &&
+          !userEditedInputThisFocusRef.current
+        ) {
+          // Zag can emit an empty input on focus/open before the user types; keep the
+          // committed label and selection (e2e: edit "male" with backspace, not full clear).
+          setInputQuery(propDerivedLabel)
+          return
+        }
+        // BaseWeb keeps the filter string in an empty input while the selection label is
+        // shown separately; we render the label in the input, so Playwright type() appends
+        // to it. When the user starts typing a new option, treat that as a fresh filter.
+        if (
+          !acceptNewOptions &&
+          propDerivedLabel !== "" &&
+          d.inputValue.length > propDerivedLabel.length &&
+          d.inputValue.startsWith(propDerivedLabel)
+        ) {
+          userEditedInputThisFocusRef.current = true
+          if (
+            valueBeforeRemovalRef.current === null &&
+            notNullOrUndefined(value)
+          ) {
+            valueBeforeRemovalRef.current = value
+          }
+          setInputQuery(d.inputValue.slice(propDerivedLabel.length))
+          return
+        }
+        if (d.inputValue !== propDerivedLabel) {
+          userEditedInputThisFocusRef.current = true
+          if (
+            valueBeforeRemovalRef.current === null &&
+            notNullOrUndefined(value)
+          ) {
+            valueBeforeRemovalRef.current = value
+          }
+        }
+      }
+      // After closing the list, Zag can emit input-change with "" while a value is still selected;
+      // keep showing the committed option label (e2e: expect(selectbox).to_contain_text(option)).
+      let nextInput = d.inputValue
       if (
         d.reason === "input-change" &&
-        notNullOrUndefined(value) &&
-        d.inputValue === ""
+        d.inputValue === "" &&
+        suppressEmptyInputAfterCloseRef.current &&
+        !acceptNewOptions &&
+        notNullOrUndefined(value)
       ) {
-        valueBeforeRemovalRef.current = value
-        setValue(null)
+        const opt = selectOptions.find(o => o.value === value)
+        nextInput = opt?.label ?? value ?? ""
       }
+      setInputQuery(nextInput)
     },
-    [value]
+    [acceptNewOptions, propDerivedLabel, selectOptions, value]
+  )
+
+  const shouldOpenListOnInputChange = useCallback(
+    (details: { inputValue: string; reason?: string }) => {
+      // Zag defaults openOnChange to true: any INPUT.CHANGE opens the list. Spurious
+      // controlled syncs to the committed label (focus/reconciliation) should not open,
+      // or Escape first closes the list instead of clearing (BaseWeb escapeClearsValue).
+      if (propDerivedLabel !== "" && details.inputValue === propDerivedLabel) {
+        return false
+      }
+      return true
+    },
+    [propDerivedLabel]
   )
 
   const onOpenChange = useCallback(
     (d: { open: boolean }) => {
-      if (!d.open) {
+      comboboxOpenRef.current = d.open
+      if (d.open) {
+        userEditedInputThisFocusRef.current = false
+      } else {
+        suppressEmptyInputAfterCloseRef.current = true
+        window.setTimeout(() => {
+          suppressEmptyInputAfterCloseRef.current = false
+        }, 0)
         handleBlur()
       }
     },
@@ -324,12 +373,13 @@ const Selectbox: FC<Props> = ({
 
   const onInputKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
+      const domTrim = (e.currentTarget?.value ?? "").trim()
+      const stateTrim = (inputQuery ?? "").trim()
+      const inputText =
+        domTrim.length >= stateTrim.length ? domTrim : stateTrim
       if (e.key === "Escape" && clearable) {
         // Let the combobox handle Escape while the dropdown is open (close only).
-        if (
-          typeof document !== "undefined" &&
-          document.querySelector('[data-testid="stSelectboxVirtualDropdown"]')
-        ) {
+        if (comboboxOpenRef.current) {
           return
         }
         e.preventDefault()
@@ -339,15 +389,26 @@ const Selectbox: FC<Props> = ({
         setInputQuery("")
         return
       }
+      // Zag reverts on Enter when the text is "custom" vs the committed value and nothing
+      // is highlighted. Commit when the input exactly matches an option (use inputQuery —
+      // the controlled value can lag e.currentTarget in the keydown event).
       if (
-        !acceptNewOptions &&
-        notNullOrUndefined(value) &&
-        (e.key === "Backspace" || e.key === "Delete")
+        (e.key === "Enter" || e.key === "NumpadEnter") &&
+        !acceptNewOptions
       ) {
-        valueBeforeRemovalRef.current = value
-        setValue(null)
-        e.preventDefault()
-        return
+        if (inputText !== "") {
+          const exact = selectOptions.find(
+            o => o.label === inputText || o.value === inputText
+          )
+          if (exact) {
+            e.preventDefault()
+            setValue(exact.value)
+            onChange(exact.value)
+            valueBeforeRemovalRef.current = null
+            setInputQuery(exact.label ?? exact.value)
+            return
+          }
+        }
       }
       if (
         e.key === "Enter" &&
@@ -363,7 +424,7 @@ const Selectbox: FC<Props> = ({
         return
       }
     },
-    [acceptNewOptions, clearable, onChange, selectOptions, value]
+    [acceptNewOptions, clearable, inputQuery, onChange, selectOptions, value]
   )
 
   const positioning = useMemo(
@@ -399,6 +460,7 @@ const Selectbox: FC<Props> = ({
         inputValue={inputQuery}
         onValueChange={onValueChange}
         onInputValueChange={onInputValueChange}
+        openOnChange={shouldOpenListOnInputChange}
         onOpenChange={onOpenChange}
         inputBehavior="none"
         selectionBehavior="replace"
@@ -417,8 +479,10 @@ const Selectbox: FC<Props> = ({
               data-testid="stSelectboxInput"
               readOnly={inputReadOnly === "readonly"}
               css={cssInput(theme, selectDisabled)}
-              onFocus={handleInputFocus}
-              onKeyDown={onInputKeyDown}
+              onFocus={() => {
+                userEditedInputThisFocusRef.current = false
+              }}
+              onKeyDownCapture={onInputKeyDown}
             />
             {clearable && (
               <Combobox.ClearTrigger
