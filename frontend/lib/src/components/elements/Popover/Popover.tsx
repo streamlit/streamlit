@@ -32,6 +32,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react"
@@ -148,6 +149,20 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
+
+  // Keep the popover body mounted for one frame after close so nested inputs can blur
+  // and commit widget state before unmount (matches BaseWeb timing).
+  const [bodyMounted, setBodyMounted] = useState(initialOpen)
+  useEffect(() => {
+    if (open) {
+      setBodyMounted(true)
+    } else {
+      const id = requestAnimationFrame(() => {
+        setBodyMounted(false)
+      })
+      return () => cancelAnimationFrame(id)
+    }
+  }, [open])
 
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
@@ -271,7 +286,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButton>
         </BaseButtonTooltip>
       </div>
-      {open && (
+      {bodyMounted && (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
@@ -284,7 +299,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               ref={refs.setFloating}
               data-testid="stPopoverBody"
               css={bodyCss}
-              style={floatingStyles}
+              style={{
+                ...floatingStyles,
+                ...(!open && { visibility: "hidden", pointerEvents: "none" }),
+              }}
               {...getFloatingProps()}
             >
               {children}

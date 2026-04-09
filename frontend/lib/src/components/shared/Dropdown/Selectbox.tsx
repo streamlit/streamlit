@@ -104,8 +104,8 @@ const Selectbox: FC<Props> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
-  /** False after first change post-focus; used to emulate select-all + replace when tests/jsdom skip selection. */
-  const firstChangeAfterFocusRef = useRef(true)
+  /** True until the first input change after focus; used to treat one appended char as a new search (no select-all on focus). */
+  const firstEditAfterFocusRef = useRef(true)
 
   const [value, setValue] = useState<string | null>(propValue ?? null)
   const valueBeforeRemovalRef = useRef<string | null>(null)
@@ -192,7 +192,7 @@ const Selectbox: FC<Props> = ({
 
   const handleBlur = useCallback(() => {
     setFocused(false)
-    firstChangeAfterFocusRef.current = true
+    firstEditAfterFocusRef.current = true
     setOpen(false)
     setSearchFilter("")
     if (valueBeforeRemovalRef.current !== null) {
@@ -202,24 +202,21 @@ const Selectbox: FC<Props> = ({
       setInputValue(restore)
       return
     }
-    setInputValue(value ?? "")
-  }, [value])
+    // Use prop so we stay in sync if the parent committed value (e.g. session_state) while open.
+    setInputValue(propValue ?? "")
+  }, [propValue])
 
   const handleFocus = useCallback(() => {
     setFocused(true)
-    firstChangeAfterFocusRef.current = true
-    setInputValue(value ?? "")
+    firstEditAfterFocusRef.current = true
+    // Use parent prop so session_state / proto updates are reflected immediately
+    // (local `value` can lag one interaction behind in edge cases).
+    setInputValue(propValue ?? "")
     setSearchFilter("")
     if (!selectDisabled) {
       setOpen(true)
     }
-    // Select-all only when replacing an existing value. requestAnimationFrame(select)
-    // after focus runs after the first typed character and breaks multi-char search
-    // (the next key replaces the selection). Sync select runs before input events.
-    if (value != null && value !== "") {
-      inputRef.current?.select()
-    }
-  }, [selectDisabled, value])
+  }, [selectDisabled, propValue])
 
   const { refs, floatingStyles, context } = useFloating({
     open: open && !selectDisabled,
@@ -260,6 +257,46 @@ const Selectbox: FC<Props> = ({
 
   const { getReferenceProps, getFloatingProps } = useInteractions([dismiss])
 
+  // When the listbox is open, focus may be on the floating surface (not the input).
+  // Handle Escape in capture phase so Playwright and keyboard users get consistent behavior.
+  useEffect(() => {
+    if (!open || selectDisabled) {
+      return
+    }
+    const onDocKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") {
+        return
+      }
+      const t = e.target
+      if (!(t instanceof Node)) {
+        return
+      }
+      const refEl = refs.reference.current
+      const floatEl = refs.floating.current
+      if ((refEl && refEl.contains(t)) || (floatEl && floatEl.contains(t))) {
+        e.preventDefault()
+        if (clearable && propValue !== null && propValue !== "") {
+          commitSelection(null)
+        } else {
+          setOpen(false)
+          requestAnimationFrame(() => {
+            inputRef.current?.blur()
+          })
+        }
+      }
+    }
+    document.addEventListener("keydown", onDocKeyDown, true)
+    return () => document.removeEventListener("keydown", onDocKeyDown, true)
+  }, [
+    open,
+    selectDisabled,
+    clearable,
+    propValue,
+    commitSelection,
+    refs.reference,
+    refs.floating,
+  ])
+
   const onInputKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
       if (selectDisabled) {
@@ -269,8 +306,12 @@ const Selectbox: FC<Props> = ({
       if (e.key === "Escape") {
         e.preventDefault()
         if (open) {
-          setOpen(false)
-        } else if (clearable && value !== null) {
+          // Dropdown open: capture-phase listener on `document` handles Escape (input may
+          // not be the event target when focus is on the floating listbox).
+          return
+        }
+        // index=None selectboxes are clearable: Escape clears when the menu is closed.
+        if (clearable && propValue !== null && propValue !== "") {
           commitSelection(null)
         }
         return
@@ -278,11 +319,12 @@ const Selectbox: FC<Props> = ({
 
       if (e.key === "Backspace" && !inputReadOnly) {
         const v = value
-        // Collapsed display uses empty input while value shows in StyledDisplayedValue;
-        // inputValue stays "" until focus, so match Backspace without inputValue === v.
+        // Only intercept when the field is collapsed (!focused). When focused, Backspace
+        // edits the text one character at a time (e2e dismiss / partial edit).
         if (
           v !== null &&
-          (inputValue === v || (!focused && inputValue === ""))
+          !focused &&
+          (inputValue === "" || inputValue === v)
         ) {
           e.preventDefault()
           valueBeforeRemovalRef.current = v
@@ -338,6 +380,7 @@ const Selectbox: FC<Props> = ({
       inputReadOnly,
       inputValue,
       open,
+      propValue,
       selectDisabled,
       value,
     ]
@@ -452,17 +495,17 @@ const Selectbox: FC<Props> = ({
                     return
                   }
                   let next = e.target.value
-                  if (firstChangeAfterFocusRef.current && value != null) {
+                  if (firstEditAfterFocusRef.current && value != null) {
                     const prevStr = value
                     if (
-                      next.startsWith(prevStr) &&
-                      next.length === prevStr.length + 1
+                      next.length === prevStr.length + 1 &&
+                      next.startsWith(prevStr)
                     ) {
                       next = next.slice(-1)
                     }
-                    firstChangeAfterFocusRef.current = false
+                    firstEditAfterFocusRef.current = false
                   } else {
-                    firstChangeAfterFocusRef.current = false
+                    firstEditAfterFocusRef.current = false
                   }
                   setInputValue(next)
                   setSearchFilter(next)

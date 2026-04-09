@@ -659,6 +659,7 @@ class SelectboxMixin:
         selectbox_proto.label = label
         if index is not None:
             selectbox_proto.default = index
+        selectbox_proto.supports_empty_selection = index is None
         selectbox_proto.options[:] = formatted_options
         selectbox_proto.form_id = current_form_id(self.dg)
         selectbox_proto.placeholder = placeholder or ""
