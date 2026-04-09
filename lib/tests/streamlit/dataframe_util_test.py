@@ -201,6 +201,57 @@ class DataframeUtilTest(unittest.TestCase):
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
 
+    def test_convert_anything_to_pandas_df_uses_arrow_pycapsule_interface(self):
+        """Test that objects implementing __arrow_c_stream__ are converted via
+        the Arrow PyCapsule Interface.
+        """
+
+        class ArrowStreamObject:
+            """Mock object that implements __arrow_c_stream__ via a PyArrow Table."""
+
+            def __init__(self):
+                self._table = pa.Table.from_pydict({"col": [1, 2, 3]})
+                self.stream_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                self.stream_called = True
+                return self._table.__arrow_c_stream__(requested_schema)
+
+        obj = ArrowStreamObject()
+        result = dataframe_util.convert_anything_to_pandas_df(obj)
+
+        assert obj.stream_called
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ["col"]
+        assert list(result["col"]) == [1, 2, 3]
+
+        # Test ensure_copy behavior
+        obj2 = ArrowStreamObject()
+        dataframe_util.convert_anything_to_pandas_df(obj2, ensure_copy=False)
+        result_with_copy = dataframe_util.convert_anything_to_pandas_df(
+            obj2, ensure_copy=True
+        )
+        # Modifying the copy should not affect future conversions
+        result_with_copy["col"] = [10, 20, 30]
+        result_fresh = dataframe_util.convert_anything_to_pandas_df(
+            obj2, ensure_copy=False
+        )
+        assert list(result_fresh["col"]) == [1, 2, 3]
+
+    def test_convert_anything_to_pandas_df_pycapsule_fallback_on_non_struct_type(self):
+        """Test that objects exporting non-struct Arrow types via __arrow_c_stream__
+        fall back to other conversion methods (e.g., the interchange protocol).
+        """
+        # pandas Series implements __arrow_c_stream__ but exports an array (non-struct),
+        # which causes ArrowInvalid when trying to use RecordBatchReader.from_stream.
+        series = pd.Series([1, 2, 3], name="values", dtype="Int64[pyarrow]")
+        assert hasattr(series, "__arrow_c_stream__")
+
+        # Should succeed by falling back to pandas conversion
+        result = dataframe_util.convert_anything_to_pandas_df(series)
+        assert isinstance(result, pd.DataFrame)
+        assert list(result["values"]) == [1, 2, 3]
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
