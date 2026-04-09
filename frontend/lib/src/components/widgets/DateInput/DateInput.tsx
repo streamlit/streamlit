@@ -32,6 +32,7 @@ import {
   useRef,
   useState,
 } from "react"
+import type { KeyboardEvent, RefObject } from "react"
 import { format } from "date-fns"
 import moment from "moment"
 import {
@@ -40,7 +41,9 @@ import {
   CalendarCell,
   CalendarGrid,
   DatePicker,
+  DatePickerStateContext,
   DateRangePicker,
+  DateRangePickerStateContext,
   Dialog,
   Group,
   Heading,
@@ -227,6 +230,10 @@ const PickerTextInput = memo(function PickerTextInput({
   textValue,
   onTextInputChange,
   onBlurEmpty,
+  onEnterCommit,
+  clearable,
+  onEscapeClear,
+  textInputRef,
   error,
   colors,
   sizes,
@@ -240,6 +247,10 @@ const PickerTextInput = memo(function PickerTextInput({
   textValue: string
   onTextInputChange: (raw: string | null | undefined) => void
   onBlurEmpty: () => void
+  onEnterCommit: (currentValue: string) => void
+  clearable: boolean
+  onEscapeClear: () => void
+  textInputRef: RefObject<HTMLInputElement | null>
   error: boolean
   colors: ReturnType<typeof useEmotionTheme>["colors"]
   sizes: ReturnType<typeof useEmotionTheme>["sizes"]
@@ -248,13 +259,49 @@ const PickerTextInput = memo(function PickerTextInput({
   fontWeights: ReturnType<typeof useEmotionTheme>["fontWeights"]
   zIndices: ReturnType<typeof useEmotionTheme>["zIndices"]
 }): ReactElement {
+  const datePickerState = useContext(DatePickerStateContext)
+  const dateRangePickerState = useContext(DateRangePickerStateContext)
+  const overlayState = datePickerState ?? dateRangePickerState
+
+  const openPickerOnFieldClick = useCallback(() => {
+    if (disabled || !overlayState) {
+      return
+    }
+    overlayState.setOpen(true)
+  }, [disabled, overlayState])
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Enter") {
+        e.preventDefault()
+        onEnterCommit((e.currentTarget as HTMLInputElement).value)
+        return
+      }
+      if (e.key === "Escape") {
+        if (overlayState?.isOpen) {
+          e.preventDefault()
+          overlayState.setOpen(false)
+          return
+        }
+        if (clearable) {
+          e.preventDefault()
+          onEscapeClear()
+        }
+      }
+    },
+    [clearable, onEnterCommit, onEscapeClear, overlayState]
+  )
+
   return (
     <StyledTextInput
+      ref={textInputRef}
       data-testid="stDateInputField"
       type="text"
       disabled={disabled}
       placeholder={placeholderText}
       value={textValue}
+      onClick={openPickerOnFieldClick}
+      onKeyDown={handleKeyDown}
       onInput={e => {
         const v = (e.target as HTMLInputElement).value as
           | string
@@ -268,7 +315,12 @@ const PickerTextInput = memo(function PickerTextInput({
         ;(e.target as HTMLInputElement).select()
       }}
       onBlur={e => {
-        if ((e.target as HTMLInputElement).value.trim() === "") {
+        const el = e.target as HTMLInputElement
+        const domVal = el.value
+        if (domVal !== textValue) {
+          onTextInputChange(domVal === "" ? null : domVal)
+        }
+        if (domVal.trim() === "") {
           onBlurEmpty()
         }
       }}
@@ -295,6 +347,7 @@ function DateInput({
   const [error, setError] = useState<string | null>(null)
   const [textValue, setTextValue] = useState("")
   const valueWireRef = useRef<string | undefined>(undefined)
+  const textFieldRef = useRef<HTMLInputElement | null>(null)
 
   const resetError = useCallback(() => {
     setError(null)
@@ -442,23 +495,44 @@ function DateInput({
     ]
   )
 
+  const syncDisplayTextFromValue = useCallback(() => {
+    const wire = datesToStrings(value).join("|")
+    valueWireRef.current = wire
+    setTextValue(formatDatesForDisplay(value, displayPattern))
+  }, [value, displayPattern])
+
   useEffect(() => {
     const wire = datesToStrings(value).join("|")
     if (valueWireRef.current === wire) {
       return
     }
-    valueWireRef.current = wire
-    setTextValue(formatDatesForDisplay(value, displayPattern))
-  }, [value, displayPattern])
+    // Avoid clobbering the field while it is focused: value from the server may
+    // lag behind in-progress typing, fill(), or Enter commits.
+    if (textFieldRef.current === document.activeElement) {
+      return
+    }
+    syncDisplayTextFromValue()
+  }, [syncDisplayTextFromValue, value, displayPattern])
 
   const handleClose = useCallback((): void => {
     if (!isEmpty) return
+    // Range inputs: an empty text field means [] — do not restore element.default
+    // (defaults may be a non-empty range; tests expect () after clear + blur).
+    if (element.isRange) {
+      return
+    }
 
     const newValue = stringsToDates(element.default)
     setValueWithSource({ value: newValue, fromUi: true })
     setIsEmpty(!newValue.length)
     setTextValue(formatDatesForDisplay(newValue, displayPattern))
-  }, [displayPattern, element.default, isEmpty, setValueWithSource])
+  }, [
+    displayPattern,
+    element.default,
+    element.isRange,
+    isEmpty,
+    setValueWithSource,
+  ])
 
   const singleCalendarValue = useMemo((): CalendarDate | null => {
     if (element.isRange || !value.length) {
@@ -518,6 +592,25 @@ function DateInput({
     },
     [displayPattern, element.isRange, handleChange]
   )
+
+  const commitTextFromField = useCallback(
+    (rawFromDom?: string) => {
+      const v = rawFromDom !== undefined ? rawFromDom : textValue
+      if (rawFromDom !== undefined) {
+        setTextValue(rawFromDom)
+      }
+      const parsed = parseDisplayToDates(v, element.isRange, displayPattern)
+      if (parsed === null) {
+        return
+      }
+      handleChange(parsed)
+    },
+    [displayPattern, element.isRange, handleChange, textValue]
+  )
+
+  const clearFieldFromEscape = useCallback(() => {
+    handleChange([])
+  }, [handleChange])
 
   const firstDayOfWeek = useMemo(() => {
     const ws = loadedLocale.options?.weekStartsOn ?? 0
@@ -592,6 +685,10 @@ function DateInput({
                   textValue={textValue}
                   onTextInputChange={onTextInputChange}
                   onBlurEmpty={handleClose}
+                  onEnterCommit={commitTextFromField}
+                  clearable={clearable}
+                  onEscapeClear={clearFieldFromEscape}
+                  textInputRef={textFieldRef}
                   error={Boolean(error)}
                   colors={colors}
                   sizes={sizes}
@@ -626,6 +723,7 @@ function DateInput({
                 <StreamlitCalendarOpenButton disabled={disabled} />
               </StyledGroup>
               <Popover
+                isNonModal
                 placement="bottom start"
                 offset={convertRemToPx(theme.spacing.twoXS)}
                 shouldFlip={!isInSidebar}
@@ -633,6 +731,7 @@ function DateInput({
               >
                 <StyledDialog>
                   <StyledCalendarContainer
+                    data-testid="stDateInputCalendar"
                     $hasLightBg={hasLightBackgroundColor(theme)}
                     $theme={theme}
                   >
@@ -671,6 +770,10 @@ function DateInput({
                   textValue={textValue}
                   onTextInputChange={onTextInputChange}
                   onBlurEmpty={handleClose}
+                  onEnterCommit={commitTextFromField}
+                  clearable={clearable}
+                  onEscapeClear={clearFieldFromEscape}
+                  textInputRef={textFieldRef}
                   error={Boolean(error)}
                   colors={colors}
                   sizes={sizes}
@@ -705,6 +808,7 @@ function DateInput({
                 <StreamlitCalendarOpenButton disabled={disabled} />
               </StyledGroup>
               <Popover
+                isNonModal
                 placement="bottom start"
                 offset={convertRemToPx(theme.spacing.twoXS)}
                 shouldFlip={!isInSidebar}
@@ -712,6 +816,7 @@ function DateInput({
               >
                 <StyledDialog>
                   <StyledCalendarContainer
+                    data-testid="stDateInputCalendar"
                     $hasLightBg={hasLightBackgroundColor(theme)}
                     $theme={theme}
                   >
@@ -885,6 +990,7 @@ const QuickSelect = memo(function QuickSelect({
   const theme = useEmotionTheme()
   return (
     <QuickSelectControl
+      data-testid="stDateInputQuickSelect"
       disabled={disabled}
       defaultValue=""
       onChange={e => {
