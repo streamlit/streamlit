@@ -133,7 +133,7 @@ st.info(":material/lightbulb: This info has a material icon extracted from body"
 # Alerts with title
 st.success(
     "This is the success body text.",
-    title=":material/celebration: Success _Title_",
+    title="Success _Title_ :material/celebration:",
 )
 
 # Alert with title and icon
