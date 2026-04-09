@@ -18,12 +18,16 @@ CustomComponent for dataframe serialization.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit import dataframe_util
 from streamlit.elements.lib import pandas_styler_utils
+from streamlit.logger import get_logger
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
+    import pyarrow as pa
     from pandas import DataFrame, Index
 
     from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
@@ -32,6 +36,85 @@ if TYPE_CHECKING:
 def _maybe_tuple_to_list(item: Any) -> Any:
     """Convert a tuple to a list. Leave as is if it's not a tuple."""
     return list(item) if isinstance(item, tuple) else item
+
+
+def _downcast_large_type(arrow_type: pa.DataType) -> pa.DataType:
+    """Recursively downcast a single Arrow type to its standard counterpart.
+
+    Handles ``large_string`` -> ``string``, ``large_binary`` -> ``binary``,
+    and ``large_list`` -> ``list`` (with recursive value-type downcasting).
+    Returns the type unchanged if no downcasting is needed.
+    """
+    import pyarrow as pa
+
+    large_type_map: dict[pa.DataType, pa.DataType] = {
+        pa.large_string(): pa.string(),
+        pa.large_binary(): pa.binary(),
+    }
+
+    if isinstance(arrow_type, pa.LargeListType):
+        return pa.list_(_downcast_large_type(arrow_type.value_type))
+    if arrow_type in large_type_map:
+        return large_type_map[arrow_type]
+    return arrow_type
+
+
+def _downcast_large_arrow_types(table: pa.Table) -> pa.Table:
+    """Downcast large Arrow types to their standard counterparts.
+
+    Pandas 3.x defaults to StringDtype backed by ``large_string`` in Arrow.
+    Third-party custom components that bundle older Arrow JS libraries cannot
+    decode ``LargeUtf8`` / ``LargeBinary`` / ``LargeList`` type codes, so we
+    convert them to the standard-width variants before serializing.
+    """
+    import pyarrow as pa
+
+    new_fields: list[pa.Field] = []
+    needs_cast = False
+    for field in table.schema:
+        downcast = _downcast_large_type(field.type)
+        if downcast != field.type:
+            new_fields.append(field.with_type(downcast))
+            needs_cast = True
+        else:
+            new_fields.append(field)
+
+    if not needs_cast:
+        return table
+
+    return table.cast(pa.schema(new_fields, metadata=table.schema.metadata))
+
+
+def _convert_df_to_component_arrow_bytes(df: DataFrame) -> bytes:
+    """Convert a DataFrame to Arrow IPC bytes, downcasting large types.
+
+    This wraps ``convert_pandas_df_to_arrow_bytes`` with an additional step
+    that downcasts large Arrow types (``large_string``, ``large_binary``,
+    ``large_list``) so that custom components bundling older Arrow JS
+    libraries can decode the data.
+    """
+    import pyarrow as pa
+
+    from streamlit.dataframe_util import convert_arrow_table_to_arrow_bytes
+
+    try:
+        table = pa.Table.from_pandas(df)
+    except (
+        pa.ArrowTypeError,
+        pa.ArrowInvalid,
+        pa.ArrowNotImplementedError,
+    ) as ex:
+        _LOGGER.info(
+            "Serialization of dataframe to Arrow table was unsuccessful. "
+            "Applying automatic fixes for column types to make the dataframe "
+            "Arrow-compatible.",
+            exc_info=ex,
+        )
+        df = dataframe_util.fix_arrow_incompatible_column_types(df)
+        table = pa.Table.from_pandas(df)
+
+    table = _downcast_large_arrow_types(table)
+    return convert_arrow_table_to_arrow_bytes(table)
 
 
 def marshall(
@@ -74,7 +157,7 @@ def _marshall_index(proto: ArrowTableProto, index: Index[Any]) -> None:
 
     index_values = list(map(_maybe_tuple_to_list, index.values))
     index_df = pd.DataFrame(index_values)
-    proto.index = dataframe_util.convert_pandas_df_to_arrow_bytes(index_df)
+    proto.index = _convert_df_to_component_arrow_bytes(index_df)
 
 
 def _marshall_columns(proto: ArrowTableProto, columns: Index[Any]) -> None:
@@ -94,7 +177,7 @@ def _marshall_columns(proto: ArrowTableProto, columns: Index[Any]) -> None:
 
     column_values = list(map(_maybe_tuple_to_list, columns.values))
     columns_df = pd.DataFrame(column_values)
-    proto.columns = dataframe_util.convert_pandas_df_to_arrow_bytes(columns_df)
+    proto.columns = _convert_df_to_component_arrow_bytes(columns_df)
 
 
 def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
@@ -109,7 +192,7 @@ def _marshall_data(proto: ArrowTableProto, df: DataFrame) -> None:
         A dataframe to marshall.
 
     """
-    proto.data = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+    proto.data = _convert_df_to_component_arrow_bytes(df)
 
 
 def arrow_proto_to_dataframe(proto: ArrowTableProto) -> DataFrame:
