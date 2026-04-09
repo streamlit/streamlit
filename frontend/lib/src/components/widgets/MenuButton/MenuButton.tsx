@@ -238,7 +238,7 @@ function MenuButton(props: Props): ReactElement {
               aria-haspopup="menu"
               aria-expanded={isOpen}
             >
-              <StyledMenuButtonLabelContainer>
+              <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
                 <DynamicButtonLabel
                   icon={element.icon}
                   label={element.label}

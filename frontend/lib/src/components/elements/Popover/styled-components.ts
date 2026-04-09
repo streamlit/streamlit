@@ -16,7 +16,9 @@
 
 import styled from "@emotion/styled"
 
-export const StyledPopoverLabelContainer = styled.div(({ theme }) => ({
+export const StyledPopoverLabelContainer = styled.div<{
+  $hideChevron?: boolean
+}>(({ theme, $hideChevron }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,
@@ -29,7 +31,8 @@ export const StyledPopoverLabelContainer = styled.div(({ theme }) => ({
   // Also, if we want to apply the same adjustment for other elements, we should
   // consider putting this into a theme variable or creating a shared styled component.
   // The SVG icon we are using seems to have an internal padding of around 25%.
-  marginRight: `calc(-${theme.iconSizes.lg} * 0.25)`,
+  // Only apply when the chevron is visible.
+  marginRight: $hideChevron ? 0 : `calc(-${theme.iconSizes.lg} * 0.25)`,
 }))
 
 export const StyledPopoverExpansionIcon = styled.div(({ theme }) => ({

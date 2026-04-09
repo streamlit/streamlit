@@ -16,12 +16,15 @@
 
 import styled from "@emotion/styled"
 
-export const StyledMenuButtonLabelContainer = styled.div(({ theme }) => ({
+export const StyledMenuButtonLabelContainer = styled.div<{
+  $hideChevron?: boolean
+}>(({ theme, $hideChevron }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.threeXS,
-  // Offset the expansion icon's built-in padding for consistent button padding
-  marginRight: `calc(-${theme.iconSizes.lg} * 0.25)`,
+  // Offset the expansion icon's built-in padding for consistent button padding.
+  // Only apply when the chevron is visible.
+  marginRight: $hideChevron ? 0 : `calc(-${theme.iconSizes.lg} * 0.25)`,
 }))
 
 export const StyledMenuButtonExpansionIcon = styled.div(({ theme }) => ({

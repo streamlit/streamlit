@@ -220,13 +220,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               containerWidth={true}
               onClick={handleToggle}
             >
-              <StyledPopoverLabelContainer>
+              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
                 <DynamicButtonLabel
                   icon={element.icon}
                   label={element.label}
                 />
                 {!hideChevron && (
-                  <StyledPopoverExpansionIcon>
+                  <StyledPopoverExpansionIcon aria-hidden="true">
                     <DynamicIcon
                       iconValue={
                         open
