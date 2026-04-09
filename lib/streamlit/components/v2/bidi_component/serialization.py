@@ -80,8 +80,9 @@ def _extract_dataframes_from_dict(
 
                     # If the first blob with this size was assigned a counter
                     # ref, retroactively re-key it by its hash for correct dedup.
+                    # Skip if already re-keyed (3rd+ blob of same size).
                     prev_ref = seen_sizes[size]
-                    if prev_ref in arrow_blobs:
+                    if prev_ref.startswith("ref_") and prev_ref in arrow_blobs:
                         prev_hash = calc_md5(arrow_blobs[prev_ref])
                         if prev_ref != prev_hash:
                             arrow_blobs[prev_hash] = arrow_blobs.pop(prev_ref)
