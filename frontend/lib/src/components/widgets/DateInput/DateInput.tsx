@@ -99,7 +99,13 @@ const RANGE_SEP_DISPLAY = " – "
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => moment(val, DATE_FORMAT).toDate())
+  return strings.map(val => {
+    const m = moment(val, DATE_FORMAT, true)
+    if (m.isValid()) {
+      return normalizeToStartOfDay(new Date(m.year(), m.month(), m.date()))
+    }
+    return normalizeToStartOfDay(moment(val, DATE_FORMAT).toDate())
+  })
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -107,7 +113,12 @@ function datesToStrings(dates: Date[]): string[] {
   if (!dates) {
     return []
   }
-  return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
+  return dates.map(value => {
+    const y = value.getFullYear()
+    const mo = value.getMonth() + 1
+    const d = value.getDate()
+    return `${String(y).padStart(4, "0")}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+  })
 }
 
 // Types for date validation
@@ -167,7 +178,9 @@ function tryParseInputToDates(
   }
   if (!isRange) {
     const d = moment(trimmed, elementFormat, true)
-    return d.isValid() ? [normalizeToStartOfDay(d.toDate())] : null
+    return d.isValid()
+      ? [normalizeToStartOfDay(new Date(d.year(), d.month(), d.date()))]
+      : null
   }
   const parts = trimmed.split(/\s*[–-]\s*/)
   if (parts.length !== 2) {
@@ -178,8 +191,8 @@ function tryParseInputToDates(
   if (!d0.isValid() || !d1.isValid()) {
     return null
   }
-  const a = normalizeToStartOfDay(d0.toDate())
-  const b = normalizeToStartOfDay(d1.toDate())
+  const a = normalizeToStartOfDay(new Date(d0.year(), d0.month(), d0.date()))
+  const b = normalizeToStartOfDay(new Date(d1.year(), d1.month(), d1.date()))
   return a <= b ? [a, b] : [b, a]
 }
 
@@ -438,11 +451,15 @@ function DateInput({
     setInputFocused(false)
     const raw = String(inputRef.current?.value ?? "")
     if (raw === "") {
-      handleClose()
+      // Single date: snap back to default when the field is cleared (BaseWeb parity).
+      // Range: keep an empty range; resetting here would restore element.default dates.
+      if (!element.isRange) {
+        handleClose()
+      }
     } else {
       setDraftInput(committedInput)
     }
-  }, [committedInput, handleClose])
+  }, [committedInput, element.isRange, handleClose])
 
   const onCalendarKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -676,17 +693,34 @@ function DateInput({
               }
               onChange={onInputChange}
               onBlur={onInputBlur}
-              onFocus={e => {
-                setInputFocused(true)
-                setDraftInput(committedInput)
-                e.currentTarget.select()
+              onClick={() => {
                 if (!disabled) {
                   setOpen(true)
                 }
               }}
+              onFocus={e => {
+                setInputFocused(true)
+                setDraftInput(committedInput)
+                e.currentTarget.select()
+              }}
               onKeyDown={e => {
                 if (e.key === "ArrowDown" && !disabled) {
                   setOpen(true)
+                }
+                if (e.key === "Escape") {
+                  if (open) {
+                    setOpen(false)
+                    e.preventDefault()
+                    return
+                  }
+                  if (
+                    clearable &&
+                    !disabled &&
+                    (value.length > 0 || displayValue)
+                  ) {
+                    e.preventDefault()
+                    handleChange({ date: null })
+                  }
                 }
               }}
             />
@@ -729,6 +763,7 @@ function DateInput({
               {...getFloatingProps()}
             >
               <CalendarPanel
+                data-testid="stDateInputCalendar"
                 role="application"
                 aria-label="Calendar."
                 tabIndex={-1}
@@ -808,7 +843,6 @@ function DateInput({
                                 ],
                               })
                               setRangeAnchor(null)
-                              setRangeSelecting(0)
                               setOpen(false)
                               inputRef.current?.focus()
                             }
@@ -835,7 +869,7 @@ function DateInput({
                     <QuickSelectLabel id={`${inputId}-qsl`}>
                       Choose a date range
                     </QuickSelectLabel>
-                    <QuickSelectComboboxWrap>
+                    <QuickSelectComboboxWrap data-testid="stDateInputQuickSelect">
                       <QuickSelectComboButton
                         type="button"
                         id={`${inputId}-qs`}
