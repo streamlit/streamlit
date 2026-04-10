@@ -157,6 +157,9 @@ const Selectbox: FC<Props> = ({
     return opt?.label ?? propValue
   }, [propValue, selectOptions])
 
+  const propDerivedLabelRef = useRef(propDerivedLabel)
+  propDerivedLabelRef.current = propDerivedLabel
+
   useLayoutEffect(() => {
     setInputQuery(propDerivedLabel)
   }, [propDerivedLabel])
@@ -357,16 +360,25 @@ const Selectbox: FC<Props> = ({
 
   const handleInputFocus = useCallback(() => {
     userEditedInputThisFocusRef.current = false
-    // Keep the committed option label in the input on focus; Ark can emit an empty
-    // controlled value before input-change reconciliation (e2e: edit "male" with backspace).
-    setInputQuery(propDerivedLabel)
-  }, [propDerivedLabel])
+    // Keep the committed option label in the input on focus; Ark clears/reconciles
+    // after focus — re-apply on the next frame so the controlled value wins (e2e parity
+    // with BaseWeb).
+    const label = propDerivedLabelRef.current
+    setInputQuery(label)
+    requestAnimationFrame(() => {
+      if (!userEditedInputThisFocusRef.current) {
+        setInputQuery(propDerivedLabelRef.current)
+      }
+    })
+  }, [])
 
   const onOpenChange = useCallback(
     (d: { open: boolean }) => {
       comboboxOpenRef.current = d.open
       if (d.open) {
         userEditedInputThisFocusRef.current = false
+        // Do not reset `inputQuery` here — opening can follow the first keystroke of
+        // `type()`, and syncing the label would wipe the filter (e2e fuzzy snapshot).
       } else {
         suppressEmptyInputAfterCloseRef.current = true
         window.setTimeout(() => {

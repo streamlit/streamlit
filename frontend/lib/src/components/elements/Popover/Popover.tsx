@@ -238,6 +238,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               minWidth: stretchWidth
                 ? `${Math.max(calculatedWidth, 160)}px`
                 : theme.sizes.minPopupWidth,
+              // Keep the portal subtree mounted for blur/commit parity with BaseWeb
+              // `renderAll`, but hide it when closed so widgets retain state.
+              display: open ? undefined : "none",
             }}
           >
             {children}

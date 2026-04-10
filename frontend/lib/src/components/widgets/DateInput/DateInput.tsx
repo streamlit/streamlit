@@ -615,12 +615,21 @@ function SingleTextField({
     if (!el) {
       return
     }
+    // Playwright `fill()` and some native paths update the DOM without React seeing a
+    // synthetic change event. Keep `draft` in sync so the controlled value does not
+    // overwrite the DOM before Enter/blur commits.
     const syncNative = (): void => {
-      lastNativeValueRef.current = el.value
+      const v = el.value
+      lastNativeValueRef.current = v
+      setDraft(v)
+      if (v === "") {
+        setIsEmpty(true)
+      }
     }
     el.addEventListener("input", syncNative, { capture: true })
     el.addEventListener("change", syncNative, { capture: true })
-    syncNative()
+    // Avoid syncNative() on attach — stale DOM after form-clear can overwrite `draft`.
+    lastNativeValueRef.current = el.value
     return () => {
       el.removeEventListener("input", syncNative, { capture: true })
       el.removeEventListener("change", syncNative, { capture: true })
@@ -807,7 +816,7 @@ function RangeTextField({
     }
     el.addEventListener("input", syncNative, { capture: true })
     el.addEventListener("change", syncNative, { capture: true })
-    syncNative()
+    lastNativeRangeValueRef.current = el.value
     return () => {
       el.removeEventListener("input", syncNative, { capture: true })
       el.removeEventListener("change", syncNative, { capture: true })
