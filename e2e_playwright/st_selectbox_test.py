@@ -178,13 +178,21 @@ def test_shows_correct_options_via_fuzzy_search(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that the fuzzy matching of options via typing works correctly."""
+    selectbox = get_selectbox(app, "selectbox 4 (more options)")
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
-    # Start typing:
-    selectbox_input.type("exp")
+    # Open the list first (chevron): Playwright fill() on a closed Ark combobox may not
+    # open the portal, so stSelectboxVirtualDropdown never mounts a test id.
+    selectbox.get_by_test_id("stSelectboxTrigger").click()
+
+    # Replace the committed label with a filter string. type() appends to the
+    # label-in-input value and can yield …/iframe.pyexp (zero fuzzy matches); fill()
+    # matches other selectbox e2e tests.
+    selectbox_input.fill("exp")
 
     # Check filtered options
     selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(selection_dropdown).to_be_visible()
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 

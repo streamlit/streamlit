@@ -186,8 +186,27 @@ const Selectbox: FC<Props> = ({
     return selectOptions.find(o => o.value === value) ?? null
   }, [selectOptions, value])
 
-  /** While the input still matches the committed label, do not filter (show full list on open). */
-  const filterQuery = inputQuery === propDerivedLabel ? "" : inputQuery
+  /**
+   * Filter string passed to fuzzy/contains/prefix matching.
+   * When Playwright (or the user) appends to the committed label without replacing it,
+   * `inputQuery` can briefly be `propDerivedLabel + suffix` (e.g. …/iframe.pyexp) while
+   * controlled reconciliation failed to slice — fuzzy match then finds nothing. Strip the
+   * known label prefix in that case (same as the input-change handler's append branch).
+   */
+  const filterQuery = useMemo(() => {
+    if (inputQuery === propDerivedLabel) {
+      return ""
+    }
+    if (
+      !acceptNewOptions &&
+      propDerivedLabel !== "" &&
+      inputQuery.startsWith(propDerivedLabel) &&
+      inputQuery.length > propDerivedLabel.length
+    ) {
+      return inputQuery.slice(propDerivedLabel.length)
+    }
+    return inputQuery
+  }, [acceptNewOptions, inputQuery, propDerivedLabel])
 
   const filteredOptions = useMemo(
     () => filterOptions(selectOptions, filterQuery) as typeof selectOptions,
@@ -376,9 +395,11 @@ const Selectbox: FC<Props> = ({
     (d: { open: boolean }) => {
       comboboxOpenRef.current = d.open
       if (d.open) {
-        userEditedInputThisFocusRef.current = false
-        // Do not reset `inputQuery` here — opening can follow the first keystroke of
-        // `type()`, and syncing the label would wipe the filter (e2e fuzzy snapshot).
+        // Do not reset `userEditedInputThisFocusRef` here: opening often follows the first
+        // keystroke of `type()`, and clearing it lets Zag emit a spurious empty
+        // input-change that restores the full label — the next chars then append to the
+        // path (…pyexp), fuzzy filter matches nothing (e2e: fuzzy snapshot "No results").
+        // `handleInputFocus` already sets this ref false when the input receives focus.
       } else {
         suppressEmptyInputAfterCloseRef.current = true
         window.setTimeout(() => {
