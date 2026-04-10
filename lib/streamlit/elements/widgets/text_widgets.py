@@ -109,6 +109,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
     ) -> str:
         pass
 
@@ -132,6 +133,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
     ) -> str | None:
         pass
 
@@ -155,6 +157,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
     ) -> str | None:
         r"""Display a single-line text input widget.
 
@@ -300,6 +303,12 @@ class TextWidgetsMixin:
             This can't be used with ``type="password"``. An empty
             query parameter (e.g., ``?my_key=``) clears the widget.
 
+        char_count_color : str or None
+            An optional color for the character count text displayed when
+            ``max_chars`` is set. Accepts a named color (e.g., ``"red"``,
+            ``"blue"``, ``"green"``) or a hex color (e.g., ``"#ff0000"``).
+            If ``None`` (default), the theme default color is used.
+
         Returns
         -------
         str or None
@@ -336,6 +345,7 @@ class TextWidgetsMixin:
             icon=icon,
             width=width,
             bind=bind,
+            char_count_color=char_count_color,
             ctx=ctx,
         )
 
@@ -358,6 +368,7 @@ class TextWidgetsMixin:
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -417,6 +428,9 @@ class TextWidgetsMixin:
 
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
+
+        if char_count_color is not None:
+            text_input_proto.char_count_color = char_count_color
 
         if type == "default":
             text_input_proto.type = TextInputProto.DEFAULT
@@ -489,6 +503,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
     ) -> str:
         pass
 
@@ -510,6 +525,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
     ) -> str | None:
         pass
 
@@ -531,6 +547,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
     ) -> str | None:
         r"""Display a multi-line text input widget.
 
@@ -665,6 +682,12 @@ class TextWidgetsMixin:
             An empty query parameter (e.g., ``?my_key=``) clears the
             widget.
 
+        char_count_color : str or None
+            An optional color for the character count text displayed when
+            ``max_chars`` is set. Accepts a named color (e.g., ``"red"``,
+            ``"blue"``, ``"green"``) or a hex color (e.g., ``"#ff0000"``).
+            If ``None`` (default), the theme default color is used.
+
         Returns
         -------
         str or None
@@ -707,6 +730,7 @@ class TextWidgetsMixin:
             label_visibility=label_visibility,
             width=width,
             bind=bind,
+            char_count_color=char_count_color,
             ctx=ctx,
         )
 
@@ -727,6 +751,7 @@ class TextWidgetsMixin:
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
         bind: BindOption = None,
+        char_count_color: str | None = None,
         ctx: ScriptRunContext | None = None,
     ) -> str | None:
         key = to_key(key)
@@ -780,6 +805,9 @@ class TextWidgetsMixin:
 
         if placeholder is not None:
             text_area_proto.placeholder = str(placeholder)
+
+        if char_count_color is not None:
+            text_area_proto.char_count_color = char_count_color
 
         # Set query param key if bound
         if bind == "query-params" and key is not None:

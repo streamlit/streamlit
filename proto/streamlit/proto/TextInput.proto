@@ -43,4 +43,6 @@ message TextInput {
   string icon = 14;
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 15;
+  // Custom color for the character count text (e.g. "red", "#ff0000")
+  string char_count_color = 16;
 }

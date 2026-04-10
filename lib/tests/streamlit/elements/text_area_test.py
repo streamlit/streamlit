@@ -397,6 +397,27 @@ class TextAreaTest(DeltaGeneratorTestCase):
         assert c.query_param_key == "my_text"
         assert c.max_chars == 5
 
+    def test_char_count_color_hex(self) -> None:
+        """Test that char_count_color is set on the proto when a hex color is provided."""
+        st.text_area("the label", max_chars=50, char_count_color="#ff0000")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.char_count_color == "#ff0000"
+
+    def test_char_count_color_named(self) -> None:
+        """Test that char_count_color is set on the proto when a named color is provided."""
+        st.text_area("the label", max_chars=50, char_count_color="red")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.char_count_color == "red"
+
+    def test_char_count_color_default(self) -> None:
+        """Test that char_count_color defaults to empty string when not provided."""
+        st.text_area("the label", max_chars=50)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.char_count_color == ""
+
 
 class SomeObj:
     pass

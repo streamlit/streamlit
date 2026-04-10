@@ -33,6 +33,8 @@ message TextArea {
   LabelVisibility label_visibility = 12;
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 13;
+  // Custom color for the character count text (e.g. "red", "#ff0000")
+  string char_count_color = 14;
 
   reserved 4;
 }

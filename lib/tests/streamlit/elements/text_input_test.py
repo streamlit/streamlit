@@ -391,6 +391,27 @@ class TextInputTest(DeltaGeneratorTestCase):
 
         assert "password" in str(exc.value).lower()
 
+    def test_char_count_color_hex(self) -> None:
+        """Test that char_count_color is set on the proto when a hex color is provided."""
+        st.text_input("the label", max_chars=50, char_count_color="#ff0000")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.char_count_color == "#ff0000"
+
+    def test_char_count_color_named(self) -> None:
+        """Test that char_count_color is set on the proto when a named color is provided."""
+        st.text_input("the label", max_chars=50, char_count_color="red")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.char_count_color == "red"
+
+    def test_char_count_color_default(self) -> None:
+        """Test that char_count_color defaults to empty string when not provided."""
+        st.text_input("the label", max_chars=50)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.char_count_color == ""
+
 
 class SomeObj:
     pass

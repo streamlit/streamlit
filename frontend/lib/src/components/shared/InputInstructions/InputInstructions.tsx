@@ -29,6 +29,7 @@ export interface Props {
   className?: string
   type?: "multiline" | "single" | "chat"
   allowEnterToSubmit?: boolean
+  charCountColor?: string
 }
 
 const InputInstructions = ({
@@ -39,6 +40,7 @@ const InputInstructions = ({
   className,
   type = "single",
   allowEnterToSubmit = true,
+  charCountColor,
 }: Props): ReactElement => {
   const messages: ReactElement[] = []
   const addMessage = (text: string, shouldBlink = false): void => {
@@ -75,6 +77,7 @@ const InputInstructions = ({
     <StyledWidgetInstructions
       data-testid="InputInstructions"
       className={className}
+      charCountColor={charCountColor}
     >
       {messages}
     </StyledWidgetInstructions>

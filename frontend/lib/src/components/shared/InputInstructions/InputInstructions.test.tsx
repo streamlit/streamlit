@@ -142,4 +142,27 @@ describe("InputInstructions", () => {
       expect(screen.getByTestId("InputInstructions")).toHaveTextContent("")
     })
   })
+
+  describe("charCountColor", () => {
+    it("applies custom color when charCountColor is provided", () => {
+      const props = getProps({
+        maxLength: 10,
+        charCountColor: "#ff0000",
+      })
+      render(<InputInstructions {...props} />)
+
+      const el = screen.getByTestId("InputInstructions")
+      expect(el).toHaveStyle("color: #ff0000")
+    })
+
+    it("uses default color when charCountColor is not provided", () => {
+      const props = getProps({
+        maxLength: 10,
+      })
+      render(<InputInstructions {...props} />)
+
+      const el = screen.getByTestId("InputInstructions")
+      expect(el).not.toHaveStyle("color: #ff0000")
+    })
+  })
 })

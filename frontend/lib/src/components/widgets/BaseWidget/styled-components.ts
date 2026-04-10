@@ -15,6 +15,7 @@
  */
 
 import styled from "@emotion/styled"
+import { transparentize } from "color2k"
 
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
@@ -52,15 +53,20 @@ export const StyledWidgetLabelHelp = styled.div({
   flex: 1,
 })
 
-export const StyledWidgetInstructions = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.twoSm,
-  color: theme.colors.fadedText60,
-  margin: theme.spacing.none,
-  textAlign: "right",
-  position: "absolute",
-  bottom: theme.spacing.threeXS,
-  right: `calc(${theme.fontSizes.mdLg} * 0.5)`,
-}))
+interface StyledWidgetInstructionsProps {
+  charCountColor?: string
+}
+
+export const StyledWidgetInstructions =
+  styled.div<StyledWidgetInstructionsProps>(({ theme, charCountColor }) => ({
+    fontSize: theme.fontSizes.twoSm,
+    color: charCountColor || transparentize(theme.colors.bodyText, 0.25),
+    margin: theme.spacing.none,
+    textAlign: "right",
+    position: "absolute",
+    bottom: theme.spacing.threeXS,
+    right: `calc(${theme.fontSizes.mdLg} * 0.5)`,
+  }))
 
 /**
  * @deprecated Please utilize `WidgetLabelHelpIconInline` instead of using this

@@ -34,6 +34,7 @@ import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import { resolveNamedColor } from "~lib/theme/getColors"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -299,6 +300,11 @@ const TextArea: FC<Props> = ({
           type={"multiline"}
           inForm={isInForm({ formId })}
           allowEnterToSubmit={allowEnterToSubmit}
+          charCountColor={
+            element.charCountColor
+              ? resolveNamedColor(element.charCountColor, theme)
+              : undefined
+          }
         />
       )}
     </StyledTextAreaContainer>

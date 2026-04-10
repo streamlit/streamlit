@@ -37,6 +37,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import { resolveNamedColor } from "~lib/theme/getColors"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -256,6 +257,11 @@ function TextInput({
           maxLength={maxChars}
           inForm={isInForm({ formId })}
           allowEnterToSubmit={allowEnterToSubmit}
+          charCountColor={
+            element.charCountColor
+              ? resolveNamedColor(element.charCountColor, theme)
+              : undefined
+          }
         />
       )}
     </StyledTextInput>
