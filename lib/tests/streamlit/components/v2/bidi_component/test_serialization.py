@@ -269,6 +269,50 @@ def test_extract_different_dataframes_same_size_stores_separately(monkeypatch):
     assert not ref2.startswith("ref_")
 
 
+def test_extract_three_same_size_blobs_dedup_and_separate(monkeypatch):
+    """Three same-size blobs: A==B should dedup, C differs. Covers the
+    startswith('ref_') guard that skips redundant re-hashing for 3rd+ blobs."""
+    from streamlit.components.v2.bidi_component import serialization as ser
+
+    blob_a = b"aaaa_same_content_xx"
+    blob_b = b"aaaa_same_content_xx"  # identical to A
+    blob_c = b"cccc_diff_content_xx"  # different but same length
+    assert len(blob_a) == len(blob_b) == len(blob_c)
+
+    call_count = 0
+
+    def _fake_arrow_bytes(value: object) -> bytes:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return blob_a
+        if call_count == 2:
+            return blob_b
+        return blob_c
+
+    monkeypatch.setattr(ser, "convert_anything_to_arrow_bytes", _fake_arrow_bytes)
+    monkeypatch.setattr(ser, "is_dataframe_like", lambda v: isinstance(v, pd.DataFrame))
+
+    df1 = pd.DataFrame({"x": [1]})
+    df2 = pd.DataFrame({"x": [2]})
+    df3 = pd.DataFrame({"x": [3]})
+
+    arrow_blobs: dict[str, bytes] = {}
+    processed_data = _extract_dataframes_from_dict(
+        {"a": df1, "b": df2, "c": df3}, arrow_blobs
+    )
+
+    ref_a = processed_data["a"]["__streamlit_arrow_ref__"]
+    ref_b = processed_data["b"]["__streamlit_arrow_ref__"]
+    ref_c = processed_data["c"]["__streamlit_arrow_ref__"]
+    # A and B are identical content → same MD5 → deduped
+    assert ref_a == ref_b
+    # C is different → different MD5
+    assert ref_c != ref_a
+    # 2 unique blobs stored (A/B shared, C separate)
+    assert len(arrow_blobs) == 2
+
+
 def test_serialize_mixed_data_with_dataframe():
     """Test serialize_mixed_data with a dataframe."""
     df = pd.DataFrame({"a": [1, 2], "b": [3, 4]})

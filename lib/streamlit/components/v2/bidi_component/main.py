@@ -261,10 +261,10 @@ class BidiComponentMixin:
             # In the rare event of a false collision, the user sees a clear
             # DuplicateElementId error telling them to add a `key` argument.
 
-            def _cheap_fingerprint(data: bytes) -> str:
-                head = data[:64].hex()
-                tail = data[-64:].hex() if len(data) > 64 else ""
-                return f"{len(data)}:{head}:{tail}"
+            def _cheap_fingerprint(blob_bytes: bytes) -> str:
+                head = blob_bytes[:64].hex()
+                tail = blob_bytes[-64:].hex() if len(blob_bytes) > 64 else ""
+                return f"{len(blob_bytes)}:{head}:{tail}"
 
             blob_fingerprints = sorted(
                 _cheap_fingerprint(blob.data) for blob in mixed.arrow_blobs.values()
