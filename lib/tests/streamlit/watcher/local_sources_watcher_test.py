@@ -47,6 +47,7 @@ def NOOP_CALLBACK(_filepath):
 
 
 @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+@patch("streamlit.file_util.get_editable_install_paths", MagicMock(return_value=set()))
 class LocalSourcesWatcherTest(unittest.TestCase):
     def setUp(self):
         modules = [
@@ -549,3 +550,109 @@ def test_get_module_paths_outputs_abs_paths():
 
 def sort_args_list(args_list):
     return sorted(args_list, key=lambda args: args[0])
+
+
+class EditableInstallWatcherTest(unittest.TestCase):
+    """Tests for editable install watching."""
+
+    @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+    @patch("streamlit.file_util.get_editable_install_paths")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_watches_editable_install_modules(
+        self,
+        mock_path_watcher: MagicMock,
+        mock_get_editable: MagicMock,
+    ) -> None:
+        """Modules from editable installs are watched."""
+        editable_path = os.path.dirname(DUMMY_MODULE_1_FILE)
+        mock_get_editable.return_value = {editable_path}
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        sys.modules["EDITABLE_TEST_MODULE"] = DUMMY_MODULE_1
+
+        mock_path_watcher.reset_mock()
+        lsw.update_watched_modules()
+
+        watched_paths = [
+            call_args[0][0] for call_args in mock_path_watcher.call_args_list
+        ]
+        assert any(DUMMY_MODULE_1_FILE in p for p in watched_paths)
+
+        del sys.modules["EDITABLE_TEST_MODULE"]
+
+    @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+    @patch("streamlit.file_util.get_editable_install_paths")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_does_not_watch_non_editable_site_packages(
+        self, mock_path_watcher: MagicMock, mock_get_editable: MagicMock
+    ) -> None:
+        """Modules outside editable installs are not watched."""
+        mock_get_editable.return_value = {"/workspace/my_package"}
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        mock_module = MagicMock()
+        mock_module.__file__ = "/venv/lib/python3.10/site-packages/other_module.py"
+        mock_module.__name__ = "other_module"
+
+        mock_path_watcher.reset_mock()
+        with patch("sys.modules", {"other_module": mock_module}):
+            lsw.update_watched_modules()
+
+        watched_paths = [
+            call_args[0][0] for call_args in mock_path_watcher.call_args_list
+        ]
+        assert not any("site-packages" in p for p in watched_paths)
+
+    @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+    @patch("streamlit.file_util.get_editable_install_paths")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_editable_install_paths_cached_at_init(
+        self, _mock_path_watcher: MagicMock, mock_get_editable: MagicMock
+    ) -> None:
+        """Editable install paths are cached at watcher initialization."""
+        mock_get_editable.return_value = {"/workspace/pkg"}
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+
+        mock_get_editable.assert_called_once()
+        assert lsw._editable_install_paths == {"/workspace/pkg"}
+
+    @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+    @patch("streamlit.file_util.get_editable_install_paths")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_no_editable_installs_still_works(
+        self, mock_path_watcher: MagicMock, mock_get_editable: MagicMock
+    ) -> None:
+        """Watcher works normally when no editable installs exist."""
+        mock_get_editable.return_value = set()
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        mock_path_watcher.assert_called()
+        args, _ = mock_path_watcher.call_args_list[0]
+        assert os.path.realpath(args[0]) == os.path.realpath(SCRIPT_PATH)
+
+    @patch("streamlit.file_util.file_in_pythonpath", MagicMock(return_value=False))
+    @patch("streamlit.file_util.get_editable_install_paths")
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_config_disables_editable_install_watching(
+        self, mock_path_watcher: MagicMock, mock_get_editable: MagicMock
+    ) -> None:
+        """server.watchEditableInstalls=False disables editable watching."""
+        with patch(
+            "streamlit.watcher.local_sources_watcher.config.get_option",
+            side_effect=lambda opt: {
+                "server.folderWatchList": [],
+                "server.folderWatchBlacklist": [],
+                "server.watchEditableInstalls": False,
+            }.get(opt),
+        ):
+            lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+
+        mock_get_editable.assert_not_called()
+        assert lsw._editable_install_paths == set()

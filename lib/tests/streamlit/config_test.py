@@ -804,6 +804,7 @@ class ConfigTest(unittest.TestCase):
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
                 "server.useStarlette",
+                "server.watchEditableInstalls",
                 "ui.hideTopBar",
             ]
         )

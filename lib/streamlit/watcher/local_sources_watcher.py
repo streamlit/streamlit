@@ -65,6 +65,17 @@ class LocalSourcesWatcher:
         self._is_closed = False
         self._cached_sys_modules: set[str] = set()
 
+        # Cache editable install paths at startup for performance.
+        # This enables watching files from packages installed in editable/development
+        # mode within a uv workspace. Only activates when the app is in a uv workspace
+        # and server.watchEditableInstalls is enabled.
+        if config.get_option("server.watchEditableInstalls"):
+            self._editable_install_paths: set[str] = (
+                file_util.get_editable_install_paths(self._main_script_path)
+            )
+        else:
+            self._editable_install_paths = set()
+
         # Blacklist for folders that should not be watched
         self._folder_black_list = FolderBlackList(
             config.get_option("server.folderWatchBlacklist")
@@ -214,6 +225,9 @@ class LocalSourcesWatcher:
         return self._file_is_new(filepath) and (
             file_util.file_is_in_folder_glob(filepath, self._script_folder)
             or file_util.file_in_pythonpath(filepath)
+            or file_util.file_in_editable_install(
+                filepath, self._editable_install_paths
+            )
         )
 
     def update_watched_modules(self) -> None:

@@ -264,3 +264,119 @@ def get_main_script_directory(main_script: str) -> str:
     main_script_path = normalize_path_join(os.getcwd(), main_script)
 
     return os.path.dirname(main_script_path)
+
+
+def _find_uv_workspace_root(start_path: str) -> str | None:
+    """Find the root directory of a uv workspace by walking up from start_path."""
+    import tomllib
+
+    current = os.path.abspath(start_path)
+    if os.path.isfile(current):
+        current = os.path.dirname(current)
+
+    while current != os.path.dirname(current):  # Stop at filesystem root
+        pyproject_path = os.path.join(current, "pyproject.toml")
+        if os.path.isfile(pyproject_path):
+            with contextlib.suppress(Exception):
+                with open(pyproject_path, "rb") as f:
+                    data = tomllib.load(f)
+                if data.get("tool", {}).get("uv", {}).get("workspace"):
+                    return current
+        current = os.path.dirname(current)
+
+    return None
+
+
+def _get_workspace_member_paths(workspace_root: str) -> set[str]:
+    """Get absolute paths of all workspace member directories."""
+    import glob
+
+    import tomllib
+
+    pyproject_path = os.path.join(workspace_root, "pyproject.toml")
+    member_paths: set[str] = set()
+
+    with contextlib.suppress(Exception):
+        with open(pyproject_path, "rb") as f:
+            data = tomllib.load(f)
+
+        workspace_config = data.get("tool", {}).get("uv", {}).get("workspace", {})
+        members = workspace_config.get("members", [])
+
+        for pattern in members:
+            full_pattern = os.path.join(workspace_root, pattern)
+            for match in glob.glob(full_pattern):
+                if os.path.isdir(match):
+                    member_paths.add(os.path.abspath(match))
+
+    # Always include the workspace root itself (it may contain a package)
+    member_paths.add(os.path.abspath(workspace_root))
+
+    return member_paths
+
+
+def get_editable_install_paths(main_script_path: str | None = None) -> set[str]:
+    """Get source directories of editable-installed packages within a uv workspace.
+
+    Only returns editable paths that are workspace members. Returns an empty set
+    outside of uv workspaces to avoid false positives. Editable installs are
+    detected via PEP 610 direct_url.json metadata.
+    """
+    if main_script_path is None:
+        return set()
+
+    workspace_root = _find_uv_workspace_root(main_script_path)
+    if workspace_root is None:
+        return set()
+
+    workspace_members = _get_workspace_member_paths(workspace_root)
+    if not workspace_members:
+        return set()
+
+    import json
+    from importlib.metadata import distributions
+    from urllib.request import url2pathname
+
+    editable_paths: set[str] = set()
+
+    for dist in distributions():
+        with contextlib.suppress(Exception):
+            direct_url_json = dist.read_text("direct_url.json")
+            if direct_url_json:
+                direct_url = json.loads(direct_url_json)
+                if direct_url.get("dir_info", {}).get("editable"):
+                    url = direct_url.get("url", "")
+                    if url.startswith("file://"):
+                        # url2pathname handles file:// URLs across platforms
+                        source_path = url2pathname(url[7:])
+                        abs_path = os.path.abspath(source_path)
+
+                        if abs_path in workspace_members:
+                            editable_paths.add(abs_path)
+
+    if editable_paths:
+        # Import logger lazily to avoid circular import with config.py
+        from streamlit.logger import get_logger
+
+        get_logger(__name__).debug(
+            "Detected editable install paths: %s", editable_paths
+        )
+
+    return editable_paths
+
+
+def file_in_editable_install(
+    filepath: str, editable_paths: set[str] | None = None
+) -> bool:
+    """Test whether a filepath is within an editable-installed package."""
+    if editable_paths is None:
+        editable_paths = get_editable_install_paths()
+
+    if not editable_paths:
+        return False
+
+    filepath = os.path.abspath(filepath)
+    return any(
+        filepath.startswith(editable_path + os.sep) or filepath == editable_path
+        for editable_path in editable_paths
+    )

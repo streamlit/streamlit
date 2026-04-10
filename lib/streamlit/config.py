@@ -820,6 +820,21 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.watchEditableInstalls",
+    description="""
+        Watch files from editable-installed packages within uv workspaces.
+
+        When enabled and the app is running within a uv workspace, Streamlit
+        will watch files from workspace member packages that are installed in
+        editable mode. Changes to these files will trigger app reruns.
+
+        This option has no effect outside of uv workspaces.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
 
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize
