@@ -37,6 +37,7 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -111,6 +112,8 @@ const Selectbox: FC<Props> = ({
    * Skip when the user has already edited (e.g. Backspace) so inputValue !== value.
    */
   const firstEditAfterFocusRef = useRef(true)
+  /** After focus, move caret to end once (avoids browser select-all wiping partial edits). */
+  const placeCaretAtEndAfterFocusRef = useRef(false)
 
   const [value, setValue] = useState<string | null>(propValue ?? null)
   const valueBeforeRemovalRef = useRef<string | null>(null)
@@ -212,7 +215,7 @@ const Selectbox: FC<Props> = ({
   }, [propValue])
 
   const handleFocus = useCallback(
-    (e: FocusEvent<HTMLInputElement>) => {
+    (_e: FocusEvent<HTMLInputElement>) => {
       setFocused(true)
       firstEditAfterFocusRef.current = true
       // Use parent prop so session_state / proto updates are reflected immediately
@@ -223,23 +226,31 @@ const Selectbox: FC<Props> = ({
       if (!selectDisabled) {
         setOpen(true)
       }
-      // When a committed value is shown, move the caret to the end after focus.
-      // Skip if empty: a deferred setSelectionRange can run after the first search
-      // keystroke and corrupt the filter string (unit tests + clearable empty select).
       if (text.length > 0) {
-        const el = e.currentTarget
-        requestAnimationFrame(() => {
-          try {
-            const len = text.length
-            el.setSelectionRange(len, len)
-          } catch {
-            // setSelectionRange not supported on some input types
-          }
-        })
+        placeCaretAtEndAfterFocusRef.current = true
       }
     },
     [selectDisabled, propValue]
   )
+
+  useLayoutEffect(() => {
+    if (!placeCaretAtEndAfterFocusRef.current || !focused) {
+      return
+    }
+    placeCaretAtEndAfterFocusRef.current = false
+    const el = inputRef.current
+    if (!el || selectDisabled || inputReadOnly) {
+      return
+    }
+    const len = el.value.length
+    if (len > 0) {
+      try {
+        el.setSelectionRange(len, len)
+      } catch {
+        // setSelectionRange not supported on some input types
+      }
+    }
+  }, [focused, inputValue, selectDisabled, inputReadOnly])
 
   const { refs, floatingStyles, context } = useFloating({
     open: open && !selectDisabled,
@@ -298,24 +309,16 @@ const Selectbox: FC<Props> = ({
       const floatEl = refs.floating.current
       if ((refEl && refEl.contains(t)) || (floatEl && floatEl.contains(t))) {
         e.preventDefault()
-        if (open) {
-          // index=None selectboxes are clearable: Escape clears while the menu is open.
-          // index set (non-clearable): Escape only closes the menu and keeps the value.
-          if (clearable && propValue !== null && propValue !== "") {
-            commitSelection(null)
-          } else {
-            setOpen(false)
-            setSearchFilter("")
-            requestAnimationFrame(() => {
-              inputRef.current?.blur()
-            })
-          }
-          return
-        }
+        // index=None selectboxes are clearable: Escape clears while the menu is open.
+        // index set (non-clearable): Escape closes and restores committed value (no onChange).
         if (clearable && propValue !== null && propValue !== "") {
           commitSelection(null)
         } else {
           setOpen(false)
+          setSearchFilter("")
+          setInputValue(propValue ?? "")
+          setValue(propValue ?? null)
+          firstEditAfterFocusRef.current = true
           requestAnimationFrame(() => {
             inputRef.current?.blur()
           })
@@ -530,6 +533,16 @@ const Selectbox: FC<Props> = ({
                 readOnly={Boolean(inputReadOnly)}
                 value={inputDisplay}
                 $hideText={showCollapsedValue}
+                onMouseDown={e => {
+                  if (selectDisabled || inputReadOnly) {
+                    return
+                  }
+                  const v = value
+                  if (v != null && v !== "" && !focused) {
+                    e.preventDefault()
+                    e.currentTarget.focus()
+                  }
+                }}
                 onChange={e => {
                   if (inputReadOnly) {
                     return

@@ -151,25 +151,39 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
 
-  // Keep the popover body mounted for one frame after close so nested inputs can blur
-  // and commit widget state before unmount (matches BaseWeb timing).
-  const [bodyMounted, setBodyMounted] = useState(initialOpen)
+  // Keep popover body mounted briefly after close so portaled inputs receive blur and
+  // commit widget state. Unmount after a delay so we do not leave many stPopoverBody
+  // nodes in the document (portals are not under stPopover; e2e uses a global test id).
+  const [contentMounted, setContentMounted] = useState(initialOpen)
+  const unmountAfterCloseTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
+  const hadOpenedContentRef = useRef(initialOpen)
+
   useEffect(() => {
     if (open) {
-      setBodyMounted(true)
-    } else {
-      // Defer unmount past blur + widget commit: rAF then macrotask so nested inputs
-      // flush blur handlers before the popover body unmounts.
-      let rafId = 0
-      let timeoutId = 0
-      rafId = window.requestAnimationFrame(() => {
-        timeoutId = window.setTimeout(() => {
-          setBodyMounted(false)
-        }, 0)
-      })
-      return () => {
-        window.cancelAnimationFrame(rafId)
-        window.clearTimeout(timeoutId)
+      if (unmountAfterCloseTimerRef.current !== null) {
+        clearTimeout(unmountAfterCloseTimerRef.current)
+        unmountAfterCloseTimerRef.current = null
+      }
+      hadOpenedContentRef.current = true
+      setContentMounted(true)
+      return
+    }
+
+    if (!hadOpenedContentRef.current) {
+      return
+    }
+
+    unmountAfterCloseTimerRef.current = setTimeout(() => {
+      unmountAfterCloseTimerRef.current = null
+      setContentMounted(false)
+    }, 200)
+
+    return () => {
+      if (unmountAfterCloseTimerRef.current !== null) {
+        clearTimeout(unmountAfterCloseTimerRef.current)
+        unmountAfterCloseTimerRef.current = null
       }
     }
   }, [open])
@@ -318,7 +332,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButton>
         </BaseButtonTooltip>
       </div>
-      {bodyMounted && (
+      {contentMounted && (
         <FloatingPortal>
           <FloatingFocusManager
             context={context}
@@ -326,6 +340,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             initialFocus={-1}
             returnFocus
             guards={false}
+            disabled={!open}
           >
             <div
               ref={refs.setFloating}
@@ -333,7 +348,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               css={bodyCss}
               style={{
                 ...floatingStyles,
-                ...(!open && { visibility: "hidden", pointerEvents: "none" }),
+                ...(!open && {
+                  visibility: "hidden",
+                  pointerEvents: "none",
+                }),
               }}
               {...getFloatingProps()}
             >
