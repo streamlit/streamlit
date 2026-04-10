@@ -22,9 +22,8 @@ from typing_extensions import Never
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
@@ -447,8 +446,7 @@ class RadioMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)

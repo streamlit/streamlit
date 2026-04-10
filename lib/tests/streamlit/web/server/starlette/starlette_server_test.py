@@ -575,7 +575,7 @@ class TestDynamicPort:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
         assert config.get_option("server.port") == 54321
         uvicorn_config = uvicorn_server_cls.call_args[0][0]
@@ -601,7 +601,7 @@ class TestDynamicPort:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
         mock_socket.getsockname.assert_not_called()
         assert config.get_option("server.port") == 8501
