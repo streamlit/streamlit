@@ -110,6 +110,8 @@ const Selectbox: FC<Props> = ({
   /** Latest prop value for Escape/blur handlers (avoid stale closures on document listeners). */
   const propValueRef = useRef(propValue)
   propValueRef.current = propValue
+  /** Committed selection (`value` state); blur must sync the input to this, not to `propValueRef`, which can lag after onChange. */
+  const committedValueRef = useRef<string | null>(propValue ?? null)
   /** Used to detect browser "select all" right after focus (Playwright / macOS). */
   const focusTimestampRef = useRef(0)
   /**
@@ -122,16 +124,21 @@ const Selectbox: FC<Props> = ({
   const placeCaretAtEndAfterFocusRef = useRef(false)
 
   const [value, setValue] = useState<string | null>(propValue ?? null)
+  committedValueRef.current = value
   const valueBeforeRemovalRef = useRef<string | null>(null)
   const [open, setOpen] = useState(false)
   const [focused, setFocused] = useState(false)
+  /** Synchronous mirror of `focused` so keydown runs before the next paint see the real focus state. */
+  const focusedRef = useRef(false)
   const [inputValue, setInputValue] = useState("")
   /** Filter string for options; reset on focus so the menu lists all options while input shows value. */
   const [searchFilter, setSearchFilter] = useState("")
   const [highlightedIndex, setHighlightedIndex] = useState(0)
 
   useExecuteWhenChanged(() => {
-    setValue(propValue ?? null)
+    const next = propValue ?? null
+    setValue(next)
+    committedValueRef.current = next
     valueBeforeRemovalRef.current = null
   }, [propValue])
 
@@ -191,9 +198,11 @@ const Selectbox: FC<Props> = ({
   const commitSelection = useCallback(
     (next: string | null) => {
       valueBeforeRemovalRef.current = null
+      committedValueRef.current = next
       setValue(next)
       onChange(next)
       setOpen(false)
+      focusedRef.current = false
       setFocused(false)
       setInputValue(next ?? "")
       setSearchFilter("")
@@ -205,6 +214,7 @@ const Selectbox: FC<Props> = ({
   )
 
   const handleBlur = useCallback(() => {
+    focusedRef.current = false
     setFocused(false)
     firstEditAfterFocusRef.current = true
     setOpen(false)
@@ -212,16 +222,19 @@ const Selectbox: FC<Props> = ({
     if (valueBeforeRemovalRef.current !== null) {
       const restore = valueBeforeRemovalRef.current
       valueBeforeRemovalRef.current = null
+      committedValueRef.current = restore
       setValue(restore)
       setInputValue(restore)
       return
     }
-    // Use prop so we stay in sync if the parent committed value (e.g. session_state) while open.
-    setInputValue(propValueRef.current ?? "")
+    // Sync to committed selection, not `propValueRef` — the prop can lag one frame after
+    // commitSelection / Escape while the parent rerenders (stale prop would break clear + session_state).
+    setInputValue(committedValueRef.current ?? "")
   }, [])
 
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLInputElement>) => {
+      focusedRef.current = true
       setFocused(true)
       firstEditAfterFocusRef.current = true
       focusTimestampRef.current = Date.now()
@@ -348,10 +361,12 @@ const Selectbox: FC<Props> = ({
         if (clearable && committed !== null && committed !== "") {
           commitSelection(null)
         } else {
+          const nextCommitted = committed ?? null
           setOpen(false)
           setSearchFilter("")
-          setInputValue(committed ?? "")
-          setValue(committed ?? null)
+          setInputValue(nextCommitted ?? "")
+          committedValueRef.current = nextCommitted
+          setValue(nextCommitted)
           firstEditAfterFocusRef.current = true
           requestAnimationFrame(() => {
             inputRef.current?.blur()
@@ -386,10 +401,12 @@ const Selectbox: FC<Props> = ({
           if (clearable && committed !== null && committed !== "") {
             commitSelection(null)
           } else {
+            const nextCommitted = committed ?? null
             setOpen(false)
             setSearchFilter("")
-            setInputValue(committed ?? "")
-            setValue(committed ?? null)
+            setInputValue(nextCommitted ?? "")
+            committedValueRef.current = nextCommitted
+            setValue(nextCommitted)
             firstEditAfterFocusRef.current = true
             requestAnimationFrame(() => {
               inputRef.current?.blur()
@@ -406,11 +423,11 @@ const Selectbox: FC<Props> = ({
 
       if (e.key === "Backspace" && !inputReadOnly) {
         const v = value
-        // Only intercept when the field is collapsed (!focused). When focused, Backspace
+        // Only intercept when the field is collapsed (!focusedRef). When focused, Backspace
         // edits the text one character at a time (e2e dismiss / partial edit).
         if (
           v !== null &&
-          !focused &&
+          !focusedRef.current &&
           (inputValue === "" || inputValue === v)
         ) {
           e.preventDefault()
@@ -462,7 +479,6 @@ const Selectbox: FC<Props> = ({
       clearable,
       commitSelection,
       displayOptions,
-      focused,
       highlightedIndex,
       inputReadOnly,
       inputValue,

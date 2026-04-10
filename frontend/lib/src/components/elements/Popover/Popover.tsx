@@ -32,7 +32,6 @@ import {
   ReactElement,
   useCallback,
   useContext,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -151,17 +150,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
 
-  // Keep popover body mounted after first open (BaseWeb renderAll): widgets need the
-  // subtree on close so blur/commit runs. Use layout effect so the first open paints
-  // with content already mounted (useEffect ran after paint and could skip commits).
-  const [contentMounted, setContentMounted] = useState(initialOpen)
-
-  useLayoutEffect(() => {
-    if (open) {
-      setContentMounted(true)
-    }
-  }, [open])
-
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
   useExecuteWhenChanged(() => {
@@ -196,6 +184,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   const handleCloseRef = useRef<() => void>(() => {})
+  /** Portal into this node so `stPopoverBody` stays under `stPopover` (e2e + query scoping). */
+  const portalRootRef = useRef<HTMLDivElement>(null)
 
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -276,7 +266,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
   return (
-    <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
+    <Box
+      data-testid="stPopover"
+      className="stPopover"
+      ref={elementRef}
+      style={{ position: "relative" }}
+    >
       <div ref={refs.setReference}>
         <BaseButtonTooltip help={element.help} containerWidth={true}>
           <BaseButton
@@ -306,34 +301,43 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButton>
         </BaseButtonTooltip>
       </div>
-      {contentMounted && (
-        <FloatingPortal>
-          <FloatingFocusManager
-            context={context}
-            modal={false}
-            initialFocus={-1}
-            returnFocus
-            guards={false}
-            disabled={!open}
+      <div
+        ref={portalRootRef}
+        style={{
+          position: "absolute",
+          width: 0,
+          height: 0,
+          overflow: "hidden",
+        }}
+        aria-hidden
+      />
+      {/* Always mount body (BaseWeb renderAll): keep widgets in the tree on close so blur commits. */}
+      <FloatingPortal root={portalRootRef}>
+        <FloatingFocusManager
+          context={context}
+          modal={false}
+          initialFocus={-1}
+          returnFocus
+          guards={false}
+          disabled={!open}
+        >
+          <div
+            ref={refs.setFloating}
+            data-testid="stPopoverBody"
+            css={bodyCss}
+            style={{
+              ...floatingStyles,
+              ...(!open && {
+                visibility: "hidden",
+                pointerEvents: "none",
+              }),
+            }}
+            {...getFloatingProps()}
           >
-            <div
-              ref={refs.setFloating}
-              data-testid="stPopoverBody"
-              css={bodyCss}
-              style={{
-                ...floatingStyles,
-                ...(!open && {
-                  visibility: "hidden",
-                  pointerEvents: "none",
-                }),
-              }}
-              {...getFloatingProps()}
-            >
-              {children}
-            </div>
-          </FloatingFocusManager>
-        </FloatingPortal>
-      )}
+            {children}
+          </div>
+        </FloatingFocusManager>
+      </FloatingPortal>
     </Box>
   )
 }
