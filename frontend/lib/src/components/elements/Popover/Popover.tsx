@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from "react"
 
 import styled from "@emotion/styled"
 import * as PopoverPrimitive from "@radix-ui/react-popover"
@@ -97,6 +104,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const isInSidebar = useContext(IsSidebarContext)
 
   const theme = useEmotionTheme()
+  const contentRef = useRef<HTMLDivElement>(null)
 
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
@@ -137,6 +145,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const handleOpenChange = useCallback(
     (nextOpen: boolean): void => {
       if (!nextOpen) {
+        const root = contentRef.current
+        const active = document.activeElement
+        if (root && active instanceof HTMLElement && root.contains(active)) {
+          active.blur()
+        }
         // Sync widget / passive state immediately; defer only the visual `open` flip so
         // inputs inside the popover receive blur/commit before the body is hidden.
         if (widgetId) {
@@ -222,6 +235,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
 
         <PopoverPrimitive.Portal>
           <StyledPopoverContent
+            ref={contentRef}
             data-testid="stPopoverBody"
             forceMount
             side="bottom"

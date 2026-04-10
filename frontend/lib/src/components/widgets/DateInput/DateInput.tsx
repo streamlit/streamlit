@@ -593,6 +593,8 @@ function SingleTextField({
   const [draft, setDraft] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const lastNativeValueRef = useRef<string>("")
+  /** Latest commit fn for native `change` (Playwright `fill`) — defined inside Context render. */
+  const commitSingleIfDistinctRef = useRef<(raw: string) => void>(() => {})
 
   const valueSyncKey = useMemo(
     () =>
@@ -626,13 +628,19 @@ function SingleTextField({
         setIsEmpty(true)
       }
     }
+    const onNativeChange = (): void => {
+      syncNative()
+      // `fill()` dispatches a native `change` that React's onChange may miss; commit here
+      // so `on_change` runs without relying on Enter (capture ref is updated in syncNative).
+      commitSingleIfDistinctRef.current(lastNativeValueRef.current)
+    }
     el.addEventListener("input", syncNative, { capture: true })
-    el.addEventListener("change", syncNative, { capture: true })
+    el.addEventListener("change", onNativeChange, { capture: true })
     // Avoid syncNative() on attach — stale DOM after form-clear can overwrite `draft`.
     lastNativeValueRef.current = el.value
     return () => {
       el.removeEventListener("input", syncNative, { capture: true })
-      el.removeEventListener("change", syncNative, { capture: true })
+      el.removeEventListener("change", onNativeChange, { capture: true })
     }
   }, [valueSyncKey, draftResetSeq])
 
@@ -678,6 +686,7 @@ function SingleTextField({
           }
           handleChange({ date: d })
         }
+        commitSingleIfDistinctRef.current = commitSingleIfDistinct
 
         const handleInputChangeLike = (
           e: ChangeEvent<HTMLInputElement>
@@ -703,9 +712,10 @@ function SingleTextField({
             e.preventDefault()
             e.stopPropagation()
             const el = e.currentTarget
-            // Prefer live DOM value; lastNativeValueRef can still hold the pre-fill value
-            // when Playwright fill() updated the input without our tracker seeing it first.
-            const v = el.value || lastNativeValueRef.current
+            // After Playwright `fill()`, React can reconcile the controlled `value` prop and
+            // revert the DOM before keydown; `lastNativeValueRef` is updated in capture phase
+            // on input/change and stays authoritative.
+            const v = lastNativeValueRef.current ?? el.value
             commitSingleIfDistinct(v)
             el.blur()
             return
@@ -790,6 +800,7 @@ function RangeTextField({
   const [draft, setDraft] = useState<string | null>(null)
   const rangeInputRef = useRef<HTMLInputElement>(null)
   const lastNativeRangeValueRef = useRef<string>("")
+  const commitRangeRef = useRef<(raw: string) => void>(() => {})
 
   const valueSyncKey = useMemo(
     () => value.map(d => String(normalizeToStartOfDay(d).getTime())).join("|"),
@@ -814,12 +825,16 @@ function RangeTextField({
       lastNativeRangeValueRef.current = v
       setDraft(v)
     }
+    const onNativeChange = (): void => {
+      syncNative()
+      commitRangeRef.current(lastNativeRangeValueRef.current)
+    }
     el.addEventListener("input", syncNative, { capture: true })
-    el.addEventListener("change", syncNative, { capture: true })
+    el.addEventListener("change", onNativeChange, { capture: true })
     lastNativeRangeValueRef.current = el.value
     return () => {
       el.removeEventListener("input", syncNative, { capture: true })
-      el.removeEventListener("change", syncNative, { capture: true })
+      el.removeEventListener("change", onNativeChange, { capture: true })
     }
   }, [valueSyncKey, draftResetSeq])
 
@@ -870,6 +885,7 @@ function RangeTextField({
           )
           handleChange({ date: [d0, d1] })
         }
+        commitRangeRef.current = commitRange
 
         const handleRangeInputChangeLike = (
           e: ChangeEvent<HTMLInputElement>
@@ -895,7 +911,7 @@ function RangeTextField({
             e.preventDefault()
             e.stopPropagation()
             const el = e.currentTarget
-            const v = lastNativeRangeValueRef.current || el.value
+            const v = lastNativeRangeValueRef.current
             commitRange(v)
             el.blur()
             return

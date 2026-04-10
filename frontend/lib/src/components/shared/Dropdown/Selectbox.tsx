@@ -170,9 +170,14 @@ const Selectbox: FC<Props> = ({
       setValue(restored)
       const opt = selectOptions.find(o => o.value === restored)
       setInputQuery(opt?.label ?? restored ?? "")
+    } else if (!acceptNewOptions && notNullOrUndefined(value)) {
+      // Ark may clear or desync the combobox input when the list closes (focus/Escape)
+      // even though the committed value never changed (e2e: session_state sync, dismiss).
+      const opt = selectOptions.find(o => o.value === value)
+      setInputQuery(opt?.label ?? value)
     }
     valueBeforeRemovalRef.current = null
-  }, [selectOptions])
+  }, [acceptNewOptions, selectOptions, value])
 
   const filterOptions = useMemo(
     () => createFilterOptions(),
