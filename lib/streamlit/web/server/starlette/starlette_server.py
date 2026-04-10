@@ -230,7 +230,7 @@ class UvicornServer:
 
     Examples
     --------
-    Used internally by Server._start_starlette():
+    Used internally by Server.start():
 
     >>> server = UvicornServer(runtime)
     >>> await server.start()  # Returns when ready
