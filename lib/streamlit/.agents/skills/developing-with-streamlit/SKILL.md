@@ -50,7 +50,7 @@ Step 4: Check if app is running and offer to run it
 
 1. **Quick scan** for Streamlit files:
    ```bash
-   find . -name "*.py" -type f | xargs grep -l "import streamlit\|from streamlit" 2>/dev/null | head -10
+   grep -rl 'import streamlit\|from streamlit' --include='*.py' . 2>/dev/null | head -10
    ```
 
 2. **Apply entry point heuristics** (in priority order):
