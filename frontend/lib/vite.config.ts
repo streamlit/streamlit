@@ -56,7 +56,10 @@ export default defineConfig({
     rolldownOptions: {
       input: "src/index.ts",
       // Externalize dependencies that shouldn't be bundled into your library
-      external: ["react", "react-dom"],
+      // React is externalized for standard library usage
+      // Perspective packages use top-level await which is incompatible with UMD output,
+      // and they're dynamically imported anyway, so externalize them
+      external: ["react", "react-dom", /^@perspective-dev\//],
       output: {
         globals: {
           react: "React",

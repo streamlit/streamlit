@@ -16,6 +16,7 @@
 
 import { memo, ReactElement, useEffect, useMemo } from "react"
 
+import { Global } from "@emotion/react"
 import { getLogger } from "loglevel"
 
 import {
@@ -31,9 +32,14 @@ import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscre
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import {
+  createStreamlitPerspectiveTheme,
+  resolvePerspectiveThemeName,
+} from "./streamlitTheme"
 import { StyledPerspectiveContainer } from "./styled-components"
 import { usePerspective } from "./usePerspective"
 
@@ -57,6 +63,7 @@ function Perspective({
   widthConfig,
   heightConfig,
 }: Readonly<PerspectiveProps>): ReactElement {
+  const theme = useEmotionTheme()
   const {
     expanded: isFullScreen,
     width,
@@ -78,9 +85,12 @@ function Perspective({
   const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
   const shouldUseContainerHeight = shouldHeightStretch(heightConfig)
   const pixelHeight = heightConfig?.pixelHeight ?? DEFAULT_HEIGHT
+  const perspectiveThemeName = resolvePerspectiveThemeName(
+    element.theme || "streamlit"
+  )
 
   // Initialize Perspective viewer
-  const { viewerRef, error } = usePerspective({
+  const { viewerRef, isViewerReady, error } = usePerspective({
     elementId: element.id || "",
     arrowData,
     defaultConfigJson: element.defaultConfigJson || undefined,
@@ -103,6 +113,7 @@ function Perspective({
       useContainerWidth={isFullScreen || shouldUseContainerWidth}
       useContainerHeight={shouldUseContainerHeight}
     >
+      <Global styles={createStreamlitPerspectiveTheme(theme)} />
       <Toolbar
         target={StyledToolbarElementContainer}
         isFullScreen={isFullScreen}
@@ -123,12 +134,13 @@ function Perspective({
           <div className="stPerspectiveError" data-testid="stPerspectiveError">
             Error loading Perspective: {error.message}
           </div>
-        ) : (
+        ) : isViewerReady ? (
           <perspective-viewer
             // @ts-expect-error - perspective-viewer is a custom element
             ref={viewerRef}
+            theme={perspectiveThemeName}
           />
-        )}
+        ) : null}
       </StyledPerspectiveContainer>
     </StyledToolbarElementContainer>
   )

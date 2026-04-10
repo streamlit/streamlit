@@ -19,8 +19,14 @@ import { RefObject, useEffect, useMemo, useRef, useState } from "react"
 import { debounce } from "lodash-es"
 import { getLogger } from "loglevel"
 
+// Import Perspective CSS - must be at module level for proper bundling
+import "@perspective-dev/viewer/dist/css/themes.css"
+import "@perspective-dev/viewer-datagrid/dist/css/perspective-viewer-datagrid.css"
+import "@perspective-dev/viewer-d3fc/dist/css/perspective-viewer-d3fc.css"
+
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { resolvePerspectiveThemeName } from "./streamlitTheme"
 import type {
   PerspectiveClient,
   PerspectiveTable,
@@ -48,6 +54,7 @@ interface UsePerspectiveProps {
 
 interface UsePerspectiveReturn {
   viewerRef: RefObject<PerspectiveViewerElement | null>
+  isViewerReady: boolean
   isInitialized: boolean
   error: Error | null
 }
@@ -62,6 +69,18 @@ let wasmInitPromise: Promise<PerspectiveClient> | null = null
  */
 async function initializePerspective(): Promise<PerspectiveClient> {
   if (wasmInitPromise) {
+    return wasmInitPromise
+  }
+
+  // Check if already initialized (handles HMR case)
+  const isAlreadyDefined =
+    customElements.get("perspective-viewer") !== undefined
+  if (isAlreadyDefined) {
+    LOG.info("Perspective already initialized, reusing existing client")
+    // Just create a new worker client
+    const perspectiveClient = await import("@perspective-dev/client")
+    const client = await perspectiveClient.worker()
+    wasmInitPromise = Promise.resolve(client as PerspectiveClient)
     return wasmInitPromise
   }
 
@@ -86,13 +105,17 @@ async function initializePerspective(): Promise<PerspectiveClient> {
     const clientWasmUrl = clientWasmModule.default
     const viewerWasmUrl = viewerWasmModule.default
 
-    // Initialize all WASM modules
-    // Note: init_server and init_client are synchronous but may need the WASM to be fetched
+    // Initialize all WASM modules - must await viewer init before using viewer
+    // The client init functions start loading but don't need to be awaited
     perspectiveClient.init_server(fetch(serverWasmUrl))
     perspectiveClient.init_client(fetch(clientWasmUrl))
     await perspectiveViewer.init_client(fetch(viewerWasmUrl))
 
-    // Import and register plugins
+    // Wait for the custom element to be defined before importing plugins
+    // This ensures plugins can register properly
+    await customElements.whenDefined("perspective-viewer")
+
+    // Import and register plugins - they auto-register when imported
     await Promise.all([
       import("@perspective-dev/viewer-datagrid"),
       import("@perspective-dev/viewer-d3fc"),
@@ -124,6 +147,7 @@ export function usePerspective({
   const clientRef = useRef<PerspectiveClient | null>(null)
   const prevSchemaDigestRef = useRef<string | null>(null)
 
+  const [isViewerReady, setIsViewerReady] = useState(false)
   const [isInitialized, setIsInitialized] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
@@ -155,18 +179,48 @@ export function usePerspective({
     [elementId, widgetMgr]
   )
 
+  useEffect(() => {
+    let mounted = true
+
+    const bootstrap = async (): Promise<void> => {
+      try {
+        const client = await initializePerspective()
+        clientRef.current = client
+
+        if (mounted) {
+          setIsViewerReady(true)
+        }
+      } catch (err) {
+        LOG.error("Failed to bootstrap Perspective:", err)
+        if (mounted) {
+          setError(err instanceof Error ? err : new Error(String(err)))
+        }
+      }
+    }
+
+    void bootstrap()
+
+    return () => {
+      mounted = false
+    }
+  }, [])
+
   /**
-   * Initialize the viewer and load data.
+   * Initialize the viewer instance and load data once the custom element can
+   * be mounted with the full plugin registry already in place.
    */
   useEffect(() => {
+    if (!isViewerReady || !viewerRef.current) {
+      return
+    }
+
     let mounted = true
     let currentViewer: PerspectiveViewerElement | null = null
     let configUpdateHandler: (() => void) | null = null
 
     const setup = async (): Promise<void> => {
       try {
-        // Initialize WASM and get client if not already done
-        const client = await initializePerspective()
+        const client = clientRef.current ?? (await initializePerspective())
         clientRef.current = client
 
         if (!mounted || !viewerRef.current) {
@@ -212,6 +266,9 @@ export function usePerspective({
             // Schema changed or no saved state - apply default config
             if (defaultConfig) {
               await viewer.restore(defaultConfig)
+            } else {
+              // No config provided - use Datagrid plugin by default
+              await viewer.restore({ plugin: "Datagrid" })
             }
           } else if (savedState?.config) {
             // Restore saved state
@@ -231,13 +288,12 @@ export function usePerspective({
           configUpdateHandler
         )
 
-        // Apply theme
-        if (theme === "streamlit") {
-          // Use Perspective's default theme for now
-          // TODO: Create a Streamlit-specific theme
-          await viewer.resetThemes([])
-        } else if (theme) {
-          await viewer.resetThemes([theme])
+        // Apply theme after restoring config so the public theme parameter
+        // always wins over any theme embedded in saved/default viewer state.
+        if (theme) {
+          const resolvedTheme = resolvePerspectiveThemeName(theme)
+          await viewer.resetThemes([resolvedTheme])
+          await viewer.restore({ theme: resolvedTheme })
         }
 
         if (mounted) {
@@ -268,6 +324,7 @@ export function usePerspective({
     arrowData,
     defaultConfig,
     elementId,
+    isViewerReady,
     saveViewerState,
     schemaDigest,
     theme,
@@ -286,6 +343,7 @@ export function usePerspective({
 
   return {
     viewerRef,
+    isViewerReady,
     isInitialized,
     error,
   }

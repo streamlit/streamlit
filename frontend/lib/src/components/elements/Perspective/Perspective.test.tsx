@@ -28,6 +28,7 @@ import { usePerspective } from "./usePerspective"
 vi.mock("./usePerspective", () => ({
   usePerspective: vi.fn(() => ({
     viewerRef: { current: null },
+    isViewerReady: true,
     isInitialized: false,
     error: null,
   })),
@@ -64,6 +65,7 @@ describe("Perspective Element", () => {
     // Reset mock to default state
     vi.mocked(usePerspective).mockReturnValue({
       viewerRef: { current: null },
+      isViewerReady: true,
       isInitialized: false,
       error: null,
     })
@@ -85,11 +87,13 @@ describe("Perspective Element", () => {
     // The perspective-viewer custom element should be rendered
     const viewer = document.querySelector("perspective-viewer")
     expect(viewer).toBeInTheDocument()
+    expect(viewer).toHaveAttribute("theme", "Streamlit")
   })
 
   it("displays error message when initialization fails", () => {
     vi.mocked(usePerspective).mockReturnValue({
       viewerRef: { current: null },
+      isViewerReady: false,
       isInitialized: false,
       error: new Error("Test error message"),
     })
@@ -145,6 +149,7 @@ describe("Perspective Element", () => {
   it("does not show error when initialization succeeds", () => {
     vi.mocked(usePerspective).mockReturnValue({
       viewerRef: { current: null },
+      isViewerReady: true,
       isInitialized: true,
       error: null,
     })
@@ -165,5 +170,21 @@ describe("Perspective Element", () => {
     // Should render without crashing
     const container = screen.getByTestId("stPerspective")
     expect(container).toBeInTheDocument()
+  })
+
+  it("waits to render perspective-viewer until Perspective plugins are ready", () => {
+    vi.mocked(usePerspective).mockReturnValue({
+      viewerRef: { current: null },
+      isViewerReady: false,
+      isInitialized: false,
+      error: null,
+    })
+
+    const props = getProps()
+    render(<Perspective {...props} />)
+
+    expect(
+      document.querySelector("perspective-viewer")
+    ).not.toBeInTheDocument()
   })
 })

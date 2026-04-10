@@ -40,6 +40,7 @@ def test_perspective_contains_viewer_element(app: Page):
 
     # The perspective-viewer should be present
     expect(viewer).to_be_attached()
+    expect(viewer).to_have_attribute("theme", "Streamlit")
 
 
 def test_perspective_custom_height(app: Page):
@@ -64,8 +65,8 @@ def test_perspective_no_errors(app: Page):
 def test_perspective_viewer_initialized(app: Page):
     """Test that the Perspective viewer initializes successfully.
 
-    This test waits for the viewer to be ready by checking for
-    the presence of the datagrid plugin inside the viewer.
+    This test waits for the viewer to be ready by checking that
+    the Datagrid plugin is registered and active.
     """
     first_perspective = app.get_by_test_id("stPerspective").first
     viewer = first_perspective.locator("perspective-viewer")
@@ -73,12 +74,15 @@ def test_perspective_viewer_initialized(app: Page):
     # Wait for the viewer to be visible
     expect(viewer).to_be_visible()
 
-    # The viewer should initialize (may take time due to WASM loading)
-    # We wait for any content to appear inside the viewer
     def check_viewer_initialized() -> bool:
-        # Check if there's any content inside the viewer shadow DOM
-        # The viewer creates shadow DOM content when initialized
-        box = viewer.bounding_box()
-        return box is not None and box["width"] > 0 and box["height"] > 0
+        plugin_names = viewer.evaluate(
+            """node => Array.from(node.getAllPlugins?.() || []).map(
+                plugin => plugin?.name
+            )"""
+        )
+        if "Datagrid" not in plugin_names:
+            return False
+
+        return viewer.evaluate("node => node.getPlugin?.()?.name") == "Datagrid"
 
     wait_until(app, check_viewer_initialized, timeout=30000)
