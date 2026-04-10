@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -288,3 +289,55 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
         switch_page(mock_page)
 
     ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("streamlit.commands.execution_control.time.sleep", MagicMock())
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+@pytest.mark.parametrize("page_arg", ["pages/other.py", Path("pages/other.py")])
+def test_st_switch_page_path_resolve_matches_streamlit_page_registration(
+    patched_get_script_run_ctx: MagicMock,
+    tmp_path: Path,
+    page_arg: str | Path,
+) -> None:
+    """Relative paths use Path.resolve() so lookup matches st.Page script_path (#14709)."""
+    main_py = tmp_path / "app.py"
+    main_py.write_text("#", encoding="utf-8")
+    other_py = tmp_path / "pages" / "other.py"
+    other_py.parent.mkdir()
+    other_py.write_text("#", encoding="utf-8")
+
+    main_abs = str(main_py.resolve())
+    # Same resolution as StreamlitPage.__init__: (main_script_parent / page).resolve()
+    registered_script_path = str(
+        (Path(main_abs).parent / "pages" / "other.py").resolve()
+    )
+
+    ctx = MagicMock()
+    ctx.main_script_path = main_abs
+    ctx.script_requests = MagicMock()
+    ctx.query_string = ""
+    ctx.cached_message_hashes = set()
+    ctx.context_info = {}
+    ctx.session_state = MagicMock()
+
+    query_params_cm = MagicMock()
+    mock_query_params = MagicMock()
+    query_params_cm.__enter__.return_value = mock_query_params
+    query_params_cm.__exit__.return_value = False
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    ctx.pages_manager = MagicMock()
+    ctx.pages_manager.get_pages.return_value = {
+        "x": {
+            "script_path": registered_script_path,
+            "page_script_hash": "target_hash",
+        }
+    }
+
+    patched_get_script_run_ctx.return_value = ctx
+
+    switch_page(page_arg)
+
+    ctx.script_requests.request_rerun.assert_called_once()
+    rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
+    assert rerun_arg.page_script_hash == "target_hash"
