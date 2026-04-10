@@ -74,6 +74,7 @@ from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
 from streamlit.elements.metric import MetricMixin
 from streamlit.elements.pdf import PdfMixin
+from streamlit.elements.perspective import PerspectiveMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
 from streamlit.elements.progress import ProgressMixin
 from streamlit.elements.pyplot import PyplotMixin
@@ -210,6 +211,7 @@ class DeltaGenerator(
     MultiSelectMixin,
     NumberInputMixin,
     PdfMixin,
+    PerspectiveMixin,
     PlotlyMixin,
     ProgressMixin,
     PydeckMixin,

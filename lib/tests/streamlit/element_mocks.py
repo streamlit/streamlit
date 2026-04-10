@@ -234,6 +234,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         lambda: st.plotly_chart(px.line(_CHART_DATA), on_select="ignore"),
     ),
     ("pydeck_chart", lambda: st.pydeck_chart(pdk.Deck())),
+    ("perspective", lambda: st.perspective(pd.DataFrame())),
     (
         "map",
         lambda: st.map(pd.DataFrame({"lat": [1, 2, 3], "lon": [3, 2, 1]})),
