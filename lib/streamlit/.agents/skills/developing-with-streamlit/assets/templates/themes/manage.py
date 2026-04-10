@@ -22,7 +22,6 @@ Usage:
 """
 
 import ast
-import re
 import shutil
 import sys
 from pathlib import Path
@@ -31,8 +30,6 @@ ROOT = Path(__file__).parent
 SHARED = ROOT / "_shared"
 TEMPLATES = ROOT / "_templates"
 CONFIGS = ROOT / "_configs"
-FONTS = SHARED / "fonts"
-
 MANAGED_HEADER_PY = (
     "# DO NOT EDIT — managed by manage.py, edit _shared/streamlit_app.py instead\n"
 )
@@ -67,17 +64,9 @@ def discover_themes():
 
 
 # ---------------------------------------------------------------------------
-# Font discovery from config content
-# ---------------------------------------------------------------------------
-
-def discover_fonts(config_text):
-    """Extract font filenames referenced in config.toml content."""
-    return re.findall(r'url\s*=\s*["\']app/static/([^"\']+\.(?:ttf|otf|woff2?))["\']', config_text)
-
-
-# ---------------------------------------------------------------------------
 # Content builders
 # ---------------------------------------------------------------------------
+
 
 def expected_app(title):
     """Build expected streamlit_app.py content for a theme."""
@@ -91,7 +80,12 @@ def expected_app(title):
         end_line = docstring_node.end_lineno  # 1-indexed
         lines = body.split("\n")
         insert_pos = end_line
-        return "\n".join(lines[:insert_pos]) + "\n" + MANAGED_HEADER_PY + "\n".join(lines[insert_pos:])
+        return (
+            "\n".join(lines[:insert_pos])
+            + "\n"
+            + MANAGED_HEADER_PY
+            + "\n".join(lines[insert_pos:])
+        )
     return MANAGED_HEADER_PY + body
 
 
@@ -114,6 +108,7 @@ def expected_from_template(tmpl_path, replacements):
 # Sync
 # ---------------------------------------------------------------------------
 
+
 def sync_theme(theme):
     """Regenerate all files for a single theme directory."""
     slug = theme["slug"]
@@ -124,7 +119,6 @@ def sync_theme(theme):
     # Create directories
     theme_dir.mkdir(exist_ok=True)
     (theme_dir / ".streamlit").mkdir(exist_ok=True)
-    (theme_dir / "static").mkdir(exist_ok=True)
 
     # .streamlit/config.toml — from _configs/
     (theme_dir / ".streamlit" / "config.toml").write_text(expected_config(slug))
@@ -148,31 +142,21 @@ def sync_theme(theme):
         )
     )
 
-    # Fonts — copy from _shared/fonts/ based on config references
-    config_text = (CONFIGS / f"{slug}.toml").read_text()
-    font_names = discover_fonts(config_text)
-    static_dir = theme_dir / "static"
-    for fname in font_names:
-        src = FONTS / fname
-        if not src.exists():
-            print(f"  Warning: font {fname} referenced in _configs/{slug}.toml not found in _shared/fonts/", file=sys.stderr)
-            continue
-        shutil.copy2(src, static_dir / fname)
-
 
 def update_gitattributes():
     """Update .gitattributes with entries for generated theme files."""
     gitattr_path = ROOT / ".gitattributes"
 
-    new_section = "\n".join([
-        GITATTR_START,
-        "*/.streamlit/config.toml linguist-generated",
-        "*/streamlit_app.py linguist-generated",
-        "*/pyproject.toml linguist-generated",
-        "*/snowflake.yml linguist-generated",
-        "*/static/*.ttf linguist-generated",
-        GITATTR_END,
-    ])
+    new_section = "\n".join(
+        [
+            GITATTR_START,
+            "*/.streamlit/config.toml linguist-generated",
+            "*/streamlit_app.py linguist-generated",
+            "*/pyproject.toml linguist-generated",
+            "*/snowflake.yml linguist-generated",
+            GITATTR_END,
+        ]
+    )
 
     if gitattr_path.exists():
         content = gitattr_path.read_text()
@@ -197,7 +181,8 @@ def cmd_sync():
     # Remove orphaned theme directories (directories not matching any config)
     config_slugs = {t["slug"] for t in themes}
     orphans = [
-        d for d in sorted(ROOT.iterdir())
+        d
+        for d in sorted(ROOT.iterdir())
         if d.is_dir() and not d.name.startswith("_") and d.name not in config_slugs
     ]
     if orphans:
@@ -219,6 +204,7 @@ def cmd_sync():
 # ---------------------------------------------------------------------------
 # Check
 # ---------------------------------------------------------------------------
+
 
 def cmd_check():
     themes = discover_themes()
@@ -268,17 +254,6 @@ def cmd_check():
         elif target.read_text() != expected:
             drifted.append(f"{slug}/snowflake.yml")
 
-        # Fonts
-        config_text = (CONFIGS / f"{slug}.toml").read_text()
-        font_names = discover_fonts(config_text)
-        for fname in font_names:
-            src = FONTS / fname
-            dest = theme_dir / "static" / fname
-            if not dest.exists():
-                missing.append(f"{slug}/static/{fname}")
-            elif src.exists() and src.read_bytes() != dest.read_bytes():
-                drifted.append(f"{slug}/static/{fname}")
-
     ok = True
     if missing:
         print("Missing files (run 'python manage.py sync' to fix):")
@@ -300,16 +275,14 @@ def cmd_check():
 # New
 # ---------------------------------------------------------------------------
 
+
 def cmd_new(name):
     config_path = CONFIGS / f"{name}.toml"
     if config_path.exists():
         print(f"Error: _configs/{name}.toml already exists", file=sys.stderr)
         sys.exit(1)
 
-    config_path.write_text(
-        f"[server]\nenableStaticServing = true\n\n"
-        f'# {name} theme\n[theme]\nbase = "dark"\n'
-    )
+    config_path.write_text(f'# {name} theme\n[theme]\nbase = "dark"\n')
 
     print(f"Created _configs/{name}.toml — edit it, then run 'python manage.py sync'")
 

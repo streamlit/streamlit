@@ -1,6 +1,3 @@
-[server]
-enableStaticServing = true
-
 # GitHub Theme for Streamlit
 # Clean, developer-friendly, functional with signature blue accents
 [theme]
@@ -39,33 +36,33 @@ secondaryBackgroundColor = "#eaeef2"
 codeBackgroundColor = "#eaeef2"
 borderColor = "#d0d7de"
 
-# Local font files
+# Google Fonts
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Regular.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Medium.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap"
 weight = 500
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-SemiBold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap"
 weight = 600
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Bold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap"
 weight = 700
 
 [[theme.fontFaces]]
 family = "JetBrainsMono"
-url = "app/static/JetBrainsMono-Regular.ttf"
+url = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "JetBrainsMono"
-url = "app/static/JetBrainsMono-Medium.ttf"
+url = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"
 weight = 500

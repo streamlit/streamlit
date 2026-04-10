@@ -1,6 +1,3 @@
-[server]
-enableStaticServing = true
-
 # Solarized Light Theme for Streamlit
 # Precision colors designed for readability and reduced eye strain
 [theme]
@@ -40,33 +37,33 @@ secondaryBackgroundColor = "#fdf6e3"
 codeBackgroundColor = "#fdf6e3"
 borderColor = "#93a1a1"
 
-# Local font files
+# Google Fonts
 [[theme.fontFaces]]
 family = "SourceSans3"
-url = "app/static/SourceSans3-Regular.ttf"
+url = "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "SourceSans3"
-url = "app/static/SourceSans3-Medium.ttf"
+url = "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@500&display=swap"
 weight = 500
 
 [[theme.fontFaces]]
 family = "SourceSans3"
-url = "app/static/SourceSans3-SemiBold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@600&display=swap"
 weight = 600
 
 [[theme.fontFaces]]
 family = "SourceSans3"
-url = "app/static/SourceSans3-Bold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@700&display=swap"
 weight = 700
 
 [[theme.fontFaces]]
 family = "SourceCodePro"
-url = "app/static/SourceCodePro-Regular.ttf"
+url = "https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "SourceCodePro"
-url = "app/static/SourceCodePro-Medium.ttf"
+url = "https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@500&display=swap"
 weight = 500

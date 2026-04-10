@@ -22,4 +22,3 @@ entities:
       - streamlit_app.py
       - pyproject.toml
       - .streamlit/config.toml
-      - static/*

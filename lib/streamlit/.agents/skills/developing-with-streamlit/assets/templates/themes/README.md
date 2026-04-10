@@ -63,26 +63,21 @@ font = "Inter"                     # Body font
 codeFont = "FiraCode"              # Code blocks
 ```
 
-### 2. For Snowflake deployment: local font files
+### 2. Custom fonts via Google Fonts
 
-Snowflake doesn't allow remote URL fetches, so fonts must be bundled locally:
+Load custom fonts using `[[theme.fontFaces]]` with Google Fonts URLs:
 
 ```toml
-[server]
-enableStaticServing = true         # Required for static files
-
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Regular.ttf"   # Note: app/ prefix required
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Bold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap"
 weight = 700
 ```
-
-Font files go in `static/` directory and are referenced with `app/static/` prefix.
 
 ### Sidebar theming (optional)
 
@@ -99,11 +94,10 @@ Each theme directory contains:
 
 ```
 {theme}/
-├── .streamlit/config.toml   # Theme colors and fonts
+├── .streamlit/config.toml   # Theme colors and fonts (Google Fonts)
 ├── streamlit_app.py         # Demo app showing the theme
 ├── pyproject.toml           # Dependencies
-├── snowflake.yml            # Snowflake deployment config
-└── static/                  # Bundled font files (*.ttf)
+└── snowflake.yml            # Snowflake deployment config
 ```
 
 ## Dependencies
@@ -114,15 +108,15 @@ All themes require Python >=3.11 and use:
 - `altair>=5.5.0`
 - `pandas>=2.2.3`
 
-## Font licensing
+## Fonts
 
-All bundled fonts are licensed under the [SIL Open Font License 1.1](https://openfontlicense.org/), which permits free use, redistribution, and modification:
+All themes use [Google Fonts](https://fonts.google.com/) loaded via URL in `[[theme.fontFaces]]` entries:
 
-| Font | Used by | Source |
-|------|---------|--------|
-| Inter | snowflake, nord, spotify, github, minimal, stripe | [github.com/rsms/inter](https://github.com/rsms/inter) |
-| JetBrains Mono | snowflake, dracula, nord, github, minimal | [github.com/JetBrains/JetBrainsMono](https://github.com/JetBrains/JetBrainsMono) |
-| Fira Sans | dracula | [github.com/mozilla/Fira](https://github.com/mozilla/Fira) |
-| Fira Code | spotify | [github.com/tonsky/FiraCode](https://github.com/tonsky/FiraCode) |
-| Source Sans 3 | solarized-light | [github.com/adobe-fonts/source-sans](https://github.com/adobe-fonts/source-sans) |
-| Source Code Pro | solarized-light, stripe | [github.com/adobe-fonts/source-code-pro](https://github.com/adobe-fonts/source-code-pro) |
+| Font | Used by |
+|------|---------|
+| Inter | snowflake, nord, spotify, github, minimal, stripe |
+| JetBrains Mono | snowflake, dracula, nord, github, minimal |
+| Fira Sans | dracula |
+| Fira Code | spotify |
+| Source Sans 3 | solarized-light |
+| Source Code Pro | solarized-light, stripe |

@@ -1,6 +1,3 @@
-[server]
-enableStaticServing = true
-
 # Spotify Theme for Streamlit
 # Bold, energetic, high contrast with signature green
 [theme]
@@ -36,33 +33,33 @@ secondaryBackgroundColor = "#282828"
 codeBackgroundColor = "#282828"
 borderColor = "#333333"
 
-# Local font files
+# Google Fonts
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Regular.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Medium.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap"
 weight = 500
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-SemiBold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap"
 weight = 600
 
 [[theme.fontFaces]]
 family = "Inter"
-url = "app/static/Inter-Bold.ttf"
+url = "https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap"
 weight = 700
 
 [[theme.fontFaces]]
 family = "FiraCode"
-url = "app/static/FiraCode-Regular.ttf"
+url = "https://fonts.googleapis.com/css2?family=Fira+Code:wght@400&display=swap"
 weight = 400
 
 [[theme.fontFaces]]
 family = "FiraCode"
-url = "app/static/FiraCode-Medium.ttf"
+url = "https://fonts.googleapis.com/css2?family=Fira+Code:wght@500&display=swap"
 weight = 500
