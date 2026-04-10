@@ -32,7 +32,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
-  useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -151,12 +151,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
 
-  // Keep popover body mounted after the first open (BaseWeb renderAll behavior). Widgets
-  // inside need the subtree to stay mounted on close so blur/commit runs reliably; hiding
-  // with CSS avoids losing input state before values reach the backend.
+  // Keep popover body mounted after first open (BaseWeb renderAll): widgets need the
+  // subtree on close so blur/commit runs. Use layout effect so the first open paints
+  // with content already mounted (useEffect ran after paint and could skip commits).
   const [contentMounted, setContentMounted] = useState(initialOpen)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (open) {
       setContentMounted(true)
     }

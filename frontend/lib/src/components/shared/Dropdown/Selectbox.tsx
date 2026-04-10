@@ -33,6 +33,7 @@ import {
   FocusEvent,
   KeyboardEvent,
   memo,
+  SyntheticEvent,
   useCallback,
   useContext,
   useEffect,
@@ -106,6 +107,11 @@ const Selectbox: FC<Props> = ({
   const isInSidebar = useContext(IsSidebarContext)
   const listboxId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  /** Latest prop value for Escape/blur handlers (avoid stale closures on document listeners). */
+  const propValueRef = useRef(propValue)
+  propValueRef.current = propValue
+  /** Used to detect browser "select all" right after focus (Playwright / macOS). */
+  const focusTimestampRef = useRef(0)
   /**
    * When the input still shows the full committed value, the first typed character
    * appends in the DOM ("male" + "x" → "malex"); collapse to that char for search.
@@ -211,16 +217,17 @@ const Selectbox: FC<Props> = ({
       return
     }
     // Use prop so we stay in sync if the parent committed value (e.g. session_state) while open.
-    setInputValue(propValue ?? "")
-  }, [propValue])
+    setInputValue(propValueRef.current ?? "")
+  }, [])
 
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLInputElement>) => {
       setFocused(true)
       firstEditAfterFocusRef.current = true
+      focusTimestampRef.current = Date.now()
       // Use parent prop so session_state / proto updates are reflected immediately
       // (local `value` can lag one interaction behind in edge cases).
-      const text = propValue ?? ""
+      const text = propValueRef.current ?? ""
       setInputValue(text)
       setSearchFilter("")
       if (!selectDisabled) {
@@ -247,8 +254,9 @@ const Selectbox: FC<Props> = ({
       }
       queueMicrotask(placeCaret)
       requestAnimationFrame(placeCaret)
+      requestAnimationFrame(() => requestAnimationFrame(placeCaret))
     },
-    [selectDisabled, propValue]
+    [selectDisabled]
   )
 
   useLayoutEffect(() => {
@@ -336,13 +344,14 @@ const Selectbox: FC<Props> = ({
         e.stopPropagation()
         // index=None selectboxes are clearable: Escape clears while the menu is open.
         // index set (non-clearable): Escape closes and restores committed value (no onChange).
-        if (clearable && propValue !== null && propValue !== "") {
+        const committed = propValueRef.current
+        if (clearable && committed !== null && committed !== "") {
           commitSelection(null)
         } else {
           setOpen(false)
           setSearchFilter("")
-          setInputValue(propValue ?? "")
-          setValue(propValue ?? null)
+          setInputValue(committed ?? "")
+          setValue(committed ?? null)
           firstEditAfterFocusRef.current = true
           requestAnimationFrame(() => {
             inputRef.current?.blur()
@@ -356,7 +365,6 @@ const Selectbox: FC<Props> = ({
     open,
     selectDisabled,
     clearable,
-    propValue,
     commitSelection,
     refs.reference,
     refs.floating,
@@ -370,17 +378,18 @@ const Selectbox: FC<Props> = ({
 
       if (e.key === "Escape") {
         e.preventDefault()
+        const committed = propValueRef.current
         if (open) {
           // Usually handled in capture on document (focus may be on the listbox). If that
           // path missed the event target, close/restore here so session_state + clearable
           // behavior stay consistent.
-          if (clearable && propValue !== null && propValue !== "") {
+          if (clearable && committed !== null && committed !== "") {
             commitSelection(null)
           } else {
             setOpen(false)
             setSearchFilter("")
-            setInputValue(propValue ?? "")
-            setValue(propValue ?? null)
+            setInputValue(committed ?? "")
+            setValue(committed ?? null)
             firstEditAfterFocusRef.current = true
             requestAnimationFrame(() => {
               inputRef.current?.blur()
@@ -389,7 +398,7 @@ const Selectbox: FC<Props> = ({
           return
         }
         // index=None selectboxes are clearable: Escape clears when the menu is closed.
-        if (clearable && propValue !== null && propValue !== "") {
+        if (clearable && committed !== null && committed !== "") {
           commitSelection(null)
         }
         return
@@ -458,10 +467,43 @@ const Selectbox: FC<Props> = ({
       inputReadOnly,
       inputValue,
       open,
-      propValue,
       selectDisabled,
       value,
     ]
+  )
+
+  const onInputSelect = useCallback(
+    (e: SyntheticEvent<HTMLInputElement>) => {
+      if (selectDisabled || inputReadOnly) {
+        return
+      }
+      const el = e.currentTarget
+      const len = el.value.length
+      if (len === 0) {
+        return
+      }
+      const soonAfterFocus = Date.now() - focusTimestampRef.current < 500
+      const selStart = el.selectionStart
+      const selEnd = el.selectionEnd
+      if (
+        soonAfterFocus &&
+        selStart === 0 &&
+        selEnd === len &&
+        document.activeElement === el
+      ) {
+        requestAnimationFrame(() => {
+          if (document.activeElement !== el) {
+            return
+          }
+          try {
+            el.setSelectionRange(len, len)
+          } catch {
+            // ignore
+          }
+        })
+      }
+    },
+    [selectDisabled, inputReadOnly]
   )
 
   const onControlMouseDown = useCallback(
@@ -620,6 +662,7 @@ const Selectbox: FC<Props> = ({
                 }}
                 onFocus={handleFocus}
                 onBlur={handleBlur}
+                onSelect={onInputSelect}
                 onKeyDown={onInputKeyDown}
               />
             </StyledInputContainer>
