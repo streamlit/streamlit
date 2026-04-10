@@ -355,7 +355,7 @@ debug:
 			exit 1; \
 		fi; \
 		if [[ -z "$$BACKEND_PORT" ]]; then \
-			BACKEND_PORT=$$(awk '/Server started on port [0-9]+/ {print $$NF; exit}' "$$DEBUG_DIR/backend.log"); \
+			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
 		fi; \
 		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
