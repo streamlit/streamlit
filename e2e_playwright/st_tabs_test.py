@@ -333,6 +333,9 @@ def test_keyed_tabs_persist_active_tab_across_remount(app: Page):
     # Toggle back — another rerun and delta path shift
     click_toggle(app, "Show extra text")
     expect(app.get_by_text("Extra text inserted above tabs")).not_to_be_visible()
+    # Ensure the full re-render cycle (including tab state restoration) has settled;
+    # on webkit the remount can lag behind the DOM removal of the toggled text.
+    wait_for_app_run(app)
 
     # Still persisted
     keyed_tabs = get_element_by_key(app, "persist_tabs")
