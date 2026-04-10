@@ -100,6 +100,12 @@ if st.user:
 | `streamlit_user`   | User identity claims (chunked if needed) | Existing behavior               |
 | `streamlit_tokens` | Token payload (chunked if needed)        | HTTP-only, Secure, SameSite=Lax |
 
+**Token storage behavior:**
+
+- The **ID token** is always stored when available, regardless of `expose_tokens`, to support RP-initiated logout via `id_token_hint`
+- The **access token** is only stored when `expose_tokens` explicitly includes `"access"`
+- The `streamlit_tokens` cookie is only set if there are tokens to store
+
 - Tokens **never stored in `session_state`**
 
 - Tokens **never accessible to browser JavaScript**

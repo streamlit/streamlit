@@ -28,6 +28,7 @@ from streamlit.auth_util import (
     get_origin_from_redirect_uri,
     get_redirect_uri,
     get_secrets_auth_section,
+    get_tokens_to_store,
     get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
@@ -87,12 +88,19 @@ class AuthHandlerMixin(tornado.web.RequestHandler):
             AUTH_COOKIE_NAME,
             user_info,
         )
-        set_cookie_with_chunks(
-            self._set_single_cookie,
-            self._create_signed_value,
-            TOKENS_COOKIE_NAME,
-            tokens,
-        )
+        if tokens:
+            set_cookie_with_chunks(
+                self._set_single_cookie,
+                self._create_signed_value,
+                TOKENS_COOKIE_NAME,
+                tokens,
+            )
+        else:
+            clear_cookie_and_chunks(
+                self._get_signed_cookie,
+                self.clear_cookie,
+                TOKENS_COOKIE_NAME,
+            )
 
     def _set_single_cookie(self, cookie_name: str, value: str) -> None:
         """Set a single cookie."""
@@ -275,7 +283,7 @@ class AuthCallbackHandler(AuthHandlerMixin, tornado.web.RequestHandler):
         user = cast("dict[str, Any]", token.get("userinfo"))
 
         cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
-        tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
+        tokens = get_tokens_to_store(token)
 
         if user:
             self.set_auth_cookie(cookie_value, tokens)

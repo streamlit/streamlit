@@ -31,6 +31,7 @@ from streamlit.auth_util import (
     get_origin_from_redirect_uri,
     get_redirect_uri,
     get_secrets_auth_section,
+    get_tokens_to_store,
     get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
@@ -201,7 +202,10 @@ def _get_cookie_path() -> str:
 
 
 async def _set_auth_cookie(
-    response: Response, user_info: dict[str, Any], tokens: dict[str, Any]
+    response: Response,
+    request: Request,
+    user_info: dict[str, Any],
+    tokens: dict[str, Any],
 ) -> None:
     """Set the auth cookies with signed user info and tokens.
 
@@ -211,6 +215,8 @@ async def _set_auth_cookie(
     behavior when switching between Tornado and Starlette backends.
 
     Cookies may be split into multiple chunks if they exceed browser limits.
+    If tokens is empty, any existing token cookies will be cleared to prevent
+    stale tokens from persisting.
     """
 
     def set_single_cookie(cookie_name: str, value: str) -> None:
@@ -222,12 +228,28 @@ async def _set_auth_cookie(
         USER_COOKIE_NAME,
         user_info,
     )
-    set_cookie_with_chunks(
-        set_single_cookie,
-        _create_signed_value_wrapper,
-        TOKENS_COOKIE_NAME,
-        tokens,
-    )
+    if tokens:
+        set_cookie_with_chunks(
+            set_single_cookie,
+            _create_signed_value_wrapper,
+            TOKENS_COOKIE_NAME,
+            tokens,
+        )
+    else:
+        # Clear any existing token cookies to prevent stale tokens from persisting
+        cookie_path = _get_cookie_path()
+
+        def get_single_cookie(cookie_name: str) -> bytes | None:
+            return _get_signed_cookie_from_request(request, cookie_name)
+
+        def clear_single_cookie(cookie_name: str) -> None:
+            response.delete_cookie(cookie_name, path=cookie_path)
+
+        clear_cookie_and_chunks(
+            get_single_cookie,
+            clear_single_cookie,
+            TOKENS_COOKIE_NAME,
+        )
 
 
 def _set_single_cookie(
@@ -550,9 +572,9 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     response = await _redirect_to_base(base_url)
 
     cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
-    tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
+    tokens = get_tokens_to_store(token)
     if user:
-        await _set_auth_cookie(response, cookie_value, tokens)
+        await _set_auth_cookie(response, request, cookie_value, tokens)
     else:  # pragma: no cover - error path
         _LOGGER.error(
             "OAuth provider '%s' did not return user information during callback.",

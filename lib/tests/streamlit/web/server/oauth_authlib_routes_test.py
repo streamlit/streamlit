@@ -397,7 +397,6 @@ class AuthCallbackHandlerTest(tornado.testing.AsyncHTTPTestCase):
                 "provider": "google",
             },
             {
-                "access_token": "test_access_token",
                 "id_token": "test_id_token",
             },
         )
