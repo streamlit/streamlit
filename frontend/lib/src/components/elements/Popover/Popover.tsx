@@ -151,40 +151,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // Single state with optimistic updates for instant UI feedback.
   const [open, setOpen] = useState(initialOpen)
 
-  // Keep popover body mounted briefly after close so portaled inputs receive blur and
-  // commit widget state. Unmount after a delay so we do not leave many stPopoverBody
-  // nodes in the document (portals are not under stPopover; e2e uses a global test id).
+  // Keep popover body mounted after the first open (BaseWeb renderAll behavior). Widgets
+  // inside need the subtree to stay mounted on close so blur/commit runs reliably; hiding
+  // with CSS avoids losing input state before values reach the backend.
   const [contentMounted, setContentMounted] = useState(initialOpen)
-  const unmountAfterCloseTimerRef = useRef<ReturnType<
-    typeof setTimeout
-  > | null>(null)
-  const hadOpenedContentRef = useRef(initialOpen)
 
   useEffect(() => {
     if (open) {
-      if (unmountAfterCloseTimerRef.current !== null) {
-        clearTimeout(unmountAfterCloseTimerRef.current)
-        unmountAfterCloseTimerRef.current = null
-      }
-      hadOpenedContentRef.current = true
       setContentMounted(true)
-      return
-    }
-
-    if (!hadOpenedContentRef.current) {
-      return
-    }
-
-    unmountAfterCloseTimerRef.current = setTimeout(() => {
-      unmountAfterCloseTimerRef.current = null
-      setContentMounted(false)
-    }, 200)
-
-    return () => {
-      if (unmountAfterCloseTimerRef.current !== null) {
-        clearTimeout(unmountAfterCloseTimerRef.current)
-        unmountAfterCloseTimerRef.current = null
-      }
     }
   }, [open])
 

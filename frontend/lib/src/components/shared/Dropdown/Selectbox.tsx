@@ -215,7 +215,7 @@ const Selectbox: FC<Props> = ({
   }, [propValue])
 
   const handleFocus = useCallback(
-    (_e: FocusEvent<HTMLInputElement>) => {
+    (e: FocusEvent<HTMLInputElement>) => {
       setFocused(true)
       firstEditAfterFocusRef.current = true
       // Use parent prop so session_state / proto updates are reflected immediately
@@ -229,6 +229,24 @@ const Selectbox: FC<Props> = ({
       if (text.length > 0) {
         placeCaretAtEndAfterFocusRef.current = true
       }
+      // Avoid browser select-all on focus (Playwright / some browsers): caret must stay
+      // at the end so Backspace edits the committed label instead of clearing it.
+      const el = e.currentTarget
+      const placeCaret = (): void => {
+        if (document.activeElement !== el) {
+          return
+        }
+        const len = el.value.length
+        if (len > 0) {
+          try {
+            el.setSelectionRange(len, len)
+          } catch {
+            // setSelectionRange not supported on some input types
+          }
+        }
+      }
+      queueMicrotask(placeCaret)
+      requestAnimationFrame(placeCaret)
     },
     [selectDisabled, propValue]
   )
@@ -302,13 +320,20 @@ const Selectbox: FC<Props> = ({
         return
       }
       const t = e.target
-      if (!(t instanceof Node)) {
-        return
-      }
       const refEl = refs.reference.current
       const floatEl = refs.floating.current
-      if ((refEl && refEl.contains(t)) || (floatEl && floatEl.contains(t))) {
+      const active =
+        document.activeElement instanceof Node ? document.activeElement : null
+      const targetInside =
+        t instanceof Node &&
+        ((refEl && refEl.contains(t)) || (floatEl && floatEl.contains(t)))
+      const activeInside =
+        active &&
+        ((refEl && refEl.contains(active)) ||
+          (floatEl && floatEl.contains(active)))
+      if (targetInside || activeInside) {
         e.preventDefault()
+        e.stopPropagation()
         // index=None selectboxes are clearable: Escape clears while the menu is open.
         // index set (non-clearable): Escape closes and restores committed value (no onChange).
         if (clearable && propValue !== null && propValue !== "") {
@@ -346,8 +371,21 @@ const Selectbox: FC<Props> = ({
       if (e.key === "Escape") {
         e.preventDefault()
         if (open) {
-          // Dropdown open: capture-phase listener on `document` handles Escape (input may
-          // not be the event target when focus is on the floating listbox).
+          // Usually handled in capture on document (focus may be on the listbox). If that
+          // path missed the event target, close/restore here so session_state + clearable
+          // behavior stay consistent.
+          if (clearable && propValue !== null && propValue !== "") {
+            commitSelection(null)
+          } else {
+            setOpen(false)
+            setSearchFilter("")
+            setInputValue(propValue ?? "")
+            setValue(propValue ?? null)
+            firstEditAfterFocusRef.current = true
+            requestAnimationFrame(() => {
+              inputRef.current?.blur()
+            })
+          }
           return
         }
         // index=None selectboxes are clearable: Escape clears when the menu is closed.
@@ -541,6 +579,22 @@ const Selectbox: FC<Props> = ({
                   if (v != null && v !== "" && !focused) {
                     e.preventDefault()
                     e.currentTarget.focus()
+                  }
+                }}
+                onMouseUp={e => {
+                  if (selectDisabled || inputReadOnly) {
+                    return
+                  }
+                  // Suppress click-to-select-all after focus (especially with preventDefault
+                  // on mousedown); keep caret at end for incremental editing.
+                  const el = e.currentTarget
+                  if (document.activeElement === el && el.value.length > 0) {
+                    try {
+                      const len = el.value.length
+                      el.setSelectionRange(len, len)
+                    } catch {
+                      // ignore
+                    }
                   }
                 }}
                 onChange={e => {
