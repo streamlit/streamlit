@@ -15,11 +15,11 @@ Invoke this skill when the user's request involves:
 - Debugging Streamlit issues (errors, session state bugs, performance problems)
 - Beautifying or improving the visual design of a Streamlit app
 - Optimizing Streamlit performance (caching, fragments, reruns)
-- Deploying Streamlit apps locally
+- Building and running Streamlit apps
 - Styling widgets (button colors, backgrounds, CSS customization)
 - Any question about Streamlit widgets, layouts, or components
 
-**Trigger phrases:** "streamlit", "st.", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache", "deploy"
+**Trigger phrases:** "streamlit", "st.", "dashboard", "app.py", "beautify app", "make it look better", "style", "CSS", "color", "background", "theme", "button", "slow rerun", "session state", "performance", "faster", "cache"
 
 ## Workflow
 
@@ -79,7 +79,9 @@ Step 4: Check if app is running and offer to run it
 
 **Goal:** Determine what the user needs and load the appropriate guidance.
 
-Use this routing table to select sub-skill(s). **Always read the sub-skill file** before making changes:
+Use this routing table to select sub-skill(s). **Always read the sub-skill file** before making changes.
+
+> All file paths below are relative to this skill's directory (`streamlit/.agents/skills/developing-with-streamlit/`).
 
 | User Need | Sub-skill to Read |
 |-----------|-------------------|
@@ -136,7 +138,7 @@ When **editing an existing app**, use templates as reference for best practices:
 
 When applying a **custom theme**, use a template from `assets/templates/themes/`:
 - Copy a theme directory (snowflake, dracula, nord, stripe, solarized-light, spotify, github, minimal)
-- Themes include bundled fonts for Snowflake deployment compatibility
+- Themes include custom fonts via Google Fonts
 - See `assets/templates/themes/README.md` for theme previews
 
 For **performance optimization**, read:

@@ -106,7 +106,7 @@ name = "my-streamlit-app"
 version = "0.1.0"
 requires-python = ">=3.11"
 dependencies = [
-    "streamlit>=1.53.0",
+    "streamlit",
     "plotly>=5.0.0",
     "snowflake-connector-python>=3.0.0",
 ]

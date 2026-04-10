@@ -24,28 +24,6 @@ uv sync
 uv run streamlit run streamlit_app.py
 ```
 
-## Deploying to Snowflake
-
-Before deploying, update `snowflake.yml` with your account-specific resources:
-
-```yaml
-# Find available compute pools
-SHOW COMPUTE POOLS;
-
-# Find available external access integrations
-SHOW EXTERNAL ACCESS INTEGRATIONS;
-```
-
-Then edit `snowflake.yml` to replace the placeholders:
-- `<YOUR_COMPUTE_POOL>` → e.g., `STREAMLIT_DEDICATED_POOL`
-- `<YOUR_PYPI_INTEGRATION>` → e.g., `PYPI_ACCESS_INTEGRATION`
-- `<FROM_CONNECTION>` values are filled from your active connection
-
-Deploy with:
-```bash
-snow streamlit deploy --replace
-```
-
 ## How Streamlit theming works
 
 A custom theme requires two things:
@@ -97,16 +75,15 @@ Each theme directory contains:
 ├── .streamlit/config.toml   # Theme colors and fonts (Google Fonts)
 ├── streamlit_app.py         # Demo app showing the theme
 ├── pyproject.toml           # Dependencies
-└── snowflake.yml            # Snowflake deployment config
 ```
 
 ## Dependencies
 
 All themes require Python >=3.11 and use:
-- `snowflake-connector-python>=3.3.0` (required — `streamlit[snowflake]` silently skips this on Python 3.12+)
-- `streamlit[snowflake]>=1.54.0`
+- `streamlit`
 - `altair>=5.5.0`
 - `pandas>=2.2.3`
+- `numpy>=1.26.0`
 
 ## Fonts
 

@@ -181,8 +181,11 @@ def load_metric_data() -> pd.DataFrame:
 ## Dependencies
 
 All templates require Python >=3.11 and use:
-- `snowflake-connector-python>=3.3.0` (required — `streamlit[snowflake]` silently skips this on Python 3.12+)
-- `streamlit[snowflake]>=1.54.0`
+- `streamlit`
 - `altair>=5.5.0`
 - `pandas>=2.2.3`
-- `numpy>=1.26.0`
+- `numpy>=1.26.0` (most templates)
+
+Snowflake variants (`*-snowflake`) additionally require:
+- `snowflake-connector-python>=3.3.0`
+- `streamlit[snowflake]>=1.54.0`

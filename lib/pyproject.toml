@@ -219,6 +219,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 
 [tool.coverage.report]
@@ -227,6 +228,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",

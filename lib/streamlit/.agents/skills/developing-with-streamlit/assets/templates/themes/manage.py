@@ -113,7 +113,6 @@ def sync_theme(theme):
     """Regenerate all files for a single theme directory."""
     slug = theme["slug"]
     title = theme["title"]
-    identifier = slug.replace("-", "_")
     theme_dir = ROOT / slug
 
     # Create directories
@@ -134,14 +133,6 @@ def sync_theme(theme):
         )
     )
 
-    # snowflake.yml
-    (theme_dir / "snowflake.yml").write_text(
-        expected_from_template(
-            TEMPLATES / "snowflake.yml.tmpl",
-            {"slug": slug, "title": title, "identifier": identifier},
-        )
-    )
-
 
 def update_gitattributes():
     """Update .gitattributes with entries for generated theme files."""
@@ -153,7 +144,6 @@ def update_gitattributes():
             "*/.streamlit/config.toml linguist-generated",
             "*/streamlit_app.py linguist-generated",
             "*/pyproject.toml linguist-generated",
-            "*/snowflake.yml linguist-generated",
             GITATTR_END,
         ]
     )
@@ -214,7 +204,6 @@ def cmd_check():
     for theme in themes:
         slug = theme["slug"]
         title = theme["title"]
-        identifier = slug.replace("-", "_")
         theme_dir = ROOT / slug
 
         # .streamlit/config.toml
@@ -242,17 +231,6 @@ def cmd_check():
             missing.append(f"{slug}/pyproject.toml")
         elif target.read_text() != expected:
             drifted.append(f"{slug}/pyproject.toml")
-
-        # snowflake.yml
-        target = theme_dir / "snowflake.yml"
-        expected = expected_from_template(
-            TEMPLATES / "snowflake.yml.tmpl",
-            {"slug": slug, "title": title, "identifier": identifier},
-        )
-        if not target.exists():
-            missing.append(f"{slug}/snowflake.yml")
-        elif target.read_text() != expected:
-            drifted.append(f"{slug}/snowflake.yml")
 
     ok = True
     if missing:
