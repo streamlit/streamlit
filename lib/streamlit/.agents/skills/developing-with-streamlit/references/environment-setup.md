@@ -7,7 +7,7 @@ If uv is not installed, ask the user before installing it.
 
 ## CRITICAL: Always Use Latest Streamlit
 
-**Always specify `streamlit>=1.53.0`** (or latest) in dependencies. Many Streamlit features and patterns in these skills require recent versions. Older streamlit versions will cause errors with:
+**Always specify the latest version of `streamlit`** in dependencies. Many Streamlit features and patterns in these skills require recent versions. Older streamlit versions will cause errors with:
 - Material icons (`:material/icon_name:`)
 - `st.pills()`, `st.segmented_control()`
 - Modern caching decorators
