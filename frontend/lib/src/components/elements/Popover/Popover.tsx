@@ -154,18 +154,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         // popover boolean to the manager and hide UI — avoids losing in-popover edits
         // when closing via outside click (e2e: text_input in popover).
         const flushAndClose = (): void => {
-          if (widgetId) {
-            widgetMgr?.setBoolValue(
-              { id: widgetId },
-              false,
-              { fromUi: true },
-              fragmentId
-            )
-          } else if (isPassivelyKeyed) {
-            setStoredOpen(false)
-          }
+          // Defer bool sync one macrotask after blur so BaseUI inputs flush `dirty` →
+          // WidgetStateManager before the popover state update (e2e: text in popover).
           window.setTimeout(() => {
-            setOpen(false)
+            if (widgetId) {
+              widgetMgr?.setBoolValue(
+                { id: widgetId },
+                false,
+                { fromUi: true },
+                fragmentId
+              )
+            } else if (isPassivelyKeyed) {
+              setStoredOpen(false)
+            }
+            window.setTimeout(() => {
+              setOpen(false)
+            }, 0)
           }, 0)
         }
         requestAnimationFrame(() => {

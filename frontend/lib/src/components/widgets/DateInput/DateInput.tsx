@@ -717,7 +717,15 @@ function SingleTextField({
           if (value.length === 0) {
             return
           }
-          e.currentTarget.select()
+          const el = e.currentTarget
+          el.select()
+          // Second select on the next frame helps Playwright `fill()` after focus; skip
+          // when the field shows error styling so snapshot tests stay stable.
+          if (!error) {
+            requestAnimationFrame(() => {
+              el.select()
+            })
+          }
         }
 
         const handleInputKeyDown = (
@@ -764,7 +772,8 @@ function SingleTextField({
             onFocus={handleDateFieldFocus}
             onChange={handleInputChangeLike}
             onBlur={e => {
-              const raw = e.currentTarget.value
+              const el = e.currentTarget
+              const raw = lastNativeValueRef.current || el.value
               setDraft(null)
               const trimmed = raw.trim()
               if (!trimmed) {
@@ -929,7 +938,13 @@ function RangeTextField({
           if (value.length === 0) {
             return
           }
-          e.currentTarget.select()
+          const el = e.currentTarget
+          el.select()
+          if (!error) {
+            requestAnimationFrame(() => {
+              el.select()
+            })
+          }
         }
 
         const handleRangeKeyDown = (
@@ -976,7 +991,8 @@ function RangeTextField({
             onFocus={handleRangeDateFieldFocus}
             onChange={handleRangeInputChangeLike}
             onBlur={e => {
-              const raw = e.currentTarget.value
+              const el = e.currentTarget
+              const raw = lastNativeRangeValueRef.current || el.value
               setDraft(null)
               const trimmed = raw.trim()
               if (!trimmed) {

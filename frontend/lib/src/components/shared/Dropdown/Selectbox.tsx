@@ -346,6 +346,11 @@ const Selectbox: FC<Props> = ({
           valueBeforeRemovalRef.current = null
           return
         }
+        // While the list is open, Zag can emit an empty selection during typing/filtering.
+        // Keep the committed value so the controlled `value` prop stays in sync with Streamlit.
+        if (comboboxOpenRef.current && !acceptNewOptions) {
+          return
+        }
         valueBeforeRemovalRef.current = value
         setValue(null)
         return
@@ -360,7 +365,7 @@ const Selectbox: FC<Props> = ({
       onChange(item.optionValue)
       valueBeforeRemovalRef.current = null
     },
-    [onChange, value]
+    [acceptNewOptions, onChange, value]
   )
 
   const onInputValueChange = useCallback(
@@ -390,6 +395,10 @@ const Selectbox: FC<Props> = ({
             })
             return
           }
+          // List is already open: transient clear on open — show the committed label so
+          // the user can edit from the full text (Backspace from "male", not from "").
+          setInputQuery(propDerivedLabelRef.current)
+          return
         }
         // BaseWeb keeps the filter string in an empty input while the selection label is
         // shown separately; we render the label in the input, so Playwright type() appends
@@ -469,11 +478,11 @@ const Selectbox: FC<Props> = ({
     (d: { open: boolean }) => {
       comboboxOpenRef.current = d.open
       if (d.open) {
-        // Do not reset `userEditedInputThisFocusRef` here: opening often follows the first
-        // keystroke of `type()`, and clearing it lets Zag emit a spurious empty
-        // input-change that restores the full label — the next chars then append to the
-        // path (…pyexp), fuzzy filter matches nothing (e2e: fuzzy snapshot "No results").
-        // `handleInputFocus` already sets this ref false when the input receives focus.
+        // Re-apply the committed label when the list opens so Ark/Zag does not leave the
+        // input blank before the first edit (BaseWeb keeps the selected label visible).
+        if (!userEditedInputThisFocusRef.current) {
+          setInputQuery(propDerivedLabelRef.current)
+        }
       } else {
         suppressEmptyInputAfterCloseRef.current = true
         window.setTimeout(() => {
