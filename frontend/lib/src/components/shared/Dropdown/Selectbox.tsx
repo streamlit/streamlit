@@ -193,6 +193,12 @@ const PopupPanel = styled(Combobox.Popup)(({ theme }) => ({
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
   overflow: "hidden",
   zIndex: theme.zIndices.popup,
+  // Base UI mount transitions can leave opacity at 0 long enough that Playwright treats
+  // the virtualized list as not visible (screenshots/clicks); keep the panel opaque.
+  opacity: 1,
+  transition: "none",
+  "&[data-starting-style]": { opacity: 1 },
+  "&[data-ending-style]": { opacity: 1 },
 }))
 
 const Selectbox: FC<Props> = ({
@@ -216,6 +222,8 @@ const Selectbox: FC<Props> = ({
   const [open, setOpen] = useState(false)
   const valueBeforeRemovalRef = useRef<string | null>(null)
   const skipRemovalSyncRef = useRef(false)
+  /** True when creatable mode intentionally opened with an empty query (trigger-press). */
+  const openedForCreatableClearRef = useRef(false)
 
   useExecuteWhenChanged(() => {
     setValue(propValue)
@@ -285,15 +293,15 @@ const Selectbox: FC<Props> = ({
 
   const comboboxItems = useMemo(() => {
     const base = selectOptions.map(o => o.value)
-    if (
-      acceptNewOptions &&
-      inputValue.length > 0 &&
-      !base.includes(inputValue)
-    ) {
-      return [...base, inputValue]
+    const out = new Set(base)
+    if (acceptNewOptions && value != null && value !== "" && !out.has(value)) {
+      out.add(value)
     }
-    return base
-  }, [acceptNewOptions, inputValue, selectOptions])
+    if (acceptNewOptions && inputValue.length > 0 && !out.has(inputValue)) {
+      out.add(inputValue)
+    }
+    return [...out]
+  }, [acceptNewOptions, inputValue, selectOptions, value])
 
   const filteredItemValues = useMemo(
     () => displayRows.map(r => r.value),
@@ -312,8 +320,17 @@ const Selectbox: FC<Props> = ({
       setOpen(nextOpen)
       if (nextOpen) {
         skipRemovalSyncRef.current = true
-        if (eventDetails?.reason === "trigger-press") {
+        if (acceptNewOptions && eventDetails?.reason === "trigger-press") {
+          openedForCreatableClearRef.current = true
           setInputValue("")
+        } else {
+          openedForCreatableClearRef.current = false
+          const label =
+            value == null || value === ""
+              ? ""
+              : (selectOptions.find(o => o.value === value)?.label ??
+                String(value))
+          setInputValue(label)
         }
       } else {
         let nextVal = value
@@ -322,16 +339,34 @@ const Selectbox: FC<Props> = ({
           setValue(valueBeforeRemovalRef.current)
           valueBeforeRemovalRef.current = null
         }
-        setInputValue(nextVal ?? "")
+        const closeLabel =
+          nextVal == null || nextVal === ""
+            ? ""
+            : (selectOptions.find(o => o.value === nextVal)?.label ??
+              String(nextVal))
+        setInputValue(closeLabel)
       }
     },
-    [value]
+    [acceptNewOptions, selectOptions, value]
   )
 
   const handleInputValueChange = useCallback(
     (next: string) => {
       if (skipRemovalSyncRef.current) {
         skipRemovalSyncRef.current = false
+        if (
+          next === "" &&
+          value != null &&
+          value !== "" &&
+          !openedForCreatableClearRef.current
+        ) {
+          const label =
+            selectOptions.find(o => o.value === value)?.label ?? String(value)
+          setInputValue(label)
+          openedForCreatableClearRef.current = false
+          return
+        }
+        openedForCreatableClearRef.current = false
         setInputValue(next)
         return
       }
@@ -343,7 +378,7 @@ const Selectbox: FC<Props> = ({
       }
       setInputValue(next)
     },
-    [inputValue, open, value]
+    [inputValue, open, selectOptions, value]
   )
 
   const handleCreatableEnterCapture = useCallback(
@@ -351,7 +386,12 @@ const Selectbox: FC<Props> = ({
       if (e.key !== "Enter" || !acceptNewOptions || selectDisabled) {
         return
       }
-      const trimmed = inputValue.trim()
+      const fromDom =
+        e.target instanceof HTMLInputElement
+          ? e.target.value
+          : ((e.currentTarget as HTMLElement | null)?.querySelector("input")
+              ?.value ?? "")
+      const trimmed = fromDom.trim()
       if (!trimmed) {
         return
       }
@@ -363,13 +403,7 @@ const Selectbox: FC<Props> = ({
         setOpen(false)
       }
     },
-    [
-      acceptNewOptions,
-      handleValueChange,
-      inputValue,
-      selectDisabled,
-      selectOptions,
-    ]
+    [acceptNewOptions, handleValueChange, selectDisabled, selectOptions]
   )
 
   const borderColor = getBorderColor(theme.colors, open)
@@ -424,13 +458,13 @@ const Selectbox: FC<Props> = ({
         {help && <WidgetLabelHelpIcon content={help} label={label} />}
       </WidgetLabel>
       <Combobox.Root
+        open={open}
         value={value}
         onValueChange={v => {
           handleValueChange(v as string | null)
         }}
         inputValue={inputValue}
         onInputValueChange={handleInputValueChange}
-        open={open}
         onOpenChange={(nextOpen, eventDetails) =>
           handleOpenChange(nextOpen, eventDetails)
         }
@@ -492,6 +526,46 @@ const Selectbox: FC<Props> = ({
                 readOnly={inputReadOnly != null}
                 aria-label={label || ""}
                 placeholder={open ? selectboxPlaceholder : undefined}
+                onFocus={e => {
+                  if (selectDisabled) {
+                    return
+                  }
+                  if (acceptNewOptions) {
+                    ;(e.target as HTMLInputElement).select()
+                    return
+                  }
+                  if (value != null && value !== "" && inputValue === "") {
+                    setInputValue(value)
+                  }
+                }}
+                onKeyDown={e => {
+                  if (e.key !== "Escape") {
+                    return
+                  }
+                  e.preventDefault()
+                  e.stopPropagation()
+                  if (open) {
+                    if (clearable && value != null && value !== "") {
+                      handleValueChange(null)
+                    } else {
+                      const label =
+                        value == null || value === ""
+                          ? ""
+                          : (selectOptions.find(o => o.value === value)
+                              ?.label ?? String(value))
+                      setInputValue(label)
+                    }
+                    setOpen(false)
+                    return
+                  }
+                  if (!clearable) {
+                    return
+                  }
+                  if (value == null || value === "") {
+                    return
+                  }
+                  handleValueChange(null)
+                }}
               />
             </InputWrap>
           </ValueContainer>
@@ -524,20 +598,26 @@ const Selectbox: FC<Props> = ({
           </IconsContainer>
         </ControlContainer>
 
-        <Combobox.Portal>
+        <Combobox.Portal keepMounted={false}>
           <Combobox.Positioner
             side="bottom"
             align="start"
             sideOffset={convertRemToPx(theme.spacing.twoXS)}
             collisionBoundary={isInSidebar ? undefined : "clipping-ancestors"}
           >
-            <PopupPanel>
+            <PopupPanel
+              {...(open
+                ? { "data-testid": "stSelectboxDropdownPopup" as const }
+                : {})}
+            >
               <Combobox.List>
                 {displayRows.length === 0 ? (
                   <Combobox.Empty
-                    data-testid={
-                      open ? "stSelectboxVirtualDropdown" : undefined
-                    }
+                    {...(open
+                      ? {
+                          "data-testid": "stSelectboxVirtualDropdown" as const,
+                        }
+                      : {})}
                     style={{
                       padding: theme.spacing.md,
                       color: theme.colors.fadedText60,

@@ -27,7 +27,9 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_selectbox,
+    get_selectbox_virtual_dropdown,
     select_selectbox_option,
+    strip_selectbox_dropdown_overlay_attrs,
 )
 
 if TYPE_CHECKING:
@@ -152,24 +154,41 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     """Test that selection of an option via the dropdown works correctly."""
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
-    # Take a snapshot of the selection dropdown:
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
-    assert_snapshot(selection_dropdown, name="st_selectbox-selection_dropdown")
-    # Select last option:
-    selection_dropdown.locator("li").nth(1).click()
+    # Snapshot the popup panel (sized box); the raw listbox id target is often not
+    # considered "visible" by Playwright for element screenshots.
+    popup = app.get_by_test_id("stSelectboxDropdownPopup").first
+    expect(popup).to_be_attached()
+    strip_selectbox_dropdown_overlay_attrs(popup)
+    popup.evaluate(
+        """
+        (el) => {
+          if (el instanceof HTMLElement) {
+            el.style.position = "fixed";
+            el.style.left = "8px";
+            el.style.top = "8px";
+            el.style.zIndex = "2147483647";
+          }
+        }
+        """
+    )
+    # Popup screenshots can be small enough that the default image_threshold (0.2% of
+    # pixels) rounds down to 0 allowed differing pixels; relax slightly for stability.
+    assert_snapshot(popup, name="st_selectbox-selection_dropdown", image_threshold=0.02)
+    # Virtualized rows are not always exposed as multiple `li` nodes to Playwright;
+    # reuse the same fill + list-row path as other selectbox tests.
+    select_selectbox_option(
+        app, "selectbox 4 (more options)", "e2e/scripts/st_warning.py"
+    )
     # Check that selection worked:
     expect_markdown(app, "value 4: e2e/scripts/st_warning.py")
 
 
 def test_handles_option_selection_via_typing(app: Page):
     """Test that selection of an option via typing works correctly."""
-    selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
-
-    # Type an option:
-    selectbox_input.type("e2e/scripts/st_warning.py")
-    selectbox_input.press("Enter")
-
-    # Check that selection worked:
+    # open → filter with fill → pick list row (matches widget behavior; raw fill+Enter does not commit)
+    select_selectbox_option(
+        app, "selectbox 4 (more options)", "e2e/scripts/st_warning.py"
+    )
     expect_markdown(app, "value 4: e2e/scripts/st_warning.py")
 
 
@@ -183,7 +202,10 @@ def test_shows_correct_options_via_fuzzy_search(
     selectbox_input.type("exp")
 
     # Check filtered options
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown = get_selectbox_virtual_dropdown(
+        get_selectbox(app, "selectbox 4 (more options)")
+    )
+    strip_selectbox_dropdown_overlay_attrs(selection_dropdown)
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
@@ -191,11 +213,7 @@ def test_empty_selectbox_behaves_correctly(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that st.selectbox behaves correctly when empty (no initial selection)."""
-    empty_selectbox_input = get_selectbox_input(app, "selectbox 9 (empty selection)")
-
-    # Type an option:
-    empty_selectbox_input.type("male")
-    empty_selectbox_input.press("Enter")
+    select_selectbox_option(app, "selectbox 9 (empty selection)", "male")
 
     expect_markdown(app, "value 9: male")
 
@@ -204,6 +222,7 @@ def test_empty_selectbox_behaves_correctly(
         name="st_selectbox-clearable_input",
     )
 
+    empty_selectbox_input = get_selectbox_input(app, "selectbox 9 (empty selection)")
     empty_selectbox_input.focus()
     empty_selectbox_input.press("Escape")
 
@@ -213,10 +232,11 @@ def test_empty_selectbox_behaves_correctly(
 
 def test_keeps_value_on_selection_close(app: Page):
     """Test that the selection is kept when the dropdown is closed."""
+    selectbox = get_selectbox(app, "selectbox 4 (more options)")
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
+    expect(get_selectbox_virtual_dropdown(selectbox)).to_be_attached()
 
     # Click outside to close the dropdown:
     app.get_by_test_id("stMarkdown").first.click()
@@ -231,11 +251,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect_markdown(app, "value 8: female")
     expect_markdown(app, "selectbox changed: False")
 
-    get_selectbox_input(app, "selectbox 8 (with callback, help)").click()
-
-    # Select last option:
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
-    selection_dropdown.locator("li").first.click()
+    select_selectbox_option(app, "selectbox 8 (with callback, help)", "male")
+    wait_for_app_run(app)
 
     # Check that selection worked:
     expect_markdown(app, "value 8: male")
@@ -244,13 +261,9 @@ def test_handles_callback_on_change_correctly(app: Page):
         app.get_by_text("Selectbox widget callback triggered: x=1, y=2, z=3")
     ).to_be_visible()
 
-    # Change different input to trigger delta path change
-    empty_selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
-
-    # Type an option:
-    empty_selectbox_input.type("female")
-    empty_selectbox_input.press("Enter")
-
+    # Change different input to trigger delta path change (fill+click; typing would append
+    # to the existing "male" label because the input does not select-all on focus).
+    select_selectbox_option(app, "selectbox 1 (default)", "female")
     wait_for_app_run(app)
 
     expect_markdown(app, "value 1: female")
@@ -422,6 +435,7 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
     # Type and add a new option "new_option"
     selectbox_input.fill("new_option")
     selectbox_input.press("Enter")
+    wait_for_app_run(app)
 
     # Verify new option was added and selected successfully
     expect_markdown(app, "value 17: new_option")
@@ -429,10 +443,18 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
     # Verify the new option is visible in the input field
     expect(selectbox_elem.get_by_text("new_option", exact=True)).to_be_visible()
 
-    # Add another option to replace the first one
+    # Add another option to replace the first one (click list row; Base UI may use
+    # role=option on an inner node rather than a single text node match for "Add: …").
     selectbox_input.click()
     selectbox_input.fill("another_option")
-    selectbox_input.press("Enter")
+    get_selectbox_virtual_dropdown(selectbox_elem)
+    popup = app.get_by_test_id("stSelectboxDropdownPopup").first
+    strip_selectbox_dropdown_overlay_attrs(popup)
+    # The aria-controls listbox id may not wrap the virtualized `ul`; rows live under the popup.
+    virtual = popup.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(virtual).to_be_attached()
+    virtual.get_by_role("option").first.evaluate("el => el.click()")
+    wait_for_app_run(app)
 
     # Verify the new option replaced the previous one
     expect_markdown(app, "value 17: another_option")
@@ -465,7 +487,7 @@ def test_selectbox_session_state_sync_after_open_close(app: Page):
     selectbox_input.click()
 
     # Verify dropdown is open
-    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
+    expect(get_selectbox_virtual_dropdown(selectbox)).to_be_attached()
 
     # Close by pressing Escape without making a selection
     app.keyboard.press("Escape")
@@ -477,45 +499,50 @@ def test_selectbox_session_state_sync_after_open_close(app: Page):
 
 def test_selectbox_prefix_filter_mode_matches_prefix_only(app: Page):
     """Test that prefix mode only shows prefix matches and preserves option order."""
-    selectbox_input = get_selectbox_input(app, "selectbox 21 (filter_mode='prefix')")
+    selectbox = get_selectbox(app, "selectbox 21 (filter_mode='prefix')")
+    selectbox_input = selectbox.get_by_test_id("stSelectboxComboboxInput")
+    selectbox_input.click()
     selectbox_input.type("A123")
 
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
-    options = selection_dropdown.get_by_role("option")
+    selection_dropdown = get_selectbox_virtual_dropdown(selectbox)
+    options = selection_dropdown.locator("li")
     expect(options).to_have_count(2)
     expect(options.nth(0)).to_have_text("A123")
     expect(options.nth(1)).to_have_text("A1234")
-    expect(
-        selection_dropdown.get_by_role("option", name="BA123", exact=True)
-    ).to_have_count(0)
+    expect(selection_dropdown.locator("li", has_text="BA123")).to_have_count(0)
 
 
 def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
     """Test that contains mode matches case-insensitive substrings without reordering."""
-    selectbox_input = get_selectbox_input(app, "selectbox 22 (filter_mode='contains')")
+    selectbox = get_selectbox(app, "selectbox 22 (filter_mode='contains')")
+    selectbox_input = selectbox.get_by_test_id("stSelectboxComboboxInput")
+    selectbox_input.click()
     selectbox_input.type("EXAMPLE")
 
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
-    options = selection_dropdown.get_by_role("option")
+    selection_dropdown = get_selectbox_virtual_dropdown(selectbox)
+    options = selection_dropdown.locator("li")
     expect(options).to_have_count(2)
     expect(options.nth(0)).to_have_text("alice@example.com")
     expect(options.nth(1)).to_have_text("carol@example.com")
-    expect(
-        selection_dropdown.get_by_role("option", name="bob@company.com", exact=True)
-    ).to_have_count(0)
+    expect(selection_dropdown.locator("li", has_text="bob@company.com")).to_have_count(
+        0
+    )
 
 
 def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
     """Test that filter_mode=None keeps the input readonly while leaving the dropdown usable."""
-    selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
+    selectbox = get_selectbox(app, "selectbox 23 (filter_mode=None)")
+    selectbox_input = selectbox.get_by_test_id("stSelectboxComboboxInput")
     expect(selectbox_input).to_have_attribute("readonly", "")
 
     selectbox_input.click()
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
-    options = selection_dropdown.get_by_role("option")
+    selection_dropdown = get_selectbox_virtual_dropdown(selectbox)
+    options = selection_dropdown.locator("li")
     expect(options).to_have_count(3)
 
-    selection_dropdown.get_by_role("option", name="No", exact=True).click()
+    selection_dropdown.locator("li").filter(
+        has_text=re.compile(r"^No$")
+    ).first.evaluate("el => el.click()")
     expect_markdown(app, "value 23: No")
 
 

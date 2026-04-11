@@ -1451,6 +1451,9 @@ def assert_snapshot(
                 style = ""
             style += " .stAppHeader { background: transparent; }"
 
+        if isinstance(element, Locator):
+            element.scroll_into_view_if_needed(timeout=10_000)
+
         if file_type == "jpg":
             file_extension = ".jpg"
             img_bytes = element.screenshot(

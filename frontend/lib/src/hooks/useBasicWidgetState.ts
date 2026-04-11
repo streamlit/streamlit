@@ -19,6 +19,7 @@ import {
   SetStateAction,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react"
@@ -119,7 +120,10 @@ export function useBasicWidgetClientState<
 
   // When someone calls setNextValueWithSource, update internal state and tell
   // widget manager to update its state too.
-  useEffect(() => {
+  // useLayoutEffect: apply before paint so controlled widgets (e.g. Ark DatePicker)
+  // receive the new value in the same turn as the user event; passive effects run too
+  // late and third-party sync can revert UI-committed state before WidgetStateManager updates.
+  useLayoutEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
     // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
     setNextValueWithSource(null) // Clear "event".

@@ -163,7 +163,9 @@ const VirtualDropdown = forwardRef<HTMLUListElement, VirtualDropdownProps>(
       return (
         <SelectboxVirtualListRoot
           ref={ref}
-          data-testid={props.selectboxListDataTestId}
+          {...(props.selectboxListDataTestId
+            ? { "data-testid": props.selectboxListDataTestId }
+            : {})}
         >
           <FixedSizeList
             width="100%"

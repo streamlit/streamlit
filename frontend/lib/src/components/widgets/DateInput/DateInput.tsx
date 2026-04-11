@@ -23,11 +23,11 @@ import { format, isValid, parse } from "date-fns"
 import moment from "moment"
 import {
   memo,
-  type MouseEvent,
-  ReactElement,
+  type ReactElement,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -142,7 +142,15 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [textValue, setTextValue] = useState("")
+  const textValueRef = useRef("")
   const allowEmptyPickerCommitRef = useRef(false)
+  /** True after committing [] from typed/blurred empty field; ignore stale Ark repopulate until calendar opens. */
+  const commitEmptyFromTextRef = useRef(false)
+  /** True briefly after a typed commit so stale Ark `onValueChange` (previous day) is ignored. */
+  const commitFromTextInputRef = useRef(false)
+  useEffect(() => {
+    textValueRef.current = textValue
+  }, [textValue])
 
   const timeZone = useMemo(
     () => Intl.DateTimeFormat().resolvedOptions().timeZone,
@@ -151,6 +159,15 @@ function DateInput({
 
   const resetError = useCallback(() => {
     setError(null)
+  }, [])
+
+  const scheduleClearTextCommitGuard = useCallback(() => {
+    commitFromTextInputRef.current = true
+    // Ark may emit a stale onValueChange after a typed commit (e.g. TZ/parsing). Keep the guard
+    // past one task so we do not revert to the previous calendar day before React state catches up.
+    window.setTimeout(() => {
+      commitFromTextInputRef.current = false
+    }, 100)
   }, [])
 
   const handleFormCleared = useCallback(() => {
@@ -285,11 +302,32 @@ function DateInput({
     [dateFormat, element.isRange, loadedLocale]
   )
 
+  const valueFingerprint = useMemo(
+    () => datesToStrings(value ?? []).join("|"),
+    [value]
+  )
+
+  // Tracks the last value we pushed to the widget manager from this control.
+  // `value` from useBasicWidgetState lags one render behind setValueWithSource, so we
+  // cannot rely on valueFingerprint alone to dedupe Enter after onChange already committed.
+  const lastCommittedFpRef = useRef(valueFingerprint)
+  const prevRenderValueFpRef = useRef(valueFingerprint)
+  useLayoutEffect(() => {
+    if (valueFingerprint !== prevRenderValueFpRef.current) {
+      lastCommittedFpRef.current = valueFingerprint
+      prevRenderValueFpRef.current = valueFingerprint
+    }
+  }, [valueFingerprint])
+
   const commitUserDates = useCallback(
     (dates: Date[]): void => {
-      resetError()
-
       if (!dates.length) {
+        if (lastCommittedFpRef.current === "") {
+          setIsEmpty(true)
+          return
+        }
+        resetError()
+        lastCommittedFpRef.current = ""
         setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
         return
@@ -304,9 +342,25 @@ function DateInput({
         minDate,
         maxDate
       )
+      const nextFp = datesToStrings(newDates).join("|")
+      // Dedupe only "clean" commits. Out-of-range dates still need setError even when the
+      // fingerprint matches a previous invalid commit (resetError must not win via early return).
+      if (nextFp === lastCommittedFpRef.current && !errorType) {
+        return
+      }
+
+      resetError()
       if (errorType) {
         setError(createErrorMessage(errorType))
+        if (element.isRange) {
+          lastCommittedFpRef.current = ""
+          setValueWithSource({ value: [], fromUi: true })
+          setIsEmpty(true)
+          setTextValue("")
+        }
+        return
       }
+      lastCommittedFpRef.current = nextFp
       setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates.length)
     },
@@ -320,9 +374,45 @@ function DateInput({
     ]
   )
 
-  const valueFingerprint = useMemo(
-    () => datesToStrings(value ?? []).join("|"),
-    [value]
+  const handleArkValueChange = useCallback(
+    ({ value: next }: { value: DateValue[] | null | undefined }) => {
+      const nextDatesFiltered = (next ?? []).filter(Boolean)
+      if (commitEmptyFromTextRef.current && nextDatesFiltered.length > 0) {
+        return
+      }
+      if (nextDatesFiltered.length === 0) {
+        if (!allowEmptyPickerCommitRef.current) {
+          return
+        }
+        allowEmptyPickerCommitRef.current = false
+        commitUserDates([])
+        return
+      }
+      const dates = nextDatesFiltered.map(d =>
+        normalizeToStartOfDay(d.toDate(timeZone))
+      )
+      const nextFp = datesToStrings(dates).join("|")
+      if (
+        commitFromTextInputRef.current &&
+        nextFp !== lastCommittedFpRef.current
+      ) {
+        return
+      }
+      // Drop stale Ark replays of the pre-commit widget value before React state catches up.
+      const widgetFp = datesToStrings(value ?? []).join("|")
+      if (
+        nextFp === widgetFp &&
+        lastCommittedFpRef.current !== widgetFp &&
+        nextFp !== lastCommittedFpRef.current
+      ) {
+        return
+      }
+      if (nextFp === valueFingerprint) {
+        return
+      }
+      commitUserDates(dates)
+    },
+    [commitUserDates, timeZone, value, valueFingerprint]
   )
 
   // Sync display when committed widget value changes. useBasicWidgetClientState applies
@@ -334,14 +424,6 @@ function DateInput({
     setTextValue(formatDatesForDisplay(value))
     // eslint-disable-next-line react-hooks/exhaustive-deps -- valueFingerprint tracks value semantics
   }, [valueFingerprint, formatDatesForDisplay])
-
-  const handleClose = useCallback((): void => {
-    if (!isEmpty) return
-
-    const newValue = stringsToDates(element.default)
-    setValueWithSource({ value: newValue, fromUi: true })
-    setIsEmpty(!newValue)
-  }, [isEmpty, element, setValueWithSource])
 
   const isCompleteDateInput = useCallback(
     (raw: string): boolean => {
@@ -368,53 +450,194 @@ function DateInput({
     (raw: string): Date[] | null => {
       const trimmed = raw.trim()
       if (!trimmed) return []
+      // Use moment + the proto display format so parsing matches wire serialization (datesToStrings / stringsToDates).
       if (!element.isRange) {
-        const d = parse(trimmed, dateFormat, new Date(), {
-          locale: loadedLocale,
-        })
-        if (!isValid(d)) return null
-        return [d]
+        const m = moment(trimmed, element.format, true)
+        if (!m.isValid()) return null
+        return [normalizeToStartOfDay(m.toDate())]
       }
       const parts = trimmed.split(/\s*[–-]\s*/)
       if (parts.length !== 2) return null
-      const d1 = parse(parts[0].trim(), dateFormat, new Date(), {
-        locale: loadedLocale,
-      })
-      const d2 = parse(parts[1].trim(), dateFormat, new Date(), {
-        locale: loadedLocale,
-      })
-      if (!isValid(d1) || !isValid(d2)) return null
-      return [d1, d2]
+      const m1 = moment(parts[0].trim(), element.format, true)
+      const m2 = moment(parts[1].trim(), element.format, true)
+      if (!m1.isValid() || !m2.isValid()) return null
+      return [
+        normalizeToStartOfDay(m1.toDate()),
+        normalizeToStartOfDay(m2.toDate()),
+      ]
     },
-    [dateFormat, element.isRange, loadedLocale]
+    [element.format, element.isRange]
   )
+
+  const handleClose = useCallback((): void => {
+    // Range + empty text: commit empty tuple; never restore range defaults here.
+    if (element.isRange && textValueRef.current.trim() === "") {
+      commitEmptyFromTextRef.current = true
+      commitUserDates([])
+      setTextValue("")
+      return
+    }
+
+    // Range + complete typed value: validate/commit on calendar close (e.g. Escape).
+    if (element.isRange) {
+      const rawField = textValueRef.current
+      if (isCompleteDateInput(rawField)) {
+        const parsed = parseTypedValue(rawField.trim())
+        if (parsed !== null && parsed.length > 0) {
+          scheduleClearTextCommitGuard()
+          commitUserDates(parsed)
+        }
+      }
+      return
+    }
+
+    if (!isEmpty) {
+      return
+    }
+
+    if (clearable && textValueRef.current.trim() === "") {
+      commitEmptyFromTextRef.current = true
+      commitUserDates([])
+      setTextValue("")
+      return
+    }
+
+    // Non-clearable single date: restore proto default when the field was left empty.
+    const newValue = stringsToDates(element.default)
+    setValueWithSource({ value: newValue, fromUi: true })
+    setIsEmpty(!newValue.length)
+  }, [
+    clearable,
+    commitUserDates,
+    element.default,
+    element.isRange,
+    isCompleteDateInput,
+    isEmpty,
+    parseTypedValue,
+    scheduleClearTextCommitGuard,
+    setValueWithSource,
+  ])
 
   const handleTextChange = useCallback(
     (raw: string): void => {
+      if (raw.trim() !== "") {
+        commitEmptyFromTextRef.current = false
+      }
       setTextValue(raw)
+      textValueRef.current = raw
       const parsed = parseTypedValue(raw)
       if (parsed === null) {
         return
       }
       if (parsed.length === 0) {
+        if (raw.trim() === "") {
+          commitEmptyFromTextRef.current = true
+        }
         commitUserDates([])
         return
       }
       if (!isCompleteDateInput(raw)) {
         return
       }
+      scheduleClearTextCommitGuard()
       commitUserDates(parsed)
     },
-    [commitUserDates, isCompleteDateInput, parseTypedValue]
+    [
+      commitUserDates,
+      isCompleteDateInput,
+      parseTypedValue,
+      scheduleClearTextCommitGuard,
+    ]
+  )
+
+  /** Enter commits the current field text (typing, fill(), or IME). */
+  const handleEnterKey = useCallback(
+    (rawFromDom?: string): void => {
+      const raw = rawFromDom ?? textValueRef.current
+      const trimmed = raw.trim()
+      const parsed = parseTypedValue(trimmed)
+      if (parsed === null) {
+        return
+      }
+      if (parsed.length === 0) {
+        if (clearable || element.isRange) {
+          commitEmptyFromTextRef.current = true
+          commitUserDates([])
+          setTextValue("")
+        }
+        return
+      }
+      scheduleClearTextCommitGuard()
+      commitUserDates(parsed)
+    },
+    [
+      clearable,
+      commitUserDates,
+      element.isRange,
+      parseTypedValue,
+      scheduleClearTextCommitGuard,
+    ]
   )
 
   const handleOpenChange = useCallback(
     ({ open }: { open: boolean }): void => {
-      if (!open) {
-        handleClose()
+      if (open) {
+        commitEmptyFromTextRef.current = false
+        return
       }
+      handleClose()
     },
     [handleClose]
+  )
+
+  const handleBlurField = useCallback(
+    (currentValue: string): void => {
+      const t = currentValue.trim()
+      if (t !== "") {
+        if (isCompleteDateInput(currentValue)) {
+          const parsed = parseTypedValue(t)
+          if (parsed !== null) {
+            if (parsed.length === 0) {
+              commitEmptyFromTextRef.current = true
+              commitUserDates([])
+              setTextValue("")
+            } else {
+              scheduleClearTextCommitGuard()
+              commitUserDates(parsed)
+            }
+          }
+        }
+        return
+      }
+      if (element.isRange) {
+        commitEmptyFromTextRef.current = true
+        commitUserDates([])
+        setTextValue("")
+        return
+      }
+      if (clearable) {
+        commitEmptyFromTextRef.current = true
+        commitUserDates([])
+        setTextValue("")
+        return
+      }
+      setIsEmpty(true)
+      const newValue = stringsToDates(element.default)
+      setValueWithSource({ value: newValue, fromUi: true })
+      setTextValue(formatDatesForDisplay(newValue))
+      setIsEmpty(!newValue.length)
+    },
+    [
+      clearable,
+      commitUserDates,
+      element.default,
+      element.isRange,
+      formatDatesForDisplay,
+      isCompleteDateInput,
+      parseTypedValue,
+      scheduleClearTextCommitGuard,
+      setValueWithSource,
+    ]
   )
 
   const minCv = useMemo(
@@ -519,34 +742,18 @@ function DateInput({
         )}
       </WidgetLabel>
       <DatePicker.Root
-        lazyMount
-        unmountOnExit
         locale={safeLocaleTag}
         timeZone={timeZone}
         selectionMode={element.isRange ? "range" : "single"}
         value={arkValue}
-        onValueChange={({ value: next }) => {
-          const nextDates = (next ?? []).filter(Boolean)
-          if (nextDates.length === 0) {
-            if (!allowEmptyPickerCommitRef.current) {
-              return
-            }
-            allowEmptyPickerCommitRef.current = false
-            commitUserDates([])
-            return
-          }
-          const dates = nextDates.map(d =>
-            normalizeToStartOfDay(d.toDate(timeZone))
-          )
-          commitUserDates(dates)
-        }}
+        onValueChange={handleArkValueChange}
         onOpenChange={handleOpenChange}
         min={minCv}
         max={maxCv}
         startOfWeek={startOfWeek}
         disabled={disabled}
         readOnly={false}
-        openOnClick={false}
+        openOnClick
         format={formatArk}
         parse={parseArk}
         placeholder={placeholderText}
@@ -566,20 +773,26 @@ function DateInput({
                       error={error}
                       placeholderText={placeholderText}
                       textValue={textValue}
-                      onTextChange={handleTextChange}
-                      onBlurField={(currentValue: string) => {
-                        if (currentValue.trim() === "") {
-                          setIsEmpty(true)
-                          const newValue = stringsToDates(element.default)
-                          setValueWithSource({ value: newValue, fromUi: true })
-                          setTextValue(formatDatesForDisplay(newValue))
-                          setIsEmpty(!newValue.length)
-                        }
+                      clearable={clearable}
+                      calendarOpen={api.open}
+                      onRequestCloseCalendar={() => {
+                        api.setOpen(false)
                       }}
-                      onInputClick={e => {
-                        if (e.isTrusted) {
-                          api.setOpen(true)
+                      onTextChange={handleTextChange}
+                      onBlurField={handleBlurField}
+                      onEscapeClear={() => {
+                        if (!clearable) {
+                          return
                         }
+                        resetError()
+                        commitEmptyFromTextRef.current = true
+                        commitUserDates([])
+                        setTextValue("")
+                      }}
+                      onEnterKey={handleEnterKey}
+                      onTrustedPointerOpenCalendar={() => {
+                        commitEmptyFromTextRef.current = false
+                        api.setOpen(true)
                       }}
                     />
                     {error && (
@@ -625,150 +838,164 @@ function DateInput({
             </DatePicker.Context>
           </DatePicker.Control>
         </StyledControlRow>
-        <DatePicker.Positioner
-          style={{
-            zIndex: zIndices.popup,
-            ...getPopoverContainerStyle(theme),
-            ...(hasLightBackgroundColor(theme) && {
-              borderWidth: theme.spacing.none,
-            }),
-          }}
-        >
-          <DatePicker.Content data-testid="stDateInputCalendar">
-            <StyledCalendarInner
-              fontSize={fontSizes.sm}
-              paddingRight={spacing.sm}
-              paddingLeft={spacing.sm}
-              paddingBottom={spacing.sm}
-              paddingTop={spacing.sm}
-            >
-              {enableQuickSelect && (
-                <StyledQuickSelect
-                  data-testid="stDateInputQuickSelect"
-                  aria-label="Choose a date range"
-                  defaultValue=""
-                  onChange={e => {
-                    const v = e.target.value
-                    if (!v) return
-                    const [start, end] = getQuickSelectMomentRange(v)
-                    const [cs, ce] = clampRangeToBounds(
-                      start,
-                      end,
-                      minDate,
-                      maxDate
-                    )
-                    commitUserDates([cs, ce])
-                    const selectEl = e.target
-                    queueMicrotask(() => {
-                      selectEl.selectedIndex = 0
-                    })
+        <DatePicker.Context>
+          {pickerApi =>
+            pickerApi.open ? (
+              <DatePicker.Positioner
+                style={{
+                  zIndex: zIndices.popup,
+                  ...getPopoverContainerStyle(theme),
+                  ...(hasLightBackgroundColor(theme) && {
+                    borderWidth: theme.spacing.none,
+                  }),
+                }}
+              >
+                <DatePicker.Content
+                  onMouseDown={e => {
+                    e.preventDefault()
                   }}
                 >
-                  <option value="">None</option>
-                  <option value="last7Days">Past Week</option>
-                  <option value="last30Days">Past Month</option>
-                  <option value="last90Days">Past 3 Months</option>
-                  <option value="last180Days">Past 6 Months</option>
-                  <option value="lastYear">Past Year</option>
-                  <option value="pastTwoYears">Past 2 Years</option>
-                </StyledQuickSelect>
-              )}
-              <DatePicker.View view="day">
-                <DatePicker.ViewControl
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    marginBottom: spacing.sm,
-                  }}
-                >
-                  <DatePicker.PrevTrigger
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: colors.bodyText,
-                    }}
-                  >
-                    ‹
-                  </DatePicker.PrevTrigger>
-                  <DatePicker.ViewTrigger>
-                    <DatePicker.RangeText />
-                  </DatePicker.ViewTrigger>
-                  <DatePicker.NextTrigger
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "transparent",
-                      border: "none",
-                      cursor: "pointer",
-                      color: colors.bodyText,
-                    }}
-                  >
-                    ›
-                  </DatePicker.NextTrigger>
-                </DatePicker.ViewControl>
-                <DatePicker.Context>
-                  {api => {
-                    const narrowWeekdays =
-                      getEnglishNarrowWeekdaysForCalendarHeader(startOfWeek)
-                    const weekdayNarrow = narrowWeekdays.join("")
-                    return (
-                      <DatePicker.Table>
-                        <caption
-                          role="presentation"
-                          style={{
-                            position: "absolute",
-                            width: "1px",
-                            height: "1px",
-                            padding: 0,
-                            margin: "-1px",
-                            overflow: "hidden",
-                            clip: "rect(0, 0, 0, 0)",
-                            whiteSpace: "nowrap",
-                            border: 0,
+                  <div data-testid="stDateInputCalendar">
+                    <StyledCalendarInner
+                      fontSize={fontSizes.sm}
+                      paddingRight={spacing.sm}
+                      paddingLeft={spacing.sm}
+                      paddingBottom={spacing.sm}
+                      paddingTop={spacing.sm}
+                    >
+                      {enableQuickSelect && (
+                        <StyledQuickSelect
+                          data-testid="stDateInputQuickSelect"
+                          aria-label="Choose a date range"
+                          defaultValue=""
+                          onChange={e => {
+                            const v = e.target.value
+                            if (!v) return
+                            const [start, end] = getQuickSelectMomentRange(v)
+                            const [cs, ce] = clampRangeToBounds(
+                              start,
+                              end,
+                              minDate,
+                              maxDate
+                            )
+                            commitUserDates([cs, ce])
+                            const selectEl = e.target
+                            queueMicrotask(() => {
+                              selectEl.selectedIndex = 0
+                            })
                           }}
                         >
-                          {weekdayNarrow}
-                        </caption>
-                        <DatePicker.TableHead>
-                          <DatePicker.TableRow>
-                            {narrowWeekdays.map((narrow, i) => (
-                              <DatePicker.TableHeader key={i}>
-                                {narrow}
-                              </DatePicker.TableHeader>
-                            ))}
-                          </DatePicker.TableRow>
-                        </DatePicker.TableHead>
-                        <DatePicker.TableBody>
-                          {api.weeks.map((week, wi) => (
-                            <DatePicker.TableRow key={wi}>
-                              {week.map((day, di) => (
-                                <DatePicker.TableCell
-                                  key={di}
-                                  value={day}
-                                  visibleRange={api.visibleRange}
+                          <option value="">None</option>
+                          <option value="last7Days">Past Week</option>
+                          <option value="last30Days">Past Month</option>
+                          <option value="last90Days">Past 3 Months</option>
+                          <option value="last180Days">Past 6 Months</option>
+                          <option value="lastYear">Past Year</option>
+                          <option value="pastTwoYears">Past 2 Years</option>
+                        </StyledQuickSelect>
+                      )}
+                      <DatePicker.View view="day">
+                        <DatePicker.ViewControl
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: spacing.sm,
+                          }}
+                        >
+                          <DatePicker.PrevTrigger
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              color: colors.bodyText,
+                            }}
+                          >
+                            ‹
+                          </DatePicker.PrevTrigger>
+                          <DatePicker.ViewTrigger>
+                            <DatePicker.RangeText />
+                          </DatePicker.ViewTrigger>
+                          <DatePicker.NextTrigger
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "transparent",
+                              border: "none",
+                              cursor: "pointer",
+                              color: colors.bodyText,
+                            }}
+                          >
+                            ›
+                          </DatePicker.NextTrigger>
+                        </DatePicker.ViewControl>
+                        <DatePicker.Context>
+                          {api => {
+                            const narrowWeekdays =
+                              getEnglishNarrowWeekdaysForCalendarHeader(
+                                startOfWeek
+                              )
+                            const weekdayNarrow = narrowWeekdays.join("")
+                            return (
+                              <DatePicker.Table>
+                                <caption
+                                  role="presentation"
+                                  style={{
+                                    position: "absolute",
+                                    width: "1px",
+                                    height: "1px",
+                                    padding: 0,
+                                    margin: "-1px",
+                                    overflow: "hidden",
+                                    clip: "rect(0, 0, 0, 0)",
+                                    whiteSpace: "nowrap",
+                                    border: 0,
+                                  }}
                                 >
-                                  <DatePicker.TableCellTrigger>
-                                    {day.day}
-                                  </DatePicker.TableCellTrigger>
-                                </DatePicker.TableCell>
-                              ))}
-                            </DatePicker.TableRow>
-                          ))}
-                        </DatePicker.TableBody>
-                      </DatePicker.Table>
-                    )
-                  }}
-                </DatePicker.Context>
-              </DatePicker.View>
-            </StyledCalendarInner>
-          </DatePicker.Content>
-        </DatePicker.Positioner>
+                                  {weekdayNarrow}
+                                </caption>
+                                <DatePicker.TableHead>
+                                  <DatePicker.TableRow>
+                                    {narrowWeekdays.map((narrow, i) => (
+                                      <DatePicker.TableHeader key={i}>
+                                        {narrow}
+                                      </DatePicker.TableHeader>
+                                    ))}
+                                  </DatePicker.TableRow>
+                                </DatePicker.TableHead>
+                                <DatePicker.TableBody>
+                                  {api.weeks.map((week, wi) => (
+                                    <DatePicker.TableRow key={wi}>
+                                      {week.map((day, di) => (
+                                        <DatePicker.TableCell
+                                          key={di}
+                                          value={day}
+                                          visibleRange={api.visibleRange}
+                                        >
+                                          <DatePicker.TableCellTrigger>
+                                            {day.day}
+                                          </DatePicker.TableCellTrigger>
+                                        </DatePicker.TableCell>
+                                      ))}
+                                    </DatePicker.TableRow>
+                                  ))}
+                                </DatePicker.TableBody>
+                              </DatePicker.Table>
+                            )
+                          }}
+                        </DatePicker.Context>
+                      </DatePicker.View>
+                    </StyledCalendarInner>
+                  </div>
+                </DatePicker.Content>
+              </DatePicker.Positioner>
+            ) : null
+          }
+        </DatePicker.Context>
       </DatePicker.Root>
     </div>
   )
@@ -779,17 +1006,27 @@ function MainDateInputField({
   error,
   placeholderText,
   textValue,
+  clearable,
+  calendarOpen,
+  onRequestCloseCalendar,
   onTextChange,
   onBlurField,
-  onInputClick,
+  onEscapeClear,
+  onEnterKey,
+  onTrustedPointerOpenCalendar,
 }: {
   disabled: boolean
   error: string | null
   placeholderText: string
   textValue: string
+  clearable: boolean
+  calendarOpen: boolean
+  onRequestCloseCalendar: () => void
   onTextChange: (v: string) => void
   onBlurField: (currentValue: string) => void
-  onInputClick: (e: MouseEvent<HTMLInputElement>) => void
+  onEscapeClear: () => void
+  onEnterKey: (rawFromDom: string) => void
+  onTrustedPointerOpenCalendar: () => void
 }): ReactElement {
   return (
     <StyledTextInput
@@ -799,12 +1036,63 @@ function MainDateInputField({
       placeholder={placeholderText}
       value={textValue}
       $hasError={Boolean(error)}
-      onClick={onInputClick}
+      onClick={e => {
+        const el = e.currentTarget as HTMLInputElement
+        el.select()
+        // Vitest runs in MODE=test with synthetic (untrusted) clicks; production e2e uses a prod
+        // build where MODE is not "test", so Playwright clicks always open the popup.
+        const runningVitest =
+          typeof import.meta !== "undefined" &&
+          import.meta.env?.MODE === "test"
+        const allowOpenPopup = !runningVitest || e.isTrusted
+        if (allowOpenPopup) {
+          onTrustedPointerOpenCalendar()
+        }
+      }}
+      onFocus={e => {
+        ;(e.target as HTMLInputElement).select()
+      }}
       onChange={e => {
-        onTextChange(e.target.value)
+        onTextChange(e.currentTarget.value)
+      }}
+      onInput={e => {
+        const t = e.currentTarget as HTMLInputElement
+        onTextChange(t.value)
+      }}
+      onKeyDown={e => {
+        if (
+          calendarOpen &&
+          !e.metaKey &&
+          !e.ctrlKey &&
+          (e.key.length === 1 ||
+            e.key === "Backspace" ||
+            e.key === "Delete" ||
+            e.key.startsWith("Arrow"))
+        ) {
+          onRequestCloseCalendar()
+        }
+        if (e.key === "Enter") {
+          e.preventDefault()
+          e.stopPropagation()
+          onEnterKey((e.currentTarget as HTMLInputElement).value)
+        }
+        if (e.key === "Escape") {
+          if (calendarOpen) {
+            e.preventDefault()
+            e.stopPropagation()
+            onRequestCloseCalendar()
+            return
+          }
+          if (!clearable) {
+            return
+          }
+          e.preventDefault()
+          e.stopPropagation()
+          onEscapeClear()
+        }
       }}
       onBlur={e => {
-        onBlurField(e.currentTarget.value)
+        onBlurField((e.currentTarget as HTMLInputElement).value)
       }}
     />
   )

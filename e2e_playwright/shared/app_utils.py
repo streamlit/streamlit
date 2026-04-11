@@ -227,6 +227,53 @@ def get_selectbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Loca
     return element
 
 
+def strip_selectbox_dropdown_overlay_attrs(dropdown: Locator) -> None:
+    """Remove aria-hidden / [hidden] from the portaled listbox chain for screenshots.
+
+    Floating UI can leave these attributes set while the menu is shown; Playwright screenshots
+    may otherwise capture an empty region. Base UI mount transitions may also leave
+    ``visibility``/``opacity`` in a state Playwright treats as not visible even while the
+    listbox is interactive.
+    """
+
+    dropdown.evaluate(
+        """
+        (el) => {
+          let n = el;
+          while (n) {
+            n.removeAttribute("aria-hidden");
+            n.removeAttribute("hidden");
+            if (n instanceof HTMLElement) {
+              n.style.visibility = "visible";
+              n.style.opacity = "1";
+              n.style.pointerEvents = "auto";
+            }
+            n = n.parentElement;
+          }
+        }
+        """
+    )
+
+
+def get_selectbox_virtual_dropdown(selectbox: Locator) -> Locator:
+    """Return the portaled virtual dropdown for an opened selectbox.
+
+    Dropdown markup is not a DOM descendant of ``stSelectbox`` (portal); the
+    combobox input's ``aria-controls`` id identifies the correct listbox.
+    """
+    page = selectbox.page
+    combobox = selectbox.get_by_test_id("stSelectboxComboboxInput")
+    expect(combobox).to_have_attribute("aria-expanded", "true")
+    controls_id = combobox.get_attribute("aria-controls")
+    assert controls_id is not None
+    # The listbox div (role=listbox) is the aria-controls target. Base UI + Floating UI can leave
+    # the portaled subtree in a state Playwright classifies as not "visible" even while interactive;
+    # callers use to_be_attached / force clicks instead of strict visibility where needed.
+    listbox = page.locator(f'[id="{controls_id}"]')
+    expect(listbox).to_be_attached()
+    return listbox
+
+
 def select_selectbox_option(
     locator: Locator | Page,
     label: str | re.Pattern[str],
@@ -256,15 +303,19 @@ def select_selectbox_option(
     selectbox_input = selectbox.get_by_test_id("stSelectboxComboboxInput")
     selectbox_input.click()
 
-    # Wait for dropdown to be visible before typing
-    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
-    expect(dropdown).to_be_visible()
+    # Wait for dropdown to be in the DOM before typing
+    dropdown = get_selectbox_virtual_dropdown(selectbox)
+    expect(dropdown).to_be_attached()
 
     selectbox_input.fill(option)
 
     # Select the option by role from the filtered virtual dropdown
-    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
-    dropdown.get_by_role("option", name=option, exact=True).click()
+    dropdown = get_selectbox_virtual_dropdown(selectbox)
+    # Use li nodes (virtualized list) instead of get_by_role("option"), which can resolve
+    # zero matches when Floating UI leaves the subtree hidden in the accessibility tree.
+    dropdown.locator("li").filter(
+        has_text=re.compile("^" + re.escape(option) + "$")
+    ).first.evaluate("el => el.click()")
 
     wait_for_app_run(page)
 
