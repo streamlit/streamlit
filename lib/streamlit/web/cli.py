@@ -258,6 +258,9 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
             main_script_path = str(path)
         else:
             # Target doesn't exist and has no .py extension - try module resolution
+            # If target looks like a file path (contains separators), show a file error
+            if os.sep in target or (os.altsep and os.altsep in target):
+                raise click.BadParameter(f"File does not exist: {path}")
             main_script_path = _resolve_module(target)
 
         _main_run(main_script_path, args, flag_options=kwargs)
@@ -311,9 +314,14 @@ def _resolve_module(module_name: str) -> str:
         spec = importlib.util.find_spec(module_name)
     except ModuleNotFoundError as e:
         raise click.BadParameter(str(e))
-    except ValueError as e:
-        # Invalid module name (e.g., empty string)
+    except (ValueError, ImportError) as e:
+        # ValueError: Invalid module name (e.g., empty string)
+        # ImportError: Relative module name (starts with '.')
         raise click.BadParameter(f"Invalid module name '{module_name}': {e}")
+    except Exception as e:
+        # Catch unexpected errors (e.g., SyntaxError in __init__.py, AttributeError
+        # from custom finders) and wrap in a user-friendly error
+        raise click.BadParameter(f"Error resolving module '{module_name}': {e}")
 
     if spec is None:
         raise click.BadParameter(f"No module named '{module_name}'")
@@ -321,17 +329,19 @@ def _resolve_module(module_name: str) -> str:
     # Check if module is a package (has submodule_search_locations)
     # Packages need special handling to find __main__.py or streamlit_app.py
     if spec.submodule_search_locations:
-        package_path = Path(spec.submodule_search_locations[0])
+        # Iterate all locations (important for namespace packages)
+        for location in spec.submodule_search_locations:
+            package_path = Path(location)
 
-        # First try __main__.py (mirrors python -m behavior)
-        main_file = package_path / "__main__.py"
-        if main_file.exists():
-            return str(main_file)
+            # First try __main__.py (mirrors python -m behavior)
+            main_file = package_path / "__main__.py"
+            if main_file.exists():
+                return str(main_file)
 
-        # Then try streamlit_app.py (Streamlit convention)
-        streamlit_app_file = package_path / "streamlit_app.py"
-        if streamlit_app_file.exists():
-            return str(streamlit_app_file)
+            # Then try streamlit_app.py (Streamlit convention)
+            streamlit_app_file = package_path / "streamlit_app.py"
+            if streamlit_app_file.exists():
+                return str(streamlit_app_file)
 
         raise click.BadParameter(
             f"Module '{module_name}' is a package but has no __main__.py or "
@@ -342,6 +352,13 @@ def _resolve_module(module_name: str) -> str:
     if spec.origin is None or spec.origin in {"frozen", "built-in"}:
         raise click.BadParameter(
             f"Module '{module_name}' has no associated file (built-in or frozen module)"
+        )
+
+    # Validate that origin points to a runnable Python source file
+    if not _has_py_extension(spec.origin):
+        raise click.BadParameter(
+            f"Module '{module_name}' resolves to '{spec.origin}' which is not a "
+            f"Python source file. Only .py files can be run with Streamlit."
         )
 
     return spec.origin

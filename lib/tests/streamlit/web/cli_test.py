@@ -828,6 +828,55 @@ class ModuleResolutionTest(unittest.TestCase):
         assert result.exit_code != 0
         assert "File does not exist" in result.output
 
+    def test_run_path_with_separator_no_module_fallback(self):
+        """Test that paths with separators fail without module fallback."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.cli._resolve_module") as mock_resolve,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("pathlib.Path.is_dir", return_value=False),
+        ):
+            result = self.runner.invoke(cli, ["run", "path/to/script"])
+
+        mock_resolve.assert_not_called()
+        assert result.exit_code != 0
+        assert "File does not exist" in result.output
+
+    def test_resolve_module_relative_import_error(self):
+        """Test _resolve_module raises error for relative module names."""
+        with pytest.raises(click.exceptions.BadParameter) as exc_info:
+            cli._resolve_module(".relative_module")
+        assert "Invalid module name" in str(exc_info.value)
+
+    def test_resolve_module_builtin(self):
+        """Test _resolve_module raises error for built-in/frozen modules."""
+        with (
+            patch("importlib.util.find_spec") as mock_find_spec,
+        ):
+            mock_spec = MagicMock()
+            mock_spec.submodule_search_locations = None
+            mock_spec.origin = "built-in"
+            mock_find_spec.return_value = mock_spec
+
+            with pytest.raises(click.exceptions.BadParameter) as exc_info:
+                cli._resolve_module("test_module")
+            assert "has no associated file" in str(exc_info.value)
+
+    def test_resolve_module_non_python_extension(self):
+        """Test _resolve_module raises error for modules resolving to non-Python files."""
+        with (
+            patch("importlib.util.find_spec") as mock_find_spec,
+        ):
+            mock_spec = MagicMock()
+            mock_spec.submodule_search_locations = None
+            mock_spec.origin = "/path/to/extension.so"
+            mock_find_spec.return_value = mock_spec
+
+            with pytest.raises(click.exceptions.BadParameter) as exc_info:
+                cli._resolve_module("test_module")
+            assert "not a Python source file" in str(exc_info.value)
+
 
 class HTTPServerIntegrationTest(unittest.TestCase):
     def tearDown(self) -> None:
