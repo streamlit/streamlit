@@ -148,6 +148,8 @@ function DateInput({
   const commitEmptyFromTextRef = useRef(false)
   /** True briefly after a typed commit so stale Ark `onValueChange` (previous day) is ignored. */
   const commitFromTextInputRef = useRef(false)
+  /** After a range validation error + empty commit, ignore Ark replaying the previous in-range selection. */
+  const suppressArkRangeResyncRef = useRef(false)
   useEffect(() => {
     textValueRef.current = textValue
   }, [textValue])
@@ -327,6 +329,7 @@ function DateInput({
           return
         }
         resetError()
+        suppressArkRangeResyncRef.current = false
         lastCommittedFpRef.current = ""
         setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
@@ -353,6 +356,7 @@ function DateInput({
       if (errorType) {
         setError(createErrorMessage(errorType))
         if (element.isRange) {
+          suppressArkRangeResyncRef.current = true
           lastCommittedFpRef.current = ""
           setValueWithSource({ value: [], fromUi: true })
           setIsEmpty(true)
@@ -360,6 +364,7 @@ function DateInput({
         }
         return
       }
+      suppressArkRangeResyncRef.current = false
       lastCommittedFpRef.current = nextFp
       setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates.length)
@@ -377,6 +382,13 @@ function DateInput({
   const handleArkValueChange = useCallback(
     ({ value: next }: { value: DateValue[] | null | undefined }) => {
       const nextDatesFiltered = (next ?? []).filter(Boolean)
+      if (
+        suppressArkRangeResyncRef.current &&
+        element.isRange &&
+        nextDatesFiltered.length > 0
+      ) {
+        return
+      }
       if (commitEmptyFromTextRef.current && nextDatesFiltered.length > 0) {
         return
       }
@@ -412,7 +424,7 @@ function DateInput({
       }
       commitUserDates(dates)
     },
-    [commitUserDates, timeZone, value, valueFingerprint]
+    [commitUserDates, element.isRange, timeZone, value, valueFingerprint]
   )
 
   // Sync display when committed widget value changes. useBasicWidgetClientState applies
@@ -523,6 +535,7 @@ function DateInput({
       if (raw.trim() !== "") {
         commitEmptyFromTextRef.current = false
       }
+      suppressArkRangeResyncRef.current = false
       setTextValue(raw)
       textValueRef.current = raw
       const parsed = parseTypedValue(raw)
@@ -583,6 +596,13 @@ function DateInput({
     ({ open }: { open: boolean }): void => {
       if (open) {
         commitEmptyFromTextRef.current = false
+        if (suppressArkRangeResyncRef.current) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              suppressArkRangeResyncRef.current = false
+            })
+          })
+        }
         return
       }
       handleClose()

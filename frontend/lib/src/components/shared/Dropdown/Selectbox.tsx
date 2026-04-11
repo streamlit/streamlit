@@ -221,9 +221,14 @@ const Selectbox: FC<Props> = ({
   const [inputValue, setInputValue] = useState(() => propValue ?? "")
   const [open, setOpen] = useState(false)
   const valueBeforeRemovalRef = useRef<string | null>(null)
+  /** True until the first `onInputValueChange` after open is applied (Base UI may emit a spurious ""). */
   const skipRemovalSyncRef = useRef(false)
-  /** True when creatable mode intentionally opened with an empty query (trigger-press). */
-  const openedForCreatableClearRef = useRef(false)
+  /** True while creatable was opened via trigger-press with an intentional empty query. */
+  const creatableEmptyQueryRef = useRef(false)
+  /** True until the next microtask after open; Base UI may emit several synchronous "" events to clear. */
+  const openInputSyncBatchRef = useRef(false)
+  /** Count of label restores from "" during the open sync batch (bounded). */
+  const openSyncEmptyRestoresRef = useRef(0)
 
   useExecuteWhenChanged(() => {
     setValue(propValue)
@@ -320,11 +325,16 @@ const Selectbox: FC<Props> = ({
       setOpen(nextOpen)
       if (nextOpen) {
         skipRemovalSyncRef.current = true
+        openInputSyncBatchRef.current = true
+        openSyncEmptyRestoresRef.current = 0
+        queueMicrotask(() => {
+          openInputSyncBatchRef.current = false
+        })
         if (acceptNewOptions && eventDetails?.reason === "trigger-press") {
-          openedForCreatableClearRef.current = true
+          creatableEmptyQueryRef.current = true
           setInputValue("")
         } else {
-          openedForCreatableClearRef.current = false
+          creatableEmptyQueryRef.current = false
           const label =
             value == null || value === ""
               ? ""
@@ -345,6 +355,8 @@ const Selectbox: FC<Props> = ({
             : (selectOptions.find(o => o.value === nextVal)?.label ??
               String(nextVal))
         setInputValue(closeLabel)
+        creatableEmptyQueryRef.current = false
+        openInputSyncBatchRef.current = false
       }
     },
     [acceptNewOptions, selectOptions, value]
@@ -358,16 +370,37 @@ const Selectbox: FC<Props> = ({
           next === "" &&
           value != null &&
           value !== "" &&
-          !openedForCreatableClearRef.current
+          !creatableEmptyQueryRef.current
         ) {
           const label =
             selectOptions.find(o => o.value === value)?.label ?? String(value)
           setInputValue(label)
-          openedForCreatableClearRef.current = false
           return
         }
-        openedForCreatableClearRef.current = false
+        if (creatableEmptyQueryRef.current && next === "") {
+          setInputValue(next)
+          return
+        }
+        creatableEmptyQueryRef.current = false
         setInputValue(next)
+        return
+      }
+      if (creatableEmptyQueryRef.current && next.length > 0) {
+        creatableEmptyQueryRef.current = false
+      }
+      if (
+        open &&
+        next === "" &&
+        value != null &&
+        value !== "" &&
+        !creatableEmptyQueryRef.current &&
+        openInputSyncBatchRef.current &&
+        openSyncEmptyRestoresRef.current < 3
+      ) {
+        openSyncEmptyRestoresRef.current += 1
+        const label =
+          selectOptions.find(o => o.value === value)?.label ?? String(value)
+        setInputValue(label)
         return
       }
       if (!open && value !== null && next === "" && inputValue === value) {
@@ -611,29 +644,25 @@ const Selectbox: FC<Props> = ({
                 : {})}
             >
               <Combobox.List>
-                {displayRows.length === 0 ? (
-                  <Combobox.Empty
-                    {...(open
-                      ? {
-                          "data-testid": "stSelectboxVirtualDropdown" as const,
-                        }
-                      : {})}
-                    style={{
-                      padding: theme.spacing.md,
-                      color: theme.colors.fadedText60,
-                    }}
-                  >
-                    No results
-                  </Combobox.Empty>
-                ) : (
-                  <VirtualDropdown
-                    selectboxListDataTestId={
-                      open ? "stSelectboxVirtualDropdown" : undefined
-                    }
-                    selectboxVirtualRows={displayRows}
-                    renderSelectboxRow={renderSelectboxRow}
-                  />
-                )}
+                {open ? (
+                  displayRows.length === 0 ? (
+                    <Combobox.Empty
+                      data-testid="stSelectboxVirtualDropdown"
+                      style={{
+                        padding: theme.spacing.md,
+                        color: theme.colors.fadedText60,
+                      }}
+                    >
+                      No results
+                    </Combobox.Empty>
+                  ) : (
+                    <VirtualDropdown
+                      selectboxListDataTestId="stSelectboxVirtualDropdown"
+                      selectboxVirtualRows={displayRows}
+                      renderSelectboxRow={renderSelectboxRow}
+                    />
+                  )
+                ) : null}
               </Combobox.List>
             </PopupPanel>
           </Combobox.Positioner>
