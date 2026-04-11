@@ -18,6 +18,7 @@ import {
   FC,
   type KeyboardEvent,
   memo,
+  type MutableRefObject,
   type ReactNode,
   useCallback,
   useContext,
@@ -96,6 +97,63 @@ function SelectboxDropdownContent({
     >
       {children}
     </StyledContent>
+  )
+}
+
+function SelectboxComboboxInput({
+  theme,
+  selectDisabled,
+  inputReadOnly,
+  handleInputFocus,
+  clearable,
+  comboboxOpenRef,
+  propDerivedLabelRef,
+  setInputQuery,
+  userEditedInputThisFocusRef,
+  onInputKeyDown,
+}: {
+  theme: ReturnType<typeof useEmotionTheme>
+  selectDisabled: boolean
+  inputReadOnly: "readonly" | null
+  handleInputFocus: () => void
+  clearable?: boolean
+  comboboxOpenRef: MutableRefObject<boolean>
+  propDerivedLabelRef: MutableRefObject<string>
+  setInputQuery: (q: string) => void
+  userEditedInputThisFocusRef: MutableRefObject<boolean>
+  onInputKeyDown: (e: KeyboardEvent<HTMLInputElement>) => void
+}): JSX.Element {
+  const api = useComboboxContext()
+  const handleKeyDownCapture = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === "Escape" && !clearable && comboboxOpenRef.current) {
+        e.preventDefault()
+        e.stopPropagation()
+        api.setOpen(false)
+        setInputQuery(propDerivedLabelRef.current)
+        userEditedInputThisFocusRef.current = false
+        return
+      }
+      onInputKeyDown(e)
+    },
+    [
+      api,
+      clearable,
+      comboboxOpenRef,
+      onInputKeyDown,
+      propDerivedLabelRef,
+      setInputQuery,
+      userEditedInputThisFocusRef,
+    ]
+  )
+  return (
+    <Combobox.Input
+      data-testid="stSelectboxInput"
+      readOnly={inputReadOnly === "readonly"}
+      css={cssInput(theme, selectDisabled)}
+      onFocus={handleInputFocus}
+      onKeyDownCapture={handleKeyDownCapture}
+    />
   )
 }
 
@@ -315,10 +373,12 @@ const Selectbox: FC<Props> = ({
         if (
           d.inputValue === "" &&
           notNullOrUndefined(value) &&
-          !userEditedInputThisFocusRef.current
+          !userEditedInputThisFocusRef.current &&
+          !comboboxOpenRef.current
         ) {
-          // Zag can emit an empty input on focus/open before the user types; keep the
-          // committed label and selection (e2e: edit "male" with backspace, not full clear).
+          // Zag can emit an empty input on focus before the list opens; keep the
+          // committed label. Do not apply while the dropdown is open — the user may be
+          // deleting characters to filter (e2e: "male" → backspace → "mxyz").
           setInputQuery(propDerivedLabel)
           return
         }
@@ -520,12 +580,17 @@ const Selectbox: FC<Props> = ({
           $isFocused={isFocused}
         >
           <StyledValueRow>
-            <Combobox.Input
-              data-testid="stSelectboxInput"
-              readOnly={inputReadOnly === "readonly"}
-              css={cssInput(theme, selectDisabled)}
-              onFocus={handleInputFocus}
-              onKeyDownCapture={onInputKeyDown}
+            <SelectboxComboboxInput
+              theme={theme}
+              selectDisabled={selectDisabled}
+              inputReadOnly={inputReadOnly}
+              handleInputFocus={handleInputFocus}
+              clearable={clearable}
+              comboboxOpenRef={comboboxOpenRef}
+              propDerivedLabelRef={propDerivedLabelRef}
+              setInputQuery={setInputQuery}
+              userEditedInputThisFocusRef={userEditedInputThisFocusRef}
+              onInputKeyDown={onInputKeyDown}
             />
             {clearable && (
               <Combobox.ClearTrigger

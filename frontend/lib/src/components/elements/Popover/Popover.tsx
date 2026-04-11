@@ -150,21 +150,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         if (root && active instanceof HTMLElement && root.contains(active)) {
           active.blur()
         }
-        // Sync widget / passive state immediately; defer only the visual `open` flip so
-        // inputs inside the popover receive blur/commit before the body is hidden.
-        if (widgetId) {
-          widgetMgr?.setBoolValue(
-            { id: widgetId },
-            false,
-            { fromUi: true },
-            fragmentId
-          )
-        } else if (isPassivelyKeyed) {
-          setStoredOpen(false)
-        }
-        // Defer closing so inputs inside the popover receive blur/change before hide.
+        // Let nested widgets flush blur/change (and widget state) before we sync the
+        // popover boolean to the manager and hide UI — avoids losing in-popover edits
+        // when closing via outside click (e2e: text_input in popover).
         window.setTimeout(() => {
-          setOpen(false)
+          if (widgetId) {
+            widgetMgr?.setBoolValue(
+              { id: widgetId },
+              false,
+              { fromUi: true },
+              fragmentId
+            )
+          } else if (isPassivelyKeyed) {
+            setStoredOpen(false)
+          }
+          window.setTimeout(() => {
+            setOpen(false)
+          }, 0)
         }, 0)
         return
       }

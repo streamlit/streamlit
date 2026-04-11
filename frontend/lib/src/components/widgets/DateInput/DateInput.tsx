@@ -628,18 +628,31 @@ function SingleTextField({
         setIsEmpty(true)
       }
     }
-    const onNativeChange = (): void => {
-      syncNative()
-      // `fill()` dispatches a native `change` that React's onChange may miss; commit here
-      // so `on_change` runs without relying on Enter (capture ref is updated in syncNative).
+    const tryCommitNative = (): void => {
+      // Playwright `fill()` can dispatch `input` without a reliable `change` for
+      // controlled inputs. Per-keystroke typing is handled by React `onChange`.
       commitSingleIfDistinctRef.current(lastNativeValueRef.current)
     }
-    el.addEventListener("input", syncNative, { capture: true })
+    const onNativeInput = (ev: Event): void => {
+      syncNative()
+      const ie = ev as InputEvent
+      if (
+        ie.inputType === "insertFromPaste" ||
+        ie.inputType === "insertReplacementText"
+      ) {
+        tryCommitNative()
+      }
+    }
+    const onNativeChange = (): void => {
+      syncNative()
+      tryCommitNative()
+    }
+    el.addEventListener("input", onNativeInput, { capture: true })
     el.addEventListener("change", onNativeChange, { capture: true })
     // Avoid syncNative() on attach — stale DOM after form-clear can overwrite `draft`.
     lastNativeValueRef.current = el.value
     return () => {
-      el.removeEventListener("input", syncNative, { capture: true })
+      el.removeEventListener("input", onNativeInput, { capture: true })
       el.removeEventListener("change", onNativeChange, { capture: true })
     }
   }, [valueSyncKey, draftResetSeq])
@@ -702,7 +715,16 @@ function SingleTextField({
         const handleDateFieldFocus = (
           e: FocusEvent<HTMLInputElement>
         ): void => {
-          e.target.select()
+          // Select-all on focus only when a date is already committed. For an empty
+          // field, select()+incremental typing would replace the year segment (unit:
+          // typeInDateField). Playwright fill still works via input/change commit.
+          if (value.length === 0) {
+            return
+          }
+          const t = e.target
+          requestAnimationFrame(() => {
+            t.select()
+          })
         }
 
         const handleInputKeyDown = (
@@ -742,6 +764,9 @@ function SingleTextField({
             placeholder={placeholder}
             onClick={() => {
               dp.setOpen(true)
+              requestAnimationFrame(() => {
+                inputRef.current?.select()
+              })
             }}
             onFocus={handleDateFieldFocus}
             onChange={handleInputChangeLike}
@@ -825,15 +850,28 @@ function RangeTextField({
       lastNativeRangeValueRef.current = v
       setDraft(v)
     }
-    const onNativeChange = (): void => {
-      syncNative()
+    const tryCommitRangeNative = (): void => {
       commitRangeRef.current(lastNativeRangeValueRef.current)
     }
-    el.addEventListener("input", syncNative, { capture: true })
+    const onNativeInput = (ev: Event): void => {
+      syncNative()
+      const ie = ev as InputEvent
+      if (
+        ie.inputType === "insertFromPaste" ||
+        ie.inputType === "insertReplacementText"
+      ) {
+        tryCommitRangeNative()
+      }
+    }
+    const onNativeChange = (): void => {
+      syncNative()
+      tryCommitRangeNative()
+    }
+    el.addEventListener("input", onNativeInput, { capture: true })
     el.addEventListener("change", onNativeChange, { capture: true })
     lastNativeRangeValueRef.current = el.value
     return () => {
-      el.removeEventListener("input", syncNative, { capture: true })
+      el.removeEventListener("input", onNativeInput, { capture: true })
       el.removeEventListener("change", onNativeChange, { capture: true })
     }
   }, [valueSyncKey, draftResetSeq])
@@ -901,7 +939,13 @@ function RangeTextField({
         const handleRangeDateFieldFocus = (
           e: FocusEvent<HTMLInputElement>
         ): void => {
-          e.target.select()
+          if (value.length === 0) {
+            return
+          }
+          const t = e.target
+          requestAnimationFrame(() => {
+            t.select()
+          })
         }
 
         const handleRangeKeyDown = (
@@ -941,6 +985,9 @@ function RangeTextField({
             placeholder={`${element.format}${RANGE_SEP}${element.format}`}
             onClick={() => {
               dp.setOpen(true)
+              requestAnimationFrame(() => {
+                rangeInputRef.current?.select()
+              })
             }}
             onFocus={handleRangeDateFieldFocus}
             onChange={handleRangeInputChangeLike}
