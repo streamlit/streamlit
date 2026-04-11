@@ -210,3 +210,59 @@ with st.expander("Ignore-mode expander"):
     st.write("This expander uses the default on_change='ignore'")
 
 st.write(f"Expander ignore rerun count: {st.session_state.exp_ignore_rerun_count}")
+
+# Callback support
+# ============================================================================
+
+if "cb_toggle_count" not in st.session_state:
+    st.session_state.cb_toggle_count = 0
+if "cb_last_state" not in st.session_state:
+    st.session_state.cb_last_state = None
+
+
+def expander_callback() -> None:
+    st.session_state.cb_toggle_count += 1
+    st.session_state.cb_last_state = st.session_state.cb_expander
+
+
+with st.expander("Callback expander", key="cb_expander", on_change=expander_callback):
+    st.write("Callback expander content")
+
+st.write(f"Callback count: {st.session_state.cb_toggle_count}")
+st.write(f"Callback last state: {st.session_state.cb_last_state}")
+
+
+# Callback with args/kwargs
+# ============================================================================
+
+if "cb_args_result" not in st.session_state:
+    st.session_state.cb_args_result = ""
+
+
+def expander_callback_with_args(prefix: str, suffix: str = "") -> None:
+    st.session_state.cb_args_result = f"{prefix}-toggled-{suffix}"
+
+
+with st.expander(
+    "Callback args expander",
+    key="cb_args_expander",
+    on_change=expander_callback_with_args,
+    args=("hello",),
+    kwargs={"suffix": "world"},
+):
+    st.write("Callback args expander content")
+
+st.write(f"Callback args result: {st.session_state.cb_args_result}")
+
+# ============================================================================
+# State Persistence Test — keyed expander should persist open/close across remount
+# ============================================================================
+
+persist_show = st.toggle(
+    "Show extra text above expander", key="persist_expander_toggle"
+)
+if persist_show:
+    st.write("Extra text inserted above expander")
+
+with st.expander("Persist expander", expanded=False, key="persist_expander"):
+    st.write("Persist expander content")

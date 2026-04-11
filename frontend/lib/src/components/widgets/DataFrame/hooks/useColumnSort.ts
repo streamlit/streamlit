@@ -64,7 +64,7 @@ function updateSortingHeader(
   })
 }
 
-export type ColumnSortReturn = {
+type ColumnSortReturn = {
   columns: BaseColumn[]
   sortColumn: (
     index: number,

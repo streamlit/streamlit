@@ -26,7 +26,7 @@ import {
 import { Video } from "@emotion-icons/open-iconic"
 import Webcam from "react-webcam"
 
-import Icon from "~lib/components/shared/Icon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
@@ -64,7 +64,7 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-export const AskForCameraPermission = ({
+const AskForCameraPermission = ({
   width,
 }: AskForCameraPermissionProps): ReactElement => {
   return (

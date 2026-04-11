@@ -63,6 +63,5 @@ const BaseLinkButton = forwardRef<
 })
 
 BaseLinkButton.displayName = "BaseLinkButton"
-export type BaseButtonProps = BaseLinkButtonPropsT
-export { BaseButtonKind, BaseButtonSize }
+
 export default memo(BaseLinkButton)

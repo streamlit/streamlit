@@ -75,7 +75,7 @@ def as_cached_result(value: Any) -> CachedResult:
     """Creates cached results for a function that returned `value`
     and did not execute any elements.
     """
-    return CachedResult(value, [], st._main.id, st.sidebar.id)
+    return CachedResult(value, [], st._main._id, st.sidebar._id)
 
 
 class CommonCacheTest(DeltaGeneratorTestCase):

@@ -276,3 +276,140 @@ st.write("Data update count:", st.session_state.data_update_count)
 
 # Use on_click callback to ensure counter is incremented before the rerun completes
 st.button("Update data", key="update_data_btn", on_click=increment_data_count)
+
+st.header("Selection default:")
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-row",
+    selection_default={"selection": {"rows": [1, 3], "columns": [], "cells": []}},
+    column_config=column_config,
+    width="content",
+    key="selection_default_df",
+)
+st.write("Selection default row selection:", str(selection))
+
+st.header("Programmatic selection via session state:")
+
+# Pre-set selection via session state if not already set
+if "programmatic_row_selection_df" not in st.session_state:
+    st.session_state["programmatic_row_selection_df"] = {
+        "selection": {"rows": [1, 3], "columns": [], "cells": []}
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="multi-row",
+    column_config=column_config,
+    width="content",
+    key="programmatic_row_selection_df",
+)
+st.write("Programmatic row selection:", str(selection))
+# Attribute access verifies AttributeDictionary is returned (regression test for #14454).
+st.write("Programmatic row selection rows:", str(selection.selection.rows))  # type: ignore[attr-defined]
+
+
+def set_programmatic_selection():
+    """Callback to set a new programmatic selection."""
+    st.session_state["programmatic_row_selection_df"] = {
+        "selection": {"rows": [0, 2, 4], "columns": [], "cells": []}
+    }
+
+
+def clear_programmatic_selection():
+    """Callback to clear the programmatic selection."""
+    st.session_state["programmatic_row_selection_df"] = {
+        "selection": {"rows": [], "columns": [], "cells": []}
+    }
+
+
+st.button(
+    "Set selection to rows 0, 2, 4",
+    on_click=set_programmatic_selection,
+)
+st.button(
+    "Clear dataframe selection",
+    on_click=clear_programmatic_selection,
+)
+
+# Programmatic column + cell selection (verifies non-row selection types)
+if "programmatic_col_cell_df" not in st.session_state:
+    st.session_state["programmatic_col_cell_df"] = {
+        "selection": {
+            "rows": [],
+            "columns": ["col_1", "col_3"],
+            "cells": [[2, "col_0"]],
+        }
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["multi-column", "single-cell"],
+    column_config=column_config,
+    width="content",
+    key="programmatic_col_cell_df",
+)
+st.write("Column+cell selection:", str(selection))
+
+st.subheader("single-row-required select")
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode="single-row-required",
+    column_config=column_config,
+    width="content",
+    key="single_row_required_select",
+)
+st.write("Dataframe single-row-required selection:", str(selection))
+
+# Combined single-row-required + multi-column with programmatic control
+st.subheader("single-row-required + multi-column select")
+
+
+def set_combined_selection():
+    st.session_state["combined_row_col_select"] = {
+        "selection": {"rows": [3], "columns": ["col_2", "col_4"], "cells": []}
+    }
+
+
+def clear_combined_columns():
+    # Clear only columns while keeping the required row
+    current = st.session_state.get("combined_row_col_select", {})
+    current_selection = current.get(
+        "selection", {"rows": [1], "columns": [], "cells": []}
+    )
+    st.session_state["combined_row_col_select"] = {
+        "selection": {
+            "rows": current_selection.get("rows", [1]),
+            "columns": [],
+            "cells": [],
+        }
+    }
+
+
+# Default selection: row 1, columns col_1 and col_3
+if "combined_row_col_select" not in st.session_state:
+    st.session_state["combined_row_col_select"] = {
+        "selection": {"rows": [1], "columns": ["col_1", "col_3"], "cells": []}
+    }
+
+selection = st.dataframe(
+    df,
+    hide_index=True,
+    on_select="rerun",
+    selection_mode=["single-row-required", "multi-column"],
+    column_config=column_config,
+    width="content",
+    key="combined_row_col_select",
+)
+st.write("Combined row+col selection:", str(selection))
+
+st.button("Change to row 3, cols 2+4", on_click=set_combined_selection)
+st.button("Clear columns only", on_click=clear_combined_columns)

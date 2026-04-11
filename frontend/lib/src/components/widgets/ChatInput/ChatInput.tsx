@@ -33,6 +33,7 @@ import {
   Close,
   ErrorOutline,
 } from "@emotion-icons/material-rounded"
+import type { AxiosProgressEvent } from "axios"
 import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
@@ -42,24 +43,28 @@ import {
   FileUploaderState as FileUploaderStateProto,
   IChatInputValue,
   IFileURLs,
+  streamlit,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import { useWaveformController } from "~lib/components/audio"
+import { useWaveformController } from "~lib/components/audio/core/useWaveformController"
 import { LOG } from "~lib/components/ChatInput/logger"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
 import {
   UploadedStatus,
   UploadFileInfo,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { getAccept } from "~lib/components/widgets/FileUploader/utils"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import {
@@ -71,7 +76,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatFileUploadButton from "./fileUpload/ChatFileUploadButton"
 import ChatFileUploadDropzone from "./fileUpload/ChatFileUploadDropzone"
-import ChatUploadedFiles from "./fileUpload/ChatUploadedFiles"
 import { createDropHandler } from "./fileUpload/createDropHandler"
 import { createUploadFileHandler } from "./fileUpload/createFileUploadHandler"
 import {
@@ -85,6 +89,7 @@ import {
   StyledRightCluster,
   StyledSendIconButton,
   StyledTextareaWrapper,
+  StyledToolbarRow,
   StyledWaveformContainer,
 } from "./styled-components"
 
@@ -94,16 +99,20 @@ import {
  * @param theme - The Emotion theme for accessing design tokens
  * @param autoExpand - Auto-expand configuration with height and maxHeight
  * @param rootLayoutStyle - Layout-specific style for Root (e.g., flex or width)
+ * @param minHeightOverride - Optional minimum height override from heightConfig
+ * @param useFixedHeight - When true, use 100% height instead of autoExpand (for stretch/pixel height modes)
  */
 function createTextAreaOverrides(
   theme: EmotionTheme,
   autoExpand: { height: string; maxHeight: string; isExtended: boolean },
-  rootLayoutStyle: Record<string, string | number>
+  rootLayoutStyle: Record<string, string | number>,
+  minHeightOverride?: string,
+  useFixedHeight?: boolean
 ): React.ComponentProps<typeof UITextArea>["overrides"] {
   return {
     Root: {
       style: {
-        minHeight: theme.sizes.chatInputTextareaMinHeight,
+        minHeight: minHeightOverride ?? theme.sizes.chatInputTextareaMinHeight,
         outline: "none",
         borderLeftWidth: "0",
         borderRightWidth: "0",
@@ -126,8 +135,14 @@ function createTextAreaOverrides(
         "::placeholder": {
           color: theme.colors.fadedText60,
         },
-        height: autoExpand.isExtended ? autoExpand.height : "auto",
-        maxHeight: autoExpand.maxHeight,
+        // When useFixedHeight is true (stretch/pixel height mode), fill the container
+        // Otherwise, use autoExpand values for dynamic expansion
+        height: useFixedHeight
+          ? "100%"
+          : autoExpand.isExtended
+            ? autoExpand.height
+            : "auto",
+        maxHeight: useFixedHeight ? "none" : autoExpand.maxHeight,
         overflowY: "auto",
         paddingLeft: theme.spacing.none,
         paddingRight: theme.spacing.none,
@@ -145,6 +160,7 @@ export interface Props {
   widgetMgr: WidgetStateManager
   uploadClient: FileUploadClient
   fragmentId?: string
+  heightConfig?: streamlit.IHeightConfig | null
 }
 
 const updateFile = (
@@ -164,6 +180,7 @@ function ChatInput({
   widgetMgr,
   fragmentId,
   uploadClient,
+  heightConfig,
 }: Props): React.ReactElement {
   const theme = useEmotionTheme()
 
@@ -420,14 +437,16 @@ function ChatInput({
       },
       uploadClient,
       element,
-      onUploadProgress: (e: ProgressEvent, fileId: number) => {
+      onUploadProgress: (e: AxiosProgressEvent, fileId: number) => {
         setFiles(prevFiles => {
           const file = getFile(fileId, prevFiles)
           if (isNullOrUndefined(file) || file.status.type !== "uploading") {
             return prevFiles
           }
 
-          const newProgress = Math.round((e.loaded * 100) / e.total)
+          const newProgress = e.total
+            ? Math.round((e.loaded * 100) / e.total)
+            : 0
           if (file.status.progress === newProgress) {
             return prevFiles
           }
@@ -780,30 +799,44 @@ function ChatInput({
     width > convertRemToPx(theme.breakpoints.hideWidgetDetails) &&
     maxChars > 0
 
+  // Calculate minimum height for the textarea based on heightConfig.
+  // Subtracts container padding and border from pixel height to get inner textarea height.
+  const textareaMinHeight = useMemo((): string | undefined => {
+    if (!heightConfig || heightConfig.useContent) {
+      return undefined
+    }
+    if (heightConfig.useStretch) {
+      return "100%"
+    }
+    if (heightConfig.pixelHeight && heightConfig.pixelHeight > 0) {
+      const borderWidth = parseInt(theme.sizes.borderWidth, 10) || 1
+      const containerPadding =
+        convertRemToPx(theme.spacing.md) * 2 + borderWidth * 2
+      const adjustedHeight = Math.max(
+        0,
+        heightConfig.pixelHeight - containerPadding
+      )
+      return `${adjustedHeight}px`
+    }
+    return undefined
+  }, [heightConfig, theme.sizes.borderWidth, theme.spacing.md])
+  const isStretchHeight = heightConfig?.useStretch ?? false
+  // Height is explicitly configured via props (stretch or pixel), not from dynamic expansion
+  const hasConfiguredHeight =
+    isStretchHeight || (heightConfig?.pixelHeight ?? 0) > 0
+  // Buttons should stick to bottom when:
+  // - height is explicitly configured (stretch or pixel), OR
+  // - textarea has dynamically expanded beyond single-line (user added newlines)
+  const hasExpandedHeight = hasConfiguredHeight || autoExpand.isExtended
+
   return (
     <StyledChatInputContainer
       className="stChatInput"
       data-testid="stChatInput"
       ref={elementRef}
+      isStretchHeight={isStretchHeight}
     >
-      <StyledChatInput>
-        {/* Character count - positioned in top-right corner */}
-        {showInstructions && (
-          <StyledInputInstructions
-            onClick={focusInput}
-            id="stChatInputInstructions"
-          >
-            <InputInstructions
-              dirty={dirty}
-              value={value}
-              maxLength={maxChars}
-              type="chat"
-              inForm={false}
-              className="stChatInputInstructions"
-            />
-          </StyledInputInstructions>
-        )}
-
+      <StyledChatInput isStretchHeight={isStretchHeight}>
         {/* Dropzone overlay - shown when dragging files over */}
         {showDropzone && (
           <ChatFileUploadDropzone
@@ -816,7 +849,7 @@ function ChatInput({
         {/* Files area - shown above input row when files are uploaded */}
         {acceptFile !== AcceptFileValue.None && files.length > 0 && (
           <StyledFilesArea>
-            <ChatUploadedFiles
+            <UploadedFileChips
               items={[...files]}
               onDelete={deleteFile}
               onRetry={handleRetry}
@@ -824,37 +857,20 @@ function ChatInput({
           </StyledFilesArea>
         )}
 
-        {/* Main row - uses flex-wrap and order to handle stacked/inline layouts
-            In stacked mode: textarea wraps to its own line above buttons via CSS order
-            In inline mode: textarea sits between left and right button clusters
+        {/* Main row - contains textarea and button clusters
+            When expanded (hasExpandedHeight): column layout with textarea above toolbar row
+            When not expanded: row layout (inline or stacked via flex-wrap)
             When recording: waveform replaces textarea inline with cancel/approve buttons */}
-        <StyledInputRow isStacked={isStacked}>
-          <StyledLeftCluster>
-            {acceptFile !== AcceptFileValue.None && !isRecording && (
-              <ChatFileUploadButton
-                key={dropzoneResetCounter}
-                onDrop={dropHandler}
-                multiple={
-                  acceptFile === AcceptFileValue.Multiple ||
-                  acceptFile === AcceptFileValue.Directory
-                }
-                accept={getAccept(element.fileType)}
-                maxSize={maxFileSize}
-                acceptFile={acceptFile}
-                disabled={disabled}
-              />
-            )}
-          </StyledLeftCluster>
-
-          {/* Waveform - shown inline when recording, replaces textarea position */}
-          <StyledWaveformContainer isRecording={isRecording}>
-            <StyledChatAudioWave ref={waveformContainerRef} />
-          </StyledWaveformContainer>
-
-          {/* Textarea - always at this position in the tree to preserve focus on layout change.
-              StyledTextareaWrapper uses CSS (order, width) to visually move it above buttons when stacked */}
+        <StyledInputRow
+          isStacked={isStacked}
+          hasExpandedHeight={hasExpandedHeight && !isRecording}
+        >
+          {/* Textarea - rendered first in expanded mode (column layout) */}
           {!isRecording && (
-            <StyledTextareaWrapper isStacked={isStacked}>
+            <StyledTextareaWrapper
+              isStacked={isStacked}
+              hasExpandedHeight={hasExpandedHeight}
+            >
               <UITextArea
                 inputRef={chatInputRef}
                 value={value}
@@ -867,39 +883,57 @@ function ChatInput({
                 aria-describedby={
                   showInstructions ? "stChatInputInstructions" : undefined
                 }
-                overrides={createTextAreaOverrides(theme, autoExpand, {
-                  width: "100%",
-                })}
+                overrides={createTextAreaOverrides(
+                  theme,
+                  autoExpand,
+                  {
+                    width: "100%",
+                    ...(hasExpandedHeight ? { flex: 1 } : {}),
+                  },
+                  textareaMinHeight,
+                  hasConfiguredHeight
+                )}
               />
             </StyledTextareaWrapper>
           )}
 
-          <StyledRightCluster>
-            {isRecording ? (
-              <>
-                <StyledSendIconButton
-                  onClick={handleRecordingCancel}
-                  disabled={disabled}
-                  data-testid="stChatInputCancelButton"
-                  aria-label="Cancel recording"
-                >
-                  <Icon content={Close} size="lg" color="inherit" />
-                </StyledSendIconButton>
-                <StyledSendIconButton
-                  onClick={handleRecordingApproveVoid}
-                  disabled={disabled || audioUploading}
-                  data-testid="stChatInputApproveButton"
-                  aria-label="Submit recording"
-                >
-                  {audioUploading ? (
-                    <DynamicIcon size="lg" iconValue="spinner" />
-                  ) : (
-                    <Icon content={Check} size="lg" color="inherit" />
-                  )}
-                </StyledSendIconButton>
-              </>
-            ) : (
-              <>
+          {/* Toolbar/buttons section - wrapped in StyledToolbarRow when expanded */}
+          {hasExpandedHeight && !isRecording ? (
+            <StyledToolbarRow>
+              <StyledLeftCluster hasExpandedHeight>
+                {acceptFile !== AcceptFileValue.None && (
+                  <ChatFileUploadButton
+                    key={dropzoneResetCounter}
+                    onDrop={dropHandler}
+                    multiple={
+                      acceptFile === AcceptFileValue.Multiple ||
+                      acceptFile === AcceptFileValue.Directory
+                    }
+                    accept={getAccept(element.fileType)}
+                    maxSize={maxFileSize}
+                    acceptFile={acceptFile}
+                    disabled={disabled}
+                    fileTypes={element.fileType}
+                  />
+                )}
+              </StyledLeftCluster>
+
+              <StyledRightCluster>
+                {showInstructions && (
+                  <StyledInputInstructions
+                    onClick={focusInput}
+                    id="stChatInputInstructions"
+                  >
+                    <InputInstructions
+                      dirty={dirty}
+                      value={value}
+                      maxLength={maxChars}
+                      type="chat"
+                      inForm={false}
+                      className="stChatInputInstructions"
+                    />
+                  </StyledInputInstructions>
+                )}
                 {acceptAudio && (
                   <>
                     {recordingError ? (
@@ -943,9 +977,126 @@ function ChatInput({
                 >
                   <Icon content={ArrowUpward} size="lg" color="inherit" />
                 </StyledSendIconButton>
-              </>
-            )}
-          </StyledRightCluster>
+              </StyledRightCluster>
+            </StyledToolbarRow>
+          ) : (
+            <>
+              <StyledLeftCluster hasExpandedHeight={false}>
+                {acceptFile !== AcceptFileValue.None && !isRecording && (
+                  <ChatFileUploadButton
+                    key={dropzoneResetCounter}
+                    onDrop={dropHandler}
+                    multiple={
+                      acceptFile === AcceptFileValue.Multiple ||
+                      acceptFile === AcceptFileValue.Directory
+                    }
+                    accept={getAccept(element.fileType)}
+                    maxSize={maxFileSize}
+                    acceptFile={acceptFile}
+                    disabled={disabled}
+                    fileTypes={element.fileType}
+                  />
+                )}
+              </StyledLeftCluster>
+
+              {/* Waveform - shown inline when recording */}
+              <StyledWaveformContainer isRecording={isRecording}>
+                <StyledChatAudioWave ref={waveformContainerRef} />
+              </StyledWaveformContainer>
+
+              <StyledRightCluster>
+                {isRecording ? (
+                  <>
+                    <StyledSendIconButton
+                      onClick={handleRecordingCancel}
+                      disabled={disabled}
+                      data-testid="stChatInputCancelButton"
+                      aria-label="Cancel recording"
+                    >
+                      <Icon content={Close} size="lg" color="inherit" />
+                    </StyledSendIconButton>
+                    <StyledSendIconButton
+                      onClick={handleRecordingApproveVoid}
+                      disabled={disabled || audioUploading}
+                      data-testid="stChatInputApproveButton"
+                      aria-label="Submit recording"
+                    >
+                      {audioUploading ? (
+                        <DynamicIcon size="lg" iconValue="spinner" />
+                      ) : (
+                        <Icon content={Check} size="lg" color="inherit" />
+                      )}
+                    </StyledSendIconButton>
+                  </>
+                ) : (
+                  <>
+                    {showInstructions && (
+                      <StyledInputInstructions
+                        onClick={focusInput}
+                        id="stChatInputInstructions"
+                      >
+                        <InputInstructions
+                          dirty={dirty}
+                          value={value}
+                          maxLength={maxChars}
+                          type="chat"
+                          inForm={false}
+                          className="stChatInputInstructions"
+                        />
+                      </StyledInputInstructions>
+                    )}
+                    {acceptAudio && (
+                      <>
+                        {recordingError ? (
+                          <Tooltip
+                            content={recordingError}
+                            placement={Placement.TOP}
+                            error
+                          >
+                            <StyledSendIconButton
+                              onClick={handleMicClickVoid}
+                              disabled={disabled || audioUploading}
+                              hasError
+                              data-testid="stChatInputMicButton"
+                              aria-label="Start recording"
+                            >
+                              <Icon
+                                content={ErrorOutline}
+                                size="xl"
+                                color="inherit"
+                              />
+                            </StyledSendIconButton>
+                          </Tooltip>
+                        ) : (
+                          <StyledSendIconButton
+                            onClick={handleMicClickVoid}
+                            disabled={disabled || audioUploading}
+                            data-testid="stChatInputMicButton"
+                            aria-label="Start recording"
+                          >
+                            <Icon
+                              content={MicNone}
+                              size="xl"
+                              color="inherit"
+                            />
+                          </StyledSendIconButton>
+                        )}
+                      </>
+                    )}
+                    <StyledSendIconButton
+                      onClick={handleSubmit}
+                      disabled={!dirty || disabled || audioUploading}
+                      data-testid="stChatInputSubmitButton"
+                      aria-label="Send message"
+                      primary
+                    >
+                      <Icon content={ArrowUpward} size="lg" color="inherit" />
+                    </StyledSendIconButton>
+                  </>
+                )}
+              </StyledRightCluster>
+            </>
+          )}
         </StyledInputRow>
       </StyledChatInput>
     </StyledChatInputContainer>

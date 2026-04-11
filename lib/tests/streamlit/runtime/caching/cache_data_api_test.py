@@ -81,9 +81,9 @@ def as_replay_test_data() -> CachedResult:
     """
     return CachedResult(
         1,
-        [ElementMsgData("text", TextProto(body="1"), st._main.id, "")],
-        st._main.id,
-        st.sidebar.id,
+        [ElementMsgData("text", TextProto(body="1"), st._main._id, "")],
+        st._main._id,
+        st.sidebar._id,
     )
 
 

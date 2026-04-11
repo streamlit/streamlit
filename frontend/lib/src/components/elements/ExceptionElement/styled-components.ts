@@ -45,9 +45,9 @@ export const StyledExceptionMessage = styled.div({
 export const StyledExceptionLinks = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   display: "flex",
+  flexWrap: "wrap",
   gap: theme.spacing.md,
   justifyContent: "flex-end",
-  underline: true,
 }))
 
 export const StyledExceptionCopyButton = styled.button({

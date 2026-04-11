@@ -65,7 +65,7 @@ jobs:
 
       - name: Comment on PR when snapshot update fails
         if: steps.update-snapshots.outputs.script_status == 'failed'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -132,6 +132,7 @@ jobs:
         if: steps.update-snapshots.outputs.script_status == 'success' && steps.count-snapshots.outputs.has_updates == 'true' && steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
           PR_BODY: |
             ## Describe your changes
 
@@ -147,7 +148,7 @@ jobs:
         run: |
           gh pr create \
             --head "snapshots/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
-            --base "${{ github.head_ref }}" \
+            --base "$HEAD_REF" \
             --title "[snapshots] Update E2E snapshots for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
 

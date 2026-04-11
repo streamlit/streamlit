@@ -18,7 +18,7 @@ import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
-import UIRadio from "~lib/components/shared/Radio"
+import UIRadio from "~lib/components/shared/Radio/Radio"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -68,6 +68,7 @@ function Radio({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
     queryParamBinding,
   })
 
@@ -130,7 +131,7 @@ function updateWidgetMgrState(
   element: RadioProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<RadioValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

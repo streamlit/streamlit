@@ -15,9 +15,9 @@ from pathlib import Path
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static assets path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 # Test that we can render HTML with in-line styles
 st.html(
     """
@@ -62,12 +62,12 @@ with st.expander("HTML Elements for Spacing Test", expanded=True):
     st.write("After tag")
 st.write("## Style test")
 # Test that we can load HTML files from str paths
-HTML_PATH = TEST_ASSETS_DIR / "test_div.html"
+HTML_PATH = STATIC_DIR / "test_div.html"
 st.html(str(HTML_PATH))
 # Test that we can load HTML files from Path objects
 st.html(HTML_PATH)
 # Test that we can load CSS files and they are wrapped in style tags
-CSS_PATH = TEST_ASSETS_DIR / "test.css"
+CSS_PATH = STATIC_DIR / "test.css"
 st.html(CSS_PATH)
 st.write("# Hello, World!")
 st.write("## Random")

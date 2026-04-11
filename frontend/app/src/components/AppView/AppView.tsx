@@ -22,14 +22,12 @@ import {
   useState,
 } from "react"
 
-import EventContainer from "@streamlit/app/src/components/EventContainer"
-import Header from "@streamlit/app/src/components/Header"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
-import {
-  shouldShowNavigation,
-  TopNav,
-} from "@streamlit/app/src/components/Navigation"
-import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import EventContainer from "@streamlit/app/src/components/EventContainer/EventContainer"
+import Header from "@streamlit/app/src/components/Header/Header"
+import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
+import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
+import ThemedSidebar from "@streamlit/app/src/components/Sidebar/ThemedSidebar"
 import {
   getSavedSidebarState,
   saveSidebarState,

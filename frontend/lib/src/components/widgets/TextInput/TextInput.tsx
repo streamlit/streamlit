@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useCallback, useId, useState } from "react"
 
 import { Input as UIInput } from "baseui/input"
-import { uniqueId } from "lodash-es"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+  DynamicIcon,
+  isMaterialIcon,
+} from "~lib/components/shared/Icon/DynamicIcon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -37,7 +37,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -96,6 +96,7 @@ function TextInput({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
     queryParamBinding,
   })
@@ -108,7 +109,7 @@ function TextInput({
   const [focused, setFocused] = useState(false)
 
   const theme = useEmotionTheme()
-  const [id] = useState(() => uniqueId("text_input_"))
+  const id = useId()
   const { placeholder, formId, icon, maxChars } = element
 
   const commitWidgetValue = useCallback((): void => {
@@ -280,7 +281,7 @@ function updateWidgetMgrState(
   element: TextInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<string | null>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

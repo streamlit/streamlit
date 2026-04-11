@@ -22,8 +22,6 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import {
   Box,
   getPopoverContainerStyle,
@@ -31,15 +29,18 @@ import {
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
-  BaseButtonTooltip,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
-import { DynamicIcon } from "~lib/components/shared/Icon"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import {
+  DynamicIcon,
+  isMenuStyleIconLabel,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
-import { ScriptRunState } from "~lib/ScriptRunState"
-import { convertRemToPx } from "~lib/theme"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -53,7 +54,9 @@ export interface PopoverProps {
   // TODO (lawilby): This is can probably be simplified if we
   // rewrite the min width calculation to translate rem to px.
   stretchWidth: boolean
-  widgetMgr?: WidgetStateManager
+  widgetMgr: WidgetStateManager
+  /** Block-level ID for CSS key styling and passive persistence. */
+  blockId?: string
   fragmentId?: string
 }
 
@@ -63,28 +66,33 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   children,
   stretchWidth,
   widgetMgr,
+  blockId,
   fragmentId,
 }): ReactElement => {
   const isInSidebar = useContext(IsSidebarContext)
-  const { scriptRunState, scriptRunId } = useContext(ScriptRunContext)
 
   const theme = useEmotionTheme()
 
   // id is only set when the backend registers the popover as a
   // stateful widget (on_change="rerun").
   const widgetId = element.id
+  const isWidget = Boolean(widgetId)
+  const isPassivelyKeyed = Boolean(blockId) && !isWidget
+
+  // Persist open state across remounts via elementStates.
+  // The hook is always called (Rules of Hooks) but only effective when
+  // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
+  const [storedOpen, setStoredOpen] = useWidgetManagerElementState<boolean>({
+    widgetMgr,
+    id: isPassivelyKeyed ? (blockId ?? "") : "",
+    key: "open",
+    defaultValue: element.open ?? false,
+  })
+
+  const initialOpen = isPassivelyKeyed ? storedOpen : (element.open ?? false)
 
   // Single state with optimistic updates for instant UI feedback.
-  // Initialize from backend state.
-  const [open, setOpen] = useState(element.open ?? false)
-
-  // Tracks the scriptRunId at the time the user opened an empty widget
-  // popover. Used to derive isLoadingContent: we show the skeleton until
-  // a *different* script run completes (meaning our triggered run finished)
-  // or content arrives.
-  const [loadingStartScriptRunId, setLoadingStartScriptRunId] = useState<
-    string | null
-  >(null)
+  const [open, setOpen] = useState(initialOpen)
 
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
@@ -93,33 +101,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return
     }
     setOpen(element.open)
-    setLoadingStartScriptRunId(null)
   }, [widgetId, element.open])
-
-  // Clear loadingStartScriptRunId once the triggered run completes,
-  // so unrelated script runs don't re-activate the skeleton.
-  useExecuteWhenChanged(() => {
-    if (
-      loadingStartScriptRunId !== null &&
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    ) {
-      setLoadingStartScriptRunId(null)
-    }
-  }, [scriptRunState, scriptRunId])
-
-  // Loading is active when: widget mode, popover is open, content is empty, loading
-  // was initiated by the user, and the script run that would populate
-  // content hasn't completed yet.
-  const isLoadingContent =
-    Boolean(widgetId) &&
-    open &&
-    empty &&
-    loadingStartScriptRunId !== null &&
-    !(
-      scriptRunState === ScriptRunState.NOT_RUNNING &&
-      scriptRunId !== loadingStartScriptRunId
-    )
 
   // It would be nice to remove this since it uses a resize observer
   // and therefore has a performance overhead. However, this is needed
@@ -131,37 +113,34 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const handleToggle = useCallback((): void => {
     const newOpen = !open
 
-    // Optimistic update
     setOpen(newOpen)
 
     if (widgetId) {
-      // Track loading start when opening an empty widget popover.
-      // isLoadingContent is derived from this + other state.
-      setLoadingStartScriptRunId(newOpen && empty ? scriptRunId : null)
-
-      // Send state update to backend
       widgetMgr?.setBoolValue(
         { id: widgetId },
         newOpen,
         { fromUi: true },
         fragmentId
       )
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(newOpen)
     }
-  }, [open, empty, scriptRunId, widgetMgr, widgetId, fragmentId])
+  }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   const handleClose = useCallback((): void => {
     setOpen(false)
 
     if (widgetId) {
-      setLoadingStartScriptRunId(null)
       widgetMgr?.setBoolValue(
         { id: widgetId },
         false,
         { fromUi: true },
         fragmentId
       )
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(false)
     }
-  }, [widgetMgr, widgetId, fragmentId])
+  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -170,18 +149,15 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     kind = BaseButtonKind.TERTIARY
   }
 
+  // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
+  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <UIPopover
         triggerType={TRIGGER_TYPE.click}
         placement={PLACEMENT.bottomLeft}
-        content={() =>
-          isLoadingContent ? (
-            <SquareSkeleton data-testid="stPopoverSkeleton" />
-          ) : (
-            children
-          )
-        }
+        content={() => children}
         isOpen={open}
         onClickOutside={handleClose}
         // We need to handle the click here as well to allow closing the
@@ -244,21 +220,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               containerWidth={true}
               onClick={handleToggle}
             >
-              <StyledPopoverLabelContainer>
+              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
                 <DynamicButtonLabel
                   icon={element.icon}
                   label={element.label}
                 />
-                <StyledPopoverExpansionIcon>
-                  <DynamicIcon
-                    iconValue={
-                      open
-                        ? ":material/expand_less:"
-                        : ":material/expand_more:"
-                    }
-                    size="lg"
-                  />
-                </StyledPopoverExpansionIcon>
+                {!hideChevron && (
+                  <StyledPopoverExpansionIcon aria-hidden="true">
+                    <DynamicIcon
+                      iconValue={
+                        open
+                          ? ":material/expand_less:"
+                          : ":material/expand_more:"
+                      }
+                      size="lg"
+                    />
+                  </StyledPopoverExpansionIcon>
+                )}
               </StyledPopoverLabelContainer>
             </BaseButton>
           </BaseButtonTooltip>

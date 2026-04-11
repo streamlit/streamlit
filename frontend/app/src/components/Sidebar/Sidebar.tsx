@@ -30,11 +30,9 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
-import {
-  shouldShowNavigation,
-  SidebarNav,
-} from "@streamlit/app/src/components/Navigation"
+import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
+import SidebarNav from "@streamlit/app/src/components/Navigation/SidebarNav"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,

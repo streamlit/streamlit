@@ -33,10 +33,8 @@ import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
@@ -76,6 +74,34 @@ function DateTimeInput({
   const { innerHeight: windowHeight } = useWindowDimensionsContext()
   const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+      }
+    : undefined
+
+  const getInitialCommittedDate = (): Date | null => {
+    // Keep this in sync with useBasicWidgetState initialization.
+    const initialValue =
+      getStateFromWidgetMgr(widgetMgr, element) ??
+      (element.setValue
+        ? getCurrStateFromProto(element)
+        : getDefaultStateFromProto(element))
+    return stringToDate(initialValue)
+  }
+
+  // pendingDate is the temporary value while the user is selecting
+  const [pendingDate, setPendingDate] = useState<Date | null>(
+    getInitialCommittedDate
+  )
+
+  // Store the previous committedDate to detect changes from the widget manager
+  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
+    getInitialCommittedDate
+  )
+
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
     DateTimeInputProto
@@ -87,6 +113,11 @@ function DateTimeInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: useCallback(() => {
+      setPendingDate(stringToDate(getDefaultStateFromProto(element)))
+    }, [element]),
   })
 
   const { locale } = useContext(LibConfigContext)
@@ -99,14 +130,6 @@ function DateTimeInput({
 
   // committedDate is the value from the widget manager
   const committedDate = useMemo(() => stringToDate(value), [value])
-
-  // pendingDate is the temporary value while the user is selecting
-  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
-
-  // Store the previous committedDate to detect changes from the widget manager
-  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
-    committedDate
-  )
 
   // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
   if (committedDate !== prevCommittedDate) {

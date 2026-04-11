@@ -32,7 +32,8 @@ import {
 } from "baseui/tooltip"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import { StyledTooltipContentWrapper } from "./styled-components"
 import { useTooltipMeasurementSideEffect } from "./useTooltipMeasurementSideEffect"

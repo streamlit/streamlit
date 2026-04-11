@@ -280,16 +280,18 @@ def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
 
 
 def _has_nested_composition(spec: VegaLiteSpec) -> bool:
-    """Check if a vconcat spec contains nested composition operators.
+    """Check if a vconcat spec contains nested multi-view compositions.
 
     This function checks if a vconcat chart contains nested hconcat, vconcat,
-    concat, or layer operators. Such nested compositions don't work well with
-    the fit-x autosize type and can cause infinite extent errors.
+    concat, layer, facet, or repeat operators. Such nested compositions don't
+    work well with fit-x autosize and forced child widths, and can cause
+    infinite extent errors.
 
-    In valid Vega-Lite specs, composition operators (hconcat, vconcat, concat, layer)
-    are always top-level keys of a view specification. They cannot be buried inside
-    encoding, mark, or other nested properties. This allows us to check only the
-    immediate children of vconcat for nested composition operators.
+    In valid Vega-Lite specs, composition operators
+    (hconcat, vconcat, concat, layer, facet, repeat) are always top-level keys
+    of a view specification. They cannot be buried inside encoding, mark, or
+    other nested properties. This allows us to check only the immediate children
+    of vconcat for nested composition operators.
 
     Parameters
     ----------
@@ -308,7 +310,8 @@ def _has_nested_composition(spec: VegaLiteSpec) -> bool:
         for item in spec["vconcat"]:
             # Check if this item is a dict containing any composition operator
             if isinstance(item, dict) and any(
-                k in item for k in ["hconcat", "vconcat", "concat", "layer"]
+                k in item
+                for k in ["hconcat", "vconcat", "concat", "layer", "facet", "repeat"]
             ):
                 return True
     return False
@@ -1909,14 +1912,19 @@ class VegaChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -1945,7 +1953,7 @@ class VegaChartsMixin:
 
             For consistent selection output, especially in multi-view charts
             (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
-            ``encodings`` in your selection. For example:
+            ``encodings`` in your selection, like
             ``alt.selection_point(fields=["Origin"])`` or
             ``alt.selection_point(encodings=["x", "y"])``. Without explicit
             fields, Vega may add an internal row identifier field (``vgsid``)
@@ -1975,9 +1983,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import altair as alt
         >>> import pandas as pd
         >>> import streamlit as st
@@ -2141,14 +2148,19 @@ class VegaChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -2177,9 +2189,12 @@ class VegaChartsMixin:
 
             For consistent selection output, especially in multi-view charts
             (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
-            ``encodings`` in your selection parameter. Without explicit fields,
-            selections may return internal row identifiers (``vgsid``) instead
-            of data values.
+            ``encodings`` in your selection, like
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
 
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
@@ -2213,8 +2228,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import pandas as pd
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng

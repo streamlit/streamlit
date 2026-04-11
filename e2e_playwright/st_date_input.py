@@ -120,6 +120,42 @@ st.date_input("Date input 17 (width='stretch')", date(1970, 1, 1), width="stretc
 st.write("""This is a block of text. We can click on it to
          trigger a click outside of the element to submit the value.""")
 
+# --- Bound widgets (query-params) ---
+
+bound_single = st.date_input(
+    "Bound single date",
+    value=date(2025, 1, 15),
+    key="bound_date",
+    bind="query-params",
+)
+st.write("Bound date:", bound_single)
+
+bound_clearable = st.date_input(
+    "Bound clearable date",
+    value=None,
+    key="bound_clearable_date",
+    bind="query-params",
+)
+st.write("Bound clearable date:", bound_clearable)
+
+bound_range = st.date_input(
+    "Bound date range",
+    value=[date(2025, 3, 1), date(2025, 3, 15)],
+    key="bound_range",
+    bind="query-params",
+)
+st.write("Bound range:", bound_range)
+
+bound_minmax = st.date_input(
+    "Bound with bounds",
+    value=date(2025, 6, 15),
+    min_value=date(2025, 1, 1),
+    max_value=date(2025, 12, 31),
+    key="bound_minmax_date",
+    bind="query-params",
+)
+st.write("Bound minmax:", bound_minmax)
+
 if st.toggle("Update date input props"):
     dval = st.date_input(
         "Updated dynamic date input",

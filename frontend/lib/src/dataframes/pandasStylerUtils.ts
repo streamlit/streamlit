@@ -23,7 +23,7 @@ import { Quiver } from "./Quiver"
 /**
  * A styled header object with information from Pandas Styler.
  */
-export interface StyledHeader {
+interface StyledHeader {
   /** The column header name. */
   name: string
   /** The CSS class to apply to the column header. */

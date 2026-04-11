@@ -121,7 +121,7 @@ class CustomComponent(BaseCustomComponent):
             import pyarrow  # noqa: F401, ICN001
 
             from streamlit.components.v1 import component_arrow
-        except ImportError:
+        except ImportError:  # pragma: no cover - optional dep
             raise StreamlitAPIException(
                 """To use Custom Components in Streamlit, you need to install
 PyArrow. To do so locally:

@@ -35,8 +35,8 @@ from e2e_playwright.shared.app_utils import (
     register_connection_status_observer,
 )
 
-TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
-HOSTFRAME_TEST_HTML: Final[str] = (TEST_ASSETS_DIR / "hostframe.html").read_text()
+STATIC_DIR: Final[Path] = Path(__file__).parent / "static"
+HOSTFRAME_TEST_HTML: Final[str] = (STATIC_DIR / "hostframe.html").read_text()
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
@@ -117,7 +117,7 @@ def _check_widgets_and_sidebar_nav_links_disabled(frame_locator: FrameLocator):
         "disabled", ""
     )
     expect(
-        file_uploader.get_by_role("button").get_by_text("Browse files")
+        file_uploader.get_by_role("button").get_by_text("Upload", exact=True)
     ).to_be_disabled()
 
     # Color picker
@@ -294,8 +294,8 @@ def test_handles_host_close_modal_message(iframed_app: IframedPage):
 
     # Open the Main Menu
     frame_locator.get_by_test_id("stMainMenu").locator("button").click()
-    # Open the Settings Modal
-    frame_locator.get_by_test_id("stMainMenuList").get_by_text("Settings").click()
+    # Open the Clear cache Modal
+    frame_locator.get_by_test_id("stMainMenuList").get_by_text("Clear cache").click()
 
     expect(frame_locator.get_by_role("dialog")).to_be_attached()
     # Close the Modal

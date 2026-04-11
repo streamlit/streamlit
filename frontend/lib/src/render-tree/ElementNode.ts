@@ -26,10 +26,10 @@ import {
   VegaLiteChart as VegaLiteChartProto,
 } from "@streamlit/protobuf"
 
-import {
+import type {
   VegaLiteChartElement,
   WrappedNamedDataset,
-} from "~lib/components/elements/ArrowVegaLiteChart"
+} from "~lib/components/elements/ArrowVegaLiteChart/arrowUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 
 import { AppNode } from "./AppNode.interface"

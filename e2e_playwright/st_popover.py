@@ -84,6 +84,19 @@ with st.popover("popover 18 (primary)", type="primary"):
 with st.popover("popover 19 (tertiary)", type="tertiary"):
     st.markdown("Dummy content")
 
+# Menu-style icons (chevron should be hidden)
+with st.container(key="menu_style_icons_container"):
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        with st.popover(":material/menu:", key="menu_icon_popover"):
+            st.markdown("Menu popover content")
+    with col2:
+        with st.popover(":material/more_vert:", key="more_vert_icon_popover"):
+            st.markdown("More vert popover content")
+    with col3:
+        with st.popover(":material/more_horiz:", key="more_horiz_icon_popover"):
+            st.markdown("More horiz popover content")
+
 # ============================================================================
 # Dynamic Popover Tests (on_change="rerun")
 # ============================================================================
@@ -156,3 +169,74 @@ def popover_fragment() -> None:
 
 
 popover_fragment()
+
+# ============================================================================
+# Callback Tests — on_change with callable
+# ============================================================================
+
+if "cb_pop_count" not in st.session_state:
+    st.session_state.cb_pop_count = 0
+
+
+def popover_callback() -> None:
+    st.session_state.cb_pop_count += 1
+
+
+pop_cb = st.popover("Basic callback popover", key="cb_pop", on_change=popover_callback)
+if pop_cb.open:
+    with pop_cb:
+        st.write("Callback popover content")
+
+st.write(f"Callback count: {st.session_state.cb_pop_count}")
+
+
+def popover_args_callback(prefix: str, suffix: str = "") -> None:
+    st.session_state.cb_pop_args_result = f"{prefix}-toggled-{suffix}"
+
+
+pop_args = st.popover(
+    "Callback args popover",
+    key="cb_args_pop",
+    on_change=popover_args_callback,
+    args=("my_prefix",),
+    kwargs={"suffix": "my_suffix"},
+)
+if pop_args.open:
+    with pop_args:
+        st.write("Callback args popover content")
+
+st.write(
+    f"Callback args result: {st.session_state.get('cb_pop_args_result', 'not called')}"
+)
+
+
+# Callback inside a fragment
+if "frag_cb_count" not in st.session_state:
+    st.session_state.frag_cb_count = 0
+
+
+def frag_popover_callback() -> None:
+    st.session_state.frag_cb_count += 1
+
+
+@st.fragment
+def callback_popover_fragment() -> None:
+    pop = st.popover(
+        "Fragment callback popover",
+        key="frag_cb_pop",
+        on_change=frag_popover_callback,
+    )
+    if pop.open:
+        with pop:
+            st.write("Fragment callback popover content")
+    st.write(f"Fragment callback count: {st.session_state.frag_cb_count}")
+
+
+callback_popover_fragment()
+
+if st.session_state.get("persist_popover_shift"):
+    st.write("Extra text above popover")
+
+with st.popover("Persist popover", key="persist_popover"):
+    st.write("Persist popover content")
+    st.checkbox("Shift delta path", key="persist_popover_shift")

@@ -58,7 +58,7 @@ export const StyledAppStatus = styled.div(({ theme }) => ({
   height: theme.sizes.appRunningMen,
 }))
 
-export interface StyledAppStatusLabelProps {
+interface StyledAppStatusLabelProps {
   isPrompt: boolean
 }
 
@@ -80,7 +80,7 @@ export const StyledAppButtonContainer = styled.span(({ theme }) => ({
   color: theme.colors.bodyText,
 }))
 
-export interface StyledAppRunningIconProps {
+interface StyledAppRunningIconProps {
   isNewYears: boolean
 }
 

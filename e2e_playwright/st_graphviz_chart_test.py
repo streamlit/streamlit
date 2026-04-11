@@ -22,12 +22,44 @@ def get_first_graph_svg(app: Page) -> Locator:
     return app.get_by_test_id("stGraphVizChart").nth(0).locator("svg")
 
 
-def click_fullscreen(app: Page):
-    fullscreen_button = app.get_by_role("button", name="Fullscreen").nth(0)
-    expect(fullscreen_button).to_be_visible()
+def get_first_fullscreen_frame(app: Page) -> Locator:
+    return app.get_by_test_id("stFullScreenFrame").nth(0)
+
+
+def enter_fullscreen(app: Page) -> None:
+    """Enter fullscreen mode for the first chart by clicking the fullscreen toolbar button."""
+    fullscreen_frame = get_first_fullscreen_frame(app)
+    chart_toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
+
+    # Hover on the fullscreen frame to activate toolbar
+    fullscreen_frame.hover()
+    # Wait for toolbar to be fully visible (animation complete)
+    expect(chart_toolbar).to_have_css("opacity", "1")
+
+    # Click the fullscreen button
+    fullscreen_button = chart_toolbar.get_by_role("button", name="Fullscreen")
     fullscreen_button.click()
-    # Wait for the animation to finish
-    app.wait_for_timeout(1000)
+
+    # Wait for fullscreen mode to be active by checking the button changed to "Close fullscreen"
+    expect(chart_toolbar.get_by_role("button", name="Close fullscreen")).to_be_visible()
+
+
+def exit_fullscreen(app: Page) -> None:
+    """Exit fullscreen mode for the first chart by clicking the close fullscreen button."""
+    fullscreen_frame = get_first_fullscreen_frame(app)
+    chart_toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
+
+    # Hover on the fullscreen frame to activate toolbar (same behavior as enter_fullscreen)
+    fullscreen_frame.hover()
+    # Wait for toolbar to be fully visible (animation complete)
+    expect(chart_toolbar).to_have_css("opacity", "1")
+
+    # Click the close fullscreen button
+    close_button = chart_toolbar.get_by_role("button", name="Close fullscreen")
+    close_button.click()
+
+    # Wait for fullscreen mode to be exited by checking the button changed back to "Fullscreen"
+    expect(chart_toolbar.get_by_role("button", name="Fullscreen")).to_be_visible()
 
 
 def test_initial_setup(app: Page):
@@ -60,16 +92,9 @@ def test_first_graph_fullscreen(app: Page, assert_snapshot: ImageCompareFunction
     """Test if the first graph shows in fullscreen."""
     first_graph_svg = get_first_graph_svg(app)
     expect(first_graph_svg).to_have_attribute("width", "79pt")
-    first_graph_svg.hover()
-
-    # Get the fullscreen wrapper element
-    fullscreen_frame = app.get_by_test_id("stFullScreenFrame").nth(0)
 
     # Enter fullscreen
-    click_fullscreen(app)
-
-    # Wait for fullscreen mode to be active by checking the position style
-    expect(fullscreen_frame).to_have_css("position", "fixed")
+    enter_fullscreen(app)
 
     def check_dimensions() -> bool:
         svg_dimensions = first_graph_svg.bounding_box()
@@ -88,20 +113,12 @@ def test_first_graph_after_exit_fullscreen(
 
     first_graph_svg = get_first_graph_svg(app)
     expect(first_graph_svg).to_have_attribute("width", "79pt")
-    first_graph_svg.hover()
-
-    # Get the fullscreen wrapper element
-    fullscreen_frame = app.get_by_test_id("stFullScreenFrame").nth(0)
 
     # Enter fullscreen
-    click_fullscreen(app)
-    # Wait for fullscreen mode to be active by checking the position style
-    expect(fullscreen_frame).to_have_css("position", "fixed")
+    enter_fullscreen(app)
 
     # Exit fullscreen
-    click_fullscreen(app)
-    # Wait for fullscreen mode to be exited by checking position is back to static
-    expect(fullscreen_frame).to_have_css("position", "static")
+    exit_fullscreen(app)
 
     expect(first_graph_svg).to_have_attribute("width", "79pt")
     expect(first_graph_svg).to_have_attribute("height", "116pt")

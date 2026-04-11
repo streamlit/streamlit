@@ -29,7 +29,7 @@ from streamlit.components.v2.bidi_component.main import (
     BidiComponentMixin,
     _make_trigger_id,
 )
-from streamlit.components.v2.bidi_component.state import BidiComponentResult
+from streamlit.components.v2.bidi_component.state import ComponentResult
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.errors import (
@@ -173,15 +173,15 @@ def test_multiple_trigger_ids_are_all_internal() -> None:
     assert len(trigger_ids) == len(set(trigger_ids)), "All trigger IDs should be unique"
 
 
-def test_result_merges_state_and_trigger_values_and_exposes_dg():
-    """BidiComponentResult should behave like a mapping/attribute dict and expose the dg."""
+def test_result_merges_state_and_trigger_values():
+    """ComponentResult should behave like a mapping/attribute dict."""
 
     # Arrange
     state_vals = {"foo": 123, "bar": "abc"}
     trigger_vals = {"clicked": True, "changed": {"value": 42}}
 
     # Act
-    result = BidiComponentResult(state_vals, trigger_vals)
+    result = ComponentResult(state_vals, trigger_vals)
 
     # Assert mapping access
     assert result["foo"] == 123
@@ -251,7 +251,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
     - Parsing of ``on_<event>_change`` kwargs into an event-to-callback mapping
     - Registration of the per-run aggregator trigger widget with
       ``value_type`` equal to ``"json_trigger_value"``
-    - ``BidiComponentResult`` exposes event keys and merges persistent state
+    - ``ComponentResult`` exposes event keys and merges persistent state
       with trigger values
     - Callbacks and widget metadata are correctly stored in ``SessionState``
       for the current run
@@ -295,7 +295,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # ------------------------------------------------------------------
         # Assert - return type & merged keys
         # ------------------------------------------------------------------
-        assert isinstance(result, BidiComponentResult)
+        assert isinstance(result, ComponentResult)
         # No state set yet, but we expect trigger keys to exist with None
         assert "click" in result
         assert result.click is None

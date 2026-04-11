@@ -43,8 +43,8 @@ def echo(
         Whether to show the echoed code before or after the results of the
         executed code block.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> with st.echo():

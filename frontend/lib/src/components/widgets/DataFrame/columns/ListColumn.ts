@@ -70,7 +70,7 @@ function ListColumn(props: BaseColumnProps): BaseColumn {
         } satisfies MultiSelectCellType
       }
 
-      const cellData = toSafeArray(data)
+      const cellData = toSafeArray(data) as string[]
 
       return {
         ...cellTemplate,

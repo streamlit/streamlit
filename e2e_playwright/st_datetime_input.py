@@ -113,6 +113,34 @@ def datetime_fragment() -> None:
 
 datetime_fragment()
 
+# --- Bound widgets (query-params) ---
+
+bound_dt = st.datetime_input(
+    "Bound datetime",
+    value=BASE_DATETIME,
+    key="bound_datetime",
+    bind="query-params",
+)
+st.write("Bound datetime:", bound_dt)
+
+bound_clearable_dt = st.datetime_input(
+    "Bound clearable datetime",
+    value=None,
+    key="bound_clearable_dt",
+    bind="query-params",
+)
+st.write("Bound clearable datetime:", bound_clearable_dt)
+
+bound_minmax_dt = st.datetime_input(
+    "Bound minmax datetime",
+    value=BASE_DATETIME,
+    key="bound_minmax_dt",
+    min_value=datetime(2025, 1, 1, 0, 0),
+    max_value=datetime(2025, 12, 31, 23, 59),
+    bind="query-params",
+)
+st.write("Bound minmax datetime:", bound_minmax_dt)
+
 st.markdown("Dynamic datetime input:")
 
 if st.toggle("Update datetime input props"):

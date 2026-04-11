@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_toggle,
+    get_element_by_key,
     get_expander,
     reset_hovering,
 )
@@ -25,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
 
 def test_tabs_render_correctly(themed_app: Page, assert_snapshot: ImageCompareFunction):
     st_tabs = themed_app.get_by_test_id("stTabs")
-    expect(st_tabs).to_have_count(11)
+    expect(st_tabs).to_have_count(14)
 
     assert_snapshot(st_tabs.nth(0), name="st_tabs-sidebar")
     assert_snapshot(st_tabs.nth(1), name="st_tabs-text_input")
@@ -249,3 +253,89 @@ def test_dynamic_tabs_in_fragment(app: Page):
 
     # Left should have executed twice, Right still once
     expect(app.get_by_text("Fragment tab execs - Left: 2, Right: 1")).to_be_visible()
+
+
+def test_tabs_callback_fires_on_tab_switch(app: Page):
+    """Test that the on_change callback fires when tabs are switched."""
+    expect(app.get_by_text("Tabs callback log: []")).to_be_visible()
+
+    # Locate the callback tabs container
+    cb_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="CbTab2"))
+        .first
+    )
+
+    # Switch to CbTab2
+    cb_tabs.get_by_role("tab", name="CbTab2").click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_text("Tabs callback log: ['tabs_callback_called']")
+    ).to_be_visible()
+
+    # Switch back to CbTab1 — callback fires again
+    cb_tabs.get_by_role("tab", name="CbTab1").click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_text(
+            "Tabs callback log: ['tabs_callback_called', 'tabs_callback_called']"
+        )
+    ).to_be_visible()
+
+
+def test_tabs_callback_with_args_kwargs(app: Page):
+    """Test that the on_change callback receives args and kwargs correctly."""
+    expect(app.get_by_text("Tabs callback args result: Not called")).to_be_visible()
+
+    # Locate the args callback tabs container
+    args_tabs = (
+        app.get_by_test_id("stTabs")
+        .filter(has=app.get_by_role("tab", name="ArgsTab2"))
+        .first
+    )
+
+    # Switch to ArgsTab2
+    args_tabs.get_by_role("tab", name="ArgsTab2").click()
+    wait_for_app_run(app)
+    expect(
+        app.get_by_text("Tabs callback args result: my_prefix-switched-my_suffix")
+    ).to_be_visible()
+
+
+def test_keyed_tabs_css_key_class(app: Page):
+    """Keyed tabs should have the st-key-* CSS class on the outermost element."""
+    keyed_tabs = get_element_by_key(app, "key_only_tabs")
+    expect(keyed_tabs).to_have_class(re.compile(r"st-key-key_only_tabs"))
+
+
+def test_keyed_tabs_persist_active_tab_across_remount(app: Page):
+    """Toggling a conditional element above keyed tabs shifts the delta path,
+    but the active tab should be preserved via elementStates.
+    """
+    keyed_tabs = get_element_by_key(app, "persist_tabs")
+
+    # Click on "Details" (second tab)
+    keyed_tabs.get_by_role("tab", name="Details").click()
+    expect(keyed_tabs.get_by_role("tab", name="Details")).to_have_attribute(
+        "aria-selected", "true"
+    )
+
+    # Toggle the conditional element above — causes a rerun and delta path shift
+    click_toggle(app, "Show extra text")
+    expect(app.get_by_text("Extra text inserted above tabs")).to_be_visible()
+
+    # The keyed tabs should still show "Details" as active
+    keyed_tabs = get_element_by_key(app, "persist_tabs")
+    expect(keyed_tabs.get_by_role("tab", name="Details")).to_have_attribute(
+        "aria-selected", "true"
+    )
+
+    # Toggle back — another rerun and delta path shift
+    click_toggle(app, "Show extra text")
+    expect(app.get_by_text("Extra text inserted above tabs")).not_to_be_visible()
+
+    # Still persisted
+    keyed_tabs = get_element_by_key(app, "persist_tabs")
+    expect(keyed_tabs.get_by_role("tab", name="Details")).to_have_attribute(
+        "aria-selected", "true"
+    )

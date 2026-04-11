@@ -144,8 +144,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     if (url) {
       try {
         source = new URL(url).pathname
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (e) {
+      } catch {
         LOG.error(`unrecognized url: ${url}`)
       }
     }

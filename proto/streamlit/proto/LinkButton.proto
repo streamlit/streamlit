@@ -19,7 +19,7 @@ syntax = "proto3";
 import "streamlit/proto/ButtonLikeIconPosition.proto";
 
 message LinkButton {
-  // The ID is only needed if a shortcut is provided.
+  // The ID is needed for shortcuts, keys, and click-triggered reruns.
   string id = 1;
   string label = 2;
   string help = 4;
@@ -30,4 +30,5 @@ message LinkButton {
   string icon = 10;
   string shortcut = 11;
   streamlit.ButtonLikeIconPosition icon_position = 12;
+  bool ignore_rerun = 13;
 }

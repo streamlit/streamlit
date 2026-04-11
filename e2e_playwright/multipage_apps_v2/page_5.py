@@ -28,3 +28,6 @@ st.checkbox("Checkbox 1", on_change=handle_change)
 st.checkbox("Checkbox 2")
 
 st.write("test_value: ", st.session_state.test_value)
+
+# Display query params for test verification (unique label to avoid collision with main page)
+st.write("Page 5 Query Params:", str(st.query_params))

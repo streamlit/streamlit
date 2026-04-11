@@ -54,7 +54,7 @@ Instructions for the AI agent...
 Use **gerund form** (verb + -ing) for skill names:
 - `checking-changes`
 - `debugging-streamlit`
-- `implementing-new-features`
+- `finalizing-pr`
 
 Avoid vague names (`helper`, `utils`) or reserved words (`anthropic-*`, `claude-*`).
 
@@ -88,3 +88,4 @@ When adding or modifying skills:
 3. Include practical examples and commands
 4. Read the [best practices for skill writing](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/best-practices.md)
 5. Review the skill against the best practices you just read
+6. **Update the overview table in `CONTRIBUTING.md`** under "AI Agent Skills and Subagents" to include the new or modified skill/subagent with a brief description of when to use it

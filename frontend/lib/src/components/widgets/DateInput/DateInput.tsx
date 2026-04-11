@@ -37,19 +37,18 @@ import {
   getBorderColor,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -65,12 +64,12 @@ export interface Props {
   fragmentId?: string
 }
 
-// Date format for communication (protobuf) support
-const DATE_FORMAT = "YYYY/MM/DD"
+// Date format for protobuf communication (ISO 8601)
+const DATE_FORMAT = "YYYY-MM-DD"
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => new Date(val))
+  return strings.map(val => moment(val, DATE_FORMAT).toDate())
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -95,10 +94,31 @@ function DateInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const [isEmpty, setIsEmpty] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const resetError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  const handleFormCleared = useCallback(() => {
+    resetError()
+    setIsEmpty(false)
+  }, [resetError])
+
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    */
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+        urlFormat: element.isRange ? ("repeated" as const) : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     Date[],
     DateInputProto
@@ -110,10 +130,10 @@ function DateInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: handleFormCleared,
   })
-
-  const [isEmpty, setIsEmpty] = useState(false)
-  const [error, setError] = useState<string | null>(null)
 
   const {
     colors,
@@ -205,8 +225,7 @@ function DateInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
-      // Reset our error state
-      setError(null)
+      resetError()
 
       if (isNullOrUndefined(date)) {
         setValueWithSource({ value: [], fromUi: true })
@@ -241,7 +260,14 @@ function DateInput({
       setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates)
     },
-    [setValueWithSource, createErrorMessage, setError, minDate, maxDate]
+    [
+      createErrorMessage,
+      maxDate,
+      minDate,
+      resetError,
+      setError,
+      setValueWithSource,
+    ]
   )
 
   const handleClose = useCallback((): void => {
@@ -523,14 +549,12 @@ function DateInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateInputProto
-): Date[] {
-  // If WidgetStateManager knew a value for this widget, initialize to that.
-  // Otherwise, use the default value from the widget protobuf.
+): Date[] | undefined {
   const storedValue = widgetMgr.getStringArrayValue(element)
-  const stringArray =
-    storedValue !== undefined ? storedValue : element.default || []
-
-  return stringsToDates(stringArray)
+  if (storedValue === undefined) {
+    return undefined
+  }
+  return stringsToDates(storedValue)
 }
 
 function getDefaultStateFromProto(element: DateInputProto): Date[] {
@@ -545,7 +569,7 @@ function updateWidgetMgrState(
   element: DateInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<Date[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   const minDate = moment(element.min, DATE_FORMAT).toDate()
   const maxDate = getMaxDate(element)

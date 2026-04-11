@@ -55,17 +55,17 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    const AudioContextMock = vi.fn().mockImplementation(function (
-      this: AudioContext
-    ) {
-      return mockAudioContext
-    })
+    const AudioContextMock = vi
+      .fn()
+      .mockImplementation(function (this: AudioContext) {
+        return mockAudioContext
+      })
 
-    const OfflineAudioContextMock = vi.fn().mockImplementation(function (
-      this: OfflineAudioContext
-    ) {
-      return mockOfflineContext
-    })
+    const OfflineAudioContextMock = vi
+      .fn()
+      .mockImplementation(function (this: OfflineAudioContext) {
+        return mockOfflineContext
+      })
 
     global.AudioContext = AudioContextMock
     global.OfflineAudioContext = OfflineAudioContextMock
@@ -115,11 +115,11 @@ describe("encodeToWav", () => {
       close: vi.fn(),
     }
 
-    const AudioContextMock = vi.fn().mockImplementation(function (
-      this: AudioContext
-    ) {
-      return mockAudioContext
-    })
+    const AudioContextMock = vi
+      .fn()
+      .mockImplementation(function (this: AudioContext) {
+        return mockAudioContext
+      })
 
     global.AudioContext = AudioContextMock
     const originalOfflineAudioContext = global.OfflineAudioContext
@@ -196,17 +196,17 @@ describe("encodeToWav", () => {
     const originalAudioContext = global.AudioContext
     const originalOfflineAudioContext = global.OfflineAudioContext
 
-    const AudioContextMock = vi.fn().mockImplementation(function (
-      this: AudioContext
-    ) {
-      return mockAudioContext
-    })
+    const AudioContextMock = vi
+      .fn()
+      .mockImplementation(function (this: AudioContext) {
+        return mockAudioContext
+      })
 
-    const OfflineAudioContextMock = vi.fn().mockImplementation(function (
-      this: OfflineAudioContext
-    ) {
-      return mockOfflineContext
-    })
+    const OfflineAudioContextMock = vi
+      .fn()
+      .mockImplementation(function (this: OfflineAudioContext) {
+        return mockOfflineContext
+      })
 
     global.AudioContext = AudioContextMock
     global.OfflineAudioContext = OfflineAudioContextMock

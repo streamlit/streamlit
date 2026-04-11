@@ -16,7 +16,7 @@
 
 import { Alert as AlertProto } from "@streamlit/protobuf"
 
-import { Kind } from "~lib/components/shared/AlertContainer"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 
 export function getAlertElementKind(format: AlertProto.Format): Kind {
   switch (format) {

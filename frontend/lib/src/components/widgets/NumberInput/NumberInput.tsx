@@ -19,6 +19,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -26,20 +27,21 @@ import {
 
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
-import { uniqueId } from "lodash-es"
 
 import { NumberInput as NumberInputProto } from "@streamlit/protobuf"
 
-import Icon, { DynamicIcon, isMaterialIcon } from "~lib/components/shared/Icon"
-import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+  DynamicIcon,
+  isMaterialIcon,
+} from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
+import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isInForm,
   isNullOrUndefined,
@@ -146,6 +148,7 @@ const NumberInput: React.FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
       // Reset dirty state and formatted value when form is cleared
       const newValue = elementDefault ?? null
@@ -158,7 +161,7 @@ const NumberInput: React.FC<Props> = ({
   // Additional local state for UI interactions
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
-  const [id] = useState(() => uniqueId("number_input_"))
+  const id = useId()
 
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
@@ -228,6 +231,7 @@ const NumberInput: React.FC<Props> = ({
         numberInput.removeEventListener("wheel", preventScroll)
       }
     }
+    return undefined
   }, [])
 
   const clearable = isNullOrUndefined(element.default) && !disabled

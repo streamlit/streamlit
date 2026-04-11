@@ -176,8 +176,7 @@ describe("SelectboxColumn", () => {
 
   it.each([[null], [undefined], [""]])(
     "%p is interpreted as missing value",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any) => {
+    (input: unknown) => {
       const mockColumn = getSelectboxColumn(MOCK_CATEGORICAL_TYPE, {
         options: ["foo", "bar"],
       })
@@ -329,7 +328,8 @@ describe("prepareOptions", () => {
     [null as unknown as unknown[], []],
     [undefined as unknown as unknown[], []],
   ])("normalizes %j into %j", (input, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- casting for test inputs only
-    expect(prepareOptions(input as any)).toEqual(expected)
+    expect(
+      prepareOptions(input as Parameters<typeof prepareOptions>[0])
+    ).toEqual(expected)
   })
 })

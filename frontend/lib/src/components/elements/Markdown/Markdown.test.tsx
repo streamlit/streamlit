@@ -33,7 +33,7 @@ import {
   IFlexContext,
 } from "~lib/components/core/Layout/FlexContext"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"

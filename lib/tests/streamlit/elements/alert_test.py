@@ -278,3 +278,62 @@ class StWarningAPITest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_STRETCH.value
         )
         assert el.alert.width_config.use_stretch
+
+
+class AlertIconExtractionTest(DeltaGeneratorTestCase):
+    """Test auto-extraction of leading icons from body text."""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_leading_emoji(self, alert_func):
+        """Test that alerts extract emoji from the beginning of body text."""
+        alert_func("🚨 Something went wrong")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == "🚨"
+        assert el.alert.body == "Something went wrong"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_material_icon(self, alert_func):
+        """Test that alerts extract material icon from the beginning of body text."""
+        alert_func(":material/warning: Please be careful")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ":material/warning:"
+        assert el.alert.body == "Please be careful"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_explicit_icon_takes_precedence(self, alert_func):
+        """Test that explicit icon parameter takes precedence over body icon."""
+        alert_func("🚨 Something went wrong", icon="⚠️")
+
+        el = self.get_delta_from_queue().new_element
+        # Explicit icon should be used, body should remain unchanged
+        assert el.alert.icon == "⚠️"
+        assert el.alert.body == "🚨 Something went wrong"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_no_icon_extraction_without_leading_icon(self, alert_func):
+        """Test that alerts without leading icons work normally."""
+        alert_func("No icon here")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ""
+        assert el.alert.body == "No icon here"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_icon_only_body(self, alert_func):
+        """Test alert with only an emoji as body."""
+        alert_func("✅")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == "✅"
+        assert el.alert.body == ""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_icon_from_multiline_body(self, alert_func):
+        """Test that alerts correctly extract icon from multiline body text."""
+        alert_func(":material/warning:\nLine 1\nLine 2")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ":material/warning:"
+        assert el.alert.body == "Line 1\nLine 2"

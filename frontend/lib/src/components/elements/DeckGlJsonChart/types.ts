@@ -23,10 +23,6 @@ import type {
 
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-export type StreamlitDeckProps = DeckProps & {
-  mapStyle?: string
-}
-
 type SerializedLayer = {
   /** @see https://deck.gl/docs/api-reference/json/conversion-reference */
   "@@type": string

@@ -273,11 +273,10 @@ def test_set_page_config_menu_items_additive(app: Page):
 
     # Open the main menu:
     app.get_by_test_id("stMainMenu").click()
-    # First main menu list includes "Report a Bug" and "Get help" (second is developer menu)
-    main_menu_items = app.get_by_test_id("stMainMenuList").first.get_by_role("option")
+    menu_list = app.get_by_test_id("stMainMenuList")
     # These options should now be present in the main menu:
-    expect(main_menu_items.nth(4)).to_have_text("Report a bug")
-    expect(main_menu_items.nth(5)).to_have_text("Get help")
+    expect(menu_list.get_by_text("Report a bug")).to_be_attached()
+    expect(menu_list.get_by_text("Get help")).to_be_attached()
 
 
 @pytest.mark.skip_browser("webkit")
@@ -290,12 +289,11 @@ def test_set_page_config_menu_items_overwrites(app: Page):
     expect_no_exception(app)
     # Open the main menu:
     app.get_by_test_id("stMainMenu").click()
-    # First main menu list includes "Get help" (second is developer menu)
-    main_menu_items = app.get_by_test_id("stMainMenuList").first.get_by_role("option")
+    menu_list = app.get_by_test_id("stMainMenuList")
     # Get help should be present
-    expect(main_menu_items.nth(4)).to_have_text("Get help")
+    expect(menu_list.get_by_text("Get help")).to_be_attached()
     # Open the about dialog:
-    main_menu_items.nth(5).click()
+    menu_list.get_by_text("About").click()
     about_dialog = app.get_by_role("dialog")
     expect(about_dialog).to_be_visible()
     # The about section markdown should contain the updated text:
@@ -308,9 +306,8 @@ def test_set_page_config_menu_items_overwrites(app: Page):
     click_button(app, "Menu Items Overwrite")
     expect_no_exception(app)
     app.get_by_test_id("stMainMenu").click()
-    main_menu_items = app.get_by_test_id("stMainMenuList").first.get_by_role("option")
+    menu_list = app.get_by_test_id("stMainMenuList")
     # Get help should still be present in the main menu from the 1st call:
-    expect(main_menu_items.nth(4)).to_have_text("Get help")
-    # About menu item should no longer be present since it was set to None, so there
-    # should be one less menu item now
-    expect(main_menu_items).to_have_count(5)
+    expect(menu_list.get_by_text("Get help")).to_be_attached()
+    # About menu item should no longer be present since it was set to None
+    expect(menu_list.get_by_text("About")).not_to_be_attached()
