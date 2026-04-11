@@ -117,5 +117,5 @@ app = st.App(
     ],
     middleware=[Middleware(CustomHeaderMiddleware)],
     lifespan=lifespan,
-    exception_handlers={CustomAPIError: custom_api_error_handler},
+    exception_handlers={CustomAPIError: custom_api_error_handler},  # type: ignore[dict-item]
 )

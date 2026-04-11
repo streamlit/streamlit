@@ -387,6 +387,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "context",
             "login",
             "logout",
+            # st.App is a class for creating ASGI applications, not a tracked command
+            "App",
         }
 
         # Create a list of all public API names in the `st` module (minus
