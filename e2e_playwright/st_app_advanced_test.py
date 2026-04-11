@@ -38,7 +38,7 @@ def test_streamlit_ui_and_widget_interaction(app: Page) -> None:
     expect(
         app.get_by_text("This app tests custom routes, middleware, and lifespan hooks.")
     ).to_be_visible()
-    expect(app.get_by_text("Counter: 0")).to_be_visible()
+    expect(app.get_by_text("Counter: 0", exact=True)).to_be_visible()
 
     # Negative assertion: no exception should be displayed
     expect(app.get_by_test_id("stException")).to_have_count(0)
@@ -47,7 +47,7 @@ def test_streamlit_ui_and_widget_interaction(app: Page) -> None:
     button = get_button(app, "Increment")
     expect(button).to_be_visible()
     button.click()
-    expect(app.get_by_text("Counter: 1")).to_be_visible()
+    expect(app.get_by_text("Counter: 1", exact=True)).to_be_visible()
 
     # Test text input interaction
     text_input_container = get_text_input(app, "Enter text")
@@ -99,6 +99,6 @@ def test_websocket_works_with_middleware(app: Page) -> None:
     # Multiple clicks verify WebSocket stream isn't broken by middleware
     for i in range(3):
         button.click()
-        expect(app.get_by_text(f"Counter: {i + 1}")).to_be_visible()
+        expect(app.get_by_text(f"Counter: {i + 1}", exact=True)).to_be_visible()
 
-    expect(app.get_by_text("Counter: 3")).to_be_visible()
+    expect(app.get_by_text("Counter: 3", exact=True)).to_be_visible()
