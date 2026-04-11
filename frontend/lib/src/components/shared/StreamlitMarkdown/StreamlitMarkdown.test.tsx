@@ -972,18 +972,34 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("renders shimmer text with correct class", () => {
-    const source = `:shimmer[Loading...]`
-    render(<StreamlitMarkdown source={source} allowHTML={false} />)
-    const markdown = screen.getByText("Loading...")
-    expect(markdown.tagName.toLowerCase()).toBe("span")
-    expect(markdown).toHaveClass("stMarkdownShimmer")
+    render(
+      <StreamlitMarkdown source=":shimmer[Loading...]" allowHTML={false} />
+    )
+    const element = screen.getByText("Loading...")
+    expect(element.tagName.toLowerCase()).toBe("span")
+    expect(element).toHaveClass("stMarkdownShimmer")
   })
 
   it("does not apply shimmer class to regular text", () => {
-    const source = `Regular text without shimmer`
-    render(<StreamlitMarkdown source={source} allowHTML={false} />)
-    const markdown = screen.getByText("Regular text without shimmer")
-    expect(markdown).not.toHaveClass("stMarkdownShimmer")
+    render(
+      <StreamlitMarkdown
+        source="Regular text without shimmer"
+        allowHTML={false}
+      />
+    )
+    const element = screen.getByText("Regular text without shimmer")
+    expect(element).not.toHaveClass("stMarkdownShimmer")
+  })
+
+  it("renders shimmer nested inside color directive", () => {
+    render(
+      <StreamlitMarkdown
+        source=":red[:shimmer[Loading...]]"
+        allowHTML={false}
+      />
+    )
+    const element = screen.getByText("Loading...")
+    expect(element).toHaveClass("stMarkdownShimmer")
   })
 
   it("applies truncate styles when truncate is true", () => {

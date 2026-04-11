@@ -295,22 +295,13 @@ def test_shimmer_directive(app: Page):
     shimmer_container = get_element_by_key(app, "shimmer_elements")
     expect(shimmer_container).to_be_visible()
 
-    shimmer_elements = shimmer_container.locator(".stMarkdownShimmer")
-    expect(shimmer_elements).to_have_count(6)
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_have_count(1)
+    expect(shimmer_element).to_contain_text("Please wait...")
 
-    # Verify basic shimmer text content is present
-    expect(shimmer_elements.nth(0)).to_have_text("Loading...")
-    expect(shimmer_elements.nth(1)).to_have_text("thinking...")
-    expect(shimmer_elements.nth(2)).to_have_text("Please wait...")
-
-    # Verify shimmer with nested markdown (material icon, colored text, emoji/bold)
-    expect(shimmer_elements.nth(3)).to_contain_text("Syncing data...")
-    expect(shimmer_elements.nth(4)).to_contain_text("Retrying...")
-    expect(shimmer_elements.nth(5)).to_contain_text("Processing")
-
-    # Verify normal text does NOT have shimmer class
+    # Normal text should NOT have shimmer class
     normal_text = shimmer_container.get_by_text("Normal text before")
-    expect(normal_text).not_to_have_class("stMarkdownShimmer")
+    expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):

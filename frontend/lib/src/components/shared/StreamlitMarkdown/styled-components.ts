@@ -29,7 +29,7 @@ const shimmerAnimation = keyframes`
   }
 `
 
-export interface StyledStreamlitMarkdownProps {
+interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
@@ -379,15 +379,16 @@ export const StyledStreamlitMarkdown =
         },
 
         // Shimmer animation for loading/thinking text. Uses background-clip: text
-        // with an animated gradient for a smooth sweep effect.
+        // with an animated gradient for a smooth sweep effect. Uses fadedText60
+        // (secondary text color) for better readability and white shimmer highlight.
         "span.stMarkdownShimmer": {
           background: `linear-gradient(
             90deg,
-            ${theme.colors.fadedText40} 0%,
-            ${theme.colors.fadedText40} 40%,
-            ${theme.colors.bodyText} 50%,
-            ${theme.colors.fadedText40} 60%,
-            ${theme.colors.fadedText40} 100%
+            ${theme.colors.fadedText60} 0%,
+            ${theme.colors.fadedText60} 40%,
+            white 50%,
+            ${theme.colors.fadedText60} 60%,
+            ${theme.colors.fadedText60} 100%
           )`,
           backgroundSize: "200% 100%",
           backgroundClip: "text",
