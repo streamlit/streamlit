@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
@@ -202,12 +202,14 @@ describe("Dynamic popover (widget mode)", () => {
     )
 
     await user.click(screen.getByText("label"))
-    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
-      { id: widgetId },
-      false,
-      { fromUi: true },
-      fragmentId
-    )
+    await waitFor(() => {
+      expect(setBoolValueSpy).toHaveBeenLastCalledWith(
+        { id: widgetId },
+        false,
+        { fromUi: true },
+        fragmentId
+      )
+    })
   })
 
   it("does NOT sync element.open for non-widget popovers", () => {

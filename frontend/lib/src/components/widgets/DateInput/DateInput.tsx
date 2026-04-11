@@ -633,15 +633,11 @@ function SingleTextField({
       // controlled inputs. Per-keystroke typing is handled by React `onChange`.
       commitSingleIfDistinctRef.current(lastNativeValueRef.current)
     }
-    const onNativeInput = (ev: Event): void => {
+    const onNativeInput = (_ev: Event): void => {
       syncNative()
-      const ie = ev as InputEvent
-      if (
-        ie.inputType === "insertFromPaste" ||
-        ie.inputType === "insertReplacementText"
-      ) {
-        tryCommitNative()
-      }
+      // Playwright `fill()` often dispatches `input` without `insertReplacementText`;
+      // still commit when the field becomes a complete date (distinct from widget value).
+      tryCommitNative()
     }
     const onNativeChange = (): void => {
       syncNative()
@@ -715,16 +711,13 @@ function SingleTextField({
         const handleDateFieldFocus = (
           e: FocusEvent<HTMLInputElement>
         ): void => {
-          // Select-all on focus only when a date is already committed. For an empty
-          // field, select()+incremental typing would replace the year segment (unit:
-          // typeInDateField). Playwright fill still works via input/change commit.
+          // Select-all on focus when a date is committed so typing/fill replaces the
+          // whole value (e2e: dynamic date input `fill` must not append). For an empty
+          // field, avoid select-all so segmented typing still works.
           if (value.length === 0) {
             return
           }
-          const t = e.target
-          requestAnimationFrame(() => {
-            t.select()
-          })
+          e.currentTarget.select()
         }
 
         const handleInputKeyDown = (
@@ -853,15 +846,9 @@ function RangeTextField({
     const tryCommitRangeNative = (): void => {
       commitRangeRef.current(lastNativeRangeValueRef.current)
     }
-    const onNativeInput = (ev: Event): void => {
+    const onNativeInput = (_ev: Event): void => {
       syncNative()
-      const ie = ev as InputEvent
-      if (
-        ie.inputType === "insertFromPaste" ||
-        ie.inputType === "insertReplacementText"
-      ) {
-        tryCommitRangeNative()
-      }
+      tryCommitRangeNative()
     }
     const onNativeChange = (): void => {
       syncNative()
@@ -942,10 +929,7 @@ function RangeTextField({
           if (value.length === 0) {
             return
           }
-          const t = e.target
-          requestAnimationFrame(() => {
-            t.select()
-          })
+          e.currentTarget.select()
         }
 
         const handleRangeKeyDown = (

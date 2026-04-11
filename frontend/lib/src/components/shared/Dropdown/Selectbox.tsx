@@ -373,14 +373,23 @@ const Selectbox: FC<Props> = ({
         if (
           d.inputValue === "" &&
           notNullOrUndefined(value) &&
-          !userEditedInputThisFocusRef.current &&
-          !comboboxOpenRef.current
+          !userEditedInputThisFocusRef.current
         ) {
-          // Zag can emit an empty input on focus before the list opens; keep the
-          // committed label. Do not apply while the dropdown is open — the user may be
-          // deleting characters to filter (e2e: "male" → backspace → "mxyz").
-          setInputQuery(propDerivedLabel)
-          return
+          // Zag can emit an empty input on focus before `onOpenChange` flips
+          // `comboboxOpenRef`. Defer restore so we do not treat that as an open-list
+          // empty filter (e2e: dismiss-by-click-away keeps "mxyz" edit path).
+          if (!comboboxOpenRef.current) {
+            queueMicrotask(() => {
+              if (
+                comboboxOpenRef.current ||
+                userEditedInputThisFocusRef.current
+              ) {
+                return
+              }
+              setInputQuery(propDerivedLabelRef.current)
+            })
+            return
+          }
         }
         // BaseWeb keeps the filter string in an empty input while the selection label is
         // shown separately; we render the label in the input, so Playwright type() appends
