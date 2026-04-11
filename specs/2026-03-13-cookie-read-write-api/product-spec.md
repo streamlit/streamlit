@@ -98,20 +98,23 @@ def set(
     path: str = "/",
     domain: str | None = None,
     secure: bool = True,       # HTTPS-only by default
-    httponly: bool = False,    # JS-accessible by default
     samesite: Literal["strict", "lax", "none"] = "lax",
+    # Note: httponly is NOT supported - JS cannot set HTTP-only cookies.
+    # For HTTP-only cookies, use server-side mechanisms (ASGI middleware).
 ) -> None:
 ```
 
 ### Behavior
 
 **Timing:** Cookies are queued during script run and sent in the ForwardMsg. They become
-readable on the **next** page load/rerun.
+readable on the **next full page load or browser reconnect** (not just `st.rerun()`), because
+`st.context.cookies` reflects cookies from the initial HTTP request/WebSocket handshake.
 
 ```python
 st.cookies["draft"] = "text"  # Queued
-st.rerun()                    # Sent to browser
-# Next run: st.cookies["draft"] == "text"
+st.rerun()                    # Sent to browser, but not yet readable
+# Same session: st.cookies.get("draft") still returns old value
+# After browser refresh: st.cookies["draft"] == "text"
 ```
 
 **Restrictions:**
@@ -141,7 +144,9 @@ if new_theme != theme:
 session_id = st.cookies.get("session")
 if not session_id:
     session_id = secrets.token_urlsafe(32)
-    st.cookies.set("session", session_id, max_age=7*24*60*60, httponly=True)
+    # Note: httponly is NOT supported with st.cookies (JS-based).
+    # For truly HTTP-only session cookies, use ASGI middleware.
+    st.cookies.set("session", session_id, max_age=7*24*60*60, secure=True)
 ```
 
 ### Security & Legal
@@ -162,8 +167,8 @@ if not session_id:
 
 ## Checklist
 
-| Item                         | Status |
-|------------------------------|--------|
+| Item                         | ✅ or comment |
+|------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | Needs verification for cookie domain restrictions |
 | No breaking API changes      | ✅ `st.context.cookies` unchanged |
 | No new dependencies          | ✅ Uses existing Tornado/Starlette |

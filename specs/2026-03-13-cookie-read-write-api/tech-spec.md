@@ -99,7 +99,8 @@ function handleSetCookies(setCookies: SetCookies): void {
 ```
 
 **Note on `httponly`:** JavaScript cannot set HTTP-only cookies. If user specifies
-`httponly=True`, log a warning. True HTTP-only cookies require ASGI middleware approach.
+`httponly=True`, raise a `ValueError` to prevent false security expectations. True HTTP-only
+cookies require server-side mechanisms (e.g., ASGI middleware setting `Set-Cookie` headers).
 
 ### 5. Export
 

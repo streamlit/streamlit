@@ -132,13 +132,19 @@ implemented in Python, not a browser feature.
 
 ### Behavior
 
-**Timing:** Same as `st.cookies` - values are queued during script run and sent to browser
-via ForwardMsg. Readable on **next** rerun.
+**Timing:** Values written with `st.local_storage` are queued during the script run and sent
+to the browser via `ForwardMsg` after the run completes. They are **not** readable in the same
+run. With the current design, read-after-write becomes visible only after a **full page reload
+or new browser connection**, when the backend receives a fresh `LocalStorageSnapshot` from
+the browser during session initialization.
 
 ```python
-st.local_storage["draft"] = "my text"  # Queued
-st.rerun()                             # Sent to browser
-# Next run: st.local_storage["draft"] == "my text"
+st.local_storage["draft"] = "my text"  # Queued and sent to browser after this run
+st.rerun()                             # Does not make the new value readable yet
+# Same live session: st.local_storage.get("draft") may still return old value
+
+# After a full browser reload / reconnect:
+# st.local_storage["draft"] == "my text"
 ```
 
 **Auto-serialization:** Unlike cookies (string-only), localStorage automatically
@@ -152,30 +158,31 @@ prefs = st.local_storage["prefs"]  # Auto JSON.parse -> dict
 **Namespacing:** Keys are automatically namespaced per-app to prevent cross-app collisions:
 
 ```
-st_local_storage_{app_id}_{key}
+st_ls_{app_id}_{key}
 ```
 
-Where `app_id` is derived from the app's URL path. This prevents one app from reading/
-overwriting another app's data on the same domain.
+Where `app_id` is derived from the app's URL path (e.g., a hash of the path). This prevents
+one app from reading/overwriting another app's data on the same domain.
 
 **Size limits:**
 
-- Individual values: Soft limit ~1MB (warn if exceeded)
+- Individual values: Hard limit ~1MB per JSON-serialized value (writes raise `StreamlitAPIException` if exceeded)
 - Total storage: ~5-10MB (browser-dependent)
-- Raises `StreamlitAPIException` on `QuotaExceededError`
+- Browser quota failures (`QuotaExceededError` / `DOMException`) are re-raised as-is
 
 ### Widget Binding (Related Feature)
 
-The existing query-params binding spec (2026-01-06) includes plans for `bind="local-storage"`:
+The existing query-params binding spec (2026-01-06) mentions `"localstorage"` as a possible
+future extension for widget binding:
 
 ```python
-st.selectbox("Theme", ["light", "dark"], bind="local-storage", key="theme")
+st.selectbox("Theme", ["light", "dark"], bind="localstorage", key="theme")
 ```
 
 This spec focuses on the **direct API** (`st.local_storage`). Widget binding is a separate
 feature that can be implemented alongside or after the direct API.
 
-| Feature | Direct API (`st.local_storage`) | Widget Binding (`bind="local-storage"`) |
+| Feature | Direct API (`st.local_storage`) | Widget Binding (`bind="localstorage"`) |
 |---------|--------------------------------|----------------------------------------|
 | Use case | Arbitrary data | Widget state persistence |
 | Data type | Any JSON-serializable | Widget-specific |
@@ -235,11 +242,14 @@ if st.button("Publish"):
 
 ### Security & Privacy
 
-- **Client-only:** Data never sent to server (unlike cookies)
+- **Browser-managed storage:** Data is stored in the browser and is not automatically
+  attached to HTTP requests like cookies, but the current design syncs a snapshot to the
+  backend over the Streamlit WebSocket so the Python API can read it
 - **Same-origin:** Browser enforces same-origin policy
 - **User-controlled:** Users can clear via browser dev tools
-- **No sensitive data:** Docs will warn against storing passwords, tokens (use `st.cookies`
-  with `httponly=True` instead)
+- **No sensitive data:** Docs will warn against storing passwords or tokens in localStorage;
+  sensitive values should use server-managed auth/session mechanisms (e.g., server-set
+  `HttpOnly` cookies via ASGI middleware), not client-managed storage
 
 ### Out of Scope (Future Work)
 
@@ -252,8 +262,8 @@ if st.button("Publish"):
 
 ## Checklist
 
-| Item                         | Status |
-|------------------------------|--------|
+| Item                         | ✅ or comment |
+|------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | Needs verification for iframe/cross-origin restrictions |
 | No breaking API changes      | ✅ Additive only |
 | No new dependencies          | ✅ Uses browser localStorage API |

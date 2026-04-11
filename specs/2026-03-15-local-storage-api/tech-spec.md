@@ -115,7 +115,9 @@ function handleSetLocalStorage(msg: SetLocalStorage): void {
 
 ```python
 import json
+import time
 from collections.abc import Iterator, MutableMapping
+from datetime import timedelta
 from typing import Any
 
 from streamlit.errors import StreamlitAPIException
@@ -138,6 +140,20 @@ class StreamlitLocalStorageProxy(MutableMapping[str, Any]):
         return json.loads(raw)
 
     def __setitem__(self, key: str, value: Any) -> None:
+        self.set(key, value)
+
+    def set(
+        self,
+        key: str,
+        value: Any,
+        *,
+        expires_in: timedelta | None = None,
+    ) -> None:
+        """Set a value with optional expiration.
+
+        If expires_in is provided, the value is stored with metadata. On read,
+        expired values return None and are queued for deletion.
+        """
         self._validate_key(key)
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -145,12 +161,21 @@ class StreamlitLocalStorageProxy(MutableMapping[str, Any]):
                 "st.local_storage can only be used within a Streamlit app"
             )
 
-        serialized = json.dumps(value, ensure_ascii=False)
+        # If expiration requested, wrap value with metadata
+        if expires_in is not None:
+            expires_at = time.time() + expires_in.total_seconds()
+            wrapped = {"__st_expires_at": expires_at, "value": value}
+            serialized = json.dumps(wrapped, ensure_ascii=False)
+        else:
+            serialized = json.dumps(value, ensure_ascii=False)
+
         self._validate_size(key, serialized)
 
         ctx.pending_local_storage.append(
             PendingLocalStorageItem(key, serialized, delete=False)
         )
+        # Optimistic cache update for immediate read-after-write within same session
+        ctx.local_storage_cache[key] = serialized
 
     def __delitem__(self, key: str) -> None:
         self.delete(key)
@@ -176,6 +201,8 @@ class StreamlitLocalStorageProxy(MutableMapping[str, Any]):
         ctx.pending_local_storage.append(
             PendingLocalStorageItem(key, "", delete=True)
         )
+        # Optimistic cache update
+        ctx.local_storage_cache.pop(key, None)
 
     def clear(self) -> None:
         ctx = get_script_run_ctx()
@@ -184,6 +211,8 @@ class StreamlitLocalStorageProxy(MutableMapping[str, Any]):
                 "st.local_storage can only be used within a Streamlit app"
             )
         ctx.pending_local_storage_clear = True
+        # Optimistic cache update
+        ctx.local_storage_cache.clear()
 
     def _validate_key(self, key: str) -> None:
         if not key or not isinstance(key, str):
@@ -227,13 +256,15 @@ To prevent cross-app collisions on shared domains (e.g., Community Cloud), keys 
 namespaced:
 
 ```
-st_ls_{hash(page_url_path)}_{user_key}
+st_ls_{app_id}_{user_key}
 ```
+
+Where `app_id` is derived from the app's URL path (e.g., a hash of the path).
 
 Example:
 - App URL: `https://share.streamlit.io/user/myapp/app.py`
 - User key: `scores`
-- Stored key: `st_ls_a1b2c3d4_scores`
+- Stored key: `st_ls_a1b2c3d4_scores` (where `a1b2c3d4` is hash of path)
 
 ## Testing
 
