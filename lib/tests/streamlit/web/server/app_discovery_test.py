@@ -133,6 +133,8 @@ class TestIsAsgiAppCall:
             ("App()", {"App": "streamlit.starlette.App"}),
             # Fully qualified streamlit.starlette.App
             ("streamlit.starlette.App()", {"streamlit": "streamlit"}),
+            # st.App with alias import (short path via st namespace)
+            ("st.App()", {"st": "streamlit"}),
             # FastAPI with proper import
             ("FastAPI()", {"FastAPI": "fastapi.FastAPI"}),
             ("fastapi.FastAPI()", {"fastapi": "fastapi"}),

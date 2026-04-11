@@ -1652,6 +1652,12 @@ class TestAppExports:
 
         assert ShortcutApp is App
 
+    def test_app_is_exported_from_st_namespace(self) -> None:
+        """Test that App is exported from the main st namespace."""
+        import streamlit as st
+
+        assert st.App is App
+
     def test_reserved_route_prefixes_constant(self) -> None:
         """Test that reserved route prefixes constant is defined correctly."""
         assert "/_stcore/" in _RESERVED_ROUTE_PREFIXES

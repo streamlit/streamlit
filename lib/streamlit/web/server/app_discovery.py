@@ -56,6 +56,7 @@ _PREFERRED_APP_NAMES: Final[tuple[str, ...]] = ("app", "streamlit_app")
 # to use `streamlit run` for any ASGI application.
 _KNOWN_ASGI_APP_CLASSES: Final[tuple[str, ...]] = (
     # Streamlit App
+    "streamlit.App",
     "streamlit.starlette.App",
     "streamlit.web.server.starlette.App",
     "streamlit.web.server.starlette.starlette_app.App",
