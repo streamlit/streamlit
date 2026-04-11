@@ -70,6 +70,10 @@ class BottomContainerProxy:
         self._check_context()
         return getattr(self._bottom_dg, name)
 
+    def __dir__(self) -> list[str]:
+        """Return DeltaGenerator methods for IDE autocompletion."""
+        return dir(self._bottom_dg)
+
     def __enter__(self) -> None:
         self._check_context()
         self._bottom_dg.__enter__()

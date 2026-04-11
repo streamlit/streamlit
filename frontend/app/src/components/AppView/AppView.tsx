@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -217,8 +218,10 @@ function AppView(props: AppViewProps): ReactElement {
   ])
 
   // Activate scroll to bottom only when there's a chat input in the bottom container:
-  const hasBottomChatInput =
-    hasBottomElements && containsChatInput(elements.bottom)
+  const hasBottomChatInput = useMemo(
+    () => hasBottomElements && containsChatInput(elements.bottom),
+    [hasBottomElements, elements.bottom]
+  )
   const Component = hasBottomChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
