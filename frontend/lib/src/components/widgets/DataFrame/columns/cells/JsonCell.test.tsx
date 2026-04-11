@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-import { GridCellKind } from "@glideapps/glide-data-grid"
+import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import renderer from "./JsonCell"
+import renderer, { type JsonCell } from "./JsonCell"
 
 describe("JsonCell renderer", () => {
   const mockTheme = {
@@ -29,8 +29,7 @@ describe("JsonCell renderer", () => {
       data: { kind: "json-cell", value: { test: "value" } },
       allowOverlay: true,
       copyData: "",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+    } as unknown as CustomCell
 
     expect(renderer.isMatch(jsonCell)).toBe(true)
   })
@@ -42,11 +41,14 @@ describe("JsonCell renderer", () => {
 
     const cell = {
       data: { kind: "json-cell", value: { test: "value" } },
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any
+    } as unknown as JsonCell
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- TODO: Replace 'any' with a more specific type.
-    const width = renderer.measure!(ctx, cell, mockTheme as any)
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const width = renderer.measure!(
+      ctx,
+      cell,
+      mockTheme as Parameters<NonNullable<typeof renderer.measure>>[2]
+    )
     expect(width).toBeGreaterThan(0)
   })
 })

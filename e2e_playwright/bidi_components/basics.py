@@ -21,7 +21,7 @@ import pandas as pd
 import streamlit as st
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.bidi_component import BidiComponentResult
+    from streamlit.components.v2.bidi_component import ComponentResult
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
 
@@ -107,7 +107,7 @@ def stateful_component(
     width: Width = "stretch",
     height: Height = "content",
     default: dict[str, Any] | None = None,
-) -> BidiComponentResult:
+) -> ComponentResult:
     return _STATEFUL_CMP(
         key=key,
         data=data,
@@ -165,7 +165,7 @@ def trigger_component(
     data: Any | None = None,
     on_foo_change: WidgetCallback | None = None,
     on_bar_change: WidgetCallback | None = None,
-) -> BidiComponentResult:
+) -> ComponentResult:
     return _TRIGGER_CMP(
         key=key,
         data=data,
@@ -228,7 +228,7 @@ def ctx_component(
     data: Any | None = None,
     on_text_change: WidgetCallback | None = None,
     on_clicked_change: WidgetCallback | None = None,
-) -> BidiComponentResult:
+) -> ComponentResult:
     return _CTX_CMP(
         key=key,
         data=data,
@@ -382,7 +382,7 @@ with st.container():
     def _remount_stateful_component(
         *,
         key: str,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         # Resolve initial values: prefer session_state if available, else fall back to default values
         state_value = st.session_state.get(key)
         initial_defaults: dict[str, Any] = {"range": 10, "text": "hello"}
@@ -496,7 +496,7 @@ div {
         on_formValues_change: WidgetCallback | None = None,  # noqa: N803
         on_clicked_change: WidgetCallback | None = None,
         default: dict[str, Any] | None = None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         return _BASIC_CMP(
             key=key,
             data=data,
@@ -570,7 +570,7 @@ export default function(component) {
         html=_HOTKEY_HTML,
     )
 
-    def hotkey_regression_component(*, key: str) -> BidiComponentResult:
+    def hotkey_regression_component(*, key: str) -> ComponentResult:
         return _HOTKEY_CMP(key=key)
 
     hotkey_result = hotkey_regression_component(key="hotkey_regression_component")
@@ -611,7 +611,7 @@ export default function(component) {
         html=_ARROW_HTML,
     )
 
-    def arrow_component(*, key: str, data: Any) -> BidiComponentResult:
+    def arrow_component(*, key: str, data: Any) -> ComponentResult:
         return _ARROW_CMP(key=key, data=data)
 
     df = pd.DataFrame({"a": [1, 2, 3]})

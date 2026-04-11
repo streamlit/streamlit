@@ -58,3 +58,13 @@ if TYPE_CHECKING:
     assert_type(time_input("label", kwargs={"k": "v"}), time)
     assert_type(time_input("label", width="stretch"), time)
     assert_type(time_input("label", width=100), time)
+
+    # Test with bind parameter
+    assert_type(
+        time_input("label", time(12, 0), key="my_key", bind="query-params"), time
+    )
+    assert_type(
+        time_input("label", value=None, key="my_key", bind="query-params"),
+        time | None,
+    )
+    assert_type(time_input("label", time(12, 0), key="my_key", bind=None), time)

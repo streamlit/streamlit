@@ -16,12 +16,12 @@
 
 import { useCallback, useEffect, useRef } from "react"
 
-export type UseTimeoutReturn = {
+type UseTimeoutReturn = {
   clear: () => void
   restart: (timeoutMsOverride?: number | null) => void
 }
 
-export type UseTimeoutOptions = {
+type UseTimeoutOptions = {
   /**
    * Whether to automatically schedule a timeout on mount and when timeoutMs
    * changes. When false, call `restart` to schedule manually.

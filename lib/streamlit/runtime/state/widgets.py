@@ -49,8 +49,8 @@ def register_widget(
     value_type: ValueFieldName,
     presenter: WidgetValuePresenter | None = None,
     bind: BindOption = None,
-    # TODO(query-params): Remove formatted_options once all selection widgets use
-    # string-based wire formats (string_value/string_array_value).
+    # For selection widgets with bind="query-params": the valid option strings
+    # used to validate and filter URL values during seeding.
     formatted_options: list[str] | None = None,
     clearable: bool | None = None,
     max_array_length: int | None = None,

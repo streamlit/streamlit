@@ -42,3 +42,26 @@ if TYPE_CHECKING:
 
     # .open property returns bool | None
     assert_type(expander("Test").open, bool | None)
+
+    # on_change accepts string literals
+    assert_type(expander("Test", on_change="rerun"), ExpanderContainer)
+    assert_type(expander("Test", on_change="ignore"), ExpanderContainer)
+
+    # on_change accepts callable with key
+    def _noop() -> None: ...
+
+    assert_type(expander("Test", key="k", on_change=_noop), ExpanderContainer)
+
+    # on_change callable with args and kwargs
+    def _callback(x: int, y: str) -> None: ...
+
+    assert_type(
+        expander(
+            "Test",
+            key="k2",
+            on_change=_callback,
+            args=(1,),
+            kwargs={"y": "hello"},
+        ),
+        ExpanderContainer,
+    )

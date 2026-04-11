@@ -19,7 +19,7 @@ import { FC, memo, useEffect, useMemo, useRef } from "react"
 import dompurify, { SANITIZE_HTML_BASE_OPTIONS } from "./dompurifyHooks"
 import HtmlContainer from "./HtmlContainer"
 
-export interface HtmlWithJsProps {
+interface HtmlWithJsProps {
   body: string
 }
 

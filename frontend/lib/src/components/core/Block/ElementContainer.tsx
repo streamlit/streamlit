@@ -22,8 +22,8 @@ import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
 import { ViewStateContext } from "~lib/components/core/ViewStateContext"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { getElementId } from "~lib/util/utils"
 
 import { ElementContainerConfig } from "./ElementContainerConfig"

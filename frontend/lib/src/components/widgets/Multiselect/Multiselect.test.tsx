@@ -20,6 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import {
   LabelVisibility as LabelVisibilityProto,
   MultiSelect as MultiSelectProto,
+  streamlit,
 } from "@streamlit/protobuf"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
@@ -534,6 +535,44 @@ describe("Multiselect widget", () => {
     expect(dataOptions[2]).toHaveTextContent("aA")
   })
 
+  it("uses filterMode=contains for match filtering and bulk selection labels", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["apple", "grape", "banana"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+    })
+    render(<Multiselect {...props} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AP")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(3)
+    expect(options[0]).toHaveTextContent("Select 2 matches")
+    expect(options[1]).toHaveTextContent("apple")
+    expect(options[2]).toHaveTextContent("grape")
+  })
+
+  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      default: [],
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+    })
+    render(<Multiselect {...props} />)
+    const input = screen.getByRole("combobox")
+
+    expect(input).toHaveAttribute("readonly")
+
+    await user.click(input)
+    expect(screen.queryAllByRole("option")).toHaveLength(4)
+
+    await user.type(input, "no")
+    expect(screen.queryAllByRole("option")).toHaveLength(4)
+  })
+
   describe("scroll position preservation", () => {
     it("preserves scroll position when removing an item", async () => {
       const user = userEvent.setup()
@@ -910,8 +949,7 @@ describe("Multiselect query param binding", () => {
       "string_array_value",
       ["a"],
       true,
-      "repeated",
-      undefined
+      "repeated"
     )
   })
 

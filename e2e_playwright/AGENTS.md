@@ -11,10 +11,10 @@ We use playwright with pytest to e2e test Streamlit library. E2E tests verify th
 - If the test is specific to a Streamlit element, prefix the filename with `st_<element_name>`
 - Tests can use screenshot comparisons for visual verification
 - All screenshots are stored in `e2e_playwright/__snapshots__/<os>/`
-- Other e2e test results are stored in `e2e_playwright/test_results/` which includes:
-  - `e2e_playwright/test_results/<test_name>/`: Video and traces related to the failed test.
-  - `e2e_playwright/test_results/snapshot-tests-failures/<os>/<test_script>/<test_name>/`: Expected, actual, and diff screenshots of the failed snapshot test.
-  - `e2e_playwright/test_results/snapshot-updates/<os>/<test_script>/<test_name>/`: All updated screenshots of the failed test.
+- Other e2e test results are stored in `e2e_playwright/test-results/` which includes:
+  - `e2e_playwright/test-results/<test_name>/`: Video and traces related to the failed test.
+  - `e2e_playwright/test-results/snapshot-tests-failures/<os>/<test_script>/<test_name>/`: Expected, actual, and diff screenshots of the failed snapshot test.
+  - `e2e_playwright/test-results/snapshot-updates/<os>/<test_script>/<test_name>/`: All updated screenshots of the failed test.
 
 ## Key Fixtures and Utilities
 
@@ -60,7 +60,7 @@ Import from `conftest.py`:
 
 Avoid external URLs (third-party dependencies) in tests since they may cause flakiness or break. Use local assets:
 
-- **Python API** (e.g. `st.audio`, `st.video`, `st.image`): Load from `e2e_playwright/test_assets/` via file path.
+- **Python API** (e.g. `st.audio`, `st.video`, `st.image`): Load from `e2e_playwright/static/` via file path.
 - **URL references**: Place in `e2e_playwright/static/` and use `./app/static/<filename>` as relative URL.
 
 See `st_video.py` and `st_image.py` for examples.
@@ -79,6 +79,7 @@ See `st_video.py` and `st_image.py` for examples.
   2. elements that don't support `label` but support `key`: get elements by a unique key (`get_element_by_key`).
   3. If the element doesn't support key or label, you can wrap it with an `st.container(key="my_key")` to better target it via `get_element_by_key`. E.g. `get_element_by_key("my_key").get_by_test_id("stComponent")`.
 - Prefer stable locators like `get_by_test_id`, `get_by_text` or `get_by_role` over CSS / XPath selectors via `.locator`.
+- Use `exact=True` with `get_by_text()` and `filter(has_text=...)` when the target text is a prefix/substring of other text on the page. For example, `get_by_text("Count:", exact=True)` avoids accidentally matching "Count: 5". Without `exact=True`, Playwright uses substring matching, which causes strict mode violations when multiple elements match.
 - Group related tests into single, logical test files (e.g., by widget or feature) for CI efficiency.
 - Prefer a single aggregated scenario test over many micro-tests when they share the same setup and page state. Reuse one app load, cover multiple assertions in sequence, and reduce browser loads.
 - Use `@pytest.mark.parametrize` sparingly in E2E. Avoid parameterizing over expensive flows and prefer iterating variants in one scenario test when setup dominates runtime.
@@ -106,6 +107,7 @@ When adding or modifying tests for an element, ensure the following are covered:
   - If the element uses the `key` parameter, verify a corresponding CSS class or attribute is set.
   - If the element is a widget, make sure to test that the identity is kept stable when `key` is provided.
 - **Custom Config:** Use module-scoped fixtures with `@pytest.mark.early` for tests requiring specific Streamlit configuration options.
+- **Existing test compatibility:** When adding new elements to an existing app script, check whether existing tests assert element counts (e.g., `to_have_count(18)`) and update them to reflect the new total.
 
 ## Running tests
 

@@ -258,8 +258,8 @@ def test_fullscreen_is_disabled_for_dialog_elements(app: Page):
 
     # check that the dataframe does not have the fullscreen button
     dataframe_toolbar = app.get_by_test_id("stElementToolbarButton")
-    # 2 elements are in the toolbar as of today: download, search
-    expect(dataframe_toolbar).to_have_count(2)
+    # 3 elements are in the toolbar: download, search, column visibility
+    expect(dataframe_toolbar).to_have_count(3)
 
 
 def test_actions_for_dialog_headings(app: Page):
@@ -460,10 +460,19 @@ def test_dialog_copy_buttons_work(app: Page):
 
     open_dialog_with_copy_buttons(app)
 
-    # click icon button
+    # The JSON viewer has a copy button for each value. When clicked,
+    # it copies that value to the clipboard via our custom enableClipboard handler.
     json_element = app.get_by_test_id("stJson")
-    json_element.hover()
-    json_element.locator(".copy-icon").first.click()
+    expect(json_element).to_be_visible()
+
+    # The copy button is hidden until hover on the variable row.
+    # Hover on the variable row to reveal the copy button.
+    variable_row = json_element.locator(".variable-row").first
+    variable_row.hover()
+
+    # Click the copy button (now visible after hover)
+    copy_container = json_element.locator(".copy-to-clipboard-container").first
+    copy_container.click()
 
     # paste the copied content into the input field
     app.get_by_test_id("stTextInput").locator("input").click()
@@ -471,7 +480,8 @@ def test_dialog_copy_buttons_work(app: Page):
     app.keyboard.press("Enter")
 
     # we should see the pasted content written to the dialog
-    expect_markdown(app, "[1,2,3]")
+    # The first copy button copies the value at index 0, which is "1"
+    expect_markdown(app, "1")
 
 
 def test_dialog_with_chart(app: Page):
@@ -485,6 +495,8 @@ def test_dialog_with_chart(app: Page):
         "[role='graphics-document']"
     )
     expect(chart).to_be_visible()
+    # Wait for the app to fully render (helps webkit where bounding_box can be None initially)
+    wait_for_app_run(app)
     # Use chart bounds to hover deterministically (helps Firefox).
     chart_box = chart.bounding_box()
     assert chart_box is not None

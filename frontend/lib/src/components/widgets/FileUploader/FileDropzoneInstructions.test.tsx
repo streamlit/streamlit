@@ -21,8 +21,7 @@ import { render } from "~lib/test_util"
 import FileDropzoneInstructions, { Props } from "./FileDropzoneInstructions"
 
 const getProps = (props: Partial<Props> = {}): Props => ({
-  multiple: true,
-  acceptedExtensions: [],
+  acceptedTypes: [],
   maxSizeBytes: 2000,
   ...props,
 })
@@ -41,12 +40,12 @@ describe("FileDropzoneInstructions widget", () => {
     const props = getProps({ maxSizeBytes: 2000 })
     render(<FileDropzoneInstructions {...props} />)
 
-    expect(screen.getByText("Limit 2KB per file")).toBeInTheDocument()
+    expect(screen.getByText("2KB per file")).toBeInTheDocument()
   })
 
   it("renders without extensions", () => {
     const props = getProps({
-      acceptedExtensions: [],
+      acceptedTypes: [],
     })
     render(<FileDropzoneInstructions {...props} />)
     expect(screen.getByText(/per file$/)).toBeInTheDocument()
@@ -54,61 +53,50 @@ describe("FileDropzoneInstructions widget", () => {
 
   it("renders with extensions", () => {
     const props = getProps({
-      acceptedExtensions: ["jpg", "csv.gz", ".png", ".tar.gz"],
+      acceptedTypes: ["jpg", "csv.gz", ".png", ".tar.gz"],
     })
     render(<FileDropzoneInstructions {...props} />)
     expect(screen.getByText(/• JPG, CSV.GZ, PNG, TAR.GZ/)).toBeInTheDocument()
   })
 
-  it("shows directory upload instructions", () => {
+  it("renders MIME wildcards as category names", () => {
     const props = getProps({
-      acceptDirectory: true,
+      acceptedTypes: ["image/*", "audio/*"],
     })
     render(<FileDropzoneInstructions {...props} />)
 
-    const container = screen.getByTestId("stFileUploaderDropzoneInstructions")
-    expect(container).toHaveTextContent("Drag and drop directories here")
+    expect(screen.getByText(/• image, audio/)).toBeInTheDocument()
   })
 
-  it("shows regular file upload instructions", () => {
+  it("renders full MIME types as-is", () => {
     const props = getProps({
-      acceptDirectory: false,
+      acceptedTypes: ["application/pdf", "image/jpeg"],
     })
     render(<FileDropzoneInstructions {...props} />)
 
-    const container = screen.getByTestId("stFileUploaderDropzoneInstructions")
-    expect(container).toHaveTextContent("Drag and drop files here")
+    expect(
+      screen.getByText(/• application\/pdf, image\/jpeg/)
+    ).toBeInTheDocument()
   })
 
-  it("shows directory upload instructions with multiple true", () => {
+  it("renders mixed MIME types and extensions correctly", () => {
     const props = getProps({
-      acceptDirectory: true,
-      multiple: true,
+      acceptedTypes: ["image/*", "application/pdf", ".json"],
     })
     render(<FileDropzoneInstructions {...props} />)
 
-    // Directory mode shows directory instructions regardless of multiple flag
-    const container = screen.getByTestId("stFileUploaderDropzoneInstructions")
-    expect(container).toHaveTextContent("Drag and drop directories here")
+    expect(
+      screen.getByText(/• image, application\/pdf, JSON/)
+    ).toBeInTheDocument()
   })
 
-  it("shows file type restrictions with directory upload", () => {
-    const props = getProps({
-      acceptDirectory: true,
-      acceptedExtensions: ["txt", "py"],
-    })
+  it("renders correctly when disabled", () => {
+    const props = getProps({ disabled: true })
     render(<FileDropzoneInstructions {...props} />)
 
-    expect(screen.getByText(/• TXT, PY/)).toBeVisible()
-  })
-
-  it("shows size limit with directory upload", () => {
-    const props = getProps({
-      acceptDirectory: true,
-      maxSizeBytes: 5000,
-    })
-    render(<FileDropzoneInstructions {...props} />)
-
-    expect(screen.getByText("Limit 5KB per file")).toBeVisible()
+    expect(
+      screen.getByTestId("stFileUploaderDropzoneInstructions")
+    ).toBeInTheDocument()
+    expect(screen.getByText(/per file/)).toBeInTheDocument()
   })
 })

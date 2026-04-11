@@ -14,22 +14,25 @@
 
 from __future__ import annotations
 
-from streamlit.components.v2.bidi_component.state import BidiComponentResult
+from streamlit.components.v2.bidi_component.state import (
+    BidiComponentResult,
+    ComponentResult,
+)
 
 
 def test_bidi_component_result_empty() -> None:
     """Test empty result handling."""
-    result = BidiComponentResult()
+    result = ComponentResult()
     assert dict(result) == {}
 
 
 def test_bidi_component_result_merges_state_and_trigger_values() -> None:
-    """Test that BidiComponentResult surfaces trigger and state values."""
+    """Test that ComponentResult surfaces trigger and state values."""
 
     state_vals = {"foo": "bar"}
     trigger_vals = {"on_click": 42}
 
-    result = BidiComponentResult(state_vals=state_vals, trigger_vals=trigger_vals)
+    result = ComponentResult(state_vals=state_vals, trigger_vals=trigger_vals)
 
     assert result["foo"] == "bar"
     assert result.foo == "bar"
@@ -44,7 +47,14 @@ def test_bidi_component_result_merge_order() -> None:
     state_vals = {"shared": "state", "state_only": "value"}
     trigger_vals = {"shared": "trigger", "trigger_only": "value"}
 
-    result = BidiComponentResult(state_vals=state_vals, trigger_vals=trigger_vals)
+    result = ComponentResult(state_vals=state_vals, trigger_vals=trigger_vals)
 
     assert list(result.keys()) == ["shared", "trigger_only", "state_only"]
     assert result.shared == "state"
+
+
+def test_bidi_component_result_alias_remains_supported() -> None:
+    """Test that BidiComponentResult remains an alias for ComponentResult."""
+    result = BidiComponentResult(state_vals={"foo": "bar"})
+    assert BidiComponentResult is ComponentResult
+    assert isinstance(result, ComponentResult)

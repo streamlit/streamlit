@@ -41,7 +41,7 @@ export type FailedPlugin = typeof LOAD_FAILED
 export type PluginState<T> = T | FailedPlugin | null
 
 /** Keys for the plugin cache */
-export type PluginKey = "katex" | "raw" | "emoji"
+type PluginKey = "katex" | "raw" | "emoji"
 
 /** Union type for all supported plugin types */
 type AnyPlugin = KatexPlugin | RawPlugin | EmojiPlugin
@@ -74,7 +74,7 @@ export type RemarkPluginFactory<Options = unknown> = (
  * Note: `load` and `onBeforeLoad` should be stable references (e.g., module-level
  * functions or wrapped in useCallback) to avoid unnecessary effect re-runs.
  */
-export interface PluginLoaderConfig {
+interface PluginLoaderConfig {
   key: PluginKey
   needed: boolean
   load: () => Promise<Record<string, unknown>>

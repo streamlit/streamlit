@@ -15,33 +15,39 @@
  */
 import styled from "@emotion/styled"
 
-export const StyledChatInputContainer = styled.div({
+export const StyledChatInputContainer = styled.div<{
+  isStretchHeight?: boolean
+}>(({ isStretchHeight }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-})
-
-export const StyledChatInput = styled.div(({ theme }) => ({
-  backgroundColor: theme.colors.secondaryBg,
-  border: `${theme.sizes.borderWidth} solid`,
-  borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
-  position: "relative",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "stretch",
-  flex: 1,
-  paddingTop: theme.spacing.md,
-  paddingBottom: theme.spacing.md,
-  paddingLeft: theme.spacing.lg,
-  paddingRight: theme.spacing.lg,
-  gap: theme.spacing.sm,
-  borderRadius: theme.radii.default,
-  boxSizing: "border-box",
-
-  ":focus-within": {
-    borderColor: theme.colors.primary,
-  },
+  ...(isStretchHeight && { height: "100%" }),
 }))
+
+export const StyledChatInput = styled.div<{ isStretchHeight?: boolean }>(
+  ({ theme, isStretchHeight }) => ({
+    backgroundColor: theme.colors.secondaryBg,
+    border: `${theme.sizes.borderWidth} solid`,
+    borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "stretch",
+    flex: 1,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    gap: theme.spacing.sm,
+    borderRadius: theme.radii.default,
+    boxSizing: "border-box",
+    ...(isStretchHeight && { height: "100%" }),
+
+    ":focus-within": {
+      borderColor: theme.colors.primary,
+    },
+  })
+)
 
 // Files area - wrapping container for file chips above the input row
 export const StyledFilesArea = styled.div(({ theme }) => ({
@@ -50,41 +56,54 @@ export const StyledFilesArea = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-// Main input row - contains [left cluster] [textarea/waveform] [right cluster]
-// Uses flex-wrap to handle stacked mode: textarea wraps to its own line when stacked
-export const StyledInputRow = styled.div<{ isStacked?: boolean }>(
-  ({ theme, isStacked }) => ({
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    width: "100%",
-    gap: theme.spacing.sm,
-    flexWrap: isStacked ? "wrap" : "nowrap",
-  })
-)
+// Main input row - contains textarea and toolbar
+// When expanded: column layout with textarea above toolbar
+// When not expanded: row layout (inline or stacked via flex-wrap)
+export const StyledInputRow = styled.div<{
+  isStacked?: boolean
+  hasExpandedHeight?: boolean
+}>(({ theme, isStacked, hasExpandedHeight }) => ({
+  display: "flex",
+  // Column layout when expanded, row layout otherwise
+  flexDirection: hasExpandedHeight ? "column" : "row",
+  alignItems: hasExpandedHeight ? "stretch" : "center",
+  justifyContent: hasExpandedHeight ? "flex-start" : "space-between",
+  width: "100%",
+  gap: theme.spacing.sm,
+  // Only use flex-wrap for stacked mode (non-expanded)
+  flexWrap: !hasExpandedHeight && isStacked ? "wrap" : "nowrap",
+  ...(hasExpandedHeight && { flex: 1 }),
+}))
 
-// Wrapper for textarea - adapts to inline or stacked layout
+// Wrapper for textarea - adapts to inline, stacked, or expanded layout
 // In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
 // In inline mode: flex: 1 makes it fill remaining space between button clusters
-export const StyledTextareaWrapper = styled.div<{ isStacked?: boolean }>(
-  ({ isStacked }) => ({
-    flex: isStacked ? "none" : 1,
-    width: isStacked ? "100%" : "auto",
-    order: isStacked ? -1 : 0,
-    display: "flex",
-    alignItems: "center",
-    minWidth: 0,
-  })
-)
+// In expanded height mode: flex: 1 fills vertical space, width: 100% for full width
+export const StyledTextareaWrapper = styled.div<{
+  isStacked?: boolean
+  hasExpandedHeight?: boolean
+}>(({ isStacked, hasExpandedHeight }) => ({
+  flex: isStacked && !hasExpandedHeight ? "none" : 1,
+  width: isStacked || hasExpandedHeight ? "100%" : "auto",
+  // Use order only for stacked mode (non-expanded) to move textarea above buttons
+  order: isStacked && !hasExpandedHeight ? -1 : 0,
+  display: "flex",
+  alignItems: hasExpandedHeight ? "stretch" : "center",
+  minWidth: 0,
+}))
 
 // Left cluster - flex-shrink so it collapses when empty
-export const StyledLeftCluster = styled.div(({ theme }) => ({
+// In non-expanded row mode, use order: -1 to position before textarea (which is first in DOM)
+export const StyledLeftCluster = styled.div<{
+  hasExpandedHeight?: boolean
+}>(({ theme, hasExpandedHeight }) => ({
   display: "flex",
   flexDirection: "row",
   flexShrink: 0,
   gap: theme.spacing.sm,
   alignItems: "center",
+  // In non-expanded mode, position before textarea via CSS order
+  order: hasExpandedHeight ? 0 : -1,
 }))
 
 // Right cluster - contains mic and send buttons
@@ -95,17 +114,25 @@ export const StyledRightCluster = styled.div(({ theme }) => ({
   alignItems: "center",
 }))
 
+// Toolbar row - contains left and right button clusters
+// Used when hasExpandedHeight is true to keep buttons in a dedicated bottom row
+export const StyledToolbarRow = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "space-between",
+  alignItems: "center",
+  width: "100%",
+  gap: theme.spacing.sm,
+}))
+
+// Character count indicator - displayed inline with buttons
 export const StyledInputInstructions = styled.div(({ theme }) => ({
-  position: "absolute",
-  top: theme.spacing.twoXS,
-  right: theme.spacing.lg,
   color: theme.colors.fadedText60,
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
   whiteSpace: "nowrap",
   pointerEvents: "auto",
   cursor: "text",
-  zIndex: theme.zIndices.priority,
   "& .stChatInputInstructions": {
     position: "static",
   },

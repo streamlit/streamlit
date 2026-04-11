@@ -50,3 +50,38 @@ if TYPE_CHECKING:
 
     # .open property returns bool | None
     assert_type(tabs(["A", "B"])[0].open, bool | None)
+
+    # --- Callback support ---
+
+    def valid_callback() -> None:
+        pass
+
+    def callback_with_args(arg1: str, arg2: int) -> None:
+        pass
+
+    # Valid usages — should type check
+    assert_type(tabs(["A", "B"], on_change="rerun"), Sequence[TabContainer])
+    assert_type(
+        tabs(["A", "B"], on_change=valid_callback, key="t1"), Sequence[TabContainer]
+    )
+    assert_type(
+        tabs(
+            ["A", "B"],
+            on_change=callback_with_args,
+            args=("test", 1),
+            key="t2",
+        ),
+        Sequence[TabContainer],
+    )
+    assert_type(
+        tabs(
+            ["A", "B"],
+            on_change=callback_with_args,
+            kwargs={"arg1": "test", "arg2": 1},
+            key="t3",
+        ),
+        Sequence[TabContainer],
+    )
+
+    # Invalid usages — should NOT type check
+    tabs(["A", "B"], on_change=123)  # type: ignore[arg-type]

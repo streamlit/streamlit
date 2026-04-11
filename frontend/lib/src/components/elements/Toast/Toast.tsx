@@ -29,11 +29,12 @@ import { Toast as ToastProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
 
 import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
-import { Kind } from "~lib/components/shared/AlertContainer"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import {
   StyledMessageWrapper,

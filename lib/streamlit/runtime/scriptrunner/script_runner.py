@@ -107,7 +107,7 @@ class ScriptRunnerEvent(Enum):
 Note [Threading]
 There are two kinds of threads in Streamlit, the main thread and script threads.
 The main thread is started by invoking the Streamlit CLI, and bootstraps the
-framework and runs the Tornado webserver.
+framework and runs the Uvicorn webserver.
 A script thread is created by a ScriptRunner when it starts. The script thread
 is where the ScriptRunner executes, including running the user script itself,
 processing messages to/from the frontend, and all the Streamlit library function
@@ -379,7 +379,7 @@ class ScriptRunner:
             self._run_script(request.rerun_data)
             request = self._requests.on_scriptrunner_ready()
 
-        if request.type != ScriptRequestType.STOP:
+        if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
             raise RuntimeError(
                 f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
             )
@@ -446,7 +446,7 @@ class ScriptRunner:
         if request.type == ScriptRequestType.RERUN:
             raise RerunException(request.rerun_data)
 
-        if request.type != ScriptRequestType.STOP:
+        if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
             raise RuntimeError(
                 f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
             )

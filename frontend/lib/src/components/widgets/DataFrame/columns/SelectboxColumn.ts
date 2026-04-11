@@ -84,7 +84,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
   // based on the options type.
   let dataType: "number" | "boolean" | "string" = "string"
 
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<SelectboxColumnParams>(
     // Default parameters:
     {
       options: isBooleanType(props.arrowType)
@@ -93,7 +93,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     },
     // User parameters:
     props.columnTypeOptions
-  ) as SelectboxColumnParams
+  )
 
   const isSelectOption = (obj: unknown): obj is SelectOption =>
     typeof obj === "object" &&
@@ -144,8 +144,7 @@ function SelectboxColumn(props: BaseColumnProps): BaseColumn {
     kind: "selectbox",
     sortMode: "default",
     typeIcon: ":material/arrow_drop_down_circle:",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any, validate?: boolean): GridCell {
+    getCell(data?: unknown, validate?: boolean): GridCell {
       // Empty string refers to a missing value
       let cellData = null
       if (notNullOrUndefined(data) && data !== "") {

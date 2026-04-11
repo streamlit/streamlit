@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     get_multiselect,
 )
 
-MULTISELECT_COUNT = 26
+MULTISELECT_COUNT = 29
 
 
 def _get_multiselect_input(locator: Locator | Page, label: str) -> Locator:
@@ -140,6 +140,9 @@ def test_multiselect_initial_value(app: Page):
     expect_text(app, "value 14: []")
     expect_text(app, "value 15: ['apple', 'orange']")
     expect_text(app, "value 16: []")
+    expect_text(app, "value 21: []")
+    expect_text(app, "value 22: []")
+    expect_text(app, "value 23: []")
 
 
 def test_multiselect_clear_all(app: Page):
@@ -566,6 +569,47 @@ def test_multiselect_custom_objects_without_eq(app: Page):
     expect(multiselect_elem.locator('[data-baseweb="tag"]')).to_have_count(2)
 
 
+def test_multiselect_prefix_filter_mode_matches_prefix_only(app: Page):
+    """Test that prefix mode only shows prefix matches and keeps bulk actions in sync."""
+    input_elem = _get_multiselect_input(app, "multiselect 21 (filter_mode='prefix')")
+    input_elem.type("A123")
+
+    options = app.get_by_role("option")
+    expect(options).to_have_count(3)
+    expect(options.nth(0)).to_have_text("Select 2 matches")
+    expect(options.nth(1)).to_have_text("A123")
+    expect(options.nth(2)).to_have_text("A1234")
+    expect(app.get_by_role("option", name="BA123", exact=True)).to_have_count(0)
+
+
+def test_multiselect_contains_filter_mode_matches_substrings(app: Page):
+    """Test that contains mode matches case-insensitive substrings without reordering."""
+    input_elem = _get_multiselect_input(app, "multiselect 22 (filter_mode='contains')")
+    input_elem.type("AP")
+
+    options = app.get_by_role("option")
+    expect(options).to_have_count(3)
+    expect(options.nth(0)).to_have_text("Select 2 matches")
+    expect(options.nth(1)).to_have_text("apple")
+    expect(options.nth(2)).to_have_text("grape")
+    expect(app.get_by_role("option", name="banana", exact=True)).to_have_count(0)
+
+
+def test_multiselect_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
+    """Test that filter_mode=None keeps the input readonly while leaving selection enabled."""
+    input_elem = _get_multiselect_input(app, "multiselect 23 (filter_mode=None)")
+    expect(input_elem).to_have_attribute("readonly", "")
+
+    input_elem.click()
+    options = app.get_by_role("option")
+    expect(options).to_have_count(4)
+    expect(options.nth(0)).to_have_text("Select all")
+
+    app.get_by_role("option", name="No", exact=True).click()
+    wait_for_app_run(app)
+    expect_text(app, "value 23: ['No']")
+
+
 # --- Query parameter binding tests ---
 
 
@@ -762,4 +806,42 @@ def test_multiselect_query_param_duplicate_values_deduplicated(
     expect(page).to_have_url(re.compile(r"bound_multi=Red&bound_multi=Blue"))
     expect(page).not_to_have_url(
         re.compile(r"bound_multi=Red&bound_multi=Blue&bound_multi=Red")
+    )
+
+
+def test_multiselect_selected_tags_have_working_tooltips(app: Page):
+    """Test that selected tags have working native tooltips (issue #14351).
+
+    The title attribute enables the browser's native tooltip to show when hovering
+    over selected options, which is especially helpful for truncated long values.
+    This requires both the title attribute AND pointer-events: auto on the text span.
+    """
+    # Get multiselect 4 which has default selections: ["tea", "water"]
+    ms = get_multiselect(app, "multiselect 4")
+
+    # Verify tags have title attributes set to their option values
+    tea_tag = ms.locator('span[data-baseweb="tag"] span[title="tea"]')
+    water_tag = ms.locator('span[data-baseweb="tag"] span[title="water"]')
+
+    expect(tea_tag).to_be_visible()
+    expect(water_tag).to_be_visible()
+
+    # Verify the title attributes have correct values
+    expect(tea_tag).to_have_attribute("title", "tea")
+    expect(water_tag).to_have_attribute("title", "water")
+
+    # Verify pointer-events is "auto" so the native tooltip can appear on hover
+    # (the fix for issue #14351 re-enabled pointer-events on the text span)
+    tea_pointer_events = tea_tag.evaluate(
+        "el => window.getComputedStyle(el).pointerEvents"
+    )
+    assert tea_pointer_events == "auto", (
+        f"Expected pointer-events: auto, got: {tea_pointer_events}"
+    )
+
+    water_pointer_events = water_tag.evaluate(
+        "el => window.getComputedStyle(el).pointerEvents"
+    )
+    assert water_pointer_events == "auto", (
+        f"Expected pointer-events: auto, got: {water_pointer_events}"
     )

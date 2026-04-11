@@ -192,7 +192,6 @@ describe("Selectbox query param binding", () => {
       "string_value",
       "a",
       false,
-      undefined,
       undefined
     )
   })
@@ -237,7 +236,6 @@ describe("Selectbox query param binding", () => {
       "string_value",
       null,
       true,
-      undefined,
       undefined
     )
   })

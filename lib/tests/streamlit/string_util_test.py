@@ -71,6 +71,47 @@ class StringUtilTest(unittest.TestCase):
 
     @parameterized.expand(
         [
+            # Empty string
+            ("", ("", "")),
+            # No icon
+            ("some text", ("", "some text")),
+            ("A", ("", "A")),
+            # Emoji extraction
+            ("😃", ("😃", "")),
+            ("😃 message", ("😃", "message")),
+            ("🚨 Error occurred", ("🚨", "Error occurred")),
+            ("⚠️ Warning message", ("⚠️", "Warning message")),
+            # Multi-character emoji
+            ("👨‍👨‍👧‍👦 Family event", ("👨‍👨‍👧‍👦", "Family event")),
+            # Material icon extraction
+            (":material/warning: Caution", (":material/warning:", "Caution")),
+            (":material/thumb_up: Great job", (":material/thumb_up:", "Great job")),
+            (":material/error:", (":material/error:", "")),
+            (":material/info: Some info", (":material/info:", "Some info")),
+            # Invalid material icon falls back to emoji check (should return empty)
+            (
+                ":material/invalid_icon_xyz: text",
+                ("", ":material/invalid_icon_xyz: text"),
+            ),
+            # Text starting with colon but not material icon
+            (":not_material: text", ("", ":not_material: text")),
+            # Multiline body text - emoji extraction should preserve newlines
+            ("🚨 Error\nMore details", ("🚨", "Error\nMore details")),
+            # Multiline body text - material icon extraction should preserve newlines
+            (
+                ":material/warning: Caution\nMore info",
+                (":material/warning:", "Caution\nMore info"),
+            ),
+            # Emoji in middle doesn't get extracted
+            ("text 😃 more", ("", "text 😃 more")),
+        ]
+    )
+    def test_extract_leading_icon(self, text, expected):
+        """Test streamlit.string_util.extract_leading_icon."""
+        assert string_util.extract_leading_icon(text) == expected
+
+    @parameterized.expand(
+        [
             ("A", False),
             ("hello", False),
             ("1_foo", False),
@@ -198,3 +239,43 @@ class StringUtilTest(unittest.TestCase):
         """Test that validate_icon_or_emoji raises StreamlitAPIException on invalid inputs."""
         with pytest.raises(StreamlitAPIException):
             string_util.validate_icon_or_emoji(icon)
+
+    def test_validate_emoji_none(self):
+        """Test that validate_emoji returns empty string for None input."""
+        assert string_util.validate_emoji(None) == ""
+
+    def test_validate_material_icon_none(self):
+        """Test that validate_material_icon returns empty string for None input."""
+        assert string_util.validate_material_icon(None) == ""
+
+    @parameterized.expand(
+        [
+            (b"hello world", False),  # Text only
+            (b"\x00\x01\x02", True),  # Binary control characters
+            (b"text with \x00 null", True),  # Text with null byte
+            (b"", False),  # Empty bytes
+        ]
+    )
+    def test_is_binary_string(self, inp: bytes, expected: bool):
+        """Test that is_binary_string correctly identifies binary vs text data."""
+        assert string_util.is_binary_string(inp) == expected
+
+    def test_from_number_with_invalid_item_method(self):
+        """Test from_number with object that has item() but returns non-numeric."""
+
+        class FakeNumpyValue:
+            def item(self) -> str:
+                return "not a number"
+
+        with pytest.raises(TypeError):
+            string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]
+
+    def test_from_number_with_failing_item_method(self):
+        """Test from_number with object whose item() raises an exception."""
+
+        class FakeNumpyValue:
+            def item(self) -> int:
+                raise ValueError("item() failed")
+
+        with pytest.raises(TypeError):
+            string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]

@@ -33,6 +33,23 @@ How these classes work together
   callbacks if so.
 
 This module is lazy-loaded and used only if watchdog is installed.
+
+Windows-specific considerations
+-------------------------------
+On Windows, the watchdog library uses the ReadDirectoryChangesW API which can
+emit spurious filesystem events caused by:
+
+- Windows Defender real-time scanning
+- Windows Search Indexer
+- OneDrive sync
+- Other background file access
+
+To mitigate false positives from these spurious events, this module:
+1. Checks modification time before calculating MD5 (fast rejection)
+2. Compares MD5 content hash to detect actual changes
+3. Re-verifies content stability after detecting a change (double-check)
+
+See: https://github.com/streamlit/streamlit/issues/13954
 """
 
 from __future__ import annotations
@@ -57,6 +74,11 @@ if TYPE_CHECKING:
     from watchdog.observers.api import ObservedWatch
 
 _LOGGER: Final = get_logger(__name__)
+
+# Delay in seconds for the Windows stability check. On Windows, background
+# processes can trigger spurious file change events. This delay allows transient
+# file operations to complete before we verify if the change is real.
+_WINDOWS_STABILITY_DELAY_SECS: Final = 0.05
 
 
 def _get_abs_folder_path(path: str) -> str:
@@ -478,6 +500,52 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             if new_md5 == changed_path_info.md5:
                 _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
                 return
+
+            # On Windows, background processes (Windows Defender, Search Indexer,
+            # OneDrive) can trigger spurious file change events. These processes
+            # may temporarily modify file state during their operations, causing
+            # a transient MD5 difference.
+            #
+            # To mitigate false positives, we perform a stability check: wait
+            # briefly and re-read the file. If the MD5 reverts to the original
+            # value, this was likely a spurious event and we should ignore it.
+            # See: https://github.com/streamlit/streamlit/issues/13954
+            # Import at function level to avoid circular imports and
+            # because this code path is rarely executed (only on Windows
+            # after an MD5 change is detected)
+            from streamlit import env_util
+
+            if env_util.IS_WINDOWS:
+                import time
+
+                # Brief delay to let transient file operations complete
+                time.sleep(_WINDOWS_STABILITY_DELAY_SECS)
+                try:
+                    verification_md5 = util.calc_md5_with_blocking_retries(
+                        abs_changed_path,
+                        glob_pattern=changed_path_info.glob_pattern,
+                        allow_nonexistent=changed_path_info.allow_nonexistent,
+                    )
+                except StreamlitMaxRetriesError as verification_error:
+                    # If the stability re-check fails (e.g., due to a transient
+                    # file lock), proceed with the initially computed new_md5
+                    # instead of dropping the change event entirely.
+                    _LOGGER.debug(
+                        "Failed to calculate verification MD5 for path %s; "
+                        "proceeding with initial MD5.",
+                        abs_changed_path,
+                        exc_info=verification_error,
+                    )
+                else:
+                    if verification_md5 == changed_path_info.md5:
+                        _LOGGER.debug(
+                            "File/dir MD5 reverted after stability check "
+                            "(likely spurious event): %s",
+                            abs_changed_path,
+                        )
+                        return
+                    # Use the verified MD5 as the new value
+                    new_md5 = verification_md5
 
             _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
             changed_path_info.md5 = new_md5

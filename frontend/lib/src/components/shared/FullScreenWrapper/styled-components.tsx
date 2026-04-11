@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledFullScreenFrameProps {
+interface StyledFullScreenFrameProps {
   isExpanded: boolean
 }
 

@@ -29,9 +29,8 @@ from typing import (
 from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
@@ -58,7 +57,7 @@ from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import BindOption, register_widget
-from streamlit.string_util import is_emoji, validate_material_icon
+from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -237,6 +236,7 @@ def _build_proto(
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
+    required: bool = False,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -246,6 +246,7 @@ def _build_proto(
     proto.disabled = disabled
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
+    proto.required = required
 
     # not passing the label looks the same as a collapsed label
     if label is not None:
@@ -271,6 +272,8 @@ def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
 
 
 class ButtonGroupMixin:
+    # pills overloads:
+    # 1. required=True with default set -> guaranteed V return
     @overload
     def pills(
         self,
@@ -278,7 +281,29 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["single"] = "single",
-        default: V | None = None,
+        default: V,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V: ...
+    # 2. required=True without default -> V | None
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: None = None,
+        required: Literal[True],
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -290,6 +315,28 @@ class ButtonGroupMixin:
         width: Width = "content",
         bind: BindOption = None,
     ) -> V | None: ...
+    # 3. Single-select (default, required=False) -> V | None
+    @overload
+    def pills(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: V | None = None,
+        required: Literal[False] = ...,
+        format_func: Callable[[Any], str] | None = None,
+        key: Key | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select -> list[V]
     @overload
     def pills(
         self,
@@ -298,6 +345,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -317,6 +365,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -344,9 +393,9 @@ class ButtonGroupMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -377,6 +426,15 @@ class ButtonGroupMixin:
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
 
+        required : bool
+            Whether a selection is required. If this is ``True`` and
+            ``selection_mode="single"``, users cannot deselect an option once
+            one is selected. Clicking an already-selected option does nothing.
+            The default is ``False``.
+
+            If ``required=True`` is used with ``selection_mode="multi"``, an
+            exception is raised.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -385,11 +443,24 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``selection_mode`` resets the widget even when a
+               key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -433,16 +504,25 @@ class ButtonGroupMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. The URL displays the formatted option string
-            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
-            multiple selections use repeated parameters (e.g.,
-            ``?tags=Red&tags=Blue``) and duplicate URL values are
-            deduplicated. Invalid URL values (not in ``options``) are
-            reset to the ``default`` and removed from the URL. The
-            default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -502,6 +582,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default,
+            required=required,
             format_func=format_func,
             key=key,
             help=help,
@@ -515,6 +596,8 @@ class ButtonGroupMixin:
             bind=bind,
         )
 
+    # segmented_control overloads:
+    # 1. required=True with default set -> guaranteed V return
     @overload
     def segmented_control(
         self,
@@ -522,7 +605,29 @@ class ButtonGroupMixin:
         options: OptionSequence[V],
         *,
         selection_mode: Literal["single"] = "single",
-        default: V | None = None,
+        default: V,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V: ...
+    # 2. required=True without default -> V | None
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: None = None,
+        required: Literal[True],
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -534,6 +639,28 @@ class ButtonGroupMixin:
         width: Width = "content",
         bind: BindOption = None,
     ) -> V | None: ...
+    # 3. Single-select (default, required=False) -> V | None
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: V | None = None,
+        required: Literal[False] = ...,
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V | None: ...
+    # 4. Multi-select -> list[V]
     @overload
     def segmented_control(
         self,
@@ -542,6 +669,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -562,6 +690,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -588,9 +717,9 @@ class ButtonGroupMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -621,6 +750,15 @@ class ButtonGroupMixin:
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
 
+        required : bool
+            Whether a selection is required. If this is ``True`` and
+            ``selection_mode="single"``, users cannot deselect an option once
+            one is selected. Clicking an already-selected option does nothing.
+            The default is ``False``.
+
+            If ``required=True`` is used with ``selection_mode="multi"``, an
+            exception is raised.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -629,11 +767,24 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``selection_mode`` resets the widget even when a
+               key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -678,16 +829,25 @@ class ButtonGroupMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. The URL displays the formatted option string
-            (e.g., ``?color=Red``). For ``selection_mode="multi"``,
-            multiple selections use repeated parameters (e.g.,
-            ``?tags=Red&tags=Blue``) and duplicate URL values are
-            deduplicated. Invalid URL values (not in ``options``) are
-            reset to the ``default`` and removed from the URL. The
-            default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -750,6 +910,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default,
+            required=required,
             format_func=format_func,
             key=key,
             help=help,
@@ -771,6 +932,7 @@ class ButtonGroupMixin:
         key: Key | None = None,
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multi"] = "single",
+        required: bool = False,
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
         style: Literal["pills", "segmented_control"] = "segmented_control",
@@ -785,34 +947,40 @@ class ButtonGroupMixin:
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
 
+        # Validate required with multi-select
+        if required and selection_mode == "multi":
+            raise StreamlitAPIException(
+                "The `required` argument cannot be used with `selection_mode='multi'`. "
+                "The `required` parameter is only supported for single-select mode."
+            )
+
         # Use str as default format_func
         actual_format_func: Callable[[Any], str] = format_func or str
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
             it parsed to the frontend.
+
+            Note: The icon is only extracted if it's followed by a space or is the
+            entire content (icon-only).
             """
             transformed = actual_format_func(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                    elif is_emoji(maybe_icon):
-                        icon = maybe_icon
 
-                    if icon:
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
+            # Split by space to check if first token is an icon
+            parts = transformed.split(" ", 1)
+            first_part = parts[0].strip()
+
+            icon, remaining = extract_leading_icon(first_part)
+            if icon and not remaining:
+                # First token is a pure icon (emoji or material icon)
+                # Use remaining parts as content, or empty string if icon-only
+                transformed = parts[1] if len(parts) > 1 else ""
+            else:
+                icon = ""
+
             return ButtonGroupProto.Option(
                 content=transformed,
-                content_icon=icon,
+                content_icon=icon or None,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
@@ -857,6 +1025,7 @@ class ButtonGroupMixin:
             indexable_options,
             default=default_values,
             selection_mode=selection_mode,
+            required=required,
             disabled=disabled,
             format_func=_transformed_format_func,
             key=key,
@@ -894,6 +1063,7 @@ class ButtonGroupMixin:
         key: Key | None = None,
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
+        required: bool = False,
         disabled: bool = False,
         style: Literal["pills", "segmented_control"] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
@@ -944,8 +1114,7 @@ class ButtonGroupMixin:
         if default is not None and len(default) == 0:
             _default = None
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 
@@ -985,6 +1154,7 @@ class ButtonGroupMixin:
             label=label,
             label_visibility=label_visibility,
             help=help,
+            required=required,
         )
 
         if bind == "query-params" and key is not None:
@@ -1007,7 +1177,7 @@ class ButtonGroupMixin:
 
         # Validate and sync value with options for pills/segmented_control
         value_needs_reset = False
-        current_value: T | list[T] | list[T | str] | None = widget_state.value
+        current_value: Any = widget_state.value
         if options_format_func is not None:
             if selection_mode == "single":
                 # Single select: validate and possibly reset to default

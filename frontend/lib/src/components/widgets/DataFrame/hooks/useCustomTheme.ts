@@ -19,7 +19,7 @@ import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
 import { lighten, mix, transparentize } from "color2k"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid

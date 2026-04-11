@@ -116,8 +116,7 @@ export interface Args {
 }
 
 interface MessageQueue {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [index: number]: any
+  [index: number]: ForwardMsg
 }
 
 const LOG = getLogger("WebsocketConnection")
@@ -669,7 +668,13 @@ export class WebsocketConnection {
 
     const msg = BackMsg.create(obj)
     const buffer = BackMsg.encode(msg).finish()
-    this.websocket.send(buffer)
+    const encodedMessage = new Uint8Array(
+      buffer.buffer as ArrayBuffer,
+      buffer.byteOffset,
+      buffer.byteLength
+    )
+
+    this.websocket.send(encodedMessage)
   }
 
   /**

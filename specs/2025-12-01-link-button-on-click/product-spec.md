@@ -20,7 +20,7 @@ result as "read" when a user opens it via a hyperlink.
 **Requests:**
 
 - [#7453](https://github.com/streamlit/streamlit/issues/7453) - Add `on_click` parameter to
-  `st.link_button` (15+ upvotes)
+  `st.link_button`
 
 **Use cases:**
 

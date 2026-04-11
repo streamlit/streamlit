@@ -43,7 +43,6 @@ def test_st_text_doesnt_apply_formatting(
     )
 
 
-@pytest.mark.external_test
 def test_help_tooltip_works(app_target: AppTarget):
     """Test that the help tooltip is displayed on hover."""
     text_with_help = app_target.get_by_test_id("stText").nth(2)

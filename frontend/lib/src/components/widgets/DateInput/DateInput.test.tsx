@@ -35,9 +35,12 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import DateInput, { Props } from "./DateInput"
 
-const originalDate = "1970/1/20"
-const fullOriginalDate = "1970/01/20"
-const newDate = "2020/02/06"
+// Wire format (ISO 8601) — proto fields + setStringArrayValue calls
+const originalDateWire = "1970-01-20"
+const newDateWire = "2020-02-06"
+// Display format — what the user sees/types in the input field
+const originalDateDisplay = "1970/01/20"
+const newDateDisplay = "2020/02/06"
 
 const getProps = (
   elementProps: Partial<DateInputProto> = {},
@@ -46,8 +49,8 @@ const getProps = (
   element: DateInputProto.create({
     id: "1",
     label: "Label",
-    default: [fullOriginalDate],
-    min: originalDate,
+    default: [originalDateWire],
+    min: originalDateWire,
     format: "YYYY/MM/DD",
     ...elementProps,
   }),
@@ -110,7 +113,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      [fullOriginalDate],
+      [originalDateWire],
       {
         fromUi: false,
       },
@@ -125,7 +128,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      [fullOriginalDate],
+      [originalDateWire],
       {
         fromUi: false,
       },
@@ -146,7 +149,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
 
     expect(screen.getByTestId("stDateInputField")).toHaveValue(
-      fullOriginalDate
+      originalDateDisplay
     )
   })
 
@@ -163,12 +166,12 @@ describe("DateInput widget", () => {
 
     render(<DateInput {...props} />)
     const datePicker = screen.getByTestId("stDateInputField")
-    await user.type(datePicker, newDate)
+    await user.type(datePicker, newDateDisplay)
 
-    expect(screen.getByTestId("stDateInputField")).toHaveValue(newDate)
+    expect(screen.getByTestId("stDateInputField")).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      [newDate],
+      [newDateWire],
       {
         fromUi: true,
       },
@@ -179,8 +182,8 @@ describe("DateInput widget", () => {
   it("displays an error tooltip when the entered date for single date input outside range", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      min: "2020/01/05",
-      max: "2020/01/25",
+      min: "2020-01-05",
+      max: "2020-01-25",
     })
     render(<DateInput {...props} />)
     const dateInput = screen.getByTestId("stDateInputField")
@@ -203,9 +206,9 @@ describe("DateInput widget", () => {
   it("displays correct error tooltip when the entered date for range input below min date", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      default: ["2020/02/01", "2020/02/07"],
-      min: "2020/01/01",
-      max: "2020/12/31",
+      default: ["2020-02-01", "2020-02-07"],
+      min: "2020-01-01",
+      max: "2020-12-31",
       isRange: true,
     })
     render(<DateInput {...props} />)
@@ -230,9 +233,9 @@ describe("DateInput widget", () => {
   it("displays correct error tooltip when the entered date for range input above max date", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      default: ["2020/02/01", "2020/02/07"],
-      min: "2020/01/01",
-      max: "2020/12/31",
+      default: ["2020-02-01", "2020-02-07"],
+      min: "2020-01-01",
+      max: "2020-12-31",
       isRange: true,
     })
     render(<DateInput {...props} />)
@@ -259,8 +262,8 @@ describe("DateInput widget", () => {
     const invalidDate = "2020/02/15"
     const props = getProps({
       default: undefined,
-      min: "2020/01/01",
-      max: "2020/01/31",
+      min: "2020-01-01",
+      max: "2020-01-31",
     })
     render(<DateInput {...props} />)
     // Set up spy after initial setStringArrayValue call
@@ -280,24 +283,22 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
     const dateInput = screen.getByTestId("stDateInputField")
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent.change needed to set value to null (userEvent.clear sets to empty string, not null)
     fireEvent.change(dateInput, {
-      target: { value: newDate },
+      target: { value: newDateDisplay },
     })
 
-    expect(dateInput).toHaveValue(newDate)
+    expect(dateInput).toHaveValue(newDateDisplay)
 
     // Simulating clearing the date input
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent.change needed to set value to null (userEvent.clear sets to empty string, not null)
     fireEvent.change(dateInput, {
       target: { value: null },
     })
 
     // Simulating the close action
     fireEvent.blur(dateInput)
-    expect(dateInput).toHaveValue(fullOriginalDate)
+    expect(dateInput).toHaveValue(originalDateDisplay)
   })
 
   it("has a minDate", async () => {
@@ -322,9 +323,9 @@ describe("DateInput widget", () => {
   it("has a minDate if passed", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      min: "2020/01/05",
+      min: "2020-01-05",
       // Choose default so min is in the default page when the widget is opened.
-      default: ["2020/01/15"],
+      default: ["2020-01-15"],
     })
 
     render(<DateInput {...props} />)
@@ -344,9 +345,9 @@ describe("DateInput widget", () => {
   it("has a maxDate if it is passed", async () => {
     const user = userEvent.setup()
     const props = getProps({
-      max: "2020/01/25",
+      max: "2020-01-25",
       // Choose default so min is in the default page when the widget is opened.
-      default: ["2020/01/15"],
+      default: ["2020-01-15"],
     })
 
     render(<DateInput {...props} />)
@@ -365,7 +366,8 @@ describe("DateInput widget", () => {
     ).toBeTruthy()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -375,16 +377,13 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
 
     const dateInput = screen.getByTestId("stDateInputField")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(dateInput, {
-      target: { value: newDate },
-    })
+    await user.clear(dateInput)
+    await user.type(dateInput, newDateDisplay)
 
-    expect(dateInput).toHaveValue(newDate)
+    expect(dateInput).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      [newDate],
+      [newDateWire],
       {
         fromUi: true,
       },
@@ -397,10 +396,10 @@ describe("DateInput widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(dateInput).toHaveValue(fullOriginalDate)
+    expect(dateInput).toHaveValue(originalDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      [fullOriginalDate],
+      [originalDateWire],
       {
         fromUi: true,
       },
@@ -514,13 +513,13 @@ describe("DateInput widget", () => {
   describe("quick select feature", () => {
     it("hides quick select for range date inputs if minDate is within 2 years", async () => {
       const user = userEvent.setup()
-      const recentMinDate = moment().subtract(1, "year").format("YYYY/MM/DD")
+      const recentMinDate = moment().subtract(1, "year").format("YYYY-MM-DD")
       const props = getProps({
         isRange: true,
         min: recentMinDate,
         default: [
           recentMinDate,
-          moment(recentMinDate).add(1, "day").format("YYYY/MM/DD"),
+          moment(recentMinDate).add(1, "day").format("YYYY-MM-DD"),
         ],
       })
 
@@ -535,13 +534,13 @@ describe("DateInput widget", () => {
 
     it("shows quick select for range date inputs if minDate is older than 2 years", async () => {
       const user = userEvent.setup()
-      const oldMinDate = "2020/01/01"
+      const oldMinDate = "2020-01-01"
       const props = getProps({
         isRange: true,
         min: oldMinDate,
         default: [
           oldMinDate,
-          moment(oldMinDate).add(1, "day").format("YYYY/MM/DD"),
+          moment(oldMinDate).add(1, "day").format("YYYY-MM-DD"),
         ],
       })
 
@@ -559,7 +558,7 @@ describe("DateInput widget", () => {
       const user = userEvent.setup()
       const props = getProps({
         isRange: true,
-        default: ["2020/01/01", "2020/01/31"],
+        default: ["2020-01-01", "2020-01-31"],
       })
 
       render(<DateInput {...props} />)
@@ -576,7 +575,7 @@ describe("DateInput widget", () => {
       const user = userEvent.setup()
       const props = getProps({
         isRange: false,
-        default: ["2020/01/01"],
+        default: ["2020-01-01"],
       })
 
       render(<DateInput {...props} />)
@@ -597,8 +596,8 @@ describe("DateInput widget", () => {
         // Freeze both Date and moment.now so BaseWeb quick select and our code
         // agree on "now"
         const MockDate = class extends RealDate {
-          // @ts-expect-error Mocked constructor
           constructor(...args: unknown[]) {
+            super()
             // If no args, return fixed date instance
             if (args.length === 0) {
               return new RealDate(STATIC_NOW)
@@ -626,8 +625,8 @@ describe("DateInput widget", () => {
       it("commits quick select range ending today within max without error", async () => {
         const user = userEvent.setup()
 
-        const today = moment().format("YYYY/MM/DD")
-        const minDate = moment().subtract(800, "days").format("YYYY/MM/DD")
+        const today = moment().format("YYYY-MM-DD")
+        const minDate = moment().subtract(800, "days").format("YYYY-MM-DD")
 
         const props = getProps({
           isRange: true,
@@ -665,5 +664,117 @@ describe("DateInput widget", () => {
         expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalled()
       })
     })
+  })
+})
+
+describe("DateInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_date" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_date",
+      "string_array_value",
+      expect.any(Array),
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_date" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<DateInput {...props} />)
+
+    unregisterSpy.mockClear()
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when default is empty", () => {
+    const props = getProps({ queryParamKey: "my_date", default: [] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_date",
+      "string_array_value",
+      expect.any(Array),
+      true,
+      undefined
+    )
+  })
+
+  it("registers with urlFormat='repeated' for range mode", () => {
+    const props = getProps({
+      queryParamKey: "my_date",
+      isRange: true,
+      default: ["2025-03-01", "2025-03-15"],
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<DateInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_date",
+      "string_array_value",
+      expect.any(Array),
+      false,
+      "repeated"
+    )
+  })
+
+  it("uses URL-seeded value (setValue) instead of proto default", () => {
+    const seededDateWire = "2025-08-20"
+    const seededDateDisplay = "2025/08/20"
+    const props = getProps({
+      queryParamKey: "my_date",
+      value: [seededDateWire],
+      setValue: true,
+    })
+
+    render(<DateInput {...props} />)
+
+    const input = screen.getByTestId("stDateInputField")
+    expect(input).toHaveValue(seededDateDisplay)
+    expect(input).not.toHaveValue(originalDateDisplay)
+  })
+
+  it("uses URL-seeded range value instead of proto default", () => {
+    const props = getProps({
+      queryParamKey: "my_date",
+      isRange: true,
+      default: ["2025-03-01", "2025-03-15"],
+      value: ["2025-07-01", "2025-07-10"],
+      setValue: true,
+    })
+
+    render(<DateInput {...props} />)
+
+    const input = screen.getByTestId("stDateInputField")
+    expect(input).toHaveValue("2025/07/01 – 2025/07/10")
+    expect(input).not.toHaveValue("2025/03/01 – 2025/03/15")
   })
 })

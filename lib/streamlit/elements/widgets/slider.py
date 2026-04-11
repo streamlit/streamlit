@@ -32,7 +32,7 @@ from typing import (
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -126,6 +126,8 @@ def _time_to_datetime(time_: time) -> datetime:
     # Note, here we pick an arbitrary date well after Unix epoch.
     # This prevents pre-epoch timezone issues (https://bugs.python.org/issue36759)
     # We're dropping the date from datetime later, anyway.
+    # If this base date changes, also update _TIME_BASE_DATE in
+    # streamlit/runtime/state/query_params.py.
     return datetime.combine(date(2000, 1, 1), time_)
 
 
@@ -498,9 +500,9 @@ class SliderMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -590,10 +592,25 @@ class SliderMixin:
             For example, ``format="ddd ha"`` adjusts the displayed datetime to
             show the day of the week and the hour ("Tue 8pm").
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``min_value``, ``max_value``, or ``step`` resets
+               the widget even when a key is provided, because those
+               parameters constrain valid values.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -635,14 +652,23 @@ class SliderMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Out-of-range URL values (outside
-            ``min_value``/``max_value``) are ignored, reverting the widget to
-            its default value. Range sliders use repeated parameters
-            (e.g., ``?key=10&key=90``). Requires a ``key`` to be set, which
-            will be used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. Range sliders use repeated parameters (e.g.,
+            ``?price=10&price=90``).
 
         Returns
         -------
@@ -923,7 +949,7 @@ class SliderMixin:
             max_value = max(prepared_value[0], max_value)
         elif len(prepared_value) == 2:
             start, end = prepared_value
-            if start > end:  # type: ignore[operator]
+            if start > end:  # type: ignore[operator] # ty: ignore[unsupported-operator]
                 # Swap start and end, since they seem reversed
                 start, end = end, start
                 prepared_value = start, end
@@ -1081,8 +1107,7 @@ class SliderMixin:
             slider_proto.value[:] = serialized_values
             slider_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
         return cast("SliderReturn", widget_state.value)

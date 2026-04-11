@@ -164,6 +164,24 @@ with key_only_tab2:
 st.write(f"Tabs key-only rerun count: {st.session_state.tabs_key_only_rerun_count}")
 
 # ============================================================================
+# State Persistence Test — keyed tabs should persist active tab across remount
+# ============================================================================
+
+persist_show = st.toggle("Show extra text", key="persist_toggle")
+if persist_show:
+    st.write("Extra text inserted above tabs")
+
+persist_tab1, persist_tab2, persist_tab3 = st.tabs(
+    ["Overview", "Details", "Raw Data"], key="persist_tabs"
+)
+with persist_tab1:
+    st.write("Overview content")
+with persist_tab2:
+    st.write("Details content")
+with persist_tab3:
+    st.write("Raw Data content")
+
+# ============================================================================
 # Fragment Test — dynamic tabs inside a fragment
 # ============================================================================
 
@@ -193,3 +211,56 @@ def tabs_fragment() -> None:
 
 
 tabs_fragment()
+
+# ============================================================================
+# Callback Tests (on_change=callable)
+# ============================================================================
+
+if "tabs_callback_log" not in st.session_state:
+    st.session_state.tabs_callback_log = []
+
+
+def tabs_callback() -> None:
+    st.session_state.tabs_callback_log.append("tabs_callback_called")
+
+
+def tabs_callback_with_args(prefix: str, suffix: str = "") -> None:
+    st.session_state.tabs_cb_args_result = f"{prefix}-switched-{suffix}"
+
+
+cb_tabs = st.tabs(
+    ["CbTab1", "CbTab2"],
+    key="callback_tabs",
+    on_change=tabs_callback,
+)
+
+if cb_tabs[0].open:
+    with cb_tabs[0]:
+        st.write("Callback tab 1 content")
+
+if cb_tabs[1].open:
+    with cb_tabs[1]:
+        st.write("Callback tab 2 content")
+
+st.write(f"Tabs callback log: {st.session_state.tabs_callback_log}")
+
+cb_args_tabs = st.tabs(
+    ["ArgsTab1", "ArgsTab2"],
+    key="callback_args_tabs",
+    on_change=tabs_callback_with_args,
+    args=("my_prefix",),
+    kwargs={"suffix": "my_suffix"},
+)
+
+if cb_args_tabs[0].open:
+    with cb_args_tabs[0]:
+        st.write("Args tab 1 content")
+
+if cb_args_tabs[1].open:
+    with cb_args_tabs[1]:
+        st.write("Args tab 2 content")
+
+st.write(
+    f"Tabs callback args result: "
+    f"{st.session_state.get('tabs_cb_args_result', 'Not called')}"
+)

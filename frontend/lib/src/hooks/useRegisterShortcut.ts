@@ -197,7 +197,7 @@ export function ensureHotkeysFilterConfigured(): void {
  * @param shortcut - The shortcut string to parse.
  * @returns The parsed shortcut tokens.
  */
-export function parseShortcutString(
+function parseShortcutString(
   shortcut?: string | null
 ): ShortcutTokens | undefined {
   if (!shortcut) {

@@ -16,10 +16,10 @@ from pathlib import Path
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
-ICON_PATH = TEST_ASSETS_DIR / "favicon.ico"
+STATIC_DIR = Path(__file__).parent / "static"
+ICON_PATH = STATIC_DIR / "favicon.ico"
 
 st.sidebar.button("Sidebar!")
 st.markdown("Main!")

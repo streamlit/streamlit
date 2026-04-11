@@ -16,7 +16,7 @@
 
 import { ArrowNamedDataSet, IVegaLiteChart } from "@streamlit/protobuf"
 
-import { UNICODE } from "~lib/mocks/arrow"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import { NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { dataframe, table, text, vegaLiteChart } from "./test-utils"

@@ -36,7 +36,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
 
-export type AutoSizerReturn = {
+type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
   minHeight: number
   // The maximum height of the data grid can be resized to

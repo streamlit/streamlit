@@ -191,7 +191,7 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
                 cache_name="",
                 byte_length=len(file.content),
             )
-            for _, file in files_by_id.items()
+            for file in files_by_id.values()
         ]
         if not stats:
             return {}

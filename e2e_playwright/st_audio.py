@@ -19,9 +19,9 @@ import requests
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 
 st.header("Audio from bytes")
 url1 = "https://www.w3schools.com/html/horse.ogg"
@@ -34,7 +34,7 @@ st.audio(url2, start_time=10, end_time=13)
 st.audio(url2, start_time=15, end_time=19, loop=True)
 
 st.header("Audio from mp3 file (str and Path)")
-CAT_AUDIO = TEST_ASSETS_DIR / "cat-purr.mp3"
+CAT_AUDIO = STATIC_DIR / "cat-purr.mp3"
 st.audio(str(CAT_AUDIO))
 st.audio(CAT_AUDIO)
 

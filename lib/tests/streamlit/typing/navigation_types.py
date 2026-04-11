@@ -72,6 +72,9 @@ if TYPE_CHECKING:
     assert_type(
         navigation(["page1.py"], position="hidden", expanded=False), StreamlitPage
     )
+    # Test expanded with integer values
+    assert_type(navigation(["page1.py"], expanded=5), StreamlitPage)
+    assert_type(navigation(["page1.py"], expanded=0), StreamlitPage)
 
     # Test Page with visibility parameter
     visible_page = Page("page.py", visibility="visible")

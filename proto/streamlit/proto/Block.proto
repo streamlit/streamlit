@@ -39,6 +39,7 @@ message Block {
   optional string id = 12;
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
+  optional bool autoscroll = 16;
 
   message Vertical {
     bool border = 1;
@@ -175,5 +176,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 14
+  // Next ID: 17
 }

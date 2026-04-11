@@ -79,6 +79,7 @@ jobs:
         if: steps.git-check.outputs.changes == 'false' && github.event.pull_request.user.login == 'github-actions[bot]' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
           PR_BODY: |
             ## Trigger CI for bot PR
 
@@ -107,7 +108,7 @@ jobs:
 
           gh pr create \
             --head "$fix_branch" \
-            --base "${{ github.head_ref }}" \
+            --base "$HEAD_REF" \
             --title "[autofix] Trigger CI for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
 
@@ -126,6 +127,7 @@ jobs:
         if: steps.git-check.outputs.changes == 'true' && github.event.pull_request.head.repo.full_name == github.repository
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
           PR_BODY: |
             ## Describe your changes
 
@@ -135,7 +137,7 @@ jobs:
         run: |
           gh pr create \
             --head "autofix/${{ github.event.pull_request.number }}-${{ github.run_id }}" \
-            --base "${{ github.head_ref }}" \
+            --base "$HEAD_REF" \
             --title "[autofix] Automated fixes for #${{ github.event.pull_request.number }}" \
             --body "$PR_BODY"
 

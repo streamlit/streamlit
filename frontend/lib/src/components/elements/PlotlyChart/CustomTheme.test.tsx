@@ -138,7 +138,9 @@ describe("PlotlyChart CustomTheme", () => {
       const layout = {}
       const result = layoutWithThemeDefaults(layout, theme)
 
-      expect(result.font.family).toBe(theme.genericFonts.bodyFont)
+      expect((result.font as Record<string, unknown>).family).toBe(
+        theme.genericFonts.bodyFont
+      )
       expect(result.paper_bgcolor).toBe(theme.colors.bgColor)
       expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)
     })
@@ -150,7 +152,7 @@ describe("PlotlyChart CustomTheme", () => {
       }
       const result = layoutWithThemeDefaults(layout, theme)
 
-      expect(result.font.family).toBe("Arial")
+      expect((result.font as Record<string, unknown>).family).toBe("Arial")
       expect(result.paper_bgcolor).toBe("red")
       // Should still apply missing ones
       expect(result.plot_bgcolor).toBe(theme.colors.secondaryBg)

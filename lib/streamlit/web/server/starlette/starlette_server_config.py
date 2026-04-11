@@ -36,11 +36,11 @@ WEBSOCKET_MAX_SEND_QUEUE_SIZE: Final = 500
 
 # Gzip middleware configuration:
 # Do not GZip responses that are smaller than this minimum size in bytes:
-GZIP_MINIMUM_SIZE: Final = 500
+GZIP_MINIMUM_SIZE: Final = 1000
 # Used during GZip compression. It is an integer ranging from 1 to 9.
 # Lower value results in faster compression but larger file sizes, while higher value
 # results in slower compression but smaller file sizes.
-GZIP_COMPRESSLEVEL: Final = 6
+GZIP_COMPRESSLEVEL: Final = 5
 
 # When server.port is not available it will look for the next available port
 # up to this number of retries.
@@ -53,3 +53,14 @@ DEFAULT_SERVER_ADDRESS: Final = "0.0.0.0"  # noqa: S104
 DEFAULT_WEBSOCKET_PING_INTERVAL: Final = 30
 # Default WebSocket ping timeout in seconds, can be configured by the user
 DEFAULT_WEBSOCKET_PING_TIMEOUT: Final = 30
+
+# AnyIO's default thread limiter used by Starlette's static file serving path.
+# Load testing showed that 28 tokens is the best balance between static
+# asset throughput, rerun latency, memory usage, and thread count.
+ANYIO_STATIC_FILE_THREAD_TOKENS: Final = 28
+
+# The max-age value to send with cached assets. Set to one year.
+STATIC_ASSET_CACHE_MAX_AGE_SECONDS: Final = 365 * 24 * 60 * 60
+
+# Maximum size for app static files (200 MB)
+MAX_APP_STATIC_FILE_SIZE: Final = 200 * 1024 * 1024

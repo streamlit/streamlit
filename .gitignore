@@ -92,6 +92,8 @@ lib/streamlit/static
 streamlit-storage
 # Directory for temporary files (can be used by agents):
 work-tmp
+# Local checkout of streamlit.wiki for agent knowledge uploads:
+agent-wiki
 
 # Data Files
 **/uber-raw-data-sep14.csv

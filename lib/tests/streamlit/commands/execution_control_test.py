@@ -139,6 +139,7 @@ def test_st_switch_page_context_info(patched_get_script_run_ctx):
     # Mock the StreamlitPage object and its _script_hash attribute
     mock_page = MagicMock(spec=StreamlitPage)
     mock_page._script_hash = "target_page_hash"
+    mock_page.is_external = False
 
     with patch(
         "streamlit.commands.execution_control.get_main_script_directory",
@@ -179,6 +180,7 @@ def test_st_switch_page_applies_query_params(patched_get_script_run_ctx):
 
     mocked_page = MagicMock(spec=StreamlitPage)
     mocked_page._script_hash = "target_page_hash"
+    mocked_page.is_external = False
 
     patched_get_script_run_ctx.return_value = ctx
 
@@ -223,6 +225,7 @@ def test_st_switch_page_applies_iterable_query_params(patched_get_script_run_ctx
 
     mocked_page = MagicMock(spec=StreamlitPage)
     mocked_page._script_hash = "target_page_hash"
+    mocked_page.is_external = False
 
     patched_get_script_run_ctx.return_value = ctx
 
@@ -258,6 +261,7 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
 
     mocked_page = MagicMock(spec=StreamlitPage)
     mocked_page._script_hash = "target_page_hash"
+    mocked_page.is_external = False
 
     with pytest.raises(StreamlitAPIException, match=r"`query_params` must be"):
         switch_page(mocked_page, query_params="not valid")  # type: ignore[arg-type]
@@ -265,3 +269,22 @@ def test_st_switch_page_rejects_invalid_query_params(patched_get_script_run_ctx)
     ctx.script_requests.request_rerun.assert_not_called()
     mock_query_params.clear.assert_not_called()
     mock_query_params.from_dict.assert_not_called()
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
+    """Test that st.switch_page raises an error for external URL pages."""
+    ctx = MagicMock()
+    ctx.script_requests = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+
+    mock_page = MagicMock(spec=StreamlitPage)
+    mock_page.is_external = True
+
+    with pytest.raises(
+        StreamlitAPIException,
+        match=r"Cannot use st\.switch_page with external URL pages",
+    ):
+        switch_page(mock_page)
+
+    ctx.script_requests.request_rerun.assert_not_called()

@@ -19,6 +19,7 @@ from pathlib import Path
 
 import pytest
 
+from streamlit.runtime.pages_manager import PagesManager
 from streamlit.testing.v1 import AppTest
 
 
@@ -232,3 +233,88 @@ def test_switch_page_widgets():
     assert not at.slider
     at.switch_page("main.py").run()
     assert at.slider[0].value == 0
+
+
+def test_navigation_with_callable_pages():
+    """Test st.navigation renders callable pages correctly.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9446
+    """
+
+    def script():
+        import streamlit as st
+
+        def page1():
+            st.title("Page 1 Title")
+            st.write("Content from page 1")
+
+        def page2():
+            st.title("Page 2 Title")
+            st.write("Content from page 2")
+
+        st.write("Header from main app")
+        pg = st.navigation(
+            [
+                st.Page(page1, title="Page 1"),
+                st.Page(page2, title="Page 2"),
+            ]
+        )
+        pg.run()
+
+    at = AppTest.from_function(script).run()
+
+    assert at.title[0].value == "Page 1 Title"
+    assert "Header from main app" in at.markdown.values
+    assert "Content from page 1" in at.markdown.values
+
+
+def test_v2_custom_component():
+    """Test AppTest can run apps that use st.components.v2 custom components.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14274
+    """
+
+    def script():
+        import streamlit as st
+        from streamlit.components.v2 import component
+
+        _my_component = component(
+            "my_test_component",
+            html='<div id="root">hello</div>',
+        )
+
+        st.title("Test")
+        _my_component(key="test", data={"text": "hello"})
+
+    at = AppTest.from_function(script).run()
+    assert not at.exception, [e.message for e in at.exception]
+    assert at.title[0].value == "Test"
+
+
+def test_navigation_resets_pages_manager_state():
+    """Test AppTest resets PagesManager.uses_pages_directory before running.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/9446
+    """
+
+    original_value = PagesManager.uses_pages_directory
+    PagesManager.uses_pages_directory = True
+
+    try:
+
+        def script():
+            import streamlit as st
+
+            def page1():
+                st.title("Navigation Page")
+                st.write("Page content")
+
+            pg = st.navigation([st.Page(page1, title="Page 1")])
+            pg.run()
+
+        at = AppTest.from_function(script).run()
+
+        assert at.title[0].value == "Navigation Page"
+        assert "Page content" in at.markdown.values
+    finally:
+        PagesManager.uses_pages_directory = original_value

@@ -18,7 +18,6 @@ export enum DialogType {
   ABOUT = "about",
   CLEAR_CACHE = "clearCache",
   CONNECTION_ERROR = "connectionError",
-  SETTINGS = "settings",
   SCRIPT_COMPILE_ERROR = "scriptCompileError",
   WARNING = "warning",
   DEPLOY_ERROR = "deployError",

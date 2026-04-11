@@ -29,7 +29,8 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { MULTI, UNICODE } from "~lib/mocks/arrow"
+import { MULTI } from "~lib/mocks/arrow/multi"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
 import EditingState from "./EditingState"
 import useDataLoader from "./useDataLoader"

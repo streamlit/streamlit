@@ -17,12 +17,13 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { EmotionTheme, getDividerColors } from "~lib/theme"
+import { getDividerColors } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 import { isValidElementId } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -206,19 +207,21 @@ export function checkFlexContainerBackwardsCompatibile(
 }
 
 export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
-  // Auto-scroll only activates for containers with a fixed pixel height.
   const hasFixedPixelHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
-  if (
-    hasFixedPixelHeight &&
-    blockNode.children.some(node => {
-      return (
-        node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
-      )
-    })
-  ) {
-    return true
+  if (!hasFixedPixelHeight) {
+    return false
   }
-  return false
+
+  // When autoscroll is explicitly set, use that value directly.
+  const { autoscroll } = blockNode.deltaBlock
+  if (autoscroll !== null && autoscroll !== undefined) {
+    return autoscroll
+  }
+
+  // Default: auto-scroll when container has chat messages.
+  return blockNode.children.some(
+    node => node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
+  )
 }
 
 export function getBorderBackwardsCompatible(blockProto: BlockProto): boolean {

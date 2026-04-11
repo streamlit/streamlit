@@ -28,6 +28,7 @@ import {
   IFileUploaderState,
   SInt64Array,
   StringArray,
+  StringTriggerValue,
   Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
@@ -65,7 +66,7 @@ export type WidgetValueType =
 /**
  * Binding information for a widget that syncs to URL query parameters.
  */
-export interface QueryParamBinding {
+interface QueryParamBinding {
   paramKey: string
   valueType: WidgetValueType
   defaultValue: unknown
@@ -73,9 +74,7 @@ export interface QueryParamBinding {
   // When true, empty values write ?foo= to URL; when false, empty clears the param.
   clearable: boolean
   urlFormat?: "comma" | "repeated" // How to serialize arrays
-  // TODO(query-params): Remove options field after wire format changes from
-  // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
-  options?: string[] // For index-based widgets, the formatted option strings
+  dateType?: DateType
 }
 
 /**
@@ -107,6 +106,38 @@ export function createFormsData(): FormsData {
 }
 
 const LOG = getLogger("WidgetStateManager")
+
+// Structurally identical to MomentKind in formatMoment.ts, but kept separate:
+// MomentKind is for display formatting (moment.js), DateType is for URL
+// serialization (ISO strings). Coupling them would create an unrelated
+// dependency between URL binding logic and the display formatting layer.
+export type DateType = "date" | "time" | "datetime"
+
+/**
+ * Convert a microsecond timestamp (as used by date/time sliders) to an ISO
+ * string suitable for URL query parameters. The format matches the ISO
+ * conventions used by st.date_input and st.time_input.
+ *
+ * Python datetime microseconds → JS milliseconds → Date UTC → ISO substring.
+ */
+export function microsToIsoString(micros: number, dateType: DateType): string {
+  // micros are UTC-based; Date constructor interprets ms as UTC.
+  const iso = new Date(micros / 1000).toISOString()
+  switch (dateType) {
+    case "date":
+      return iso.slice(0, 10) // "YYYY-MM-DD"
+    case "time": {
+      // Include seconds when non-zero to preserve sub-minute precision.
+      const hhmmss = iso.slice(11, 19) // "HH:mm:ss"
+      return hhmmss.endsWith(":00") ? hhmmss.slice(0, 5) : hhmmss
+    }
+    case "datetime": {
+      // Include seconds when non-zero to preserve sub-minute precision.
+      const secs = iso.slice(17, 19)
+      return secs === "00" ? iso.slice(0, 16) : iso.slice(0, 19)
+    }
+  }
+}
 
 /**
  * A Dictionary that maps widgetID -> WidgetState, and provides some utility
@@ -228,8 +259,7 @@ export class WidgetStateManager {
   // A dictionary that maps elementId -> element state keys -> element state values.
   // This is used to store frontend-only state for elements.
   // This state is not never sent to the server.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private readonly elementStates = new Map<string, Map<string, any>>()
+  private readonly elementStates = new Map<string, Map<string, unknown>>()
 
   /**
    * Debouncing helpers for trigger widgets.
@@ -397,6 +427,25 @@ export class WidgetStateManager {
     // 3. Schedule (or reuse) a macrotask-level flush so that ChatInput
     //    updates are coalesced with other trigger/value updates that happen
     //    during the same event loop tick.
+    this.scheduleFlush(fragmentId)
+  }
+
+  /**
+   * Sets a string trigger value for a widget. String trigger values behave
+   * like boolean triggers - they are sent to the backend once and then
+   * auto-reset to null after each script run. Use this for trigger-based
+   * widgets that need to return a string value (e.g., menu button selections).
+   */
+  public setStringTriggerValue(
+    widget: WidgetInfo,
+    value: string,
+    source: Source,
+    fragmentId: string | undefined
+  ): void {
+    this.createWidgetState(widget, source).stringTriggerValue =
+      new StringTriggerValue({ data: value })
+
+    this.pendingTriggerIds.add(widget.id)
     this.scheduleFlush(fragmentId)
   }
 
@@ -666,8 +715,7 @@ export class WidgetStateManager {
 
   public setJsonValue(
     widget: WidgetInfo,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    value: any,
+    value: unknown,
     source: Source,
     fragmentId: string | undefined
   ): void {
@@ -968,9 +1016,11 @@ export class WidgetStateManager {
    * Get the element state value for the given element ID and key, if it exists.
    * This is a frontend-only state that is never sent to the server.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public getElementState(elementId: string, key: string): any {
-    return this.elementStates.get(elementId)?.get(key)
+  public getElementState<T = unknown>(
+    elementId: string,
+    key: string
+  ): T | undefined {
+    return this.elementStates.get(elementId)?.get(key) as T | undefined
   }
 
   /**
@@ -981,19 +1031,23 @@ export class WidgetStateManager {
    *
    * @param {string} elementId - The unique identifier of the element.
    * @param {string} key - The key to set
-   * @param {any} value - The value to set for the element's state.
+   * @param {unknown} value - The value to set for the element's state.
    * @returns {void}
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public setElementState(elementId: string, key: string, value: any): void {
+  public setElementState(
+    elementId: string,
+    key: string,
+    value: unknown
+  ): void {
     if (!this.elementStates.has(elementId)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      this.elementStates.set(elementId, new Map<string, any>())
+      this.elementStates.set(elementId, new Map<string, unknown>())
     }
 
     // It's expected here that there is always an initialized map for an elementId
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
+    const stateMap = this.elementStates.get(elementId)
+    if (stateMap) {
+      stateMap.set(key, value)
+    }
   }
 
   /**
@@ -1078,8 +1132,6 @@ export class WidgetStateManager {
    * mirrors the backend behavior in QueryParams.bind_widget() which also
    * handles duplicate paramKey cleanup.
    *
-   * @param options - For index-based widgets, the formatted option strings.
-   *   TODO(query-params): Remove options param after wire format changes.
    * @param clearable - Whether the widget allows clearing to empty state.
    *   Required - widget components must explicitly pass this based on their UI behavior.
    */
@@ -1090,7 +1142,7 @@ export class WidgetStateManager {
     defaultValue: unknown,
     clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    options?: string[]
+    dateType?: DateType
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1099,28 +1151,17 @@ export class WidgetStateManager {
       this.boundWidgets.delete(existingWidgetId)
     }
 
-    // TODO(query-params): Remove options normalization after wire format changes
-    // from index-based to string-based values for applicable widgets.
-    // Normalize defaultValue to URL-compatible format for index-based widgets.
-    // This ensures default comparison works correctly (e.g., "Red" === "Red"
-    // instead of "Red" === "0").
+    // For date/time sliders, convert microsecond defaults to ISO strings so
+    // that shouldClearUrlParam / isDefaultArrayValue comparisons match the
+    // ISO strings produced by convertToUrlValue.
     let normalizedDefault = defaultValue
-    if (options && options.length > 0) {
-      if (
-        typeof defaultValue === "number" &&
-        options[defaultValue] !== undefined
-      ) {
-        // Scalar index -> option string
-        normalizedDefault = options[defaultValue]
-      } else if (Array.isArray(defaultValue)) {
-        // Array of indices -> array of option strings
-        normalizedDefault = defaultValue
-          .map(idx =>
-            typeof idx === "number" && options[idx] !== undefined
-              ? options[idx]
-              : String(idx)
-          )
-          .filter((s): s is string => s !== undefined)
+    if (dateType) {
+      if (Array.isArray(normalizedDefault)) {
+        normalizedDefault = normalizedDefault.map(n =>
+          typeof n === "number" ? microsToIsoString(n, dateType) : String(n)
+        )
+      } else if (typeof normalizedDefault === "number") {
+        normalizedDefault = microsToIsoString(normalizedDefault, dateType)
       }
     }
 
@@ -1129,8 +1170,8 @@ export class WidgetStateManager {
       valueType,
       defaultValue: normalizedDefault,
       urlFormat,
-      options,
       clearable,
+      dateType,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
@@ -1180,10 +1221,13 @@ export class WidgetStateManager {
       }
     })
 
-    // Build query string using query-string library
-    const boundParamsStr = queryString.stringify(boundParamsObj, {
-      arrayFormat: "none",
-    })
+    // Build query string using query-string library.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const boundParamsStr = queryString
+      .stringify(boundParamsObj, {
+        arrayFormat: "none",
+      })
+      .replaceAll("%20", "+")
 
     // Combine embed params with bound widget params
     if (!boundParamsStr) {
@@ -1231,38 +1275,25 @@ export class WidgetStateManager {
       case "double_value":
         return String(value as number)
 
-      // TODO(query-params): Remove options lookup after wire format changes.
-      case "int_value": {
-        const num = value as number
-        return binding.options?.[num] ?? String(num)
-      }
+      case "int_value":
+        return String(value as number)
 
       case "string_value":
         return value as string
 
-      case "string_array_value": {
-        const arr = (value as string[]).filter(v => v !== "")
-        return arr
-      }
+      case "string_array_value":
+        return (value as string[]).filter(v => v !== "")
 
-      // TODO(query-params): Remove options lookup after wire format changes.
-      case "int_array_value": {
-        const arr = value as number[]
-        return binding.options
-          ? arr
-              .map(idx => binding.options?.[idx])
-              .filter((s): s is string => s !== undefined)
-          : arr.map(n => String(n))
-      }
+      case "int_array_value":
+        return (value as number[]).map(n => String(n))
 
-      // TODO(query-params): Remove options lookup after wire format changes.
       case "double_array_value": {
         const arr = value as number[]
-        return binding.options && binding.options.length > 0
-          ? arr
-              .map(idx => binding.options?.[idx])
-              .filter((s): s is string => s !== undefined)
-          : arr.map(n => String(n))
+        if (binding.dateType) {
+          const dt = binding.dateType
+          return arr.map(n => microsToIsoString(n, dt))
+        }
+        return arr.map(n => String(n))
       }
 
       default:
@@ -1350,13 +1381,16 @@ export class WidgetStateManager {
       currentParams[paramKey] = value
     }
 
-    // Build new URL using query-string
-    // arrayFormat: "none" produces ?key=a&key=b for arrays
-    const newSearch = queryString.stringify(currentParams, {
-      arrayFormat: "none",
-      skipNull: true,
-      skipEmptyString: false,
-    })
+    // Build new URL using query-string.
+    // arrayFormat: "none" produces ?key=a&key=b for arrays.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const newSearch = queryString
+      .stringify(currentParams, {
+        arrayFormat: "none",
+        skipNull: true,
+        skipEmptyString: false,
+      })
+      .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
     const currentSearch = window.location.search.replace(/^\?/, "")
@@ -1399,9 +1433,11 @@ export class WidgetStateManager {
   }
 
   /**
-   * Convert a primitive value to string safely.
-   * @returns The string representation, or undefined if value is not a primitive
-   *          (e.g., null, undefined, object, array).
+   * Convert a value to its URL-comparable string form.
+   * Handles primitives (string, number, boolean) and Date objects.
+   * Date is formatted as local-time ISO (YYYY-MM-DD) to match the wire
+   * format used by date_input URL values.
+   * @returns The string representation, or undefined for unsupported types.
    */
   private toStringPrimitive(value: unknown): string | undefined {
     if (
@@ -1410,6 +1446,12 @@ export class WidgetStateManager {
       typeof value === "boolean"
     ) {
       return String(value)
+    }
+    if (value instanceof Date) {
+      const y = value.getFullYear()
+      const m = String(value.getMonth() + 1).padStart(2, "0")
+      const d = String(value.getDate()).padStart(2, "0")
+      return `${y}-${m}-${d}`
     }
     return undefined
   }

@@ -20,7 +20,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { BidiComponent as BidiComponentProto } from "@streamlit/protobuf"
 
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"

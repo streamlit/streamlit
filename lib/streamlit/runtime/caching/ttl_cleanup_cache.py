@@ -75,6 +75,16 @@ class TTLCleanupCache(TTLCache[K, V]):
 
         return items
 
+    @override
+    def clear(self) -> None:
+        # cachetools 7.0.2 makes clear() O(1) and bypasses popitem(). We clear
+        # via popitem() to preserve the behavior seen in cachetools <= 7.0.1.
+        while True:
+            try:
+                self.popitem()
+            except KeyError:  # noqa: PERF203
+                break
+
     def safe_del(self, key: K) -> None:
         """Delete that calls _on_release."""
         has_value = key in self

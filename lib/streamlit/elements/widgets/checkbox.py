@@ -20,9 +20,8 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -90,9 +89,9 @@ class CheckboxMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -108,10 +107,20 @@ class CheckboxMixin:
             Preselect the checkbox when it first renders. This will be
             cast to bool internally.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -155,19 +164,27 @@ class CheckboxMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Requires a ``key`` to be set, which will
-            be used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
 
         Returns
         -------
         bool
             Whether or not the checkbox is checked.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> agree = st.checkbox("I agree")
@@ -225,9 +242,9 @@ class CheckboxMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -243,10 +260,20 @@ class CheckboxMixin:
             Preselect the toggle when it first renders. This will be
             cast to bool internally.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -290,19 +317,27 @@ class CheckboxMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Requires a ``key`` to be set, which will
-            be used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
 
         Returns
         -------
         bool
             Whether or not the toggle is checked.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> on = st.toggle("Activate feature")
@@ -388,8 +423,7 @@ class CheckboxMixin:
         if bind == "query-params" and key is not None:
             checkbox_proto.query_param_key = str(key)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         serde = CheckboxSerde(value)
 

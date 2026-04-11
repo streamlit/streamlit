@@ -21,10 +21,8 @@ from typing import TYPE_CHECKING, Literal, cast, overload
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
-    LayoutConfig,
     WidthWithoutContent,
-    validate_height,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -168,9 +166,9 @@ class TextWidgetsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -190,10 +188,24 @@ class TextWidgetsMixin:
         max_chars : int or None
             Max number of characters allowed in text input.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``max_chars`` resets the widget even when a key
+               is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         type : "default" or "password"
             The type of the text input. This can be either "default" (for
@@ -269,14 +281,22 @@ class TextWidgetsMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Requires a ``key`` to be set, which will
-            be used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
 
-            Cannot be used with ``type="password"`` (passwords must not appear
-            in URLs).
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            This can't be used with ``type="password"``. An empty
+            query parameter (e.g., ``?my_key=``) clears the widget.
 
         Returns
         -------
@@ -284,8 +304,8 @@ class TextWidgetsMixin:
             The current value of the text input widget or ``None`` if no value has been
             provided by the user.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> title = st.text_input("Movie title", "Life of Brian")
@@ -443,8 +463,7 @@ class TextWidgetsMixin:
                 text_input_proto.value = widget_state.value
             text_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
         return widget_state.value
@@ -522,9 +541,9 @@ class TextWidgetsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -563,10 +582,24 @@ class TextWidgetsMixin:
         max_chars : int or None
             Maximum number of characters allowed in text area.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``max_chars`` resets the widget even when a key
+               is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -612,11 +645,22 @@ class TextWidgetsMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Requires a ``key`` to be set, which will
-            be used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?my_key=``) clears the
+            widget.
 
         Returns
         -------
@@ -624,8 +668,8 @@ class TextWidgetsMixin:
             The current value of the text area widget or ``None`` if no value has been
             provided by the user.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> txt = st.text_area(
@@ -758,17 +802,16 @@ class TextWidgetsMixin:
                 text_area_proto.value = widget_state.value
             text_area_proto.set_value = True
 
-        validate_width(width)
-        if height is not None:
-            validate_height(height, allow_content=True)
-        else:
+        if height is None:
             # We want to maintain the same approximately three lines of text height
             # for the text input when the label is collapsed.
             # These numbers are for the entire element including the label and
             # padding.
             height = 122 if label_visibility != "collapsed" else 94
 
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width, height=height, allow_content_height=True
+        )
 
         self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
         return widget_state.value
