@@ -31,8 +31,17 @@ if TYPE_CHECKING:
     from playwright.sync_api import Page
 
 
-def test_streamlit_ui_and_widget_interaction(app: Page) -> None:
-    """Test that Streamlit UI renders and widgets work with advanced App config."""
+def test_advanced_app_scenario(app: Page, app_base_url: str) -> None:
+    """Test Streamlit UI, widgets, custom routes, middleware, lifespan, and WebSocket.
+
+    This aggregated scenario test verifies:
+    - Streamlit UI renders with advanced App config
+    - Widget interactions work correctly
+    - Custom routes and middleware function properly
+    - Lifespan hooks and exception handlers work
+    - WebSocket communication functions with custom middleware
+    """
+    # === Part 1: Streamlit UI and widget interaction ===
     # Verify initial UI renders correctly
     expect(app.get_by_text("Advanced st.App Test")).to_be_visible()
     expect(
@@ -56,9 +65,7 @@ def test_streamlit_ui_and_widget_interaction(app: Page) -> None:
     text_input_field.press("Enter")
     expect(app.get_by_text("You entered: Hello World")).to_be_visible()
 
-
-def test_custom_routes_middleware_and_lifespan(app: Page, app_base_url: str) -> None:
-    """Test custom routes, middleware headers, lifespan hooks, and exception handlers."""
+    # === Part 2: Custom routes, middleware, lifespan, and exception handlers ===
     # Test custom API route
     data_response = app.request.get(build_app_url(app_base_url, path="/api/data"))
     assert data_response.status == 200
@@ -91,14 +98,10 @@ def test_custom_routes_middleware_and_lifespan(app: Page, app_base_url: str) -> 
     assert error_data["code"] == 422
     assert error_data["handled_by"] == "custom_handler"
 
-
-def test_websocket_works_with_middleware(app: Page) -> None:
-    """Test that WebSocket communication works with custom middleware."""
-    button = get_button(app, "Increment")
-
+    # === Part 3: WebSocket communication with middleware ===
     # Multiple clicks verify WebSocket stream isn't broken by middleware
-    for i in range(3):
+    for i in range(2, 5):  # Counter is at 1, increment to 4
         button.click()
-        expect(app.get_by_text(f"Counter: {i + 1}", exact=True)).to_be_visible()
+        expect(app.get_by_text(f"Counter: {i}", exact=True)).to_be_visible()
 
-    expect(app.get_by_text("Counter: 3", exact=True)).to_be_visible()
+    expect(app.get_by_text("Counter: 4", exact=True)).to_be_visible()
