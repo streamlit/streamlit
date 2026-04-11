@@ -15,7 +15,7 @@
 # isort: skip_file
 # ruff: noqa: E402, A001
 
-from typing import TYPE_CHECKING
+from typing import cast as _cast
 
 """Streamlit.
 
@@ -106,12 +106,11 @@ from streamlit.elements.bottom import BottomContainerProxy as _BottomContainerPr
 
 # The internal _bottom_dg is used by both the public `bottom` and the deprecated `_bottom`
 _bottom_dg_internal: _DeltaGenerator = _dg_singleton._bottom_dg
-# Use DeltaGenerator type for static analysis so type checkers see all DeltaGenerator methods.
+# Use cast to DeltaGenerator for static analysis so type checkers see all DeltaGenerator methods.
 # At runtime, bottom is a BottomContainerProxy that validates the execution context.
-if TYPE_CHECKING:
-    bottom: _DeltaGenerator
-else:
-    bottom: _BottomContainerProxy = _BottomContainerProxy(_bottom_dg_internal)
+bottom: _DeltaGenerator = _cast(
+    "_DeltaGenerator", _BottomContainerProxy(_bottom_dg_internal)
+)
 
 # Deprecated: use `st.bottom` instead
 from streamlit.deprecation_util import deprecate_obj_name as _deprecate_obj_name
