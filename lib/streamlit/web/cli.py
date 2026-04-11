@@ -209,6 +209,8 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
     - The path to a local folder where "streamlit_app.py" can be found.
     - A URL pointing to a Python file. In this case Streamlit will download the
       file to a temporary file and run it.
+    - A Python module name (e.g., "mypackage.app"). Streamlit will resolve the
+      module to a file path and run it. This is useful for pip-installed apps.
 
     To pass command-line arguments to the script, add " -- " before them. For example:
 
@@ -241,14 +243,24 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
 
         if path.is_dir():
             path /= "streamlit_app.py"
+            _check_extension_or_raise(str(path))
+            if not path.exists():
+                raise click.BadParameter(f"File does not exist: {path}")
+            main_script_path = str(path)
+        elif _has_py_extension(str(path)):
+            # Target has .py extension - must exist as a file (no module fallback)
+            if not path.exists():
+                raise click.BadParameter(f"File does not exist: {path}")
+            main_script_path = str(path)
+        elif path.exists():
+            # Target exists as a file without .py extension - validate extension
+            _check_extension_or_raise(str(path))
+            main_script_path = str(path)
+        else:
+            # Target doesn't exist and has no .py extension - try module resolution
+            main_script_path = _resolve_module(target)
 
-        path_str = str(path)
-        _check_extension_or_raise(path_str)
-
-        if not path.exists():
-            raise click.BadParameter(f"File does not exist: {path}")
-
-        _main_run(path_str, args, flag_options=kwargs)
+        _main_run(main_script_path, args, flag_options=kwargs)
 
 
 def _check_extension_or_raise(path_str: str) -> None:
@@ -264,6 +276,75 @@ def _check_extension_or_raise(path_str: str) -> None:
             f"Streamlit requires raw Python (.py) files, not {extension}.\n"
             "For more information, please see https://docs.streamlit.io"
         )
+
+
+def _has_py_extension(path_str: str) -> bool:
+    """Check if a path has a Python file extension (.py or .py3)."""
+    _, extension = os.path.splitext(path_str)
+    return extension[1:] in ACCEPTED_FILE_EXTENSIONS
+
+
+def _resolve_module(module_name: str) -> str:
+    """Resolve a Python module name to a file path.
+
+    Uses importlib.util.find_spec to locate the module. If the module is a package,
+    looks for __main__.py first, then streamlit_app.py.
+
+    Parameters
+    ----------
+    module_name : str
+        The module name to resolve (e.g., "mypackage.app" or "mypackage").
+
+    Returns
+    -------
+    str
+        The resolved file path.
+
+    Raises
+    ------
+    click.BadParameter
+        If the module cannot be found or has no associated file.
+    """
+    import importlib.util
+
+    try:
+        spec = importlib.util.find_spec(module_name)
+    except ModuleNotFoundError as e:
+        raise click.BadParameter(str(e))
+    except ValueError as e:
+        # Invalid module name (e.g., empty string)
+        raise click.BadParameter(f"Invalid module name '{module_name}': {e}")
+
+    if spec is None:
+        raise click.BadParameter(f"No module named '{module_name}'")
+
+    # Check if module is a package (has submodule_search_locations)
+    # Packages need special handling to find __main__.py or streamlit_app.py
+    if spec.submodule_search_locations:
+        package_path = Path(spec.submodule_search_locations[0])
+
+        # First try __main__.py (mirrors python -m behavior)
+        main_file = package_path / "__main__.py"
+        if main_file.exists():
+            return str(main_file)
+
+        # Then try streamlit_app.py (Streamlit convention)
+        streamlit_app_file = package_path / "streamlit_app.py"
+        if streamlit_app_file.exists():
+            return str(streamlit_app_file)
+
+        raise click.BadParameter(
+            f"Module '{module_name}' is a package but has no __main__.py or "
+            f"streamlit_app.py. Create one of these files to run the package."
+        )
+
+    # Not a package - check if it has a file associated with it
+    if spec.origin is None or spec.origin in {"frozen", "built-in"}:
+        raise click.BadParameter(
+            f"Module '{module_name}' has no associated file (built-in or frozen module)"
+        )
+
+    return spec.origin
 
 
 def _get_command_line_as_string() -> str | None:
