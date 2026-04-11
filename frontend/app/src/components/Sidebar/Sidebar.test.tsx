@@ -193,9 +193,12 @@ describe("Sidebar Component", () => {
     it("has an accessible label on the collapse button", () => {
       renderSidebar({ isCollapsed: false })
 
+      // The collapse button is hidden with `visibility: hidden` until the
+      // user hovers over the sidebar header (see "Collapse Button Visibility"
+      // tests below), so we need `hidden: true` to query it for attributes.
       const collapseButton = within(
         screen.getByTestId("stSidebarCollapseButton")
-      ).getByRole("button")
+      ).getByRole("button", { hidden: true })
       expect(collapseButton).toHaveAttribute("aria-label", "Collapse sidebar")
     })
   })
