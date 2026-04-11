@@ -15,8 +15,6 @@
 # isort: skip_file
 # ruff: noqa: E402, A001
 
-from typing import cast as _cast
-
 """Streamlit.
 
 How to use Streamlit in 3 seconds:
@@ -63,6 +61,7 @@ _os.environ["MPLBACKEND"] = "Agg"
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
+from typing import cast as _cast
 
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
