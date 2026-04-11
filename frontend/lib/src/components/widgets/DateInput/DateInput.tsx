@@ -1070,7 +1070,16 @@ function MainDateInputField({
         }
       }}
       onFocus={e => {
-        ;(e.target as HTMLInputElement).select()
+        const el = e.target as HTMLInputElement
+        // Select all so typing replaces the existing date instead of appending.
+        el.select()
+        // Production e2e: Ark may repaint after focus; one microtask re-select is safe.
+        // Vitest (MODE=test): skip — async re-select runs between RTL keystrokes and corrupts input.
+        if (import.meta.env.PROD) {
+          queueMicrotask(() => {
+            el.select()
+          })
+        }
       }}
       onChange={e => {
         onTextChange(e.currentTarget.value)

@@ -28,6 +28,7 @@ import {
   memo,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -220,6 +221,11 @@ const Selectbox: FC<Props> = ({
   const [value, setValue] = useState<string | null>(propValue)
   const [inputValue, setInputValue] = useState(() => propValue ?? "")
   const [open, setOpen] = useState(false)
+  /** Mirrors `open` for value-change handlers (Base UI can fire in the same tick as transitions). */
+  const openRef = useRef(false)
+  useLayoutEffect(() => {
+    openRef.current = open
+  }, [open])
   const valueBeforeRemovalRef = useRef<string | null>(null)
   /** True until the first `onInputValueChange` after open is applied (Base UI may emit a spurious ""). */
   const skipRemovalSyncRef = useRef(false)
@@ -244,6 +250,25 @@ const Selectbox: FC<Props> = ({
       setInputValue(next ?? "")
     },
     [onChange]
+  )
+
+  /**
+   * Base UI clears `selectedValue` to null with reason `input-clear` whenever the text field
+   * becomes empty (including while filtering). Streamlit must keep the committed value until
+   * blur/selection/clear-button — otherwise partial edits like "male" → "mxyz" break.
+   */
+  const handleComboboxValueChange = useCallback(
+    (next: string | null, eventDetails?: { reason?: string }): void => {
+      if (
+        next === null &&
+        eventDetails?.reason === "input-clear" &&
+        openRef.current
+      ) {
+        return
+      }
+      handleValueChange(next)
+    },
+    [handleValueChange]
   )
 
   const opts = propOptions
@@ -493,8 +518,8 @@ const Selectbox: FC<Props> = ({
       <Combobox.Root
         open={open}
         value={value}
-        onValueChange={v => {
-          handleValueChange(v as string | null)
+        onValueChange={(v, eventDetails) => {
+          handleComboboxValueChange(v as string | null, eventDetails)
         }}
         inputValue={inputValue}
         onInputValueChange={handleInputValueChange}
@@ -631,21 +656,19 @@ const Selectbox: FC<Props> = ({
           </IconsContainer>
         </ControlContainer>
 
-        <Combobox.Portal keepMounted={false}>
-          <Combobox.Positioner
-            side="bottom"
-            align="start"
-            sideOffset={convertRemToPx(theme.spacing.twoXS)}
-            collisionBoundary={isInSidebar ? undefined : "clipping-ancestors"}
-          >
-            <PopupPanel
-              {...(open
-                ? { "data-testid": "stSelectboxDropdownPopup" as const }
-                : {})}
+        {open ? (
+          <Combobox.Portal keepMounted={false}>
+            <Combobox.Positioner
+              side="bottom"
+              align="start"
+              sideOffset={convertRemToPx(theme.spacing.twoXS)}
+              collisionBoundary={
+                isInSidebar ? undefined : "clipping-ancestors"
+              }
             >
-              <Combobox.List>
-                {open ? (
-                  displayRows.length === 0 ? (
+              <PopupPanel data-testid="stSelectboxDropdownPopup">
+                <Combobox.List>
+                  {displayRows.length === 0 ? (
                     <Combobox.Empty
                       data-testid="stSelectboxVirtualDropdown"
                       style={{
@@ -661,12 +684,12 @@ const Selectbox: FC<Props> = ({
                       selectboxVirtualRows={displayRows}
                       renderSelectboxRow={renderSelectboxRow}
                     />
-                  )
-                ) : null}
-              </Combobox.List>
-            </PopupPanel>
-          </Combobox.Positioner>
-        </Combobox.Portal>
+                  )}
+                </Combobox.List>
+              </PopupPanel>
+            </Combobox.Positioner>
+          </Combobox.Portal>
+        ) : null}
       </Combobox.Root>
     </div>
   )
