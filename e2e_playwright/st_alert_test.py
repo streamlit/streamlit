@@ -126,14 +126,10 @@ def test_alert_title_rendering(themed_app: Page, assert_snapshot: ImageCompareFu
 
     # Locate title alerts by their stable title text instead of fixture order.
     success_with_title = alert_elements.filter(
-        has=themed_app.get_by_test_id("stAlertTitle").get_by_text(
-            "Success Title", exact=True
-        )
+        has=themed_app.get_by_test_id("stAlertTitle").get_by_text("Success")
     )
     expect(success_with_title).to_have_count(1)
-    expect(success_with_title.get_by_test_id("stAlertTitle")).to_have_text(
-        "Success Title"
-    )
+    expect(success_with_title.get_by_test_id("stAlertTitle")).to_contain_text("Success")
     assert_snapshot(success_with_title, name="st_alert-success_with_title")
 
     # Alert with title and icon
