@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import StreamlitAPIException
@@ -66,7 +66,7 @@ class BottomContainerProxy:
                 "The bottom container is only available in the main app area."
             )
 
-    def __getattr__(self, name: str) -> object:
+    def __getattr__(self, name: str) -> Any:
         self._check_context()
         return getattr(self._bottom_dg, name)
 
