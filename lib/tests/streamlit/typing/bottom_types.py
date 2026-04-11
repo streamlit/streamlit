@@ -23,6 +23,8 @@ from typing_extensions import assert_type
 # Perform some "type checking testing"; mypy should flag any assignments that are
 # incorrect.
 if TYPE_CHECKING:
+    # NOTE: st.bottom is a module-level attribute, not a Mixin method, so we must
+    # import streamlit as st here rather than importing from a Mixin class directly.
     import streamlit as st
     from streamlit.delta_generator import DeltaGenerator
 

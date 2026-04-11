@@ -92,6 +92,8 @@ function containsChatInput(node: AppNode): boolean {
     return anchorHasChatInput || transientHasChatInput
   }
 
+  // Unknown AppNode subtypes are assumed to not contain a chat input.
+  // Update this function if a new node type is added that could contain one.
   return false
 }
 
