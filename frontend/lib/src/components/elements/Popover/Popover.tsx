@@ -213,12 +213,12 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       active.blur()
     }
 
-    // Defer hiding so native blur + React flush widget commits before the body becomes
-    // non-interactive (outside click can move focus before dismiss runs).
-    queueMicrotask(() => {
+    // Defer hiding to the next task so native blur + TextInput onBlur commit run before
+    // we mark the popover closed (microtasks can run before React finishes blur updates).
+    setTimeout(() => {
       setOpen(false)
       persistCloseState()
-    })
+    }, 0)
   }, [refs.floating, persistCloseState])
 
   handleCloseRef.current = handleClose
@@ -238,10 +238,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       ) {
         active.blur()
       }
-      queueMicrotask(() => {
+      setTimeout(() => {
         setOpen(false)
         persistCloseState()
-      })
+      }, 0)
       return
     }
 

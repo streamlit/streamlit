@@ -43,6 +43,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { flushSync } from "react-dom"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -237,17 +238,21 @@ const Selectbox: FC<Props> = ({
   const handleFocus = useCallback(
     (e: FocusEvent<HTMLInputElement>) => {
       focusedRef.current = true
-      setFocused(true)
       firstEditAfterFocusRef.current = true
       focusTimestampRef.current = Date.now()
       // Use parent prop so session_state / proto updates are reflected immediately
       // (local `value` can lag one interaction behind in edge cases).
       const text = propValueRef.current ?? ""
-      setInputValue(text)
-      setSearchFilter("")
-      if (!selectDisabled) {
-        setOpen(true)
-      }
+      // Flush so the controlled input shows the committed label before the next
+      // key event (Playwright/e2e can otherwise see inputValue "" and type "xyz").
+      flushSync(() => {
+        setFocused(true)
+        setInputValue(text)
+        setSearchFilter("")
+        if (!selectDisabled) {
+          setOpen(true)
+        }
+      })
       if (text.length > 0) {
         placeCaretAtEndAfterFocusRef.current = true
       }
