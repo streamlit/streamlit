@@ -62,13 +62,11 @@ def test_bottom_container_rendering(app: Page):
     expect(main_markdown.first).to_contain_text("Main content above")
 
 
-def test_bottom_container_snapshot(
-    themed_app: Page, assert_snapshot: ImageCompareFunction
-):
+def test_bottom_container_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
     """Verify the bottom container renders correctly visually."""
-    themed_app.set_viewport_size({"width": 750, "height": 600})
+    app.set_viewport_size({"width": 750, "height": 600})
 
-    bottom_container = themed_app.get_by_test_id("stBottom")
+    bottom_container = app.get_by_test_id("stBottom")
     expect(bottom_container).to_be_visible()
 
     assert_snapshot(bottom_container, name="st_bottom-container")
