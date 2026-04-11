@@ -455,11 +455,13 @@ const Selectbox: FC<Props> = ({
 
       if (e.key === "Backspace" && !inputReadOnly) {
         const v = value
-        // Only intercept when the field is collapsed (!focusedRef). When focused, Backspace
-        // edits the text one character at a time (e2e dismiss / partial edit).
+        // Only when the combobox is not actually focused in the DOM (e.g. programmatic
+        // keydown in tests). If the input is focused, Backspace must edit the label
+        // incrementally — `focusedRef` can lag one frame behind `focus` (e2e).
+        const inputIsFocused = document.activeElement === inputRef.current
         if (
           v !== null &&
-          !focusedRef.current &&
+          !inputIsFocused &&
           (inputValue === "" || inputValue === v)
         ) {
           e.preventDefault()

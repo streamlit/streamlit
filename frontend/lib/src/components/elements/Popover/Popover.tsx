@@ -213,12 +213,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       active.blur()
     }
 
-    // Defer hiding to the next task so native blur + TextInput onBlur commit run before
-    // we mark the popover closed (microtasks can run before React finishes blur updates).
-    setTimeout(() => {
-      setOpen(false)
-      persistCloseState()
-    }, 0)
+    // Close in the same task as blur() so `open` stays true until after native blur runs.
+    // Deferring with setTimeout(0) could hide the body (visibility) before Base Web inputs
+    // finish onBlur, dropping the last committed widget value (e2e popover + text_input).
+    setOpen(false)
+    persistCloseState()
   }, [refs.floating, persistCloseState])
 
   handleCloseRef.current = handleClose
@@ -238,10 +237,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       ) {
         active.blur()
       }
-      setTimeout(() => {
-        setOpen(false)
-        persistCloseState()
-      }, 0)
+      setOpen(false)
+      persistCloseState()
       return
     }
 
@@ -336,7 +333,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           height: 0,
           overflow: "hidden",
         }}
-        aria-hidden
       />
       {/* Always mount body (BaseWeb renderAll): keep widgets in the tree on close so blur commits. */}
       <FloatingPortal root={portalRootRef}>
@@ -344,7 +340,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           context={context}
           modal={false}
           initialFocus={-1}
-          returnFocus
+          returnFocus={false}
           guards={false}
           disabled={!open}
         >
