@@ -122,6 +122,8 @@ const Selectbox: FC<Props> = ({
   const firstEditAfterFocusRef = useRef(true)
   /** After focus, move caret to end once (avoids browser select-all wiping partial edits). */
   const placeCaretAtEndAfterFocusRef = useRef(false)
+  /** Tracks focus transitions for layout-phase caret + input sync (e2e / fast input). */
+  const wasFocusedRef = useRef(false)
 
   const [value, setValue] = useState<string | null>(propValue ?? null)
   committedValueRef.current = value
@@ -273,16 +275,40 @@ const Selectbox: FC<Props> = ({
   )
 
   useLayoutEffect(() => {
-    if (!placeCaretAtEndAfterFocusRef.current || !focused) {
+    const gainedFocus = focused && !wasFocusedRef.current
+    wasFocusedRef.current = focused
+
+    if (!focused || selectDisabled || inputReadOnly) {
+      if (!focused) {
+        placeCaretAtEndAfterFocusRef.current = false
+      }
+      return
+    }
+
+    const el = inputRef.current
+    if (!el) {
+      return
+    }
+
+    // On focus entry, ensure React state matches the committed label so the first
+    // Backspace edits the tail (not an empty/fully-selected field from stale "").
+    if (gainedFocus) {
+      const label = committedValueRef.current ?? ""
+      if (label !== "" && inputValue !== label) {
+        setInputValue(label)
+        setSearchFilter("")
+        placeCaretAtEndAfterFocusRef.current = true
+        return
+      }
+    }
+
+    if (!placeCaretAtEndAfterFocusRef.current) {
       return
     }
     placeCaretAtEndAfterFocusRef.current = false
-    const el = inputRef.current
-    if (!el || selectDisabled || inputReadOnly) {
-      return
-    }
+
     const len = el.value.length
-    if (len > 0) {
+    if (len > 0 && document.activeElement === el) {
       try {
         el.setSelectionRange(len, len)
       } catch {
@@ -357,7 +383,8 @@ const Selectbox: FC<Props> = ({
         e.stopPropagation()
         // index=None selectboxes are clearable: Escape clears while the menu is open.
         // index set (non-clearable): Escape closes and restores committed value (no onChange).
-        const committed = propValueRef.current
+        // Use committedValueRef so session_state / widget value wins over a stale prop ref.
+        const committed = committedValueRef.current
         if (clearable && committed !== null && committed !== "") {
           commitSelection(null)
         } else {
@@ -393,7 +420,7 @@ const Selectbox: FC<Props> = ({
 
       if (e.key === "Escape") {
         e.preventDefault()
-        const committed = propValueRef.current
+        const committed = committedValueRef.current
         if (open) {
           // Usually handled in capture on document (focus may be on the listbox). If that
           // path missed the event target, close/restore here so session_state + clearable

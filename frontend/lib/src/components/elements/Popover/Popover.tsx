@@ -165,27 +165,22 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
-  // Handle popover toggle with optimistic updates
-  const handleToggle = useCallback((): void => {
-    const newOpen = !open
+  const handleCloseRef = useRef<() => void>(() => {})
+  /** Portal into this node so `stPopoverBody` stays under `stPopover` (e2e + query scoping). */
+  const portalRootRef = useRef<HTMLDivElement>(null)
 
-    setOpen(newOpen)
-
+  const persistCloseState = useCallback((): void => {
     if (widgetId) {
       widgetMgr?.setBoolValue(
         { id: widgetId },
-        newOpen,
+        false,
         { fromUi: true },
         fragmentId
       )
     } else if (isPassivelyKeyed) {
-      setStoredOpen(newOpen)
+      setStoredOpen(false)
     }
-  }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
-
-  const handleCloseRef = useRef<() => void>(() => {})
-  /** Portal into this node so `stPopoverBody` stays under `stPopover` (e2e + query scoping). */
-  const portalRootRef = useRef<HTMLDivElement>(null)
+  }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
   const { refs, floatingStyles, context } = useFloating({
     open,
@@ -218,28 +213,60 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       active.blur()
     }
 
-    setOpen(false)
+    // Defer hiding so native blur + React flush widget commits before the body becomes
+    // non-interactive (outside click can move focus before dismiss runs).
+    queueMicrotask(() => {
+      setOpen(false)
+      persistCloseState()
+    })
+  }, [refs.floating, persistCloseState])
+
+  handleCloseRef.current = handleClose
+
+  // Handle popover toggle with optimistic updates (after useFloating so refs exist).
+  const handleToggle = useCallback((): void => {
+    const newOpen = !open
+
+    if (!newOpen) {
+      const floatEl = refs.floating.current
+      const active = document.activeElement
+      if (
+        floatEl &&
+        active &&
+        floatEl.contains(active) &&
+        active instanceof HTMLElement
+      ) {
+        active.blur()
+      }
+      queueMicrotask(() => {
+        setOpen(false)
+        persistCloseState()
+      })
+      return
+    }
+
+    setOpen(true)
 
     if (widgetId) {
       widgetMgr?.setBoolValue(
         { id: widgetId },
-        false,
+        true,
         { fromUi: true },
         fragmentId
       )
     } else if (isPassivelyKeyed) {
-      setStoredOpen(false)
+      setStoredOpen(true)
     }
   }, [
-    refs.floating,
+    open,
     widgetMgr,
     widgetId,
     fragmentId,
     isPassivelyKeyed,
     setStoredOpen,
+    refs.floating,
+    persistCloseState,
   ])
-
-  handleCloseRef.current = handleClose
 
   const dismiss = useDismiss(context, {
     outsidePress: true,
