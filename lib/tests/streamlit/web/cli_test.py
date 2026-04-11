@@ -143,8 +143,9 @@ class CliTest(unittest.TestCase):
 
         assert result.exit_code != 0
         # With module resolution, non-py files that don't exist trigger module lookup
-        # which fails with "No module named" error
+        # which fails with "No module named" error and a helpful hint
         assert "No module named" in result.output
+        assert "If you meant to specify a file" in result.output
 
     @tempdir()
     def test_run_valid_url(self, temp_dir):
@@ -695,26 +696,8 @@ class CliTest(unittest.TestCase):
         assert result.exit_code == 0
 
 
-class ModuleResolutionTest(unittest.TestCase):
+class ModuleResolutionTest(CliTest):
     """Tests for Python module resolution in streamlit run."""
-
-    def setUp(self):
-        Credentials._singleton = None
-        cli.name = "streamlit"
-        self.runner = CliRunner()
-
-        self.patches = [
-            patch.object(config._on_config_parsed, "send"),
-            patch.object(streamlit.web.bootstrap, "load_config_options"),
-        ]
-
-        for p in self.patches:
-            p.start()
-
-    def tearDown(self):
-        Credentials._singleton = None
-        for p in self.patches:
-            p.stop()
 
     @parameterized.expand(
         [
@@ -761,6 +744,13 @@ class ModuleResolutionTest(unittest.TestCase):
         """Test _resolve_module raises error for invalid module names."""
         with pytest.raises(click.exceptions.BadParameter):
             cli._resolve_module("")
+
+    def test_resolve_module_spec_none(self):
+        """Test _resolve_module raises error when find_spec returns None."""
+        with patch("importlib.util.find_spec", return_value=None):
+            with pytest.raises(click.exceptions.BadParameter) as exc_info:
+                cli._resolve_module("some_module")
+            assert "No module named" in str(exc_info.value)
 
     def test_run_module_resolution_fallback(self):
         """Test that module resolution is used when target doesn't exist as file."""

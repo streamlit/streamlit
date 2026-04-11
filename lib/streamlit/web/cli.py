@@ -210,7 +210,9 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
     - A URL pointing to a Python file. In this case Streamlit will download the
       file to a temporary file and run it.
     - A Python module name (e.g., "mypackage.app"). Streamlit will resolve the
-      module to a file path and run it. This is useful for pip-installed apps.
+      module to its file path and run that file as a script. This is useful for
+      pip-installed apps, but note that relative imports from within the module
+      will not work (unlike ``python -m``).
 
     To pass command-line arguments to the script, add " -- " before them. For example:
 
@@ -310,10 +312,24 @@ def _resolve_module(module_name: str) -> str:
     """
     import importlib.util
 
+    # Helper to generate a hint for file-like module names
+    def _get_file_hint(name: str) -> str:
+        """Return a hint if the module name looks like a file path."""
+        if "." in name and not name.endswith((".py", ".py3")):
+            _, ext = os.path.splitext(name)
+            if ext and ext[1:].isalnum() and len(ext) <= 5:
+                # Looks like it might be a file with an extension
+                return (
+                    " If you meant to specify a file, check that the path exists "
+                    "and has a .py extension."
+                )
+        return ""
+
     try:
         spec = importlib.util.find_spec(module_name)
     except ModuleNotFoundError as e:
-        raise click.BadParameter(str(e))
+        hint = _get_file_hint(module_name)
+        raise click.BadParameter(f"{e}{hint}")
     except (ValueError, ImportError) as e:
         # ValueError: Invalid module name (e.g., empty string)
         # ImportError: Relative module name (starts with '.')
@@ -324,7 +340,8 @@ def _resolve_module(module_name: str) -> str:
         raise click.BadParameter(f"Error resolving module '{module_name}': {e}")
 
     if spec is None:
-        raise click.BadParameter(f"No module named '{module_name}'")
+        hint = _get_file_hint(module_name)
+        raise click.BadParameter(f"No module named '{module_name}'{hint}")
 
     # Check if module is a package (has submodule_search_locations)
     # Packages need special handling to find __main__.py or streamlit_app.py
