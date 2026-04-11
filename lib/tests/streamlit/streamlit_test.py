@@ -56,6 +56,7 @@ def get_version() -> str | None:
 # Commands that don't result in rendered elements in the frontend
 NON_ELEMENT_COMMANDS: set[str] = {
     "Page",
+    "bottom",
     "cache",
     "cache_data",
     "cache_resource",

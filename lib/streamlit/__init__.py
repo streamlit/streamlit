@@ -99,7 +99,19 @@ _dg_singleton = _DeltaGeneratorSingleton(
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
 _event: _DeltaGenerator = _dg_singleton._event_dg
-_bottom: _DeltaGenerator = _dg_singleton._bottom_dg
+
+from streamlit.elements.bottom import BottomContainerProxy as _BottomContainerProxy
+
+# The internal _bottom_dg is used by both the public `bottom` and the deprecated `_bottom`
+_bottom_dg_internal: _DeltaGenerator = _dg_singleton._bottom_dg
+bottom: _BottomContainerProxy = _BottomContainerProxy(_bottom_dg_internal)
+
+# Deprecated: use `st.bottom` instead
+from streamlit.deprecation_util import deprecate_obj_name as _deprecate_obj_name
+
+_bottom: _DeltaGenerator = _deprecate_obj_name(
+    _bottom_dg_internal, "_bottom", "bottom", "2026-07-01"
+)
 
 
 from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator

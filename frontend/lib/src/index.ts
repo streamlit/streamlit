@@ -18,7 +18,13 @@
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export type { LibConfig } from "@streamlit/connection"
-export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
+export {
+  AppRoot,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+  type AppNode,
+} from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
