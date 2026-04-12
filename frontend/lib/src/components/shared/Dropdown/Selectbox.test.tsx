@@ -156,7 +156,9 @@ describe("Selectbox widget", () => {
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
 
-    await user.type(screen.getByRole("combobox"), "1")
+    const selectbox = screen.getByRole("combobox")
+    await user.clear(selectbox)
+    await user.type(selectbox, "1")
     expect(screen.getByText("No results")).toBeInTheDocument()
   })
 
@@ -176,6 +178,36 @@ describe("Selectbox widget", () => {
     options = screen.getAllByRole("option")
     expect(options).toHaveLength(1)
     expect(options[0]).toHaveTextContent("b")
+  })
+
+  it("commits selection with Enter when starting from empty value (e2e parity)", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      value: null,
+      options: ["male", "female"],
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{End}")
+    await user.type(input, "male")
+    await user.keyboard("{Enter}")
+    expect(currProps.onChange).toHaveBeenCalledWith("male")
+  })
+
+  it("supports suffix backspace then typing after End (e2e dismiss_change)", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      value: "male",
+      options: ["male", "female", "mxyz"],
+    })
+    render(<Selectbox {...currProps} />)
+    const input = screen.getByRole("combobox")
+    await user.click(input)
+    await user.keyboard("{End}")
+    await user.keyboard("{Backspace}{Backspace}{Backspace}")
+    await user.keyboard("xyz")
+    expect(input).toHaveValue("mxyz")
   })
 
   it("predictably produces case sensitive matches", async () => {
@@ -238,7 +270,7 @@ describe("Selectbox widget", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+  it("keeps all options visible and blocks typing when filterMode is none", async () => {
     const user = userEvent.setup()
     const currProps = getProps({
       options: ["yes", "no", "maybe"],
@@ -248,12 +280,13 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...currProps} />)
     const selectboxInput = screen.getByRole("combobox")
 
-    expect(selectboxInput).toHaveAttribute("readonly")
+    expect(selectboxInput).not.toHaveAttribute("readonly")
 
     await user.click(selectboxInput)
     expect(screen.queryAllByRole("option")).toHaveLength(3)
 
     await user.type(selectboxInput, "no")
+    expect(selectboxInput).toHaveValue("")
     expect(screen.queryAllByRole("option")).toHaveLength(3)
   })
 

@@ -20,14 +20,15 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
 
 import { mergeProps, useButton, useOverlayTrigger } from "react-aria"
 import {
-  Dialog,
   OverlayTriggerStateContext,
   Popover as RACPopover,
   Provider,
@@ -64,10 +65,20 @@ import {
   StyledPopoverLabelContainer,
 } from "./styled-components"
 
+/** Dialog surface without RAC `Dialog` / `useDialog` so we avoid `useOverlayFocusContain` (full-tree focus trap + inert side effects). */
+const PopoverDialogSurface = styled.section({
+  margin: 0,
+  padding: 0,
+  outline: "none",
+})
+
 const StreamlitPopoverBody = styled(RACPopover, {
   shouldForwardProp: prop => prop !== "$minWidth",
 })<{ $minWidth: string }>(({ theme, $minWidth }) => ({
   ...getPopoverContainerStyle(theme),
+  // Portaled popover must sit above the sidebar (z-index ~ header); otherwise
+  // stSidebarContent intercepts pointer events (e2e: popover width/columns, dataframe hover).
+  zIndex: theme.zIndices.toast,
 
   borderTopLeftRadius: theme.radii.xl,
   borderTopRightRadius: theme.radii.xl,
@@ -106,7 +117,7 @@ export interface PopoverProps {
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   element,
-  empty,
+  empty: _empty,
   children,
   stretchWidth,
   widgetMgr,
@@ -160,6 +171,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     isOpen: open,
     onOpenChange: handleOpenChange,
   })
+  const overlayStateRef = useRef(overlayState)
+  overlayStateRef.current = overlayState
 
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.
@@ -201,6 +214,48 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     ? `${Math.max(calculatedWidth, 160)}px`
     : theme.sizes.minPopupWidth
 
+  const dialogSurfaceRef = useRef<HTMLElement | null>(null)
+  const streamlitPopoverRef = useRef<HTMLDivElement | null>(null)
+
+  // React Aria's usePopover sets isDismissable=false when isNonModal, so RAC does not
+  // attach outside-dismiss. useInteractOutside can fire during the same gesture that
+  // opens the popover; register a capture listener only after open so the opening click
+  // is never observed as "outside".
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    const onDocClickCapture = (e: MouseEvent): void => {
+      const t = e.target as Node | null
+      if (!t) {
+        overlayStateRef.current.close()
+        return
+      }
+      if (triggerDomRef.current?.contains(t)) {
+        return
+      }
+      if (streamlitPopoverRef.current?.contains(t)) {
+        return
+      }
+      overlayStateRef.current.close()
+    }
+    document.addEventListener("click", onDocClickCapture, true)
+    return () => document.removeEventListener("click", onDocClickCapture, true)
+  }, [open])
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return
+    }
+    const surface = dialogSurfaceRef.current
+    if (!surface) {
+      return
+    }
+    if (!surface.contains(document.activeElement)) {
+      surface.focus()
+    }
+  }, [open])
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <Provider values={[[OverlayTriggerStateContext, overlayState]]}>
@@ -212,7 +267,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                 "data-testid": "stPopoverButton",
                 kind,
                 size: BaseButtonSize.SMALL,
-                disabled: (empty && !widgetId) || element.disabled,
+                // Do not gate on `empty`: block-tree `isEmpty` can be true briefly or for
+                // nested layouts while body content exists; disabling hides the popover UX
+                // and breaks e2e (e.g. width=500px popover in a fixed-height container).
+                disabled: element.disabled,
                 containerWidth: true,
               })}
               ref={triggerDomRef}
@@ -239,21 +297,41 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButtonTooltip>
         </div>
         <StreamlitPopoverBody
+          ref={streamlitPopoverRef}
           $minWidth={popoverMinWidth}
           triggerRef={triggerDomRef}
           placement="bottom start"
           offset={convertRemToPx(theme.spacing.twoXS)}
           shouldFlip
+          isNonModal={true}
+          shouldCloseOnInteractOutside={target => {
+            const t = triggerDomRef.current
+            if (t && (t === target || t.contains(target as Node))) {
+              // Let the trigger's toggle handle press; otherwise outside-dismiss runs first
+              // and toggle re-opens (last onOpenChange(true)).
+              return false
+            }
+            return true
+          }}
           containerPadding={isInSidebar ? 0 : 12}
-          data-testid="stPopoverBody"
         >
-          <Dialog
-            id={overlayProps.id}
-            aria-labelledby={triggerLabelId}
-            style={{ margin: 0, padding: 0, outline: "none" }}
-          >
-            {children}
-          </Dialog>
+          <div data-testid="stPopoverBody">
+            <PopoverDialogSurface
+              ref={dialogSurfaceRef}
+              id={overlayProps.id}
+              role="dialog"
+              tabIndex={-1}
+              aria-labelledby={triggerLabelId}
+              onKeyDown={e => {
+                if (e.key === "Escape") {
+                  e.stopPropagation()
+                  overlayState.close()
+                }
+              }}
+            >
+              {children}
+            </PopoverDialogSurface>
+          </div>
         </StreamlitPopoverBody>
       </Provider>
     </Box>

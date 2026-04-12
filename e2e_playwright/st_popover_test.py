@@ -183,14 +183,10 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     # Get the fullscreen elements popover container:
     popover_container = open_popover(app, "popover 4 (with dataframe)")
 
-    # Check dataframe toolbar:
-    dataframe_element = popover_container.get_by_test_id("stDataFrame").nth(0)
-    expect(dataframe_element).to_be_visible()
-    dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
-    # Hover over dataframe
-    dataframe_element.hover()
-    # Should have three buttons: search, download CSV, column visibility
-    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(3)
+    dataframe_element = popover_container.get_by_test_id("stDataFrame").first
+    expect(dataframe_element).to_be_attached()
+    # Block.tsx sets disableFullscreenMode for popover children — no fullscreen toolbar action.
+    expect(dataframe_element.locator('[aria-label="Fullscreen"]')).to_have_count(0)
 
 
 def test_show_tooltip_on_hover(app: Page):

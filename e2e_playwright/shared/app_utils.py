@@ -227,6 +227,21 @@ def get_selectbox(locator: Locator | Page, label: str | re.Pattern[str]) -> Loca
     return element
 
 
+def get_visible_selectbox_dropdown(page: Page) -> Locator:
+    """Return the open ComboBox list container.
+
+    React Aria CollectionBuilder may duplicate list markup; the visible overlay is marked
+    with ``data-dropdown-open`` from ``SelectboxDropdownContainer``. Prefer the instance
+    that actually rendered ``li`` items (hidden clones often match the wrapper only).
+    """
+    # React sets boolean data attributes as presence / empty string; match any defined value.
+    outer = page.locator(
+        '[data-testid="stSelectboxVirtualDropdown"][data-dropdown-open]'
+    )
+    # Prefer list items that expose role=option (ul/li ListBox); hidden RAC clones may lack them.
+    return outer.filter(has=page.get_by_role("option")).last
+
+
 def select_selectbox_option(
     locator: Locator | Page,
     label: str | re.Pattern[str],
@@ -254,22 +269,24 @@ def select_selectbox_option(
     # Type to filter the dropdown (handles virtualized lists where options
     # may not be rendered until scrolled into view)
     selectbox_input = selectbox.locator("input")
+    # Open by clicking the input (menuTrigger=input); focus alone does not open the list.
+    selectbox_input.scroll_into_view_if_needed()
     selectbox_input.click()
 
-    # Wait for dropdown to be visible before typing
-    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    # Wait for dropdown to be visible before typing.
+    dropdown = get_visible_selectbox_dropdown(page)
     expect(dropdown).to_be_visible()
 
     selectbox_input.fill(option)
 
     # Select the option by role from the filtered virtual dropdown
-    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    dropdown = get_visible_selectbox_dropdown(page)
     dropdown.get_by_role("option", name=option, exact=True).click()
 
     wait_for_app_run(page)
 
-    # Verify the selection was applied
-    expect(selectbox).to_contain_text(option)
+    # Verify the selection was applied (React Aria value lives in the input, not innerText).
+    expect(selectbox.locator("input").first).to_have_value(option)
 
 
 def get_multiselect(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -531,9 +548,17 @@ def open_popover(locator: Locator | Page, label: str | re.Pattern[str]) -> Locat
     Locator
         The popover container.
     """
-    get_popover(locator, label).get_by_role("button").first.click()
-    popover_container = locator.get_by_test_id("stPopoverBody")
-    expect(popover_container).to_be_visible()
+    page: Page = locator if isinstance(locator, Page) else locator.page
+    pop = get_popover(locator, label)
+    # BaseButtonTooltip renders the trigger twice (StyledTooltipNormal + StyledTooltipMobile).
+    # On desktop viewports the first instance is visible; the second is display:none — using
+    # .last breaks scroll_into_view / click for popovers with help=.
+    trigger = pop.get_by_test_id("stPopoverButton").first
+    trigger.scroll_into_view_if_needed()
+    trigger.click()
+    popover_container = page.get_by_test_id("stPopoverBody")
+    # Lazy popovers (on_change="rerun") only mount the body after the script finishes.
+    expect(popover_container).to_be_visible(timeout=20_000)
     return popover_container
 
 

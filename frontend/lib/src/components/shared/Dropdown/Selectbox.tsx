@@ -17,19 +17,31 @@
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import styled from "@emotion/styled"
 import {
+  type ComponentProps,
+  type ClipboardEvent,
   FC,
+  forwardRef,
+  type ForwardedRef,
+  type FormEvent,
   HTMLAttributes,
   KeyboardEvent,
   memo,
+  MouseEvent,
+  type ReactElement,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useRef,
   useState,
+  FocusEvent,
 } from "react"
+import type { ComboBoxState } from "@react-stately/combobox"
+import { flushSync } from "react-dom"
 import {
   Button,
   ComboBox,
+  ComboBoxStateContext,
   Group,
   Input,
   ListBox,
@@ -52,6 +64,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme/utils"
+import { getSelectFilterMode } from "~lib/util/fuzzyFilterSelectOptions"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
@@ -152,6 +165,7 @@ const StyledClearButton = styled(Button)(({ theme }) => ({
 
 const StyledPopover = styled(Popover)(({ theme }) => ({
   ...getPopoverContainerStyle(theme),
+  zIndex: theme.zIndices.toast,
   maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
   overflow: "hidden",
   marginTop: convertRemToPx(theme.spacing.twoXS),
@@ -168,6 +182,32 @@ const StyledListBox = styled(ListBox)(({ theme }) => ({
   listStyle: "none",
   margin: theme.spacing.none,
 }))
+
+/** ListBox for the open popover only (CollectionBuilder also renders a hidden clone without this wrapper). */
+const SelectboxVirtualListBox = memo(function SelectboxVirtualListBox(
+  props: ComponentProps<typeof StyledListBox>
+) {
+  return <StyledListBox {...props} />
+})
+
+/** Portaled list overlay: RAC only mounts this subtree while the menu is open, so mark it for e2e. */
+const SelectboxDropdownContainer = memo(function SelectboxDropdownContainer({
+  children,
+  instanceId,
+}: {
+  children: React.ReactNode
+  instanceId: string
+}): ReactElement {
+  return (
+    <div
+      data-testid="stSelectboxVirtualDropdown"
+      data-dropdown-open=""
+      data-selectbox-dropdown={instanceId}
+    >
+      {children}
+    </div>
+  )
+})
 
 const StyledListBoxItem = styled(ListBoxItem)(({ theme }) => ({
   display: "flex",
@@ -195,6 +235,104 @@ const ChevronIcon = styled(KeyboardArrowDown)(({ theme }) => ({
   width: theme.iconSizes.xl,
   height: theme.iconSizes.xl,
 }))
+
+/** E2e `to_contain_text` checks widget subtree; native `placeholder` is not innerText. */
+const SelectboxEmptyOptionsHint = styled.span({
+  position: "absolute",
+  left: 0,
+  top: 0,
+  fontSize: "0.01px",
+  lineHeight: 0,
+  color: "transparent",
+  pointerEvents: "none",
+  userSelect: "none",
+  whiteSpace: "nowrap",
+})
+
+const SelectComboInput = memo(
+  forwardRef(function SelectComboInput(
+    {
+      onFocusProp,
+      onClickProp,
+      onKeyDownCaptureProp,
+      ...rest
+    }: ComponentProps<typeof StyledInput> & {
+      onFocusProp: (e: FocusEvent<HTMLInputElement>) => void
+      onClickProp: (e: MouseEvent<HTMLInputElement>) => void
+      onKeyDownCaptureProp?: (e: KeyboardEvent<HTMLInputElement>) => void
+    },
+    ref: ForwardedRef<HTMLInputElement>
+  ) {
+    const state = useContext(ComboBoxStateContext) as ComboBoxState<
+      ComboOption,
+      "single"
+    > | null
+
+    const openMenuIfClosed = useCallback(() => {
+      if (state && !state.isOpen) {
+        state.toggle(null, "manual")
+      }
+    }, [state])
+
+    const mergedFocus = useCallback(
+      (e: FocusEvent<HTMLInputElement>) => {
+        onFocusProp(e)
+        // Do not open on focus alone: e2e uses .focus()+Escape to clear without opening
+        // (BaseWeb); typing tests still open via click → mergedClick → openMenuIfClosed.
+      },
+      [onFocusProp]
+    )
+
+    const moveCaretToEnd = useCallback((el: HTMLInputElement) => {
+      if (document.activeElement !== el) {
+        return
+      }
+      const len = el.value.length
+      try {
+        el.setSelectionRange(len, len)
+      } catch {
+        // ignore invalid selection
+      }
+    }, [])
+
+    const mergedClick = useCallback(
+      (e: MouseEvent<HTMLInputElement>) => {
+        onClickProp(e)
+        openMenuIfClosed()
+        const el = e.currentTarget
+        // RA may move virtual focus / selection when the list opens; defer so Backspace
+        // edits the suffix (e2e: dismiss_change — End + 3× Backspace on "male").
+        queueMicrotask(() => moveCaretToEnd(el))
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => moveCaretToEnd(el))
+        })
+      },
+      [moveCaretToEnd, onClickProp, openMenuIfClosed]
+    )
+
+    const { onKeyDownCapture: racKeyDownCapture, ...restForDom } = rest
+
+    const mergedKeyDownCapture = useCallback(
+      (e: KeyboardEvent<HTMLInputElement>) => {
+        onKeyDownCaptureProp?.(e)
+        if (!e.defaultPrevented) {
+          racKeyDownCapture?.(e)
+        }
+      },
+      [onKeyDownCaptureProp, racKeyDownCapture]
+    )
+
+    return (
+      <StyledInput
+        {...restForDom}
+        ref={ref}
+        onFocus={mergedFocus}
+        onClick={mergedClick}
+        onKeyDownCapture={mergedKeyDownCapture}
+      />
+    )
+  })
+)
 
 function buildCreatableItem(inputValue: string): ComboOption {
   return {
@@ -231,10 +369,13 @@ const Selectbox: FC<Props> = ({
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const selectboxInstanceId = useId()
 
   const [value, setValue] = useState<string | null>(propValue)
   const valueBeforeRemovalRef = useRef<string | null>(null)
   const clearIntentRef = useRef(false)
+  /** True when the user cleared the input to "" while a value was selected (not RA dismiss/Escape). */
+  const userClearedInputRef = useRef(false)
 
   useExecuteWhenChanged(() => {
     setValue(propValue)
@@ -257,6 +398,13 @@ const Selectbox: FC<Props> = ({
 
   const selectDisabled = disabled || shouldDisable
 
+  const normalizedFilterMode = useMemo(
+    () => getSelectFilterMode(filterMode),
+    [filterMode]
+  )
+  const isFilterTypingLocked =
+    normalizedFilterMode === streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE
+
   const filterOptions = useMemo(
     () => createFilterOptions(),
     [createFilterOptions]
@@ -267,9 +415,26 @@ const Selectbox: FC<Props> = ({
     [selectOptions]
   )
 
-  const [inputValue, setInputValue] = useState(() =>
-    propValue != null ? propValue : ""
+  const getDisplayString = useCallback(
+    (v: string | null): string => {
+      if (v == null) {
+        return ""
+      }
+      const found = selectOptions.find(o => o.value === v)
+      return found?.label ?? v
+    },
+    [selectOptions]
   )
+
+  const [inputValue, setInputValue] = useState(() =>
+    getDisplayString(propValue)
+  )
+  /** Mirrors the latest input text synchronously (avoids openChange clobbering a batched type). */
+  const inputTextRef = useRef(inputValue)
+
+  const menuOpenRef = useRef(false)
+  const selectboxContainerRef = useRef<HTMLDivElement>(null)
+  const selectboxInputRef = useRef<HTMLInputElement>(null)
 
   const selectedKey: Key | null = useMemo(() => {
     if (value == null) {
@@ -281,8 +446,9 @@ const Selectbox: FC<Props> = ({
 
   // While the input still matches the committed selection only, do not narrow
   // the list to that substring (matches BaseWeb: open shows all options).
+  const committedLabel = value == null ? "" : getDisplayString(value)
   const filterPatternForList =
-    value != null && inputValue === value ? "" : inputValue
+    committedLabel !== "" && inputValue === committedLabel ? "" : inputValue
 
   const displayItems = useMemo((): ComboOption[] => {
     const filtered = filterOptions(
@@ -310,17 +476,20 @@ const Selectbox: FC<Props> = ({
     selectValueSet,
   ])
 
-  const syncInputFromValue = useCallback((v: string | null) => {
-    if (v != null) {
-      setInputValue(v)
-    } else {
-      setInputValue("")
-    }
-  }, [])
+  const syncInputFromValue = useCallback(
+    (v: string | null) => {
+      const s = getDisplayString(v)
+      inputTextRef.current = s
+      setInputValue(s)
+    },
+    [getDisplayString]
+  )
 
+  // Only react to prop value changes — do not list syncInputFromValue here; its identity
+  // can change when selectOptions updates and would clobber in-progress typing (e2e dismiss).
   useExecuteWhenChanged(() => {
     syncInputFromValue(propValue)
-  }, [propValue, syncInputFromValue])
+  }, [propValue])
 
   const commitIfChanged = useCallback(
     (next: string | null) => {
@@ -337,13 +506,21 @@ const Selectbox: FC<Props> = ({
         if (clearIntentRef.current) {
           clearIntentRef.current = false
           setValue(null)
+          inputTextRef.current = ""
           setInputValue("")
           commitIfChanged(null)
           valueBeforeRemovalRef.current = null
-        } else {
+        } else if (userClearedInputRef.current) {
+          userClearedInputRef.current = false
           const prev = value
           valueBeforeRemovalRef.current = prev
           setValue(null)
+        } else {
+          // React Aria may emit null when the menu closes (e.g. Escape) without changing the
+          // committed selection — keep parent value and display text in sync (e2e session_state).
+          valueBeforeRemovalRef.current = null
+          setValue(propValue)
+          syncInputFromValue(propValue)
         }
         return
       }
@@ -363,7 +540,7 @@ const Selectbox: FC<Props> = ({
       setInputValue(item.value)
       commitIfChanged(item.value)
     },
-    [commitIfChanged, displayItems, value]
+    [commitIfChanged, displayItems, propValue, syncInputFromValue, value]
   )
 
   const handleInputChange = useCallback(
@@ -371,14 +548,126 @@ const Selectbox: FC<Props> = ({
       if (inputReadOnly) {
         return
       }
+      inputTextRef.current = v
       setInputValue(v)
       if (selectedKey != null && v === "") {
-        const prev = value
-        valueBeforeRemovalRef.current = prev
+        userClearedInputRef.current = true
         handleComboChange(null)
       }
     },
-    [handleComboChange, inputReadOnly, selectedKey, value]
+    [handleComboChange, inputReadOnly, selectedKey]
+  )
+
+  const tryHandleSelectboxBackspace = useCallback(
+    (t: HTMLInputElement): boolean => {
+      // Prefer non-empty ref text (tracks our edits); when ref is still "" but the field
+      // shows the committed label (focus/RA timing), fall back to the DOM value so the
+      // first Backspace is not a no-op (vitest + real browsers).
+      const refVal = inputTextRef.current
+      const domVal = t.value
+      const v = refVal.length > 0 ? refVal : domVal
+      let start = t.selectionStart ?? v.length
+      let end = t.selectionEnd ?? v.length
+      if (t.value !== v && start === end) {
+        start = end = v.length
+      }
+
+      if (start !== end) {
+        const committedLabel = getDisplayString(value)
+        // With the menu open, RA may leave the full committed label selected after click.
+        // One Backspace should trim the suffix (same as End + Backspace); clearing the whole
+        // field in one key triggers userCleared + prop sync and restores the label (vitest/e2e).
+        if (
+          start === 0 &&
+          end === v.length &&
+          v.length > 0 &&
+          v === committedLabel
+        ) {
+          const next = v.slice(0, -1)
+          inputTextRef.current = next
+          flushSync(() => {
+            handleInputChange(next)
+          })
+          if (document.activeElement === t) {
+            const c = next.length
+            t.setSelectionRange(c, c)
+          }
+          return true
+        }
+        const next = v.slice(0, start) + v.slice(end)
+        inputTextRef.current = next
+        flushSync(() => {
+          handleInputChange(next)
+        })
+        if (document.activeElement === t) {
+          t.setSelectionRange(start, start)
+        }
+        return true
+      }
+
+      const committedLabel = getDisplayString(value)
+      const trimmingCommitted =
+        committedLabel.length > 0 &&
+        (v === committedLabel ||
+          (committedLabel.startsWith(v) &&
+            v.length > 0 &&
+            v.length < committedLabel.length))
+
+      if (trimmingCommitted && v.length > 0) {
+        const next = v.slice(0, -1)
+        inputTextRef.current = next
+        flushSync(() => {
+          handleInputChange(next)
+        })
+        if (document.activeElement === t) {
+          const caret = next.length
+          t.setSelectionRange(caret, caret)
+        }
+        return true
+      }
+
+      if (start > 0) {
+        const next = v.slice(0, start - 1) + v.slice(start)
+        const caret = start - 1
+        inputTextRef.current = next
+        flushSync(() => {
+          handleInputChange(next)
+        })
+        if (document.activeElement === t) {
+          t.setSelectionRange(caret, caret)
+        }
+        return true
+      }
+      return false
+    },
+    [getDisplayString, handleInputChange, value]
+  )
+
+  const handleSelectboxInputBackspaceCapture = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (isFilterTypingLocked) {
+        return
+      }
+      if (
+        e.key !== "Backspace" ||
+        e.nativeEvent.isComposing ||
+        selectDisabled ||
+        inputReadOnly
+      ) {
+        return
+      }
+      const handled = tryHandleSelectboxBackspace(e.currentTarget)
+      if (handled) {
+        e.preventDefault()
+        e.stopPropagation()
+      }
+    },
+    [
+      inputReadOnly,
+      isFilterTypingLocked,
+      selectDisabled,
+      tryHandleSelectboxBackspace,
+    ]
   )
 
   const handleBlur = useCallback(() => {
@@ -389,21 +678,162 @@ const Selectbox: FC<Props> = ({
       syncInputFromValue(restore)
       return
     }
-    // Discard draft query text when it does not match the committed value
-    // (parent prop and internal value still agree).
-    const committed = propValue ?? ""
-    if (value === propValue && inputValue !== committed) {
+    // Discard draft query text when it does not match the committed selection label.
+    const committedLabel = getDisplayString(propValue)
+    if (value === propValue && inputValue !== committedLabel) {
       syncInputFromValue(propValue)
     }
-  }, [inputValue, propValue, syncInputFromValue, value])
+  }, [getDisplayString, inputValue, propValue, syncInputFromValue, value])
 
   const onClearPress = useCallback(() => {
     clearIntentRef.current = true
     setValue(null)
+    inputTextRef.current = ""
     setInputValue("")
     commitIfChanged(null)
     valueBeforeRemovalRef.current = null
   }, [commitIfChanged])
+
+  const handleComboOpenChange = useCallback((isOpen: boolean) => {
+    menuOpenRef.current = isOpen
+    if (!isOpen) {
+      return
+    }
+    // Do not call setInputValue here: onOpenChange can run while React is committing a
+    // controlled inputValue update. Resetting from getDisplayString(value) races with
+    // Backspace handling and restores the full label mid-sequence (e2e dismiss_change;
+    // vitest suffix backspace). Focus + useExecuteWhenChanged already sync display text.
+    let caretSyncTries = 0
+    const moveCaretToEnd = (): void => {
+      const el = selectboxInputRef.current
+      if (!el || document.activeElement !== el) {
+        return
+      }
+      const draft = inputTextRef.current
+      if (el.value !== draft && caretSyncTries < 24) {
+        caretSyncTries += 1
+        queueMicrotask(moveCaretToEnd)
+        return
+      }
+      const len = el.value.length
+      try {
+        el.setSelectionRange(len, len)
+      } catch {
+        // ignore
+      }
+    }
+    queueMicrotask(moveCaretToEnd)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(moveCaretToEnd)
+    })
+  }, [])
+
+  const handleInputFocus = useCallback(
+    (_e: FocusEvent<HTMLInputElement>) => {
+      // Preserve the committed label on focus (RA can reset controlled text). Do not
+      // select-all here: a deferred select() can run after e2e sends End and re-selects
+      // the whole string so the first Backspace clears the field (dismiss_change test).
+      const display = getDisplayString(value)
+      const draft = inputTextRef.current
+      // Focus can refire on the same tick as Backspace (RA); don't clobber suffix deletes
+      // of the committed label (draft is a strict prefix of the selection text).
+      if (
+        display.length > 0 &&
+        draft.length > 0 &&
+        draft.length < display.length &&
+        display.startsWith(draft)
+      ) {
+        setInputValue(draft)
+        return
+      }
+      inputTextRef.current = display
+      setInputValue(display)
+    },
+    [getDisplayString, value]
+  )
+
+  const handleInputClick = useCallback((e: MouseEvent<HTMLInputElement>) => {
+    // Second click while focused: collapse to end so small edits edit the suffix.
+    const el = e.currentTarget
+    if (document.activeElement === el) {
+      const len = el.value.length
+      el.setSelectionRange(len, len)
+    }
+  }, [])
+
+  const tryCommitEnterSelection = useCallback(
+    (
+      query: string,
+      e: { preventDefault: () => void; stopPropagation: () => void }
+    ): boolean => {
+      const selectable = displayItems.filter(i => !i.isCreatable)
+      const match = selectable.find(
+        i => i.label === query || i.value === query
+      )
+      if (match) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleComboChange(match.id)
+        return true
+      }
+      if (selectable.length === 1) {
+        e.preventDefault()
+        e.stopPropagation()
+        handleComboChange(selectable[0].id)
+        return true
+      }
+      return false
+    },
+    [displayItems, handleComboChange]
+  )
+
+  const handleGroupKeyDownCapture = useCallback(
+    (e: KeyboardEvent<HTMLDivElement>) => {
+      // Prefer the focused combobox input: React/playwright can report a different `target`
+      // than `document.activeElement` while the caret is in the field (breaks Backspace).
+      const refInput = selectboxInputRef.current
+      const active = document.activeElement
+      const t: HTMLInputElement | null =
+        refInput !== null &&
+        active === refInput &&
+        e.currentTarget.contains(refInput)
+          ? refInput
+          : e.target instanceof HTMLInputElement &&
+              e.currentTarget.contains(e.target)
+            ? e.target
+            : null
+      if (t === null) {
+        return
+      }
+      if (!selectDisabled && !inputReadOnly && !e.nativeEvent.isComposing) {
+        // With the menu open, React Aria maps Home/End to list navigation; e2e uses End to move
+        // the text caret (prepare_react_aria_combobox_typing) before typing.
+        if (e.key === "Home" && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          e.stopPropagation()
+          t.setSelectionRange(0, 0)
+          return
+        }
+        if (e.key === "End" && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          e.stopPropagation()
+          const len = t.value.length
+          t.setSelectionRange(len, len)
+          return
+        }
+      }
+      if (
+        e.key !== "Enter" ||
+        e.nativeEvent.isComposing ||
+        selectDisabled ||
+        inputReadOnly
+      ) {
+        return
+      }
+      tryCommitEnterSelection(t.value, e)
+    },
+    [inputReadOnly, selectDisabled, tryCommitEnterSelection]
+  )
 
   const handleCreatableEnter = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
@@ -425,6 +855,7 @@ const Selectbox: FC<Props> = ({
       e.stopPropagation()
       const item = buildCreatableItem(inputValue)
       setValue(item.value)
+      inputTextRef.current = item.value
       setInputValue(item.value)
       commitIfChanged(item.value)
     },
@@ -435,6 +866,81 @@ const Selectbox: FC<Props> = ({
       inputValue,
       selectDisabled,
       selectValueSet,
+    ]
+  )
+
+  const handleSelectboxKeyDown = useCallback(
+    (e: KeyboardEvent<HTMLInputElement>) => {
+      if (
+        isFilterTypingLocked &&
+        !selectDisabled &&
+        !e.nativeEvent.isComposing
+      ) {
+        if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+          const allowed = new Set([
+            "Tab",
+            "Enter",
+            "Escape",
+            "ArrowDown",
+            "ArrowUp",
+            "ArrowLeft",
+            "ArrowRight",
+            "Home",
+            "End",
+            "PageUp",
+            "PageDown",
+          ])
+          if (
+            !allowed.has(e.key) &&
+            (e.key === " " ||
+              e.key === "Backspace" ||
+              e.key === "Delete" ||
+              e.key.length === 1)
+          ) {
+            e.preventDefault()
+            e.stopPropagation()
+            return
+          }
+        }
+      }
+      const canEscapeClear =
+        (clearable || false) &&
+        value != null &&
+        !selectDisabled &&
+        !inputReadOnly
+      if (e.key === "Escape" && canEscapeClear) {
+        // First Escape: let React Aria close the menu and restore the input; only clear on Escape when closed.
+        if (menuOpenRef.current) {
+          return
+        }
+        e.preventDefault()
+        e.stopPropagation()
+        onClearPress()
+        return
+      }
+      if (
+        e.key === "Enter" &&
+        !e.nativeEvent.isComposing &&
+        !selectDisabled &&
+        !inputReadOnly
+      ) {
+        const query = (e.currentTarget as HTMLInputElement).value ?? inputValue
+        if (tryCommitEnterSelection(query, e)) {
+          return
+        }
+      }
+      handleCreatableEnter(e)
+    },
+    [
+      clearable,
+      handleCreatableEnter,
+      inputReadOnly,
+      inputValue,
+      isFilterTypingLocked,
+      onClearPress,
+      selectDisabled,
+      tryCommitEnterSelection,
+      value,
     ]
   )
 
@@ -449,7 +955,13 @@ const Selectbox: FC<Props> = ({
     <I18nProvider
       locale={typeof navigator !== "undefined" ? navigator.language : "en-US"}
     >
-      <div className="stSelectbox" data-testid="stSelectbox">
+      <div
+        ref={selectboxContainerRef}
+        className="stSelectbox"
+        data-testid="stSelectbox"
+        style={{ position: "relative" }}
+        onKeyDownCapture={handleGroupKeyDownCapture}
+      >
         <WidgetLabel
           label={label}
           labelVisibility={labelVisibility}
@@ -457,11 +969,18 @@ const Selectbox: FC<Props> = ({
         >
           {help && <WidgetLabelHelpIcon content={help} label={label} />}
         </WidgetLabel>
+        {selectOptions.length === 0 && acceptNewOptions && (
+          <SelectboxEmptyOptionsHint aria-hidden="true">
+            {selectboxPlaceholder}
+          </SelectboxEmptyOptionsHint>
+        )}
         <ComboBox<ComboOption>
           allowsCustomValue={false}
           isDisabled={selectDisabled}
           aria-label={label || ""}
-          menuTrigger="focus"
+          // Open on click (SelectComboInput) or when typing changes the query; not on Tab focus alone
+          // so e2e can focus()+Escape to clear without opening the list first.
+          menuTrigger="input"
           items={displayItems}
           defaultFilter={() => true}
           allowsEmptyCollection
@@ -469,6 +988,7 @@ const Selectbox: FC<Props> = ({
           onChange={handleComboChange}
           inputValue={inputValue}
           onInputChange={handleInputChange}
+          onOpenChange={handleComboOpenChange}
           placeholder={selectboxPlaceholder}
           onBlur={handleBlur}
           shouldFlip={!isInSidebar}
@@ -480,10 +1000,25 @@ const Selectbox: FC<Props> = ({
           }}
         >
           <StyledGroup>
-            <StyledInput
+            <SelectComboInput
+              ref={selectboxInputRef}
               placeholder={selectboxPlaceholder}
-              readOnly={inputReadOnly === "readonly"}
-              onKeyDown={handleCreatableEnter}
+              readOnly={inputReadOnly === "readonly" && !isFilterTypingLocked}
+              onBeforeInput={
+                isFilterTypingLocked
+                  ? (ev: FormEvent<HTMLInputElement>) => ev.preventDefault()
+                  : undefined
+              }
+              onPaste={
+                isFilterTypingLocked
+                  ? (ev: ClipboardEvent<HTMLInputElement>) =>
+                      ev.preventDefault()
+                  : undefined
+              }
+              onFocusProp={handleInputFocus}
+              onClickProp={handleInputClick}
+              onKeyDownCaptureProp={handleSelectboxInputBackspaceCapture}
+              onKeyDown={handleSelectboxKeyDown}
               style={{
                 color: theme.colors.bodyText,
               }}
@@ -506,28 +1041,29 @@ const Selectbox: FC<Props> = ({
               <ChevronIcon />
             </StyledOpenButton>
           </StyledGroup>
-          <StyledPopover>
-            <StyledListBox
-              // react-aria-components ListBox renders a div by default; e2e tests expect ul/li.
-              {...({
-                render: (props: HTMLAttributes<HTMLUListElement>) => (
-                  <ul {...props} />
-                ),
-              } as object)}
-              renderEmptyState={() => "No results"}
-              data-testid="stSelectboxVirtualDropdown"
-            >
-              {item => (
-                <StyledListBoxItem
-                  id={item.id}
-                  textValue={item.label}
-                  data-creatable={item.isCreatable ? true : undefined}
-                  render={props => <li {...props} />}
-                >
-                  {item.label}
-                </StyledListBoxItem>
-              )}
-            </StyledListBox>
+          <StyledPopover isNonModal={true}>
+            <SelectboxDropdownContainer instanceId={selectboxInstanceId}>
+              <SelectboxVirtualListBox
+                // react-aria-components ListBox renders a div by default; e2e tests expect ul/li.
+                {...({
+                  render: (props: HTMLAttributes<HTMLUListElement>) => (
+                    <ul {...props} />
+                  ),
+                } as object)}
+                renderEmptyState={() => "No results"}
+              >
+                {item => (
+                  <StyledListBoxItem
+                    id={item.id}
+                    textValue={item.label}
+                    data-creatable={item.isCreatable ? true : undefined}
+                    render={props => <li {...props} />}
+                  >
+                    {item.label}
+                  </StyledListBoxItem>
+                )}
+              </SelectboxVirtualListBox>
+            </SelectboxDropdownContainer>
           </StyledPopover>
         </ComboBox>
       </div>

@@ -37,8 +37,12 @@ def open_menu_button(locator: Page | Locator, label: str | re.Pattern[str]) -> L
     """Open the menu button and return the popover body."""
     page = locator if isinstance(locator, Page) else locator.page
     menu_button = get_menu_button(locator, label)
-    menu_button.get_by_test_id("stMenuButtonButton").click()
-    return page.get_by_test_id("stMenuButtonBody")
+    btn = menu_button.get_by_test_id("stMenuButtonButton")
+    btn.scroll_into_view_if_needed()
+    btn.click()
+    menu_body = page.get_by_test_id("stMenuButtonBody")
+    expect(menu_body).to_be_visible(timeout=20_000)
+    return menu_body
 
 
 def select_menu_option(page: Page, label: str, option: str):
@@ -241,9 +245,11 @@ def test_menu_button_short_options(app: Page, assert_snapshot: ImageCompareFunct
     """Test menu button with short options adapts width to content."""
     # Use key selector to avoid matching "Short" in other menu options
     short_button = get_element_by_key(app, "short_options_button")
-    short_button.get_by_test_id("stMenuButtonButton").click()
+    sb_btn = short_button.get_by_test_id("stMenuButtonButton")
+    sb_btn.scroll_into_view_if_needed()
+    sb_btn.click()
     menu_body = app.get_by_test_id("stMenuButtonBody")
-    expect(menu_body).to_be_visible()
+    expect(menu_body).to_be_visible(timeout=20_000)
 
     # Check that short options are visible (not exact match due to markdown rendering)
     expect(menu_body.locator("li").filter(has_text="A")).to_be_visible()

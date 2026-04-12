@@ -13,6 +13,7 @@
 # limitations under the License.
 from __future__ import annotations
 
+import platform
 import re
 from typing import TYPE_CHECKING
 
@@ -27,6 +28,7 @@ from e2e_playwright.shared.app_utils import (
     expect_prefixed_markdown,
     get_element_by_key,
     get_selectbox,
+    get_visible_selectbox_dropdown,
     select_selectbox_option,
 )
 
@@ -53,6 +55,19 @@ def get_selectbox_input(
         The input of the element.
     """
     return get_selectbox(locator, label).locator("input").first
+
+
+def prepare_react_aria_combobox_typing(selectbox_input: Locator) -> None:
+    """Focus the input and select all text before Playwright ``type()`` replaces it.
+
+    React Aria ComboBox may leave a partial selection after open; without a defined
+    selection, ``type()`` can append at the wrong index. Select-all matches how users
+    pick a new option by typing the full label (caret-at-end would append instead).
+    """
+    selectbox_input.click()
+    # macOS uses Meta+A for "select all" in native fields; Linux/Windows use Ctrl+A.
+    select_all = "Meta+a" if platform.system() == "Darwin" else "Control+a"
+    selectbox_input.press(select_all)
 
 
 def test_selectbox_widget_rendering(
@@ -153,7 +168,7 @@ def test_handles_option_selection(app: Page, assert_snapshot: ImageCompareFuncti
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown = get_visible_selectbox_dropdown(app)
     assert_snapshot(selection_dropdown, name="st_selectbox-selection_dropdown")
     # Select last option:
     selection_dropdown.locator("li").nth(1).click()
@@ -166,6 +181,7 @@ def test_handles_option_selection_via_typing(app: Page):
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
     # Type an option:
+    prepare_react_aria_combobox_typing(selectbox_input)
     selectbox_input.type("e2e/scripts/st_warning.py")
     selectbox_input.press("Enter")
 
@@ -180,10 +196,11 @@ def test_shows_correct_options_via_fuzzy_search(
     selectbox_input = get_selectbox_input(app, "selectbox 4 (more options)")
 
     # Start typing:
+    prepare_react_aria_combobox_typing(selectbox_input)
     selectbox_input.type("exp")
 
     # Check filtered options
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown = get_visible_selectbox_dropdown(app)
     assert_snapshot(selection_dropdown, name="st_selectbox-fuzzy_matching")
 
 
@@ -194,6 +211,7 @@ def test_empty_selectbox_behaves_correctly(
     empty_selectbox_input = get_selectbox_input(app, "selectbox 9 (empty selection)")
 
     # Type an option:
+    prepare_react_aria_combobox_typing(empty_selectbox_input)
     empty_selectbox_input.type("male")
     empty_selectbox_input.press("Enter")
 
@@ -216,7 +234,7 @@ def test_keeps_value_on_selection_close(app: Page):
     get_selectbox_input(app, "selectbox 4 (more options)").click()
 
     # Take a snapshot of the selection dropdown:
-    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
+    expect(get_visible_selectbox_dropdown(app)).to_be_visible()
 
     # Click outside to close the dropdown:
     app.get_by_test_id("stMarkdown").first.click()
@@ -231,11 +249,12 @@ def test_handles_callback_on_change_correctly(app: Page):
     expect_markdown(app, "value 8: female")
     expect_markdown(app, "selectbox changed: False")
 
-    get_selectbox_input(app, "selectbox 8 (with callback, help)").click()
-
-    # Select last option:
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
-    selection_dropdown.locator("li").first.click()
+    input_el = get_selectbox_input(app, "selectbox 8 (with callback, help)")
+    input_el.scroll_into_view_if_needed()
+    input_el.click()
+    selection_dropdown = get_visible_selectbox_dropdown(app)
+    expect(selection_dropdown).to_be_visible(timeout=20_000)
+    selection_dropdown.get_by_role("option", name="male", exact=True).click()
 
     # Check that selection worked:
     expect_markdown(app, "value 8: male")
@@ -247,8 +266,9 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Change different input to trigger delta path change
     empty_selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
 
-    # Type an option:
-    empty_selectbox_input.type("female")
+    # Replace the displayed value (typing would append to the committed label).
+    empty_selectbox_input.click()
+    empty_selectbox_input.fill("female")
     empty_selectbox_input.press("Enter")
 
     wait_for_app_run(app)
@@ -339,6 +359,7 @@ def test_dismiss_change_by_clicking_away(app: Page):
 
     # Click to focus the input
     selectbox_input.click()
+    selectbox_input.press("End")
 
     # Clear part of the text and type something else
     selectbox_input.press("Backspace")
@@ -353,9 +374,9 @@ def test_dismiss_change_by_clicking_away(app: Page):
         "selectbox 14 (test dismiss behavior)"
     ).click()
 
-    # Verify original value is restored
-    # We use contain_text because the selectbox_element's text also includes the label
-    expect(selectbox_element).to_contain_text("male")
+    # Verify original value is restored (input value: BaseWeb exposes selected text in
+    # the subtree innerText; React Aria ComboBox uses a plain <input>, so assert value.)
+    expect(selectbox_input).to_have_value("male")
     expect_markdown(app, "value 14: male")
 
 
@@ -400,7 +421,7 @@ def test_selectbox_preset_session_state(app: Page):
     """Should display values from session_state."""
     expect_markdown(app, "value 16: female")
     selectbox = get_selectbox(app, "selectbox 16 - session_state values")
-    expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("female")
 
 
 def test_selectbox_empty_options_with_accept_new_options(app: Page):
@@ -426,8 +447,8 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
     # Verify new option was added and selected successfully
     expect_markdown(app, "value 17: new_option")
 
-    # Verify the new option is visible in the input field
-    expect(selectbox_elem.get_by_text("new_option", exact=True)).to_be_visible()
+    # Value is shown in the combobox input (not a separate text node)
+    expect(selectbox_input).to_have_value("new_option")
 
     # Add another option to replace the first one
     selectbox_input.click()
@@ -436,7 +457,7 @@ def test_selectbox_empty_options_with_accept_new_options(app: Page):
 
     # Verify the new option replaced the previous one
     expect_markdown(app, "value 17: another_option")
-    expect(selectbox_elem.get_by_text("another_option", exact=True)).to_be_visible()
+    expect(selectbox_input).to_have_value("another_option")
 
 
 def test_help_tooltip_works(app: Page):
@@ -452,35 +473,36 @@ def test_selectbox_session_state_sync_after_open_close(app: Page):
     """
     # Initial state should show "male" (default at index 0)
     selectbox = get_selectbox(app, "selectbox 20 - session_state sync test")
-    expect(selectbox.get_by_text("male", exact=True)).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("male")
     expect_markdown(app, "value 20: male")
 
     # Click button to set value to "female" via session_state
     app.get_by_role("button", name="Set female").click()
     expect_markdown(app, "value 20: female")
-    expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("female")
 
     # Open the dropdown
     selectbox_input = get_selectbox_input(app, "selectbox 20 - session_state sync test")
     selectbox_input.click()
 
     # Verify dropdown is open
-    expect(app.get_by_test_id("stSelectboxVirtualDropdown")).to_be_visible()
+    expect(get_visible_selectbox_dropdown(app)).to_be_visible()
 
     # Close by pressing Escape without making a selection
     app.keyboard.press("Escape")
 
     # The selectbox should still display "female" (not revert to initial "male")
-    expect(selectbox.get_by_text("female", exact=True)).to_be_visible()
+    expect(selectbox.locator("input")).to_have_value("female")
     expect_markdown(app, "value 20: female")
 
 
 def test_selectbox_prefix_filter_mode_matches_prefix_only(app: Page):
     """Test that prefix mode only shows prefix matches and preserves option order."""
     selectbox_input = get_selectbox_input(app, "selectbox 21 (filter_mode='prefix')")
+    prepare_react_aria_combobox_typing(selectbox_input)
     selectbox_input.type("A123")
 
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown = get_visible_selectbox_dropdown(app)
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(2)
     expect(options.nth(0)).to_have_text("A123")
@@ -493,9 +515,10 @@ def test_selectbox_prefix_filter_mode_matches_prefix_only(app: Page):
 def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
     """Test that contains mode matches case-insensitive substrings without reordering."""
     selectbox_input = get_selectbox_input(app, "selectbox 22 (filter_mode='contains')")
+    prepare_react_aria_combobox_typing(selectbox_input)
     selectbox_input.type("EXAMPLE")
 
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown = get_visible_selectbox_dropdown(app)
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(2)
     expect(options.nth(0)).to_have_text("alice@example.com")
@@ -506,12 +529,18 @@ def test_selectbox_contains_filter_mode_matches_substrings(app: Page):
 
 
 def test_selectbox_filter_mode_none_disables_typing_but_keeps_selection(app: Page):
-    """Test that filter_mode=None keeps the input readonly while leaving the dropdown usable."""
+    """Test that filter_mode=None blocks typing while leaving the dropdown usable.
+
+    React Aria disables the menu trigger when the combobox input is HTML-readonly, so
+    we block edits via handlers instead of the ``readonly`` attribute.
+    """
     selectbox_input = get_selectbox_input(app, "selectbox 23 (filter_mode=None)")
-    expect(selectbox_input).to_have_attribute("readonly", "")
+    v_before = selectbox_input.input_value()
+    selectbox_input.type("x", delay=0)
+    expect(selectbox_input).to_have_value(v_before)
 
     selectbox_input.click()
-    selection_dropdown = app.get_by_test_id("stSelectboxVirtualDropdown")
+    selection_dropdown = get_visible_selectbox_dropdown(app)
     options = selection_dropdown.get_by_role("option")
     expect(options).to_have_count(3)
 

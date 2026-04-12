@@ -22,6 +22,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -149,12 +150,46 @@ function MenuButton(props: Props): ReactElement {
 
   const menuState = useMenuTriggerState({
     isOpen,
-    onOpenChange: setIsOpen,
+    onOpenChange: (newOpen: boolean) => {
+      if (newOpen) {
+        setIsOpen(true)
+        return
+      }
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          setIsOpen(false)
+        })
+      })
+    },
   })
+  const menuStateRef = useRef(menuState)
+  menuStateRef.current = menuState
 
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const menuPopoverRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const [buttonWidth, setButtonWidth] = useState<string | null>(null)
+  useEffect(() => {
+    if (!isOpen) {
+      return
+    }
+    const onDocClickCapture = (e: MouseEvent): void => {
+      const t = e.target as Node | null
+      if (!t) {
+        menuStateRef.current.close()
+        return
+      }
+      if (buttonRef.current?.contains(t)) {
+        return
+      }
+      if (menuPopoverRef.current?.contains(t)) {
+        return
+      }
+      menuStateRef.current.close()
+    }
+    document.addEventListener("click", onDocClickCapture, true)
+    return () => document.removeEventListener("click", onDocClickCapture, true)
+  }, [isOpen])
 
   useResizeObserver({
     ref: buttonRef,
@@ -209,6 +244,7 @@ function MenuButton(props: Props): ReactElement {
               containerPadding: isInSidebar ? 0 : 12,
               style: {
                 ...getPopoverContainerStyle(theme),
+                zIndex: theme.zIndices.toast,
                 "--trigger-width": buttonWidth ?? undefined,
               } as CSSProperties,
               "aria-labelledby": menuProps["aria-labelledby"],
@@ -248,43 +284,45 @@ function MenuButton(props: Props): ReactElement {
             </BaseButton>
           </BaseButtonTooltip>
         </div>
-        <Popover data-testid="stMenuButtonBody">
-          <Menu
-            selectionMode="none"
-            onAction={handleAction}
-            // react-aria-components Menu renders a div by default; e2e tests expect ul/li.
-            {...({
-              render: (props: HTMLAttributes<HTMLUListElement>) => (
-                <ul {...props} />
-              ),
-            } as object)}
-            style={{
-              backgroundColor: theme.colors.bgColor,
-              paddingTop: theme.spacing.threeXS,
-              paddingBottom: theme.spacing.threeXS,
-              paddingLeft: theme.spacing.xs,
-              paddingRight: theme.spacing.xs,
-              outline: "none",
-              listStyle: "none",
-              margin: theme.spacing.none,
-            }}
-          >
-            {menuItems.map(item => {
-              const { text } = extractLeadingMaterialIcon(item.label)
-              return (
-                <StreamlitMenuItem
-                  key={item.value}
-                  id={item.value}
-                  textValue={text}
-                  render={props => <li {...props} />}
-                >
-                  {({ isFocused }) => (
-                    <MenuOptionContent item={item} isFocused={isFocused} />
-                  )}
-                </StreamlitMenuItem>
-              )
-            })}
-          </Menu>
+        <Popover ref={menuPopoverRef} isNonModal={true}>
+          <div data-testid="stMenuButtonBody">
+            <Menu
+              selectionMode="none"
+              onAction={handleAction}
+              // react-aria-components Menu renders a div by default; e2e tests expect ul/li.
+              {...({
+                render: (props: HTMLAttributes<HTMLUListElement>) => (
+                  <ul {...props} />
+                ),
+              } as object)}
+              style={{
+                backgroundColor: theme.colors.bgColor,
+                paddingTop: theme.spacing.threeXS,
+                paddingBottom: theme.spacing.threeXS,
+                paddingLeft: theme.spacing.xs,
+                paddingRight: theme.spacing.xs,
+                outline: "none",
+                listStyle: "none",
+                margin: theme.spacing.none,
+              }}
+            >
+              {menuItems.map(item => {
+                const { text } = extractLeadingMaterialIcon(item.label)
+                return (
+                  <StreamlitMenuItem
+                    key={item.value}
+                    id={item.value}
+                    textValue={text}
+                    render={props => <li {...props} />}
+                  >
+                    {({ isFocused }) => (
+                      <MenuOptionContent item={item} isFocused={isFocused} />
+                    )}
+                  </StreamlitMenuItem>
+                )
+              })}
+            </Menu>
+          </div>
         </Popover>
       </Provider>
     </Box>

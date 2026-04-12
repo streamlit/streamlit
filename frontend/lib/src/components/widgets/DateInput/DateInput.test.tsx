@@ -50,9 +50,14 @@ async function typeInDateField(
   text: string
 ): Promise<void> {
   const el = field as HTMLInputElement
+  // Focus without clicking: field onClick opens the calendar and breaks controlled typing.
+  await act(async () => {
+    el.focus()
+  })
   await user.type(el, text, {
     initialSelectionStart: 0,
     initialSelectionEnd: el.value.length,
+    skipClick: true,
   })
 }
 
@@ -188,6 +193,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
     const datePicker = screen.getByTestId("stDateInputField")
     await typeInDateField(user, datePicker, newDateDisplay)
+    await user.keyboard("{Enter}")
 
     expect(screen.getByTestId("stDateInputField")).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -397,6 +403,7 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     await user.clear(dateInput)
     await typeInDateField(user, dateInput, newDateDisplay)
+    await user.keyboard("{Enter}")
 
     expect(dateInput).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -441,6 +448,7 @@ describe("DateInput widget", () => {
 
     await user.clear(dateInput)
     await typeInDateField(user, dateInput, "2025/12/01")
+    await user.keyboard("{Enter}")
 
     expect(within(root).getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
 

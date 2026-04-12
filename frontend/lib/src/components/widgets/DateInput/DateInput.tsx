@@ -32,7 +32,8 @@ import {
   useRef,
   useState,
 } from "react"
-import type { KeyboardEvent, RefObject } from "react"
+import type { KeyboardEvent, MutableRefObject, RefObject } from "react"
+import { flushSync } from "react-dom"
 import { format } from "date-fns"
 import moment from "moment"
 import {
@@ -230,10 +231,16 @@ const PickerTextInput = memo(function PickerTextInput({
   textValue,
   onTextInputChange,
   onBlurEmpty,
-  onEnterCommit,
+  onBlurCommit,
+  /** Commit DOM text before closing overlay (e2e: Enter then Escape; RAC may resync from calendar). */
+  commitDomValue,
+  /** Parse + commit widget state from the native input value (typing, Playwright fill/change, Enter). */
+  commitFromDomValue,
   clearable,
   onEscapeClear,
   textInputRef,
+  racOverlayRef,
+  editingRef,
   error,
   colors,
   sizes,
@@ -247,10 +254,17 @@ const PickerTextInput = memo(function PickerTextInput({
   textValue: string
   onTextInputChange: (raw: string | null | undefined) => void
   onBlurEmpty: () => void
-  onEnterCommit: (currentValue: string) => void
+  onBlurCommit: (domValue: string) => void
+  commitDomValue: (domValue?: string) => void
+  commitFromDomValue: (domValue: string) => void
   clearable: boolean
   onEscapeClear: () => void
   textInputRef: RefObject<HTMLInputElement | null>
+  racOverlayRef: MutableRefObject<{
+    isOpen: boolean
+    setOpen: (open: boolean) => void
+  } | null>
+  editingRef: MutableRefObject<boolean>
   error: boolean
   colors: ReturnType<typeof useEmotionTheme>["colors"]
   sizes: ReturnType<typeof useEmotionTheme>["sizes"]
@@ -263,6 +277,13 @@ const PickerTextInput = memo(function PickerTextInput({
   const dateRangePickerState = useContext(DateRangePickerStateContext)
   const overlayState = datePickerState ?? dateRangePickerState
 
+  useLayoutEffect(() => {
+    racOverlayRef.current = overlayState ?? null
+    return () => {
+      racOverlayRef.current = null
+    }
+  }, [overlayState, racOverlayRef])
+
   const openPickerOnFieldClick = useCallback(() => {
     if (disabled || !overlayState) {
       return
@@ -272,14 +293,12 @@ const PickerTextInput = memo(function PickerTextInput({
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault()
-        onEnterCommit((e.currentTarget as HTMLInputElement).value)
-        return
-      }
       if (e.key === "Escape") {
         if (overlayState?.isOpen) {
           e.preventDefault()
+          flushSync(() => {
+            commitDomValue()
+          })
           overlayState.setOpen(false)
           return
         }
@@ -289,7 +308,7 @@ const PickerTextInput = memo(function PickerTextInput({
         }
       }
     },
-    [clearable, onEnterCommit, onEscapeClear, overlayState]
+    [clearable, commitDomValue, onEscapeClear, overlayState]
   )
 
   return (
@@ -301,28 +320,50 @@ const PickerTextInput = memo(function PickerTextInput({
       placeholder={placeholderText}
       value={textValue}
       onClick={openPickerOnFieldClick}
-      onKeyDown={handleKeyDown}
+      onKeyDownCapture={handleKeyDown}
+      onKeyDown={e => {
+        if (e.key === "Enter") {
+          e.preventDefault()
+          e.stopPropagation()
+          const el = e.currentTarget as HTMLInputElement
+          flushSync(() => {
+            commitFromDomValue(el.value)
+          })
+          const os = racOverlayRef.current
+          if (os?.isOpen) {
+            os.setOpen(false)
+          }
+        }
+      }}
       onInput={e => {
-        const v = (e.target as HTMLInputElement).value as
-          | string
-          | null
-          | undefined
-        onTextInputChange(v)
+        const el = e.currentTarget as HTMLInputElement
+        onTextInputChange(el.value)
+        flushSync(() => {
+          commitFromDomValue(el.value)
+        })
+      }}
+      onChange={e => {
+        const el = e.currentTarget as HTMLInputElement
+        onTextInputChange(el.value)
+        flushSync(() => {
+          commitFromDomValue(el.value)
+        })
       }}
       onFocus={e => {
+        editingRef.current = true
         // Do not open the popover here: RAC moves focus into the overlay, which
         // prevents keyboard input from updating this field (e.g. tests using user.type).
+        // Select-all so Playwright `type()`/`fill()` replace the existing display text.
         ;(e.target as HTMLInputElement).select()
       }}
       onBlur={e => {
         const el = e.target as HTMLInputElement
         const domVal = el.value
-        if (domVal !== textValue) {
-          onTextInputChange(domVal === "" ? null : domVal)
-        }
+        onBlurCommit(domVal)
         if (domVal.trim() === "") {
           onBlurEmpty()
         }
+        editingRef.current = false
       }}
       $hasError={error}
       $colors={colors}
@@ -348,14 +389,22 @@ function DateInput({
   const [textValue, setTextValue] = useState("")
   const valueWireRef = useRef<string | undefined>(undefined)
   const textFieldRef = useRef<HTMLInputElement | null>(null)
+  /** True between field focus and blur; avoids value→text sync clobbering draft if activeElement check fails mid-typing. */
+  const isDateFieldEditingRef = useRef(false)
+  /** Skip one blur commit (form clear blurs before controlled value syncs to the DOM). */
+  const skipNextBlurCommitRef = useRef(false)
 
   const resetError = useCallback(() => {
     setError(null)
   }, [])
 
   const handleFormCleared = useCallback(() => {
+    skipNextBlurCommitRef.current = true
     resetError()
     setIsEmpty(false)
+    valueWireRef.current = undefined
+    // Blur so the value→text sync effect can run after form reset (field was focused with invalid text).
+    textFieldRef.current?.blur()
   }, [resetError])
 
   const queryParamBinding = element.queryParamKey
@@ -460,7 +509,9 @@ function DateInput({
       resetError()
 
       if (isNullOrUndefined(nextDates) || nextDates.length === 0) {
-        setValueWithSource({ value: [], fromUi: true })
+        flushSync(() => {
+          setValueWithSource({ value: [], fromUi: true })
+        })
         setIsEmpty(true)
         setTextValue("")
         return
@@ -481,8 +532,14 @@ function DateInput({
       )
       if (errorType) {
         setError(createErrorMessage(errorType))
+        // Do not push invalid dates to widget/session state (matches e2e: value unchanged).
+        return
       }
-      setValueWithSource({ value: newDates, fromUi: true })
+      // Flush so DatePicker/RAC sees the new CalendarDate value in the same
+      // turn as controlled text updates (avoids fill()/input fighting value).
+      flushSync(() => {
+        setValueWithSource({ value: newDates, fromUi: true })
+      })
       setIsEmpty(!newDates.length)
     },
     [
@@ -508,7 +565,11 @@ function DateInput({
     }
     // Avoid clobbering the field while it is focused: value from the server may
     // lag behind in-progress typing, fill(), or Enter commits.
-    if (textFieldRef.current === document.activeElement) {
+    if (
+      isDateFieldEditingRef.current ||
+      textFieldRef.current === document.activeElement
+    ) {
+      valueWireRef.current = wire
       return
     }
     syncDisplayTextFromValue()
@@ -576,21 +637,58 @@ function DateInput({
     [handleChange]
   )
 
-  const onTextInputChange = useCallback(
-    (raw: string | null | undefined) => {
-      if (raw === null || raw === undefined) {
-        handleChange([])
-        return
-      }
+  /** Update visible text + validation while typing; widget commits on blur/Enter/calendar only. */
+  const syncDraftText = useCallback(
+    (raw: string) => {
       const next = String(raw)
       setTextValue(next)
-      const parsed = parseDisplayToDates(next, element.isRange, displayPattern)
-      if (parsed === null) {
+      const trimmed = next.trim()
+      if (!trimmed) {
+        setIsEmpty(true)
+        resetError()
         return
       }
-      handleChange(parsed)
+      setIsEmpty(false)
+      const parsed = parseDisplayToDates(next, element.isRange, displayPattern)
+      if (parsed === null) {
+        resetError()
+        return
+      }
+      if (parsed.length === 0) {
+        setIsEmpty(true)
+        resetError()
+        return
+      }
+      const normalizedDateInput: DateOrEmpty[] = parsed
+        .filter((d): d is Date => Boolean(d))
+        .map(d => normalizeToStartOfDay(d))
+
+      const { errorType } = validateDates(
+        normalizedDateInput,
+        minDate,
+        maxDate
+      )
+      if (errorType) {
+        setError(createErrorMessage(errorType))
+      } else {
+        resetError()
+      }
     },
-    [displayPattern, element.isRange, handleChange]
+    [
+      createErrorMessage,
+      displayPattern,
+      element.isRange,
+      maxDate,
+      minDate,
+      resetError,
+    ]
+  )
+
+  const onTextInputChange = useCallback(
+    (raw: string | null | undefined) => {
+      syncDraftText(raw === null || raw === undefined ? "" : String(raw))
+    },
+    [syncDraftText]
   )
 
   const commitTextFromField = useCallback(
@@ -603,9 +701,44 @@ function DateInput({
       if (parsed === null) {
         return
       }
+      const normalizedDateInput: DateOrEmpty[] = parsed
+        .filter((d): d is Date => Boolean(d))
+        .map(d => normalizeToStartOfDay(d))
+      const { errorType, newDates } = validateDates(
+        normalizedDateInput,
+        minDate,
+        maxDate
+      )
+      if (errorType) {
+        return
+      }
+      const nextWire = datesToStrings(newDates).join("|")
+      const currWire = datesToStrings(value).join("|")
+      if (nextWire === currWire) {
+        return
+      }
       handleChange(parsed)
     },
-    [displayPattern, element.isRange, handleChange, textValue]
+    [
+      displayPattern,
+      element.isRange,
+      handleChange,
+      maxDate,
+      minDate,
+      textValue,
+      value,
+    ]
+  )
+
+  const handleBlurCommit = useCallback(
+    (domVal: string) => {
+      if (skipNextBlurCommitRef.current) {
+        skipNextBlurCommitRef.current = false
+        return
+      }
+      commitTextFromField(domVal)
+    },
+    [commitTextFromField]
   )
 
   const clearFieldFromEscape = useCallback(() => {
@@ -647,6 +780,11 @@ function DateInput({
     </>
   )
 
+  const racOverlayRef = useRef<{
+    isOpen: boolean
+    setOpen: (open: boolean) => void
+  } | null>(null)
+
   return (
     <I18nProvider locale={bcp47Locale}>
       <div
@@ -685,10 +823,14 @@ function DateInput({
                   textValue={textValue}
                   onTextInputChange={onTextInputChange}
                   onBlurEmpty={handleClose}
-                  onEnterCommit={commitTextFromField}
+                  onBlurCommit={handleBlurCommit}
+                  commitDomValue={commitTextFromField}
+                  commitFromDomValue={commitTextFromField}
                   clearable={clearable}
                   onEscapeClear={clearFieldFromEscape}
                   textInputRef={textFieldRef}
+                  racOverlayRef={racOverlayRef}
+                  editingRef={isDateFieldEditingRef}
                   error={Boolean(error)}
                   colors={colors}
                   sizes={sizes}
@@ -770,10 +912,14 @@ function DateInput({
                   textValue={textValue}
                   onTextInputChange={onTextInputChange}
                   onBlurEmpty={handleClose}
-                  onEnterCommit={commitTextFromField}
+                  onBlurCommit={handleBlurCommit}
+                  commitDomValue={commitTextFromField}
+                  commitFromDomValue={commitTextFromField}
                   clearable={clearable}
                   onEscapeClear={clearFieldFromEscape}
                   textInputRef={textFieldRef}
+                  racOverlayRef={racOverlayRef}
+                  editingRef={isDateFieldEditingRef}
                   error={Boolean(error)}
                   colors={colors}
                   sizes={sizes}
