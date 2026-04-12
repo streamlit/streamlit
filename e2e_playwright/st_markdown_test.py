@@ -304,6 +304,62 @@ def test_shimmer_directive(app: Page):
     expect(normal_text).not_to_have_class(re.compile(r"stMarkdownShimmer"))
 
 
+def test_shimmer_directive_reduced_motion(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test shimmer directive appearance with prefers-reduced-motion enabled.
+
+    Uses emulate_media to enable reduced motion, which disables the animation
+    and shows the static fallback style. This allows for reliable snapshot testing
+    in both light and dark themes.
+    """
+    # Enable reduced motion to disable animation for stable snapshots
+    themed_app.emulate_media(reduced_motion="reduce")
+
+    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
+    shimmer_container.scroll_into_view_if_needed()
+
+    # Verify shimmer element is present and animation is disabled
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_be_visible()
+
+    # In reduced motion mode, the shimmer should have no animation
+    # and should display with the theme's fadedText60 color
+    expect(shimmer_element).to_have_css("animation-duration", "0s")
+
+    # Take snapshot with reduced motion to verify visual appearance
+    assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
+
+
+def test_shimmer_with_color_directive(themed_app: Page):
+    """Test that shimmer directive preserves colors from outer color directives.
+
+    The mask-image approach should allow shimmer to work with nested color directives
+    (e.g., :red[:shimmer[text]]) by preserving the inherited color.
+    """
+    themed_app.emulate_media(reduced_motion="reduce")
+
+    color_container = get_element_by_key(themed_app, "shimmer_with_color")
+    expect(color_container).to_be_visible()
+
+    # Verify both shimmer elements are present
+    shimmer_elements = color_container.locator(".stMarkdownShimmer")
+    expect(shimmer_elements).to_have_count(2)
+
+    # The red shimmer should have its parent span with red color styling
+    red_shimmer = color_container.get_by_text("Loading error...")
+    expect(red_shimmer).to_have_class(re.compile(r"stMarkdownShimmer"))
+    red_parent = red_shimmer.locator("..")
+    expect(red_parent).to_have_class(re.compile(r"stMarkdownColoredText"))
+
+    # The blue shimmer should have its parent span with blue color styling
+    blue_shimmer = color_container.get_by_text("Processing...")
+    expect(blue_shimmer).to_have_class(re.compile(r"stMarkdownShimmer"))
+    blue_parent = blue_shimmer.locator("..")
+    expect(blue_parent).to_have_class(re.compile(r"stMarkdownColoredText"))
+
+
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(

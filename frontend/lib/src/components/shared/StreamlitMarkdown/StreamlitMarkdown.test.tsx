@@ -991,15 +991,22 @@ describe("StreamlitMarkdown", () => {
     expect(element).not.toHaveClass("stMarkdownShimmer")
   })
 
-  it("renders shimmer nested inside color directive", () => {
+  it("renders shimmer nested inside color directive preserving color", () => {
     render(
       <StreamlitMarkdown
         source=":red[:shimmer[Loading...]]"
         allowHTML={false}
       />
     )
-    const element = screen.getByText("Loading...")
-    expect(element).toHaveClass("stMarkdownShimmer")
+    const shimmerElement = screen.getByText("Loading...")
+    expect(shimmerElement).toHaveClass("stMarkdownShimmer")
+    // Verify the parent span has the red color class and style applied
+    const parentSpan = shimmerElement.parentElement
+    expect(parentSpan).not.toBeNull()
+    expect(parentSpan).toHaveClass("stMarkdownColoredText")
+    // The color style should be applied (the exact value comes from the theme)
+    expect(parentSpan).toHaveAttribute("style")
+    expect(parentSpan?.getAttribute("style")).toContain("color:")
   })
 
   it("applies truncate styles when truncate is true", () => {

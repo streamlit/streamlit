@@ -19,13 +19,18 @@ import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
-// Shimmer animation: sweeps a gradient highlight from right to left across the text
+// Shimmer animation: sweeps a mask gradient from right to left across the text.
+// Uses mask-position animation to fade text opacity in/out, preserving any inherited
+// or nested color directive colors (unlike background-clip: text which requires
+// color: transparent).
 const shimmerAnimation = keyframes`
   0% {
-    background-position: 600% center;
+    mask-position: 600% center;
+    -webkit-mask-position: 600% center;
   }
   100% {
-    background-position: -600% center;
+    mask-position: -600% center;
+    -webkit-mask-position: -600% center;
   }
 `
 
@@ -378,29 +383,39 @@ export const StyledStreamlitMarkdown =
           verticalAlign: "middle",
         },
 
-        // Shimmer animation for loading/thinking text. Uses background-clip: text
-        // with an animated gradient for a smooth sweep effect. Uses fadedText60
-        // (secondary text color) for better readability and white shimmer highlight.
+        // Shimmer animation for loading/thinking text. Uses mask-image with an
+        // animated gradient to fade text opacity in and out. This approach preserves
+        // any inherited or nested color directive colors (e.g., :red[:shimmer[text]])
+        // and is theme-agnostic since it doesn't rely on any specific colors.
         "span.stMarkdownShimmer": {
-          background: `linear-gradient(
+          // Use theme's secondary text color for shimmer text
+          color: theme.colors.fadedText60,
+          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          maskImage: `linear-gradient(
             90deg,
-            ${theme.colors.fadedText60} 0%,
-            ${theme.colors.fadedText60} 40%,
-            white 50%,
-            ${theme.colors.fadedText60} 60%,
-            ${theme.colors.fadedText60} 100%
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
           )`,
-          backgroundSize: "200% 100%",
-          backgroundClip: "text",
-          WebkitBackgroundClip: "text",
-          color: "transparent",
+          WebkitMaskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          maskSize: "200% 100%",
+          WebkitMaskSize: "200% 100%",
           animation: `${shimmerAnimation} 8s linear infinite`,
 
           // Respect user's motion preferences for accessibility
           "@media (prefers-reduced-motion: reduce)": {
             animation: "none",
-            background: "none",
-            color: theme.colors.fadedText60,
+            maskImage: "none",
+            WebkitMaskImage: "none",
           },
         },
 
