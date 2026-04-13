@@ -54,7 +54,10 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import {
+  type LabeledOption,
+  useSelectCommon,
+} from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -251,7 +254,17 @@ const Multiselect: FC<Props> = props => {
       }
 
       // Get filtered options (excluding already selected ones) for the dropdown
-      const filteredOptions = createFilterOptions(value)(options, filterValue)
+      const labeledOptions: LabeledOption[] = options.map(opt => ({
+        label:
+          typeof opt.label === "string" ? opt.label : String(opt.label ?? ""),
+        value: String(
+          (opt as Option & { value?: string }).value ?? opt.id ?? ""
+        ),
+      }))
+      const filteredOptions = createFilterOptions(value)(
+        labeledOptions,
+        filterValue
+      )
 
       // Add "Select all" or "Select X matches" option when multiple selectable options
       if (filteredOptions.length > 1) {

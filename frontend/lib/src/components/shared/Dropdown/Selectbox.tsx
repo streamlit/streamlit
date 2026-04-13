@@ -85,7 +85,7 @@ const ControlContainer = styled.div(({ theme }) => ({
   borderBottomWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   borderRadius: theme.radii.default,
-  backgroundColor: theme.colors.widgetBackgroundColor,
+  backgroundColor: theme.colors.secondaryBg,
 }))
 
 const IconsContainer = styled.div(({ theme }) => ({
@@ -532,7 +532,6 @@ const Selectbox: FC<Props> = ({
         disabled={selectDisabled}
         virtualized
         modal={false}
-        autoComplete="list"
       >
         <ControlContainer
           style={{

@@ -18,7 +18,11 @@ import styled from "@emotion/styled"
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { CalendarDate, type DateValue } from "@internationalized/date"
 import { DatePicker } from "@ark-ui/react/date-picker"
-import type { DayTableCellState, LocaleDetails } from "@zag-js/date-picker"
+import type {
+  DateView,
+  DayTableCellState,
+  LocaleDetails,
+} from "@zag-js/date-picker"
 import { format, isValid, parse } from "date-fns"
 import moment from "moment"
 import {
@@ -731,6 +735,36 @@ function DateInput({
       trigger: (open: boolean) => (open ? "Close calendar" : "Select a date."),
       content: "Calendar.",
       dayCell: baseWebDayLabel,
+      nextTrigger: (view: DateView) =>
+        view === "day"
+          ? "Switch to next month"
+          : view === "month"
+            ? "Switch to next year"
+            : "Switch to next decade",
+      prevTrigger: (view: DateView) =>
+        view === "day"
+          ? "Switch to previous month"
+          : view === "month"
+            ? "Switch to previous year"
+            : "Switch to previous decade",
+      viewTrigger: (view: DateView) =>
+        view === "day"
+          ? "Switch to year view"
+          : view === "month"
+            ? "Switch to day view"
+            : "Switch to month view",
+      monthSelect: "Select month",
+      yearSelect: "Select year",
+      presetTrigger: (value: string[]) => {
+        const [start = "", end = ""] = value
+        return `Select ${start} to ${end}`
+      },
+      clearTrigger: "Clear selected dates",
+      placeholder: (_locale: string) => ({
+        day: "dd",
+        month: "mm",
+        year: "yyyy",
+      }),
     }),
     [baseWebDayLabel]
   )
@@ -1151,7 +1185,7 @@ const StyledFieldRow = styled.div<{
     borderRightColor: borderColor,
     borderBottomColor: borderColor,
     borderLeftColor: borderColor,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.default,
     paddingRight: theme.spacing.twoXS,
     ...($hasError && {
       backgroundColor: theme.colors.redBackgroundColor,
@@ -1211,7 +1245,7 @@ const StyledQuickSelect = styled.select(({ theme }) => ({
   borderBottomWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   borderColor: theme.colors.fadedText40,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.default,
 }))
 
 function getStateFromWidgetMgr(
