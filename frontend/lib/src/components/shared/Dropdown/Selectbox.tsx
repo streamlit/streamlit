@@ -100,8 +100,104 @@ function SelectboxDropdownContent({
   )
 }
 
+type EmotionThemeT = ReturnType<typeof useEmotionTheme>
+
+function cssInput(theme: EmotionThemeT, selectDisabled: boolean) {
+  return {
+    lineHeight: theme.lineHeights.inputWidget,
+    color: theme.colors.bodyText,
+    caretColor: theme.colors.bodyText,
+    flexGrow: 1,
+    minWidth: theme.spacing.threeXS,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    paddingLeft: theme.spacing.sm,
+    paddingRight: theme.spacing.sm,
+    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    marginLeft: theme.sizes.tagMarginInsideBorder,
+    "::placeholder": {
+      color: selectDisabled
+        ? theme.colors.fadedText40
+        : theme.colors.fadedText60,
+    },
+  }
+}
+
+function cssClearTrigger(theme: EmotionThemeT) {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: theme.colors.grayTextColor,
+    padding: theme.spacing.threeXS,
+    height: theme.sizes.clearIconSize,
+    width: theme.sizes.clearIconSize,
+    border: "none",
+    background: "transparent",
+    cursor: "pointer",
+    ":hover": {
+      color: theme.colors.bodyText,
+    },
+  }
+}
+
+function cssTrigger(theme: EmotionThemeT, selectDisabled: boolean) {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    border: "none",
+    background: "transparent",
+    cursor: selectDisabled ? "not-allowed" : "pointer",
+    paddingRight: theme.spacing.sm,
+    color: theme.colors.bodyText,
+  }
+}
+
+function cssList(theme: EmotionThemeT) {
+  return {
+    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+    overflowY: "auto" as const,
+    paddingTop: theme.spacing.none,
+    paddingBottom: theme.spacing.none,
+    paddingLeft: theme.spacing.none,
+    paddingRight: theme.spacing.none,
+  }
+}
+
+function cssEmpty(theme: EmotionThemeT) {
+  return {
+    padding: theme.spacing.sm,
+    textAlign: "center" as const,
+    color: theme.colors.fadedText60,
+  }
+}
+
+const StyledComboboxInput = styled(Combobox.Input, {
+  shouldForwardProp: p => p !== "$selectDisabled",
+})<{ $selectDisabled: boolean }>(({ theme, $selectDisabled }) =>
+  cssInput(theme, $selectDisabled)
+)
+
+const StyledComboboxClearTrigger = styled(Combobox.ClearTrigger)(({ theme }) =>
+  cssClearTrigger(theme)
+)
+
+const StyledComboboxTrigger = styled(Combobox.Trigger, {
+  shouldForwardProp: p => p !== "$selectDisabled",
+})<{ $selectDisabled: boolean }>(({ theme, $selectDisabled }) =>
+  cssTrigger(theme, $selectDisabled)
+)
+
+const StyledComboboxList = styled(Combobox.List)(({ theme }) => cssList(theme))
+
+const StyledComboboxEmpty = styled(Combobox.Empty)(({ theme }) =>
+  cssEmpty(theme)
+)
+
 function SelectboxComboboxInput({
-  theme,
   selectDisabled,
   inputReadOnly,
   handleInputFocus,
@@ -112,7 +208,6 @@ function SelectboxComboboxInput({
   userEditedInputThisFocusRef,
   onInputKeyDown,
 }: {
-  theme: ReturnType<typeof useEmotionTheme>
   selectDisabled: boolean
   inputReadOnly: "readonly" | null
   handleInputFocus: () => void
@@ -147,10 +242,10 @@ function SelectboxComboboxInput({
     ]
   )
   return (
-    <Combobox.Input
+    <StyledComboboxInput
       data-testid="stSelectboxInput"
       readOnly={inputReadOnly === "readonly"}
-      css={cssInput(theme, selectDisabled)}
+      $selectDisabled={selectDisabled}
       onFocus={handleInputFocus}
       onKeyDownCapture={handleKeyDownCapture}
     />
@@ -599,7 +694,6 @@ const Selectbox: FC<Props> = ({
         >
           <StyledValueRow>
             <SelectboxComboboxInput
-              theme={theme}
               selectDisabled={selectDisabled}
               inputReadOnly={inputReadOnly}
               handleInputFocus={handleInputFocus}
@@ -611,27 +705,26 @@ const Selectbox: FC<Props> = ({
               onInputKeyDown={onInputKeyDown}
             />
             {clearable && (
-              <Combobox.ClearTrigger
+              <StyledComboboxClearTrigger
                 data-testid="stSelectboxClear"
-                css={cssClearTrigger(theme)}
                 onPointerDown={() => {
                   clearIntentRef.current = true
                 }}
               />
             )}
-            <Combobox.Trigger
+            <StyledComboboxTrigger
               data-testid="stSelectboxTrigger"
-              css={cssTrigger(theme, selectDisabled)}
+              $selectDisabled={selectDisabled}
             >
               <ChevronIcon aria-hidden />
-            </Combobox.Trigger>
+            </StyledComboboxTrigger>
           </StyledValueRow>
         </StyledControl>
         <Portal>
           <Combobox.Positioner data-testid="stSelectboxPositioner">
             <SelectboxDropdownContent>
-              <Combobox.List css={cssList(theme)}>
-                {collection.items.map(item => (
+              <StyledComboboxList>
+                {collection.items.map((item: SelectItem) => (
                   <Combobox.Item
                     key={item.id}
                     asChild
@@ -647,93 +740,14 @@ const Selectbox: FC<Props> = ({
                     </StyledComboboxOption>
                   </Combobox.Item>
                 ))}
-              </Combobox.List>
-              <Combobox.Empty css={cssEmpty(theme)}>No results</Combobox.Empty>
+              </StyledComboboxList>
+              <StyledComboboxEmpty>No results</StyledComboboxEmpty>
             </SelectboxDropdownContent>
           </Combobox.Positioner>
         </Portal>
       </Combobox.Root>
     </StyledSelectboxRoot>
   )
-}
-
-function cssInput(
-  theme: ReturnType<typeof useEmotionTheme>,
-  selectDisabled: boolean
-) {
-  return {
-    lineHeight: theme.lineHeights.inputWidget,
-    color: theme.colors.bodyText,
-    caretColor: theme.colors.bodyText,
-    flexGrow: 1,
-    minWidth: theme.spacing.threeXS,
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    paddingLeft: theme.spacing.sm,
-    paddingRight: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
-    marginLeft: theme.sizes.tagMarginInsideBorder,
-    "::placeholder": {
-      color: selectDisabled
-        ? theme.colors.fadedText40
-        : theme.colors.fadedText60,
-    },
-  }
-}
-
-function cssClearTrigger(theme: ReturnType<typeof useEmotionTheme>) {
-  return {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: theme.colors.grayTextColor,
-    padding: theme.spacing.threeXS,
-    height: theme.sizes.clearIconSize,
-    width: theme.sizes.clearIconSize,
-    border: "none",
-    background: "transparent",
-    cursor: "pointer",
-    ":hover": {
-      color: theme.colors.bodyText,
-    },
-  }
-}
-
-function cssTrigger(
-  theme: ReturnType<typeof useEmotionTheme>,
-  selectDisabled: boolean
-) {
-  return {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    border: "none",
-    background: "transparent",
-    cursor: selectDisabled ? "not-allowed" : "pointer",
-    paddingRight: theme.spacing.sm,
-    color: theme.colors.bodyText,
-  }
-}
-
-function cssList(theme: ReturnType<typeof useEmotionTheme>) {
-  return {
-    maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
-    overflowY: "auto",
-    paddingTop: theme.spacing.none,
-    paddingBottom: theme.spacing.none,
-    paddingLeft: theme.spacing.none,
-    paddingRight: theme.spacing.none,
-  }
-}
-
-function cssEmpty(theme: ReturnType<typeof useEmotionTheme>) {
-  return {
-    padding: theme.spacing.sm,
-    textAlign: "center",
-    color: theme.colors.fadedText60,
-  }
 }
 
 const StyledSelectboxRoot = styled.div({
@@ -758,8 +772,7 @@ const StyledControl = styled(Combobox.Control, {
     borderBottomColor: borderColor,
     borderLeftColor: borderColor,
     borderRadius: theme.radii.default,
-    backgroundColor:
-      theme.colors.widgetBackgroundColor ?? theme.colors.bgColor,
+    backgroundColor: theme.colors.secondaryBg ?? theme.colors.bgColor,
   }
 })
 

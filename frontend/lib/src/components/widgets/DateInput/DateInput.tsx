@@ -16,6 +16,7 @@
 
 import {
   type ChangeEvent,
+  type ComponentProps,
   type FocusEvent,
   type KeyboardEvent,
   memo,
@@ -29,10 +30,7 @@ import {
 } from "react"
 
 import { DatePicker } from "@ark-ui/react/date-picker"
-import type {
-  IntlTranslations as ArkIntlTranslations,
-  DatePickerValueChangeDetails,
-} from "@ark-ui/react/date-picker"
+import type { DatePickerValueChangeDetails } from "@ark-ui/react/date-picker"
 import { Portal } from "@ark-ui/react/portal"
 import styled from "@emotion/styled"
 import { ErrorOutline } from "@emotion-icons/material-outlined"
@@ -84,6 +82,12 @@ export interface Props {
 const DATE_FORMAT = "YYYY-MM-DD"
 
 const RANGE_SEP = " – "
+
+type DatePickerViewGranularity = "year" | "month" | "day"
+
+type DatePickerTranslations = NonNullable<
+  ComponentProps<typeof DatePicker.Root>["translations"]
+>
 
 function normalizeLocaleTag(tag: string): string {
   try {
@@ -329,11 +333,11 @@ function DateInput({
 
   const startOfWeek = loadedLocale.options?.weekStartsOn ?? 0
 
-  const translations = useMemo((): ArkIntlTranslations => {
+  const translations = useMemo((): DatePickerTranslations => {
     return {
       dayCell: (state: DayTableCellState) =>
         buildDayCellTranslation(state, loadedLocale),
-      nextTrigger: v =>
+      nextTrigger: (v: DatePickerViewGranularity) =>
         ({
           year: "Switch to next decade",
           month: "Switch to next year",
@@ -341,13 +345,13 @@ function DateInput({
         })[v],
       monthSelect: "Select month",
       yearSelect: "Select year",
-      viewTrigger: v =>
+      viewTrigger: (v: DatePickerViewGranularity) =>
         ({
           year: "Switch to month view",
           month: "Switch to day view",
           day: "Switch to year view",
         })[v],
-      prevTrigger: v =>
+      prevTrigger: (v: DatePickerViewGranularity) =>
         ({
           year: "Switch to previous decade",
           month: "Switch to previous year",
@@ -374,7 +378,7 @@ function DateInput({
   const onValueChange = useCallback(
     (details: DatePickerValueChangeDetails) => {
       const dates = details.value
-        .filter((v): v is DateValue => notNullOrUndefined(v))
+        .filter((v): v is DateValue => !isNullOrUndefined(v))
         .map(v => dateValueToJs(v))
 
       if (element.isRange) {
@@ -520,7 +524,7 @@ function DateInput({
                     <DatePicker.View view="day">
                       <StyledViewControl>
                         <DatePicker.PrevTrigger />
-                        <DatePicker.ViewTrigger view="day">
+                        <DatePicker.ViewTrigger>
                           <DatePicker.RangeText />
                         </DatePicker.ViewTrigger>
                         <DatePicker.NextTrigger />
@@ -1044,7 +1048,7 @@ const StyledRangeInput = styled("input", {
     paddingBottom: spacing.sm,
     paddingTop: spacing.sm,
     lineHeight: lineHeights.inputWidget,
-    backgroundColor: colors.widgetBackgroundColor,
+    backgroundColor: colors.secondaryBg,
     "::placeholder": { color: colors.fadedText60 },
     "&:focus": {
       borderTopColor: focused,
