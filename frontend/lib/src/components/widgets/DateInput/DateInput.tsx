@@ -207,7 +207,7 @@ function DateInput({
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLInputElement | null>(null)
 
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()))
   const [highlightedDay, setHighlightedDay] = useState<Date | null>(null)
@@ -943,7 +943,7 @@ const StyledInputContainer = styled.div<{
     borderRightColor: borderColor,
     borderBottomColor: borderColor,
     borderLeftColor: borderColor,
-    borderRadius: theme.radii.md,
+    borderRadius: theme.radii.default,
     paddingRight: theme.spacing.twoXS,
     backgroundColor: $hasError ? theme.colors.redBackgroundColor : undefined,
   }
@@ -1040,8 +1040,8 @@ const QuickSelectComboButton = styled.button(({ theme }) => ({
   borderBottomWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-  backgroundColor: theme.colors.widgetBackgroundColor ?? theme.colors.bgColor,
-  borderRadius: theme.radii.md,
+  backgroundColor: theme.colors.secondaryBg ?? theme.colors.bgColor,
+  borderRadius: theme.radii.default,
   paddingLeft: theme.spacing.sm,
   paddingRight: theme.spacing.sm,
 }))
@@ -1059,7 +1059,7 @@ const QuickSelectListbox = styled.div(({ theme }) => ({
   borderWidth: theme.sizes.borderWidth,
   borderStyle: "solid",
   borderColor: theme.colors.borderColor,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.default,
   boxShadow: theme.shadows.popover,
 }))
 

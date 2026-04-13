@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *

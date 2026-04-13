@@ -28,11 +28,14 @@ import {
   useFloating,
   useInteractions,
 } from "@floating-ui/react"
+import type { OptionListProps } from "baseui/menu"
 import {
   FC,
   FocusEvent,
-  KeyboardEvent,
+  KeyboardEvent as ReactKeyboardEvent,
   memo,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
   SyntheticEvent,
   useCallback,
   useContext,
@@ -83,11 +86,11 @@ type SelectOptionItem = {
 }
 
 /** Props-only carrier; VirtualDropdown reads props via Children, not by rendering. */
-function VirtualOptionCarrier(): null {
+function VirtualOptionCarrier(_props: OptionListProps): null {
   return null
 }
 
-function EmptyDropdownMessage(): null {
+function EmptyDropdownMessage(_props: { children?: ReactNode }): null {
   return null
 }
 
@@ -367,22 +370,24 @@ const Selectbox: FC<Props> = ({
     if (!open || selectDisabled) {
       return
     }
-    const onDocKeyDown = (e: KeyboardEvent) => {
+    const onDocKeyDown = (e: globalThis.KeyboardEvent) => {
       if (e.key !== "Escape") {
         return
       }
       const t = e.target
       const refEl = refs.reference.current
       const floatEl = refs.floating.current
+      const refNode = refEl instanceof HTMLElement ? refEl : null
+      const floatNode = floatEl instanceof HTMLElement ? floatEl : null
       const active =
         document.activeElement instanceof Node ? document.activeElement : null
       const targetInside =
         t instanceof Node &&
-        ((refEl && refEl.contains(t)) || (floatEl && floatEl.contains(t)))
+        ((refNode?.contains(t) ?? false) || (floatNode?.contains(t) ?? false))
       const activeInside =
         active &&
-        ((refEl && refEl.contains(active)) ||
-          (floatEl && floatEl.contains(active)))
+        ((refNode?.contains(active) ?? false) ||
+          (floatNode?.contains(active) ?? false))
       if (targetInside || activeInside) {
         e.preventDefault()
         e.stopPropagation()
@@ -418,7 +423,7 @@ const Selectbox: FC<Props> = ({
   ])
 
   const onInputKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
+    (e: ReactKeyboardEvent<HTMLInputElement>) => {
       if (selectDisabled) {
         return
       }
@@ -557,7 +562,7 @@ const Selectbox: FC<Props> = ({
   )
 
   const onControlMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+    (e: ReactMouseEvent) => {
       if (selectDisabled) {
         return
       }
@@ -606,12 +611,13 @@ const Selectbox: FC<Props> = ({
           <VirtualOptionCarrier
             key={opt.id}
             item={opt}
+            getItemLabel={item => item.label}
             $isHighlighted={idx === highlightedIndex}
-            onMouseDown={e => {
+            onMouseDown={(e: ReactMouseEvent) => {
               e.preventDefault()
               e.stopPropagation()
             }}
-            onClick={e => {
+            onClick={(e: ReactMouseEvent) => {
               e.preventDefault()
               commitSelection(opt.value)
             }}
@@ -801,7 +807,7 @@ const StyledControl = styled.div<{
     borderBottomColor: borderColor,
     borderLeftColor: borderColor,
     borderRadius: theme.radii.default,
-    backgroundColor: theme.colors.widgetBackgroundColor,
+    backgroundColor: theme.colors.secondaryBg,
     cursor: $disabled ? "not-allowed" : "text",
     boxSizing: "border-box",
     fontWeight: theme.fontWeights.normal,
