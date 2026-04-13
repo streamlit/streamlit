@@ -387,6 +387,10 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "context",
             "login",
             "logout",
+            # session_state is a SessionStateProxy instance that is callable (as a
+            # class decorator). The __call__ method is tracked as "session_state.__call__"
+            # to be consistent with other session_state metrics like "session_state.set_item".
+            "session_state",
         }
 
         # Create a list of all public API names in the `st` module (minus
