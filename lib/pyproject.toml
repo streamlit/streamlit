@@ -156,7 +156,19 @@ exclude = ["tests", "tests.*"]
 
 # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
 [tool.setuptools.package-data]
-streamlit = ["py.typed", "hello/**/*.py"]
+streamlit = [
+    "py.typed",
+    ".agents/**/*.md",
+    ".agents/**/*.py",
+    ".agents/**/*.toml",
+    ".agents/**/*.yml",
+    ".agents/**/*.tmpl",
+    ".agents/**/*.example",
+    ".agents/**/*.lock",
+    ".agents/**/.gitignore",
+    ".agents/**/.gitattributes",
+    "hello/**/*.py",
+]
 
 # =============================================================================
 # Pytest Configuration
@@ -207,6 +219,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 
 [tool.coverage.report]
@@ -215,6 +228,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",
