@@ -64,7 +64,9 @@ if section == "Widgets":
     cols[0].button("Primary", type="primary")
     cols[1].button("Secondary", type="secondary")
     cols[2].button("Tertiary", type="tertiary")
-    cols[3].link_button("Link", url="https://streamlit.io", icon=":material/open_in_new:")
+    cols[3].link_button(
+        "Link", url="https://streamlit.io", icon=":material/open_in_new:"
+    )
 
     # Form
     with st.form(key="demo_form"):
@@ -82,12 +84,20 @@ if section == "Widgets":
         st.checkbox("Checkbox option")
         st.toggle("Toggle switch")
         st.selectbox("Selectbox", options=["Option A", "Option B", "Option C"])
-        st.multiselect("Multiselect", options=["Tag 1", "Tag 2", "Tag 3"], default=["Tag 1"])
+        st.multiselect(
+            "Multiselect", options=["Tag 1", "Tag 2", "Tag 3"], default=["Tag 1"]
+        )
 
     with sel_cols[1]:
-        st.radio("Radio buttons", options=["Choice 1", "Choice 2", "Choice 3"], horizontal=True)
+        st.radio(
+            "Radio buttons",
+            options=["Choice 1", "Choice 2", "Choice 3"],
+            horizontal=True,
+        )
         st.pills("Pills", options=["Small", "Medium", "Large"], default="Medium")
-        st.segmented_control("Segmented", options=["Day", "Week", "Month"], default="Week")
+        st.segmented_control(
+            "Segmented", options=["Day", "Week", "Month"], default="Week"
+        )
         st.caption("Feedback widget")
         st.feedback("stars")
 
@@ -96,7 +106,9 @@ if section == "Widgets":
     num_cols = st.columns(3)
     num_cols[0].number_input("Number input", value=42)
     num_cols[1].slider("Slider", 0, 100, 50)
-    num_cols[2].select_slider("Select slider", options=["XS", "S", "M", "L", "XL"], value="M")
+    num_cols[2].select_slider(
+        "Select slider", options=["XS", "S", "M", "L", "XL"], value="M"
+    )
 
     # Date/Time
     st.subheader("Date & Time")
@@ -108,7 +120,9 @@ if section == "Widgets":
     st.subheader("Text Inputs")
     txt_cols = st.columns(2)
     txt_cols[0].text_input("Text input", placeholder="Type something...")
-    txt_cols[1].text_area("Text area", placeholder="Longer text goes here...", height=100)
+    txt_cols[1].text_area(
+        "Text area", placeholder="Longer text goes here...", height=100
+    )
 
     # File upload
     st.subheader("File Upload")
@@ -132,13 +146,15 @@ elif section == "Data":
 
     # Dataframe
     st.subheader("Dataframe")
-    df = pd.DataFrame({
-        "Name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
-        "Department": ["Engineering", "Sales", "Marketing", "Engineering", "Sales"],
-        "Salary": [95000, 78000, 82000, 105000, 71000],
-        "Start Date": pd.date_range("2022-01-15", periods=5, freq="3M"),
-        "Active": [True, True, False, True, True],
-    })
+    df = pd.DataFrame(
+        {
+            "Name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
+            "Department": ["Engineering", "Sales", "Marketing", "Engineering", "Sales"],
+            "Salary": [95000, 78000, 82000, 105000, 71000],
+            "Start Date": pd.date_range("2022-01-15", periods=5, freq="3M"),
+            "Active": [True, True, False, True, True],
+        }
+    )
     st.dataframe(
         df,
         use_container_width=True,
@@ -156,7 +172,13 @@ elif section == "Data":
 
     # JSON
     st.subheader("JSON Display")
-    st.json({"name": "Streamlit", "version": "1.41.0", "features": ["themes", "widgets", "charts"]})
+    st.json(
+        {
+            "name": "Streamlit",
+            "version": "1.41.0",
+            "features": ["themes", "widgets", "charts"],
+        }
+    )
 
 # -----------------------------------------------------------------------------
 # CHARTS SECTION
@@ -201,7 +223,9 @@ elif section == "Text":
         "**Bold text**, *italic text*, ~~strikethrough~~, "
         "`inline code`, [link](https://streamlit.io)"
     )
-    st.markdown("Math: $E = mc^2$ and $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$")
+    st.markdown(
+        "Math: $E = mc^2$ and $\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}$"
+    )
     st.markdown("Emojis: 🚀 🎨 📊 ✨ and icons: :material/home: :material/settings:")
 
     # Colored text
@@ -258,7 +282,7 @@ elif section == "Layouts":
     st.subheader("Expander")
     with st.expander("Click to expand"):
         st.write("This content is hidden by default.")
-        st.image("https://placehold.co/400x200/29B5E8/white?text=Expanded+Content")
+        st.image("https://placehold.co/400x200?text=Expanded+Content")
 
     # Popover
     st.subheader("Popover")
@@ -344,8 +368,12 @@ elif section == "Status":
 # -----------------------------------------------------------------------------
 with st.sidebar:
     st.header("Settings")
-    st.selectbox("Time Period", ["Last 7 days", "Last 30 days", "Last 90 days", "All time"])
-    st.multiselect("Metrics", ["Revenue", "Users", "Sessions"], default=["Revenue", "Users"])
+    st.selectbox(
+        "Time Period", ["Last 7 days", "Last 30 days", "Last 90 days", "All time"]
+    )
+    st.multiselect(
+        "Metrics", ["Revenue", "Users", "Sessions"], default=["Revenue", "Users"]
+    )
     st.slider("Confidence threshold", 0.0, 1.0, 0.8)
     st.divider()
     st.caption("Element Explorer v1.0")
