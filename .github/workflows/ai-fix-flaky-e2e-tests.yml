@@ -236,7 +236,7 @@ jobs:
       - name: Create PR
         id: create_pr
         if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
           MODEL_NAME: ${{ env.MODEL }}

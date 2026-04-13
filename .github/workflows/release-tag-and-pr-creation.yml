@@ -82,7 +82,7 @@ jobs:
       - name: Check for existing open PR for release
         if: ${{ inputs.dry_run != true }}
         id: check_existing_pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
@@ -141,7 +141,7 @@ jobs:
       - name: Create PR to merge release branch into develop
         id: create_pr
         if: ${{ inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
