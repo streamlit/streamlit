@@ -1577,6 +1577,183 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert self.session_state._new_session_state["my_widget"] == "url_value"
 
 
+class RegisterWidgetQueryParamProgrammaticSyncTest(DeltaGeneratorTestCase):
+    """Programmatic session_state updates sync bound widgets to the URL (gh-14670)."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def _page_info_msg_count(self) -> int:
+        return sum(
+            1 for m in self.forward_msg_queue._queue if m.HasField("page_info_changed")
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_syncs_query_params_and_forward_msg(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.session_state._new_session_state["my_widget"] = "arbitrary value"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self.query_params.get("my_widget") == "arbitrary value"
+        assert self._page_info_msg_count() == 1
+        msg = self.get_message_from_queue(-1)
+        assert "my_widget=arbitrary+value" in msg.page_info_changed.query_string
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_reset_to_default_sends_forward_msg(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("my_widget", "stale")
+        self.session_state._new_session_state["my_widget"] = "default"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+        assert self._page_info_msg_count() == 1
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_skips_forward_msg_when_url_already_matches(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("my_widget", "same")
+        self.session_state._new_session_state["my_widget"] = "same"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_ui_driven_value_does_not_trigger_programmatic_url_sync(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.session_state._new_widget_state.set_from_value(widget_id, "from_ui")
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_float_coercion_matches_url_integer_form(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-num"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="double_value",
+            deserializer=lambda x: float(x) if x is not None else 0.0,
+            serializer=lambda x: float(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="num")
+        self.session_state._compact_state()
+        # Scalar double_value uses str() in set_corrected_value, not whole-number collapse.
+        self.query_params.set_with_no_forward_msg("num", "5.0")
+        self.session_state._new_session_state["num"] = 5.0
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="num")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_bool_coercion_matches_url(self, mock_ctx: MagicMock) -> None:
+        widget_id = "$$ID-hash-bool"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            serializer=lambda x: bool(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="flag")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("flag", "true")
+        self.session_state._new_session_state["flag"] = True
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="flag")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_string_array_coercion_matches_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-arr"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: list(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="arr")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("arr", ["a", "b"])
+        self.session_state._new_session_state["arr"] = ["a", "b"]
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="arr")
+
+        assert self._page_info_msg_count() == 0
+
+
 class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
     """Tests for register_widget cleaning up stale bindings when bind is removed."""
 

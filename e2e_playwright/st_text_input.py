@@ -166,3 +166,17 @@ bound_text_max = st.text_input(
     max_chars=5,
 )
 st.write("bound text max value:", bound_text_max)
+
+# gh-14670: programmatic st.session_state updates must sync the browser URL
+st.markdown("Bound widget + session_state (gh-14670):")
+if st.button("Set gh14670_bound via session_state", key="gh14670_set_btn"):
+    st.session_state["gh14670_bound"] = "arbitrary value"
+if st.button("Reset gh14670_bound to default", key="gh14670_reset_btn"):
+    st.session_state["gh14670_bound"] = "default"
+st.text_input(
+    "gh14670 bound input",
+    value="default",
+    key="gh14670_bound",
+    bind="query-params",
+)
+st.write("gh14670 bound value:", st.session_state["gh14670_bound"])
