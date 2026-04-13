@@ -89,7 +89,39 @@ Issue comments (from `issues/{PR_NUMBER}/comments`) do not have a "resolved" fla
 - **Verify bot comments:** Bot suggestions may be false positives. Always validate the issue exists before acting.
 - **General comments without file/line:** If a comment does not reference a file or line, infer scope from the text (e.g. "add a test" points to a test file, "update the doc" to docs). If scope is unclear, list possible locations when presenting options.
 
-**Action types** (per [conventional comments](https://conventionalcomments.org)): `issue` / `todo` / `chore` (must fix) · `suggestion` (consider) · `nitpick` (optional) · `question` (clarify) · `praise` / `thought` / `note` (skip)
+#### Comment labels
+
+Per [conventional comments](https://conventionalcomments.org):
+
+| Label | Action |
+|-------|--------|
+| `issue` | Fix the problem. Use suggested solution if provided. |
+| `question` | Respond first, then act if needed. Never change code without clarifying. |
+| `suggestion` | Evaluate and implement if beneficial. Check decorations. |
+| `todo` | Complete the small task mentioned. |
+| `chore` | Complete the process step (run CI, update docs, etc.). |
+| `typo` | Fix the typo. |
+| `nitpick` | Apply if trivial. Non-blocking by nature. |
+| `polish` | Improve quality if straightforward. Similar to `suggestion`. |
+| `praise` / `thought` / `note` | Skip — no action required. |
+
+#### Decorations
+
+| Decoration | Meaning |
+|------------|---------|
+| `(blocking)` | Must resolve before merge. |
+| `(non-blocking)` | Should not prevent acceptance. |
+| `(if-minor)` | Resolve only if changes are trivial. |
+| `(security)`, `(ux)`, etc. | Context-specific tags — use to inform approach. |
+
+#### Scope assessment
+
+Before implementing feedback, determine if it's in-scope for the current PR:
+
+- **In-scope:** Fixes bugs introduced in this PR · improves code quality of changed files · addresses issues directly related to the PR's purpose · completes small related tasks.
+- **Out-of-scope:** Refactors unrelated code · adds features beyond the PR's goal · fixes pre-existing issues not touched by this PR · architectural changes unrelated to current work.
+
+For out-of-scope feedback: acknowledge the comment, propose a follow-up PR, and get reviewer agreement on deferral before proceeding.
 
 ### 4. Present options
 
@@ -216,6 +248,24 @@ gh api repos/streamlit/streamlit/pulls/{PR_NUMBER}/comments/{COMMENT_ID}/replies
 gh api repos/streamlit/streamlit/issues/{PR_NUMBER}/comments \
   -f body="@{reviewer} Re: {brief context} - {reply text}"
 ```
+
+## Worked example
+
+Given these 5 comments on a PR:
+
+1. `question (blocking): Should this cache be invalidated on user logout?`
+2. `issue: This function doesn't handle the null case for user.preferences`
+3. `suggestion (non-blocking): Consider extracting this 20-line block into a helper`
+4. `nitpick: Can we use camelCase for consistency?`
+5. `thought: We should probably refactor the entire auth module`
+
+Handling:
+
+- **#1 [question]** — Respond first: propose adding `clear_cache()` in the logout handler, await confirmation before changing code.
+- **#2 [issue]** — Fix: add null check for `user.preferences`.
+- **#3 [suggestion]** — Evaluate: extraction is straightforward and improves readability → implement.
+- **#4 [nitpick]** — Apply (trivial, improves consistency).
+- **#5 [thought]** — Skip. Acknowledge and propose follow-up PR if the idea has merit.
 
 ## Rules
 
