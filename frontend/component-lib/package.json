@@ -63,7 +63,7 @@
     "vite": "^8.0.1",
     "vite-plugin-dts": "^4.5.4",
     "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.1"
+    "vitest": "^4.1.3"
   },
   "resolutions": {
     "@types/react": "^18.2.0",
