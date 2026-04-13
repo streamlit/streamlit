@@ -54,6 +54,8 @@ export const computeDerivedColors = (
     fadedText40,
     fadedText60,
 
+    widgetBackgroundColor: secondaryBg,
+
     bgMix,
     darkenedBgMix100,
     darkenedBgMix25,

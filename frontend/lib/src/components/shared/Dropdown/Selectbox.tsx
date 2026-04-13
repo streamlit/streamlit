@@ -108,7 +108,9 @@ const StyledGroup = styled(Group)(({ theme }) => ({
   },
 }))
 
-const StyledInput = styled(Input)(({ theme }) => ({
+const StyledInput = styled(Input, {
+  shouldForwardProp: prop => prop !== "$placeholderColor",
+})<{ $placeholderColor?: string }>(({ theme, $placeholderColor }) => ({
   flexGrow: 1,
   flexShrink: 1,
   minWidth: theme.spacing.threeXS,
@@ -126,7 +128,7 @@ const StyledInput = styled(Input)(({ theme }) => ({
   caretColor: theme.colors.bodyText,
   boxSizing: "border-box",
   "&::placeholder": {
-    color: theme.colors.fadedText60,
+    color: $placeholderColor ?? theme.colors.fadedText60,
   },
 }))
 
@@ -255,11 +257,14 @@ const SelectComboInput = memo(
       onFocusProp,
       onClickProp,
       onKeyDownCaptureProp,
+      placeholderColor,
       ...rest
-    }: ComponentProps<typeof StyledInput> & {
+    }: Omit<ComponentProps<typeof StyledInput>, "$placeholderColor"> & {
       onFocusProp: (e: FocusEvent<HTMLInputElement>) => void
       onClickProp: (e: MouseEvent<HTMLInputElement>) => void
       onKeyDownCaptureProp?: (e: KeyboardEvent<HTMLInputElement>) => void
+      /** Placeholder text color (RAC Input does not accept Emotion `css`). */
+      placeholderColor?: string
     },
     ref: ForwardedRef<HTMLInputElement>
   ) {
@@ -326,6 +331,7 @@ const SelectComboInput = memo(
       <StyledInput
         {...restForDom}
         ref={ref}
+        $placeholderColor={placeholderColor}
         onFocus={mergedFocus}
         onClick={mergedClick}
         onKeyDownCapture={mergedKeyDownCapture}
@@ -989,10 +995,7 @@ const Selectbox: FC<Props> = ({
           inputValue={inputValue}
           onInputChange={handleInputChange}
           onOpenChange={handleComboOpenChange}
-          placeholder={selectboxPlaceholder}
           onBlur={handleBlur}
-          shouldFlip={!isInSidebar}
-          offset={convertRemToPx(theme.spacing.twoXS)}
           style={{
             width: "100%",
             lineHeight: theme.lineHeights.inputWidget,
@@ -1003,6 +1006,7 @@ const Selectbox: FC<Props> = ({
             <SelectComboInput
               ref={selectboxInputRef}
               placeholder={selectboxPlaceholder}
+              placeholderColor={placeholderColor}
               readOnly={inputReadOnly === "readonly" && !isFilterTypingLocked}
               onBeforeInput={
                 isFilterTypingLocked
@@ -1022,11 +1026,6 @@ const Selectbox: FC<Props> = ({
               style={{
                 color: theme.colors.bodyText,
               }}
-              css={{
-                "&::placeholder": {
-                  color: placeholderColor,
-                },
-              }}
             />
             {showClear && (
               <StyledClearButton
@@ -1041,7 +1040,11 @@ const Selectbox: FC<Props> = ({
               <ChevronIcon />
             </StyledOpenButton>
           </StyledGroup>
-          <StyledPopover isNonModal={true}>
+          <StyledPopover
+            isNonModal={true}
+            shouldFlip={!isInSidebar}
+            offset={convertRemToPx(theme.spacing.twoXS)}
+          >
             <SelectboxDropdownContainer instanceId={selectboxInstanceId}>
               <SelectboxVirtualListBox
                 // react-aria-components ListBox renders a div by default; e2e tests expect ul/li.
@@ -1052,16 +1055,21 @@ const Selectbox: FC<Props> = ({
                 } as object)}
                 renderEmptyState={() => "No results"}
               >
-                {item => (
-                  <StyledListBoxItem
-                    id={item.id}
-                    textValue={item.label}
-                    data-creatable={item.isCreatable ? true : undefined}
-                    render={props => <li {...props} />}
-                  >
-                    {item.label}
-                  </StyledListBoxItem>
-                )}
+                {item => {
+                  const option = item as ComboOption
+                  return (
+                    <StyledListBoxItem
+                      id={option.id}
+                      textValue={option.label}
+                      data-creatable={option.isCreatable ? true : undefined}
+                      render={props => (
+                        <li {...(props as HTMLAttributes<HTMLLIElement>)} />
+                      )}
+                    >
+                      {option.label}
+                    </StyledListBoxItem>
+                  )
+                }}
               </SelectboxVirtualListBox>
             </SelectboxDropdownContainer>
           </StyledPopover>

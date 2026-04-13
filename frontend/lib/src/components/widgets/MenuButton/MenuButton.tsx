@@ -267,7 +267,10 @@ function MenuButton(props: Props): ReactElement {
               ref={buttonRef}
             >
               <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
-                <DynamicButtonLabel icon={element.icon} label={element.label} />
+                <DynamicButtonLabel
+                  icon={element.icon}
+                  label={element.label}
+                />
                 {!hideChevron && (
                   <StyledMenuButtonExpansionIcon aria-hidden="true">
                     <DynamicIcon
@@ -313,7 +316,9 @@ function MenuButton(props: Props): ReactElement {
                     key={item.value}
                     id={item.value}
                     textValue={text}
-                    render={props => <li {...props} />}
+                    render={props => (
+                      <li {...(props as HTMLAttributes<HTMLLIElement>)} />
+                    )}
                   >
                     {({ isFocused }) => (
                       <MenuOptionContent item={item} isFocused={isFocused} />

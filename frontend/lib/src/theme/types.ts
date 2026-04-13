@@ -63,6 +63,9 @@ export type DerivedColors = {
   fadedText40: string
   fadedText60: string
 
+  /** Alias for `secondaryBg`; used for widget chrome (selectbox, inputs). */
+  widgetBackgroundColor: string
+
   bgMix: string
   darkenedBgMix100: string
   darkenedBgMix25: string

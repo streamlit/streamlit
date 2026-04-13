@@ -13,7 +13,6 @@
 # limitations under the License.
 from __future__ import annotations
 
-import platform
 import re
 from typing import TYPE_CHECKING
 
@@ -21,6 +20,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
+    COMMAND_KEY,
     check_top_level_class,
     click_toggle,
     expect_help_tooltip,
@@ -66,7 +66,7 @@ def prepare_react_aria_combobox_typing(selectbox_input: Locator) -> None:
     """
     selectbox_input.click()
     # macOS uses Meta+A for "select all" in native fields; Linux/Windows use Ctrl+A.
-    select_all = "Meta+a" if platform.system() == "Darwin" else "Control+a"
+    select_all = f"{COMMAND_KEY}+a"
     selectbox_input.press(select_all)
 
 

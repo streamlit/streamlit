@@ -50,7 +50,7 @@ export enum BaseButtonSize {
 
 export interface BaseButtonProps extends Omit<
   ButtonHTMLAttributes<HTMLButtonElement>,
-  "children" | "onClick" | "type"
+  "children" | "onClick" | "type" | "aria-haspopup"
 > {
   kind: BaseButtonKind
   size?: BaseButtonSize
@@ -62,16 +62,20 @@ export interface BaseButtonProps extends Omit<
   autoFocus?: boolean
   "data-testid"?: string
   "aria-label"?: string
-  "aria-haspopup"?: "menu" | "true" | "dialog" | "listbox" | "tree" | "grid"
-  "aria-expanded"?: boolean
+  /** Wider than strict ARIA literals so react-aria and DOM can pass boolean `true` / `false`. */
+  "aria-haspopup"?:
+    | "menu"
+    | "true"
+    | "dialog"
+    | "listbox"
+    | "tree"
+    | "grid"
+    | "false"
+    | boolean
+  "aria-expanded"?: boolean | "true" | "false"
 }
 
-// Most props become required via defaults in BaseButton, but ARIA popup
-// attributes stay optional so they only appear in the DOM when explicitly set.
-type RequiredBaseButtonProps = Required<
-  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
-> &
-  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+type RequiredBaseButtonProps = BaseButtonProps
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -123,7 +127,7 @@ const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // additionally show a colored focus ring
         boxShadow: theme.shadows.focusRing,
       },
-      ...getSizeStyle(size, theme),
+      ...getSizeStyle(size ?? BaseButtonSize.MEDIUM, theme),
     }
   }
 )
@@ -462,7 +466,7 @@ export const StyledBorderlessIconButton = styled(
   return {
     backgroundColor: theme.colors.transparent,
     color: theme.colors.fadedText60,
-    padding: iconPadding[size],
+    padding: iconPadding[size ?? BaseButtonSize.MEDIUM],
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
 

@@ -219,7 +219,7 @@ const StreamlitCalendarOpenButton = memo(function StreamlitCalendarOpenButton({
   return (
     <CalendarOpenButton
       ref={btnRef}
-      disabled={disabled}
+      isDisabled={disabled}
       data-testid="stDateInputCalendarButton"
     />
   )
@@ -248,6 +248,7 @@ const PickerTextInput = memo(function PickerTextInput({
   lineHeights,
   fontWeights,
   zIndices,
+  radii,
 }: {
   disabled: boolean
   placeholderText: string
@@ -259,7 +260,7 @@ const PickerTextInput = memo(function PickerTextInput({
   commitFromDomValue: (domValue: string) => void
   clearable: boolean
   onEscapeClear: () => void
-  textInputRef: RefObject<HTMLInputElement | null>
+  textInputRef: RefObject<HTMLInputElement>
   racOverlayRef: MutableRefObject<{
     isOpen: boolean
     setOpen: (open: boolean) => void
@@ -272,6 +273,7 @@ const PickerTextInput = memo(function PickerTextInput({
   lineHeights: ReturnType<typeof useEmotionTheme>["lineHeights"]
   fontWeights: ReturnType<typeof useEmotionTheme>["fontWeights"]
   zIndices: ReturnType<typeof useEmotionTheme>["zIndices"]
+  radii: ReturnType<typeof useEmotionTheme>["radii"]
 }): ReactElement {
   const datePickerState = useContext(DatePickerStateContext)
   const dateRangePickerState = useContext(DateRangePickerStateContext)
@@ -372,6 +374,7 @@ const PickerTextInput = memo(function PickerTextInput({
       $lineHeights={lineHeights}
       $fontWeights={fontWeights}
       $zIndices={zIndices}
+      $radii={radii}
     />
   )
 })
@@ -432,7 +435,7 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
-  const { colors, fontWeights, lineHeights, spacing, sizes, zIndices } =
+  const { colors, fontWeights, lineHeights, spacing, sizes, zIndices, radii } =
     useEmotionTheme()
 
   const { locale: libLocale } = useContext(LibConfigContext)
@@ -838,6 +841,7 @@ function DateInput({
                   lineHeights={lineHeights}
                   fontWeights={fontWeights}
                   zIndices={zIndices}
+                  radii={radii}
                 />
                 {clearable && (
                   <ClearButton
@@ -927,6 +931,7 @@ function DateInput({
                   lineHeights={lineHeights}
                   fontWeights={fontWeights}
                   zIndices={zIndices}
+                  radii={radii}
                 />
                 {clearable && (
                   <ClearButton
@@ -1006,6 +1011,7 @@ const StyledTextInput = styled.input<{
   $lineHeights: ReturnType<typeof useEmotionTheme>["lineHeights"]
   $fontWeights: ReturnType<typeof useEmotionTheme>["fontWeights"]
   $zIndices: ReturnType<typeof useEmotionTheme>["zIndices"]
+  $radii: ReturnType<typeof useEmotionTheme>["radii"]
 }>(
   ({
     $hasError,
@@ -1015,6 +1021,7 @@ const StyledTextInput = styled.input<{
     $lineHeights,
     $fontWeights,
     $zIndices,
+    $radii,
   }) => {
     const idle = getBorderColor($colors, false)
     const focused = getBorderColor($colors, true)
@@ -1031,7 +1038,7 @@ const StyledTextInput = styled.input<{
       borderRightColor: idle,
       borderBottomColor: idle,
       borderLeftColor: idle,
-      borderRadius: $sizes.borderRadius,
+      borderRadius: $radii.default,
       paddingRight: $spacing.sm,
       paddingLeft: `calc(${$spacing.sm} + ${$sizes.tagMarginInsideBorder})`,
       paddingBottom: $spacing.sm,
@@ -1191,7 +1198,7 @@ const QuickSelectControl = styled.select<{
   borderBottomWidth: $theme.sizes.borderWidth,
   borderStyle: "solid",
   borderColor: $theme.colors.fadedText10,
-  borderRadius: $theme.radii.md,
+  borderRadius: $theme.radii.md2,
   backgroundColor: $theme.colors.widgetBackgroundColor,
   color: $theme.colors.bodyText,
   fontSize: $theme.fontSizes.sm,
