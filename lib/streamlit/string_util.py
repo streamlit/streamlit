@@ -231,6 +231,52 @@ def simplify_number(num: int) -> str:
     )
 
 
+# Regex patterns for normalizing OpenAI/LLM-style LaTeX delimiters.
+# Match \[ ... \] for block math. Use re.DOTALL so content can span lines.
+_BLOCK_LATEX_DELIMITER: Final = re.compile(r"\\\[(.*?)\\\]", re.DOTALL)
+# Match \( ... \) for inline math.
+_INLINE_LATEX_DELIMITER: Final = re.compile(r"\\\((.*?)\\\)", re.DOTALL)
+
+
+def normalize_latex_delimiters(text: str) -> str:
+    r"""Normalize OpenAI/LLM-style LaTeX delimiters to KaTeX-compatible ones.
+
+    LLM outputs (OpenAI, ChatGPT, Claude, etc.) commonly use ``\(`` / ``\)``
+    for inline math and ``\[`` / ``\]`` for block/display math.  Streamlit's
+    Markdown renderer only recognises ``$`` (inline) and ``$$`` (block), so
+    these expressions would otherwise appear as raw text.
+
+    This function replaces:
+
+    - ``\(`` … ``\)``  →  ``$`` … ``$``   (inline math)
+    - ``\[`` … ``\]``  →  ``$$`` … ``$$`` (display/block math)
+
+    The conversion is applied only when the delimiters are present; content
+    that already uses ``$``/``$$`` is left untouched.
+
+    Parameters
+    ----------
+    text : str
+        The Markdown/text string, potentially containing LLM-style LaTeX.
+
+    Returns
+    -------
+    str
+        The string with normalised LaTeX delimiters.
+
+    Examples
+    --------
+    >>> normalize_latex_delimiters(r"Area is \(A = \pi r^2\).")
+    'Area is $A = \\pi r^2$.'
+    >>> normalize_latex_delimiters(r"\[E = mc^2\]")
+    '$$E = mc^2$$'
+    """
+    # Block math first (so a \[ is not accidentally caught by the inline rule).
+    text = _BLOCK_LATEX_DELIMITER.sub(r"$$\1$$", text)
+    text = _INLINE_LATEX_DELIMITER.sub(r"$\1$", text)
+    return text
+
+
 _OBJ_MEM_ADDRESS: Final = re.compile(
     r"^\<[a-zA-Z_]+[a-zA-Z0-9<>._ ]* at 0x[0-9a-f]+\>$"
 )

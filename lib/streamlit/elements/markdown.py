@@ -24,7 +24,11 @@ from streamlit.elements.lib.layout_utils import (
 )
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.string_util import clean_text, validate_icon_or_emoji
+from streamlit.string_util import (
+    clean_text,
+    normalize_latex_delimiters,
+    validate_icon_or_emoji,
+)
 from streamlit.type_util import SupportsStr, is_sympy_expression
 
 if TYPE_CHECKING:
@@ -49,12 +53,12 @@ class MarkdownMixin:
         """Internal markdown method with extended options."""
         markdown_proto = MarkdownProto()
 
-        markdown_proto.body = clean_text(body)
+        markdown_proto.body = normalize_latex_delimiters(clean_text(body))
         markdown_proto.allow_html = unsafe_allow_html
         markdown_proto.element_type = MarkdownProto.Type.NATIVE
         markdown_proto.unterminated_parsing = unterminated_parsing
         if help:
-            markdown_proto.help = help
+            markdown_proto.help = normalize_latex_delimiters(clean_text(help))
 
         if width != "auto":
             layout_config = create_layout_config(
@@ -315,11 +319,11 @@ class MarkdownMixin:
 
         """
         caption_proto = MarkdownProto()
-        caption_proto.body = clean_text(body)
+        caption_proto.body = normalize_latex_delimiters(clean_text(body))
         caption_proto.allow_html = unsafe_allow_html
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
-            caption_proto.help = help
+            caption_proto.help = normalize_latex_delimiters(clean_text(help))
 
         layout_config = create_layout_config(
             width=width, text_alignment=text_alignment, allow_content_width=True

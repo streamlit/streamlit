@@ -279,3 +279,65 @@ class StringUtilTest(unittest.TestCase):
 
         with pytest.raises(TypeError):
             string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]
+
+
+class NormalizeLatexDelimitersTest(unittest.TestCase):
+    """Tests for string_util.normalize_latex_delimiters."""
+
+    @parameterized.expand(
+        [
+            # Inline \( ... \) → $ ... $
+            (
+                r"Area is \(A = \pi r^2\).",
+                r"Area is $A = \pi r^2$.",
+            ),
+            # Block \[ ... \] → $$ ... $$
+            (
+                r"\[E = mc^2\]",
+                r"$$E = mc^2$$",
+            ),
+            # Multiple inline expressions in one string
+            (
+                r"Values \(x\) and \(y\) are given.",
+                r"Values $x$ and $y$ are given.",
+            ),
+            # Mixed inline and block
+            (
+                r"Inline \(a + b\) and block \[c + d\].",
+                r"Inline $a + b$ and block $$c + d$$.",
+            ),
+            # Already using $ delimiters — must not be double-converted
+            (
+                r"Already $x^2$ formatted.",
+                r"Already $x^2$ formatted.",
+            ),
+            # Already using $$ delimiters — must not be double-converted
+            (
+                r"Already $$x^2$$ formatted.",
+                r"Already $$x^2$$ formatted.",
+            ),
+            # No LaTeX at all — string unchanged
+            (
+                "Plain text without any math.",
+                "Plain text without any math.",
+            ),
+            # Empty string
+            (
+                "",
+                "",
+            ),
+            # Multiline block expression
+            (
+                "\\[\n  \\frac{a}{b}\n\\]",
+                "$$\n  \\frac{a}{b}\n$$",
+            ),
+            # Escaped content with backslashes inside the expression
+            (
+                r"\(\alpha + \beta = \gamma\)",
+                r"$\alpha + \beta = \gamma$",
+            ),
+        ]
+    )
+    def test_normalize_latex_delimiters(self, text: str, expected: str):
+        """Test that OpenAI/LLM-style LaTeX delimiters are normalised correctly."""
+        assert string_util.normalize_latex_delimiters(text) == expected

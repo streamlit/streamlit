@@ -68,6 +68,13 @@ class StMarkdownAPITest(DeltaGeneratorTestCase):
         assert el.markdown.body == "some markdown"
         assert el.markdown.help == "help text"
 
+    def test_st_markdown_normalizes_help_latex(self):
+        """Ensure LaTeX delimiters in help text are normalized like the body."""
+        st.markdown("body", help=r"Equation: \\(x^2\\)")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.help == "Equation: $x^2$"
+
     def test_st_markdown_with_width(self):
         """Test st.markdown with different width types."""
         test_cases = [
@@ -188,6 +195,13 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         st.caption("some caption", help="help text")
         el = self.get_delta_from_queue().new_element
         assert el.markdown.help == "help text"
+
+    def test_st_caption_normalizes_help_latex(self):
+        """Ensure LaTeX delimiters in caption help are normalized."""
+        st.caption("some caption", help=r"Inline \\(x+y\\) and block \\[z\\]")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.help == "Inline $x+y$ and block $$z$$"
 
     def test_st_caption_with_width(self):
         """Test st.caption with different width types."""
@@ -361,6 +375,52 @@ class StBadgeAPITest(DeltaGeneratorTestCase):
 
         assert el.markdown.body == ":blue-badge[Badge without help]"
         assert not getattr(el.markdown, "help", None)
+
+
+class StMarkdownLatexNormalizationTest(DeltaGeneratorTestCase):
+    """Test that st.markdown normalises LLM-style LaTeX delimiters."""
+
+    def test_inline_latex_delimiters_normalized(self):
+        r"""\\( ... \\) should be converted to $ ... $."""
+        st.markdown(r"Inline math: \(x^2\)")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == r"Inline math: $x^2$"
+
+    def test_block_latex_delimiters_normalized(self):
+        r"""\\[ ... \\] should be converted to $$\\n...\\n$$."""
+        st.markdown(r"\[E = mc^2\]")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "$$\nE = mc^2\n$$"
+
+    def test_mixed_latex_delimiters_normalized(self):
+        """Mixed LLM-style inline and block delimiters should both be converted."""
+        st.markdown(r"Inline \(a\) and block \[b\].")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "Inline $a$ and block $$\nb\n$$."
+
+    def test_existing_dollar_delimiters_unchanged(self):
+        """Content already using $ delimiters must not be double-converted."""
+        st.markdown(r"Already $x^2$ and $$y^2$$ formatted.")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == r"Already $x^2$ and $$y^2$$ formatted."
+
+    def test_no_latex_unchanged(self):
+        """Plain text with no LaTeX should be unaffected."""
+        st.markdown("Just plain text.")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == "Just plain text."
+
+    def test_caption_inline_latex_delimiters_normalized(self):
+        r"""st.caption should also normalize \\( ... \\) to $ ... $."""
+        st.caption(r"Caption with \(\pi r^2\)")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.markdown.body == r"Caption with $\pi r^2$"
 
 
 class StMarkdownTextAlignmentTest(DeltaGeneratorTestCase):
