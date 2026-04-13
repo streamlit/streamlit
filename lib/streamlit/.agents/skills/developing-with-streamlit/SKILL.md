@@ -98,7 +98,7 @@ Use this routing table to select sub-skill(s). **Always read the sub-skill file*
 | **Custom themes and colors** | `read references/theme.md` |
 | **Chat interfaces and AI assistants** | `read references/chat-ui.md` |
 | **Connecting to Snowflake** | `read references/snowflake-connection.md` |
-| **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | `read references/custom-components-v2.md` — **IMPORTANT: For new custom components, always use CCv2 (`st.components.v2.component()`). The v1 module still exists but is legacy; specific v1 APIs like `components.v1.html/iframe` are deprecated.** |
+| **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | `read references/custom-components-v2.md` — **IMPORTANT: `st.components.v1` is deprecated. Never use v1 for new components; always use `st.components.v2.component()`.** |
 | **Third-party components** | `read references/third-party-components.md` |
 | **Code organization** | `read references/code-organization.md` |
 | **Environment setup** | `read references/environment-setup.md` |
