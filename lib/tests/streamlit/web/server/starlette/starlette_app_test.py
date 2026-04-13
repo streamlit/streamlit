@@ -22,8 +22,9 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
@@ -36,14 +37,24 @@ from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
     _RESERVED_ROUTE_PREFIXES,
     App,
     create_starlette_app,
+    create_streamlit_middleware,
 )
-from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    SelectiveGZipMiddleware,
+    _should_bypass_static_gzip,
+)
+from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
+)
+from streamlit.web.server.starlette.starlette_static_routes import (
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -210,7 +221,7 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
         {
             "server.baseUrlPath": "",
             "global.developmentMode": False,
-            # Disable XSRF for basic tests (matches Tornado test behavior)
+            # Disable XSRF for basic tests
             "server.enableXsrfProtection": False,
         }
     ):
@@ -231,6 +242,96 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     response = client.get("/_stcore/health")
     assert response.status_code == 200
     assert response.text == "ok"
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/", True),
+        ("/static/app.123.js", True),
+        ("/app/static/logo.svg", False),
+        ("/assets/theme.css", False),
+        ("/_stcore/metrics", False),
+        ("/media/file", False),
+    ],
+    ids=[
+        "root",
+        "static-bundle",
+        "app-static",
+        "hashed-style",
+        "api-route",
+        "media-route",
+    ],
+)
+def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
+    """Only root and `/static/...` paths should bypass the gzip middleware."""
+    assert _should_bypass_static_gzip(path) is expected
+
+
+def test_create_streamlit_middleware_uses_selective_gzip() -> None:
+    """The Streamlit middleware stack should use the selective gzip wrapper."""
+    middleware_list = create_streamlit_middleware()
+
+    assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_selective_gzip_skips_static_like_paths() -> None:
+    """Only `/static/...` paths should bypass gzip while API paths compress."""
+
+    async def javascript_asset(_: Any) -> PlainTextResponse:
+        return PlainTextResponse("x" * 2000, media_type="application/javascript")
+
+    async def json_api(_: Any) -> PlainTextResponse:
+        return PlainTextResponse("x" * 2000, media_type="application/json")
+
+    app = Starlette(
+        routes=[
+            Route("/static/app.123.js", javascript_asset),
+            Route("/_stcore/data", json_api),
+        ],
+        middleware=create_streamlit_middleware(),
+    )
+
+    with TestClient(app) as client:
+        static_response = client.get(
+            "/static/app.123.js", headers={"Accept-Encoding": "gzip"}
+        )
+        api_response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
+
+    assert static_response.status_code == HTTPStatus.OK
+    assert static_response.headers.get("content-encoding") is None
+    assert api_response.status_code == HTTPStatus.OK
+    assert api_response.headers.get("content-encoding") == "gzip"
+
+
+def test_create_starlette_app_sets_anyio_thread_limiter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Starlette app lifespan should apply the measured AnyIO thread limit."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>test</html>")
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    observed: dict[str, int] = {}
+
+    async def start() -> None:
+        from anyio import to_thread
+
+        observed["tokens"] = to_thread.current_default_thread_limiter().total_tokens
+
+    runtime.start = start
+    app = create_starlette_app(runtime)
+
+    with TestClient(app):
+        pass
+
+    assert observed["tokens"] == ANYIO_STATIC_FILE_THREAD_TOKENS
 
 
 def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
@@ -305,7 +406,7 @@ def test_metrics_endpoint_protobuf(
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/x-protobuf"
-    expected_proto = StatsRequestHandler._stats_to_proto(expected).SerializeToString()
+    expected_proto = _stats_to_proto(expected).SerializeToString()
     assert response.content == expected_proto
 
 

@@ -14,8 +14,10 @@
 
 from __future__ import annotations
 
+import builtins
 import contextlib
 import datetime
+import inspect
 import sys
 import unittest
 from collections import Counter
@@ -28,13 +30,17 @@ from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit import config
+from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
+from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.testing.v1.util import patch_config_options
 from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import create_pep649_function
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -43,6 +49,17 @@ MAC = "mac"
 UUID = "uuid"
 FILENAME = "/some/id/file"
 mock_get_path = MagicMock(return_value=FILENAME)
+
+
+def _mock_script_run_ctx() -> MagicMock:
+    """Build a script run context for ``gather_metrics`` tests."""
+    ctx = MagicMock()
+    ctx.gather_usage_stats = True
+    ctx.command_tracking_deactivated = False
+    ctx.tracked_commands = []
+    ctx.tracked_commands_counter = Counter()
+    ctx.fragment_ids_this_run = []
+    return ctx
 
 
 class MetricsUtilTest(unittest.TestCase):
@@ -484,13 +501,7 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
 
 
 def test_get_arg_keywords_includes_positional_only_params() -> None:
-    """_get_arg_keywords includes POSITIONAL_ONLY params like getfullargspec().args.
-
-    This test ensures that _get_arg_keywords correctly matches the behavior of
-    inspect.getfullargspec().args, which includes both POSITIONAL_ONLY and
-    POSITIONAL_OR_KEYWORD parameters.
-    """
-    from streamlit.runtime.metrics_util import _get_arg_keywords
+    """Include positional-only and positional-or-keyword names like ``getfullargspec().args``."""
 
     def func_with_posonly(a: int, b: str, /, c: float, d: bool) -> None:
         pass
@@ -498,11 +509,9 @@ def test_get_arg_keywords_includes_positional_only_params() -> None:
     def func_without_posonly(a: int, b: str, c: float, d: bool) -> None:
         pass
 
-    # Should include positional-only params (a, b) AND positional-or-keyword (c, d)
-    assert _get_arg_keywords(func_with_posonly) == ["a", "b", "c", "d"]
-
-    # Regular function should work the same as before
-    assert _get_arg_keywords(func_without_posonly) == ["a", "b", "c", "d"]
+    expected = ["a", "b", "c", "d"]
+    assert metrics_util._get_arg_keywords(func_with_posonly) == expected
+    assert metrics_util._get_arg_keywords(func_without_posonly) == expected
 
 
 @pytest.mark.skipif(
@@ -510,18 +519,11 @@ def test_get_arg_keywords_includes_positional_only_params() -> None:
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
 )
 def test_get_arg_keywords_handles_pep649_annotations() -> None:
-    """Handles PEP 649 deferred annotations when getting argument names.
+    """Collect argument names when PEP 649 annotations reference undefined types.
 
-    On Python 3.14+, inspect.getfullargspec() can raise NameError for annotations
-    referencing types imported under TYPE_CHECKING. Our _get_arg_keywords helper
-    uses annotation_format=Format.STRING to avoid evaluation.
-
-    See: https://github.com/streamlit/streamlit/issues/14324
+    On Python 3.14+, ``getfullargspec`` may fail on such callables; ``_get_arg_keywords``
+    uses string annotations instead. See https://github.com/streamlit/streamlit/issues/14324.
     """
-    import inspect
-
-    from streamlit.runtime.metrics_util import _get_arg_keywords
-    from tests.testutil import create_pep649_function
 
     def base_func(items: object, count: int) -> None:
         pass
@@ -530,15 +532,10 @@ def test_get_arg_keywords_handles_pep649_annotations() -> None:
         base_func, {"items": "UndefinedType", "count": "int", "return": "None"}
     )
 
-    # Verify that inspect.getfullargspec() without STRING format fails
-    # On Python 3.14, getfullargspec() catches the NameError from annotation
-    # evaluation and re-raises as TypeError("unsupported callable")
     with pytest.raises((NameError, TypeError)):
         inspect.getfullargspec(func)
 
-    # Our _get_arg_keywords should handle this gracefully
-    keywords = _get_arg_keywords(func)
-    assert keywords == ["items", "count"]
+    assert metrics_util._get_arg_keywords(func) == ["items", "count"]
 
 
 @pytest.mark.skipif(
@@ -546,18 +543,11 @@ def test_get_arg_keywords_handles_pep649_annotations() -> None:
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
 )
 def test_gather_metrics_decorator_handles_pep649_annotations() -> None:
-    """Handles PEP 649 deferred annotations when preserving function signature.
+    """Decorate callables whose annotations break plain ``inspect.signature``.
 
-    On Python 3.14+, inspect.signature() raises NameError for annotations
-    referencing types imported under TYPE_CHECKING. Our fix catches NameError
-    via contextlib.suppress when setting __signature__ on decorated functions.
-
-    See: https://github.com/streamlit/streamlit/issues/14324
+    On Python 3.14+, undefined deferred annotations can raise ``NameError``; the
+    decorator still wraps the callable. See https://github.com/streamlit/streamlit/issues/14324.
     """
-    import inspect
-
-    from streamlit.runtime.metrics_util import gather_metrics
-    from tests.testutil import create_pep649_function
 
     def base_func(items: object) -> str:
         return "result"
@@ -566,14 +556,169 @@ def test_gather_metrics_decorator_handles_pep649_annotations() -> None:
         base_func, {"items": "UndefinedType", "return": "str"}
     )
 
-    # Verify that inspect.signature() without STRING format raises NameError
     with pytest.raises(NameError, match="UndefinedType"):
         inspect.signature(func)
 
-    # Apply the gather_metrics decorator - should not raise NameError
-    decorated = gather_metrics("test_command", func)
-
-    # The decorator should complete without error, even though __signature__
-    # couldn't be set due to NameError. The function should still work.
+    decorated = metrics_util.gather_metrics("test_command", func)
     assert decorated.__name__ == "base_func"
     assert decorated("test_items") == "result"
+
+
+def test_installation_repr() -> None:
+    """``Installation.__repr__`` delegates to ``util.repr_``."""
+    inst = object.__new__(metrics_util.Installation)
+    inst.installation_id_v3 = "test-v3"
+    inst.installation_id_v4 = "test-v4"
+    assert (
+        repr(inst)
+        == "Installation(installation_id_v3='test-v3', installation_id_v4='test-v4')"
+    )
+
+
+class _TypeUsesNameOnly:
+    """Marker type; ``hasattr`` is patched to hide ``__qualname__`` in the test."""
+
+
+def test_get_type_name_falls_back_to_name_without_qualname() -> None:
+    """Use ``__name__`` when the type has no ``__qualname__`` (via patched ``hasattr``)."""
+    real_hasattr = builtins.hasattr
+
+    def selective_hasattr(obj: object, name: str) -> bool:
+        if obj is _TypeUsesNameOnly and name == "__qualname__":
+            return False
+        return real_hasattr(obj, name)
+
+    with patch("builtins.hasattr", side_effect=selective_hasattr):
+        assert metrics_util._get_type_name(_TypeUsesNameOnly()) == (
+            f"{_TypeUsesNameOnly.__module__}.{_TypeUsesNameOnly.__name__}"
+        )
+
+
+def test_get_type_name_returns_failed_when_type_introspection_raises() -> None:
+    """Return ``failed`` when introspection raises (telemetry must not assume types are well-behaved)."""
+    with patch(
+        "streamlit.runtime.metrics_util.inspect.isclass",
+        side_effect=RuntimeError("broken inspect"),
+    ):
+        assert metrics_util._get_type_name(object()) == "failed"
+
+
+@pytest.mark.parametrize(
+    "fake_module",
+    [
+        None,
+        MagicMock(__name__=""),
+    ],
+    ids=["no_module", "empty_module_name"],
+)
+def test_get_top_level_module_returns_unknown_without_module_name(
+    fake_module: object,
+) -> None:
+    """Return ``unknown`` when ``inspect.getmodule`` is missing or has no ``__name__``."""
+    with patch(
+        "streamlit.runtime.metrics_util.inspect.getmodule", return_value=fake_module
+    ):
+
+        def sample_func() -> None:
+            pass
+
+        assert metrics_util._get_top_level_module(sample_func) == "unknown"
+
+
+def test_get_command_telemetry_maps_create_instance_to_component_name() -> None:
+    """``create_instance`` telemetry uses ``component:<name>`` when ``self`` exposes ``name``."""
+    self_arg = MagicMock()
+    self_arg.name = "my_component"
+    cmd = metrics_util._get_command_telemetry(
+        CustomComponent.create_instance,
+        "create_instance",
+        self_arg,
+        key="k",
+    )
+    assert cmd.name == "component:my_component"
+
+
+def test_gather_metrics_empty_name_logs_warning_and_tracks_as_undefined() -> None:
+    """Empty decorator name logs a warning and is normalized to ``undefined`` for tracking."""
+    ctx = _mock_script_run_ctx()
+
+    with (
+        patch.object(metrics_util._LOGGER, "warning") as mock_warning,
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        patch.object(metrics_util, "_get_top_level_module", return_value="streamlit"),
+    ):
+
+        @metrics_util.gather_metrics("")
+        def tracked() -> str:
+            return "x"
+
+        assert tracked() == "x"
+
+    mock_warning.assert_called_once_with("gather_metrics: name is empty")
+    assert len(ctx.tracked_commands) == 1
+    assert ctx.tracked_commands[0].name == "undefined"
+
+
+def test_gather_metrics_swallows_command_telemetry_errors() -> None:
+    """Failures in ``_get_command_telemetry`` are logged and do not break the wrapped call."""
+    ctx = _mock_script_run_ctx()
+
+    with (
+        patch.object(metrics_util._LOGGER, "debug") as mock_debug,
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        patch.object(
+            metrics_util,
+            "_get_command_telemetry",
+            side_effect=RuntimeError("telemetry failed"),
+        ),
+    ):
+
+        @metrics_util.gather_metrics("ok_name")
+        def inner() -> int:
+            return 42
+
+        assert inner() == 42
+
+    mock_debug.assert_called_once()
+    assert mock_debug.call_args[0][0] == "Failed to collect command telemetry"
+    assert ctx.tracked_commands == []
+
+
+def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
+    """``RerunException`` still records elapsed time on the active command telemetry."""
+    ctx = _mock_script_run_ctx()
+
+    timer_calls = iter([0.0, 0.25])
+    with (
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        # Patch the global timeit.default_timer because gather_metrics imports it
+        # locally inside the function (not at module level).
+        patch("timeit.default_timer", side_effect=lambda: next(timer_calls)),
+    ):
+
+        @metrics_util.gather_metrics("raises_rerun")
+        def raises_rerun() -> None:
+            raise RerunException(None)
+
+        with pytest.raises(RerunException):
+            raises_rerun()
+
+    assert len(ctx.tracked_commands) == 1
+    assert ctx.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
+
+
+@pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
+def test_create_page_profile_message_sets_server_mode(server_mode: str) -> None:
+    """``server_mode`` is copied from ``config._server_mode`` when it is set."""
+    with patch.object(config, "_server_mode", server_mode):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+        assert msg.page_profile.server_mode == server_mode
+
+
+def test_create_page_profile_message_sets_uncaught_exception() -> None:
+    """``uncaught_exception`` is forwarded into the page profile proto when provided."""
+    exc_text = "ValueError: boom"
+    msg = metrics_util.create_page_profile_message(
+        [], 0, 0, uncaught_exception=exc_text
+    )
+    assert msg.page_profile.uncaught_exception == exc_text

@@ -138,7 +138,7 @@ jobs:
 
       - name: Get latest develop run ID
         id: get-latest-run
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -168,7 +168,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check coverage changes and comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const COVERAGE_CHANGE_THRESHOLD = 0.05; // 0.05%

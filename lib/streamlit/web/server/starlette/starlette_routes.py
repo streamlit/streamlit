@@ -27,31 +27,37 @@ from streamlit.logger import get_logger
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import get_extension_for_mimetype
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.app_static_file_handler import MAX_APP_STATIC_FILE_SIZE
 from streamlit.web.server.component_file_utils import (
     build_safe_abspath,
     guess_content_type,
 )
-from streamlit.web.server.routes import (
+from streamlit.web.server.server_util import (
     allow_all_cross_origin_requests,
+    get_url,
     is_allowed_origin,
+    is_xsrf_enabled,
 )
-from streamlit.web.server.server_util import get_url, is_xsrf_enabled
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app_utils import validate_xsrf_token
-from streamlit.web.server.starlette.starlette_server_config import XSRF_COOKIE_NAME
-from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.starlette.starlette_server_config import (
+    MAX_APP_STATIC_FILE_SIZE,
+    XSRF_COOKIE_NAME,
+)
 
 if TYPE_CHECKING:
+    from collections.abc import Mapping, Sequence
+
     from starlette.requests import Request
     from starlette.responses import Response
     from starlette.routing import BaseRoute
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.components.v2.component_manager import BidiComponentManager
+    from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
     from streamlit.runtime import Runtime
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+    from streamlit.runtime.stats import Stat
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -89,6 +95,61 @@ _ROUTE_COMPONENTS_V2: Final = f"{BASE_ROUTE_CORE}/bidi-components/{{path:path}}"
 
 # App static files
 _ROUTE_APP_STATIC: Final = "app/static/{path:path}"
+
+
+def _stats_to_text(stats_by_family: Mapping[str, Sequence[Stat]]) -> str:
+    """Convert stats to OpenMetrics text format."""
+    result: list[str] = []
+
+    for stats in stats_by_family.values():
+        if not stats:
+            continue
+
+        # All of the stats in a family will have the same family_name, type,
+        # unit, and help text, so we can just use the first one to construct
+        # our OpenMetrics comments.
+        first_stat = stats[0]
+        result.append(f"# TYPE {first_stat.family_name} {first_stat.type}")
+        if first_stat.unit:
+            result.append(f"# UNIT {first_stat.family_name} {first_stat.unit}")
+        result.append(f"# HELP {first_stat.family_name} {first_stat.help}")
+        result.extend(stat.to_metric_str() for stat in stats)
+
+    result.append("# EOF\n")
+    return "\n".join(result)
+
+
+def _stats_to_proto(
+    stats_by_family: Mapping[str, Sequence[Stat]],
+) -> MetricSetProto:
+    """Convert stats to protobuf MetricSet format."""
+    # Lazy load the import of this proto message for better performance:
+    from streamlit.proto.openmetrics_data_model_pb2 import (
+        MetricSet as MetricSetProto,
+    )
+    from streamlit.runtime.stats import metric_type_string_to_proto
+
+    metric_set = MetricSetProto()
+
+    for stats in stats_by_family.values():
+        if not stats:
+            continue
+
+        # All of the stats in a family will have the same family_name, type,
+        # unit, and help text, so we can just use the first one to fill in
+        # these metric_family fields.
+        first_stat = stats[0]
+        metric_family = metric_set.metric_families.add()
+        metric_family.name = first_stat.family_name
+        metric_family.type = metric_type_string_to_proto(first_stat.type)
+        metric_family.unit = first_stat.unit
+        metric_family.help = first_stat.help
+
+        for stat in stats:
+            metric_proto = metric_family.metrics.add()
+            stat.marshall_metric_proto(metric_proto)
+
+    return metric_set
 
 
 def _with_base(path: str, base_url: str | None = None) -> str:
@@ -142,9 +203,8 @@ def _ensure_xsrf_cookie(request: Request, response: Response) -> None:
     """Ensure that the XSRF cookie is set on the response.
 
     This function manages XSRF (Cross-Site Request Forgery) token generation
-    and cookie setting to maintain compatibility with Tornado's implementation.
-    If an existing valid XSRF cookie is present, its token bytes and timestamp
-    are preserved. Otherwise, a new token is generated.
+    and cookie setting. If an existing valid XSRF cookie is present, its token
+    bytes and timestamp are preserved. Otherwise, a new token is generated.
 
     The cookie is only set if XSRF protection is enabled in the configuration.
     The Secure flag is added when SSL is configured.
@@ -196,9 +256,8 @@ def _set_unquoted_cookie(
     """Set a cookie without URL-encoding or quoting the value.
 
     Starlette's standard set_cookie() method URL-encodes special characters
-    (like `|`) in cookie values. This function bypasses that encoding to
-    maintain compatibility with Tornado's cookie format, which is required
-    for XSRF tokens that use the format "2|mask|token|timestamp".
+    (like `|`) in cookie values. This function bypasses that encoding to preserve
+    the raw cookie format required for XSRF tokens (format: "2|mask|token|timestamp").
 
     If a cookie with the same name already exists, it is replaced.
 
@@ -209,7 +268,6 @@ def _set_unquoted_cookie(
 
     HttpOnly is intentionally NOT set for XSRF cookies because JavaScript must
     read the cookie value to include it in request headers (double-submit pattern).
-    This matches Tornado's behavior.
 
     Parameters
     ----------
@@ -359,10 +417,10 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
         stats = runtime.stats_mgr.get_stats(family_names=requested_families or None)
         accept = request.headers.get("Accept", "")
         if "application/x-protobuf" in accept:
-            payload = StatsRequestHandler._stats_to_proto(stats).SerializeToString()
+            payload = _stats_to_proto(stats).SerializeToString()
             response = Response(payload, media_type="application/x-protobuf")
         else:
-            text = StatsRequestHandler._stats_to_text(stats)
+            text = _stats_to_text(stats)
             response = PlainTextResponse(
                 text, media_type="application/openmetrics-text"
             )
@@ -565,7 +623,6 @@ def create_upload_routes(
         """Validate XSRF token for non-safe HTTP methods.
 
         Raises HTTPException with 403 if XSRF is enabled and validation fails.
-        This mirrors Tornado's automatic XSRF protection for non-GET requests.
         """
         if not is_xsrf_enabled():
             return
@@ -786,7 +843,7 @@ def create_bidi_component_routes(
 
         abspath = build_safe_abspath(component_root, filename)
         if abspath is None:
-            # Return 400 for unsafe paths (matches Tornado behavior for opacity)
+            # Return 400 for unsafe paths
             return await _text_response("Bad Request", 400)
 
         if await AsyncPath(abspath).is_dir():

@@ -36,7 +36,7 @@ if TYPE_CHECKING:
 
 
 MAX_COOKIE_BYTES: Final = 4096
-# Cookie attributes added by Tornado: "; Path=/; HttpOnly"
+# Cookie attributes added by the server: "; Path=/; HttpOnly"
 COOKIE_ATTRIBUTES: Final = "; Path=/; HttpOnly"
 COOKIE_ATTR_SIZE: Final = len(COOKIE_ATTRIBUTES)
 # Safety buffer for signing overhead to account for edge cases, rounding, and potential
@@ -343,7 +343,7 @@ def _calculate_signing_overhead(
 ) -> int:
     """Calculate the server's signing overhead by measuring the size difference.
 
-    This empirically measures the overhead added by the signing function (e.g., Tornado's
+    This empirically measures the overhead added by the signing function (e.g., itsdangerous
     create_signed_value) by signing a minimal test value and computing the difference.
 
     Args:

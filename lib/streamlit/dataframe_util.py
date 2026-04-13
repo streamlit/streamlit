@@ -21,6 +21,7 @@ import dataclasses
 import inspect
 import math
 import re
+import warnings
 from collections import ChainMap, UserDict, UserList, deque
 from collections.abc import ItemsView, Iterable, Mapping, Sequence
 from enum import Enum, EnumMeta, auto
@@ -29,6 +30,7 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Final,
+    Literal,
     Protocol,
     TypeAlias,
     TypeGuard,
@@ -165,11 +167,26 @@ class DataframeInterchangeCompatible(Protocol):
     def __dataframe__(self, allow_copy: bool) -> Any: ...
 
 
+class ArrowStreamExportable(Protocol):
+    """Protocol for objects implementing the Arrow PyCapsule Interface.
+
+    Objects implementing this protocol can export their data as an Arrow stream
+    via the C Data Interface using PyCapsules. This is the recommended way for
+    cross-library Arrow data exchange, replacing the deprecated DataFrame
+    Interchange Protocol.
+
+    https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+    """
+
+    def __arrow_c_stream__(self, requested_schema: Any = None) -> Any: ...
+
+
 OptionSequence: TypeAlias = (
     Iterable[V_co]
     | DataFrameGenericAlias[V_co]
     | PandasCompatible
     | DataframeInterchangeCompatible
+    | ArrowStreamExportable
 )
 
 # Various data types supported by our dataframe processing
@@ -188,6 +205,7 @@ Data: TypeAlias = Union[
     DBAPICursor,
     PandasCompatible,
     DataframeInterchangeCompatible,
+    ArrowStreamExportable,
     CustomDict,
     None,
 ]
@@ -253,6 +271,18 @@ def is_pyarrow_version_less_than(v: str) -> bool:
     import pyarrow as pa
 
     return is_version_less_than(pa.__version__, v)
+
+
+# Minimum PyArrow version that supports consuming PyCapsule Interface via from_stream.
+# While the PyCapsule Interface dunder methods (__arrow_c_stream__, etc.) were added in
+# PyArrow 14.0.0, RecordBatchReader.from_stream() was introduced in PyArrow 15.0.0.
+# https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+_MIN_PYARROW_PYCAPSULE_VERSION: Final = "15.0.0"
+
+
+def _is_arrow_pycapsule_supported() -> bool:
+    """Return True if PyArrow supports the Arrow PyCapsule Interface."""
+    return not is_pyarrow_version_less_than(_MIN_PYARROW_PYCAPSULE_VERSION)
 
 
 def is_pandas_version_less_than(v: str) -> bool:
@@ -695,14 +725,35 @@ def convert_anything_to_pandas_df(
     if has_callable_attr(data, "to_pandas"):
         return pd.DataFrame(data.to_pandas())
 
-    # Check for dataframe interchange protocol
+    # Check for Arrow PyCapsule Interface (__arrow_c_stream__). Preferred over
+    # the deprecated DataFrame Interchange Protocol for cross-library data exchange.
+    # https://arrow.apache.org/docs/format/CDataInterface/PyCapsuleInterface.html
+    if (
+        has_callable_attr(data, "__arrow_c_stream__")
+        and _is_arrow_pycapsule_supported()
+    ):
+        import pyarrow as pa
+
+        try:
+            table = pa.RecordBatchReader.from_stream(data).read_all()
+            data_df = cast("pd.DataFrame", table.to_pandas())
+            return data_df.copy() if ensure_copy else data_df
+        except (pa.ArrowInvalid, pa.ArrowTypeError, pa.ArrowNotImplementedError):
+            # Object exports a non-struct type (e.g., pandas Series) or has a
+            # partial __arrow_c_stream__ implementation. Fall back to other methods.
+            pass
+
+    # Check for dataframe interchange protocol (deprecated, prefer PyCapsule above)
     # Only available in pandas >= 1.5.0
     # https://pandas.pydata.org/docs/whatsnew/v1.5.0.html#dataframe-interchange-protocol-implementation
     if (
         has_callable_attr(data, "__dataframe__")
         and is_pandas_version_less_than("1.5.0") is False
     ):
-        data_df = pd.api.interchange.from_dataframe(data)
+        # Suppress the Pandas4Warning about deprecated interchange protocol
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", "The Dataframe Interchange Protocol")
+            data_df = pd.api.interchange.from_dataframe(data)
         return data_df.copy() if ensure_copy else data_df
 
     # Support for generator functions
@@ -890,8 +941,6 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    # TODO(lukasmasuch): Add direct conversion to Arrow for supported formats here
-
     # Fallback: try to convert to pandas DataFrame
     # and then to Arrow bytes.
     df = convert_anything_to_pandas_df(data, max_unevaluated_rows)
@@ -1029,14 +1078,21 @@ def _maybe_truncate_table(
     return table
 
 
-def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
-    """Return True if the column type is known to cause issues during
-    Arrow conversion.
+def determine_arrow_column_fix(
+    column: Series[Any] | Index[Any],
+) -> Literal["string", "list"] | None:
+    """Determine the fix needed for Arrow compatibility.
+
+    Returns the conversion type needed for Arrow compatibility:
+    - "string": convert column values to strings
+    - "list": convert iterable values (e.g., frozensets, ExtensionArrays) to lists
+    - None: column is already Arrow-compatible
     """
+    from pandas.api.extensions import ExtensionArray
     from pandas.api.types import infer_dtype, is_dict_like, is_list_like
 
     if column.dtype.kind == "c":  # complex64, complex128, complex256
-        return True
+        return "string"
 
     if str(column.dtype) in {
         # These period types are not yet supported by our frontend impl.
@@ -1048,7 +1104,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
         "period[us]",
         "geometry",
     }:
-        return True
+        return "string"
 
     if column.dtype == "object":
         # The dtype of mixed type columns is always object. In pandas 3.0+, pure
@@ -1062,7 +1118,7 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
             "mixed-integer",
             "complex",
         }:
-            return True
+            return "string"
         if inferred_type == "mixed":
             # This includes most of the more complex/custom types (objects, dicts,
             # lists, ...)
@@ -1072,24 +1128,28 @@ def is_colum_type_arrow_incompatible(column: Series[Any] | Index[Any]) -> bool:
                 # The column seems to be invalid, so we assume it is incompatible.
                 # But this would most likely never happen since empty columns
                 # cannot be mixed.
-                return True
+                return "string"
 
-            # Get the first value to check if it is a supported list-like type.
-            first_value = cast("DataFrameGenericAlias[Any]", column).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
+            # Get the first non-null value to check if it is a supported list-like type.
+            # Using dropna() handles cases where early values are NaN (e.g., from reindexing).
+            non_null = column.dropna()
+            if len(non_null) == 0:
+                return "string"
+            first_value = cast("DataFrameGenericAlias[Any]", non_null).iloc[0]  # type: ignore[index] # ty: ignore[not-subscriptable]
 
-            if (  # noqa: SIM103
-                not is_list_like(first_value)
-                # dicts are list-like, but have issues in Arrow JS (see comments in
-                # Quiver.ts)
-                or is_dict_like(first_value)
-                # Frozensets are list-like, but are not compatible with pyarrow.
-                or isinstance(first_value, frozenset)
-            ):
-                # This seems to be an incompatible list-like type
-                return True
-            return False
+            if not is_list_like(first_value):
+                return "string"
+            # dicts are list-like, but have issues in Arrow JS (see comments in
+            # Quiver.ts)
+            if is_dict_like(first_value):
+                return "string"
+            # Frozensets and ExtensionArrays (e.g. ArrowStringArray from pandas 3+)
+            # are list-like but not directly serializable by PyArrow - convert to lists.
+            if isinstance(first_value, (frozenset, ExtensionArray)):
+                return "list"
+            return None
     # We did not detect an incompatible type, so we assume it is compatible:
-    return False
+    return None
 
 
 def fix_arrow_incompatible_column_types(
@@ -1100,7 +1160,7 @@ def fix_arrow_incompatible_column_types(
     This includes mixed types (e.g. mix of integers and strings)
     as well as complex numbers (complex128 type). These types will cause
     errors during conversion of the dataframe to an Arrow table.
-    It is fixed by converting all values of the column to strings
+    It is fixed by converting column values to strings or lists as appropriate.
     This is sufficient for displaying the data on the frontend.
 
     Parameters
@@ -1120,10 +1180,22 @@ def fix_arrow_incompatible_column_types(
     # Make a copy, but only initialize if necessary to preserve memory.
     df_copy: DataFrame | None = None
     for col in selected_columns or df.columns:
-        if is_colum_type_arrow_incompatible(df[col]):
+        fix_type = determine_arrow_column_fix(df[col])
+        if fix_type is not None:
             if df_copy is None:
                 df_copy = df.copy()
-            df_copy[col] = df[col].astype("string")
+            if fix_type == "list":
+                # Convert any iterable (except strings/bytes) to lists.
+                # Non-iterable values (e.g., NaN/None) are kept as-is.
+                df_copy[col] = df[col].map(
+                    lambda x: (
+                        list(x)
+                        if isinstance(x, Iterable) and not isinstance(x, (str, bytes))
+                        else x
+                    )
+                )
+            else:
+                df_copy[col] = df[col].astype("string")
 
     # The index can also contain mixed types
     # causing Arrow issues during conversion.
@@ -1134,7 +1206,7 @@ def fix_arrow_incompatible_column_types(
             df.index,
             pd.MultiIndex,
         )
-        and is_colum_type_arrow_incompatible(df.index)
+        and determine_arrow_column_fix(df.index) is not None
     ):
         if df_copy is None:
             df_copy = df.copy()
@@ -1261,16 +1333,23 @@ def _unify_missing_values(df: DataFrame) -> DataFrame:
 
     Pandas uses a variety of values to represent missing values, including np.nan,
     NaT, None, and pd.NA. This function replaces all of these values with None,
-    which is the only missing value type that is supported by all data
+    which is the only missing value type that is supported by all data types
+    when serializing to JSON-compatible formats.
     """
     import numpy as np
     import pandas as pd
 
-    # Replace all recognized nulls (np.nan, pd.NA, NaT) with None
-    # then infer objects without creating a separate copy:
-    # For performance reasons, we could use copy=False here.
-    # However, this is only available in pandas >=2.
-    return df.replace([pd.NA, pd.NaT, np.nan], None).infer_objects()  # type: ignore
+    # Replace all recognized nulls (np.nan, pd.NA, NaT) with None.
+    result = df.replace([pd.NA, pd.NaT, np.nan], None)  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
+
+    # infer_objects() improves column type correctness (e.g., int instead of float,
+    # string instead of object). However, in pandas 3.0+ it converts None back to
+    # np.nan, which defeats the purpose of this function. Only call it for older
+    # pandas versions. See: https://github.com/streamlit/streamlit/issues/14693
+    if is_pandas_version_less_than("3.0.0"):
+        result = result.infer_objects()
+
+    return result
 
 
 def _pandas_df_to_series(df: DataFrame) -> Series[Any]:

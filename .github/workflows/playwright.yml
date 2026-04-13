@@ -97,7 +97,7 @@ jobs:
 
       - name: Get latest develop run ID
         id: get-latest-run
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -129,7 +129,7 @@ jobs:
 
       - name: Compare test counts and comment
         if: steps.get-latest-run.outputs.run_id
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');

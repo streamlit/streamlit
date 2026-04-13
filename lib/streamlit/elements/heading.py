@@ -17,7 +17,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -131,8 +131,11 @@ class HeadingMixin:
            height: 600px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -237,8 +240,11 @@ class HeadingMixin:
            height: 500px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -332,8 +338,11 @@ class HeadingMixin:
            height: 220px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",

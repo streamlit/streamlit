@@ -14,6 +14,7 @@
 
 """media.py unit tests that are common to st.audio + st.video"""
 
+import io
 from enum import Enum
 from pathlib import Path
 from unittest import mock
@@ -23,9 +24,17 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.cursor import make_delta_path
-from streamlit.elements.media import MediaData
-from streamlit.errors import StreamlitInvalidWidthError
+from streamlit.elements.media import (
+    TIMEDELTA_PARSE_ERROR_MESSAGE,
+    MediaData,
+    MediaMixin,
+    _marshall_av_media,
+    _parse_start_time_end_time,
+    marshall_video,
+)
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.RootContainer_pb2 import RootContainer
+from streamlit.proto.Video_pb2 import Video as VideoProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -234,3 +243,118 @@ class MediaTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise exceptions for video."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.video("foo.mp4", "video/mp4", width=width)
+
+
+class _RawIOReadReturnsNone(io.RawIOBase):
+    """Minimal RawIOBase whose read() returns None (non-standard but handled)."""
+
+    def readable(self) -> bool:
+        return True
+
+    def seek(self, offset: int, whence: int = io.SEEK_SET) -> int:
+        return 0
+
+    def read(self, n: int = -1) -> bytes | None:  # type: ignore[override]
+        return None
+
+
+def test_media_mixin_dg_returns_self() -> None:
+    """``MediaMixin.dg`` returns the mixin instance."""
+
+    class _OnlyMedia(MediaMixin):
+        pass
+
+    media_mixin = _OnlyMedia()
+    assert media_mixin.dg is media_mixin
+
+
+def test_marshall_av_media_raw_io_read_returns_none() -> None:
+    """When RawIOBase.read() returns None, marshalling returns without setting a URL."""
+    proto = VideoProto()
+    _marshall_av_media("coord", proto, _RawIOReadReturnsNone(), "video/mp4")
+    assert proto.url == ""
+
+
+@pytest.mark.parametrize("invalid_data", [42, 3.14, object()])
+def test_marshall_av_media_invalid_binary_type_raises(invalid_data: object) -> None:
+    """Unsupported data types should raise RuntimeError."""
+    proto = VideoProto()
+    with pytest.raises(RuntimeError, match="Invalid binary data format"):
+        _marshall_av_media("coord", proto, invalid_data, "video/mp4")  # type: ignore[arg-type]
+
+
+def test_marshall_av_media_no_runtime_sets_empty_url() -> None:
+    """Without a Streamlit runtime, the proto URL should stay empty."""
+    proto = VideoProto()
+    with mock.patch("streamlit.elements.media.runtime.exists", return_value=False):
+        _marshall_av_media("coord", proto, b"data", "video/mp4")
+    assert proto.url == ""
+
+
+@pytest.mark.parametrize(
+    ("start_time", "end_time"),
+    [
+        (-1, None),
+        (0, 0),
+        (10, 5),
+    ],
+)
+def test_marshall_video_invalid_start_end_times(
+    start_time: int, end_time: int | None
+) -> None:
+    """Negative start_time or end_time not after start_time should error."""
+    proto = VideoProto()
+    with pytest.raises(
+        StreamlitAPIException, match="Invalid start_time and end_time combination"
+    ):
+        marshall_video(
+            mock.Mock(),
+            "coord",
+            proto,
+            b"video-bytes",
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+
+def test_marshall_video_youtube_with_subtitles_raises() -> None:
+    """Subtitles are rejected for YouTube iframe URLs."""
+    proto = VideoProto()
+    with pytest.raises(
+        StreamlitAPIException, match="Subtitles are not supported for YouTube"
+    ):
+        marshall_video(
+            mock.Mock(),
+            "coord",
+            proto,
+            "https://youtu.be/dQw4w9WgXcQ",
+            subtitles={"en": "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\nx"},
+        )
+
+
+@pytest.mark.parametrize("bad_subtitles", [["x"], [0], 123])
+def test_marshall_video_unsupported_subtitles_type_raises(
+    bad_subtitles: object,
+) -> None:
+    """Reject subtitle containers that are not str, bytes, Path, BytesIO, or dict."""
+    proto = VideoProto()
+    with pytest.raises(
+        StreamlitAPIException, match="Unsupported data type for subtitles"
+    ):
+        marshall_video(
+            mock.Mock(),
+            "coord",
+            proto,
+            "https://example.com/video.mp4",
+            subtitles=bad_subtitles,  # type: ignore[arg-type]
+        )
+
+
+def test_parse_start_end_time_none_start_raises() -> None:
+    """None start_time is converted via time_to_seconds to None and should error."""
+    with pytest.raises(StreamlitAPIException) as exc_info:
+        _parse_start_time_end_time(None, None)  # type: ignore[arg-type]
+    expected = TIMEDELTA_PARSE_ERROR_MESSAGE.format(
+        param_name="start_time", param_value=None
+    )
+    assert str(exc_info.value) == expected
