@@ -146,14 +146,6 @@ if "tickers_input" not in st.session_state:
     ).split(",")
 
 
-# Callback to update query param when input changes
-def update_query_param():
-    if st.session_state.tickers_input:
-        st.query_params["stocks"] = stocks_to_str(st.session_state.tickers_input)
-    else:
-        st.query_params.pop("stocks", None)
-
-
 top_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
 )
@@ -232,9 +224,11 @@ if empty_columns:
 # Normalize prices (start at 1)
 normalized = data.div(data.iloc[0])
 
-latest_norm_values = {normalized[ticker].iat[-1]: ticker for ticker in tickers}
-max_norm_value = max(latest_norm_values.items())
-min_norm_value = min(latest_norm_values.items())
+# Build list of (normalized_value, ticker) tuples for safe comparison
+# (using a dict with float keys could silently drop tickers with identical values).
+ticker_values = [(normalized[ticker].iat[-1], ticker) for ticker in tickers]
+max_norm_value = max(ticker_values)
+min_norm_value = min(ticker_values)
 
 bottom_left_cell = cols[0].container(
     border=True, height="stretch", vertical_alignment="center"
@@ -245,13 +239,13 @@ with bottom_left_cell:
     cols[0].metric(
         "Best stock",
         max_norm_value[1],
-        delta=f"{round(max_norm_value[0] * 100)}%",
+        delta=f"{round((max_norm_value[0] - 1) * 100)}%",
         width="content",
     )
     cols[1].metric(
         "Worst stock",
         min_norm_value[1],
-        delta=f"{round(min_norm_value[0] * 100)}%",
+        delta=f"{round((min_norm_value[0] - 1) * 100)}%",
         width="content",
     )
 
@@ -323,7 +317,7 @@ for i, ticker in enumerate(tickers):
 
     cell = cols[(i * 2) % NUM_COLS].container(border=True)
     cell.write("")
-    cell.altair_chart(chart, use_container_width=True)
+    cell.altair_chart(chart, width="stretch")
 
     # Create Delta chart
     plot_data = pd.DataFrame(
@@ -345,7 +339,7 @@ for i, ticker in enumerate(tickers):
 
     cell = cols[(i * 2 + 1) % NUM_COLS].container(border=True)
     cell.write("")
-    cell.altair_chart(chart, use_container_width=True)
+    cell.altair_chart(chart, width="stretch")
 
 ""
 ""

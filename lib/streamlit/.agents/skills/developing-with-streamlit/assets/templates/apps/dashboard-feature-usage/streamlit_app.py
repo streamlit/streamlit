@@ -48,10 +48,35 @@ st.set_page_config(
 
 # API categories and their endpoints
 API_CATEGORIES = {
-    "Users": ["/users", "/users/{id}", "/users/me", "/users/search", "/users/bulk", "/users/export"],
-    "Orders": ["/orders", "/orders/{id}", "/orders/create", "/orders/cancel", "/orders/refund", "/orders/status"],
-    "Products": ["/products", "/products/{id}", "/products/search", "/products/categories", "/products/inventory"],
-    "Analytics": ["/analytics/events", "/analytics/metrics", "/analytics/reports", "/analytics/dashboards"],
+    "Users": [
+        "/users",
+        "/users/{id}",
+        "/users/me",
+        "/users/search",
+        "/users/bulk",
+        "/users/export",
+    ],
+    "Orders": [
+        "/orders",
+        "/orders/{id}",
+        "/orders/create",
+        "/orders/cancel",
+        "/orders/refund",
+        "/orders/status",
+    ],
+    "Products": [
+        "/products",
+        "/products/{id}",
+        "/products/search",
+        "/products/categories",
+        "/products/inventory",
+    ],
+    "Analytics": [
+        "/analytics/events",
+        "/analytics/metrics",
+        "/analytics/reports",
+        "/analytics/dashboards",
+    ],
 }
 
 # Starter kits - predefined endpoint selections
@@ -96,11 +121,13 @@ def generate_api_data(
             # Random noise
             value = trend * np.random.uniform(0.85, 1.15)
 
-            records.append({
-                "date": dt,
-                "endpoint": endpoint,
-                "request_count": int(value),
-            })
+            records.append(
+                {
+                    "date": dt,
+                    "endpoint": endpoint,
+                    "request_count": int(value),
+                }
+            )
 
     df = pd.DataFrame(records)
     return df
@@ -125,9 +152,8 @@ def apply_rolling_average(df: pd.DataFrame, window: int) -> pd.DataFrame:
         return df
 
     result = df.copy()
-    result["request_count"] = (
-        result.groupby("endpoint")["request_count"]
-        .transform(lambda x: x.rolling(window, min_periods=1).mean())
+    result["request_count"] = result.groupby("endpoint")["request_count"].transform(
+        lambda x: x.rolling(window, min_periods=1).mean()
     )
     return result
 
@@ -245,7 +271,9 @@ with filter_col:
 
     # Determine default selection based on starter kit
     if starter_kit and starter_kit != "None":
-        default_endpoints = [e for e in STARTER_KITS[starter_kit] if e in available_endpoints]
+        default_endpoints = [
+            e for e in STARTER_KITS[starter_kit] if e in available_endpoints
+        ]
     else:
         default_endpoints = available_endpoints[:4]  # First 4 endpoints
 
@@ -260,7 +288,9 @@ with filter_col:
 # Filter and process data
 if not selected_endpoints:
     with chart_col:
-        st.info("Select at least one endpoint to view usage data.", icon=":material/info:")
+        st.info(
+            "Select at least one endpoint to view usage data.", icon=":material/info:"
+        )
     st.stop()
 
 filtered_data = raw_data[raw_data["endpoint"].isin(selected_endpoints)].copy()
@@ -301,8 +331,12 @@ with chart_col:
             .mark_line()
             .encode(
                 x=alt.X("date:T", title="Date"),
-                y=alt.Y("request_count:Q", title=y_title, axis=alt.Axis(format=y_format)),
-                color=alt.Color("endpoint:N", title="Endpoint", legend=alt.Legend(orient="bottom")),
+                y=alt.Y(
+                    "request_count:Q", title=y_title, axis=alt.Axis(format=y_format)
+                ),
+                color=alt.Color(
+                    "endpoint:N", title="Endpoint", legend=alt.Legend(orient="bottom")
+                ),
                 tooltip=[
                     alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"),
                     alt.Tooltip("endpoint:N", title="Endpoint"),
@@ -313,11 +347,13 @@ with chart_col:
             .interactive()
         )
 
-        st.altair_chart(chart, use_container_width=True)
+        st.altair_chart(chart, width="stretch")
 
 # Raw data section
 with st.expander("Raw data", expanded=False, icon=":material/table:"):
     display_df = filtered_data.copy()
     if normalize:
-        display_df["request_count"] = display_df["request_count"].apply(lambda x: f"{x:.2%}")
-    st.dataframe(display_df, use_container_width=True, hide_index=True)
+        display_df["request_count"] = display_df["request_count"].apply(
+            lambda x: f"{x:.2%}"
+        )
+    st.dataframe(display_df, width="stretch", hide_index=True)

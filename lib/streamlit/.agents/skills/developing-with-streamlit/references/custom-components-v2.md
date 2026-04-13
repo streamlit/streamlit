@@ -3,14 +3,14 @@
 
 Use Streamlit Custom Components v2 (CCv2) when core Streamlit doesn’t have the UI you need and you want to ship a reusable, interactive element (from “tiny inline HTML” to “full bundled frontend app”).
 
-## CRITICAL: CCv2 only — NEVER use v1 APIs
+## CRITICAL: CCv2 only — NEVER use v1 APIs for new components
 
-Custom Components **v1 is deprecated and removed**. Every API below belongs to v1 and must **NEVER** appear in any code you write — not in Python, not in JavaScript, not in HTML:
+Custom Components **v1 is legacy and superseded by v2**. The `st.components.v1` module still exists in Streamlit (e.g., `declare_component` for existing third-party components), but specific v1 APIs like `components.v1.html()` and `components.v1.iframe()` are deprecated. **For new components, always use CCv2.** The following v1 APIs must **NEVER** appear in new code:
 
-**Banned Python APIs (v1):**
-- `st.components.v1` — the entire v1 module
-- `components.declare_component()` — v1 registration
-- `components.html()` — v1 raw HTML embed
+**Banned Python APIs (v1 — do not use for new components):**
+- `components.declare_component()` — v1 registration; use `st.components.v2.component()` instead
+- `components.v1.html()` — deprecated; use `st.iframe()` instead
+- `components.v1.iframe()` — deprecated; use `st.iframe()` instead
 
 **Banned JavaScript patterns (v1):**
 - `Streamlit.setComponentValue(...)` — v1 global; use `setStateValue()` / `setTriggerValue()` instead
