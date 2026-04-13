@@ -111,6 +111,24 @@ with st.sidebar:
 # Main area is all dashboard content
 ```
 
+## Dashboard templates
+
+Ready-to-use dashboard templates are available in `assets/templates/apps/`:
+
+| Template | Features |
+|----------|----------|
+| `dashboard-metrics` | Metric cards with sparklines, date filtering, focus mode |
+| `dashboard-metrics-snowflake` | Same as above, with Snowflake connection |
+| `dashboard-companies` | Company comparison, filterable data tables |
+| `dashboard-compute` | `@st.fragment` for independent updates, popover filters |
+| `dashboard-compute-snowflake` | Same as above, with Snowflake connection |
+| `dashboard-feature-usage` | Feature adoption tracking, trend analysis |
+| `dashboard-seattle-weather` | Weather data visualization |
+| `dashboard-stock-peers` | Stock peer comparison |
+| `dashboard-stock-peers-snowflake` | Same as above, with Snowflake connection |
+
+Each template uses synthetic data that can be replaced with real queries. See `assets/templates/apps/README.md` for setup instructions.
+
 ## References
 
 - `layouts.md` — Columns, containers, tabs, dialogs
