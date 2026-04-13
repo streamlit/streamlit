@@ -76,14 +76,14 @@ secondaryBackgroundColor = "skyBlue"
 ## Detect current theme
 
 ```python
-if st.context.theme.base == "dark":
+if st.context.theme.type == "dark":
     # Dark mode specific logic
     chart_color = "#FF6B6B"
 else:
     chart_color = "#FF4B4B"
 ```
 
-Use `st.context.theme.base` to detect if the user is in light or dark mode.
+Use `st.context.theme.type` to detect if the user is in light or dark mode.
 
 ## When CSS is allowed
 

@@ -174,9 +174,8 @@ extend-exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   # Ignore frontend directory:
   "frontend/**",
-  # Bundled skill templates are copied verbatim from cortex-code-skills and
-  # follow their own conventions (not Streamlit library conventions), so they
-  # are excluded from Ruff checks to avoid false positives:
+  # Bundled agent skills (reference docs and app templates) follow their own
+  # conventions, so they are excluded from Ruff checks:
   "lib/streamlit/.agents/**",
 ]
 exclude = [
