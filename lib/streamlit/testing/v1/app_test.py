@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from __future__ import annotations
+from streamlit.testing.v1.element_tree import Expandable
 
 import inspect
 import tempfile
@@ -756,18 +757,9 @@ class AppTest:
         return self._tree.file_uploader
 
     @property
-    def expander(self) -> Sequence[Expander]:
-        """Sequence of all ``st.expander`` elements.
-
-        Returns
-        -------
-        Sequence of Expandable
-            Sequence of all ``st.expander`` elements. Individual elements can be
-            accessed from a Sequence by index (order on the page). For
-            example, ``at.expander[0]`` for the first element. Expandable is an
-            extension of the Block class.
-        """
-        return self._tree.expander
+     def expander(self) -> Sequence[Expandable]:
+             """Sequence of all expander elements."""
+             return self._tree.expander
 
     @property
     def header(self) -> ElementList[Header]:
