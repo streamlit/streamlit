@@ -20,9 +20,7 @@ import styled from "@emotion/styled"
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
 // Shimmer animation: sweeps a mask gradient from right to left across the text.
-// Uses mask-position animation to fade text opacity in/out, preserving any inherited
-// or nested color directive colors (unlike background-clip: text which requires
-// color: transparent).
+// Uses mask-position animation to fade text opacity in/out.
 const shimmerAnimation = keyframes`
   0% {
     mask-position: 600% center;
