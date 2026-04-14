@@ -49,7 +49,9 @@ function AlertElement({
 }: Readonly<AlertElementProps>): ReactElement {
   const theme = useEmotionTheme()
 
-  // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present
+  // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present.
+  // Only needed for the no-title layout where icon and body are side by side (row).
+  // When there's a title, the layout is vertical (column) and body has its own full-width row.
   const markdownWidth = {
     width: icon
       ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
