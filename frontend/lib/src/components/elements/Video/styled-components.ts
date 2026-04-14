@@ -23,4 +23,10 @@ export const StyledVideoIframe = styled.iframe(({ theme }) => ({
   margin: theme.spacing.none,
   width: "100%",
   aspectRatio: "16 / 9",
+  borderRadius: theme.radii.default,
+}))
+
+export const StyledVideo = styled.video(({ theme }) => ({
+  width: "100%",
+  borderRadius: theme.radii.default,
 }))
