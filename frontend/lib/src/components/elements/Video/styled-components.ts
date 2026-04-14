@@ -31,4 +31,5 @@ export const StyledVideo = styled.video(({ theme }) => ({
   display: "block",
   width: "100%",
   borderRadius: theme.radii.default,
+  overflow: "hidden",
 }))
