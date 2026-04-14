@@ -116,7 +116,7 @@ When `on_change="ignore"`:
 
 1. User interacts with widget (e.g., moves slider)
 2. Frontend updates the widget's visual state
-3. Widget value is stored in **frontend state** (not sent to backend)
+3. Widget value is updated in **frontend state** only (no immediate flush to backend)
 4. **No rerun is triggered**
 5. On next rerun (e.g., triggered by a button click), the frontend sends the updated value to the
    backend, and Python code receives it
@@ -146,6 +146,7 @@ if st.button("Train Model"):
 
 ```python
 import streamlit as st
+import pandas as pd
 
 # Upload without immediate processing
 uploaded_file = st.file_uploader("Upload CSV", on_change="ignore")
@@ -190,11 +191,14 @@ When `on_change="ignore"`:
 This is the expected behavior - the feature is designed for cases where you want to batch multiple
 widget changes before processing them together.
 
+**Note:** Widget values modified with `on_change="ignore"` are held in browser memory only. If the
+session ends or the page is refreshed before a rerun occurs, those changes are lost.
+
 ## Checklist
 
-| Item                         | Status                                                    |
+| Item                         | ✅ or comment                                             |
 | ---------------------------- | --------------------------------------------------------- |
-| Works on SiS, Cloud, etc?    | ✅ Frontend-only change, no platform dependencies |
+| Works on SiS, Cloud, etc?    | ✅ Requires coordinated frontend, proto, and backend changes; expected to work consistently across supported platforms |
 | No breaking API changes      | ✅ New parameter value, existing code unchanged |
 | No new dependencies          | ✅                                        |
 | Metrics collected            | ✅ Existing widget metrics apply          |

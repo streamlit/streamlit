@@ -3,15 +3,18 @@ author: lukasmasuch
 created: 2026-04-14
 ---
 
-# Callback modes for `on_change` and `on_select` parameters
+# Callback modes for `on_change` parameter
 
 ## Summary
 
-Extend stateful widget callback parameters (`on_change`, `on_select`) to accept
-`Literal["rerun", "ignore"]` in addition to `WidgetCallback`, enabling users to control whether a
-widget interaction triggers a rerun. This unifies the existing pattern already implemented in
-`st.dataframe` and chart elements, and reuses the `ignore_rerun` proto field from `st.link_button`
+Extend stateful widget `on_change` parameter to accept `Literal["rerun", "ignore"]` in addition to
+`WidgetCallback`, enabling users to control whether a widget interaction triggers a rerun. This
+unifies the existing `on_select` pattern already implemented in `st.dataframe` and chart elements
+with the remaining stateful widgets, and reuses the `ignore_rerun` proto field from `st.link_button`
 and `st.download_button`.
+
+Note: The `on_select` parameter in `st.dataframe`/charts already supports this pattern. This spec
+focuses on bringing the same capability to the `on_change` parameter across all stateful widgets.
 
 ## Problem
 
@@ -114,6 +117,20 @@ on_change: WidgetCallback | Literal["rerun", "ignore"] | None = "rerun"
 **Note:** `None` is kept as an alias for `"rerun"` for backwards compatibility. The default is
 `"rerun"` to be explicit about the behavior.
 
+### Backwards Compatibility
+
+Changing the default from `None` to `"rerun"` requires updating internal code:
+
+1. **Internal `if on_change is None:` guards**: All 17 affected widget implementations currently
+   check `if on_change is None` or use truthiness checks. These must be updated to handle
+   `on_change == "rerun"` equivalently to `None`. A helper function (see Backend Changes section)
+   ensures consistent handling across all widgets.
+
+2. **Type stubs**: Third-party libraries or apps with custom type stubs pinning
+   `on_change: WidgetCallback | None = None` will see type errors after the change. This is
+   expected as the signature changes, but runtime behavior remains compatible since `None` is
+   still accepted.
+
 ### Example Usage
 
 ```python
@@ -146,6 +163,10 @@ if st.button("Process"):
         st.write(f"Processing {uploaded.name}")  # File is available
 ```
 
+For `accept_multiple_files=True`, each file upload stores the file server-side via HTTP POST
+without triggering a rerun. On the next manual rerun, all uploaded files are available in the
+returned list.
+
 ### Implementation Strategy
 
 #### Option 1: Proto-Level `ignore_rerun` Flag (PREFERRED)
@@ -166,6 +187,14 @@ message Slider {
    `scheduleFlush()` (which triggers the rerun).
 
 2. **Individual widgets**: Pass the `ignoreRerun` value from proto to WidgetStateManager hooks.
+
+**Note on pattern divergence from `DownloadButton`:** The existing `DownloadButton.tsx`
+implementation handles `ignoreRerun` by skipping the `setTriggerValue()` call entirely when
+`ignoreRerun` is true. However, stateful widgets must use a different approach: they still call
+`setValue` methods (so the value is stored in `WidgetStateManager` for transmission on the next
+rerun), but suppress `scheduleFlush()` in `onWidgetValueChanged`. This distinction is important
+because stateful widgets need their value persisted in frontend state even when the rerun is
+suppressed.
 
 **Backend changes:**
 
@@ -255,12 +284,42 @@ private onWidgetValueChanged(
 }
 ```
 
+**Fragment interaction:** When `ignoreRerun=true` inside a fragment, the condition
+`source.fromUi && !ignoreRerun` will skip `scheduleFlush(fragmentId)`, suppressing both fragment
+and full-page reruns. This is the desired behavior—the feature suppresses any rerun triggered by
+the widget interaction, regardless of context. On the next rerun (fragment or full-page), the
+pending widget value will be sent to the backend.
+
+**Text input debounce:** `st.text_input` and `st.text_area` have special debounce behavior where
+the rerun triggers on Enter/blur rather than per-keystroke. The `ignoreRerun` flag will be
+respected at the debounce-flush point (the `onWidgetValueChanged` call), ensuring the rerun is
+suppressed when the user finishes editing, not just on individual keystrokes.
+
 Widget hooks (e.g., `useBasicWidgetState`) need to pass through the `ignoreRerun` value from the
 widget proto.
 
 ### Backend Changes
 
-Update each widget's element function signature and implementation:
+Update each widget's element function signature and implementation. Since all 17 widgets need
+identical `on_change` parsing logic, a shared helper ensures consistent behavior:
+
+```python
+def parse_on_change(
+    on_change: WidgetCallback | Literal["rerun", "ignore"] | None
+) -> tuple[bool, WidgetCallback | None]:
+    """Extract ignore_rerun flag and actual callback from on_change parameter."""
+    ignore_rerun = on_change == "ignore"
+    callback = on_change if callable(on_change) else None
+    return ignore_rerun, callback
+```
+
+**Note on form callback policies:** Existing callback policies treat any non-`None` `on_change`
+value as a callback and will error inside `st.form`. Since the proposal makes the default a string
+(`"rerun"`), implementations must extract `actual_callback` (callable or `None`) using the helper
+above and pass only the callable into `check_widget_policies` / `register_widget`. This ensures
+`on_change="rerun"` and `on_change="ignore"` don't trigger form callback errors.
+
+Example widget implementation:
 
 ```python
 def slider(
@@ -273,14 +332,13 @@ def slider(
     # ... existing logic ...
 
     # Determine rerun behavior
-    ignore_rerun = on_change == "ignore"
-    actual_callback = on_change if callable(on_change) else None
+    ignore_rerun, actual_callback = parse_on_change(on_change)
 
     slider_proto.ignore_rerun = ignore_rerun
 
     register_widget(
         # ...
-        on_change_handler=actual_callback,
+        on_change_handler=actual_callback,  # Pass callable or None, not string modes
         # ...
     )
 ```
@@ -323,6 +381,7 @@ with st.no_rerun():
 ## Out of Scope
 
 - **Fragment-level rerun control**: This proposal focuses on widget-level control. Fragment reruns
-  are a separate concern addressed by `st.fragment`.
+  are a separate concern addressed by `st.fragment`. Note that widgets with `on_change="ignore"`
+  inside fragments will suppress both fragment and full-page reruns (see Frontend Changes section).
 - **Debouncing/throttling**: Rate-limiting widget updates is a different feature request.
 - **Batch updates**: Batching multiple widget changes into a single rerun is handled by `st.form`.
