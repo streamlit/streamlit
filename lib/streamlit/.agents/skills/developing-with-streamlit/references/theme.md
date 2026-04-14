@@ -65,12 +65,12 @@ Style the sidebar separately:
 ```toml
 [theme]
 base = "light"
-primaryColor = "slateBlue"
-backgroundColor = "mintCream"
+primaryColor = "#6A5ACD"
+backgroundColor = "#F5FFFA"
 
 [theme.sidebar]
-backgroundColor = "aliceBlue"
-secondaryBackgroundColor = "skyBlue"
+backgroundColor = "#F0F8FF"
+secondaryBackgroundColor = "#87CEEB"
 ```
 
 ## Detect current theme
