@@ -21,10 +21,8 @@ import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { TopLevelSpec } from "vega-lite"
 
-import {
-  applyStreamlitTheme,
-  StyledVegaLiteChartTooltips,
-} from "~lib/components/elements/ArrowVegaLiteChart"
+import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
+import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
@@ -65,7 +63,7 @@ function formatTooltipDate(timestamp: number): string {
   })
 }
 
-export interface StatisticsChartProps {
+interface StatisticsChartProps {
   statistics:
     | NumericStatistics
     | TextStatistics
