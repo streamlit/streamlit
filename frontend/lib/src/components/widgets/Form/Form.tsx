@@ -90,11 +90,13 @@ function Form(props: Props): ReactElement {
   // haven't seen yet.)
   const [showWarning, setShowWarning] = useState(false)
 
-  if (hasSubmitButton && showWarning) {
-    setShowWarning(false)
-  } else if (!hasSubmitButton && !showWarning && scriptNotRunning) {
-    setShowWarning(true)
-  }
+  useEffect(() => {
+    if (hasSubmitButton) {
+      setShowWarning(false)
+    } else if (scriptNotRunning) {
+      setShowWarning(true)
+    }
+  }, [hasSubmitButton, scriptNotRunning])
 
   let submitWarning: ReactElement | undefined
   if (showWarning) {
