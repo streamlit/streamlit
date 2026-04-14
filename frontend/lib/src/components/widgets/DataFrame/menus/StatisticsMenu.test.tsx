@@ -20,7 +20,7 @@ import { Field, Int64 } from "apache-arrow"
 import { NumberColumn } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { TEN_BY_TEN } from "~lib/mocks/arrow"
+import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 
 import StatisticsMenu, { StatisticsMenuProps } from "./StatisticsMenu"

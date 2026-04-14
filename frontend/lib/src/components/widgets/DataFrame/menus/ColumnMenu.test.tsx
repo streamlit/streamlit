@@ -26,7 +26,7 @@ import {
 } from "~lib/components/widgets/DataFrame/columns"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { TEN_BY_TEN } from "~lib/mocks/arrow"
+import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
 
 import ColumnMenu, { ColumnMenuProps } from "./ColumnMenu"

@@ -172,7 +172,7 @@ export function getStatisticsType(
  * @param data - The Quiver data
  * @param columnIndex - The absolute column index in Quiver (including index columns)
  */
-export function extractColumnValues(
+function extractColumnValues(
   data: Quiver,
   columnIndex: number
 ): { values: unknown[]; isSampled: boolean } {
