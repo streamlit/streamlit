@@ -174,9 +174,6 @@ extend-exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   # Ignore frontend directory:
   "frontend/**",
-  # Bundled agent skills (reference docs and app templates) follow their own
-  # conventions, so they are excluded from Ruff checks:
-  "lib/streamlit/.agents/**",
 ]
 exclude = [
   # pympler is a vendored dependency that doesn't conform to our linting rules:
@@ -434,7 +431,6 @@ include = ["lib/streamlit", "e2e_playwright", "scripts"]
 exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",
-  "lib/streamlit/.agents/**",
 ]
 
 [tool.ty.rules]
