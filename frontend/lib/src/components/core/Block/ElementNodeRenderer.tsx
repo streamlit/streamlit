@@ -51,6 +51,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   PageLink as PageLinkProto,
+  Perspective as PerspectiveProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Radio as RadioProto,
@@ -122,6 +123,9 @@ const LinkButton = lazy(
 const Metric = lazy(() => import("~lib/components/elements/Metric/Metric"))
 const PageLink = lazy(
   () => import("~lib/components/elements/PageLink/PageLink")
+)
+const Perspective = lazy(
+  () => import("~lib/components/elements/Perspective/Perspective")
 )
 const PlotlyChart = lazy(
   () => import("~lib/components/elements/PlotlyChart/PlotlyChart")
@@ -1052,6 +1056,23 @@ const RawElementNodeRenderer = (
           <PlotlyChart
             key={plotlyProto.id}
             element={plotlyProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "perspective": {
+      const perspectiveProto = node.element.perspective as PerspectiveProto
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <Perspective
+            key={perspectiveProto.id}
+            element={perspectiveProto}
             {...widgetProps}
           />
         </ElementContainer>

@@ -191,7 +191,9 @@ describe("Html element", () => {
       })
 
       // At least one new script element was created and old replaced
-      expect(createSpy.mock.calls.some(([tag]) => tag === "script")).toBe(true)
+      expect(
+        createSpy.mock.calls.some(([tag]) => (tag as string) === "script")
+      ).toBe(true)
       expect(replaceSpy).toHaveBeenCalled()
 
       const script = screen.getByTestId("stHtml").querySelector("script")

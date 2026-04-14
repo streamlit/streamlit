@@ -1,0 +1,42 @@
+/**!
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+syntax = "proto3";
+
+import "streamlit/proto/ArrowData.proto";
+
+// Perspective element for interactive tabular data exploration.
+// Uses client-side WebAssembly runtime in the browser with Arrow data.
+message Perspective {
+  // The Arrow data to display.
+  ArrowData data = 1;
+
+  // JSON-encoded default config to seed the viewer on first load or reset.
+  // This follows Perspective's viewer configuration format with keys:
+  // plugin, columns, group_by, split_by, sort, filter, aggregates, expressions, settings.
+  optional string default_config_json = 2;
+
+  // Theme name: "streamlit" uses a Streamlit-generated Perspective theme,
+  // other strings are passed through as Perspective theme names.
+  optional string theme = 3;
+
+  // Element ID used for state persistence.
+  optional string id = 4;
+
+  // Hash of the Arrow schema, used to detect schema changes that require
+  // resetting the viewer state.
+  optional string schema_digest = 5;
+}
