@@ -146,20 +146,19 @@ with st.form("search", border=False):
 
 **This is critical and often missed.**
 
-Layout containers like `st.tabs`, `st.expander`, and `st.popover` always render all their content, even when hidden or collapsed.
-
-To render content only when needed, use elements like `st.segmented_control`, `st.toggle`, or `@st.dialog` with conditional logic:
+By default, layout containers like `st.tabs` and `st.expander` render all their content, even when hidden or collapsed. Use `on_change="rerun"` to enable lazy rendering — content only runs when the tab/expander is visible:
 
 ```python
-# BAD: Heavy content loads even when tab not visible
+# BAD: All tab content loads, even hidden tabs
 tab1, tab2 = st.tabs(["Light", "Heavy"])
 with tab2:
     expensive_chart()  # Always computed!
 
-# GOOD: Content only loads when selected
-view = st.segmented_control("View", ["Light", "Heavy"])
-if view == "Heavy":
-    expensive_chart()  # Only computed when selected
+# GOOD: Only render when tab is active
+tab1, tab2 = st.tabs(["Light", "Heavy"], on_change="rerun")
+if tab2.open:
+    with tab2:
+        expensive_chart()  # Only computed when selected
 ```
 
 ```python
@@ -167,10 +166,14 @@ if view == "Heavy":
 with st.expander("Advanced options"):
     heavy_computation()  # Runs even when collapsed!
 
-# GOOD: Toggle controls loading
-if st.toggle("Show advanced options"):
-    heavy_computation()  # Only runs when toggled on
+# GOOD: Only render when expander is open
+details = st.expander("Advanced options", on_change="rerun")
+if details.open:
+    with details:
+        heavy_computation()  # Only runs when expanded
 ```
+
+The `.open` property returns `True` when visible, `False` when hidden, or `None` when `on_change` is not set.
 
 ## Pre-computation
 
