@@ -24,7 +24,9 @@ Performs end-to-end QA testing of the feature in the current branch by reading a
 First, determine the QA output directory based on the branch name:
 ```bash
 # Derive feature name from branch (strip prefix before "/" if present)
+# Falls back to short commit hash in detached-HEAD environments (e.g., CI)
 FEATURE_NAME=$(git branch --show-current | sed 's|.*/||')
+FEATURE_NAME=${FEATURE_NAME:-$(git rev-parse --short HEAD)}
 QA_DIR="work-tmp/qa-${FEATURE_NAME}"
 mkdir -p "$QA_DIR"
 ```
@@ -45,8 +47,11 @@ Collect all documentation related to the feature being tested:
 
 1. **Identify the feature from branch changes:**
    ```bash
-   git diff develop --stat
-   git log develop..HEAD --oneline
+   # Determine the base branch (from PR if exists, otherwise develop)
+   BASE_BRANCH=$(gh pr view --json baseRefName -q .baseRefName 2>/dev/null || echo "develop")
+   git fetch origin "$BASE_BRANCH" 2>/dev/null || true
+   git diff "origin/${BASE_BRANCH}" --stat
+   git log "origin/${BASE_BRANCH}..HEAD" --oneline
    ```
 
 2. **Read spec documents** (if available):
@@ -55,9 +60,10 @@ Collect all documentation related to the feature being tested:
    - Read any linked GitHub issues from commit messages
 
 3. **Check the agent-wiki for related documents:**
-   - Look in `agent-wiki/pull-requests/<pr-number>/` for implementation plans, exploration notes, or design decisions
+   - If a PR exists for this branch, look in `agent-wiki/pull-requests/<pr-number>/` for implementation plans, exploration notes, or design decisions
+   - Use `gh pr view --json number -q .number 2>/dev/null` to get the PR number (may not exist yet if running before PR creation)
    - Look in `agent-wiki/references/` for relevant reference documents
-   - Use `gh pr view --json number -q .number` to get the PR number if a PR exists
+   - If no PR exists, skip PR-specific lookups and note this in the test plan
    - These documents may contain context, design rationale, and edge cases discovered during implementation
 
 4. **Read API docstrings:**
@@ -122,17 +128,21 @@ Create a structured QA plan in `$QA_DIR/test-plan.md`:
    - Use `st.header()` to label each test section
    - Add `st.session_state` for interaction tracking if needed
 
-2. **Start the debug server** using a background task:
+2. **Start the debug server** in a background task. The `debugging-streamlit` skill provides details on this pattern:
    ```bash
    make debug $QA_DIR/test_app.py
    ```
+   The server runs in the background and continues while you proceed with testing.
 
-3. **Get the App URL** from the startup output. The port is printed on startup (e.g., `http://localhost:3001`). The port may vary (`3002+`) if other debug sessions are running.
+3. **Get the App URL and session path** from the startup output:
+   - The App URL is printed on startup (e.g., `http://localhost:3001`). The port may vary (`3002+`) if other debug sessions are running.
+   - Capture the **session directory path** printed by `make debug` (e.g., `work-tmp/debug/<session>/`). Use this stable path instead of `work-tmp/debug/latest/` for log references, since `latest` is a symlink that can shift if multiple debug sessions are running.
 
-4. **Verify startup** by checking logs for errors:
+4. **Verify startup** by checking logs for errors (use the session path from step 3):
    ```bash
-   rg -i "error|exception" work-tmp/debug/latest/backend.log
-   rg -i "error" work-tmp/debug/latest/frontend.log
+   SESSION_DIR="<session-path-from-make-debug>"  # e.g., work-tmp/debug/1234567890/
+   rg -i "error|exception" "$SESSION_DIR/backend.log"
+   rg -i "error" "$SESSION_DIR/frontend.log"
    ```
 
 ### Phase 4: Execute test plan
@@ -151,9 +161,9 @@ STREAMLIT_APP_URL=<url-from-phase-3> \
 PYTHONPATH=. uv run python $QA_DIR/qa_test.py
 ```
 
-After each test, check logs for errors:
+After each test, check logs for errors (use the session path from Phase 3):
 ```bash
-rg -i "error|exception" work-tmp/debug/latest/backend.log
+rg -i "error|exception" "$SESSION_DIR/backend.log"
 ```
 
 ### Phase 5: Generate QA report
