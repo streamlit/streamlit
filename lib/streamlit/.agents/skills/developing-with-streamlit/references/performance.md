@@ -26,13 +26,15 @@ Use for connections, API clients, ML models—objects that can't be serialized.
 
 ```python
 @st.cache_resource
-def get_connection():
-    return st.connection("snowflake")
+def get_client():
+    return OpenAI(api_key=st.secrets["openai_key"])
 
 @st.cache_resource
 def load_model():
     return torch.load("model.pt")
 ```
+
+Note: `st.connection()` already handles caching internally — don't wrap it in `@st.cache_resource`.
 
 ### TTL for fresh data
 
