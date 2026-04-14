@@ -326,7 +326,9 @@ def discover_asgi_app(
 
     Supported import patterns:
     - `from streamlit.starlette import App`
+    - `from streamlit import App`
     - `import streamlit` (for `streamlit.starlette.App`)
+    - `import streamlit as st` (for `st.App`)
     - `from fastapi import FastAPI`
     - `from starlette.applications import Starlette`
 
