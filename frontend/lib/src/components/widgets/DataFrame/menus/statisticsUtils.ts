@@ -428,8 +428,11 @@ export function computeDateTimeStatistics(
         // Assume milliseconds timestamp
         timestamp = v
       } else if (typeof v === "bigint") {
-        // Arrow timestamps may be bigints (nanoseconds or microseconds)
-        // Convert to milliseconds - assume nanoseconds
+        // Arrow timestamps may be bigints in various units (ns, us, ms, s).
+        // Streamlit's Quiver layer normalizes datetime columns to nanoseconds,
+        // so we divide by 1,000,000 to convert to milliseconds.
+        // Note: If Arrow data from other sources uses different units,
+        // this conversion may be incorrect.
         timestamp = Number(v / BigInt(1_000_000))
       } else if (typeof v === "string") {
         const parsed = Date.parse(v)
