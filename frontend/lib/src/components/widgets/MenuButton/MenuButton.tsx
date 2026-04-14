@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-import type { Key } from "@react-types/shared"
 import type { CSSProperties, HTMLAttributes } from "react"
 import {
   memo,
@@ -28,7 +26,9 @@ import {
   useState,
 } from "react"
 
+import styled from "@emotion/styled"
 import { useResizeObserver } from "@react-aria/utils"
+import type { Key } from "@react-types/shared"
 import { mergeProps, useButton, useMenuTrigger } from "react-aria"
 import {
   Menu,
@@ -163,7 +163,9 @@ function MenuButton(props: Props): ReactElement {
     },
   })
   const menuStateRef = useRef(menuState)
-  menuStateRef.current = menuState
+  useEffect(() => {
+    menuStateRef.current = menuState
+  }, [menuState])
 
   const buttonRef = useRef<HTMLButtonElement>(null)
   const menuPopoverRef = useRef<HTMLDivElement | null>(null)
@@ -195,6 +197,7 @@ function MenuButton(props: Props): ReactElement {
     ref: buttonRef,
     onResize: useCallback(() => {
       if (buttonRef.current) {
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- sync popover min width to trigger; resize callback runs after layout
         setButtonWidth(`${buttonRef.current.offsetWidth}px`)
       }
     }, []),

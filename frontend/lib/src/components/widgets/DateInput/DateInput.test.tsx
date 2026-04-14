@@ -51,7 +51,7 @@ async function typeInDateField(
 ): Promise<void> {
   const el = field as HTMLInputElement
   // Focus without clicking: field onClick opens the calendar and breaks controlled typing.
-  await act(async () => {
+  act(() => {
     el.focus()
   })
   await user.type(el, text, {
@@ -61,11 +61,15 @@ async function typeInDateField(
   })
 }
 
-/** One-shot input event with full value (reliable for validation / range strings in jsdom). */
-function setDateInputValue(field: HTMLElement, value: string): void {
+/** Types a full value (reliable for validation / range strings in jsdom). */
+async function setDateInputValue(
+  user: UserEvent,
+  field: HTMLElement,
+  value: string
+): Promise<void> {
   const el = field as HTMLInputElement
-  el.value = value
-  fireEvent.input(el, { target: { value } })
+  await user.clear(el)
+  await user.type(el, value, { skipClick: true })
 }
 
 const getProps = (
@@ -242,8 +246,7 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2019/01/05 - 2020/02/07"
 
-    await user.clear(dateInput)
-    setDateInputValue(dateInput, currNewDate)
+    await setDateInputValue(user, dateInput, currNewDate)
 
     const root = screen.getByTestId("stDateInput")
     const errorIcon = within(root).getByTestId("stTooltipErrorHoverTarget")
@@ -268,8 +271,7 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2020/02/01 - 2021/02/07"
 
-    await user.clear(dateInput)
-    setDateInputValue(dateInput, currNewDate)
+    await setDateInputValue(user, dateInput, currNewDate)
 
     const root = screen.getByTestId("stDateInput")
     const errorIcon = within(root).getByTestId("stTooltipErrorHoverTarget")

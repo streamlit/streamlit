@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-import {
-  ChevronLeft,
-  ChevronRight,
-  ErrorOutline,
-} from "@emotion-icons/material-outlined"
-import { CalendarDate, parseDate } from "@internationalized/date"
 import {
   memo,
   ReactElement,
@@ -33,7 +26,14 @@ import {
   useState,
 } from "react"
 import type { KeyboardEvent, MutableRefObject, RefObject } from "react"
-import { flushSync } from "react-dom"
+
+import styled from "@emotion/styled"
+import {
+  ChevronLeft,
+  ChevronRight,
+  ErrorOutline,
+} from "@emotion-icons/material-outlined"
+import { CalendarDate, parseDate } from "@internationalized/date"
 import { format } from "date-fns"
 import moment from "moment"
 import {
@@ -52,6 +52,7 @@ import {
   Popover,
   RangeCalendar,
 } from "react-aria-components"
+import { flushSync } from "react-dom"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -195,6 +196,7 @@ function resolveBcp47Locale(locale: string): string {
   }
 }
 
+/* eslint-disable @typescript-eslint/no-use-before-define -- styled components and QuickSelectControl are declared later in this module */
 // Types for date validation
 type ValidationResult = {
   errorType: "Start" | "End" | null
@@ -298,6 +300,7 @@ const PickerTextInput = memo(function PickerTextInput({
       if (e.key === "Escape") {
         if (overlayState?.isOpen) {
           e.preventDefault()
+          // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- commit DOM before closing overlay (RAC calendar sync)
           flushSync(() => {
             commitDomValue()
           })
@@ -328,6 +331,7 @@ const PickerTextInput = memo(function PickerTextInput({
           e.preventDefault()
           e.stopPropagation()
           const el = e.currentTarget as HTMLInputElement
+          // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- commit before closing overlay in same turn
           flushSync(() => {
             commitFromDomValue(el.value)
           })
@@ -340,6 +344,7 @@ const PickerTextInput = memo(function PickerTextInput({
       onInput={e => {
         const el = e.currentTarget as HTMLInputElement
         onTextInputChange(el.value)
+        // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- keep widget state aligned with DOM during typing
         flushSync(() => {
           commitFromDomValue(el.value)
         })
@@ -347,6 +352,7 @@ const PickerTextInput = memo(function PickerTextInput({
       onChange={e => {
         const el = e.currentTarget as HTMLInputElement
         onTextInputChange(el.value)
+        // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- keep widget state aligned with DOM during typing
         flushSync(() => {
           commitFromDomValue(el.value)
         })
@@ -512,6 +518,7 @@ function DateInput({
       resetError()
 
       if (isNullOrUndefined(nextDates) || nextDates.length === 0) {
+        // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- clear calendar + text in same turn
         flushSync(() => {
           setValueWithSource({ value: [], fromUi: true })
         })
@@ -540,19 +547,13 @@ function DateInput({
       }
       // Flush so DatePicker/RAC sees the new CalendarDate value in the same
       // turn as controlled text updates (avoids fill()/input fighting value).
+      // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- RAC controlled sync
       flushSync(() => {
         setValueWithSource({ value: newDates, fromUi: true })
       })
       setIsEmpty(!newDates.length)
     },
-    [
-      createErrorMessage,
-      displayPattern,
-      maxDate,
-      minDate,
-      resetError,
-      setValueWithSource,
-    ]
+    [createErrorMessage, maxDate, minDate, resetError, setValueWithSource]
   )
 
   const syncDisplayTextFromValue = useCallback(() => {
@@ -575,7 +576,9 @@ function DateInput({
       valueWireRef.current = wire
       return
     }
-    syncDisplayTextFromValue()
+    queueMicrotask(() => {
+      syncDisplayTextFromValue()
+    })
   }, [syncDisplayTextFromValue, value, displayPattern])
 
   const handleClose = useCallback((): void => {
@@ -1072,7 +1075,7 @@ const ClearButton = styled.button(({ theme }) => ({
   cursor: "pointer",
   color: theme.colors.grayTextColor,
   fontSize: theme.fontSizes.lg,
-  lineHeight: 1,
+  lineHeight: theme.lineHeights.none,
   padding: theme.spacing.threeXS,
   ":hover": {
     color: theme.colors.bodyText,
@@ -1129,6 +1132,24 @@ const CalendarNavRow = styled.div(({ theme }) => ({
 const StyledCalendarCell = styled(CalendarCell)(({ theme }) => ({
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
+}))
+
+const QuickSelectControl = styled.select<{
+  $theme: ReturnType<typeof useEmotionTheme>
+}>(({ $theme }) => ({
+  height: $theme.sizes.minElementHeight,
+  borderLeftWidth: $theme.sizes.borderWidth,
+  borderRightWidth: $theme.sizes.borderWidth,
+  borderTopWidth: $theme.sizes.borderWidth,
+  borderBottomWidth: $theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: $theme.colors.fadedText10,
+  borderRadius: $theme.radii.md2,
+  backgroundColor: $theme.colors.widgetBackgroundColor,
+  color: $theme.colors.bodyText,
+  fontSize: $theme.fontSizes.sm,
+  marginBottom: $theme.spacing.xs,
+  width: "100%",
 }))
 
 const QuickSelect = memo(function QuickSelect({
@@ -1188,23 +1209,7 @@ const QuickSelect = memo(function QuickSelect({
   )
 })
 
-const QuickSelectControl = styled.select<{
-  $theme: ReturnType<typeof useEmotionTheme>
-}>(({ $theme }) => ({
-  height: $theme.sizes.minElementHeight,
-  borderLeftWidth: $theme.sizes.borderWidth,
-  borderRightWidth: $theme.sizes.borderWidth,
-  borderTopWidth: $theme.sizes.borderWidth,
-  borderBottomWidth: $theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: $theme.colors.fadedText10,
-  borderRadius: $theme.radii.md2,
-  backgroundColor: $theme.colors.widgetBackgroundColor,
-  color: $theme.colors.bodyText,
-  fontSize: $theme.fontSizes.sm,
-  marginBottom: $theme.spacing.xs,
-  width: "100%",
-}))
+/* eslint-enable @typescript-eslint/no-use-before-define */
 
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
