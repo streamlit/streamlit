@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-use-before-define -- Styled components follow the component body; file-level disable keeps the diff small. */
+
 import {
   FC,
   FocusEvent,
@@ -63,7 +65,7 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme/utils"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import { LabelVisibilityOptions, notNullOrUndefined } from "~lib/util/utils"
 
 export interface Props {
   value: string | null
@@ -114,7 +116,6 @@ const Selectbox: FC<Props> = ({
   const inputRef = useRef<HTMLInputElement>(null)
   /** Latest prop value for Escape/blur handlers (avoid stale closures on document listeners). */
   const propValueRef = useRef(propValue)
-  propValueRef.current = propValue
   /** Committed selection (`value` state); blur must sync the input to this, not to `propValueRef`, which can lag after onChange. */
   const committedValueRef = useRef<string | null>(propValue ?? null)
   /** Used to detect browser "select all" right after focus (Playwright / macOS). */
@@ -131,7 +132,6 @@ const Selectbox: FC<Props> = ({
   const wasFocusedRef = useRef(false)
 
   const [value, setValue] = useState<string | null>(propValue ?? null)
-  committedValueRef.current = value
   const valueBeforeRemovalRef = useRef<string | null>(null)
   const [open, setOpen] = useState(false)
   const [focused, setFocused] = useState(false)
@@ -141,6 +141,14 @@ const Selectbox: FC<Props> = ({
   /** Filter string for options; reset on focus so the menu lists all options while input shows value. */
   const [searchFilter, setSearchFilter] = useState("")
   const [highlightedIndex, setHighlightedIndex] = useState(0)
+
+  useEffect(() => {
+    propValueRef.current = propValue
+  }, [propValue])
+
+  useEffect(() => {
+    committedValueRef.current = value
+  }, [value])
 
   useExecuteWhenChanged(() => {
     const next = propValue ?? null
@@ -249,6 +257,7 @@ const Selectbox: FC<Props> = ({
       const text = propValueRef.current ?? ""
       // Flush so the controlled input shows the committed label before the next
       // key event (Playwright/e2e can otherwise see inputValue "" and type "xyz").
+      // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- Intentional sync flush for controlled input vs. keyboard event ordering (e2e).
       flushSync(() => {
         setFocused(true)
         setInputValue(text)
@@ -643,6 +652,7 @@ const Selectbox: FC<Props> = ({
       </WidgetLabel>
       <StyledRoot
         ref={refs.setReference}
+        // eslint-disable-next-line react-hooks/refs -- @floating-ui getReferenceProps
         {...getReferenceProps({
           onMouseDown: onControlMouseDown,
         })}
@@ -760,6 +770,7 @@ const Selectbox: FC<Props> = ({
       {open && !selectDisabled && (
         <FloatingPortal>
           <div
+            // eslint-disable-next-line react-hooks/refs -- @floating-ui floating ref setter
             ref={refs.setFloating}
             id={listboxId}
             role="listbox"

@@ -14,13 +14,27 @@
  * limitations under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-use-before-define -- Styled components are declared after the main component; reordering would be a large churn. */
+
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
+
 import styled from "@emotion/styled"
 import { ErrorOutline } from "@emotion-icons/material-outlined"
 import {
-  FloatingFocusManager,
-  FloatingPortal,
   autoUpdate,
   flip,
+  FloatingFocusManager,
+  FloatingPortal,
   offset,
   shift,
   useDismiss,
@@ -43,18 +57,6 @@ import {
   startOfWeek,
 } from "date-fns"
 import type { Locale as DateFnsLocale } from "date-fns"
-import {
-  memo,
-  ReactElement,
-  useCallback,
-  useContext,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
-
 import moment from "moment"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
@@ -376,7 +378,7 @@ function DateInput({
       flip({
         boundary: isInSidebar ? document.documentElement : undefined,
       }),
-      shift({ padding: 8 }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
     ],
   })
 
@@ -515,14 +517,7 @@ function DateInput({
         setViewMonth(startOfMonth(next))
       }
     },
-    [
-      element.isRange,
-      handleChange,
-      highlightedDay,
-      loadedLocale.options?.weekStartsOn,
-      rangeAnchor,
-      viewMonth,
-    ]
+    [element.isRange, handleChange, highlightedDay, rangeAnchor, viewMonth]
   )
 
   const calendarDays = useMemo(() => {
@@ -762,6 +757,7 @@ function DateInput({
             initialFocus={-1}
           >
             <CalendarPopover
+              // eslint-disable-next-line react-hooks/refs -- Floating UI setFloating ref callback
               ref={refs.setFloating}
               style={{ ...floatingStyles, zIndex: theme.zIndices.popup }}
               {...getFloatingProps()}
@@ -795,8 +791,8 @@ function DateInput({
                 </NavRow>
 
                 <WeekdayPresentation role="presentation">
-                  {weekdayLabels.map((w, i) => (
-                    <span key={i}>{w}</span>
+                  {weekdayLabels.map(w => (
+                    <span key={w}>{w}</span>
                   ))}
                 </WeekdayPresentation>
 
@@ -996,7 +992,7 @@ const ClearButton = styled.button(({ theme }) => ({
   padding: theme.spacing.threeXS,
   height: theme.sizes.clearIconSize,
   width: theme.sizes.clearIconSize,
-  lineHeight: 1,
+  lineHeight: theme.lineHeights.none,
   "&:hover": {
     color: theme.colors.bodyText,
   },
@@ -1011,7 +1007,7 @@ const CalendarPanel = styled.div(({ theme }) => ({
   paddingBottom: theme.spacing.sm,
   paddingTop: theme.spacing.sm,
   borderWidth: theme.spacing.none,
-  minWidth: "260px",
+  minWidth: theme.sizes.toastWidth,
 }))
 
 const QuickSelectRow = styled.div(({ theme }) => ({
@@ -1051,9 +1047,9 @@ const QuickSelectListbox = styled.div(({ theme }) => ({
   left: 0,
   right: 0,
   top: "100%",
-  zIndex: 1,
+  zIndex: theme.zIndices.priority,
   marginTop: theme.spacing.threeXS,
-  maxHeight: "200px",
+  maxHeight: theme.sizes.maxDropdownHeight,
   overflowY: "auto",
   backgroundColor: theme.colors.bgColor,
   borderWidth: theme.sizes.borderWidth,
@@ -1077,12 +1073,12 @@ const QuickSelectOption = styled.button(({ theme }) => ({
   },
 }))
 
-const NavRow = styled.div({
+const NavRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  marginBottom: 8,
-})
+  marginBottom: theme.spacing.sm,
+}))
 
 const NavButton = styled.button(({ theme }) => ({
   display: "flex",
@@ -1099,29 +1095,29 @@ const NavButton = styled.button(({ theme }) => ({
   },
 }))
 
-const MonthTitle = styled.div({
-  fontWeight: 600,
+const MonthTitle = styled.div(({ theme }) => ({
+  fontWeight: theme.fontWeights.bold,
   textAlign: "center",
   flex: 1,
-})
+}))
 
-const WeekdayPresentation = styled.div({
+const WeekdayPresentation = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   justifyContent: "space-between",
-  marginBottom: 4,
-})
+  marginBottom: theme.spacing.twoXS,
+}))
 
-const DayGrid = styled.div({
+const DayGrid = styled.div(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(7, 1fr)",
-  gap: 2,
-})
+  gap: theme.spacing.threeXS,
+}))
 
-const DayNum = styled.span({
+const DayNum = styled.span(({ theme }) => ({
   position: "relative",
-  zIndex: 1,
-})
+  zIndex: theme.zIndices.priority,
+}))
 
 const DayCell = styled.div<{
   $outside: boolean
@@ -1134,7 +1130,7 @@ const DayCell = styled.div<{
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
   textAlign: "center",
-  padding: 4,
+  padding: theme.spacing.twoXS,
   cursor: $disabled || $outside ? "default" : "pointer",
   opacity: $outside ? 0.35 : 1,
   color: $selected

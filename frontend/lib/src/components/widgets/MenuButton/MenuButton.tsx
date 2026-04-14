@@ -15,24 +15,11 @@
  * limitations under the License.
  */
 
-import { css } from "@emotion/react"
 import {
-  FloatingFocusManager,
-  FloatingPortal,
-  autoUpdate,
-  flip,
-  offset,
-  shift,
-  useDismiss,
-  useFloating,
-  useInteractions,
-  useRole,
-} from "@floating-ui/react"
-import {
-  KeyboardEvent as ReactKeyboardEvent,
   memo,
   MouseEventHandler,
   ReactElement,
+  KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useContext,
   useEffect,
@@ -40,6 +27,20 @@ import {
   useRef,
   useState,
 } from "react"
+
+import { css } from "@emotion/react"
+import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
@@ -62,6 +63,7 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -137,9 +139,15 @@ function MenuButton(props: Props): ReactElement {
   const theme = useEmotionTheme()
   const menuListRef = useRef<HTMLUListElement>(null)
   const typeaheadBufferRef = useRef("")
-  const typeaheadTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  )
+
+  const { clear: clearTypeaheadTimer, restart: restartTypeaheadClear } =
+    useTimeout(
+      () => {
+        typeaheadBufferRef.current = ""
+      },
+      null,
+      { autoStart: false }
+    )
 
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
@@ -185,7 +193,7 @@ function MenuButton(props: Props): ReactElement {
       flip({
         boundary: isInSidebar ? document.documentElement : undefined,
       }),
-      shift({ padding: 8 }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
     ],
   })
 
@@ -208,21 +216,11 @@ function MenuButton(props: Props): ReactElement {
     }
   }, [isOpen, menuItems.length])
 
-  const clearTypeaheadTimer = useCallback(() => {
-    if (typeaheadTimeoutRef.current != null) {
-      clearTimeout(typeaheadTimeoutRef.current)
-      typeaheadTimeoutRef.current = null
-    }
-  }, [])
-
   const applyTypeahead = useCallback(
     (char: string) => {
       clearTypeaheadTimer()
       typeaheadBufferRef.current += char
-      typeaheadTimeoutRef.current = setTimeout(() => {
-        typeaheadBufferRef.current = ""
-        typeaheadTimeoutRef.current = null
-      }, TYPEAHEAD_CLEAR_MS)
+      restartTypeaheadClear(TYPEAHEAD_CLEAR_MS)
 
       const buffer = typeaheadBufferRef.current.toLowerCase()
       const matchIdx = menuItems.findIndex(it => {
@@ -240,7 +238,7 @@ function MenuButton(props: Props): ReactElement {
         setHighlightedIndex(matchIdx)
       }
     },
-    [clearTypeaheadTimer, menuItems]
+    [clearTypeaheadTimer, menuItems, restartTypeaheadClear]
   )
 
   const onMenuKeyDown = useCallback(
@@ -374,6 +372,7 @@ function MenuButton(props: Props): ReactElement {
             guards={false}
           >
             <div
+              // eslint-disable-next-line react-hooks/refs -- @floating-ui floating ref setter
               ref={refs.setFloating}
               data-testid="stMenuButtonBody"
               css={menuBodyCss}

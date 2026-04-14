@@ -20,6 +20,7 @@ import {
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -222,7 +223,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     persistCloseState()
   }, [refs.floating, persistCloseState])
 
-  handleCloseRef.current = handleClose
+  useEffect(() => {
+    handleCloseRef.current = handleClose
+  }, [handleClose])
 
   // Handle popover toggle with optimistic updates (after useFloating so refs exist).
   const handleToggle = useCallback((): void => {
@@ -347,6 +350,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           disabled={!open}
         >
           <div
+            // eslint-disable-next-line react-hooks/refs -- @floating-ui floating ref setter
             ref={refs.setFloating}
             data-testid="stPopoverBody"
             css={bodyCss}
