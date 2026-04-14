@@ -48,15 +48,3 @@ export const StyledMenuOptionIcon = styled.span(({ theme }) => ({
   width: theme.iconSizes.md,
   color: theme.colors.bodyText,
 }))
-
-export const StyledMenuItem = styled.li(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  marginTop: theme.spacing.twoXS,
-  marginBottom: theme.spacing.twoXS,
-  padding: 0,
-  background: "transparent",
-  cursor: "pointer",
-  listStyle: "none",
-  minWidth: theme.sizes.minMenuWidth,
-}))
