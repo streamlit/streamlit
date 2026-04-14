@@ -111,21 +111,20 @@ m = folium.Map(location=[37.7749, -122.4194], zoom_start=12)
 st_folium(m, width=700)
 ```
 
-### pygwalker
+### streamlit-pivot-table
 
-Tableau-like drag-and-drop data exploration.
+Interactive pivot table component for data exploration.
 
-- **Repo:** https://github.com/Kanaries/pygwalker
-- **Docs:** https://docs.kanaries.net/pygwalker
+- **Repo:** https://github.com/streamlit/streamlit-pivot-table
 
 ```bash
-uv add pygwalker
+uv add streamlit-pivot-table
 ```
 
 ```python
-import pygwalker as pyg
+from streamlit_pivot_table import pivot_table
 
-pyg.walk(df, env="Streamlit")
+pivot_table(df)
 ```
 
 ### streamlit-extras
