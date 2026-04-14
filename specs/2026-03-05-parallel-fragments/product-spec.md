@@ -509,6 +509,15 @@ The parallel fragments design should not preclude future work in these areas:
   share an outside container, their cursor positions conflict. The threading and context
   isolation design should accommodate future cursor synchronization without requiring
   rearchitecture.
+- **Background tasks / cross-rerun computation**
+  ([#10578](https://github.com/streamlit/streamlit/issues/10578)) — long-running
+  computation that outlives a single script run, continuing across reruns while the app
+  remains interactive. This was considered as a potential `execution="background"` mode on
+  `@st.fragment` (see [API alternatives above](#also-considered-execution-enum-instead-of-parallel-boolean))
+  but is better served by a separate API (`st.background_task()`) because background tasks
+  have a fundamentally different lifetime, purpose, and mental model from fragments. The
+  boolean `parallel` parameter leaves room for this without overloading the fragment
+  decorator.
 
 ---
 
@@ -579,5 +588,59 @@ Streamlit's target audience.
 The two approaches compose rather than compete: `parallel=True` provides inter-fragment
 concurrency via threads (works with sync code), while future `async def` support provides
 intra-fragment concurrency via the event loop (for users who have async libraries).
+
+</details>
+
+<details>
+<summary>Parallel fragments and long-running blocking calls</summary>
+
+### Do parallel fragments make long-running blocking calls responsive?
+
+No. Parallel fragments solve the bottleneck where independent sections wait for each
+other — total page load drops from the sum of all sections to the maximum of any single
+section. But they do not change the general responsiveness characteristics of a Streamlit
+script during long-running blocking calls.
+
+Streamlit uses a cooperative execution model: every `st.*` command acts as a yield point
+where the runtime checks for pending rerun or stop requests. Between yield points (e.g.,
+during a long `requests.get()` or `cursor.execute()`), the executing thread is blocked in
+external code and Streamlit has no opportunity to intervene. This applies equally to the
+main script thread and to parallel fragment threads — it is not something parallel fragments
+introduce or change.
+
+Users may expect `parallel=True` to make everything responsive, but it specifically
+addresses the *between-section* bottleneck. For general script responsiveness during
+long-running operations, `st.yield_point()` is the complementary solution — an explicit
+yield point that users can insert in loops or between operations to let Streamlit check for
+pending requests, improving responsiveness in code that makes multiple sequential blocking
+calls.
+
+</details>
+
+<details>
+<summary>Parallel fragments and indivisible long-running operations</summary>
+
+### Does parallel=True prevent a slow operation from blocking the app?
+
+No. Parallel fragments are bounded to the script run — a barrier joins all threads before
+the run is considered complete. If one parallel fragment contains an indivisible long-running
+operation (e.g., a 30-second model training call or a single slow database query that cannot
+be split), that thread holds the barrier open for its entire duration. The app cannot start
+a new rerun until all parallel fragment threads finish or are cancelled, and cancellation is
+cooperative — a thread blocked in external code won't see the cancellation signal until the
+blocking call returns.
+
+When a rerun is triggered (e.g., a widget click), the runtime signals all sibling threads
+to cancel via cooperative cancellation. But a thread blocked in external code (e.g.,
+mid-way through a 30-second query) won't see the cancellation signal until the blocking
+call returns and the thread reaches its next yield point. The rerun waits for that thread
+to exit before proceeding.
+
+The complementary solution is `st.background_task()` — moving the long-running work
+*outside* the script run entirely. A background task runs in its own managed thread with no
+`ScriptRunContext`, producing data rather than UI. The script run stays fast (it just checks
+whether the task has completed and renders accordingly), and the task continues independently
+across reruns. See [Forward compatibility](#forward-compatibility) for the API-level
+rationale for keeping this as a separate API rather than a fragment mode.
 
 </details>
