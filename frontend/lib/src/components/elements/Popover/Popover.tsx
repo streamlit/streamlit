@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
 import {
   memo,
   ReactElement,
@@ -27,11 +26,12 @@ import {
   useState,
 } from "react"
 
+import styled from "@emotion/styled"
 import { mergeProps, useButton, useOverlayTrigger } from "react-aria"
 import {
   OverlayTriggerStateContext,
-  Popover as RACPopover,
   Provider,
+  Popover as RACPopover,
 } from "react-aria-components"
 import { useOverlayTriggerState } from "react-stately"
 
@@ -172,7 +172,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     onOpenChange: handleOpenChange,
   })
   const overlayStateRef = useRef(overlayState)
-  overlayStateRef.current = overlayState
+  useEffect(() => {
+    overlayStateRef.current = overlayState
+  }, [overlayState])
 
   // Sync backend state changes (for programmatic control via session_state).
   // Uses render-time comparison instead of useEffect — no DOM side effects needed.

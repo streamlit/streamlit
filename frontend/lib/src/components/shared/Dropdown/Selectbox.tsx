@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
-import styled from "@emotion/styled"
 import {
-  type ComponentProps,
   type ClipboardEvent,
+  type ComponentProps,
   FC,
-  forwardRef,
-  type ForwardedRef,
+  FocusEvent,
   type FormEvent,
+  type ForwardedRef,
+  forwardRef,
   HTMLAttributes,
   KeyboardEvent,
   memo,
@@ -34,22 +33,24 @@ import {
   useMemo,
   useRef,
   useState,
-  FocusEvent,
 } from "react"
+
+import styled from "@emotion/styled"
+import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
 import type { ComboBoxState } from "@react-stately/combobox"
-import { flushSync } from "react-dom"
+import type { Key } from "@react-types/shared"
 import {
   Button,
   ComboBox,
   ComboBoxStateContext,
   Group,
+  I18nProvider,
   Input,
   ListBox,
   ListBoxItem,
   Popover,
-  I18nProvider,
 } from "react-aria-components"
-import type { Key } from "@react-types/shared"
+import { flushSync } from "react-dom"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -239,6 +240,9 @@ const ChevronIcon = styled(KeyboardArrowDown)(({ theme }) => ({
 }))
 
 /** E2e `to_contain_text` checks widget subtree; native `placeholder` is not innerText. */
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values --
+ * Invisible positioning/sizing for the hint span; not theme-driven styling.
+ */
 const SelectboxEmptyOptionsHint = styled.span({
   position: "absolute",
   left: 0,
@@ -250,6 +254,7 @@ const SelectboxEmptyOptionsHint = styled.span({
   userSelect: "none",
   whiteSpace: "nowrap",
 })
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 const SelectComboInput = memo(
   forwardRef(function SelectComboInput(
@@ -423,7 +428,7 @@ const Selectbox: FC<Props> = ({
 
   const getDisplayString = useCallback(
     (v: string | null): string => {
-      if (v == null) {
+      if (isNullOrUndefined(v)) {
         return ""
       }
       const found = selectOptions.find(o => o.value === v)
@@ -443,7 +448,7 @@ const Selectbox: FC<Props> = ({
   const selectboxInputRef = useRef<HTMLInputElement>(null)
 
   const selectedKey: Key | null = useMemo(() => {
-    if (value == null) {
+    if (isNullOrUndefined(value)) {
       return null
     }
     const found = selectOptions.find(o => o.value === value)
@@ -452,7 +457,9 @@ const Selectbox: FC<Props> = ({
 
   // While the input still matches the committed selection only, do not narrow
   // the list to that substring (matches BaseWeb: open shows all options).
-  const committedLabel = value == null ? "" : getDisplayString(value)
+  const committedLabel = isNullOrUndefined(value)
+    ? ""
+    : getDisplayString(value)
   const filterPatternForList =
     committedLabel !== "" && inputValue === committedLabel ? "" : inputValue
 
@@ -556,7 +563,7 @@ const Selectbox: FC<Props> = ({
       }
       inputTextRef.current = v
       setInputValue(v)
-      if (selectedKey != null && v === "") {
+      if (notNullOrUndefined(selectedKey) && v === "") {
         userClearedInputRef.current = true
         handleComboChange(null)
       }
@@ -591,6 +598,9 @@ const Selectbox: FC<Props> = ({
         ) {
           const next = v.slice(0, -1)
           inputTextRef.current = next
+          /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+           * ComboBox input must commit synchronously so selection range updates match the trimmed value.
+           */
           flushSync(() => {
             handleInputChange(next)
           })
@@ -602,6 +612,9 @@ const Selectbox: FC<Props> = ({
         }
         const next = v.slice(0, start) + v.slice(end)
         inputTextRef.current = next
+        /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+         * ComboBox input must commit synchronously so selection range updates match the trimmed value.
+         */
         flushSync(() => {
           handleInputChange(next)
         })
@@ -622,6 +635,9 @@ const Selectbox: FC<Props> = ({
       if (trimmingCommitted && v.length > 0) {
         const next = v.slice(0, -1)
         inputTextRef.current = next
+        /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+         * ComboBox input must commit synchronously so selection range updates match the trimmed value.
+         */
         flushSync(() => {
           handleInputChange(next)
         })
@@ -636,6 +652,9 @@ const Selectbox: FC<Props> = ({
         const next = v.slice(0, start - 1) + v.slice(start)
         const caret = start - 1
         inputTextRef.current = next
+        /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+         * ComboBox input must commit synchronously so selection range updates match the trimmed value.
+         */
         flushSync(() => {
           handleInputChange(next)
         })
@@ -911,7 +930,7 @@ const Selectbox: FC<Props> = ({
       }
       const canEscapeClear =
         (clearable || false) &&
-        value != null &&
+        notNullOrUndefined(value) &&
         !selectDisabled &&
         !inputReadOnly
       if (e.key === "Escape" && canEscapeClear) {
@@ -955,7 +974,10 @@ const Selectbox: FC<Props> = ({
     : theme.colors.fadedText60
 
   const showClear =
-    (clearable || false) && value != null && !selectDisabled && !inputReadOnly
+    (clearable || false) &&
+    notNullOrUndefined(value) &&
+    !selectDisabled &&
+    !inputReadOnly
 
   return (
     <I18nProvider

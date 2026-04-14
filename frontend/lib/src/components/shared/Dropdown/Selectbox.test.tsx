@@ -119,7 +119,7 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByRole("combobox")
     await user.click(selectbox)
-    const options = await waitFor(() => screen.getAllByRole("option"))
+    const options = await screen.findAllByRole("option")
 
     expect(options).toHaveLength(props.options.length)
     options.forEach((option, index) => {
@@ -141,7 +141,7 @@ describe("Selectbox widget", () => {
     const selectbox = screen.getByRole("combobox")
     // Open the dropdown
     await user.click(selectbox)
-    const options = await waitFor(() => screen.getAllByRole("option"))
+    const options = await screen.findAllByRole("option")
     await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
