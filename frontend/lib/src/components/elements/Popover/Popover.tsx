@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
+import { memo, ReactElement, useCallback, useContext, useState } from "react"
+
 import { Popover as BasePopover } from "@base-ui-components/react/popover"
 import styled from "@emotion/styled"
-import { memo, ReactElement, useCallback, useContext, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"

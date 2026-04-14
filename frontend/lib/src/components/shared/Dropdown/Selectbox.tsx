@@ -21,10 +21,9 @@
  * Combobox is the supported primitive for this pattern.
  */
 
-import styled from "@emotion/styled"
-import { Combobox } from "@base-ui-components/react/combobox"
 import {
   FC,
+  type KeyboardEvent,
   memo,
   useCallback,
   useContext,
@@ -32,8 +31,10 @@ import {
   useMemo,
   useRef,
   useState,
-  type KeyboardEvent,
 } from "react"
+
+import { Combobox } from "@base-ui-components/react/combobox"
+import styled from "@emotion/styled"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -54,7 +55,11 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
 import { convertRemToPx } from "~lib/theme/utils"
-import { LabelVisibilityOptions } from "~lib/util/utils"
+import {
+  isNullOrUndefined,
+  LabelVisibilityOptions,
+  notNullOrUndefined,
+} from "~lib/util/utils"
 
 import { ThemedStyledDropdownListItem } from "./styled-components"
 
@@ -160,7 +165,7 @@ const StyledComboboxInput = styled(Combobox.Input, {
   color: theme.colors.bodyText,
   caretColor: theme.colors.bodyText,
   position: "relative",
-  zIndex: 1,
+  zIndex: theme.zIndices.priority,
   ...($disabled && {
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
@@ -324,7 +329,12 @@ const Selectbox: FC<Props> = ({
   const comboboxItems = useMemo(() => {
     const base = selectOptions.map(o => o.value)
     const out = new Set(base)
-    if (acceptNewOptions && value != null && value !== "" && !out.has(value)) {
+    if (
+      acceptNewOptions &&
+      notNullOrUndefined(value) &&
+      value !== "" &&
+      !out.has(value)
+    ) {
       out.add(value)
     }
     if (acceptNewOptions && inputValue.length > 0 && !out.has(inputValue)) {
@@ -339,7 +349,7 @@ const Selectbox: FC<Props> = ({
   )
 
   const showPlaceholder =
-    !open && (value == null || value === "") && inputValue === ""
+    !open && (isNullOrUndefined(value) || value === "") && inputValue === ""
 
   const placeholderColor = selectDisabled
     ? theme.colors.fadedText40
@@ -361,7 +371,7 @@ const Selectbox: FC<Props> = ({
         } else {
           creatableEmptyQueryRef.current = false
           const label =
-            value == null || value === ""
+            isNullOrUndefined(value) || value === ""
               ? ""
               : (selectOptions.find(o => o.value === value)?.label ??
                 String(value))
@@ -375,7 +385,7 @@ const Selectbox: FC<Props> = ({
           valueBeforeRemovalRef.current = null
         }
         const closeLabel =
-          nextVal == null || nextVal === ""
+          isNullOrUndefined(nextVal) || nextVal === ""
             ? ""
             : (selectOptions.find(o => o.value === nextVal)?.label ??
               String(nextVal))
@@ -393,7 +403,7 @@ const Selectbox: FC<Props> = ({
         skipRemovalSyncRef.current = false
         if (
           next === "" &&
-          value != null &&
+          notNullOrUndefined(value) &&
           value !== "" &&
           !creatableEmptyQueryRef.current
         ) {
@@ -416,7 +426,7 @@ const Selectbox: FC<Props> = ({
       if (
         open &&
         next === "" &&
-        value != null &&
+        notNullOrUndefined(value) &&
         value !== "" &&
         !creatableEmptyQueryRef.current &&
         openInputSyncBatchRef.current &&
@@ -519,7 +529,7 @@ const Selectbox: FC<Props> = ({
         open={open}
         value={value}
         onValueChange={(v, eventDetails) => {
-          handleComboboxValueChange(v as string | null, eventDetails)
+          handleComboboxValueChange(v, eventDetails)
         }}
         inputValue={inputValue}
         onInputValueChange={handleInputValueChange}
@@ -573,14 +583,14 @@ const Selectbox: FC<Props> = ({
                 setInputValue("")
               }}
             >
-              {!open && value != null && value !== "" && (
+              {!open && notNullOrUndefined(value) && value !== "" && (
                 <SelectionMirror>{value}</SelectionMirror>
               )}
               <StyledComboboxInput
                 data-testid="stSelectboxComboboxInput"
                 $disabled={selectDisabled}
                 disabled={selectDisabled}
-                readOnly={inputReadOnly != null}
+                readOnly={notNullOrUndefined(inputReadOnly)}
                 aria-label={label || ""}
                 placeholder={open ? selectboxPlaceholder : undefined}
                 onFocus={e => {
@@ -591,7 +601,11 @@ const Selectbox: FC<Props> = ({
                     ;(e.target as HTMLInputElement).select()
                     return
                   }
-                  if (value != null && value !== "" && inputValue === "") {
+                  if (
+                    notNullOrUndefined(value) &&
+                    value !== "" &&
+                    inputValue === ""
+                  ) {
                     setInputValue(value)
                   }
                 }}
@@ -602,11 +616,15 @@ const Selectbox: FC<Props> = ({
                   e.preventDefault()
                   e.stopPropagation()
                   if (open) {
-                    if (clearable && value != null && value !== "") {
+                    if (
+                      clearable &&
+                      notNullOrUndefined(value) &&
+                      value !== ""
+                    ) {
                       handleValueChange(null)
                     } else {
                       const label =
-                        value == null || value === ""
+                        isNullOrUndefined(value) || value === ""
                           ? ""
                           : (selectOptions.find(o => o.value === value)
                               ?.label ?? String(value))
@@ -618,7 +636,7 @@ const Selectbox: FC<Props> = ({
                   if (!clearable) {
                     return
                   }
-                  if (value == null || value === "") {
+                  if (isNullOrUndefined(value) || value === "") {
                     return
                   }
                   handleValueChange(null)
@@ -627,13 +645,16 @@ const Selectbox: FC<Props> = ({
             </InputWrap>
           </ValueContainer>
           <IconsContainer>
-            {clearable && value != null && value !== "" && !selectDisabled && (
-              <ClearButton
-                type="button"
-                aria-label="Clear"
-                disabled={selectDisabled}
-              />
-            )}
+            {clearable &&
+              notNullOrUndefined(value) &&
+              value !== "" &&
+              !selectDisabled && (
+                <ClearButton
+                  type="button"
+                  aria-label="Clear"
+                  disabled={selectDisabled}
+                />
+              )}
             <Combobox.Icon
               style={selectDisabled ? { cursor: "not-allowed" } : undefined}
             >
