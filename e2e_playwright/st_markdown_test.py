@@ -336,30 +336,26 @@ def test_shimmer_with_color_directive(themed_app: Page):
     """Test shimmer directive behavior with color directives.
 
     Nesting behavior:
-    - :shimmer[:red[text]] - inner color wins (displays red)
+    - :shimmer[:blue[text]] - inner color wins (displays blue)
     - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
     """
     themed_app.emulate_media(reduced_motion="reduce")
 
-    color_container = get_element_by_key(themed_app, "shimmer_with_color")
-    expect(color_container).to_be_visible()
+    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
+    expect(shimmer_container).to_be_visible()
 
-    # Verify both shimmer elements are present
-    shimmer_elements = color_container.locator(".stMarkdownShimmer")
-    expect(shimmer_elements).to_have_count(2)
+    # Get the shimmer element
+    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
+    expect(shimmer_element).to_be_visible()
 
-    # With :red[:shimmer[text]], the shimmer span uses fadedText60 (shimmer wins),
-    # but the parent still has the color directive class
-    red_shimmer = color_container.get_by_text("Loading error...")
-    expect(red_shimmer).to_have_class(re.compile(r"stMarkdownShimmer"))
-    red_parent = red_shimmer.locator("..")
+    # Outer :red[] should NOT apply - shimmer has its own color (fadedText60)
+    # The parent span still has the color directive class, but shimmer overrides it
+    red_parent = shimmer_element.locator("..")
     expect(red_parent).to_have_class(re.compile(r"stMarkdownColoredText"))
 
-    # With :blue[:shimmer[text]], same behavior - shimmer color wins
-    blue_shimmer = color_container.get_by_text("Processing...")
-    expect(blue_shimmer).to_have_class(re.compile(r"stMarkdownShimmer"))
-    blue_parent = blue_shimmer.locator("..")
-    expect(blue_parent).to_have_class(re.compile(r"stMarkdownColoredText"))
+    # Inner :blue[Please] SHOULD apply - inner colors are preserved
+    blue_text = shimmer_container.get_by_text("Please")
+    expect(blue_text).to_have_class(re.compile(r"stMarkdownColoredText"))
 
 
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
