@@ -77,6 +77,13 @@ Widgets with `on_change: WidgetCallback | None` (stateful widgets):
 - `st.data_editor`
 - `st.feedback`
 
+**Note on `st.data_editor`:** This widget has more complex state than simple widgets, supporting
+compound operations (cell edits, row additions, row deletions). With `on_change="ignore"`, all
+individual edit operations are accumulated in the frontend and sent as a batch on the next
+manual rerun. Each cell edit or row operation updates the frontend state locally without
+triggering a rerun, and the complete set of changes becomes available to Python on the next
+rerun.
+
 ### Excluded: Trigger-Based Widgets
 
 The following widgets use trigger values and are **not** candidates for `on_x="ignore"`:
@@ -104,6 +111,11 @@ To:
 ```python
 on_change: WidgetCallback | Literal["rerun", "ignore"] | None = "rerun"
 ```
+
+Since the return type of affected widgets depends on whether a callable is passed (returning
+`None` in some cases vs. the widget value), implementations will likely need `@overload`
+decorators to provide type-safe return types. This follows the pattern already established by
+`st.dataframe`, which uses `@overload` to narrow its return type based on `on_select`.
 
 ### Behavior
 
@@ -307,7 +319,16 @@ identical `on_change` parsing logic, a shared helper ensures consistent behavior
 def parse_on_change(
     on_change: WidgetCallback | Literal["rerun", "ignore"] | None
 ) -> tuple[bool, WidgetCallback | None]:
-    """Extract ignore_rerun flag and actual callback from on_change parameter."""
+    """Extract ignore_rerun flag and actual callback from on_change parameter.
+
+    Raises StreamlitAPIException for invalid string values.
+    """
+    if isinstance(on_change, str) and on_change not in ("rerun", "ignore"):
+        from streamlit.errors import StreamlitAPIException
+        raise StreamlitAPIException(
+            f"Invalid on_change value: {on_change!r}. "
+            f"Expected 'rerun', 'ignore', a callable, or None."
+        )
     ignore_rerun = on_change == "ignore"
     callback = on_change if callable(on_change) else None
     return ignore_rerun, callback

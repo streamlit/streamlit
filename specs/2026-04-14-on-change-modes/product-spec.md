@@ -133,7 +133,9 @@ st.title("ML Model Tuner")
 # Adjust parameters without triggering reruns
 threshold = st.slider("Threshold", 0.0, 1.0, 0.5, on_change="ignore")
 learning_rate = st.slider("Learning Rate", 0.001, 0.1, 0.01, on_change="ignore")
-epochs = st.number_input("Epochs", 1, 100, 10, on_change="ignore")
+epochs = st.number_input(
+    "Epochs", min_value=1, max_value=100, value=10, on_change="ignore"
+)
 
 # Only run expensive computation when user clicks
 if st.button("Train Model"):
@@ -199,7 +201,7 @@ session ends or the page is refreshed before a rerun occurs, those changes are l
 | Item                         | ✅ or comment                                             |
 | ---------------------------- | --------------------------------------------------------- |
 | Works on SiS, Cloud, etc?    | ✅ Requires coordinated frontend, proto, and backend changes; expected to work consistently across supported platforms |
-| No breaking API changes      | ✅ New parameter value, existing code unchanged |
+| No breaking API changes      | ✅ No breaking runtime changes; minor type signature evolution (`None` → `"rerun"` default) |
 | No new dependencies          | ✅                                        |
 | Metrics collected            | ✅ Existing widget metrics apply          |
 | Any security/legal impact?   | ✅ No                                     |
