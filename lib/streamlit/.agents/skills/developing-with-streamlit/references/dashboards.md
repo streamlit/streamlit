@@ -111,7 +111,7 @@ with st.sidebar:
 # Main area is all dashboard content
 ```
 
-## Related skills
+## Related references
 
 - `layouts.md`: Columns, containers, tabs, dialogs
 - `data-display.md`: Charts, dataframes, column configuration

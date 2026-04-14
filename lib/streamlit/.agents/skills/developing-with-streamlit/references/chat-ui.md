@@ -155,7 +155,7 @@ if prompt and prompt.audio:
     st.rerun()
 ```
 
-## Related skills
+## Related references
 
 - `snowflake-connection.md`: Database queries and Cortex chat example
 - `performance.md`: Caching strategies for LLM calls

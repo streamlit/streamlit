@@ -451,7 +451,7 @@ Most theme options update live after saving `config.toml` and rerunning. Font-re
 
 Test your theme with: buttons (primary contrast), forms (borders, focus), dataframes (headers), code blocks, charts, and sidebar.
 
-## Related skills
+## Related references
 
 - [improving-streamlit-design](../improving-streamlit-design/SKILL.md) - Visual polish with icons, badges, spacing
 

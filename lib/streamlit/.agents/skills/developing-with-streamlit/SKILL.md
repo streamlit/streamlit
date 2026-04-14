@@ -5,7 +5,7 @@ description: "**[REQUIRED]** Use for ALL Streamlit tasks: creating, editing, deb
 
 # Developing with Streamlit
 
-This is a **routing skill** that directs you to specialized sub-skills for Streamlit development.
+This is a **routing skill** that directs you to specialized references for Streamlit development.
 
 ## When to Use
 
@@ -26,9 +26,9 @@ Invoke this skill when the user's request involves:
 ```
 Step 1: Locate the Streamlit source code
     ↓
-Step 2: Identify task type and load appropriate sub-skill(s)
+Step 2: Identify task type and load appropriate reference(s)
     ↓
-Step 3: Apply guidance from sub-skill to edit code
+Step 3: Apply guidance from reference to edit code
     ↓
 Step 4: Check if app is running and offer to run it
 ```
@@ -75,15 +75,15 @@ Step 4: Check if app is running and offer to run it
 
 **Output:** Path to the main Streamlit source file(s)
 
-### Step 2: Identify Task Type and Route to Sub-Skill
+### Step 2: Identify Task Type and Route to Reference
 
 **Goal:** Determine what the user needs and load the appropriate guidance.
 
-Use this routing table to select sub-skill(s). **Always read the sub-skill file** before making changes.
+Use this routing table to select reference(s). **Always read the reference file** before making changes.
 
 > All file paths below are relative to this skill's directory (`streamlit/.agents/skills/developing-with-streamlit/`).
 
-| User Need | Sub-skill to Read |
+| User Need | Reference to Read |
 |-----------|-------------------|
 | **Performance issues, slow apps, caching** | `read references/performance.md` |
 | **Building a dashboard with KPIs/metrics** | `read references/dashboards.md` |
@@ -106,7 +106,7 @@ Use this routing table to select sub-skill(s). **Always read the sub-skill file*
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
-If the user asks for a UI element or interaction that **has never been part of Streamlit's API** and cannot be built with any combination of native widgets (e.g., drag-and-drop, canvas drawing, custom interactive visualizations), **route to the CCv2 sub-skill** (`references/custom-components-v2.md`). **Do not** route to CCv2 for features that exist in newer Streamlit versions (e.g., `st.connection`, `st.segmented_control`) — suggest upgrading instead.
+If the user asks for a UI element or interaction that **has never been part of Streamlit's API** and cannot be built with any combination of native widgets (e.g., drag-and-drop, canvas drawing, custom interactive visualizations), **route to the CCv2 reference** (`references/custom-components-v2.md`). **Do not** route to CCv2 for features that exist in newer Streamlit versions (e.g., `st.connection`, `st.segmented_control`) — suggest upgrading instead.
 
 **Common combinations:**
 
@@ -124,11 +124,11 @@ For **performance optimization**, read:
 
 ### Step 3: Apply Guidance to Edit Code
 
-**Goal:** Make changes to the Streamlit app following sub-skill best practices.
+**Goal:** Make changes to the Streamlit app following reference best practices.
 
 **Actions:**
 
-1. Apply the patterns and recommendations from the loaded sub-skill(s)
+1. Apply the patterns and recommendations from the loaded reference(s)
 2. Make edits to the source file(s) identified in Step 1
 3. Preserve existing functionality while adding improvements
 
@@ -168,7 +168,7 @@ For **performance optimization**, read:
 
 ## Stopping Points
 
-- **Step 2**: If multiple sub-skills seem relevant, ask user which aspect to focus on first
+- **Step 2**: If multiple references seem relevant, ask user which aspect to focus on first
 - **Step 4**: Ask before starting the Streamlit app
 
 ## Resources
