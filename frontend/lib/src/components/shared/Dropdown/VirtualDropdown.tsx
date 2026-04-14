@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
 import {
   Children,
   CSSProperties,
@@ -23,6 +22,7 @@ import {
   ReactNode,
 } from "react"
 
+import styled from "@emotion/styled"
 import {
   type OptionListProps,
   StyledEmptyState,

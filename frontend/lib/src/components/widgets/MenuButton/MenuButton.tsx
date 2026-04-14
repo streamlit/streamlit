@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import { Menu } from "@base-ui-components/react/menu"
-import styled from "@emotion/styled"
 import {
   memo,
   ReactElement,
@@ -24,6 +22,9 @@ import {
   useMemo,
   useState,
 } from "react"
+
+import { Menu } from "@base-ui-components/react/menu"
+import styled from "@emotion/styled"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 

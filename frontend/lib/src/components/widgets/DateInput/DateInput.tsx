@@ -14,17 +14,6 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { CalendarDate, type DateValue } from "@internationalized/date"
-import { DatePicker } from "@ark-ui/react/date-picker"
-import type {
-  DateView,
-  DayTableCellState,
-  LocaleDetails,
-} from "@zag-js/date-picker"
-import { format, isValid, parse } from "date-fns"
-import moment from "moment"
 import {
   memo,
   type ReactElement,
@@ -36,6 +25,19 @@ import {
   useRef,
   useState,
 } from "react"
+
+import { DatePicker } from "@ark-ui/react/date-picker"
+import styled from "@emotion/styled"
+import { ErrorOutline } from "@emotion-icons/material-outlined"
+import { CalendarDate, type DateValue } from "@internationalized/date"
+import type {
+  DateView,
+  DayTableCellState,
+  LocaleDetails,
+} from "@zag-js/date-picker"
+import { format, isValid, parse } from "date-fns"
+import moment from "moment"
+
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -53,6 +55,7 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useTimeout from "~lib/hooks/useTimeout"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
@@ -136,6 +139,106 @@ type ValidationResult = {
   newDates: Date[]
 }
 
+const StyledControlRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.twoXS,
+  width: "100%",
+}))
+
+const StyledFieldRow = styled.div<{
+  $hasError: boolean
+}>(({ theme, $hasError }) => {
+  const borderColor = getBorderColor(theme.colors, false)
+  return {
+    display: "flex",
+    alignItems: "center",
+    flex: 1,
+    borderLeftWidth: theme.sizes.borderWidth,
+    borderRightWidth: theme.sizes.borderWidth,
+    borderTopWidth: theme.sizes.borderWidth,
+    borderBottomWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderTopColor: borderColor,
+    borderRightColor: borderColor,
+    borderBottomColor: borderColor,
+    borderLeftColor: borderColor,
+    borderRadius: theme.radii.default,
+    paddingRight: theme.spacing.twoXS,
+    ...($hasError && {
+      backgroundColor: theme.colors.redBackgroundColor,
+    }),
+    "&:focus-within": {
+      borderTopColor: getBorderColor(theme.colors, true),
+      borderRightColor: getBorderColor(theme.colors, true),
+      borderBottomColor: getBorderColor(theme.colors, true),
+      borderLeftColor: getBorderColor(theme.colors, true),
+    },
+  }
+})
+
+const StyledTextInput = styled.input<{ $hasError: boolean }>(
+  ({ theme, $hasError }) => ({
+    flex: 1,
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    position: "relative",
+    zIndex: theme.zIndices.priority,
+    fontWeight: theme.fontWeights.normal,
+    paddingRight: theme.spacing.sm,
+    paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    lineHeight: theme.lineHeights.inputWidget,
+    color: $hasError ? theme.colors.redTextColor : theme.colors.bodyText,
+    "::placeholder": {
+      color: theme.colors.fadedText60,
+    },
+  })
+)
+
+const StyledCalendarInner = styled.div<{
+  fontSize: string
+  paddingRight: string
+  paddingLeft: string
+  paddingBottom: string
+  paddingTop: string
+}>(({ fontSize, paddingRight, paddingLeft, paddingBottom, paddingTop }) => ({
+  fontSize,
+  paddingRight,
+  paddingLeft,
+  paddingBottom,
+  paddingTop,
+  borderWidth: 0,
+}))
+
+const StyledQuickSelect = styled.select(({ theme }) => ({
+  width: "100%",
+  marginBottom: theme.spacing.sm,
+  height: theme.sizes.minElementHeight,
+  borderLeftWidth: theme.sizes.borderWidth,
+  borderRightWidth: theme.sizes.borderWidth,
+  borderTopWidth: theme.sizes.borderWidth,
+  borderBottomWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: theme.colors.fadedText40,
+  borderRadius: theme.radii.default,
+}))
+
+/** Visually hidden caption for the calendar table (screen-reader-only). */
+const TableCaptionSrOnly = styled.caption(({ theme }) => ({
+  position: "absolute",
+  width: theme.spacing.px,
+  height: theme.spacing.px,
+  padding: theme.spacing.none,
+  margin: `-${theme.spacing.px}`,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: theme.spacing.none,
+}))
+
 function DateInput({
   disabled,
   element,
@@ -167,14 +270,22 @@ function DateInput({
     setError(null)
   }, [])
 
+  const clearTextCommitGuard = useCallback(() => {
+    commitFromTextInputRef.current = false
+  }, [])
+
+  const { restart: restartClearTextCommitGuard } = useTimeout(
+    clearTextCommitGuard,
+    null,
+    { autoStart: false }
+  )
+
   const scheduleClearTextCommitGuard = useCallback(() => {
     commitFromTextInputRef.current = true
     // Ark may emit a stale onValueChange after a typed commit (e.g. TZ/parsing). Keep the guard
     // past one task so we do not revert to the previous calendar day before React state catches up.
-    window.setTimeout(() => {
-      commitFromTextInputRef.current = false
-    }, 100)
-  }, [])
+    restartClearTextCommitGuard(100)
+  }, [restartClearTextCommitGuard])
 
   const handleFormCleared = useCallback(() => {
     resetError()
@@ -300,7 +411,7 @@ function DateInput({
       if (!a || !b) {
         return [a, b]
           .filter(Boolean)
-          .map(d => format(d as Date, dateFormat, { locale: loadedLocale }))
+          .map(d => format(d, dateFormat, { locale: loadedLocale }))
           .join(RANGE_DISPLAY_SEP)
       }
       return `${format(a, dateFormat, { locale: loadedLocale })}${RANGE_DISPLAY_SEP}${format(b, dateFormat, { locale: loadedLocale })}`
@@ -996,37 +1107,26 @@ function DateInput({
                             const weekdayNarrow = narrowWeekdays.join("")
                             return (
                               <DatePicker.Table>
-                                <caption
-                                  role="presentation"
-                                  style={{
-                                    position: "absolute",
-                                    width: "1px",
-                                    height: "1px",
-                                    padding: 0,
-                                    margin: "-1px",
-                                    overflow: "hidden",
-                                    clip: "rect(0, 0, 0, 0)",
-                                    whiteSpace: "nowrap",
-                                    border: 0,
-                                  }}
-                                >
+                                <TableCaptionSrOnly role="presentation">
                                   {weekdayNarrow}
-                                </caption>
+                                </TableCaptionSrOnly>
                                 <DatePicker.TableHead>
                                   <DatePicker.TableRow>
-                                    {narrowWeekdays.map((narrow, i) => (
-                                      <DatePicker.TableHeader key={i}>
+                                    {narrowWeekdays.map(narrow => (
+                                      <DatePicker.TableHeader key={narrow}>
                                         {narrow}
                                       </DatePicker.TableHeader>
                                     ))}
                                   </DatePicker.TableRow>
                                 </DatePicker.TableHead>
                                 <DatePicker.TableBody>
-                                  {api.weeks.map((week, wi) => (
-                                    <DatePicker.TableRow key={wi}>
-                                      {week.map((day, di) => (
+                                  {api.weeks.map(week => (
+                                    <DatePicker.TableRow
+                                      key={week.map(d => String(d)).join("|")}
+                                    >
+                                      {week.map(day => (
                                         <DatePicker.TableCell
-                                          key={di}
+                                          key={String(day)}
                                           value={day}
                                           visibleRange={api.visibleRange}
                                         >
@@ -1160,93 +1260,6 @@ function MainDateInputField({
     />
   )
 }
-
-const StyledControlRow = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: theme.spacing.twoXS,
-  width: "100%",
-}))
-
-const StyledFieldRow = styled.div<{
-  $hasError: boolean
-}>(({ theme, $hasError }) => {
-  const borderColor = getBorderColor(theme.colors, false)
-  return {
-    display: "flex",
-    alignItems: "center",
-    flex: 1,
-    borderLeftWidth: theme.sizes.borderWidth,
-    borderRightWidth: theme.sizes.borderWidth,
-    borderTopWidth: theme.sizes.borderWidth,
-    borderBottomWidth: theme.sizes.borderWidth,
-    borderStyle: "solid",
-    borderTopColor: borderColor,
-    borderRightColor: borderColor,
-    borderBottomColor: borderColor,
-    borderLeftColor: borderColor,
-    borderRadius: theme.radii.default,
-    paddingRight: theme.spacing.twoXS,
-    ...($hasError && {
-      backgroundColor: theme.colors.redBackgroundColor,
-    }),
-    "&:focus-within": {
-      borderTopColor: getBorderColor(theme.colors, true),
-      borderRightColor: getBorderColor(theme.colors, true),
-      borderBottomColor: getBorderColor(theme.colors, true),
-      borderLeftColor: getBorderColor(theme.colors, true),
-    },
-  }
-})
-
-const StyledTextInput = styled.input<{ $hasError: boolean }>(
-  ({ theme, $hasError }) => ({
-    flex: 1,
-    border: "none",
-    outline: "none",
-    background: "transparent",
-    position: "relative",
-    zIndex: theme.zIndices.priority,
-    fontWeight: theme.fontWeights.normal,
-    paddingRight: theme.spacing.sm,
-    paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
-    paddingBottom: theme.spacing.sm,
-    paddingTop: theme.spacing.sm,
-    lineHeight: theme.lineHeights.inputWidget,
-    color: $hasError ? theme.colors.redTextColor : theme.colors.bodyText,
-    "::placeholder": {
-      color: theme.colors.fadedText60,
-    },
-  })
-)
-
-const StyledCalendarInner = styled.div<{
-  fontSize: string
-  paddingRight: string
-  paddingLeft: string
-  paddingBottom: string
-  paddingTop: string
-}>(({ fontSize, paddingRight, paddingLeft, paddingBottom, paddingTop }) => ({
-  fontSize,
-  paddingRight,
-  paddingLeft,
-  paddingBottom,
-  paddingTop,
-  borderWidth: 0,
-}))
-
-const StyledQuickSelect = styled.select(({ theme }) => ({
-  width: "100%",
-  marginBottom: theme.spacing.sm,
-  height: theme.sizes.minElementHeight,
-  borderLeftWidth: theme.sizes.borderWidth,
-  borderRightWidth: theme.sizes.borderWidth,
-  borderTopWidth: theme.sizes.borderWidth,
-  borderBottomWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: theme.colors.fadedText40,
-  borderRadius: theme.radii.default,
-}))
 
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,

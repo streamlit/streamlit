@@ -255,8 +255,7 @@ const Multiselect: FC<Props> = props => {
 
       // Get filtered options (excluding already selected ones) for the dropdown
       const labeledOptions: LabeledOption[] = options.map(opt => ({
-        label:
-          typeof opt.label === "string" ? opt.label : String(opt.label ?? ""),
+        label: typeof opt.label === "string" ? opt.label : "",
         value: String(
           (opt as Option & { value?: string }).value ?? opt.id ?? ""
         ),
