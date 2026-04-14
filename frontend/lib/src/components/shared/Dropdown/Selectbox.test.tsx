@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -151,11 +145,13 @@ describe("Selectbox widget", () => {
     await user.click(options[2])
 
     expect(props.onChange).toHaveBeenCalledWith("c")
-    expect(
-      within(screen.getByTestId("stSelectbox")).getByDisplayValue(
-        props.options[2]
-      )
-    ).toBeVisible()
+    await waitFor(() => {
+      expect(
+        within(screen.getByTestId("stSelectbox")).getByDisplayValue(
+          props.options[2]
+        )
+      ).toBeVisible()
+    })
   })
 
   it("doesn't filter options based on index", async () => {
@@ -334,6 +330,7 @@ describe("Selectbox widget", () => {
   })
 
   it("does not call onChange when the user deletes characters", async () => {
+    const user = userEvent.setup()
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(
@@ -341,11 +338,8 @@ describe("Selectbox widget", () => {
     ).toBeInTheDocument()
 
     const selectboxInput = screen.getByRole("combobox")
-
-    // Simulate deleting the selected label without committing (real browsers emit input events).
-    await act(async () => {
-      fireEvent.input(selectboxInput, { target: { value: "" } })
-    })
+    await user.click(selectboxInput)
+    await user.clear(selectboxInput)
 
     await waitFor(() => {
       expect(props.onChange).toHaveBeenCalledTimes(0)
@@ -356,35 +350,17 @@ describe("Selectbox widget", () => {
   })
 
   it("allows new options when acceptNewOptions is true", async () => {
+    const user = userEvent.setup()
     props = getProps({
       acceptNewOptions: true,
       value: null,
     })
     render(<Selectbox {...props} />)
     const selectboxInput = screen.getByRole("combobox")
-    // One-shot input avoids dozens of per-keystroke Zag updates that trip act() in vitest.setup.
-    await act(async () => {
-      fireEvent.input(selectboxInput, {
-        target: { value: "hello world!" },
-      })
-    })
-    await act(async () => {
-      fireEvent.keyDown(selectboxInput, {
-        key: "Enter",
-        code: "Enter",
-        charCode: 13,
-      })
-    })
-    await waitFor(() => {
-      expect(props.onChange).toHaveBeenCalledTimes(1)
-      expect(props.onChange).toHaveBeenCalledWith("hello world!")
-    })
-    const selectbox = screen.getByTestId("stSelectbox")
-    await waitFor(() => {
-      expect(
-        within(selectbox).getByDisplayValue("hello world!")
-      ).toBeInTheDocument()
-    })
+    await user.type(selectboxInput, "hello world!")
+    await user.keyboard("{enter}")
+    expect(props.onChange).toHaveBeenCalledTimes(1)
+    expect(props.onChange).toHaveBeenCalledWith("hello world!")
   })
 
   describe("on mobile", () => {
@@ -393,24 +369,17 @@ describe("Selectbox widget", () => {
     })
 
     it("allows typing when acceptNewOptions is true even with few options", async () => {
-      props = getProps({ acceptNewOptions: true, options: ["a", "b", "c"] })
+      const user = userEvent.setup()
+      props = getProps({
+        acceptNewOptions: true,
+        options: ["a", "b", "c"],
+        value: null,
+      })
       render(<Selectbox {...props} />)
       const selectboxInput = screen.getByRole("combobox")
-      await act(async () => {
-        fireEvent.input(selectboxInput, {
-          target: { value: "mobile new option" },
-        })
-      })
-      await act(async () => {
-        fireEvent.keyDown(selectboxInput, {
-          key: "Enter",
-          code: "Enter",
-          charCode: 13,
-        })
-      })
-      await waitFor(() => {
-        expect(props.onChange).toHaveBeenCalledWith("mobile new option")
-      })
+      await user.type(selectboxInput, "mobile new option")
+      await user.keyboard("{enter}")
+      expect(props.onChange).toHaveBeenCalledWith("mobile new option")
     })
 
     it("keeps input readonly when acceptNewOptions is false and few options", async () => {

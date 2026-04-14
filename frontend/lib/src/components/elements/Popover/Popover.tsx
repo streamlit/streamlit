@@ -47,6 +47,7 @@ import {
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import useTimeout from "~lib/hooks/useTimeout"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -142,6 +143,39 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
+  const { restart: scheduleSetOpenFalse } = useTimeout(
+    useCallback(() => {
+      setOpen(false)
+    }, []),
+    0,
+    { autoStart: false }
+  )
+
+  const { restart: scheduleCloseFlush } = useTimeout(
+    useCallback(() => {
+      if (widgetId) {
+        widgetMgr?.setBoolValue(
+          { id: widgetId },
+          false,
+          { fromUi: true },
+          fragmentId
+        )
+      } else if (isPassivelyKeyed) {
+        setStoredOpen(false)
+      }
+      scheduleSetOpenFalse(0)
+    }, [
+      widgetId,
+      widgetMgr,
+      fragmentId,
+      isPassivelyKeyed,
+      setStoredOpen,
+      scheduleSetOpenFalse,
+    ]),
+    0,
+    { autoStart: false }
+  )
+
   const handleOpenChange = useCallback(
     (nextOpen: boolean): void => {
       if (!nextOpen) {
@@ -156,21 +190,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         const flushAndClose = (): void => {
           // Defer bool sync one macrotask after blur so BaseUI inputs flush `dirty` →
           // WidgetStateManager before the popover state update (e2e: text in popover).
-          window.setTimeout(() => {
-            if (widgetId) {
-              widgetMgr?.setBoolValue(
-                { id: widgetId },
-                false,
-                { fromUi: true },
-                fragmentId
-              )
-            } else if (isPassivelyKeyed) {
-              setStoredOpen(false)
-            }
-            window.setTimeout(() => {
-              setOpen(false)
-            }, 0)
-          }, 0)
+          scheduleCloseFlush(0)
         }
         requestAnimationFrame(() => {
           requestAnimationFrame(flushAndClose)
@@ -190,7 +210,14 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         setStoredOpen(true)
       }
     },
-    [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen]
+    [
+      widgetMgr,
+      widgetId,
+      fragmentId,
+      isPassivelyKeyed,
+      setStoredOpen,
+      scheduleCloseFlush,
+    ]
   )
 
   let kind = BaseButtonKind.SECONDARY
