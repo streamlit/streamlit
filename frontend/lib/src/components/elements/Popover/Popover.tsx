@@ -15,19 +15,6 @@
  * limitations under the License.
  */
 
-import { css } from "@emotion/react"
-import {
-  FloatingFocusManager,
-  FloatingPortal,
-  autoUpdate,
-  flip,
-  offset,
-  shift,
-  useDismiss,
-  useFloating,
-  useInteractions,
-  useRole,
-} from "@floating-ui/react"
 import {
   memo,
   ReactElement,
@@ -37,6 +24,20 @@ import {
   useRef,
   useState,
 } from "react"
+
+import { css, type SerializedStyles } from "@emotion/react"
+import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -85,7 +86,7 @@ function getPopoverBodyStyles(
   theme: EmotionTheme,
   stretchWidth: boolean,
   calculatedWidth: number
-) {
+): SerializedStyles {
   return css({
     zIndex: theme.zIndices.popup,
     boxSizing: "border-box",
@@ -198,7 +199,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       flip({
         boundary: isInSidebar ? document.documentElement : undefined,
       }),
-      shift({ padding: 8 }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
     ],
   })
 

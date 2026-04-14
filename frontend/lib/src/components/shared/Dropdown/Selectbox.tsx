@@ -14,26 +14,11 @@
  * limitations under the License.
  */
 
-import { ExpandMore } from "@emotion-icons/material-outlined"
-import isPropValid from "@emotion/is-prop-valid"
-import styled from "@emotion/styled"
-import {
-  FloatingPortal,
-  autoUpdate,
-  flip,
-  offset,
-  shift,
-  size,
-  useDismiss,
-  useFloating,
-  useInteractions,
-} from "@floating-ui/react"
-import type { OptionListProps } from "baseui/menu"
 import {
   FC,
   FocusEvent,
-  KeyboardEvent as ReactKeyboardEvent,
   memo,
+  KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type ReactNode,
   SyntheticEvent,
@@ -46,6 +31,22 @@ import {
   useRef,
   useState,
 } from "react"
+
+import isPropValid from "@emotion/is-prop-valid"
+import styled from "@emotion/styled"
+import { ExpandMore } from "@emotion-icons/material-outlined"
+import {
+  autoUpdate,
+  flip,
+  FloatingPortal,
+  offset,
+  shift,
+  size,
+  useDismiss,
+  useFloating,
+  useInteractions,
+} from "@floating-ui/react"
+import type { OptionListProps } from "baseui/menu"
 import { flushSync } from "react-dom"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -340,7 +341,7 @@ const Selectbox: FC<Props> = ({
       flip({
         boundary: isInSidebar ? document.documentElement : undefined,
       }),
-      shift({ padding: 8 }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
       size({
         apply({ availableHeight, rects, elements }) {
           const refWidth =
@@ -370,7 +371,7 @@ const Selectbox: FC<Props> = ({
     if (!open || selectDisabled) {
       return
     }
-    const onDocKeyDown = (e: globalThis.KeyboardEvent) => {
+    const onDocKeyDown = (e: globalThis.KeyboardEvent): void => {
       if (e.key !== "Escape") {
         return
       }
@@ -674,7 +675,7 @@ const Selectbox: FC<Props> = ({
                     return
                   }
                   const v = value
-                  if (v != null && v !== "" && !focused) {
+                  if (notNullOrUndefined(v) && v !== "" && !focused) {
                     e.preventDefault()
                     e.currentTarget.focus()
                   }
@@ -702,7 +703,7 @@ const Selectbox: FC<Props> = ({
                   let next = e.target.value
                   if (
                     firstEditAfterFocusRef.current &&
-                    value != null &&
+                    notNullOrUndefined(value) &&
                     inputValue === value &&
                     next.length === value.length + 1 &&
                     next.startsWith(value)
