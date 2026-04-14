@@ -151,8 +151,11 @@ Configuration can be set in multiple places. Order of precedence (highest to low
 
 1. **Command-line flags** (`--server.port=8080`)
 2. **Environment variables** (`STREAMLIT_SERVER_PORT=8080`)
-3. **Local config** (`.streamlit/config.toml` in project directory)
-4. **Global config** (`~/.streamlit/config.toml`)
+3. **Script-level config** (`.streamlit/config.toml` next to your main script)
+4. **Project-level config** (`.streamlit/config.toml` in the current working directory)
+5. **Global config** (`~/.streamlit/config.toml`)
+
+Script-level and project-level configs are the same path when you run `streamlit run app.py` from the script's directory. They differ when you run from elsewhere, e.g. `streamlit run path/to/app.py` — in that case, the config next to `app.py` takes precedence over the one in your cwd.
 
 ## References
 
