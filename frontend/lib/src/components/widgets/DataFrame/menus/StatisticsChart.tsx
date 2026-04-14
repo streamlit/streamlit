@@ -152,6 +152,10 @@ function createBarChartSpec(
         axis: null,
         scale: { nice: false },
       },
+      tooltip: [
+        { field: "label", type: "nominal", title: "Value" },
+        { field: "value", type: "quantitative", title: "Count" },
+      ],
     },
     config: {
       view: { stroke: null },
