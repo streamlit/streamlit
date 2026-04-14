@@ -105,6 +105,8 @@ updates:
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
     open-pull-requests-limit: 3
+    # Only increase version constraints when required for update
+    versioning-strategy: increase-if-necessary
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
@@ -132,6 +134,8 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3
+    # Only increase version constraints when required for update
+    versioning-strategy: increase-if-necessary
 
     cooldown:
       default-days: 5
