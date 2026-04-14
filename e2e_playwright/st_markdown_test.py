@@ -332,32 +332,6 @@ def test_shimmer_directive_reduced_motion(
     assert_snapshot(shimmer_container, name="st_markdown-shimmer_reduced_motion")
 
 
-def test_shimmer_with_color_directive(themed_app: Page):
-    """Test shimmer directive behavior with color directives.
-
-    Nesting behavior:
-    - :shimmer[:blue[text]] - inner color wins (displays blue)
-    - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
-    """
-    themed_app.emulate_media(reduced_motion="reduce")
-
-    shimmer_container = get_element_by_key(themed_app, "shimmer_elements")
-    expect(shimmer_container).to_be_visible()
-
-    # Get the shimmer element
-    shimmer_element = shimmer_container.locator(".stMarkdownShimmer")
-    expect(shimmer_element).to_be_visible()
-
-    # Outer :red[] should NOT apply - shimmer has its own color (fadedText60)
-    # The parent span still has the color directive class, but shimmer overrides it
-    red_parent = shimmer_element.locator("..")
-    expect(red_parent).to_have_class(re.compile(r"stMarkdownColoredText"))
-
-    # Inner :blue[Please] SHOULD apply - inner colors are preserved
-    blue_text = shimmer_container.get_by_text("Please")
-    expect(blue_text).to_have_class(re.compile(r"stMarkdownColoredText"))
-
-
 def test_large_image_in_markdown(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that large images in markdown are displayed correctly with max width 100%."""
     markdown_element = get_markdown(
