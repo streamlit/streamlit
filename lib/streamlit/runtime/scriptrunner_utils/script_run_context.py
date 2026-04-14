@@ -65,6 +65,14 @@ parallel_fragment_id: contextvars.ContextVar[str | None] = contextvars.ContextVa
     "parallel_fragment_id", default=None
 )
 
+# True on parallel fragment worker threads during the parallel batch (full-app run).
+# Set before contextvars.copy_context() in _dispatch_parallel_fragment so the worker
+# inherits the value. Used by _check_not_parallel_worker to gate APIs that are unsafe
+# during concurrent execution (e.g. @st.dialog, st.switch_page).
+is_parallel_worker: contextvars.ContextVar[bool] = contextvars.ContextVar(
+    "is_parallel_worker", default=False
+)
+
 
 @dataclass
 class ScriptRunContext:

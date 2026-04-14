@@ -38,6 +38,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     add_script_run_ctx,
     get_script_run_ctx,
+    is_parallel_worker,
     parallel_fragment_id,
 )
 from streamlit.time_util import time_to_seconds
@@ -188,6 +189,23 @@ class ParallelFragmentCoordinator:
             thread.join()
 
 
+def _check_not_parallel_worker(api_name: str) -> None:
+    """Raise StreamlitAPIException if called from a parallel fragment worker thread.
+
+    Certain APIs (e.g. @st.dialog, st.switch_page) are unsafe during the parallel
+    batch because they mutate shared state or assume single-threaded execution.
+    They remain allowed during sequential fragment reruns even when the fragment
+    was declared with ``parallel=True``.
+    """
+    if is_parallel_worker.get():
+        from streamlit.errors import StreamlitAPIException
+
+        raise StreamlitAPIException(
+            f"`{api_name}` cannot be called from a parallel fragment during a "
+            f"full app run. It is only allowed during sequential fragment reruns."
+        )
+
+
 def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
@@ -224,11 +242,12 @@ def _dispatch_parallel_fragment(
                 active_dg._cursor.delta_path if active_dg._cursor else []
             )[:-1]
 
-            # Set the parallel fragment ID ContextVar before copying so the
-            # worker thread inherits it for delta tagging.
+            # Set ContextVars before copying so the worker thread inherits them.
             parallel_fragment_id.set(fragment_id)
+            is_parallel_worker.set(True)
             parent_context = contextvars.copy_context()
             parallel_fragment_id.set(None)
+            is_parallel_worker.set(False)
 
     # Restore main thread state
     ctx.current_fragment_id = prev_fragment_id

@@ -280,6 +280,9 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    from streamlit.runtime.fragment import _check_not_parallel_worker
+
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 
