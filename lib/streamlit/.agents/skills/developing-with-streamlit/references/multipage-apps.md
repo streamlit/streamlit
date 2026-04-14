@@ -21,9 +21,9 @@ app_pages/
 # streamlit_app.py
 import streamlit as st
 
-# Initialize global state (shared across pages)
-if "api_client" not in st.session_state:
-    st.session_state.api_client = init_api_client()
+# Initialize user-specific state (shared across pages)
+if "selected_project" not in st.session_state:
+    st.session_state.selected_project = None
 
 # Define navigation
 page = st.navigation([
@@ -89,12 +89,12 @@ page = st.navigation({
 # app_pages/analytics.py
 import streamlit as st
 
-# Access global state
-api = st.session_state.api_client
+# Access shared state
+project = st.session_state.selected_project
 user = st.session_state.user
 
 # Page-specific content (title is handled in streamlit_app.py)
-data = api.fetch_analytics(user.id)
+data = fetch_analytics(user.id, project)
 st.line_chart(data)
 ```
 
@@ -104,7 +104,13 @@ Initialize state in the main module only if it's needed across multiple pages:
 
 ```python
 # streamlit_app.py
-st.session_state.api = init_client()
+
+# Shared resources — use @st.cache_resource, NOT session_state
+@st.cache_resource
+def get_api_client():
+    return init_client()
+
+# User-specific state — use session_state
 st.session_state.user = get_user()
 st.session_state.settings = load_settings()
 ```
@@ -113,6 +119,8 @@ st.session_state.settings = load_settings()
 - Runs before every page
 - Ensures state is initialized
 - Single source of truth
+
+**Use `@st.cache_resource` for shared resources** (API clients, DB connections, ML models). Use `st.session_state` only for per-user data (selections, form inputs, preferences).
 
 ## Page-specific state
 
