@@ -991,7 +991,7 @@ describe("StreamlitMarkdown", () => {
     expect(element).not.toHaveClass("stMarkdownShimmer")
   })
 
-  it("renders shimmer nested inside color directive preserving color", () => {
+  it("renders shimmer nested inside color directive with correct DOM structure", () => {
     render(
       <StreamlitMarkdown
         source=":red[:shimmer[Loading...]]"
@@ -1000,7 +1000,8 @@ describe("StreamlitMarkdown", () => {
     )
     const shimmerElement = screen.getByText("Loading...")
     expect(shimmerElement).toHaveClass("stMarkdownShimmer")
-    // Verify the parent span has the red color class and style applied
+    // Verify the parent span has the color directive class (shimmer uses fadedText60,
+    // but the outer :red[] span still has its color class applied)
     const parentSpan = shimmerElement.parentElement
     expect(parentSpan).not.toBeNull()
     expect(parentSpan).toHaveClass("stMarkdownColoredText")

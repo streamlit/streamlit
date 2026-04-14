@@ -541,9 +541,5 @@ Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 # Shimmer directive test
 with st.container(key="shimmer_elements"):
     st.markdown(
-        "Normal text before :shimmer[:material/hourglass_empty: Please **wait**...] and after"
+        "Normal text before :shimmer[:material/hourglass_empty: :blue[Please] **wait**...] and after"
     )
-
-# Shimmer with color directive test - verifies mask-image approach preserves colors
-with st.container(key="shimmer_with_color"):
-    st.markdown(":red[:shimmer[Loading error...]] and :blue[:shimmer[Processing...]]")

@@ -333,10 +333,11 @@ def test_shimmer_directive_reduced_motion(
 
 
 def test_shimmer_with_color_directive(themed_app: Page):
-    """Test that shimmer directive preserves colors from outer color directives.
+    """Test shimmer directive behavior with color directives.
 
-    The mask-image approach should allow shimmer to work with nested color directives
-    (e.g., :red[:shimmer[text]]) by preserving the inherited color.
+    Nesting behavior:
+    - :shimmer[:red[text]] - inner color wins (displays red)
+    - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
     """
     themed_app.emulate_media(reduced_motion="reduce")
 
@@ -347,13 +348,14 @@ def test_shimmer_with_color_directive(themed_app: Page):
     shimmer_elements = color_container.locator(".stMarkdownShimmer")
     expect(shimmer_elements).to_have_count(2)
 
-    # The red shimmer should have its parent span with red color styling
+    # With :red[:shimmer[text]], the shimmer span uses fadedText60 (shimmer wins),
+    # but the parent still has the color directive class
     red_shimmer = color_container.get_by_text("Loading error...")
     expect(red_shimmer).to_have_class(re.compile(r"stMarkdownShimmer"))
     red_parent = red_shimmer.locator("..")
     expect(red_parent).to_have_class(re.compile(r"stMarkdownColoredText"))
 
-    # The blue shimmer should have its parent span with blue color styling
+    # With :blue[:shimmer[text]], same behavior - shimmer color wins
     blue_shimmer = color_container.get_by_text("Processing...")
     expect(blue_shimmer).to_have_class(re.compile(r"stMarkdownShimmer"))
     blue_parent = blue_shimmer.locator("..")
