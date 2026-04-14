@@ -13,9 +13,10 @@ without requiring `secrets.toml` files.
 
 ## Problem
 
-Streamlit's current secrets management requires a `secrets.toml` file, but many deployment
-platforms inject credentials via environment variables (Heroku, AWS ECS, Kubernetes, Azure App
-Service). Users face friction when deploying outside Streamlit Cloud.
+Streamlit's current secrets management primarily relies on `secrets.toml` files (though it also
+supports Kubernetes-style secrets mounted as directories via `secrets.files` entries). However,
+many deployment platforms inject credentials via environment variables (Heroku, AWS ECS,
+Kubernetes, Azure App Service). Users face friction when deploying outside Streamlit Cloud.
 
 **GitHub Issues:**
 
@@ -42,12 +43,15 @@ Service). Users face friction when deploying outside Streamlit Cloud.
 Add a `secrets` parameter to `st.App`:
 
 ```python
+# Type alias for documentation
+SecretsValue = str | int | float | bool | dict[str, "SecretsValue"]
+
 class App:
     def __init__(
         self,
         script_path: str | Path,
         *,
-        secrets: Mapping[str, Any] | None = None,  # NEW
+        secrets: Mapping[str, SecretsValue] | None = None,  # NEW
         lifespan: ... = None,
         routes: ... = None,
         middleware: ... = None,
@@ -58,23 +62,35 @@ class App:
 
 **Parameter:**
 
-- `secrets : Mapping[str, Any] | None`
-  A dictionary of secrets to make available via `st.secrets`. Supports nested dictionaries for
-  sections (e.g., `{"auth": {"client_id": "..."}}`). When provided, these secrets are merged with
-  any file-based secrets, with programmatic secrets taking precedence.
+- `secrets : Mapping[str, SecretsValue] | None`
+  A dictionary of secrets to make available via `st.secrets`. Supported value types:
+  - `str`, `int`, `float`, `bool` — scalar values
+  - `dict[str, SecretsValue]` — nested sections (recursive)
+
+  Unsupported types (e.g., `list`, `datetime`, custom objects) raise `TypeError` at `App`
+  construction.
+
+  When provided, these secrets are **shallow-merged** with file-based secrets: entire top-level
+  keys are replaced, not individual nested keys. For example, if `secrets.toml` has
+  `[auth] redirect_uri = "..."` and the programmatic dict has `{"auth": {"client_id": "..."}}`,
+  the resulting `st.secrets["auth"]` contains only `client_id` (the file's `redirect_uri` is
+  replaced, not preserved).
 
 ### Behavior
 
 1. **Precedence order** (later sources override earlier):
    1. Global `~/.streamlit/secrets.toml`
    2. Project `.streamlit/secrets.toml`
-   3. `secrets` parameter passed to `st.App`
+   3. Script-level `.streamlit/secrets.toml` (located alongside the main script)
+   4. `secrets` parameter passed to `st.App`
 
 2. **Type preservation:** Values retain their Python types (strings, ints, bools, nested dicts).
    No TOML parsing required.
 
 3. **Environment variable promotion:** Top-level string/int/float secrets are promoted to
-   `os.environ` (same as file-based secrets).
+   `os.environ` as strings (same behavior as file-based secrets). Note: `int` and `float` values
+   are stringified (e.g., `42` becomes `"42"`). This matches existing TOML-based behavior where
+   all values become strings in `os.environ`.
 
 4. **File watcher:** File-based secrets continue to support hot-reload. Programmatic secrets are
    static for the lifetime of the `App` instance.
@@ -87,9 +103,9 @@ class App:
 
 ```python
 import os
-from streamlit.web.server.starlette import App
+import streamlit as st
 
-app = App(
+app = st.App(
     "main.py",
     secrets={
         "database": {
@@ -105,14 +121,14 @@ app = App(
 ```python
 import boto3
 import json
-from streamlit.web.server.starlette import App
+import streamlit as st
 
 def load_secrets():
     client = boto3.client("secretsmanager")
     response = client.get_secret_value(SecretId="my-streamlit-app")
     return json.loads(response["SecretString"])
 
-app = App("main.py", secrets=load_secrets())
+app = st.App("main.py", secrets=load_secrets())
 ```
 
 **Hybrid: file-based + programmatic:**
@@ -123,11 +139,11 @@ app = App("main.py", secrets=load_secrets())
 # app_name = "My App"
 
 # main_app.py
-from streamlit.web.server.starlette import App
 import os
+import streamlit as st
 
 # Programmatic secrets override/extend file-based
-app = App(
+app = st.App(
     "main.py",
     secrets={
         "auth": {
@@ -197,7 +213,7 @@ STREAMLIT_SECRETS_JSON='{"auth": {"client_id": "..."}}'
 
 ## Checklist
 
-| Item                         | Status                                                     |
+| Item                         | ✅ or comment                                              |
 |------------------------------|------------------------------------------------------------|
 | Works on SiS, Cloud, etc?    | ✅ `st.App` is ASGI-compatible                             |
 | No breaking API changes      | ✅ New optional parameter only                             |
