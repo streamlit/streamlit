@@ -113,7 +113,7 @@ test = [
   # Used by vega-lite / altair e2e tests:
   "vega_datasets",
   # Only for unit tests:
-  "httpx>=0.24.1",
+  "httpx>=0.28.1",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
   "playwright==1.58.*",
