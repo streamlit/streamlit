@@ -147,10 +147,10 @@ selection = image_selector(image, selections=["Region A", "Region B"])
 ```
 
 ```python
-from streamlit_extras.vertical_slider import vertical_slider
+from streamlit_extras.pagination import pagination
 
-# A vertical slider widget
-value = vertical_slider("Volume", min_value=0, max_value=100, default_value=50)
+# Paginate through a list of items
+page = pagination(st.session_state.get("items", list(range(100))), page_size=10)
 ```
 
 ## Discover more
