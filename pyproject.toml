@@ -66,7 +66,7 @@ dev = [
   "mypy>=1.16.1,<1.21",
   "mypy-protobuf>=3.2",
   "semver>=3",
-  "setuptools>=65.5.1",
+  "setuptools>=82.0.1",
   "build",
   "twine",
   "wheel",
