@@ -79,6 +79,8 @@ Step 4: Check if app is running and offer to run it
 
 **Goal:** Determine what the user needs and load the appropriate guidance.
 
+**IMPORTANT — `use_container_width` is deprecated.** Never add `use_container_width` to new code. Streamlit elements now stretch to fill their container by default. Use `width="stretch"` or `width="content"` instead. Remove `use_container_width` when you encounter it.
+
 Use this routing table to select reference(s). **Always read the reference file** before making changes.
 
 > All file paths below are relative to this skill's directory (`streamlit/.agents/skills/developing-with-streamlit/`).
