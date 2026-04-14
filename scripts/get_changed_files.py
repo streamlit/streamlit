@@ -59,7 +59,7 @@ FRONTEND_PREFIX = "frontend/"
 E2E_PREFIX = "e2e_playwright/"
 
 # Paths to exclude from checks
-EXCLUDED_PATHS = ("/vendor/", "lib/streamlit/proto/", "lib/streamlit/.agents/")
+EXCLUDED_PATHS = ("/vendor/", "lib/streamlit/proto/")
 
 # File extension patterns
 PYTHON_EXTENSIONS = r"\.(py|pyi)$"
