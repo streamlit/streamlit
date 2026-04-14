@@ -34,10 +34,10 @@ st.logo("logo.png")
 
 ## Icons over emojis
 
-Use Material icons for a cleaner, more professional look.
+Use Material Symbols for a cleaner, more professional look. Streamlit uses the [Material Symbols](https://fonts.google.com/icons) icon set (not the older Material Icons).
 
 ```python
-# GOOD: Material icons
+# GOOD: Material Symbols
 st.markdown(":material/settings:")
 st.markdown(":material/calendar_today:")
 st.markdown(":material/dashboard:")
@@ -162,7 +162,7 @@ Options: `"left"` (default), `"center"`, `"right"`, `"justify"`
 
 ## Icons in callouts and expanders
 
-Material icons can make callouts and expanders look nicer:
+Material Symbols can make callouts and expanders look nicer:
 
 ```python
 st.info("Processing complete", icon=":material/check_circle:")
