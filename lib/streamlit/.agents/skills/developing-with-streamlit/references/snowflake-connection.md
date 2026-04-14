@@ -169,17 +169,6 @@ if prompt := st.chat_input("Ask anything"):
 
 See `chat-ui.md` for more chat patterns (avatars, suggestions, history management).
 
-## Python 3.12+ dependency caveat
-
-`streamlit[snowflake]` gates `snowflake-connector-python` on `python_version < "3.12"`. On Python 3.12+, the connector is silently skipped and you get `No module named 'snowflake'` at runtime. Always add `snowflake-connector-python>=3.3.0` as an explicit dependency in `pyproject.toml`:
-
-```toml
-dependencies = [
-    "snowflake-connector-python>=3.3.0",
-    "streamlit[snowflake]>=1.54.0",
-]
-```
-
 ## References
 
 - [st.connection](https://docs.streamlit.io/develop/api-reference/connections/st.connection)
