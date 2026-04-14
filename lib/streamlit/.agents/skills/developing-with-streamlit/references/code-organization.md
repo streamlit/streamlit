@@ -68,18 +68,6 @@ import streamlit as st
 st.title("My App")
 ```
 
-The main guard is fine in utility modules for quick testing:
-
-```python
-# utils/data.py
-def load_data(path):
-    ...
-
-# Optional: test this module directly with `python utils/data.py`
-if __name__ == "__main__":
-    print(load_data("test.csv"))
-```
-
 ## References
 
 - [Multipage apps](https://docs.streamlit.io/develop/concepts/multipage-apps)
