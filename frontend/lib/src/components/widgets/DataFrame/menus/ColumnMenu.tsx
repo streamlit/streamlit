@@ -188,6 +188,7 @@ function ColumnMenu({
                 onMouseLeave={() => setStatsMenuOpen(false)}
                 isActive={statsMenuOpen}
                 hasSubmenu={true}
+                role="menuitem"
               >
                 <div>
                   <DynamicIcon size="base" iconValue=":material/bar_chart:" />

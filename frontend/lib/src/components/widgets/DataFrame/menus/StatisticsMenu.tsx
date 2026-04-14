@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useMemo } from "react"
+import { memo, ReactElement, useEffect, useMemo, useState } from "react"
 
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
@@ -433,14 +433,17 @@ function StatisticsMenu({
   const theme = useEmotionTheme()
   const { colors, fontSizes, fontWeights } = theme
 
-  // Only compute statistics when menu is open
-  // Memoize based on data hash and column to cache results
+  const [hasOpened, setHasOpened] = useState(false)
+  useEffect(() => {
+    if (isOpen) setHasOpened(true)
+  }, [isOpen])
+
   const statistics = useMemo((): ColumnStatistics | null => {
-    if (!isOpen) return null
+    if (!hasOpened) return null
     if (!supportsStatistics(column.kind)) return null
 
     return computeStatistics(column.kind, data, column.indexNumber)
-  }, [isOpen, column.kind, column.indexNumber, data])
+  }, [hasOpened, column.kind, column.indexNumber, data])
 
   // Don't render if column doesn't support statistics
   if (!supportsStatistics(column.kind)) {

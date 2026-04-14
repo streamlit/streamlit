@@ -178,6 +178,7 @@ function StatisticsChart({
 
     const chartElement = chartRef.current
     let spec: TopLevelSpec | null = null
+    let cancelled = false
     let embedResult: Awaited<ReturnType<typeof embed>> | null = null
 
     switch (statistics.type) {
@@ -233,7 +234,11 @@ function StatisticsChart({
         tooltip: { theme: "custom" },
       })
         .then(result => {
-          embedResult = result
+          if (cancelled) {
+            result.finalize()
+          } else {
+            embedResult = result
+          }
         })
         .catch(() => {
           // Ignore embed errors (e.g., component unmounted during async operation)
@@ -241,10 +246,8 @@ function StatisticsChart({
     }
 
     return () => {
-      // Cleanup: finalize vega view to release resources and event listeners
-      if (embedResult) {
-        embedResult.finalize()
-      }
+      cancelled = true
+      embedResult?.finalize()
       chartElement.innerHTML = ""
     }
   }, [statistics, theme])
