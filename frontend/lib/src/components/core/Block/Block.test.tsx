@@ -23,8 +23,9 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 import { BlockNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { FlexBoxContainer, VerticalBlock } from "./Block"
+import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -276,5 +277,66 @@ describe("FlexBoxContainer layout props", () => {
     })
     renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+})
+
+describe("BlockNodeRenderer CSS key class placement", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("places st-key-* on StyledLayoutWrapper for expander blocks", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        expandable: { label: "test expander", expanded: false },
+        id: "$$ID-abc123-my_expander",
+      })
+    )
+
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveClass("st-key-my_expander")
+
+    const innerBlock = screen.getByTestId("stVerticalBlock")
+    expect(innerBlock.className).not.toContain("st-key-")
+  })
+
+  it("places st-key-* on StyledLayoutWrapper for popover blocks", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        popover: { label: "test popover" },
+        id: "$$ID-abc123-my_popover",
+      })
+    )
+
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveClass("st-key-my_popover")
+
+    const innerBlock = screen.getByTestId("stVerticalBlock")
+    expect(innerBlock.className).not.toContain("st-key-")
   })
 })

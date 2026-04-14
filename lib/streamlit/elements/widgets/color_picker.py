@@ -21,9 +21,8 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -266,9 +265,7 @@ class ColorPickerMixin:
         if isinstance(width, int) and width < min_width_px:
             width = min_width_px
 
-        validate_width(width, allow_content=True)
-
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         element_id = compute_and_register_element_id(
             "color_picker",

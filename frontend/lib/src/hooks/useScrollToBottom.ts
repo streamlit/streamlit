@@ -30,7 +30,7 @@ function setImmediateInterval(fn: () => void, ms: number): NodeJS.Timeout {
   return setInterval(fn, ms)
 }
 
-function isAtBottom({
+export function isAtBottom({
   scrollHeight,
   offsetHeight,
   scrollTop,

@@ -45,7 +45,7 @@ jobs:
           python_version: ${{ env.PYTHON_MAX_VERSION }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
       - name: Install Python deps for notifications
         run: |
@@ -99,7 +99,7 @@ jobs:
       - name: Create PR to merge changes into develop
         id: create_pr_update_assets
         if: ${{ steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:

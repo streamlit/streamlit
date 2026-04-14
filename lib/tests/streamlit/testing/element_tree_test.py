@@ -1304,3 +1304,156 @@ def test_file_uploader_multiple_persists_across_runs():
     assert len(at.file_uploader[0].value) == 2
     assert at.markdown[0].value == "File: file1.txt"
     assert at.markdown[1].value == "File: file2.txt"
+
+
+def test_segmented_control_with_none_default():
+    """Test st.segmented_control with default=None works correctly. (Issue #11338)"""
+
+    def script():
+        import streamlit as st
+
+        # Single-select with no default (None)
+        result = st.segmented_control(
+            "Choose option",
+            options=["A", "B", "C"],
+            default=None,
+            key="single_select",
+        )
+        st.write(f"Selected: {result}")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify the widget renders without error
+    assert len(at.segmented_control) == 1
+    assert at.segmented_control[0].value is None
+    assert at.segmented_control[0].indices == []
+    assert at.markdown[0].value == "Selected: None"
+
+    # Verify selecting a value works
+    at.segmented_control[0].select("B").run()
+    assert at.segmented_control[0].value == "B"
+    assert at.segmented_control[0].indices == [1]
+    assert at.markdown[0].value == "Selected: B"
+
+
+def test_pills_widget():
+    """Test st.pills can be accessed via the pills property. (Issue #11361)"""
+
+    def script():
+        import streamlit as st
+
+        selected = st.pills("Pick one", options=["X", "Y", "Z"], key="my_pills")
+        st.write(f"Picked: {selected}")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify pills property returns only pills widgets (filtered by style)
+    assert len(at.pills) == 1
+    assert len(at.button_group) == 1
+
+    # Verify key lookup works
+    assert at.pills("my_pills").value is None
+
+    # Verify selection works
+    at.pills[0].select("Y").run()
+    assert at.pills[0].value == "Y"
+    assert at.markdown[0].value == "Picked: Y"
+
+
+def test_segmented_control_property():
+    """Test st.segmented_control can be accessed via the segmented_control property."""
+
+    def script():
+        import streamlit as st
+
+        result = st.segmented_control(
+            "Options", options=["opt1", "opt2"], key="my_segmented"
+        )
+        st.write(f"Result: {result}")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify segmented_control property returns only segmented_control widgets
+    assert len(at.segmented_control) == 1
+    assert len(at.button_group) == 1
+
+    # Verify key lookup works
+    assert at.segmented_control("my_segmented").value is None
+
+
+def test_pills_and_segmented_control_filtering():
+    """Test pills/segmented_control properties filter by style when both are on page."""
+
+    def script():
+        import streamlit as st
+
+        # Render both widget types on the same page
+        pills_val = st.pills("Pills label", options=["A", "B"], key="the_pills")
+        seg_val = st.segmented_control("Seg label", options=["X", "Y"], key="the_seg")
+        st.write(f"Pills: {pills_val}, Seg: {seg_val}")
+
+    at = AppTest.from_function(script).run()
+
+    # button_group should contain both widgets
+    assert len(at.button_group) == 2
+
+    # pills should only contain the pills widget
+    assert len(at.pills) == 1
+    assert at.pills("the_pills") is not None
+    # segmented_control key should NOT be found in pills
+    assert len([p for p in at.pills if p.key == "the_seg"]) == 0
+
+    # segmented_control should only contain the segmented_control widget
+    assert len(at.segmented_control) == 1
+    assert at.segmented_control("the_seg") is not None
+    # pills key should NOT be found in segmented_control
+    assert len([s for s in at.segmented_control if s.key == "the_pills"]) == 0
+
+    # Verify interaction with each widget type works correctly
+    at.pills[0].select("B").run()
+    assert at.pills[0].value == "B"
+    assert at.segmented_control[0].value is None
+
+    at.segmented_control[0].select("Y").run()
+    assert at.segmented_control[0].value == "Y"
+    assert at.pills[0].value == "B"  # Pills value should be unchanged
+
+
+def test_dataframe_key():
+    """Test st.dataframe key is accessible for interactive dataframes. (Issue #12199)"""
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        df1 = pd.DataFrame({"col1": [1, 2], "col2": [3, 4]})
+        df2 = pd.DataFrame({"colA": ["a", "b"], "colB": ["c", "d"]})
+
+        # Interactive dataframes with on_select have the key stored in proto.id
+        st.dataframe(df1, key="first_df", on_select="rerun")
+        st.dataframe(df2, key="second_df", on_select="rerun")
+
+    at = AppTest.from_function(script).run()
+
+    # Verify key is accessible for interactive dataframes
+    assert at.dataframe[0].key == "first_df"
+    assert at.dataframe[1].key == "second_df"
+
+
+def test_dataframe_non_interactive_has_no_key():
+    """Test non-interactive st.dataframe has None key (expected behavior)."""
+
+    def script():
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"col1": [1, 2]})
+        # Non-interactive dataframe - key param is accepted but not stored in proto
+        st.dataframe(df, key="my_df")
+
+    at = AppTest.from_function(script).run()
+
+    # Non-interactive dataframes don't store the key in proto.id
+    assert at.dataframe[0].key is None

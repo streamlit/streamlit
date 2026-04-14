@@ -34,6 +34,7 @@ from streamlit.elements.arrow import _validate_selection_state
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -347,6 +348,17 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
                 ],
             ),
             ("single-row", [DataframeProto.SelectionMode.SINGLE_ROW]),
+            (
+                "single-row-required",
+                [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+            ),
+            (
+                ("single-row-required", "multi-column"),
+                [
+                    DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
+                    DataframeProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
             ("multi-column", [DataframeProto.SelectionMode.MULTI_COLUMN]),
             ("single-cell", [DataframeProto.SelectionMode.SINGLE_CELL]),
             ("multi-cell", [DataframeProto.SelectionMode.MULTI_CELL]),
@@ -359,12 +371,15 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df, on_select="rerun", selection_mode=input_modes)
 
         el = self.get_delta_from_queue().new_element
-        assert el.dataframe.selection_mode == expected_modes
+        # Use set comparison since the order of modes is not guaranteed
+        assert set(el.dataframe.selection_mode) == set(expected_modes)
 
     @parameterized.expand(
         [
             (["invalid", "single-row"],),
             (["single-row", "multi-row"],),
+            (["single-row-required", "single-row"],),
+            (["single-row-required", "multi-row"],),
             (["single-column", "multi-column"],),
             (["single-cell", "multi-cell"],),
         ]
@@ -1107,3 +1122,125 @@ class TestValidateSelectionState:
         assert result["selection"]["rows"] == [0, 1]
         assert result["selection"]["columns"] == ["col1"]
         assert result["selection"]["cells"] == [(2, "col2")]
+
+    def test_single_row_required_auto_selects_first_row(self) -> None:
+        """Test that single-row-required mode auto-selects row 0 when selection is empty."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [0]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_single_row_required_does_not_override_valid_selection(self) -> None:
+        """Test that single-row-required mode preserves existing valid selection."""
+        value = {"selection": {"rows": [2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [2]
+
+    def test_single_row_required_empty_dataframe(self) -> None:
+        """Test that single-row-required mode returns empty selection for empty dataframe."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=0,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == []
+
+    def test_single_row_required_limits_to_single_row(self) -> None:
+        """Test that single-row-required mode limits selection to a single row."""
+        value = {"selection": {"rows": [0, 1, 2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [0]
+
+
+def test_programmatic_selection_returns_attribute_dictionary() -> None:
+    """Test that programmatic selection via session state returns AttributeDictionary.
+
+    Regression test for #14454: When setting dataframe selection state
+    programmatically via st.session_state, the returned value must be an
+    AttributeDictionary so users can access selection attributes (e.g.,
+    event.selection) without getting an AttributeError.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        if "run_count" not in st.session_state:
+            st.session_state["run_count"] = 0
+        st.session_state["run_count"] += 1
+
+        # Programmatically set selection on second run
+        if st.session_state["run_count"] == 2:
+            st.session_state["df_key"] = {
+                "selection": {"rows": [1], "columns": [], "cells": []}
+            }
+
+        result = st.dataframe(
+            df, key="df_key", on_select="rerun", selection_mode="multi-row"
+        )
+        # Attribute access would raise AttributeError if result is a plain dict.
+        st.text(f"rows: {result.selection.rows}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "rows: []"
+
+    at = at.run()
+    assert at.text[0].value == "rows: [1]"
+
+    # Third run without modifying session state: selection should persist
+    # as AttributeDictionary (verifies the fix applies across subsequent reruns).
+    at = at.run()
+    assert at.text[0].value == "rows: [1]"
+
+
+def test_selection_state_is_read_only() -> None:
+    """Test that dataframe selection state is read-only.
+
+    When users try to modify the selection state via nested assignment
+    (e.g., st.session_state.key.selection = {...}), a TypeError should be
+    raised with a helpful error message guiding them to use full assignment.
+    """
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    result = st.dataframe(
+        df, key="df_key", on_select="rerun", selection_mode="multi-row"
+    )
+
+    # Verify the result is read-only and raises TypeError on modification attempts
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {"rows": [0]}
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {"rows": [0]}
+
+    # Verify nested access is also read-only (both attribute and bracket style)
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection.rows = [0]
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["rows"] = [0]
+
+    # Verify read access still works
+    assert result.selection.rows == []
+    assert result.selection.columns == []
+    assert result.selection.cells == []

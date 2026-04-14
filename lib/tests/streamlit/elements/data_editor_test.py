@@ -233,7 +233,8 @@ class DataEditorUtilTest(unittest.TestCase):
 
         assert df.iat[0, 0] == 10
         assert df.iat[0, 1] == "foo"
-        assert df.iat[1, 1] is None
+        # pandas 3.x uses NA instead of None for missing values in string columns
+        assert pd.isna(df.iat[1, 1])
         assert not df.iat[0, 2]
         assert df.iat[0, 3] == pd.Timestamp("2020-03-20T14:28:23")
         assert df.iat[0, 4] == Decimal("2.3")
@@ -901,11 +902,19 @@ class DataEditorTest(DeltaGeneratorTestCase):
         assert reconstructed_df.shape[0] == metadata.expected_rows
         assert reconstructed_df.shape[1] == metadata.expected_cols
 
-        assert type(return_data) is (
+        expected_type = (
             type(input_data)
             if metadata.expected_type is None
             else metadata.expected_type
         )
+        # For pyarrow arrays, use isinstance check since pandas 3.x may return
+        # LargeStringArray instead of StringArray for string columns
+        if metadata.expected_data_format == DataFormat.PYARROW_ARRAY:
+            import pyarrow as pa
+
+            assert isinstance(return_data, pa.Array)
+        else:
+            assert type(return_data) is expected_type
 
         if isinstance(return_data, pd.DataFrame):
             assert return_data.shape[0] == metadata.expected_rows

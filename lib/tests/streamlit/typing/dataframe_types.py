@@ -168,6 +168,10 @@ if TYPE_CHECKING:
         dataframe(df, on_select="rerun", selection_mode="single-row"), DataframeState
     )
     assert_type(
+        dataframe(df, on_select="rerun", selection_mode="single-row-required"),
+        DataframeState,
+    )
+    assert_type(
         dataframe(df, on_select="rerun", selection_mode="multi-row"), DataframeState
     )
 

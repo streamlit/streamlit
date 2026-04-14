@@ -82,7 +82,7 @@ jobs:
       - name: Create PR to merge changes into develop
         id: create_pr
         if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:

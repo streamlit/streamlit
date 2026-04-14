@@ -117,13 +117,18 @@ function handleMultiSelection(
 function handleSelection(
   mode: ButtonGroupProto.ClickMode,
   clickedContent: string,
-  currentSelection: string[]
+  currentSelection: string[],
+  required: boolean
 ): string[] {
   if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(clickedContent, currentSelection)
   }
 
-  // For single-select, toggle off if already selected
+  // Prevent deselection when required
+  if (required && currentSelection.includes(clickedContent)) {
+    return currentSelection
+  }
+
   return currentSelection.includes(clickedContent) ? [] : [clickedContent]
 }
 
@@ -307,7 +312,8 @@ function createOptionChild(
 
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
-  const { clickMode, options, style, label, labelVisibility, help } = element
+  const { clickMode, options, style, label, labelVisibility, help, required } =
+    element
   const theme = useEmotionTheme()
 
   const queryParamBinding = element.queryParamKey
@@ -347,10 +353,20 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const onClick = useCallback(
     (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
       const clickedContent = getOptionBaseContent(options[index])
-      const newSelected = handleSelection(clickMode, clickedContent, value)
+      const newSelected = handleSelection(
+        clickMode,
+        clickedContent,
+        value,
+        required
+      )
+      // Skip state update if selection didn't change (e.g., clicking already-selected
+      // option when required=true). This prevents unnecessary backend reruns.
+      if (newSelected === value) {
+        return
+      }
       setValueWithSource({ value: newSelected, fromUi: true })
     },
-    [clickMode, options, value, setValueWithSource]
+    [clickMode, options, value, required, setValueWithSource]
   )
 
   const mode = getSelectionMode(clickMode)
@@ -405,6 +421,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         }
         overrides={{
           Root: {
+            props: {
+              "aria-required": required || undefined,
+            },
             style: useCallback(
               () =>
                 getButtonGroupOverridesStyle(

@@ -37,6 +37,10 @@ export default defineConfig({
     viteTsconfigPaths(),
     dts({
       insertTypesEntry: true,
+      // Keep declaration emit on a separate tsconfig so normal typechecking can
+      // still resolve sibling workspace source without pulling those files into
+      // the build root under TypeScript 6.
+      tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
     }),
   ],
   build: {

@@ -23,9 +23,9 @@ from starlette.applications import Starlette
 from starlette.routing import Mount
 from starlette.testclient import TestClient
 
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette.starlette_static_routes import (
     _RESERVED_STATIC_PATH_SUFFIXES,
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
     create_streamlit_static_handler,
 )
 
@@ -158,23 +158,22 @@ class TestReservedPaths:
     ) -> None:
         """Test that paths ending with reserved suffixes return 404.
 
-        This matches Tornado's behavior where endswith() is used for reserved
-        path matching. Paths like /my_stcore/health return 404 because they
-        end with '_stcore/health'.
+        Uses endswith() for reserved path matching. Paths like /my_stcore/health
+        return 404 because they end with '_stcore/health'.
 
         TODO: Consider making this path-segment-aware in the future to avoid
         false positives.
         """
         response = static_app.get("/my_stcore/health")
 
-        # Matches Tornado: endswith check treats this as reserved
+        # endswith check treats this as reserved
         assert response.status_code == 404
 
     def test_user_path_custom_stcore_returns_404(self, static_app: TestClient) -> None:
-        """Test that /custom_stcore/host-config returns 404 (matches Tornado)."""
+        """Test that /custom_stcore/host-config returns 404."""
         response = static_app.get("/custom_stcore/host-config")
 
-        # Matches Tornado: endswith check treats this as reserved
+        # endswith check treats this as reserved
         assert response.status_code == 404
 
     def test_nested_reserved_path_returns_404(self, static_app: TestClient) -> None:

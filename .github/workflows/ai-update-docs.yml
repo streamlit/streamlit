@@ -15,7 +15,7 @@ on:
         description: "Model to use for documentation review"
         required: false
         type: string
-        default: "opus-4.6-thinking"
+        default: "claude-4.6-opus-high-thinking"
       dry_run:
         description: "Run without creating PR"
         type: boolean
@@ -23,7 +23,7 @@ on:
         default: false
 
 env:
-  MODEL: ${{ inputs.model || 'opus-4.6-thinking' }}
+  MODEL: ${{ inputs.model || 'claude-4.6-opus-high-thinking' }}
   PR_NUMBER: ${{ inputs.pr_number || '' }}
 
 jobs:
@@ -61,6 +61,7 @@ jobs:
       base_branch: ${{ steps.pr-info.outputs.base_ref || 'develop' }}
       head_branch: ${{ steps.pr-info.outputs.head_ref || '' }}
       is_fork: ${{ steps.pr-info.outputs.is_fork || 'false' }}
+      checkout_sha: ${{ steps.get-sha.outputs.sha }}
 
     defaults:
       run:
@@ -97,6 +98,10 @@ jobs:
           ref: ${{ steps.pr-info.outputs.head_sha || '' }}
           fetch-depth: 0
           persist-credentials: false
+
+      - name: Capture checkout SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -227,8 +232,8 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
-          # Checkout the PR's head branch if pr_number specified, otherwise develop
-          ref: ${{ needs.ai-update-docs.outputs.head_branch || 'develop' }}
+          # Use the exact SHA from the ai-update-docs job to ensure patch applies cleanly
+          ref: ${{ needs.ai-update-docs.outputs.checkout_sha }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -286,7 +291,7 @@ jobs:
       - name: Create PR
         id: create_pr
         if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
           MODEL_NAME: ${{ env.MODEL }}
@@ -361,7 +366,7 @@ jobs:
         run: |
           {
             echo "## AI Documentation Update Summary";
-            echo "- Model: ${{ env.MODEL }}";
+            echo "- Model: $MODEL";
             if [ -n "${SOURCE_PR_NUMBER}" ]; then
               echo "- Source PR: #${SOURCE_PR_NUMBER}";
             fi
@@ -387,7 +392,7 @@ jobs:
         run: |
           {
             echo "## AI Documentation Update Summary";
-            echo "- Model: ${{ env.MODEL }}";
+            echo "- Model: $MODEL";
             echo "- Source PR: #${SOURCE_PR_NUMBER}";
             echo "";
             echo "**Skipped:** PR-scoped documentation updates are not supported for fork PRs.";

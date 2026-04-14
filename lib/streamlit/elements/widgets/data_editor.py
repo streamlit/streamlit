@@ -338,8 +338,20 @@ def _assign_row_values(
     This avoids numpy attempting to coerce nested sequences (e.g. lists) into
     multi-dimensional arrays when a column legitimately stores list values.
     """
+    import warnings
 
-    df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    # Suppress pandas FutureWarning about dtype inference during concatenation.
+    # When assigning to a new row via .loc[], pandas internally performs concat
+    # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
+    # The warning is not actionable by users and was removed in pandas 3.x.
+    # See: https://github.com/streamlit/streamlit/issues/14321
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+            category=FutureWarning,
+        )
+        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
 
 
 def _apply_row_additions(
@@ -1026,7 +1038,7 @@ class DataEditorMixin:
 
         # Deactivate editing for columns that are not compatible with arrow
         for column_name, column_data in data_df.items():
-            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+            if dataframe_util.determine_arrow_column_fix(column_data) is not None:
                 update_column_config(
                     column_config_mapping, str(column_name), {"disabled": True}
                 )

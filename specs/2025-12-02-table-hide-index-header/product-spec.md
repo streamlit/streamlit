@@ -28,8 +28,8 @@ indices) and column headers, which is problematic for:
 
 **Requests:**
 
-- [#8235](https://github.com/streamlit/streamlit/issues/8235) - `hide_header` (32+ upvotes)
-- [#9251](https://github.com/streamlit/streamlit/issues/9251) - `hide_index` for `st.table` (14+ upvotes)
+- [#8235](https://github.com/streamlit/streamlit/issues/8235) - `hide_header`
+- [#9251](https://github.com/streamlit/streamlit/issues/9251) - `hide_index` for `st.table`
 - [#13185](https://github.com/streamlit/streamlit/issues/13185) - Add a description list element for viewing key-value data
 
 **Consistency gap:**

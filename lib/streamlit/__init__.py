@@ -151,7 +151,7 @@ from streamlit.commands.execution_control import (
 def _update_logger() -> None:
     _logger.set_log_level(_config.get_option("logger.level").upper())
     _logger.update_formatter()
-    _logger.init_tornado_logs()
+    _logger.init_uvicorn_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
@@ -199,6 +199,7 @@ graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
 html = _main.html
+iframe = _main.iframe
 image = _main.image
 info = _main.info
 json = _main.json

@@ -36,12 +36,12 @@ from streamlit.auth_util import (
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime.secrets import AttrDict
 
-# Simulates realistic Tornado cookie signing overhead (~100 bytes for signature, timestamp, etc.)
+# Simulates realistic cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
 
 
 def create_realistic_signed_value(name: str, value: str) -> bytes:
-    """Mock that simulates realistic Tornado cookie signing behavior.
+    """Mock that simulates realistic cookie signing behavior.
 
     Returns base64-encoded value plus a fixed overhead to simulate signing.
     """

@@ -65,7 +65,7 @@ jobs:
 
       - name: Comment on PR when snapshot update fails
         if: steps.update-snapshots.outputs.script_status == 'failed'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
