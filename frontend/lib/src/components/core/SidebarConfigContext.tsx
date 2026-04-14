@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { createContext } from "react"
+import { createContext, RefObject } from "react"
 
 import { Logo, PageConfig } from "@streamlit/protobuf"
 
@@ -65,6 +65,16 @@ export interface SidebarConfigContextProps {
   expandSidebarNav: boolean
 
   /**
+   * Maximum number of pages to display when the sidebar nav is collapsed.
+   * When undefined, uses the default (10 pages).
+   * When a positive number, shows that many pages before "View X more".
+   *
+   * Consumed by: SidebarNav
+   * @see SidebarNav
+   */
+  sidebarNavVisibleItems?: number
+
+  /**
    * Whether to hide the sidebar navigation menu entirely.
    * When true, sidebar nav is not rendered even if multiple pages exist.
    *
@@ -73,6 +83,17 @@ export interface SidebarConfigContextProps {
    * @see AppView
    */
   hideSidebarNav: boolean
+
+  /**
+   * Ref to the root app container element.
+   * Used to detect if click events are inside the main app container
+   * vs. in a portal (dropdowns, modals, etc.) to prevent incorrect
+   * sidebar collapse on mobile.
+   *
+   * Consumed by: Sidebar
+   * @see Sidebar
+   */
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 /**

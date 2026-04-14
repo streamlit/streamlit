@@ -22,9 +22,8 @@ from typing_extensions import Never
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
@@ -48,6 +47,7 @@ from streamlit.proto.Radio_pb2 import Radio as RadioProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -108,13 +108,17 @@ class RadioSerde(Generic[T]):
             formatted_value = self.format_func(v)
         except Exception:
             # format_func failed (e.g., v is a string but format_func expects
-            # an object with specific attributes). Treat v as a raw string.
-            return cast("str", v)
+            # an object with specific attributes). Use str(v) to ensure we return
+            # a proper string, not the original object. This handles both cases:
+            # - v is already a string -> str(v) returns it unchanged
+            # - v is a custom object -> str(v) gives its string representation
+            return str(v)
 
         if formatted_value in self.formatted_option_to_option_index:
             return formatted_value
-        # Value not found in options - return as raw string
-        return cast("str", v)
+        # Value not found in options - return the formatted string (not the original
+        # object) to maintain type consistency since serialize() must return str|None
+        return formatted_value
 
     def deserialize(self, ui_value: str | None) -> T | str | None:
         # If no options, there's no valid value - return None
@@ -151,6 +155,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> None: ...
 
     @overload
@@ -171,6 +176,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T: ...
 
     @overload
@@ -191,6 +197,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T | None: ...
 
     @gather_metrics("radio")
@@ -211,6 +218,7 @@ class RadioMixin:
         captions: Sequence[str] | None = None,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> T | None:
         r"""Display a radio button widget.
 
@@ -224,9 +232,9 @@ class RadioMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -244,8 +252,7 @@ class RadioMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-            Labels can include markdown as described in the ``label`` parameter
-            and will be cast to str internally by default.
+            Labels can include markdown as described in the ``label`` parameter.
 
         index : int or None
             The index of the preselected option on first render. If ``None``,
@@ -258,10 +265,20 @@ class RadioMixin:
             shown for that option. This has no impact on the return value of
             the radio.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -313,6 +330,25 @@ class RadioMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. If ``index`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
+
         Returns
         -------
         any
@@ -320,8 +356,8 @@ class RadioMixin:
 
             This is a copy of the selected option, not the original.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> genre = st.radio(
@@ -375,6 +411,7 @@ class RadioMixin:
             horizontal=horizontal,
             captions=captions,
             label_visibility=label_visibility,
+            bind=bind,
             ctx=ctx,
             width=width,
         )
@@ -395,7 +432,8 @@ class RadioMixin:
         horizontal: bool = False,
         label_visibility: LabelVisibility = "visible",
         captions: Sequence[str] | None = None,
-        ctx: ScriptRunContext | None,
+        bind: BindOption = None,
+        ctx: ScriptRunContext | None = None,
         width: Width = "content",
     ) -> T | None:
         key = to_key(key)
@@ -408,8 +446,7 @@ class RadioMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
@@ -474,6 +511,10 @@ class RadioMixin:
         if help is not None:
             radio_proto.help = dedent(help)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            radio_proto.query_param_key = str(key)
+
         serde = RadioSerde(
             opt,
             formatted_options=formatted_options,
@@ -491,6 +532,13 @@ class RadioMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_value",
+            bind=bind,
+            # Clearable when index=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
+            clearable=(index is None),
+            # Pass formatted_options so _seed_widget_from_url can reject
+            # invalid option strings from URLs (e.g., ?size=Random).
+            formatted_options=formatted_options,
         )
         widget_state = maybe_coerce_enum(widget_state, options, opt)
 

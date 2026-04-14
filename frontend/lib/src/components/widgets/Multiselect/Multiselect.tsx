@@ -38,12 +38,16 @@ import { without } from "lodash-es"
 import { MultiSelect as MultiSelectProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import { VirtualDropdown } from "~lib/components/shared/Dropdown"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+import VirtualDropdown, {
+  SELECT_ALL_ID,
+  SELECT_MATCHES_ID,
+} from "~lib/components/shared/Dropdown/VirtualDropdown"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { StyledUISelect } from "~lib/components/widgets/Multiselect/styled-components"
 import {
   useBasicWidgetState,
@@ -51,6 +55,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import { convertRemToPx } from "~lib/theme/utils"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -86,7 +91,7 @@ const updateWidgetMgrState = (
   element: MultiSelectProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<MultiselectValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringArrayValue(
     element,
@@ -103,6 +108,18 @@ const Multiselect: FC<Props> = props => {
   const isInSidebar = useContext(IsSidebarContext)
   const valueContainerRef = useRef<HTMLDivElement>(null)
   const scrollTopRef = useRef(0)
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: true,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
+
+  // Ref to store filtered matches for "Select X matches" option
+  const selectMatchesRef = useRef<string[]>([])
   const [value, setValueWithSource] = useBasicWidgetState<
     MultiselectValue,
     MultiSelectProto
@@ -114,6 +131,8 @@ const Multiselect: FC<Props> = props => {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const overMaxSelections =
@@ -139,6 +158,34 @@ const Multiselect: FC<Props> = props => {
           return []
         }
         case "select": {
+          // Handle "Select all" option (no search) - compute from element.options
+          if (data.option?.value === SELECT_ALL_ID) {
+            const unselectedValues = element.options.filter(
+              opt => !value.includes(opt)
+            )
+
+            // Respect maxSelections limit
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...unselectedValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...unselectedValues]
+          }
+
+          // Handle "Select X matches" option (with search) - values stored in ref
+          if (data.option?.value === SELECT_MATCHES_ID) {
+            const filteredValues = selectMatchesRef.current
+
+            // Respect maxSelections limit
+            if (element.maxSelections > 0) {
+              const remainingSlots = element.maxSelections - value.length
+              return [...value, ...filteredValues.slice(0, remainingSlots)]
+            }
+
+            return [...value, ...filteredValues]
+          }
+
           return value.concat([data.option?.value])
         }
         default: {
@@ -147,7 +194,7 @@ const Multiselect: FC<Props> = props => {
         }
       }
     },
-    [value]
+    [value, element.maxSelections, element.options]
   )
 
   /**
@@ -193,6 +240,7 @@ const Multiselect: FC<Props> = props => {
     options,
     isMulti: true,
     acceptNewOptions: element.acceptNewOptions ?? false,
+    filterMode: element.filterMode,
     placeholderInput: element.placeholder,
   })
 
@@ -201,7 +249,36 @@ const Multiselect: FC<Props> = props => {
       if (overMaxSelections) {
         return []
       }
-      return createFilterOptions(value)(options, filterValue)
+
+      // Get filtered options (excluding already selected ones) for the dropdown
+      const filteredOptions = createFilterOptions(value)(options, filterValue)
+
+      // Add "Select all" or "Select X matches" option when multiple selectable options
+      if (filteredOptions.length > 1) {
+        if (filterValue.trim()) {
+          // With search: store filtered values in dedicated ref
+          // Using separate ref from "Select all" avoids race conditions
+          selectMatchesRef.current = filteredOptions.map(
+            (opt: Option) => opt.value as string
+          )
+          const selectMatchesOption: Option = {
+            label: `Select ${filteredOptions.length} matches`,
+            value: SELECT_MATCHES_ID,
+            id: SELECT_MATCHES_ID,
+          }
+          return [selectMatchesOption, ...filteredOptions]
+        }
+
+        // No search: just use marker, handler computes unselected from element.options
+        const selectAllOption: Option = {
+          label: "Select all",
+          value: SELECT_ALL_ID,
+          id: SELECT_ALL_ID,
+        }
+        return [selectAllOption, ...filteredOptions]
+      }
+
+      return filteredOptions
     },
     [createFilterOptions, overMaxSelections, value]
   )
@@ -215,14 +292,15 @@ const Multiselect: FC<Props> = props => {
   // Calculate the max height of the selectbox based on the baseFontSize
   // to better support advanced theming
   const maxHeight = useMemo(() => {
-    // Option height = lineHeight (1.6 * baseFontSize) + margin/padding (14px total)
-    const optionHeight = theme.fontSizes.baseFontSize * 1.6 + 14
-    // Allow up to 4 options tall before scrolling + show small portion
-    // of the next row so its clear the user can scroll
-    const pxMaxHeight = Math.round(optionHeight * 4.25)
-    // Return value in px
-    return `${pxMaxHeight}px`
-  }, [theme.fontSizes.baseFontSize])
+    // Set max height to cut through fifth row of options so the scroll state is apparent
+    const rowHeight = `calc(${theme.sizes.elementHighlightHeight} + ${theme.sizes.tagMarginInsideBorder})`
+    const maxHeight = `calc(4.5 * ${rowHeight} + ${theme.sizes.tagMarginInsideBorder} + 2 * ${theme.sizes.borderWidth})`
+    return maxHeight
+  }, [
+    theme.sizes.elementHighlightHeight,
+    theme.sizes.tagMarginInsideBorder,
+    theme.sizes.borderWidth,
+  ])
 
   // Runs every render to capture BaseWeb's internal DOM updates that can reset scroll position.
   // Performance is acceptable since this is a leaf component with no children to re-render.
@@ -290,13 +368,24 @@ const Multiselect: FC<Props> = props => {
           closeOnSelect={false}
           ignoreCase={false}
           overrides={{
+            DropdownContainer: {
+              style: () => ({
+                ...getPopoverContainerStyle(theme),
+
+                // Height constraint - VirtualDropdown handles scrolling internally
+                maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
+                overflow: "hidden",
+              }),
+            },
             Popover: {
               props: {
                 ignoreBoundary: isInSidebar,
+                popoverMargin: convertRemToPx(theme.spacing.twoXS),
                 overrides: {
                   Body: {
                     style: () => ({
-                      marginTop: theme.spacing.px,
+                      // Scrolling is handled by the VirtualDropdown component
+                      overflow: "hidden",
                     }),
                   },
                 },
@@ -349,14 +438,25 @@ const Multiselect: FC<Props> = props => {
                 color: disabled
                   ? theme.colors.fadedText40
                   : theme.colors.fadedText60,
+                // Position absolute so Input can overlay it
+                position: "absolute",
+                // Vertically center in the container
+                top: "50%",
+                transform: "translateY(-50%)",
+                // Left padding aligns with tag text
+                paddingLeft: theme.spacing.sm,
+                // Allow clicks to pass through to input
+                pointerEvents: "none",
               }),
             },
             ValueContainer: {
               component: ValueContainer,
               style: () => ({
                 overflowY: "auto",
-                paddingLeft: theme.spacing.sm,
-                paddingTop: theme.spacing.none,
+                // Uniform top and left padding - placeholder/input/tags are sized
+                paddingLeft: theme.sizes.tagMarginInsideBorder,
+                paddingTop: theme.sizes.tagMarginInsideBorder,
+                // Right and bottom gaps are deferred to items
                 paddingBottom: theme.spacing.none,
                 paddingRight: theme.spacing.none,
               }),
@@ -391,29 +491,42 @@ const Multiselect: FC<Props> = props => {
                   Root: {
                     style: {
                       fontWeight: theme.fontWeights.normal,
-                      borderTopLeftRadius: theme.radii.md,
-                      borderTopRightRadius: theme.radii.md,
-                      borderBottomRightRadius: theme.radii.md,
-                      borderBottomLeftRadius: theme.radii.md,
+                      borderTopLeftRadius: theme.radii.md2,
+                      borderTopRightRadius: theme.radii.md2,
+                      borderBottomRightRadius: theme.radii.md2,
+                      borderBottomLeftRadius: theme.radii.md2,
                       fontSize: theme.fontSizes.md,
                       paddingLeft: theme.spacing.sm,
+                      // Top and left margins are deferred to ValueContainer padding
+                      marginTop: theme.spacing.none,
                       marginLeft: theme.spacing.none,
-                      marginRight: theme.spacing.sm,
-                      // The tag height is derived from the minElementHeight
-                      // minus a top and bottom padding (2 * spacing.xs)
-                      // to nicely fit into the input field.
-                      height: `calc(${theme.sizes.minElementHeight} - 2 * ${theme.spacing.xs})`,
+                      // Right and bottom margins to handle tag spacing and row gap
+                      marginRight: theme.spacing.twoXS,
+                      marginBottom: theme.sizes.tagMarginInsideBorder,
+                      height: theme.sizes.elementHighlightHeight,
                       maxWidth: `calc(100% - ${theme.spacing.lg})`,
                       // Using !important because the alternative would be
                       // uglier: we'd have to put it under a selector like
                       // "&[role="button"]:not(:disabled)" in order to win in
                       // the order of the precedence.
                       cursor: "default !important",
+                      // Allow clicks to pass through to the container/input
+                      pointerEvents: "none",
+                    },
+                  },
+                  Text: {
+                    style: {
+                      // Re-enable pointer events for the text so the title
+                      // tooltip is shown on hover (pointerEvents: none on Root
+                      // disables it by default)
+                      pointerEvents: "auto",
                     },
                   },
                   Action: {
                     style: {
-                      paddingLeft: 0,
+                      paddingLeft: theme.spacing.none,
+                      // Re-enable pointer events for the close button
+                      pointerEvents: "auto",
                     },
                   },
                   ActionIcon: {
@@ -443,7 +556,37 @@ const Multiselect: FC<Props> = props => {
                 },
               },
             },
-            Input: { props: { readOnly: inputReadOnly } },
+            InputContainer: {
+              style: ({ $isFocused }: { $isFocused: boolean }) => ({
+                // Height matches tags
+                height: theme.sizes.elementHighlightHeight,
+                // Alignment and left margin to match tags (ValueContainer padding)
+                alignSelf: "flex-start",
+                marginLeft: theme.spacing.none,
+                marginTop: theme.spacing.none,
+                // Bottom margin required to size the container correctly if the
+                // input is orphaned on a new line (in focus)
+                marginBottom: theme.sizes.tagMarginInsideBorder,
+                // Stack input when not focused to prevent premature line wrap
+                position: $isFocused ? "relative" : "absolute",
+                width: "fit-content",
+                flexGrow: 0,
+                // Center input vertically
+                display: "flex",
+              }),
+            },
+            Input: {
+              props: {
+                readOnly: inputReadOnly,
+              },
+              style: () => ({
+                color: theme.colors.bodyText,
+                caretColor: theme.colors.bodyText,
+                // Left padding aligns cursor with tag/placeholder text (only when focused)
+                paddingLeft: theme.spacing.sm,
+                fieldSizing: "content",
+              }),
+            },
             Dropdown: { component: VirtualDropdown },
           }}
         />

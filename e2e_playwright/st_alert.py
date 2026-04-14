@@ -96,7 +96,7 @@ This is a big error message.
 ### LATEST MATERIAL ICON TEST START ###
 st.success(
     "Success message to test material icon from latest material symbols font",
-    icon=":material/assignment_globe:",
+    icon=":material/bolt_boost:",
 )
 ### LATEST MATERIAL ICON TEST END ###
 
@@ -119,3 +119,11 @@ st.error("This is an error with width='stretch' and icon", width="stretch", icon
 
 # Alerts with width=200 and icon
 st.info("This is an info message with width=200 and icon", width=200, icon="👉🏻")
+
+### Test cases for icon extraction from body ###
+
+# Test case with emoji icon extracted from body
+st.warning("🔔 This warning has an emoji icon extracted from body")
+
+# Test case with material icon extracted from body
+st.info(":material/lightbulb: This info has a material icon extracted from body")

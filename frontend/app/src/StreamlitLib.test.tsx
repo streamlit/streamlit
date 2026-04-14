@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
-
 import { PureComponent, ReactElement } from "react"
 
-import { screen, waitFor } from "@testing-library/react"
+import { act, screen, waitFor } from "@testing-library/react"
 
 import {
   AppConfig as ConnectionAppConfig,
@@ -50,32 +48,32 @@ import {
  * Example StreamlitEndpoints implementation.
  */
 class Endpoints implements StreamlitEndpoints {
-  public setStaticConfigUrl(url: string | null): void {
+  public setStaticConfigUrl(_url: string | null): void {
     throw new Error("Unimplemented")
   }
 
   public sendClientErrorToHost(
-    component: string,
-    error: string | number,
-    message: string,
-    source: string,
-    customComponentName?: string
+    _component: string,
+    _error: string | number,
+    _message: string,
+    _source: string,
+    _customComponentName?: string
   ): void {
     throw new Error("Unimplemented")
   }
 
   public checkSourceUrlResponse(
-    sourceUrl: string,
-    componentName?: string
+    _sourceUrl: string,
+    _componentName?: string
   ): Promise<void> {
     return Promise.reject(new Error("Unimplemented"))
   }
 
-  public buildComponentURL(componentName: string, path: string): string {
+  public buildComponentURL(_componentName: string, path: string): string {
     return path
   }
 
-  public buildBidiComponentURL(componentName: string, path: string): string {
+  public buildBidiComponentURL(_componentName: string, path: string): string {
     return path
   }
 
@@ -265,8 +263,7 @@ describe("StreamlitLibExample", () => {
 
   it("handles Delta messages", async () => {
     // there's nothing within the app ui to cycle through script run messages so we need a reference
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    let streamlitLibInstance: any
+    let streamlitLibInstance: StreamlitLibExample | null = null
     render(
       <StreamlitLibExample
         ref={ref => {
@@ -287,10 +284,16 @@ describe("StreamlitLibExample", () => {
       deltaPath: [0, 0], // main container, first element
     })
 
-    // Send the delta to our app
-    streamlitLibInstance.beginScriptRun("newScriptRun")
-    streamlitLibInstance.handleDeltaMsg(delta, metadata)
-    streamlitLibInstance.endScriptRun()
+    expect(streamlitLibInstance).not.toBeNull()
+    // The ref callback has set the instance by this point
+    const instance = streamlitLibInstance as unknown as StreamlitLibExample
+
+    // Send the delta to our app (wrap in act() because these cause state updates)
+    act(() => {
+      instance.beginScriptRun("newScriptRun")
+      instance.handleDeltaMsg(delta, metadata)
+      instance.endScriptRun()
+    })
 
     // our "Please wait..." alert should be gone, because it
     // belonged to a previous "script run"

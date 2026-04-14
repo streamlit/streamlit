@@ -16,13 +16,17 @@
 
 import { fireEvent, screen } from "@testing-library/react"
 
-import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
+import {
+  type IImage,
+  ImageList as ImageListProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
-import ImageList, { ImageListProps, WidthBehavior } from "./ImageList"
+import ImageList, { ImageListProps } from "./ImageList"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
 vi.mock("@streamlit/utils", async () => {
@@ -70,6 +74,73 @@ describe("ImageList Element", () => {
     expect(screen.getAllByRole("img")).toHaveLength(2)
   })
 
+  describe("Link parameter", () => {
+    it("renders image wrapped in link when link is provided", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toBeVisible()
+      expect(link).toHaveAttribute("href", "https://streamlit.io")
+      expect(link).toHaveAttribute("target", "_blank")
+      expect(link).toHaveAttribute("rel", "noreferrer")
+      expect(link).toHaveAttribute("aria-label", "a")
+
+      // Image should be inside the link
+      const image = screen.getByRole("img")
+      expect(link).toContainElement(image)
+    })
+
+    it("uses link URL as aria-label when no caption is provided", () => {
+      const props = getProps({
+        imgs: [{ url: "/media/mockImage1.jpeg" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
+    })
+
+    it("does not render link wrapper when link is not provided", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+      })
+      render(<ImageList {...props} />)
+
+      expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+      expect(screen.getByRole("img")).toBeVisible()
+    })
+
+    it("does not render link wrapper when link is empty string", () => {
+      const props = getProps({
+        imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+        link: "",
+      })
+      render(<ImageList {...props} />)
+
+      expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
+      expect(screen.getByRole("img")).toBeVisible()
+    })
+
+    it("renders image with caption and link", () => {
+      const props = getProps({
+        imgs: [{ caption: "Test caption", url: "/media/mockImage1.jpeg" }],
+        link: "https://example.com",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toBeVisible()
+
+      const caption = screen.getByTestId("stImageCaption")
+      expect(caption).toHaveTextContent("Test caption")
+    })
+  })
+
   describe("New width configuration system", () => {
     it("renders explicit width for each image when using pixelWidth", () => {
       const props = getProps({}, { pixelWidth: 300 })
@@ -107,90 +178,8 @@ describe("ImageList Element", () => {
     })
   })
 
-  describe("Legacy WidthBehavior backwards compatibility", () => {
-    it("uses original size for OriginalWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.OriginalWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses container width for ColumnWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.ColumnWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("uses original size for AutoWidth WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.AutoWidth })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses original size for MinImageOrContainer WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MinImageOrContainer })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-
-    it("uses container width for MaxImageOrContainer WidthBehavior", () => {
-      const props = getProps({ width: WidthBehavior.MaxImageOrContainer })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("uses exact pixel width for positive integer WidthBehavior", () => {
-      const props = getProps({ width: 400 })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 400px")
-      })
-    })
-
-    it("defaults to original size for unknown negative WidthBehavior values", () => {
-      const props = getProps({ width: -999 })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 100%")
-      })
-    })
-  })
-
-  describe("Priority and fallback behavior", () => {
-    it("prioritizes new widthConfig over legacy width", () => {
-      const props = getProps({ width: 400 }, { useStretch: true })
-      render(<ImageList {...props} />)
-
-      const images = screen.getAllByRole("img")
-      images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
-      })
-    })
-
-    it("defaults to content behavior when no widthConfig or legacy width is provided", () => {
+  describe("Fallback behavior", () => {
+    it("defaults to content behavior when no widthConfig is provided", () => {
       const props = getProps()
       render(<ImageList {...props} />)
 
@@ -201,13 +190,13 @@ describe("ImageList Element", () => {
       })
     })
 
-    it("falls back to legacy width when new widthConfig is null", () => {
-      const props = getProps({ width: WidthBehavior.ColumnWidth }, null)
+    it("defaults to content behavior when widthConfig is null", () => {
+      const props = getProps({}, null)
       render(<ImageList {...props} />)
 
       const images = screen.getAllByRole("img")
       images.forEach(image => {
-        expect(image).toHaveStyle("width: 250px")
+        expect(image).toHaveStyle("width: 100%")
       })
     })
   })
@@ -350,8 +339,7 @@ describe("ImageList Element", () => {
       ])(
         "sets crossOrigin to $expected when $scenario",
         ({ expected, resourceCrossOriginMode, imgs }) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const props = getProps({ imgs: imgs as any })
+          const props = getProps({ imgs: imgs as IImage[] })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,
@@ -433,8 +421,7 @@ describe("ImageList Element", () => {
       ])(
         "does not set crossOrigin when $scenario",
         ({ resourceCrossOriginMode, imgs }) => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const props = getProps({ imgs: imgs as any })
+          const props = getProps({ imgs: imgs as IImage[] })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,

@@ -556,8 +556,8 @@ class CacheDataAPI:
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> @st.cache_data
@@ -760,8 +760,8 @@ class DataCache(Cache[R]):
         The value must be pickleable.
         """
         try:
-            main_id = st._main.id
-            sidebar_id = st.sidebar.id
+            main_id = st._main._id
+            sidebar_id = st.sidebar._id
             entry = CachedResult(value, messages, main_id, sidebar_id)
             pickled_entry = pickle.dumps(entry)
         except (pickle.PicklingError, TypeError) as exc:

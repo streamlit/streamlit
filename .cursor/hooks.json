@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "type": "prompt",
+        "prompt": "Block if the command runs pytest on e2e_playwright tests. These tests should use 'make run-e2e-test <filename>' instead.",
+        "matcher": "(uv run )?(python[3]? -m )?pytest.*e2e_playwright"
+      },
+      {
+        "type": "prompt",
+        "prompt": "Block if the command starts with a Python tool (python, pytest, ruff, mypy, ty, streamlit) without 'uv run'. Use 'uv run <command> ...' instead.",
+        "matcher": "^(python[3]?|pytest|ruff|mypy|ty|streamlit)(\\s|$)"
+      },
+      {
+        "type": "prompt",
+        "prompt": "Block if the command is 'git commit' or 'git push' without 'uv run'. Pre-commit hooks require the uv environment. Use 'uv run git commit ...' or 'uv run git push ...' instead.",
+        "matcher": "^git\\s+(commit|push)(\\s|$)"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/post_edit_autofix.sh",
+        "timeout": 5,
+        "matcher": "\\.py$"
+      }
+    ],
+    "stop": [
+      {
+        "command": "$CURSOR_PROJECT_DIR/.claude/hooks/stop_check.sh",
+        "timeout": 120
+      }
+    ]
+  }
+}

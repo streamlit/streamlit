@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 export const StyledVideo = styled.video(({ theme }) => ({
   width: theme.sizes.full,
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
 }))
 
 export const StyledDialogContainer = styled.div(({ theme }) => ({

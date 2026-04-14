@@ -18,6 +18,7 @@ from typing import Final
 import pytest
 from playwright.sync_api import Page, Response, WebSocket, expect
 
+from e2e_playwright.conftest import build_app_url
 from e2e_playwright.shared.app_utils import goto_app
 
 
@@ -33,7 +34,7 @@ def test_is_webdriver_set(app: Page):
     assert content, "window.navigator.webdriver is set to False"
 
 
-def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
+def test_total_loaded_assets_size_under_threshold(page: Page, app_base_url: str):
     """Test that verifies the total size of loaded web assets is under a
     configured threshold.
     """
@@ -63,7 +64,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     # Register the response handler
     page.on("response", handle_response)
 
-    goto_app(page, f"http://localhost:{app_port}/")
+    goto_app(page, build_app_url(app_base_url, path="/"))
     # Wait until all dependent resources are loaded:
     page.wait_for_load_state()
     # Wait until Hello world is visible:
@@ -85,7 +86,7 @@ def test_total_loaded_assets_size_under_threshold(page: Page, app_port: int):
     reruns=3  # TODO(lukasmasuch): Webkit is a bit flaky here and sometimes transfers
     # more messages than expected (> bytes threshold). Something to investigate at some point.
 )
-def test_check_total_websocket_message_number_and_size(page: Page, app_port: int):
+def test_check_total_websocket_message_number_and_size(page: Page, app_base_url: str):
     """Test that verifies the number and total size of websocket messages
     of the basic app is under a configured threshold.
     """
@@ -136,7 +137,7 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_port: int
     # Register websocket handler
     page.on("websocket", on_web_socket)
 
-    goto_app(page, f"http://localhost:{app_port}/")
+    goto_app(page, build_app_url(app_base_url, path="/"))
     # Wait until all dependent resources are loaded:
     page.wait_for_load_state()
     # Wait until Hello world is visible:

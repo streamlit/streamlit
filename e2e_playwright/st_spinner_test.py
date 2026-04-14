@@ -233,3 +233,37 @@ def test_spinner_with_delayed_container_write(app: Page):
     # After the spinner completes, the container content should be visible
     expect(app.get_by_test_id("stSpinner")).to_have_count(0)
     expect(app.get_by_text("Hello World")).to_be_visible()
+
+
+def test_spinner_before_tabs_preserves_active_tab_and_increments_number_input(
+    app: Page,
+):
+    """Test that tab selection and number input interaction survive reruns.
+
+    Regression test for issue #14018: widgets in tabs should not reset tab
+    selection when rendered after a spinner context.
+    """
+    get_button(app, "Enable spinner before tabs scenario").click()
+
+    # Spinner appears while the scenario is initializing.
+    expect(app.get_by_test_id("stSpinner")).to_be_visible()
+    wait_for_app_run(app)
+
+    tab_one = app.get_by_role("tab", name="tab_one")
+    tab_two = app.get_by_role("tab", name="tab_two")
+    number_input = app.get_by_role("spinbutton", name="number in tab")
+
+    tab_two.click()
+    expect(tab_two).to_have_attribute("aria-selected", "true")
+    expect(tab_one).to_have_attribute("aria-selected", "false")
+
+    initial_value = float(number_input.input_value())
+    number_input.click()
+    number_input.press("ArrowUp")
+    wait_for_app_run(app)
+
+    # Tab selection should not jump back to the first tab after rerun.
+    expect(tab_two).to_have_attribute("aria-selected", "true")
+    expect(tab_one).to_have_attribute("aria-selected", "false")
+    updated_value = float(number_input.input_value())
+    assert updated_value > initial_value

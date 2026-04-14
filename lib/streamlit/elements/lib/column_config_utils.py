@@ -29,7 +29,7 @@ if TYPE_CHECKING:
     import pyarrow as pa
     from pandas import DataFrame, Index, Series
 
-    from streamlit.proto.Arrow_pb2 import Arrow as ArrowProto
+    from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 
 
 # The index identifier can be used to apply configuration options
@@ -170,7 +170,7 @@ def _determine_data_kind_via_arrow(field: pa.Field) -> ColumnDataKind:
     if pa.types.is_boolean(field_type):
         return ColumnDataKind.BOOLEAN
 
-    if pa.types.is_string(field_type):
+    if pa.types.is_string(field_type) or pa.types.is_large_string(field_type):
         return ColumnDataKind.STRING
 
     if pa.types.is_date(field_type):
@@ -517,7 +517,6 @@ def apply_data_specific_configs(
         DataFormat.POLARS_SERIES,
         DataFormat.POLARS_LAZYFRAME,
         DataFormat.PYARROW_ARRAY,
-        DataFormat.RAY_DATASET,
     }:
         update_column_config(columns_config, INDEX_IDENTIFIER, {"hidden": True})
 
@@ -539,13 +538,13 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
 
 
 def marshall_column_config(
-    proto: ArrowProto, column_config_mapping: ColumnConfigMapping
+    proto: DataframeProto, column_config_mapping: ColumnConfigMapping
 ) -> None:
-    """Marshall the column config into the Arrow proto.
+    """Marshall the column config into the Dataframe proto.
 
     Parameters
     ----------
-    proto : ArrowProto
+    proto : DataframeProto
         The proto to marshall into.
 
     column_config_mapping : ColumnConfigMapping

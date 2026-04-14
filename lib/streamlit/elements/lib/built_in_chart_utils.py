@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cas
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
     Color,
+    is_builtin_color_name,
     is_color_like,
     is_color_tuple_like,
     is_hex_color_like,
@@ -190,7 +191,7 @@ def generate_chart(
     # Store some info so we can use it in add_rows.
     add_rows_metadata = AddRowsMetadata(
         # The st command that was used to generate this chart.
-        chart_command=chart_type.value["command"],
+        chart_command=cast("str", chart_type.value["command"]),
         # The last index of df so we can adjust the input df in add_rows:
         last_index=_last_index_for_melted_dataframes(df),
         # This is the input to prep_data (except for the df):
@@ -239,7 +240,7 @@ def generate_chart(
     # Create a Chart with x and y encodings.
     chart = alt.Chart(
         data=df,
-        mark=chart_type.value["mark_type"],
+        mark=chart_type.value["mark_type"],  # ty: ignore[invalid-argument-type]
         width=chart_width or 0,
         height=chart_height or 0,
     ).encode(
@@ -670,7 +671,7 @@ def _drop_unused_columns(df: pd.DataFrame, *column_names: str | None) -> pd.Data
         seen.add(x)
         keep.append(x)
 
-    return df[keep]
+    return df[keep]  # type: ignore[no-any-return, unused-ignore]
 
 
 def _maybe_convert_color_column_in_place(
@@ -1080,6 +1081,14 @@ def _get_color_encoding(
 
             return alt.ColorValue(to_css_color(cast("Any", color_value)))
 
+        # Check for built-in color names (resolved on frontend, not converted here)
+        if isinstance(color_value, str) and is_builtin_color_name(color_value):
+            if len(y_column_list) != 1:
+                raise StreamlitColorLengthError(
+                    [color_value] if color_value else [], y_column_list
+                )
+            return alt.ColorValue(color_value)
+
         # If the color value is a list of colors of appropriate length, return that.
         if isinstance(color_value, (list, tuple)):
             color_values = cast("Collection[Color]", color_value)
@@ -1088,12 +1097,23 @@ def _get_color_encoding(
                 raise StreamlitColorLengthError(color_values, y_column_list)
 
             if len(color_values) == 1:
-                return alt.ColorValue(to_css_color(cast("Any", color_value[0])))
+                first_color = cast("Any", color_value[0])
+                # Pass through built-in color names as-is (resolved on frontend)
+                if isinstance(first_color, str) and is_builtin_color_name(first_color):
+                    return alt.ColorValue(first_color)
+                return alt.ColorValue(to_css_color(first_color))
+
+            # Convert colors, but pass through built-in color names as-is
+            resolved_colors: list[Color] = []
+            for c in color_values:
+                if isinstance(c, str) and is_builtin_color_name(c):
+                    resolved_colors.append(c)
+                else:
+                    resolved_colors.append(to_css_color(c))
+
             return alt.Color(
                 field=color_column if color_column is not None else alt.Undefined,
-                scale=alt.Scale(
-                    domain=y_column_list, range=[to_css_color(c) for c in color_values]
-                ),
+                scale=alt.Scale(domain=y_column_list, range=resolved_colors),
                 legend=_COLOR_LEGEND_SETTINGS,
                 type="nominal",
                 title=" ",
@@ -1163,7 +1183,9 @@ def _get_size_encoding(
             f"This does not look like a valid size: {size_value!r}"
         )
 
-    if size_column is not None or size_value is not None:
+    if (
+        size_column is not None or size_value is not None
+    ):  # pragma: no cover - defensive
         raise Error(
             f"Chart type {chart_type.name} does not support size argument. "
             "This should never happen!"

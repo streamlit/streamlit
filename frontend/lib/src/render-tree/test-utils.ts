@@ -20,11 +20,11 @@ import {
   Block as BlockProto,
   Element,
   ForwardMsgMetadata,
-  IArrowVegaLiteChart,
+  IVegaLiteChart,
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
-import { UNICODE } from "~lib/mocks/arrow"
+import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import {
   GENERATED_ELEMENT_ID_PREFIX,
   isNullOrUndefined,
@@ -86,9 +86,25 @@ export function block(
   )
 }
 
-/** Create an arrowTable element node with the given properties. */
-export function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
-  const element = makeProto(Element, { arrowTable: { data: UNICODE } })
+/** Create a BlockNode with a specific block-level id. */
+export function blockWithId(
+  id: string,
+  children: AppNode[] = [],
+  scriptRunId = NO_SCRIPT_RUN_ID
+): BlockNode {
+  return new BlockNode(
+    FAKE_SCRIPT_HASH,
+    children,
+    makeProto(BlockProto, { id }),
+    scriptRunId
+  )
+}
+
+/** Create a table element node with the given properties. */
+export function table(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+  const element = makeProto(Element, {
+    table: { arrowData: { data: UNICODE } },
+  })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
@@ -97,9 +113,11 @@ export function arrowTable(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   )
 }
 
-/** Create an arrowDataFrame element node with the given properties. */
-export function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
-  const element = makeProto(Element, { arrowDataFrame: { data: UNICODE } })
+/** Create a dataframe element node with the given properties. */
+export function dataframe(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+  const element = makeProto(Element, {
+    dataframe: { arrowData: { data: UNICODE } },
+  })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
@@ -108,12 +126,12 @@ export function arrowDataFrame(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
   )
 }
 
-/** Create an arrowVegaLiteChart element node with the given properties. */
-export function arrowVegaLiteChart(
-  data: IArrowVegaLiteChart,
+/** Create a vegaLiteChart element node with the given properties. */
+export function vegaLiteChart(
+  data: IVegaLiteChart,
   scriptRunId = NO_SCRIPT_RUN_ID
 ): ElementNode {
-  const element = makeProto(Element, { arrowVegaLiteChart: data })
+  const element = makeProto(Element, { vegaLiteChart: data })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
@@ -165,7 +183,7 @@ interface CustomMatchers<R = unknown> {
 }
 
 declare module "vitest" {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- TODO: Replace 'any' with a more specific type.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-empty-object-type -- Must match vitest's Assertion<T> signature which has no default type parameter.
   interface Assertion<T = any> extends CustomMatchers<T> {}
   // eslint-disable-next-line @typescript-eslint/no-empty-object-type
   interface AsymmetricMatchersContaining extends CustomMatchers {}

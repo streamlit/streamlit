@@ -33,7 +33,7 @@ import { TransientNode } from "./TransientNode"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
-// prettier-ignore
+// oxfmt-ignore
 const BLOCK = block([
   text("1"),
   block([
@@ -426,6 +426,81 @@ describe("AppRoot", () => {
       expect(replacedBlock).toBeDefined()
       expect(replacedBlock.deltaBlock.type).toBe("expandable")
       expect(replacedBlock.children.length).toBe(1)
+    })
+
+    it("inherits children when replacing a block wrapped in a transient node", () => {
+      const tabContainerProto = makeProto(DeltaProto, {
+        addBlock: { tabContainer: {}, allowEmpty: false },
+      })
+      const tab1 = makeProto(DeltaProto, {
+        addBlock: { tab: { label: "tab1" }, allowEmpty: true },
+      })
+      const tab2 = makeProto(DeltaProto, {
+        addBlock: { tab: { label: "tab2" }, allowEmpty: true },
+      })
+      const clearTransientDelta = makeProto(DeltaProto, {
+        newTransient: { elements: [] },
+      })
+
+      const rootWithTabs = ROOT.applyDelta(
+        "old_script_run_id",
+        tabContainerProto,
+        forwardMsgMetadata([0, 1, 1])
+      )
+        .applyDelta(
+          "old_script_run_id",
+          tab1,
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+        .applyDelta(
+          "old_script_run_id",
+          tab2,
+          forwardMsgMetadata([0, 1, 1, 1])
+        )
+
+      const rootWithTransientWrapper = rootWithTabs.applyDelta(
+        "old_script_run_id",
+        clearTransientDelta,
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(
+          rootWithTransientWrapper.main,
+          [1, 1]
+        )
+      ).toBeInstanceOf(TransientNode)
+
+      const replacedRoot = rootWithTransientWrapper.applyDelta(
+        "new_script_run_id",
+        tabContainerProto,
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      const replacedBlock = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        replacedRoot.main,
+        [1, 1]
+      ) as BlockNode
+      expect(replacedBlock).toBeDefined()
+      expect(replacedBlock.deltaBlock.type).toBe("tabContainer")
+      expect(replacedBlock.children.length).toBe(2)
+
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            replacedRoot.main,
+            [1, 1, 0]
+          ) as BlockNode
+        ).deltaBlock.tab?.label
+      ).toBe("tab1")
+      expect(
+        (
+          GetNodeByDeltaPathVisitor.getNodeAtPath(
+            replacedRoot.main,
+            [1, 1, 1]
+          ) as BlockNode
+        ).deltaBlock.tab?.label
+      ).toBe("tab2")
     })
 
     it("removes a dialog block's children when replacing with a different dialog identity", () => {

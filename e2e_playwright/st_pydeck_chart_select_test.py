@@ -36,7 +36,7 @@ from e2e_playwright.shared.pydeck_utils import (
 )
 
 # The pydeck tests are a lot flakier than need be so increase the pixel threshold
-PIXEL_THRESHOLD = 1.0
+PIXEL_THRESHOLD = 0.1
 
 # Common selection values
 EMPTY_SELECTION = "{'selection': {'indices': {}, 'objects': {}}}"
@@ -74,6 +74,7 @@ def _select_chart_type(app: Page, chart_type: str):
         "form": "In Form",
         "fragment": "In Fragment",
         "scatterplot": "Scatterplot",
+        "dynamic": "Dynamic Data",
     }
 
     button_text = button_text_map.get(chart_type, "Basic Chart")
@@ -100,25 +101,32 @@ def _click_point_and_verify_selection(
     markdown_prefix: str = "managed_map selection:",
     markdown_prefix_session_state: str | None = "session_state.managed_map:",
     wait_delay: int = STANDARD_WAIT_DELAY,
+    max_attempts: int = 1,
 ):
     """Helper function to click on a point and verify the selection."""
-    click_point(click_handling_div, coords)
+    for attempt in range(max_attempts):
+        click_point(click_handling_div, coords)
 
-    wait_for_app_run(app, wait_delay=wait_delay)
+        wait_for_app_run(app, wait_delay=wait_delay)
 
-    if markdown_prefix:
-        expect_prefixed_markdown(
-            app,
-            markdown_prefix,
-            expected_selection,
-        )
+        try:
+            if markdown_prefix:
+                expect_prefixed_markdown(
+                    app,
+                    markdown_prefix,
+                    expected_selection,
+                )
 
-    if markdown_prefix_session_state:
-        expect_prefixed_markdown(
-            app,
-            markdown_prefix_session_state,
-            expected_selection,
-        )
+            if markdown_prefix_session_state:
+                expect_prefixed_markdown(
+                    app,
+                    markdown_prefix_session_state,
+                    expected_selection,
+                )
+            return
+        except AssertionError:
+            if attempt == max_attempts - 1:
+                raise
 
 
 # A note on browser testing strategy. We are only testing on Chromium because:
@@ -220,9 +228,17 @@ def test_pydeck_chart_single_select_interactions_and_return_values(
     click_handling_div = get_click_handling_div(app, nth=0)
 
     # Click on the scatterplot point with the biggest size
-    click_point(click_handling_div, SCATTERPLOT_POINT_COORDS)
-
-    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    _click_point_and_verify_selection(
+        app,
+        click_handling_div,
+        SCATTERPLOT_POINT_COORDS,
+        "'indices': {'cities': [4]}",
+        markdown_prefix="scatterplot_map selection:",
+        markdown_prefix_session_state="session_state.scatterplot_map:",
+        # Scatterplot selection can be weird in CI, allow it to retry a few
+        # times to avoid flakes.
+        max_attempts=3,
+    )
 
     # Assert that we have deselected everything
     assert_snapshot(
@@ -427,3 +443,45 @@ def test_pydeck_chart_selection_in_fragment(app: Page):
 
     # Check that the main script has not re-run any additional times.
     expect(app.get_by_text("Runs: 2")).to_be_visible()
+
+
+@pytest.mark.only_browser("chromium")
+@pytest.mark.flaky(reruns=4)
+def test_pydeck_chart_selection_preserved_when_data_updates(app: Page):
+    """
+    Test that selection state is preserved when data updates and a key is provided.
+    This tests the key_as_main_identity={"selection_mode"} behavior.
+    """
+    _select_chart_type(app, "dynamic")
+    wait_for_chart(app)
+
+    click_handling_div = get_click_handling_div(app, nth=0)
+
+    markdown_prefix = "dynamic_chart selection:"
+    markdown_prefix_session_state = "session_state.dynamic_chart:"
+
+    # Verify initial empty state
+    expect_prefixed_markdown(app, markdown_prefix, EMPTY_SELECTION)
+    expect_prefixed_markdown(app, markdown_prefix_session_state, EMPTY_SELECTION)
+
+    # Select the first point
+    _click_point_and_verify_selection(
+        app,
+        click_handling_div,
+        FIRST_POINT_COORDS,
+        FIRST_POINT_SELECTION,
+        markdown_prefix,
+        markdown_prefix_session_state,
+    )
+
+    # Click "Update Data" button to change the data (but keep same key)
+    click_button(app, "Update Data")
+    wait_for_app_run(app, wait_delay=STANDARD_WAIT_DELAY)
+    wait_for_chart(app)
+
+    # Verify data version changed
+    expect(app.get_by_text("Data version: 2")).to_be_visible()
+
+    # Selection should still be preserved because key is provided
+    expect_prefixed_markdown(app, markdown_prefix, FIRST_POINT_SELECTION)
+    expect_prefixed_markdown(app, markdown_prefix_session_state, FIRST_POINT_SELECTION)

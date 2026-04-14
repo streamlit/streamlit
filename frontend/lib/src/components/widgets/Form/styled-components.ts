@@ -20,7 +20,7 @@ export const StyledFormSubmitContent = styled.div({
   display: "flex",
 })
 
-export interface StyledFormProps {
+interface StyledFormProps {
   border: boolean
   overflow: React.CSSProperties["overflow"]
 }

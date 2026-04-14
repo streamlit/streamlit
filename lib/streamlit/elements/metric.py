@@ -19,13 +19,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
@@ -39,6 +33,7 @@ from streamlit.string_util import AnyNumber, clean_text, from_number
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.column_types import NumberFormat
+    from streamlit.elements.lib.layout_utils import Height, Width
 
 
 Value: TypeAlias = AnyNumber | str | None
@@ -80,6 +75,13 @@ _VALID_DELTA_COLORS: Final[set[str]] = {
     *_DELTA_COLOR_TO_PROTO.keys(),
 }
 
+# Mapping from delta_arrow string values to proto enum values
+_DELTA_ARROW_TO_PROTO: Final[dict[str, MetricProto.MetricDirection.ValueType]] = {
+    "off": MetricProto.MetricDirection.NONE,
+    "up": MetricProto.MetricDirection.UP,
+    "down": MetricProto.MetricDirection.DOWN,
+}
+
 
 @dataclass(frozen=True)
 class MetricColorAndDirection:
@@ -105,6 +107,7 @@ class MetricMixin:
         chart_type: Literal["line", "bar", "area"] = "line",
         delta_arrow: DeltaArrow = "auto",
         format: str | NumberFormat | None = None,
+        delta_description: str | None = None,
     ) -> DeltaGenerator:
         r"""Display a metric in big bold font, with an optional indicator of how the metric changed.
 
@@ -117,9 +120,9 @@ class MetricMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -259,7 +262,14 @@ class MetricMixin:
             - ``"engineering"``: Show the number in engineering notation (e.g. "1.235E3").
             - printf-style format string: Format the number with a printf
               specifier, like ``"%d"`` to show a signed integer (e.g. "1234") or
-              ``"%.2f"`` to show a float with 2 decimal places.
+              ``"%.2f"`` to show a float with 2 decimal places. Use ``,`` for
+              thousand separators (e.g. ``"%,d"`` yields ``"1,234"``).
+
+        delta_description : str or None
+            A short description displayed next to the delta value, such as
+            ``"month over month"`` or ``"vs. last quarter"``. If this is ``None``
+            (default), no description is shown. The description is displayed
+            in a smaller, muted font style similar to ``st.caption``.
 
         Examples
         --------
@@ -375,13 +385,8 @@ class MetricMixin:
             cast("DeltaArrow", clean_text(delta_arrow))
         )
 
-        if parsed_delta_arrow != "auto":
-            if parsed_delta_arrow == "off":
-                metric_proto.direction = MetricProto.MetricDirection.NONE
-            elif parsed_delta_arrow == "up":
-                metric_proto.direction = MetricProto.MetricDirection.UP
-            elif parsed_delta_arrow == "down":
-                metric_proto.direction = MetricProto.MetricDirection.DOWN
+        if parsed_delta_arrow in _DELTA_ARROW_TO_PROTO:
+            metric_proto.direction = _DELTA_ARROW_TO_PROTO[parsed_delta_arrow]
         metric_proto.label_visibility.value = get_label_visibility_proto_value(
             label_visibility
         )
@@ -405,9 +410,15 @@ class MetricMixin:
         if format is not None:
             metric_proto.format = format
 
-        validate_height(height, allow_content=True)
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, height=height)
+        if delta_description is not None:
+            metric_proto.delta_description = delta_description
+
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 

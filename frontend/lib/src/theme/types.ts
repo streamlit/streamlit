@@ -25,7 +25,8 @@ import {
   RequiredThemeColors,
 } from "./emotionBaseTheme/themeColors"
 import { ThemeShadows } from "./getShadows"
-import { PrimitiveColors } from "./primitives"
+import type { NamedColor } from "./namedColors"
+import { type PrimitiveColors } from "./primitives/colors"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -107,7 +108,7 @@ export interface EmotionTheme extends Omit<
 
 export type ThemeConfig = {
   name: string
-  // Display name is used in custom themes for SettingsDialog theme selector
+  // Display name is used in custom themes for the main menu theme selector
   // Allows custom themes to still show as "Light", "Dark", or "Use System Setting"
   displayName?: string
   emotion: EmotionTheme
@@ -124,10 +125,27 @@ export type ThemeSelection = "System" | "Light" | "Dark"
 export type CachedTheme = ThemeSelection
 
 type IconSizes = typeof emotionBaseTheme.iconSizes
-export type ThemeSizings = typeof emotionBaseTheme.sizes
 export type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
-export type ThemeSizing = keyof ThemeSizings
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
+
+/**
+ * Auto color modes for charts and progress bars.
+ * - "auto": Green when positive/increasing, red when negative/decreasing
+ * - "auto-inverse": Red when positive/increasing, green when negative/decreasing
+ */
+export type ChartAutoColor = "auto" | "auto-inverse"
+
+/**
+ * Branded type for CSS color strings (hex, rgb, etc.)
+ * Allows any string while providing type safety for color values.
+ */
+declare const __cssColorBrand: unique symbol
+export type CSSColorString = string & { readonly [__cssColorBrand]?: never }
+
+/**
+ * Union of all valid color parameter values for charts and progress bars.
+ */
+export type ChartColor = ChartAutoColor | NamedColor | CSSColorString

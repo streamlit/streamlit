@@ -25,6 +25,7 @@ import {
 } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
+import type { AxiosProgressEvent } from "axios"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
@@ -37,19 +38,18 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import Icon from "~lib/components/shared/Icon"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import Icon from "~lib/components/shared/Icon/Icon"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
+import useTimeout from "~lib/hooks/useTimeout"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -202,6 +202,43 @@ const CameraInput = ({
   const [minShutterEffectPassed, setMinShutterEffectPassed] = useState(true)
   const [clearPhotoInProgress, setClearPhotoInProgress] = useState(false)
   const [facingMode, setFacingMode] = useState(FacingMode.USER)
+  const minShutterEffectResolversRef = useRef<Array<() => void>>([])
+  const captureInFlightRef = useRef<Promise<void> | null>(null)
+
+  const resolveMinShutterEffectWaiters = useCallback((): void => {
+    if (minShutterEffectResolversRef.current.length === 0) {
+      return
+    }
+
+    minShutterEffectResolversRef.current.forEach(resolve => resolve())
+    minShutterEffectResolversRef.current = []
+  }, [])
+
+  const {
+    clear: clearMinShutterEffectTimeout,
+    restart: restartMinShutterEffectTimeout,
+  } = useTimeout(
+    () => {
+      resolveMinShutterEffectWaiters()
+    },
+    MIN_SHUTTER_EFFECT_TIME_MS,
+    { autoStart: false }
+  )
+
+  const waitForMinShutterEffect = useCallback((): Promise<void> => {
+    return new Promise(resolve => {
+      minShutterEffectResolversRef.current.push(resolve)
+      restartMinShutterEffectTimeout()
+    })
+  }, [restartMinShutterEffectTimeout])
+
+  useEffect(() => {
+    return () => {
+      clearMinShutterEffectTimeout()
+      resolveMinShutterEffectWaiters()
+      captureInFlightRef.current = null
+    }
+  }, [clearMinShutterEffectTimeout, resolveMinShutterEffectWaiters])
 
   /**
    * Generate a unique ID for a new file.
@@ -328,13 +365,15 @@ const CameraInput = ({
    * Callback for file upload progress. Updates a single file's local progress state.
    */
   const onUploadProgress = useCallback(
-    (event: ProgressEvent, fileId: number): void => {
+    (event: AxiosProgressEvent, fileId: number): void => {
       const file = getFile(fileId)
       if (isNullOrUndefined(file) || file.status.type !== "uploading") {
         return
       }
 
-      const newProgress = Math.round((event.loaded * 100) / event.total)
+      const newProgress = event.total
+        ? Math.round((event.loaded * 100) / event.total)
+        : 0
       if (file.status.progress === newProgress) {
         return
       }
@@ -443,14 +482,15 @@ const CameraInput = ({
         return Promise.resolve()
       }
 
+      if (captureInFlightRef.current) {
+        return captureInFlightRef.current
+      }
+
       setImgSrc(capturedImgSrc)
       setShutter(true)
       setMinShutterEffectPassed(false)
 
-      const delay = (t: number): Promise<ReturnType<typeof setTimeout>> =>
-        new Promise(resolve => setTimeout(resolve, t))
-
-      return urltoFile(
+      const capturePromise = urltoFile(
         capturedImgSrc,
         `camera-input-${new Date().toISOString().replace(/:/g, "_")}.jpg`
       )
@@ -461,15 +501,21 @@ const CameraInput = ({
           }))
         )
         .then(({ file, fileUrls }) => uploadFile(fileUrls, file))
-        .then(() => delay(MIN_SHUTTER_EFFECT_TIME_MS))
+        .then(waitForMinShutterEffect)
         .then(() => {
           setMinShutterEffectPassed(true)
         })
         .catch(err => {
           LOG.error(err)
         })
+        .finally(() => {
+          captureInFlightRef.current = null
+        })
+
+      captureInFlightRef.current = capturePromise
+      return capturePromise
     },
-    [uploadClient, uploadFile]
+    [uploadClient, uploadFile, waitForMinShutterEffect]
   )
 
   /**

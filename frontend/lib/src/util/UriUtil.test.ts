@@ -118,14 +118,12 @@ describe("isValidOrigin", () => {
     // issue is fixed.
     const OrigURL = globalThis.URL
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      globalThis.URL = function (url: string, ...rest: any[]) {
+      globalThis.URL = function (url: string, ...rest: string[]) {
         if (url.includes("*")) {
           throw new Error("Invalid URL")
         }
         return new OrigURL(url, ...rest)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any
+      } as unknown as typeof URL
       expect(
         isValidOrigin(
           "https://*.streamlit.app",

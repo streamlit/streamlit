@@ -30,7 +30,7 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace, FontSource
+from streamlit.proto.NewSession_pb2 import Config, FontFace, FontSource
 from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
@@ -816,12 +816,12 @@ def _mock_get_options_for_section(
             {
                 "family": "Inter",
                 "url": "https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
-                "weight": 400,
+                "weight_range": "400",
             },
             {
                 "family": "Monaspace Argon",
-                "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
-                "weight": 400,
+                "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
+                "weight_range": "400",
             },
         ],
         "headingFont": "Inter Bold",
@@ -1179,8 +1179,9 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda retain_lifecycle_msgs,
-            fragment_ids_this_run: forward_msg_queue_events.append(CLEAR_QUEUE)
+            side_effect=lambda retain_lifecycle_msgs, fragment_ids_this_run: (
+                forward_msg_queue_events.append(CLEAR_QUEUE)
+            )
         )
 
         session._browser_queue = mock_queue
@@ -1275,6 +1276,20 @@ class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
             handle_app_heartbeat_request.assert_called_once()
             handle_backmsg_exception.assert_not_called()
             patched_logger.warning.assert_not_called()
+
+    async def test_app_heartbeat_sends_ack(self) -> None:
+        """Test that _handle_app_heartbeat_request sends a heartbeat_ack ForwardMsg."""
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+            session._handle_app_heartbeat_request()
+
+            # Verify that a ForwardMsg with heartbeat_ack was enqueued
+            enqueue_mock.assert_called_once()
+            msg = enqueue_mock.call_args[0][0]
+            assert isinstance(msg, ForwardMsg)
+            assert msg.heartbeat_ack is True
+            # Verify it's not some other message type
+            assert msg.WhichOneof("type") == "heartbeat_ack"
 
     async def test_event_handler_raises_error_if_page_hash_none_on_script_started(
         self,
@@ -1814,7 +1829,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             ),
             FontFace(
                 family="Monaspace Argon",
-                url="https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
+                url="https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
                 weight_range="400",
             ),
         ]
@@ -2418,3 +2433,44 @@ class DeferredFileRequestTest(unittest.TestCase):
             mock_create_task.assert_called_once()
             # The argument to create_task should be a coroutine
             assert asyncio.iscoroutine(mock_create_task.call_args[0][0])
+
+
+class GetShowErrorLinksTest(unittest.TestCase):
+    @patch_config_options({"client.showErrorLinks": "auto"})
+    def test_auto(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO
+
+    @patch_config_options({"client.showErrorLinks": "true"})
+    def test_true(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": "false"})
+    def test_false(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": True})
+    def test_bool_true(self):
+        """Test that boolean True is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": False})
+    def test_bool_false(self):
+        """Test that boolean False is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": "invalid"})
+    def test_invalid_raises(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        with pytest.raises(ValueError, match="auto, true, false"):
+            _get_show_error_links()

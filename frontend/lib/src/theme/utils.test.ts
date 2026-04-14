@@ -20,20 +20,13 @@ import { MockInstance } from "vitest"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
-import {
-  baseTheme,
-  createAutoTheme,
-  darkTheme,
-  lightTheme,
-} from "~lib/theme/index"
+import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
-import { LocalStore } from "~lib/util/storageUtils"
-
-import { hasLightBackgroundColor } from "./getColors"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
   computeSpacingStyle,
+  createAutoTheme,
   createCustomThemes,
   createEmotionTheme,
   createSidebarTheme,
@@ -57,7 +50,10 @@ import {
   setCachedThemeSelection,
   sortThemeInputKeys,
   toThemeInput,
-} from "./utils"
+} from "~lib/theme/utils"
+import { LocalStore } from "~lib/util/storageUtils"
+
+import { hasLightBackgroundColor } from "./getColors"
 
 const matchMediaFillers = {
   onchange: null,
@@ -70,17 +66,16 @@ const matchMediaFillers = {
 
 const LOG = getLogger("theme:utils")
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowLocationSearch = (search: string): any => ({
+const windowLocationSearch = (search: string): Pick<Window, "location"> => ({
   location: {
     search,
-  },
+  } as Location,
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowMatchMedia = (theme: "light" | "dark"): any => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  matchMedia: (query: any) => ({
+const windowMatchMedia = (
+  theme: "light" | "dark"
+): Pick<Window, "matchMedia"> => ({
+  matchMedia: (query: string) => ({
     matches: query === `(prefers-color-scheme: ${theme})`,
     media: query,
     ...matchMediaFillers,
@@ -503,6 +498,54 @@ describe("createTheme", () => {
       lightTheme.emotion.colors.secondaryBg
     )
   })
+
+  const modernThemeColors = [
+    "oklch(0.21 0.01 260)",
+    "oklab(0.5 0.1 -0.1)",
+    "lab(50 40 -20)",
+    "lch(50 30 270)",
+    "rgb(34 139 34)",
+    "hsl(145 63% 49%)",
+    "hwb(120 0% 0%)",
+  ]
+
+  const acceptedColors = new Set(modernThemeColors)
+
+  it.each(modernThemeColors)(
+    "keeps accepted modern theme color syntax '%s'",
+    color => {
+      class MockOption {
+        style = {
+          storedColor: "",
+          get color(): string {
+            return this.storedColor
+          },
+          set color(value: string) {
+            this.storedColor = acceptedColors.has(value) ? value : ""
+          },
+        }
+      }
+
+      vi.stubGlobal("Option", MockOption as unknown as typeof Option)
+
+      try {
+        const customTheme = createTheme(
+          CUSTOM_THEME_NAME,
+          new CustomThemeConfig({
+            backgroundColor: color,
+            primaryColor: color,
+          })
+        )
+
+        expect(customTheme.emotion.colors.bgColor).toBe(color)
+        expect(customTheme.emotion.colors.primary).toBe(color)
+        expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
+        expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    }
+  )
 })
 
 describe("getSystemTheme", () => {
@@ -1107,15 +1150,6 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
     expect(theme.colors.widgetBorderColor).toBe(theme.colors.borderColor)
-  })
-
-  it("handles legacy widgetBorderColor config", () => {
-    const themeInput: Partial<CustomThemeConfig> = {
-      widgetBorderColor: "yellow",
-    }
-
-    const theme = createEmotionTheme(themeInput)
-    expect(theme.colors.widgetBorderColor).toBe("yellow")
   })
 
   // Background theme colors
@@ -2498,34 +2532,42 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.radii.default).toBe("1.2rem")
-    expect(theme.radii.md).toBe("0.6rem")
+    expect(theme.radii.sm).toBe("0.6rem")
+    expect(theme.radii.md2).toBe("0.9rem")
     expect(theme.radii.xl).toBe("1.8rem")
     expect(theme.radii.xxl).toBe("2.4rem")
   })
 
   it.each([
     // Test keyword values
-    ["full", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["none", "0rem", "0rem", "0rem", "0rem"],
-    ["small", "0.35rem", "0.17rem", "0.52rem", "0.7rem"],
-    ["medium", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "1.5rem", "2rem"],
+    ["full", "1.4rem", "0.7rem", "1.05rem", "2.1rem", "2.8rem"],
+    ["none", "0rem", "0rem", "0rem", "0rem", "0rem"],
+    ["small", "0.35rem", "0.17rem", "0.26rem", "0.52rem", "0.7rem"],
+    ["medium", "0.5rem", "0.25rem", "0.38rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.75rem", "1.5rem", "2rem"],
     // Test rem values
-    ["0.8rem", "0.8rem", "0.4rem", "1.2rem", "1.6rem"],
-    ["2rem", "2rem", "1rem", "3rem", "4rem"],
+    ["0.8rem", "0.8rem", "0.4rem", "0.6rem", "1.2rem", "1.6rem"],
+    ["2rem", "2rem", "1rem", "1.5rem", "3rem", "4rem"],
     // Test px values
-    ["10px", "10px", "5px", "15px", "20px"],
-    ["24px", "24px", "12px", "36px", "48px"],
+    ["10px", "10px", "5px", "7.5px", "15px", "20px"],
+    ["24px", "24px", "12px", "18px", "36px", "48px"],
     // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.7rem", "2.1rem", "2.8rem"],
-    ["  medium  ", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "1rem", "3rem", "4rem"],
+    [" FULL ", "1.4rem", "0.7rem", "1.05rem", "2.1rem", "2.8rem"],
+    ["  medium  ", "0.5rem", "0.25rem", "0.38rem", "0.75rem", "1rem"],
+    ["2 rem ", "2rem", "1rem", "1.5rem", "3rem", "4rem"],
     // Test only numbers:
-    ["10", "10px", "5px", "15px", "20px"],
-    ["24foo", "24px", "12px", "36px", "48px"],
+    ["10", "10px", "5px", "7.5px", "15px", "20px"],
+    ["24foo", "24px", "12px", "18px", "36px", "48px"],
   ])(
     "correctly applies baseRadius '%s'",
-    (baseRadius, expectedDefault, expectedMd, expectedXl, expectedXxl) => {
+    (
+      baseRadius,
+      expectedDefault,
+      expectedSm,
+      expectedMd2,
+      expectedXl,
+      expectedXxl
+    ) => {
       const themeInput: Partial<CustomThemeConfig> = {
         baseRadius,
       }
@@ -2533,7 +2575,8 @@ describe("createEmotionTheme", () => {
       const theme = createEmotionTheme(themeInput)
 
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
+      expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
     }
@@ -2560,7 +2603,8 @@ describe("createEmotionTheme", () => {
 
       // Should fall back to default values
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.sm).toBe(baseTheme.emotion.radii.sm)
+      expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
     }
@@ -2568,31 +2612,40 @@ describe("createEmotionTheme", () => {
 
   it.each([
     // Test keyword values
-    ["full", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["none", "0rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["small", "0.35rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["large", "1rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["full", "1.4rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["none", "0rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["small", "0.35rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["medium", "0.5rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["large", "1rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test rem values
-    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2rem", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["0.8rem", "0.8rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["2rem", "2rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test px values
-    ["10px", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24px", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["10px", "10px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["24px", "24px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test with whitespace and uppercase
-    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["  medium  ", "0.5rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    [" FULL ", "1.4rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    [
+      "  medium  ",
+      "0.5rem",
+      "0.5rem",
+      "0.25rem",
+      "0.375rem",
+      "0.75rem",
+      "1rem",
+    ],
+    ["2 rem ", "2rem", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
     // Test only numbers:
-    ["10", "10px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
-    ["24foo", "24px", "0.5rem", "0.25rem", "0.75rem", "1rem"],
+    ["10", "10px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
+    ["24foo", "24px", "0.5rem", "0.25rem", "0.375rem", "0.75rem", "1rem"],
   ])(
     "correctly handles buttonRadius config '%s' (does not impact other radii values)",
     (
       buttonRadius,
       expectedButtonRadius,
       expectedDefault,
-      expectedMd,
+      expectedSm,
+      expectedMd2,
       expectedXl,
       expectedXxl
     ) => {
@@ -2604,7 +2657,8 @@ describe("createEmotionTheme", () => {
 
       expect(theme.radii.button).toBe(expectedButtonRadius)
       expect(theme.radii.default).toBe(expectedDefault)
-      expect(theme.radii.md).toBe(expectedMd)
+      expect(theme.radii.sm).toBe(expectedSm)
+      expect(theme.radii.md2).toBe(expectedMd2)
       expect(theme.radii.xl).toBe(expectedXl)
       expect(theme.radii.xxl).toBe(expectedXxl)
     }
@@ -2633,7 +2687,8 @@ describe("createEmotionTheme", () => {
       // Should fall back to default values
       expect(theme.radii.button).toBe(baseTheme.emotion.radii.button)
       expect(theme.radii.default).toBe(baseTheme.emotion.radii.default)
-      expect(theme.radii.md).toBe(baseTheme.emotion.radii.md)
+      expect(theme.radii.sm).toBe(baseTheme.emotion.radii.sm)
+      expect(theme.radii.md2).toBe(baseTheme.emotion.radii.md2)
       expect(theme.radii.xl).toBe(baseTheme.emotion.radii.xl)
       expect(theme.radii.xxl).toBe(baseTheme.emotion.radii.xxl)
     }
@@ -2648,7 +2703,8 @@ describe("createEmotionTheme", () => {
 
     expect(theme.radii.button).toBe("0.77rem")
     expect(theme.radii.default).toBe("0.77rem")
-    expect(theme.radii.md).toBe("0.39rem")
+    expect(theme.radii.sm).toBe("0.39rem")
+    expect(theme.radii.md2).toBe("0.58rem")
     expect(theme.radii.xl).toBe("1.16rem")
     expect(theme.radii.xxl).toBe("1.54rem")
   })
@@ -3250,6 +3306,102 @@ describe("createEmotionTheme", () => {
     }
   )
 
+  // == Metric value font properties ==
+
+  it.each([
+    // Valid metricValueFontSize values: rem, px, or plain number (treated as px)
+    ["3rem", "3rem"],
+    ["3REM", "3rem"],
+    ["2.25rem", "2.25rem"],
+    ["48px", "48px"],
+    ["48PX", "48px"],
+    ["48", "48px"],
+  ])(
+    "correctly applies metricValueFontSize '%s'",
+    (metricValueFontSize, expectedFontSize) => {
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(theme.fontSizes.metricValueFontSize).toBe(expectedFontSize)
+    }
+  )
+
+  it("uses default metricValueFontSize if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.fontSizes.metricValueFontSize).toBe("2.25rem")
+  })
+
+  it.each(["invalid", "rem", "px", " ", "0px", "0rem"])(
+    "logs a warning and uses default metricValueFontSize for invalid value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.fontSizes.metricValueFontSize).toBe("2.25rem")
+    }
+  )
+
+  it.each(["0", "-10", "-10px", "-10rem"])(
+    "logs a warning and uses default metricValueFontSize for zero/negative value '%s'",
+    metricValueFontSize => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontSize,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+      )
+      expect(theme.fontSizes.metricValueFontSize).toBe("2.25rem")
+    }
+  )
+
+  it("uses metricValueFontWeight when configured", () => {
+    const themeInput: Partial<CustomThemeConfig> = {
+      metricValueFontWeight: 600,
+    }
+
+    const theme = createEmotionTheme(themeInput)
+
+    expect(theme.fontWeights.metricValueFontWeight).toBe(600)
+  })
+
+  it("uses default metricValueFontWeight if not configured", () => {
+    const theme = createEmotionTheme({})
+
+    expect(theme.fontWeights.metricValueFontWeight).toBe(400)
+  })
+
+  it.each([50, 950, -100])(
+    "logs a warning and uses default metricValueFontWeight if value is out of range: %s",
+    metricValueFontWeight => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const themeInput: Partial<CustomThemeConfig> = {
+        metricValueFontWeight,
+      }
+
+      const theme = createEmotionTheme(themeInput)
+
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+      )
+      expect(theme.fontWeights.metricValueFontWeight).toBe(400)
+    }
+  )
+
   // == Theme font properties ==
 
   it("uses bodyFont when configured", () => {
@@ -3463,6 +3615,7 @@ describe("Font weight configuration coverage", () => {
       "h4FontWeight",
       "h5FontWeight",
       "h6FontWeight",
+      "metricValueFontWeight",
     ]
 
     // List of font weights that SHOULD be calculated based on baseFontWeight

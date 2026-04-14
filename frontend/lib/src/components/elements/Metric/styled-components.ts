@@ -18,12 +18,15 @@ import styled from "@emotion/styled"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
-import { StyledWidgetLabel } from "~lib/components/widgets/BaseWidget/styled-components"
+import {
+  StyledWidgetLabel,
+  StyledWidgetProps,
+} from "~lib/components/widgets/BaseWidget/styled-components"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import { getMetricBackgroundColor, getMetricTextColor } from "./metricColors"
 
-export interface StyledMetricContainerProps {
+interface StyledMetricContainerProps {
   showBorder: boolean
 }
 
@@ -53,30 +56,9 @@ export const StyledMetricChart = styled.div<{ showBorder: boolean }>(
   })
 )
 
-export interface StyledMetricLabelTextProps {
+interface StyledMetricLabelTextProps extends StyledWidgetProps {
   visibility?: LabelVisibilityOptions
 }
-
-export const StyledTruncateText = styled.div(({ theme }) => ({
-  overflowWrap: "normal",
-  textOverflow: "ellipsis",
-  width: "100%",
-  overflow: "hidden",
-  whiteSpace: "nowrap",
-  fontFamily: theme.genericFonts.bodyFont,
-  lineHeight: "normal",
-  verticalAlign: "middle",
-
-  // Styles to truncate the text inside the StyledStreamlitMarkdown div.
-  "& > div": {
-    overflow: "hidden",
-
-    "& > p": {
-      textOverflow: "ellipsis",
-      overflow: "hidden",
-    },
-  },
-}))
 
 export const StyledMetricLabelText = styled(
   StyledWidgetLabel
@@ -90,12 +72,14 @@ export const StyledMetricLabelText = styled(
 }))
 
 export const StyledMetricValueText = styled.div(({ theme }) => ({
-  fontSize: theme.fontSizes.threeXL,
+  fontSize: theme.fontSizes.metricValueFontSize,
+  lineHeight: "normal",
+  fontWeight: theme.fontWeights.metricValueFontWeight,
   color: theme.colors.bodyText,
   paddingBottom: theme.spacing.twoXS,
 }))
 
-export interface StyledMetricDeltaTextProps {
+interface StyledMetricDeltaTextProps {
   metricColor: MetricProto.MetricColor
   showArrow: boolean
 }
@@ -107,13 +91,15 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     // Uses same color as shaded bg of area chart (bg color)
     backgroundColor: getMetricBackgroundColor(theme, metricColor),
     fontSize: theme.fontSizes.sm,
+    lineHeight: "normal",
     display: "inline-flex",
     flexDirection: "row",
     alignItems: "center",
     fontWeight: theme.fontWeights.normal,
     borderRadius: theme.radii.full,
     maxWidth: "100%",
-    padding: `${theme.spacing.threeXS} ${theme.spacing.xs} ${theme.spacing.threeXS} ${theme.spacing.xs}`,
+    flexShrink: 0,
+    padding: `${theme.spacing.threeXS} ${theme.spacing.xs}`,
     ...(showArrow && {
       // Using only twoXS (4px) on the left side because the arrow icon has an additional
       // 2px padding. Note that this should be adjusted in case we change the arrow icon
@@ -122,3 +108,20 @@ export const StyledMetricDeltaText = styled.div<StyledMetricDeltaTextProps>(
     }),
   })
 )
+
+export const StyledDeltaContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  gap: "0.5em",
+  maxWidth: "100%",
+  overflow: "hidden",
+  paddingBottom: theme.spacing.twoXS,
+}))
+
+export const StyledDeltaDescription = styled.div({
+  // Flex properties needed for proper truncation within StyledDeltaContainer
+  overflow: "hidden",
+  flexShrink: 1,
+  minWidth: 0,
+})

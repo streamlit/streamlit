@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useState } from "react"
+import { FC, memo, useState } from "react"
+
+import useTimeout from "~lib/hooks/useTimeout"
 
 import {
   ParagraphSkeleton,
@@ -29,15 +31,9 @@ const SHOW_DELAY_MS = 500
 const RawAppSkeleton: FC<React.PropsWithChildren<unknown>> = () => {
   const [visible, setVisible] = useState(false)
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setVisible(true)
-    }, SHOW_DELAY_MS)
-
-    return () => {
-      clearTimeout(timer)
-    }
-  }, [])
+  useTimeout(() => {
+    setVisible(true)
+  }, SHOW_DELAY_MS)
 
   if (!visible) return <></>
 

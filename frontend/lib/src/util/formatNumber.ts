@@ -15,7 +15,8 @@
  */
 
 import numbro from "numbro"
-import { sprintf } from "sprintf-js"
+
+import { sprintf } from "~lib/vendor/sprintf.js/sprintfjs.js"
 
 import { isNullOrUndefined, notNullOrUndefined } from "./utils"
 
@@ -79,6 +80,9 @@ function formatIntlNumberWithLocales(
  *   - "scientific": Show the number in scientific notation (e.g. "1.235E3").
  *   - "engineering": Show the number in engineering notation (e.g. "1.235E3").
  *   - printf-style format string: Format the number with a printf specifier.
+ *     Supports `,` flag for thousand separators: use `,` for commas (e.g., "%,d"
+ *     yields "1,234" or "%,.2f" yields "1,234.57") and `_` for underscores
+ *     (e.g., "%_d" yields "1_234"), mirroring Python's format spec.
  * @param maxPrecision - The maximum number of decimals to show. If not provided,
  *                     a reasonable default is used based on the configured format.
  *

@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "NewSessionProto";
-
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
 
@@ -44,11 +41,6 @@ message NewSession {
   // '/foo/bar/foo.py'
   string main_script_path = 4;
 
-  // DEPRECATED.
-  // DeployParams deploy_params = 5;
-
-  reserved 5;
-
   // Config options that are (mostly) defined in the .streamlit/config.toml
   // file.
   Config config = 6;
@@ -69,6 +61,8 @@ message NewSession {
 
   // Hash of the main script running (ie streamlit run main_script.py)
   string main_script_hash = 11;
+
+  reserved 5;
 }
 
 // Contains the session status that existed at the time the user connected.
@@ -82,10 +76,6 @@ message Initialize {
   // The session status at the time the connection was established
   SessionStatus session_status = 4;
 
-  // DEPRECATED: We no longer send this to the frontend for security reasons.
-  // The actual command line as a string
-  string command_line = 5;
-
   // The AppSession.id for this connection's AppSession.
   // This is used to associate uploaded files with the client that uploaded
   // them.
@@ -93,6 +83,8 @@ message Initialize {
 
   // True if the command used to start this app was `streamlit hello`.
   bool is_hello = 7;
+
+  reserved 5;
 }
 
 // App configuration options, initialized mainly from the
@@ -103,9 +95,6 @@ message Config {
 
   // See config option "global.maxCachedMessageAge".
   int32 max_cached_message_age = 3;
-
-  // DEPRECATED: the mapbox token was moved to the DeckGlJsonChart message.
-  string mapbox_token = 4;
 
   // See config option "server.allowRunOnSave".
   bool allow_run_on_save = 5;
@@ -125,7 +114,16 @@ message Config {
   }
   ToolbarMode toolbar_mode = 8;
 
-  reserved 1;
+  // See config option "client.showErrorLinks".
+  enum ShowErrorLinks {
+    SHOW_ERROR_LINKS_UNSPECIFIED = 0;
+    SHOW_ERROR_LINKS_AUTO = 1;
+    SHOW_ERROR_LINKS_TRUE = 2;
+    SHOW_ERROR_LINKS_FALSE = 3;
+  }
+  ShowErrorLinks show_error_links = 9;
+
+  reserved 1, 4;
 }
 
 // Custom theme configuration options. Like other config options, these are set
@@ -139,35 +137,16 @@ message CustomThemeConfig {
     DARK = 1;
   }
 
-  // DEPRECATED: Use body_font instead:
-  enum FontFamily {
-    SANS_SERIF = 0;
-    SERIF = 1;
-    MONOSPACE = 2;
-  }
-
   string primary_color = 1;
   string secondary_background_color = 2;
   string background_color = 3;
   string text_color = 4;
-  // DEPRECATED: Use body_font instead:
-  FontFamily font = 5;
   BaseTheme base = 6;
-  // DEPRECATED: This color is not applied anymore:
-  string widget_background_color = 7;
-  // DEPRECATED: Use the border_color and show_widget_border instead:
-  string widget_border_color = 8;
-  // DEPRECATED: Please use the base_radius theme config instead:
-  Radii radii = 9;
   string heading_font = 12;
   string body_font = 13;
   string code_font = 14;
   repeated FontFace font_faces = 15;
   repeated FontSource font_sources = 37;
-  // DEPRECATED: Please use the base_font_size theme config instead:
-  FontSizes font_sizes = 16;
-  // DEPRECATED: This color is not applied anymore:
-  string skeleton_background_color = 17;
   optional string base_radius = 18;
   optional string button_radius = 26;
   optional string border_color = 19;
@@ -216,26 +195,31 @@ message CustomThemeConfig {
   optional string violet_text_color = 57;
   optional string gray_text_color = 58;
 
+  // Metric value styling:
+  optional string metric_value_font_size = 64;
+  optional int32 metric_value_font_weight = 65;
+
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
-  // Next ID: 63
+  reserved 5, 7, 8, 9, 16, 17;
+  // Next ID: 66
 }
 
 message FontFace {
   string url = 1;
   // Equivalent to font-family @font-face CSS property.
   string family = 2;
-  // DEPRECATED: Use weight_range instead which supports single weights & weight ranges.
-  int32 weight = 3 [deprecated = true];
   // Equivalent to font-weight @font-face CSS property.
   string weight_range = 5;
   // Equivalent to font-style @font-face CSS property.
   string style = 4;
   // Equivalent to unicode-range @font-face CSS property.
   string unicode_range = 6;
+
+  reserved 3;
 }
 
 message FontSource {
@@ -245,21 +229,6 @@ message FontSource {
   string source_url = 2;
 }
 
-// DEPRECATED: Please use the base_radius theme config instead.
-message Radii {
-  // In pixels.
-  int32 base_widget_radius = 1;
-  int32 checkbox_radius = 2;
-}
-
-// DEPRECATED: Please use the base_font_size theme config instead:
-message FontSizes {
-  // In pixels.
-  int32 tiny_font_size = 1;
-  int32 small_font_size = 2;
-  int32 base_font_size = 3;
-}
-
 // Data that identifies the Streamlit app creator.
 // Does not change over the app's lifetime.
 message UserInfo {
@@ -267,11 +236,7 @@ message UserInfo {
   string installation_id_v3 = 5;
   string installation_id_v4 = 6;
 
-  // DEPRECATED:
-  // string email = 2;
   reserved 2;
-
-  // Next 7
 }
 
 // Data that identifies the Streamlit app's environment.

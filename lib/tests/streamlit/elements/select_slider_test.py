@@ -24,8 +24,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -46,8 +50,7 @@ class SliderTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == [0]
         assert c.min == 0
@@ -237,9 +240,9 @@ class SliderTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -289,7 +292,6 @@ class SliderTest(DeltaGeneratorTestCase):
                 args=("arg1", "arg2"),
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
-                # Whitelisted kwargs
                 options=["red", "green", "blue"],
                 format_func=lambda x: x.capitalize(),
             )
@@ -307,7 +309,6 @@ class SliderTest(DeltaGeneratorTestCase):
                 args=("arg_1", "arg_2"),
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
-                # Whitelisted kwargs
                 format_func=lambda x: x.capitalize(),
                 options=["red", "green", "blue"],
             )
@@ -315,36 +316,55 @@ class SliderTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
-    @parameterized.expand(
-        [
-            ("options", ["a", "bb"], ["a", "bb", "c"]),
-            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs(
-        self, kwarg_name: str, value1: object, value2: object
-    ):
-        """Changing whitelisted kwargs should change the ID even when a key is provided."""
+    def test_stable_id_with_key_when_options_change(self):
+        """With key_as_main_identity=True, ID should remain stable when options change."""
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            base_kwargs = {
-                "label": "Label",
-                "key": "select_slider_key",
-                "options": ["a", "b", "c", "d"],
-            }
-            base_kwargs[kwarg_name] = value1
-
-            st.select_slider(**base_kwargs)
+            st.select_slider(
+                label="Label",
+                key="select_slider_key4",
+                options=["a", "b", "c", "d"],
+            )
             c1 = self.get_delta_from_queue().new_element.slider
             id1 = c1.id
 
-            base_kwargs[kwarg_name] = value2
-            st.select_slider(**base_kwargs)
+            # Change options - ID should remain stable because key_as_main_identity=True
+            st.select_slider(
+                label="Label",
+                key="select_slider_key4",
+                options=["a", "bb", "c"],
+            )
             c2 = self.get_delta_from_queue().new_element.slider
             id2 = c2.id
-            assert id1 != id2
+            assert id1 == id2
+
+    def test_stable_id_with_key_when_format_func_changes(self):
+        """With key_as_main_identity=True, ID should remain stable when format_func changes."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            st.select_slider(
+                label="Label",
+                key="select_slider_key5",
+                options=["a", "b", "c"],
+                format_func=lambda x: x.lower(),
+            )
+            c1 = self.get_delta_from_queue().new_element.slider
+            id1 = c1.id
+
+            # Change format_func - ID should remain stable
+            st.select_slider(
+                label="Label",
+                key="select_slider_key5",
+                options=["a", "b", "c"],
+                format_func=lambda x: x.upper(),
+            )
+            c2 = self.get_delta_from_queue().new_element.slider
+            id2 = c2.id
+            assert id1 == id2
 
 
 def test_select_slider_enum_coercion():
@@ -384,7 +404,7 @@ def test_select_slider_enum_coercion():
 
 
 def test_select_slider_enum_coercion_multivalue():
-    """Test E2E Enum Coercion on a selectbox."""
+    """Test E2E Enum Coercion on a select_slider with range values."""
 
     def script():
         from enum import Enum
@@ -462,3 +482,297 @@ class SelectSliderWidthTest(DeltaGeneratorTestCase):
         """Test width config with various invalid values."""
         with pytest.raises(StreamlitInvalidWidthError):
             st.select_slider("the label", options=["a", "b", "c"], width=invalid_width)
+
+
+def test_select_slider_dynamic_options_preserves_valid_selection():
+    """Test that changing options dynamically preserves a valid selection."""
+
+    def script():
+        import streamlit as st
+
+        if "use_alt_options" not in st.session_state:
+            st.session_state.use_alt_options = False
+
+        if st.session_state.use_alt_options:
+            # "alpha" and "delta" are shared between both option sets
+            options = ["alpha", "beta", "gamma", "delta"]
+        else:
+            options = ["alpha", "bravo", "charlie", "delta", "echo"]
+
+        selected = st.select_slider("Test", options=options, key="test_slider")
+        st.write(f"Selected: {selected}")
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == "alpha"
+
+    # Select "bravo" which only exists in the first option set
+    at.select_slider[0].set_value("bravo").run()
+    assert at.select_slider[0].value == "bravo"
+    assert "Selected: bravo" in at.get("markdown")[-1].value
+    # Negative assertion: "alpha" should no longer be selected
+    assert at.select_slider[0].value != "alpha"
+
+    # Switch to alternative options - "bravo" doesn't exist, should reset to "alpha"
+    at.session_state.use_alt_options = True
+    at = at.run()
+    assert at.select_slider[0].value == "alpha"
+    assert "Selected: alpha" in at.get("markdown")[-1].value
+    # Negative assertion: "bravo" should not be preserved
+    assert at.select_slider[0].value != "bravo"
+    assert "Selected: bravo" not in at.get("markdown")[-1].value
+
+    # Select "delta" which exists in both option sets (and is not the default)
+    at.select_slider[0].set_value("delta").run()
+    assert at.select_slider[0].value == "delta"
+
+    # Switch back to original options - "delta" should be preserved
+    at.session_state.use_alt_options = False
+    at = at.run()
+    assert at.select_slider[0].value == "delta"
+
+
+def test_select_slider_dynamic_options_range_resets_when_invalid():
+    """Test that range slider resets when options change and values become invalid."""
+
+    def script():
+        import streamlit as st
+
+        if "use_alt_options" not in st.session_state:
+            st.session_state.use_alt_options = False
+
+        if st.session_state.use_alt_options:
+            options = ["x", "y", "z"]
+            default = ("x", "z")
+        else:
+            options = ["a", "b", "c", "d", "e"]
+            default = ("a", "e")
+
+        selected = st.select_slider(
+            "Test Range", options=options, value=default, key="test_range"
+        )
+        st.write(f"Range: {selected}")
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == ("a", "e")
+
+    # Switch to alternative options - neither "a" nor "e" exists, should reset to default
+    at.session_state.use_alt_options = True
+    at = at.run()
+    assert at.select_slider[0].value == ("x", "z")
+    # Negative assertion: old range values should not be preserved
+    assert at.select_slider[0].value != ("a", "e")
+
+
+def test_select_slider_dynamic_options_with_format_func():
+    """Test that dynamic options work correctly with format_func."""
+
+    def script():
+        import streamlit as st
+
+        if "use_alt_options" not in st.session_state:
+            st.session_state.use_alt_options = False
+
+        def fmt(x):
+            return f"Option {x}"
+
+        if st.session_state.use_alt_options:
+            options = [1, 2, 3]
+        else:
+            options = [1, 2, 3, 4, 5]
+
+        selected = st.select_slider(
+            "Test", options=options, format_func=fmt, key="test_fmt"
+        )
+        st.write(f"Selected: {selected}")
+
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 1
+
+    # Select option 4 which only exists in the first option set
+    at.select_slider[0].set_value(4).run()
+    assert at.select_slider[0].value == 4
+
+    # Switch to alternative options - 4 doesn't exist, should reset to 1
+    at.session_state.use_alt_options = True
+    at = at.run()
+    assert at.select_slider[0].value == 1
+    # Negative assertion: value 4 should not be preserved
+    assert at.select_slider[0].value != 4
+
+
+def test_select_slider_dynamic_options_with_enum():
+    """Test that dynamic options work correctly with Enum values."""
+    from enum import Enum
+
+    # Define enums at module level for serialization
+    class ColorA(Enum):
+        RED = "red"
+        GREEN = "green"
+        BLUE = "blue"
+
+    class ColorB(Enum):
+        GREEN = "green"
+        YELLOW = "yellow"
+        PURPLE = "purple"
+
+    def script():
+        from enum import Enum
+
+        import streamlit as st
+
+        class ColorA(Enum):
+            RED = "red"
+            GREEN = "green"
+            BLUE = "blue"
+
+        class ColorB(Enum):
+            GREEN = "green"
+            YELLOW = "yellow"
+            PURPLE = "purple"
+
+        if "use_alt_options" not in st.session_state:
+            st.session_state.use_alt_options = False
+
+        if st.session_state.use_alt_options:
+            options = list(ColorB)
+        else:
+            options = list(ColorA)
+
+        selected = st.select_slider("Color", options=options, key="color_slider")
+        st.write(f"Selected: {selected.name}")
+
+    at = AppTest.from_function(script).run()
+    # Initial value is ColorA.RED
+    assert "Selected: RED" in at.get("markdown")[-1].value
+
+    # Select ColorA.BLUE which only exists in ColorA
+    at.select_slider[0].set_value(ColorA.BLUE).run()
+    assert "Selected: BLUE" in at.get("markdown")[-1].value
+
+    # Switch to ColorB - BLUE doesn't exist, should reset to GREEN (first option)
+    at.session_state.use_alt_options = True
+    at = at.run()
+    assert "Selected: GREEN" in at.get("markdown")[-1].value
+    # Negative assertion: BLUE should not be preserved
+    assert "Selected: BLUE" not in at.get("markdown")[-1].value
+
+
+def test_select_slider_format_func_multiple_runs():
+    """Regression test for GitHub issue #13832.
+
+    Ensures that select_slider with format_func works correctly on subsequent
+    AppTest runs. The bug occurred because the testing framework was applying
+    format_func to options that were already formatted strings in the proto,
+    causing a ValueError on the second run. This test implicitly validates
+    that no ValueError is raised during subsequent runs.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.select_slider(
+            "Percentage",
+            value=0.40,
+            options=(0.00, 0.20, 0.40, 0.45),
+            format_func="{:.0%}".format,
+        )
+        st.select_slider(
+            "Range",
+            value=(0.20, 0.45),
+            options=(0.00, 0.20, 0.40, 0.45),
+            format_func="{:.0%}".format,
+        )
+
+    # First run
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Second run - this failed before the fix with:
+    # ValueError: Unknown format code '%' for object of type 'str'
+    at = at.run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Third run to ensure stability
+    at = at.run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Test changing values and re-running
+    at.select_slider[0].set_value(0.20)
+    at.select_slider[1].set_range(0.00, 0.40)
+    at = at.run()
+    assert at.select_slider[0].value == 0.20
+    assert at.select_slider[1].value == (0.00, 0.40)
+
+    # Another run after value change
+    at = at.run()
+    assert at.select_slider[0].value == 0.20
+    assert at.select_slider[1].value == (0.00, 0.40)
+
+
+class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for select_slider bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.select_slider(
+            "the label",
+            options=["a", "b", "c"],
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.select_slider("the label", options=["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.select_slider("the label", options=["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.select_slider(
+                "the label",
+                options=["a", "b"],
+                key="my_key",
+                bind="invalid-value",
+            )
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.select_slider(
+            "the label",
+            options=["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG", "BIRD"]
+
+    def test_bind_with_range_value(self):
+        """Test that bind works with range values."""
+        st.select_slider(
+            "the label",
+            options=["a", "b", "c", "d", "e"],
+            value=("b", "d"),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == [1, 3]

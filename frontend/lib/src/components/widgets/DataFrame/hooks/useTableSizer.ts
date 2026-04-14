@@ -21,7 +21,7 @@ import { useLayoutEffect, useState } from "react"
 
 import { Size as ResizableSize } from "re-resizable"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import {
   calculateTableHeight,
@@ -36,7 +36,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
 
-export type AutoSizerReturn = {
+type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
   minHeight: number
   // The maximum height of the data grid can be resized to
@@ -56,7 +56,7 @@ export type AutoSizerReturn = {
 /**
  * A custom React hook that manages all aspects related to the size of the table.
  *
- * @param element - The ArrowProto element
+ * @param element - The DataframeProto element
  * @param numRows - The number of rows in the table
  * @param usesGroupRow - Whether the table uses a group row to display multiple column headers.
  * @param containerWidth - The width of the surrounding container
@@ -70,7 +70,7 @@ export type AutoSizerReturn = {
  * @returns The row height, min/max height & width, and the current size of the resizable container.
  */
 function useTableSizer(
-  element: ArrowProto,
+  element: DataframeProto,
   gridTheme: CustomGridTheme,
   numRows: number,
   usesGroupRow: boolean,
@@ -87,8 +87,8 @@ function useTableSizer(
   // Group row + column header row
   const numHeaderRows = usesGroupRow ? 2 : 1
   const numTrailingRows =
-    element.editingMode === ArrowProto.EditingMode.DYNAMIC ||
-    element.editingMode === ArrowProto.EditingMode.ADD_ONLY
+    element.editingMode === DataframeProto.EditingMode.DYNAMIC ||
+    element.editingMode === DataframeProto.EditingMode.ADD_ONLY
       ? 1
       : 0
 
@@ -112,7 +112,7 @@ function useTableSizer(
    *   - 4+ rows → 3-row minimum
    */
 
-  const configuredHeight = getConfiguredHeight(element, heightConfig)
+  const configuredHeight = getConfiguredHeight(heightConfig)
   // Stretch height styling does not work in the root container without an
   // enclosing fixed-height container.
   const useStretchHeight = shouldUseStretchHeight(heightConfig, isInRoot)
@@ -211,8 +211,8 @@ function useTableSizer(
   // The maximum width of the data grid can be resized to.
   let maxWidth = availableWidth
 
-  const useContainerWidth = shouldUseContainerWidth(element, widthConfig)
-  const configuredWidth = getConfiguredWidth(element, widthConfig)
+  const useContainerWidth = shouldUseContainerWidth(widthConfig)
+  const configuredWidth = getConfiguredWidth(widthConfig)
   const useContentWidth = shouldUseContentWidth(widthConfig)
 
   if (useContainerWidth) {

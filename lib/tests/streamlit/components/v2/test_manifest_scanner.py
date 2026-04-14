@@ -126,8 +126,8 @@ def test_process_single_package_valid_manifest() -> None:
     mock_dist = Mock()
     mock_dist.files = [mock_file, mock_init_file]
     mock_dist.name = "test-package"
-    mock_dist.locate_file.side_effect = (
-        lambda f: "/path/to/pyproject.toml"
+    mock_dist.locate_file.side_effect = lambda f: (
+        "/path/to/pyproject.toml"
         if f == mock_file
         else "/path/to/test_package/__init__.py"
     )
@@ -221,8 +221,8 @@ def test_scan_multiple_component_manifests() -> None:
         ) as mock_process,
     ):
         mock_distributions.return_value = mock_dists
-        mock_process.side_effect = (
-            lambda dist: results[int(dist.name.split("-")[-1])]
+        mock_process.side_effect = lambda dist: (
+            results[int(dist.name.split("-")[-1])]
             if "streamlit" in dist.name and int(dist.name.split("-")[-1]) < 3
             else None
         )

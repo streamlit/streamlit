@@ -31,7 +31,7 @@ import {
 
 export const HOST_COMM_VERSION = 1
 
-export interface HostCommunicationProps {
+interface HostCommunicationProps {
   readonly streamlitExecutionStartedAt: number
   readonly sendRerunBackMsg: (
     widgetStates?: WidgetStates,
@@ -41,7 +41,7 @@ export interface HostCommunicationProps {
   readonly stopScript: () => void
   readonly rerunScript: () => void
   readonly clearCache: () => void
-  readonly sendAppHeartbeat: () => void
+  readonly sendAppHeartbeat: (ackTimeoutMilliseconds: number) => void
   readonly setInputsDisabled: (inputsDisabled: boolean) => void
   readonly themeChanged: (
     themeName?: PresetThemeName,
@@ -78,6 +78,8 @@ export default class HostCommunicationManager {
 
   private deferredAuthToken: PromiseWithResolvers<string | undefined>
 
+  private isHostCommOpen = false
+
   constructor(props: HostCommunicationProps) {
     this.props = props
 
@@ -86,10 +88,16 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Adds a listener for messages from the host
-   * sends message that guest is ready to receive messages
+   * Adds a listener for messages from the host and sends a GUEST_READY
+   * message. This is idempotent: subsequent calls are no-ops while the
+   * communication channel is open, ensuring only one listener is registered
+   * and only one GUEST_READY is sent per app lifecycle.
    */
   public openHostCommunication = (): void => {
+    if (this.isHostCommOpen) {
+      return
+    }
+    this.isHostCommOpen = true
     window.addEventListener("message", this.receiveHostMessage)
     this.sendMessageToHost({
       type: "GUEST_READY",
@@ -99,10 +107,12 @@ export default class HostCommunicationManager {
   }
 
   /**
-   * Cleans up message event listener
+   * Cleans up message event listener and resets the open flag so
+   * communication can be re-established if needed.
    */
   public closeHostCommunication = (): void => {
     window.removeEventListener("message", this.receiveHostMessage)
+    this.isHostCommOpen = false
   }
 
   /**
@@ -174,8 +184,7 @@ export default class HostCommunicationManager {
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
-    const message: VersionedMessage<IHostToGuestMessage> | any = event.data
+    const message = event.data as VersionedMessage<IHostToGuestMessage>
 
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
@@ -213,7 +222,12 @@ export default class HostCommunicationManager {
     }
 
     if (message.type === "SEND_APP_HEARTBEAT") {
-      this.props.sendAppHeartbeat()
+      const timeout = message.ackTimeoutMilliseconds
+      const validatedTimeout =
+        typeof timeout === "number" && Number.isFinite(timeout) && timeout > 0
+          ? timeout
+          : 0
+      this.props.sendAppHeartbeat(validatedTimeout)
     }
 
     if (message.type === "SET_INPUTS_DISABLED") {

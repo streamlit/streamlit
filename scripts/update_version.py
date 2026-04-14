@@ -60,7 +60,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 # These regex's are super greedy in that it actually matches everything
 # but the version number so we can throw any valid PEP440 version in
 # there.
-PYTHON = {"lib/setup.py": r"(?P<pre>.*VERSION = \").*(?P<post>\"  # PEP-440$)"}
+PYTHON = {"lib/pyproject.toml": r'(?P<pre>^version = ").*(?P<post>"$)'}
 
 # This regex captures the "version": field in a JSON-like structure
 # allowing for any amount of whitespace before the "version": field.

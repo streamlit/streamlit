@@ -18,13 +18,14 @@ import { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
+import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render, renderWithContexts } from "~lib/test_util"
-import { getMarkdownBgColors } from "~lib/theme/getColors"
+import { getThemeBackgroundColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
 import StreamlitMarkdown, {
@@ -36,6 +37,7 @@ import StreamlitMarkdown, {
   CustomMediaTag,
   CustomPreTag,
   HeadingWithActionElements,
+  isValidCssColor,
   LinkWithTargetBlank,
 } from "./StreamlitMarkdown"
 
@@ -293,6 +295,82 @@ describe("containsEmojiShortcodes", () => {
   )
 })
 
+describe("isValidCssColor", () => {
+  it.each([
+    // Hex colors - should return true
+    { input: "#000", expected: true, description: "3-digit hex" },
+    { input: "#FFF", expected: true, description: "3-digit hex uppercase" },
+    { input: "#abc", expected: true, description: "3-digit hex lowercase" },
+    { input: "#000000", expected: true, description: "6-digit hex" },
+    { input: "#FFFFFF", expected: true, description: "6-digit hex uppercase" },
+    { input: "#ff5733", expected: true, description: "6-digit hex lowercase" },
+    { input: "#0000", expected: true, description: "4-digit hex with alpha" },
+    {
+      input: "#00000000",
+      expected: true,
+      description: "8-digit hex with alpha",
+    },
+
+    // rgb/rgba - should return true
+    { input: "rgb(0, 0, 0)", expected: true, description: "rgb black" },
+    { input: "rgb(255, 255, 255)", expected: true, description: "rgb white" },
+    {
+      input: "rgba(0, 0, 0, 0.5)",
+      expected: true,
+      description: "rgba with alpha",
+    },
+    {
+      input: "rgba(255, 255, 255, 1)",
+      expected: true,
+      description: "rgba full alpha",
+    },
+
+    // hsl/hsla - should return true
+    { input: "hsl(0, 0%, 0%)", expected: true, description: "hsl black" },
+    { input: "hsl(360, 100%, 50%)", expected: true, description: "hsl red" },
+    {
+      input: "hsla(0, 0%, 0%, 0.5)",
+      expected: true,
+      description: "hsla with alpha",
+    },
+
+    // Named colors - should return true
+    { input: "red", expected: true, description: "named color red" },
+    { input: "blue", expected: true, description: "named color blue" },
+    { input: "transparent", expected: true, description: "transparent" },
+
+    // Invalid colors - should return false
+    { input: "#", expected: false, description: "hash only" },
+    { input: "#12", expected: false, description: "2-digit hex (invalid)" },
+    { input: "#12345", expected: false, description: "5-digit hex (invalid)" },
+    {
+      input: "#1234567",
+      expected: false,
+      description: "7-digit hex (invalid)",
+    },
+    {
+      input: "#GGGGGG",
+      expected: false,
+      description: "invalid hex characters",
+    },
+    { input: "notacolor", expected: false, description: "random string" },
+    { input: "rgb()", expected: false, description: "empty rgb" },
+    { input: "", expected: false, description: "empty string" },
+    {
+      input: "javascript:alert(1)",
+      expected: false,
+      description: "potential XSS",
+    },
+    {
+      input: "expression(alert(1))",
+      expected: false,
+      description: "CSS expression",
+    },
+  ])("validates $description correctly", ({ input, expected }) => {
+    expect(isValidCssColor(input)).toBe(expected)
+  })
+})
+
 describe("linkReference", () => {
   it("renders a link with _blank target", () => {
     const body = "Some random URL like [Streamlit](https://streamlit.io/)"
@@ -347,12 +425,12 @@ describe("linkReference", () => {
 })
 
 describe("StreamlitMarkdown", () => {
-  let bgColors: ReturnType<typeof getMarkdownBgColors>
+  let bgColors: ReturnType<typeof getThemeBackgroundColors>
   let backgroundColorMapping: Map<string, string>
 
   beforeAll(() => {
     // Use the actual implementation to get background colors
-    bgColors = getMarkdownBgColors(mockTheme.emotion)
+    bgColors = getThemeBackgroundColors(mockTheme.emotion)
 
     backgroundColorMapping = new Map([
       ["red", bgColors.redbg],
@@ -605,23 +683,25 @@ describe("StreamlitMarkdown", () => {
     { input: table, tag: "tr", expected: tableText },
     { input: table, tag: "th", expected: tableText },
     { input: table, tag: "td", expected: tableText },
-    { input: "# Heading 1", tag: "h1", expected: "Heading 1" },
-    { input: "## Heading 2", tag: "h2", expected: "Heading 2" },
-    { input: "### Heading 3", tag: "h3", expected: "Heading 3" },
-    { input: "#### Heading 4", tag: "h4", expected: "Heading 4" },
-    { input: "##### Heading 5", tag: "h5", expected: "Heading 5" },
-    { input: "###### Heading 6", tag: "h6", expected: "Heading 6" },
-    { input: "- List Item 1", tag: "ul", expected: "List Item 1" },
-    { input: "- List Item 1", tag: "li", expected: "List Item 1" },
-    { input: "1. List Item 1", tag: "ol", expected: "List Item 1" },
-    { input: "1. List Item 1", tag: "li", expected: "List Item 1" },
+    // Markdown syntax is escaped in labels to preserve as text
+    // (see https://github.com/streamlit/streamlit/issues/7359)
+    { input: "# Heading 1", tag: "h1", expected: "# Heading 1" },
+    { input: "## Heading 2", tag: "h2", expected: "## Heading 2" },
+    { input: "### Heading 3", tag: "h3", expected: "### Heading 3" },
+    { input: "#### Heading 4", tag: "h4", expected: "#### Heading 4" },
+    { input: "##### Heading 5", tag: "h5", expected: "##### Heading 5" },
+    { input: "###### Heading 6", tag: "h6", expected: "###### Heading 6" },
+    { input: "- List Item 1", tag: "ul", expected: "- List Item 1" },
+    { input: "- List Item 1", tag: "li", expected: "- List Item 1" },
+    { input: "1. List Item 1", tag: "ol", expected: "1. List Item 1" },
+    { input: "1. List Item 1", tag: "li", expected: "1. List Item 1" },
     {
       input: "- [ ] Task List Item 1",
       tag: "input",
-      expected: "Task List Item 1",
+      expected: "- [ ] Task List Item 1",
     },
     { input: horizontalRule, tag: "hr", expected: "Horizontal rule" },
-    { input: "> Blockquote", tag: "blockquote", expected: "Blockquote" },
+    { input: "> Blockquote", tag: "blockquote", expected: "> Blockquote" },
   ]
 
   it.each(invalidCases)(
@@ -652,6 +732,105 @@ describe("StreamlitMarkdown", () => {
     )
     const tag = screen.getByText("Link text")
     expect(tag instanceof HTMLAnchorElement).toBe(false)
+  })
+
+  // Test for markdown syntax escaping in labels (https://github.com/streamlit/streamlit/issues/7359)
+  // These characters/patterns would normally create markdown elements that get stripped,
+  // leaving empty labels. Escaping preserves them as plain text.
+  const markdownEscapingCases = [
+    // Unordered list markers
+    { input: "-", expected: "-", description: "single hyphen" },
+    { input: "+", expected: "+", description: "single plus" },
+    { input: "*", expected: "*", description: "single asterisk" },
+    { input: "- text", expected: "- text", description: "hyphen with text" },
+    { input: "+ text", expected: "+ text", description: "plus with text" },
+    { input: "* text", expected: "* text", description: "asterisk with text" },
+    {
+      input: "  - indented",
+      expected: "- indented",
+      description: "indented hyphen",
+    },
+    // Ordered list markers
+    { input: "1.", expected: "1.", description: "single ordered marker" },
+    {
+      input: "1. text",
+      expected: "1. text",
+      description: "ordered with text",
+    },
+    { input: "99.", expected: "99.", description: "multi-digit ordered" },
+    { input: "1)", expected: "1)", description: "ordered with paren" },
+    // Blockquote markers
+    { input: ">", expected: ">", description: "single blockquote" },
+    {
+      input: "> text",
+      expected: "> text",
+      description: "blockquote with text",
+    },
+    // Heading markers
+    { input: "#", expected: "#", description: "single hash" },
+    { input: "##", expected: "##", description: "double hash" },
+    { input: "# text", expected: "# text", description: "heading with text" },
+  ]
+
+  it.each(markdownEscapingCases)(
+    "preserves markdown syntax in labels - $description",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+
+      // Should be rendered as plain paragraph text, not special elements
+      const tagName = markdownText.nodeName.toLowerCase()
+      expect(tagName).toBe("p")
+
+      cleanup()
+    }
+  )
+
+  // Patterns that should NOT be escaped (no space after marker)
+  const nonEscapingCases = [
+    {
+      input: "not-a-list",
+      expected: "not-a-list",
+      description: "hyphen mid-word",
+    },
+    {
+      input: "#hashtag",
+      expected: "#hashtag",
+      description: "hash without space",
+    },
+    { input: "1.5", expected: "1.5", description: "decimal number" },
+    {
+      input: "1\\. Already escaped",
+      expected: "1. Already escaped",
+      description: "pre-escaped ordered list",
+    },
+    {
+      input: "\\- Already escaped",
+      expected: "- Already escaped",
+      description: "pre-escaped unordered list",
+    },
+  ]
+
+  it.each(nonEscapingCases)(
+    "does not escape non-markdown patterns in labels - $description",
+    ({ input, expected }) => {
+      render(<StreamlitMarkdown source={input} allowHTML={false} isLabel />)
+      const markdownText = screen.getByText(expected)
+      expect(markdownText).toBeInTheDocument()
+      cleanup()
+    }
+  )
+
+  it("renders emphasis markdown in labels", () => {
+    // *italic label* should render as emphasized text, not be escaped
+    render(
+      <StreamlitMarkdown source="*italic label*" allowHTML={false} isLabel />
+    )
+    const emphasisText = screen.getByText("italic label")
+    expect(emphasisText).toBeInTheDocument()
+    expect(emphasisText.tagName.toLowerCase()).toBe("em")
+    cleanup()
   })
 
   it("renders smaller text sizing when isToast is true", () => {
@@ -791,6 +970,116 @@ describe("StreamlitMarkdown", () => {
       `font-size: ${mockTheme.emotion.fontSizes.sm}`
     )
   })
+
+  it("applies truncate styles when truncate is true", () => {
+    const source = "This is some text that should be truncated"
+    render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).toHaveStyle("overflow: hidden")
+    expect(container).toHaveStyle("white-space: nowrap")
+    expect(container).toHaveStyle("text-overflow: ellipsis")
+  })
+
+  it("does not apply truncate styles when truncate is false", () => {
+    const source = "This is some text that should not be truncated"
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    const container = screen.getByTestId("stMarkdownContainer")
+    expect(container).not.toHaveStyle("white-space: nowrap")
+  })
+
+  // Custom color directive tests
+  describe("custom color directive", () => {
+    it("applies custom foreground color with hex value", () => {
+      const source = `:color[custom text]{foreground="#FF5733"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("custom text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("color: #FF5733")
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("applies custom background color with hex value", () => {
+      const source = `:color[custom text]{background="#FF5733"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("custom text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("background-color: #FF5733")
+      expect(markdown).toHaveClass("stMarkdownColoredBackground")
+    })
+
+    it("applies both foreground and background colors", () => {
+      // Note: directive attributes are space-separated, not comma-separated
+      const source = `:color[text]{foreground="#FFFFFF" background="#000000"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      expect(markdown).toHaveStyle("color: #FFFFFF")
+      expect(markdown).toHaveStyle("background-color: #000000")
+      // Should use background class when both are present for proper styling
+      expect(markdown).toHaveClass("stMarkdownColoredBackground")
+    })
+
+    it("applies custom color with 3-digit hex", () => {
+      const source = `:color[text]{foreground="#F00"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown).toHaveStyle("color: #F00")
+    })
+
+    it("applies custom color with named color", () => {
+      const source = `:color[text]{foreground="red"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      // Named colors are normalized by the browser to rgb() format
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+    })
+
+    it("renders content as plain text when color values are invalid", () => {
+      const source = `:color[text]{foreground="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Invalid colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style attribute when color is invalid
+      expect(markdown).not.toHaveAttribute("style")
+    })
+
+    it("ignores potential XSS in color values and renders content safely", () => {
+      const source = `:color[text]{foreground="javascript:alert(1)"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Invalid/dangerous colors should still render the content as plain text
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have the dangerous value in any attribute
+      expect(markdown).not.toHaveAttribute("style")
+    })
+
+    it("applies only valid colors when mixed with invalid colors", () => {
+      // Test partial validity: foreground is valid, background is invalid
+      const source = `:color[text]{foreground="red" background="notacolor"}`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Only the valid foreground color should be applied
+      expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
+      // Background should not be applied since it's invalid
+      expect(markdown).not.toHaveStyle("background-color: notacolor")
+      // Should use text class since no valid background
+      expect(markdown).toHaveClass("stMarkdownColoredText")
+    })
+
+    it("renders as plain span when used without attributes", () => {
+      const source = `:color[text]`
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const markdown = screen.getByText("text")
+      expect(markdown.tagName.toLowerCase()).toBe("span")
+      // Should not have any style when no attributes are provided
+      expect(markdown).not.toHaveAttribute("style")
+      // Should not have the colored text class
+      expect(markdown).not.toHaveClass("stMarkdownColoredText")
+      expect(markdown).not.toHaveClass("stMarkdownColoredBackground")
+    })
+  })
 })
 
 const getCustomCodeTagProps = (
@@ -825,9 +1114,15 @@ describe("CustomCodeTag Element", () => {
       children: "i am not empty",
     })
     render(<CustomCodeTag {...props} />)
-    const copyButton = await screen.findByTitle("Copy to clipboard")
+    await screen.findByTestId("stCode")
+    const copyButton = screen.getByLabelText(/copy to clipboard/i, {
+      selector: "button",
+    })
 
-    expect(copyButton).not.toBeNull()
+    expect(copyButton).toBeEnabled()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
   })
 
   it("should not render copy button when code block is empty", async () => {
@@ -887,11 +1182,146 @@ describe("CustomPreTag", () => {
       'import streamlit as st st.write("Hello")'
     )
   })
+
+  describe("remend integration (streaming markdown)", () => {
+    it.each([
+      ["**incomplete bold", "incomplete bold", "STRONG"],
+      ["*incomplete italic", "incomplete italic", "EM"],
+      ["`incomplete code", "incomplete code", "CODE"],
+      ["**complete bold** text", "complete bold", "STRONG"],
+    ])(
+      "completes incomplete markdown when unterminatedParsing=true: %s -> %s (%s)",
+      (source, expectedText, expectedTag) => {
+        render(
+          <StreamlitMarkdown
+            source={`This is ${source}`}
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+        const element = screen.getByText(expectedText)
+        expect(element).toBeVisible()
+        expect(element.tagName).toBe(expectedTag)
+      }
+    )
+
+    it.each([
+      [
+        "isLabel=true",
+        { isLabel: true, allowHTML: false, unterminatedParsing: true },
+      ],
+      [
+        "allowHTML=true",
+        { isLabel: false, allowHTML: true, unterminatedParsing: true },
+      ],
+      [
+        "unterminatedParsing=false",
+        { isLabel: false, allowHTML: false, unterminatedParsing: false },
+      ],
+      ["unterminatedParsing not set", { isLabel: false, allowHTML: false }],
+    ])("does NOT apply remend when %s", async (_, props) => {
+      const source = "Content with **incomplete bold"
+      render(<StreamlitMarkdown source={source} {...props} />)
+      // Wait for content to render (allowHTML=true triggers async plugin load)
+      const textElement = await screen.findByText(source, { exact: false })
+      expect(textElement).toBeVisible()
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container.querySelector("strong")).toBeNull()
+    })
+
+    describe("directive completion during streaming", () => {
+      it.each([
+        // Incomplete directives - should be completed without artifact
+        [":red[incomplete text", "incomplete text"],
+        [":blue[streaming", "streaming"],
+        [":red-background[highlighted", "highlighted"],
+        [":small[small text", "small text"],
+        // Complete directive - should render normally
+        [":red[complete]", "complete"],
+      ])(
+        "renders directive %s without streamdown:incomplete-link artifact",
+        (source, expectedText) => {
+          render(
+            <StreamlitMarkdown
+              source={`This is ${source}`}
+              allowHTML={false}
+              unterminatedParsing={true}
+            />
+          )
+
+          expect(screen.getByText(expectedText)).toBeVisible()
+
+          const container = screen.getByTestId("stMarkdownContainer")
+          expect(container.textContent).not.toContain(
+            "streamdown:incomplete-link"
+          )
+        }
+      )
+
+      it("completes nested incomplete directives", () => {
+        render(
+          <StreamlitMarkdown
+            source=":red-background[:rainbow[nested text"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        expect(container.textContent).toContain("nested text")
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+      })
+
+      it("does not close non-directive brackets in markdown links", () => {
+        // This tests the fix for the issue where `:red[text] and [link`
+        // would incorrectly close the `[link` bracket too.
+        // The handler should only close directive brackets, not markdown link brackets.
+        render(
+          <StreamlitMarkdown
+            source=":red[red text] and [incomplete link"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        expect(container.textContent).toContain("red text")
+        // The important thing is that no streamdown artifact appears and no extra ]
+        // is appended that would break the rendering
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+        // Should not have extra closing brackets added for non-directive [
+        expect(container.textContent).not.toContain("link]")
+      })
+
+      it("handles nested brackets inside directives", () => {
+        // This tests the fix for `:red[text [link` where a non-directive `[`
+        // appears inside an open directive. The handler should track nested brackets
+        // to ensure proper balancing.
+        render(
+          <StreamlitMarkdown
+            source=":red[text [link"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        // The text should be rendered without the artifact
+        expect(container.textContent).toContain("text [link")
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+      })
+    })
+  })
 })
 
 describe("CustomMediaTag", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mockNode = { tagName: "img" } as any
+  const mockNode = { tagName: "img" } as Element
   const mockProps = {
     src: "test-image.jpg",
     alt: "Test image",
@@ -966,8 +1396,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(
@@ -1032,8 +1461,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element without crossOrigin when $scenario",
       ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(

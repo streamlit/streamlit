@@ -23,8 +23,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -45,8 +45,7 @@ class RadioTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0
         assert not c.disabled
@@ -145,8 +144,7 @@ class RadioTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0
         assert c.options == []
@@ -202,9 +200,9 @@ class RadioTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -413,9 +411,10 @@ def test_radio_interaction():
 def test_radio_enum_coercion():
     """Test E2E Enum Coercion on a radio.
 
-    With string-based widget values, enum options are naturally preserved
-    through string lookup, so enum coercion works correctly regardless of
-    the enumCoercion config setting.
+    When enum classes are redefined between runs (common in Streamlit scripts),
+    the widget should return a valid enum value from the current class when
+    coercion is enabled. When coercion is "off", the value from session state
+    (which may be from an old class) is returned as-is.
     """
 
     def script():
@@ -442,12 +441,15 @@ def test_radio_enum_coercion():
         assert at.text[0].value == at.text[1].value, "Enum Class ID not the same"
         assert at.text[2].value == "True", "Not all enums found in class"
 
-    # With string-based values, enum values are naturally preserved through
-    # string lookup in the options, so this works with any enumCoercion setting
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        test_enum()  # This now passes because string-based lookup preserves enum types
+    # With coercion="off", the value from session state (old class) is returned as-is,
+    # so class IDs will differ - expect assertion to fail.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()
 
 
 def test_None_session_state_value_retained():
@@ -675,3 +677,56 @@ def test_custom_objects_without_eq() -> None:
     # Verify it didn't reset to None or become invalid
     assert at.radio[0].value is not None
     assert "Selected: opt_a" in at.text[0].value
+
+
+class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for radio bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.radio("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.radio("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.radio("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.radio("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.radio(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_index_none(self):
+        """Test that bind works with index=None (clearable)."""
+        st.radio(
+            "the label", ["a", "b", "c"], index=None, key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")

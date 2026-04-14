@@ -485,8 +485,8 @@ class CacheResourceAPI:
             consider adjusting the ``server.websocketPingInterval``
             configuration option.
 
-        Example
-        -------
+        Examples
+        --------
         **Example 1: Global cache**
 
         By default, an ``@st.cache_resource``-decorated function uses a global cache.
@@ -695,8 +695,8 @@ class ResourceCache(Cache[R]):
     @gather_metrics("_cache_resource_object")
     def write_result(self, key: str, value: R, messages: list[MsgData]) -> None:
         """Write a value and associated messages to the cache."""
-        main_id = st._main.id
-        sidebar_id = st.sidebar.id
+        main_id = st._main._id
+        sidebar_id = st.sidebar._id
 
         with self._mem_cache_lock:
             self._mem_cache[key] = CachedResult(value, messages, main_id, sidebar_id)

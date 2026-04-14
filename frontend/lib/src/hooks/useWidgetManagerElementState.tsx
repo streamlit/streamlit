@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 

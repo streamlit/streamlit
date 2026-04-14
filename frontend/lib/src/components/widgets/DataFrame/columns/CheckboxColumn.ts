@@ -20,7 +20,8 @@ import {
   GridCellKind,
 } from "@glideapps/glide-data-grid"
 
-import { convertRemToPx, EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -59,7 +60,7 @@ function CheckboxColumn(
       roundingRadius: Math.round(
         // Use theme value, but a maximum rounding of maxCheckbox:
         Math.min(
-          convertRemToPx(theme.radii.md),
+          convertRemToPx(theme.radii.sm),
           convertRemToPx(theme.radii.maxCheckbox)
         )
       ),

@@ -175,3 +175,31 @@ v19 = st.number_input(
     key="number_input_19",
 )
 st.write(f"number input 19 (small step decrement) - value: {v19:.7f}")
+
+# --- Bound widgets (query-params) ---
+
+v20 = st.number_input(
+    "Bound integer",
+    value=None,
+    key="bound_int",
+    bind="query-params",
+)
+st.write("bound int value:", v20)
+
+v21 = st.number_input(
+    "Bound float",
+    value=3.14,
+    key="bound_float",
+    bind="query-params",
+)
+st.write("bound float value:", v21)
+
+v22 = st.number_input(
+    "Bound with min/max",
+    value=50,
+    min_value=0,
+    max_value=100,
+    key="bound_minmax",
+    bind="query-params",
+)
+st.write("bound minmax value:", v22)

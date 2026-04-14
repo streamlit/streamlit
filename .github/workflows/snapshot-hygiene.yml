@@ -47,18 +47,15 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Check for orphaned snapshots
         id: check-snapshots
         run: |
-          source venv/bin/activate
           set +e  # Don't exit immediately on error
-          python scripts/snapshot_cleanup.py --ci > snapshot_output.txt 2>&1
+          uv run python scripts/snapshot_cleanup.py --ci > snapshot_output.txt 2>&1
           EXIT_CODE=$?
           if [ -f snapshot_output.txt ]; then
             cat snapshot_output.txt
@@ -72,7 +69,7 @@ jobs:
           fi
       - name: Delete comment on success
         if: success() && github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Find and delete existing orphaned snapshots comments
@@ -103,7 +100,7 @@ jobs:
             }
       - name: Comment on PR if snapshots found
         if: failure() && github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           SNAPSHOT_OUTPUT: ${{ steps.check-snapshots.outputs.snapshot_list }}
         with:

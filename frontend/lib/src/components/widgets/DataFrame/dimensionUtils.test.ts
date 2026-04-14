@@ -16,7 +16,7 @@
 
 import { describe, expect, it } from "vitest"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { streamlit } from "@streamlit/protobuf"
 
 import {
   getConfiguredHeight,
@@ -29,49 +29,35 @@ import {
 describe("width configuration utilities", () => {
   describe("shouldUseContainerWidth", () => {
     it("returns true when widthConfig.useStretch is true", () => {
-      const element = ArrowProto.create({ useContainerWidth: false })
       const widthConfig = new streamlit.WidthConfig({ useStretch: true })
 
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(true)
+      expect(shouldUseContainerWidth(widthConfig)).toBe(true)
     })
 
     it("returns false when widthConfig.useStretch is false", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
       const widthConfig = new streamlit.WidthConfig({ useStretch: false })
 
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
+      expect(shouldUseContainerWidth(widthConfig)).toBe(false)
     })
 
     it("returns false when widthConfig.useContent is true", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
       const widthConfig = new streamlit.WidthConfig({ useContent: true })
 
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
+      expect(shouldUseContainerWidth(widthConfig)).toBe(false)
     })
 
     it("returns false when widthConfig.pixelWidth is set", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
       const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
 
-      expect(shouldUseContainerWidth(element, widthConfig)).toBe(false)
+      expect(shouldUseContainerWidth(widthConfig)).toBe(false)
     })
 
-    it("falls back to element.useContainerWidth when widthConfig is null", () => {
-      const element = ArrowProto.create({ useContainerWidth: true })
-
-      expect(shouldUseContainerWidth(element, null)).toBe(true)
+    it("returns false when widthConfig is null", () => {
+      expect(shouldUseContainerWidth(null)).toBe(false)
     })
 
-    it("falls back to element.useContainerWidth when widthConfig is undefined", () => {
-      const element = ArrowProto.create({ useContainerWidth: false })
-
-      expect(shouldUseContainerWidth(element, undefined)).toBe(false)
-    })
-
-    it("returns false when element.useContainerWidth is undefined", () => {
-      const element = ArrowProto.create({})
-
-      expect(shouldUseContainerWidth(element, null)).toBe(false)
+    it("returns false when widthConfig is undefined", () => {
+      expect(shouldUseContainerWidth(undefined)).toBe(false)
     })
   })
 
@@ -111,69 +97,57 @@ describe("width configuration utilities", () => {
 
   describe("getConfiguredWidth", () => {
     it("returns widthConfig.pixelWidth when set", () => {
-      const element = ArrowProto.create({ width: 300 })
       const widthConfig = new streamlit.WidthConfig({ pixelWidth: 400 })
 
-      expect(getConfiguredWidth(element, widthConfig)).toBe(400)
+      expect(getConfiguredWidth(widthConfig)).toBe(400)
     })
 
-    it("falls back to element.width when widthConfig is null", () => {
-      const element = ArrowProto.create({ width: 300 })
-
-      expect(getConfiguredWidth(element, null)).toBe(300)
+    it("returns undefined when widthConfig is null", () => {
+      expect(getConfiguredWidth(null)).toBe(undefined)
     })
 
-    it("returns element.width when element.width is not set (default value)", () => {
-      const element = ArrowProto.create({})
-
-      expect(getConfiguredWidth(element, null)).toBe(undefined)
+    it("returns undefined when widthConfig is undefined", () => {
+      expect(getConfiguredWidth(undefined)).toBe(undefined)
     })
 
     it("returns undefined when widthConfig.pixelWidth is 0", () => {
-      const element = ArrowProto.create({ width: 300 })
       const widthConfig = new streamlit.WidthConfig({ pixelWidth: 0 })
 
-      expect(getConfiguredWidth(element, widthConfig)).toBe(undefined)
+      expect(getConfiguredWidth(widthConfig)).toBe(undefined)
     })
 
-    it("returns undefined when element.width is 0", () => {
-      const element = ArrowProto.create({ width: 0 })
+    it("returns undefined when widthConfig has useStretch set", () => {
+      const widthConfig = new streamlit.WidthConfig({ useStretch: true })
 
-      expect(getConfiguredWidth(element, null)).toBe(undefined)
+      expect(getConfiguredWidth(widthConfig)).toBe(undefined)
     })
   })
 
   describe("getConfiguredHeight", () => {
     it("returns heightConfig.pixelHeight when set", () => {
-      const element = ArrowProto.create({ height: 300 })
       const heightConfig = new streamlit.HeightConfig({ pixelHeight: 400 })
 
-      expect(getConfiguredHeight(element, heightConfig)).toBe(400)
+      expect(getConfiguredHeight(heightConfig)).toBe(400)
     })
 
-    it("falls back to element.height when heightConfig is null", () => {
-      const element = ArrowProto.create({ height: 300 })
-
-      expect(getConfiguredHeight(element, null)).toBe(300)
+    it("returns undefined when heightConfig is null", () => {
+      expect(getConfiguredHeight(null)).toBe(undefined)
     })
 
-    it("returns undefined when element.height is not set (default value)", () => {
-      const element = ArrowProto.create({})
-
-      expect(getConfiguredHeight(element, null)).toBe(undefined)
+    it("returns undefined when heightConfig is undefined", () => {
+      expect(getConfiguredHeight(undefined)).toBe(undefined)
     })
 
     it("returns undefined when heightConfig.pixelHeight is 0", () => {
-      const element = ArrowProto.create({ height: 300 })
       const heightConfig = new streamlit.HeightConfig({ pixelHeight: 0 })
 
-      expect(getConfiguredHeight(element, heightConfig)).toBe(undefined)
+      expect(getConfiguredHeight(heightConfig)).toBe(undefined)
     })
 
-    it("returns undefined when element.height is 0", () => {
-      const element = ArrowProto.create({ height: 0 })
+    it("returns undefined when heightConfig has useStretch set", () => {
+      const heightConfig = new streamlit.HeightConfig({ useStretch: true })
 
-      expect(getConfiguredHeight(element, null)).toBe(undefined)
+      expect(getConfiguredHeight(heightConfig)).toBe(undefined)
     })
   })
 

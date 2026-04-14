@@ -82,6 +82,41 @@ class ConfigUtilTest(unittest.TestCase):
         result = config_util._clean_paragraphs("")
         assert result == [""]
 
+    def test_format_config_file_label_scopes(self) -> None:
+        assert (
+            config_util._format_config_file_label(
+                "/global.toml", ["/global.toml", "/project.toml", "/script.toml"]
+            )
+            == "config.toml (global): /global.toml"
+        )
+        assert (
+            config_util._format_config_file_label(
+                "/project.toml", ["/global.toml", "/project.toml", "/script.toml"]
+            )
+            == "config.toml (project): /project.toml"
+        )
+        assert (
+            config_util._format_config_file_label(
+                "/script.toml", ["/global.toml", "/project.toml", "/script.toml"]
+            )
+            == "config.toml (script): /script.toml"
+        )
+
+    def test_format_config_file_label_out_of_range(self) -> None:
+        assert (
+            config_util._format_config_file_label(
+                "/extra.toml",
+                ["/global.toml", "/project.toml", "/script.toml", "/extra.toml"],
+            )
+            == "config.toml: /extra.toml"
+        )
+        assert (
+            config_util._format_config_file_label(
+                "/missing.toml", ["/global.toml", "/project.toml"]
+            )
+            is None
+        )
+
     @patch("click.secho")
     def test_default_config_options_commented_out(self, patched_echo):
         config_options = create_config_options(
@@ -1171,7 +1206,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         primary_option = ConfigOption(
             "theme.primaryColor", description="", default_val=None
         )
-        primary_option.set_value("#override", "config.toml")
+        primary_option.set_value("#override", "/project.toml")
 
         config_options = {
             "theme.base": base_option,
@@ -1193,20 +1228,43 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             set_option_calls.append((key, value, source))
 
         config_util.process_theme_inheritance(
-            config_options, self.config_template, mock_set_option
+            config_options,
+            self.config_template,
+            mock_set_option,
+            ["/global.toml", "/project.toml"],
         )
 
         # Verify that theme options were set correctly
         set_calls_dict = {call[0]: call[1] for call in set_option_calls}
+        set_calls_source = {call[0]: call[2] for call in set_option_calls}
 
         # Base should be set from theme file
         assert set_calls_dict.get("theme.base") == "dark"
+        assert (
+            set_calls_source.get("theme.base") == "base theme file: custom_theme.toml"
+        )
 
         # Background should come from theme file
         assert set_calls_dict.get("theme.backgroundColor") == "#from_theme_file"
+        assert (
+            set_calls_source.get("theme.backgroundColor")
+            == "base theme file: custom_theme.toml"
+        )
+        assert (
+            set_calls_source.get("theme.backgroundColor")
+            != "config.toml (project): /project.toml"
+        )
 
         # Primary color should be the merged result (config override wins)
         assert set_calls_dict.get("theme.primaryColor") == "#override"
+        assert (
+            set_calls_source.get("theme.primaryColor")
+            == "config.toml (project): /project.toml"
+        )
+        assert (
+            set_calls_source.get("theme.primaryColor")
+            != "base theme file: custom_theme.toml"
+        )
 
     @patch("streamlit.config_util._load_theme_file")
     def test_process_theme_inheritance_successful_complex_merge(self, mock_load_theme):
@@ -1217,21 +1275,21 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         primary_option = ConfigOption(
             "theme.primaryColor", description="", default_val=None
         )
-        primary_option.set_value("#override", "config.toml")
+        primary_option.set_value("#override", "/project.toml")
 
         light_option = ConfigOption(
             "theme.light.linkColor", description="", default_val=None
         )
-        light_option.set_value("#light_link_override", "config.toml")
+        light_option.set_value("#light_link_override", "/project.toml")
 
         sidebar_option = ConfigOption(
             "theme.sidebar.primaryColor", description="", default_val=None
         )
-        sidebar_option.set_value("#sidebar_override", "config.toml")
+        sidebar_option.set_value("#sidebar_override", "/project.toml")
         sidebar_light_option = ConfigOption(
             "theme.light.sidebar.borderColor", description="", default_val=None
         )
-        sidebar_light_option.set_value("#sidebar_light_override", "config.toml")
+        sidebar_light_option.set_value("#sidebar_light_override", "/project.toml")
 
         config_options = {
             "theme.base": base_option,
@@ -1273,21 +1331,40 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             set_option_calls.append((key, value, source))
 
         config_util.process_theme_inheritance(
-            config_options, self.config_template, mock_set_option
+            config_options,
+            self.config_template,
+            mock_set_option,
+            ["/global.toml", "/project.toml"],
         )
 
         # Verify that theme options were set correctly
         set_calls_dict = {call[0]: call[1] for call in set_option_calls}
+        set_calls_source = {call[0]: call[2] for call in set_option_calls}
 
         # Base should be set from theme file
         assert set_calls_dict.get("theme.base") == "dark"
+        assert (
+            set_calls_source.get("theme.base") == "base theme file: custom_theme.toml"
+        )
 
         # Theme and sidebar primary colors should be the merged result (config override wins)
         assert set_calls_dict.get("theme.primaryColor") == "#override"
         assert set_calls_dict.get("theme.sidebar.primaryColor") == "#sidebar_override"
+        assert (
+            set_calls_source.get("theme.primaryColor")
+            == "config.toml (project): /project.toml"
+        )
+        assert (
+            set_calls_source.get("theme.sidebar.primaryColor")
+            == "config.toml (project): /project.toml"
+        )
 
         # Background color should come from base theme file
         assert set_calls_dict.get("theme.backgroundColor") == "#from_theme_file"
+        assert (
+            set_calls_source.get("theme.backgroundColor")
+            == "base theme file: custom_theme.toml"
+        )
 
         # Config options should include the new section/subsections
         assert set_calls_dict.get("theme.light.primaryColor") == "#light_primary_color"
@@ -1298,6 +1375,10 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             # override from config.toml should apply in subsubsection
             set_calls_dict.get("theme.light.sidebar.borderColor")
             == "#sidebar_light_override"
+        )
+        assert (
+            set_calls_source.get("theme.light.sidebar.borderColor")
+            == "config.toml (project): /project.toml"
         )
         assert (
             set_calls_dict.get("theme.dark.sidebar.borderColor")

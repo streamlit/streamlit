@@ -99,9 +99,9 @@ class StTextTextAlignmentTest(DeltaGeneratorTestCase):
             ("justify", 4),
             (None, 1),  # Default case
         ],
-        name_func=lambda func,
-        num,
-        param: f"{func.__name__}_{param.args[0] or 'default'}",
+        name_func=lambda func, num, param: (
+            f"{func.__name__}_{param.args[0] or 'default'}"
+        ),
     )
     def test_st_text_text_alignment(
         self, text_alignment: str | None, expected_alignment: int

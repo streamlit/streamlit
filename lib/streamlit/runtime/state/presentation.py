@@ -35,17 +35,6 @@ def apply_presenter(
     ``base_value`` is returned, so presentation never interferes with core
     behavior.
 
-    Notes
-    -----
-    Presentation is applied exclusively for user-facing access paths such as:
-    - `st.session_state[... ]` via `SessionState.__getitem__`
-    - `SessionState.filtered_state`
-
-    Internal serialization paths (for example `WStates.as_widget_states()` and
-    `SessionState.get_widget_states()`) must operate on base (unpresented)
-    values to ensure stable and lossless serialization. Do not use
-    `apply_presenter` in serialization code paths.
-
     Parameters
     ----------
     session_state : SessionState
@@ -59,6 +48,17 @@ def apply_presenter(
     -------
     Any
         The value that should be shown to the user.
+
+    Notes
+    -----
+    Presentation is applied exclusively for user-facing access paths such as:
+    - `st.session_state[... ]` via `SessionState.__getitem__`
+    - `SessionState.filtered_state`
+
+    Internal serialization paths (for example `WStates.as_widget_states()` and
+    `SessionState.get_widget_states()`) must operate on base (unpresented)
+    values to ensure stable and lossless serialization. Do not use
+    `apply_presenter` in serialization code paths.
     """
 
     try:

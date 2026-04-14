@@ -16,18 +16,12 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "TextAreaProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message TextArea {
   string id = 1;
   string label = 2;
   optional string default = 3;
-
-  // deprecated. Use heightConfig on Element.proto.
-  uint32 height = 4 [deprecated = true];
 
   uint32 max_chars = 5;
   string help = 6;
@@ -36,5 +30,9 @@ message TextArea {
   bool set_value = 9;
   string placeholder = 10;
   bool disabled = 11;
-  LabelVisibilityMessage label_visibility = 12;
+  LabelVisibility label_visibility = 12;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 13;
+
+  reserved 4;
 }

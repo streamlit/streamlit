@@ -313,7 +313,7 @@ def test_check_top_level_class(app: Page):
 @pytest.mark.app_hash("bold-header1")
 def test_anchor_scrolling(app: Page):
     """Test that anchor scrolling works correctly."""
-    # The app fixture navigates to http://localhost:{app_port}/#bold-header1
+    # The app fixture navigates with the requested hash fragment (#bold-header1),
     # which should scroll to the header.
     expect(app.get_by_text("Bold header1")).to_be_in_viewport()
 

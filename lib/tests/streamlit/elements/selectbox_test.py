@@ -25,8 +25,16 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.elements.lib.options_selector_utils import create_mappings
 from streamlit.elements.widgets.selectbox import SelectboxSerde
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+    StreamlitValueError,
+)
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -47,8 +55,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.selectbox
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0
         assert c.HasField("default")
@@ -56,6 +63,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
         # Default placeholders are now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
         assert not c.accept_new_options
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -146,6 +154,35 @@ class SelectboxTest(DeltaGeneratorTestCase):
         # Placeholder logic is now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
 
+    def test_filter_mode(self):
+        """Test that it can set a non-default filter mode."""
+        st.selectbox("the label", ("m", "f"), filter_mode="contains")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
+
+    def test_filter_mode_none(self):
+        """Test that None filter mode is serialized using the frontend marker."""
+        st.selectbox("the label", ("m", "f"), filter_mode=None)
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
+
+    def test_invalid_filter_mode(self):
+        """Test that unsupported filter modes raise an exception."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
+            st.selectbox("the label", ("m", "f"), filter_mode="invalid")
+
+    def test_filter_mode_none_with_accept_new_options_raises_exception(self):
+        """Test that filter_mode=None is incompatible with accept_new_options=True."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be None when `accept_new_options=True`",
+        ):
+            st.selectbox(
+                "the label", ("m", "f"), filter_mode=None, accept_new_options=True
+            )
+
     def test_invalid_value(self):
         """Test that value must be an int."""
         with pytest.raises(StreamlitAPIException):
@@ -190,9 +227,9 @@ class SelectboxTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -294,6 +331,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                filter_mode="fuzzy",
                 # Whitelisted kwargs:
                 accept_new_options=True,
             )
@@ -315,6 +353,7 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format_func=lambda x: x.upper(),
                 options=["apple", "banana", "cherry"],
+                filter_mode="prefix",
                 # Whitelisted kwargs:
                 accept_new_options=True,
             )
@@ -339,7 +378,8 @@ class SelectboxTest(DeltaGeneratorTestCase):
                 "label": "Label",
                 "key": "selectbox_key_whitelist",
                 "options": ["a", "b"],
-                "accept_new_options": True,
+                "accept_new_options": False,
+                "filter_mode": "fuzzy",
                 "format_func": lambda x: x.lower(),
             }
 
@@ -544,12 +584,9 @@ def test_selectbox_enum_coercion():
     """Test E2E Enum Coercion on a selectbox.
 
     When enum classes are redefined between runs (common in Streamlit scripts),
-    the widget should return a valid enum value from the current class.
-
-    Note: AppTest has a limitation - enum classes defined in the script function
-    are the same class object across runs, not redefined like in real Streamlit.
-    This means we can only verify that the returned value is from a valid class,
-    not the full coercion=off reset behavior.
+    the widget should return a valid enum value from the current class when
+    coercion is enabled. When coercion is "off", the value from session state
+    (which may be from an old class) is returned as-is.
     """
 
     def script():
@@ -578,8 +615,13 @@ def test_selectbox_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
-    with patch_config_options({"runner.enumCoercion": "off"}):
-        test_enum()  # Same assertions - see docstring for limitation
+    # With coercion="off", the value from session state (old class) is returned as-is,
+    # so class IDs will differ - expect assertion to fail.
+    with (
+        patch_config_options({"runner.enumCoercion": "off"}),
+        pytest.raises(AssertionError),
+    ):
+        test_enum()
 
 
 def test_None_session_state_value_retained():
@@ -849,3 +891,74 @@ class TestSelectboxSerde:
         # This should work correctly using format_func comparison
         res = serde.serialize(deepcopied_value)
         assert res == "a"
+
+
+class SelectboxBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for selectbox bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.selectbox("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.selectbox("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.selectbox("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.selectbox("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.selectbox(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_index_none(self):
+        """Test that bind works with index=None (clearable)."""
+        st.selectbox(
+            "the label",
+            ["a", "b", "c"],
+            index=None,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")
+
+    def test_bind_with_accept_new_options(self):
+        """Test that bind works with accept_new_options=True."""
+        st.selectbox(
+            "the label",
+            ["a", "b", "c"],
+            key="my_key",
+            bind="query-params",
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.selectbox
+        assert c.query_param_key == "my_key"
+        assert c.accept_new_options

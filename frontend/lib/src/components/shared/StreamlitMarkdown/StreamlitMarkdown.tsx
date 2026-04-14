@@ -32,6 +32,7 @@ import {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
+import { parseToRgba } from "color2k"
 import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
@@ -44,6 +45,7 @@ import ReactMarkdown, {
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
+import remend, { type RemendHandler } from "remend"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
@@ -54,17 +56,17 @@ import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.s
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
-import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
-  convertRemToPx,
-  EmotionTheme,
-  getMarkdownBgColors,
   getMarkdownTextColors,
-} from "~lib/theme"
+  getThemeBackgroundColors,
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StyledHeadingActionElements,
@@ -176,6 +178,17 @@ export interface Props {
    * When present, :help[] markers in the source will use this text.
    */
   helpText?: string
+
+  /**
+   * Truncate text with ellipsis when it overflows the container.
+   * Useful for single-line text that should not wrap, such as metric labels.
+   */
+  truncate?: boolean
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 /**
@@ -397,11 +410,7 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
-export const CustomHeading: FC<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <HeadingWithActionElements
@@ -413,7 +422,7 @@ export const CustomHeading: FC<HeadingProps> = ({
     </HeadingWithActionElements>
   )
 }
-export interface RenderedMarkdownProps {
+interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
    */
@@ -442,6 +451,11 @@ export interface RenderedMarkdownProps {
    * When present, :help[] markers in the source will use this text.
    */
   helpText?: string
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -533,7 +547,7 @@ interface CustomHelpIconProps {
  * - For reliable multiline or complex markdown in tooltips, use the help parameter
  *   which passes content via context and avoids directive label limitations.
  */
-export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
   // Prefer context (from help parameter) over children (from directive label)
   const contextHelpText = useContext(HelpTextContext)
   const tooltipContent =
@@ -579,7 +593,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
     purplebg,
     graybg,
     primarybg,
-  }: Record<string, string> = getMarkdownBgColors(theme)
+  }: Record<string, string> = getThemeBackgroundColors(theme)
 
   return new Map(
     Object.entries({
@@ -634,6 +648,24 @@ function createRemarkHelpIcon() {
 }
 
 /**
+ * Validates that a string is a valid CSS color value.
+ * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
+ * and named colors.
+ *
+ * @param color - The color string to validate
+ * @returns true if the color is valid, false otherwise
+ */
+export function isValidCssColor(color: string): boolean {
+  if (!color) return false
+  try {
+    parseToRgba(color)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Factory function to create the color and small text directive plugin
  */
 function createRemarkColoringAndSmall(
@@ -650,6 +682,41 @@ function createRemarkColoringAndSmall(
         data.hName = "span"
         data.hProperties = data.hProperties || {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
+        return
+      }
+
+      // Handle custom color directive (:color[text]{foreground="...", background="..."})
+      if (nodeName === "color" && node.attributes) {
+        const { foreground, background } = node.attributes
+        const validForeground = foreground && isValidCssColor(foreground)
+        const validBackground = background && isValidCssColor(background)
+
+        const data = node.data || (node.data = {})
+        data.hName = "span"
+        data.hProperties = data.hProperties || {}
+
+        if (validForeground || validBackground) {
+          const styles: string[] = []
+
+          if (validForeground) {
+            styles.push(`color: ${foreground}`)
+          }
+
+          if (validBackground) {
+            styles.push(`background-color: ${background}`)
+          }
+
+          // Use background class when background is set (has more styling: padding, border-radius)
+          const className = validBackground
+            ? "stMarkdownColoredBackground"
+            : "stMarkdownColoredText"
+
+          data.hProperties.style = styles.join("; ")
+          data.hProperties.className = className
+        }
+        // When both colors are invalid, render as plain span (no style)
+        // to preserve the content text rather than falling through to
+        // unsupported directive cleanup which would lose the content
         return
       }
 
@@ -856,6 +923,66 @@ function createRemarkTypographicalSymbols() {
   }
 }
 
+/**
+ * Completes unclosed Streamlit directive syntax (e.g., `:red[text`) during streaming.
+ *
+ * Runs before remend's link handler (priority 10 < 20) to prevent incomplete directives
+ * from being misinterpreted as markdown links, which produces "(streamdown:incomplete-link)".
+ * See: https://github.com/streamlit/streamlit/issues/14460
+ */
+const directiveCompletionHandler: RemendHandler = {
+  name: "streamlit-directives",
+  priority: 10,
+  handle: (text: string): string => {
+    // Match directive patterns like :red[, :small[, :red-background[
+    const directivePattern = /:[a-z][a-z0-9-]*\[/
+    const firstMatch = directivePattern.exec(text)
+    if (!firstMatch) {
+      return text
+    }
+
+    // Track directive openings (:<name>[), nested brackets, and close with ']'.
+    // We track all '[' inside directives to handle cases like `:red[text [link]`
+    // where nested brackets need proper balancing.
+    let depth = 1
+    let i = firstMatch.index + firstMatch[0].length
+
+    while (i < text.length) {
+      const char = text[i]
+
+      if (char === "[" && depth > 0) {
+        depth += 1
+        i += 1
+        continue
+      }
+
+      if (char === "]" && depth > 0) {
+        depth -= 1
+        i += 1
+        continue
+      }
+
+      if (char === ":") {
+        // Attempt to match another directive starting at this position.
+        const remainingText = text.slice(i)
+        const nextMatch = directivePattern.exec(remainingText)
+        if (nextMatch?.index === 0) {
+          depth += 1
+          i += nextMatch[0].length
+          continue
+        }
+      }
+
+      i += 1
+    }
+
+    return depth > 0 ? text + "]".repeat(depth) : text
+  },
+}
+
+// Options for remend to use the directive completion handler
+const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
+
 // Standard remark plugins that don't depend on theme or props
 // Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
 const BASE_REMARK_PLUGINS = [
@@ -934,6 +1061,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   isLabel,
   disableLinks,
   helpText,
+  unterminatedParsing,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1031,15 +1159,42 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       ({
         ...BASE_RENDERERS,
         a: LinkWithTargetBlank,
-        ...(overrideComponents || {}),
+        ...overrideComponents,
       }) as Components,
     [overrideComponents]
   )
 
-  const processedSource = useMemo(
-    () => source.replaceAll(":material/", ":material_"),
-    [source]
-  )
+  const processedSource = useMemo(() => {
+    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
+    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
+    let processed = source.replaceAll(":material/", ":material_")
+
+    if (isLabel) {
+      // Escape markdown syntax that would be stripped in labels, leaving empty content.
+      // See: https://github.com/streamlit/streamlit/issues/7359
+      //
+      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
+      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
+      //
+      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
+      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
+      processed = processed.replace(
+        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
+        "$1\\$2"
+      )
+      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
+      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
+    }
+
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (unterminatedParsing && !isLabel && !allowHTML) {
+      processed = remend(processed, REMEND_OPTIONS)
+    }
+
+    return processed
+  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -1100,6 +1255,8 @@ const StreamlitMarkdown: FC<Props> = ({
   isToast,
   inheritFont,
   helpText,
+  truncate,
+  unterminatedParsing,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1112,6 +1269,7 @@ const StreamlitMarkdown: FC<Props> = ({
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
+      truncate={truncate}
       style={style}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
     >
@@ -1121,6 +1279,7 @@ const StreamlitMarkdown: FC<Props> = ({
         isLabel={isLabel}
         disableLinks={disableLinks}
         helpText={helpText}
+        unterminatedParsing={unterminatedParsing}
       />
     </StyledStreamlitMarkdown>
   )

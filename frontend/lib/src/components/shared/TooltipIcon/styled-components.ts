@@ -46,7 +46,7 @@ interface StyledLabelHelpWrapperProps {
 }
 
 export const StyledTooltipIconWrapper =
-  styled.div<StyledTooltipIconWrapperProps>(({ isLatex, theme }) => ({
+  styled.span<StyledTooltipIconWrapperProps>(({ isLatex, theme }) => ({
     display: "flex",
     alignItems: "center",
     marginTop: isLatex ? theme.spacing.md : "0",

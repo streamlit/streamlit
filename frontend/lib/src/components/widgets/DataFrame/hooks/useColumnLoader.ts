@@ -18,7 +18,7 @@ import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react"
 import { isArray, isEmpty, merge, mergeWith } from "lodash-es"
 import { getLogger } from "loglevel"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import {
   getColumnTypeFromArrow,
@@ -38,7 +38,7 @@ import {
 } from "~lib/components/widgets/DataFrame/dimensionUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 // Using this ID for column config will apply the config to all index columns
@@ -97,6 +97,29 @@ function parseWidthConfig(
 }
 
 /**
+ * Validate the user-defined alignment configuration.
+ * Returns the alignment if valid, undefined otherwise (with a warning).
+ */
+function parseAlignmentConfig(
+  alignment?: "left" | "center" | "right"
+): "left" | "center" | "right" | undefined {
+  if (isNullOrUndefined(alignment)) {
+    return undefined
+  }
+
+  // Cast to string since invalid values can come from JSON at runtime
+  if (new Set(["left", "center", "right"]).has(alignment as string)) {
+    return alignment
+  }
+
+  LOG.warn(
+    `Invalid alignment value in column configuration: "${alignment as string}". ` +
+      `Expected "left", "center", or "right".`
+  )
+  return undefined
+}
+
+/**
  * Custom merge function to merge column config objects.
  */
 const mergeColumnConfig = (
@@ -104,12 +127,15 @@ const mergeColumnConfig = (
   source: ColumnConfigProps
 ): ColumnConfigProps => {
   // Don't merge arrays, just overwrite the old value with the new value
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const customMergeArrays = (_objValue: object, srcValue: object): any => {
+  const customMergeArrays = (
+    _objValue: object,
+    srcValue: object
+  ): object | undefined => {
     // If the new value is an array, just return it as is (overwriting the old)
     if (isArray(srcValue)) {
       return srcValue
     }
+    return undefined
   }
 
   return mergeWith(target, source, customMergeArrays)
@@ -197,7 +223,7 @@ export function applyColumnConfig(
     isPinned: columnConfig.pinned,
     isRequired: columnConfig.required,
     columnTypeOptions: columnConfig.type_config,
-    contentAlignment: columnConfig.alignment,
+    contentAlignment: parseAlignmentConfig(columnConfig.alignment),
     defaultValue: columnConfig.default,
     help: columnConfig.help,
   } as BaseColumnProps) as BaseColumnProps
@@ -210,8 +236,9 @@ export function applyColumnConfig(
  *
  * @returns the user-defined column configuration.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function getColumnConfig(configJson: string): Map<string, any> {
+export function getColumnConfig(
+  configJson: string
+): Map<string, ColumnConfigProps> {
   if (!configJson) {
     return new Map()
   }
@@ -232,8 +259,7 @@ type ColumnLoaderReturn = {
   allColumns: BaseColumn[]
   // Callback to set the column config state:
   setColumnConfigMapping: Dispatch<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    SetStateAction<Map<string, any>>
+    SetStateAction<Map<string, ColumnConfigProps>>
   >
 }
 
@@ -277,7 +303,7 @@ export function getColumnType(column: BaseColumnProps): ColumnCreator {
  * and the parsed column config mapping.
  */
 function useColumnLoader(
-  element: ArrowProto,
+  element: DataframeProto,
   data: Quiver,
   disabled: boolean,
   columnOrder: string[],
@@ -295,8 +321,7 @@ function useColumnLoader(
   // We need that to allow changing the column config state
   // (e.g. via changes by the user in the UI)
   const [columnConfigMapping, setColumnConfigMapping] =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    useState<Map<string, any>>(parsedColumnConfig)
+    useState<Map<string, ColumnConfigProps>>(parsedColumnConfig)
 
   // Resync state whenever the parsed column config from the proto changes:
   useEffect(() => {
@@ -304,13 +329,13 @@ function useColumnLoader(
   }, [parsedColumnConfig])
 
   const shouldUseContainerWidthValue = useMemo(
-    () => shouldUseContainerWidth(element, widthConfig),
-    [element, widthConfig]
+    () => shouldUseContainerWidth(widthConfig),
+    [widthConfig]
   )
 
   const configuredWidth = useMemo(
-    () => getConfiguredWidth(element, widthConfig),
-    [element, widthConfig]
+    () => getConfiguredWidth(widthConfig),
+    [widthConfig]
   )
 
   const stretchColumns: boolean =
@@ -338,7 +363,7 @@ function useColumnLoader(
       // Make sure editing is deactivated if the column is read-only, disabled,
       // or a not editable type.
       if (
-        element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+        element.editingMode === DataframeProto.EditingMode.READ_ONLY ||
         disabled ||
         ColumnType.isEditableType === false
       ) {
@@ -349,7 +374,7 @@ function useColumnLoader(
       }
 
       if (
-        element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+        element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
         updatedColumn.isEditable == true
       ) {
         // Set editable icon for all editable columns:
@@ -361,7 +386,7 @@ function useColumnLoader(
         // Make sure that required columns are not hidden when editing mode is dynamic:
         if (
           updatedColumn.isRequired &&
-          element.editingMode === ArrowProto.EditingMode.DYNAMIC
+          element.editingMode === DataframeProto.EditingMode.DYNAMIC
         ) {
           updatedColumn = {
             ...updatedColumn,
@@ -396,7 +421,7 @@ function useColumnLoader(
         // Make sure editing is deactivated if the column is read-only, disabled,
         // or a not editable type.
         if (
-          element.editingMode === ArrowProto.EditingMode.READ_ONLY ||
+          element.editingMode === DataframeProto.EditingMode.READ_ONLY ||
           disabled ||
           ColumnType.isEditableType === false
         ) {
@@ -407,7 +432,7 @@ function useColumnLoader(
         }
 
         if (
-          element.editingMode !== ArrowProto.EditingMode.READ_ONLY &&
+          element.editingMode !== DataframeProto.EditingMode.READ_ONLY &&
           updatedColumn.isEditable == true
         ) {
           // Set editable icon for all editable columns:
@@ -419,7 +444,7 @@ function useColumnLoader(
           // Make sure that required columns are not hidden when editing mode is dynamic:
           if (
             updatedColumn.isRequired &&
-            element.editingMode === ArrowProto.EditingMode.DYNAMIC
+            element.editingMode === DataframeProto.EditingMode.DYNAMIC
           ) {
             updatedColumn = {
               ...updatedColumn,

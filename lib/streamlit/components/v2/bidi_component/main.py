@@ -28,7 +28,7 @@ from streamlit.components.v2.bidi_component.serialization import (
     serialize_mixed_data,
 )
 from streamlit.components.v2.bidi_component.state import (
-    BidiComponentResult,
+    ComponentResult,
     unwrap_component_state,
 )
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -277,7 +277,7 @@ class BidiComponentMixin:
         width: Width = "stretch",
         height: Height = "content",
         **kwargs: WidgetCallback | None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         """Add a bidirectional component instance to the app.
 
         This method uses a component that has already been registered with the
@@ -317,7 +317,7 @@ class BidiComponentMixin:
 
         Returns
         -------
-        BidiComponentResult
+        ComponentResult
             A dictionary-like object that holds the component's state and
             trigger values.
 
@@ -337,7 +337,7 @@ class BidiComponentMixin:
 
         if ctx is None:
             # Create an empty state with the default value and return it
-            return BidiComponentResult({}, {})
+            return ComponentResult({}, {})
 
         # Get the component definition from the registry
         from streamlit.runtime import Runtime
@@ -529,7 +529,7 @@ class BidiComponentMixin:
 
         state_vals = unwrap_component_state(component_state.value)
 
-        return BidiComponentResult(state_vals, trigger_vals)
+        return ComponentResult(state_vals, trigger_vals)
 
     @property
     def dg(self) -> DeltaGenerator:

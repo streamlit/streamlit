@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "TimeInputProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message TimeInput {
   string id = 1;
@@ -30,6 +27,7 @@ message TimeInput {
   optional string value = 6;
   bool set_value = 7;
   bool disabled = 8;
-  LabelVisibilityMessage label_visibility = 9;
+  LabelVisibility label_visibility = 9;
   int64 step = 10;
+  optional string query_param_key = 11;
 }

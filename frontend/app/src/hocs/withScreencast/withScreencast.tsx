@@ -26,12 +26,10 @@ import {
 import hoistNonReactStatics from "hoist-non-react-statics"
 import { getLogger } from "loglevel"
 
-import Countdown from "@streamlit/app/src/components/Countdown"
-import {
-  ScreencastDialog,
-  UnsupportedBrowserDialog,
-  VideoRecordedDialog,
-} from "@streamlit/app/src/hocs/withScreencast/components"
+import Countdown from "@streamlit/app/src/components/Countdown/Countdown"
+import ScreencastDialog from "@streamlit/app/src/hocs/withScreencast/components/ScreencastDialog/ScreencastDialog"
+import UnsupportedBrowserDialog from "@streamlit/app/src/hocs/withScreencast/components/UnsupportedBrowserDialog/UnsupportedBrowserDialog"
+import VideoRecordedDialog from "@streamlit/app/src/hocs/withScreencast/components/VideoRecordedDialog/VideoRecordedDialog"
 import ScreenCastRecorder from "@streamlit/app/src/util/ScreenCastRecorder"
 import { isNullOrUndefined } from "@streamlit/utils"
 

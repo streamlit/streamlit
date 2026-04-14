@@ -18,7 +18,6 @@ from streamlit import runtime
 from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.web.server.browser_websocket_handler import BrowserWebSocketHandler
 
 _GET_WEBSOCKET_HEADERS_DEPRECATE_MSG = (
     "The `_get_websocket_headers` function is deprecated and will be removed "
@@ -48,9 +47,8 @@ def _get_websocket_headers() -> dict[str, str] | None:
     if session_client is None:
         return None
 
-    if not isinstance(session_client, BrowserWebSocketHandler):
-        raise TypeError(
-            f"SessionClient is not a BrowserWebSocketHandler! ({session_client})"
-        )
+    client_context = session_client.client_context
+    if client_context is None:
+        return None
 
-    return dict(session_client.request.headers)
+    return dict(client_context.headers)

@@ -26,7 +26,7 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
  * @param theme The theme to use.
  * @returns The horizontal spacing for the sidebar.
  */
-export const getSidebarHorizontalSpacing = (
+const getSidebarHorizontalSpacing = (
   theme: EmotionTheme,
   scrollbarGutterSize: number
 ): string => {
@@ -40,7 +40,7 @@ export const getSidebarHorizontalSpacing = (
   )`
 }
 
-export interface StyledSidebarProps {
+interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
   sidebarWidth: string
@@ -92,7 +92,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
   }
 )
 
-export interface StyledSidebarUserContentProps {
+interface StyledSidebarUserContentProps {
   hasPageNavAbove: boolean
 }
 
@@ -102,7 +102,7 @@ export const StyledSidebarUserContent =
     paddingBottom: theme.sizes.sidebarTopSpace,
   }))
 
-export interface StyledSidebarContentProps {
+interface StyledSidebarContentProps {
   scrollbarGutterSize: number
 }
 
@@ -169,13 +169,12 @@ export const StyledLogoButton = styled.button({
   },
 })
 
-export interface StyledLogoProps {
+interface StyledLogoProps {
   size: string
   sidebarWidth?: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function translateLogoHeight(theme: any, size: string): string {
+function translateLogoHeight(theme: EmotionTheme, size: string): string {
   if (size === "small") {
     return theme.sizes.smallLogoHeight
   } else if (size === "large") {
@@ -218,7 +217,7 @@ export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
   height: theme.sizes.largeLogoHeight,
 }))
 
-export interface StyledCollapseSidebarButtonProps {
+interface StyledCollapseSidebarButtonProps {
   showSidebarCollapse: boolean
 }
 

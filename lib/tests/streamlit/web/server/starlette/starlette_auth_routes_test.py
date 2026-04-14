@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import PlainTextResponse, RedirectResponse
+from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
@@ -42,12 +43,10 @@ if TYPE_CHECKING:
 
 
 def _build_app() -> Starlette:
-    app = Starlette(routes=create_auth_routes(""))
-
-    @app.route("/", methods=["GET"])  # type: ignore[arg-type]
     async def root(_: Any) -> PlainTextResponse:
         return PlainTextResponse("ok")
 
+    app = Starlette(routes=[*create_auth_routes(""), Route("/", root, methods=["GET"])])
     app.add_middleware(SessionMiddleware, secret_key="test-secret")
     return app
 
@@ -354,11 +353,16 @@ class TestAuthCookieFlags:
     @patch_config_options({"server.baseUrlPath": "myapp"})
     def test_logout_clears_cookie_with_correct_path(self) -> None:
         """Test that logout clears the cookie with the same path it was set with."""
-        app = Starlette(routes=create_auth_routes("/myapp"))
 
-        @app.route("/myapp/", methods=["GET"])  # type: ignore[arg-type]
         async def root(_: Any) -> PlainTextResponse:
             return PlainTextResponse("ok")
+
+        app = Starlette(
+            routes=[
+                *create_auth_routes("/myapp"),
+                Route("/myapp/", root, methods=["GET"]),
+            ]
+        )
 
         with TestClient(app) as client:
             client.cookies.set("_streamlit_user", "value", path="/myapp")
@@ -731,7 +735,9 @@ class TestLogoutWithProviderRedirect:
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_logout_url",
-            lambda request: "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback",
+            lambda request: (
+                "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
+            ),
         )
 
         app = Starlette(routes=create_auth_routes(""))

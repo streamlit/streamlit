@@ -16,14 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "PlotlyChartProto";
-
 message PlotlyChart {
-  // DEPRECATED: If True, will overwrite the chart width spec to fit to container.
-  // Use widthConfig in layout configuration instead.
-  bool use_container_width = 5 [deprecated=true];
-
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
 
@@ -42,29 +35,12 @@ message PlotlyChart {
   // JSON-serialized dict with Plotly's config object.
   string config = 11;
 
-  reserved 3, 4;
-
   // Available selection modes:
   enum SelectionMode {
-      POINTS = 0; // Point selection mode
-      BOX = 1; // Box selection mode
-      LASSO = 2; // Lasso selection mode
+    POINTS = 0; // Point selection mode
+    BOX = 1; // Box selection mode
+    LASSO = 2; // Lasso selection mode
   }
 
-  // DEPRECATED and unused.
-  oneof chart {
-    // DEPRECATED and unused.
-    string url = 1;
-
-    // DEPRECATED and unused.
-    Figure figure = 2;
-  }
-
-}
-
-
-// DEPRECATED and unused.
-message Figure {
-  string spec = 1;
-  string config = 2;
+  reserved 1, 2, 3, 4, 5;
 }

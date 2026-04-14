@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "SliderProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message Slider {
   enum DataType {
@@ -55,6 +52,14 @@ message Slider {
   repeated string options = 13;
   string help = 14;
   bool disabled = 15;
-  LabelVisibilityMessage label_visibility = 16;
+  LabelVisibility label_visibility = 16;
   Type type = 17;
+
+  // String-based value for select_slider to support dynamic option changes.
+  // Stores formatted option strings instead of indices.
+  repeated string raw_value = 18;
+
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 19;
+  // Next: 20
 }

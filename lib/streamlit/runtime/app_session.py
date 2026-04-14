@@ -600,13 +600,11 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
-
-        clear_forward_msg_queue : bool
-            If set (the default), clears the queue of forward messages to be sent to the
-            browser. Set only for the SCRIPT_STARTED event.
         """
 
-        if self._event_loop != asyncio.get_running_loop():
+        if (
+            self._event_loop != asyncio.get_running_loop()
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 "This function must only be called on the eventloop thread the AppSession was created on. "
                 "This should never happen."
@@ -626,7 +624,7 @@ class AppSession:
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
-            if page_script_hash is None:
+            if page_script_hash is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
                 )
@@ -677,7 +675,7 @@ class AppSession:
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
-                if exception is None:
+                if exception is None:  # pragma: no cover - defensive
                     raise RuntimeError(
                         "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. "
                         "This should never happen."
@@ -699,7 +697,7 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            if client_state is None:
+            if client_state is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "client_state must be set for the SHUTDOWN event. This should never happen."
                 )
@@ -714,7 +712,7 @@ class AppSession:
             self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
-            if forward_msg is None:
+            if forward_msg is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen."
                 )
@@ -908,9 +906,12 @@ class AppSession:
         The heartbeat indicates the frontend is active and keeps the
         websocket from going idle and disconnecting.
 
-        The actual handler here is a noop
-
+        We respond with a heartbeat_ack so the frontend can verify the
+        connection is healthy and detect network issues.
         """
+        msg = ForwardMsg()
+        msg.heartbeat_ack = True
+        self._enqueue_forward_msg(msg)
 
     def _handle_set_run_on_save_request(self, new_value: bool) -> None:
         """Change our run_on_save flag to the given value.
@@ -1007,6 +1008,32 @@ def _get_toolbar_mode() -> Config.ToolbarMode.ValueType:
     return enum_value
 
 
+def _get_show_error_links() -> Config.ShowErrorLinks.ValueType:
+    config_key = "client.showErrorLinks"
+    config_value = config.get_option(config_key)
+
+    # Handle boolean values (from st.set_option or programmatic setting)
+    if config_value is True:
+        return Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+    if config_value is False:
+        return Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    # Handle string values (from config.toml or command-line)
+    allowed_values = ["auto", "true", "false"]
+    value_to_enum = {
+        "auto": Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO,
+        "true": Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE,
+        "false": Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE,
+    }
+    if config_value not in allowed_values:
+        raise ValueError(
+            f"Config {config_key!r} expects to have one of "
+            f"the following values: {', '.join(allowed_values)}. "
+            f"Current value: {config_value}"
+        )
+    return value_to_enum[config_value]
+
+
 def _populate_config_msg(msg: Config) -> None:
     msg.gather_usage_stats = config.get_option("browser.gatherUsageStats")
     msg.max_cached_message_age = config.get_option("global.maxCachedMessageAge")
@@ -1015,6 +1042,7 @@ def _populate_config_msg(msg: Config) -> None:
     if config.get_option("client.showSidebarNavigation") is False:
         msg.hide_sidebar_nav = True
     msg.toolbar_mode = _get_toolbar_mode()
+    msg.show_error_links = _get_show_error_links()
 
 
 def _parse_and_populate_chart_colors(
@@ -1102,10 +1130,9 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
         ):
             setattr(msg, to_snake_case(option_name), option_val)
 
-    # NOTE: If unset, base and font will default to the protobuf enum zero
-    # values, which are BaseTheme.LIGHT and FontFamily.SANS_SERIF,
-    # respectively. This is why we both don't handle the cases explicitly and
-    # also only log a warning when receiving invalid base/font options.
+    # NOTE: If unset, base will default to the protobuf enum zero value,
+    # which is BaseTheme.LIGHT. This is why we don't handle the case
+    # explicitly and also only log a warning when receiving invalid base options.
     base_map = {
         "light": msg.BaseTheme.LIGHT,
         "dark": msg.BaseTheme.DARK,
@@ -1150,9 +1177,16 @@ def _populate_theme_msg(msg: CustomThemeConfig, section: str = "theme") -> None:
     if font_faces is not None:
         for font_face in font_faces:
             try:
-                if "weight" in font_face:
-                    font_face["weight_range"] = str(font_face["weight"])
-                    del font_face["weight"]
+                if isinstance(font_face, dict):
+                    # Backwards compatibility: accept legacy "weight" or numeric "weight_range".
+                    if "weight" in font_face:
+                        if "weight_range" not in font_face:
+                            font_face["weight_range"] = font_face["weight"]
+                        del font_face["weight"]
+                    if "weight_range" in font_face and not isinstance(
+                        font_face["weight_range"], str
+                    ):
+                        font_face["weight_range"] = str(font_face["weight_range"])
                 msg.font_faces.append(ParseDict(font_face, FontFace()))
             except Exception as e:  # noqa: PERF203
                 _LOGGER.warning(

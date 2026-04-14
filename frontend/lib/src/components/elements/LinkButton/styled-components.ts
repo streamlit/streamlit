@@ -23,7 +23,7 @@ import {
   BaseButtonKind,
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/styled-components"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export { BaseButtonKind, BaseButtonSize }
 
@@ -41,8 +41,7 @@ export interface BaseLinkButtonProps {
   href: string
   target: string
   rel: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick: (event: MouseEvent<HTMLAnchorElement>) => any
+  onClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 type RequiredBaseLinkButtonProps = Required<BaseLinkButtonProps>
@@ -69,7 +68,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
-export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
+const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
   ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",

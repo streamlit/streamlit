@@ -29,7 +29,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 30
+TOTAL_BUTTONS = 32
 
 
 def test_button_widget_rendering(
@@ -286,3 +286,14 @@ def test_button_with_spinner_icon(app: Page):
     button = get_button(app, "Button with spinner icon")
     # Check that the spinner icon is visible:
     expect(button.get_by_test_id("stSpinnerIcon")).to_be_visible()
+
+
+def test_markdown_syntax_in_labels(app: Page):
+    """Test that markdown syntax characters in labels are displayed literally (issue #7359)."""
+    # Test that "+" is not parsed as a list marker
+    plus_button = get_element_by_key(app, "markdown_plus_label")
+    expect(plus_button).to_contain_text("+")
+
+    # Test that "1." is not parsed as an ordered list marker
+    numbered_button = get_element_by_key(app, "markdown_numbered_label")
+    expect(numbered_button).to_contain_text("1. Something")

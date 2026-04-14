@@ -24,7 +24,7 @@ export const StyledCheckbox = styled.div(({ theme }) => ({
   minHeight: theme.sizes.smallElementHeight,
 }))
 
-export interface StyledContentProps {
+interface StyledContentProps {
   visibility?: LabelVisibilityOptions
 }
 

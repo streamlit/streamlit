@@ -86,6 +86,27 @@ describe("useDebouncedCallback hook", () => {
     expect(callback).toHaveBeenCalledWith("arg1", 123, { test: true })
   })
 
+  it("should invoke the latest callback when callback changes between debounced calls", () => {
+    const callback1 = vi.fn()
+    const callback2 = vi.fn()
+    let callback = callback1
+    const delay = 100
+
+    const { result, rerender } = renderHook(() =>
+      useDebouncedCallback(callback, delay)
+    )
+
+    result.current.debouncedCallback("test")
+
+    // Swap callback before the timer fires
+    callback = callback2
+    rerender()
+
+    vi.advanceTimersByTime(delay)
+    expect(callback1).not.toHaveBeenCalled()
+    expect(callback2).toHaveBeenCalledWith("test")
+  })
+
   it("should cleanup timeout on unmount", () => {
     const callback = vi.fn()
     const delay = 100

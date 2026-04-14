@@ -64,7 +64,6 @@ it("Props can be initialized from a protobuf", () => {
     config: {
       gatherUsageStats: false,
       maxCachedMessageAge: 31,
-      mapboxToken: "mapboxToken",
       allowRunOnSave: false,
     },
     initialize: {

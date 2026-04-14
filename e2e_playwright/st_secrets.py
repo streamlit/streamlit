@@ -23,9 +23,9 @@ if runtime.exists():
     st.write("Secret: ", st.secrets["fake"]["FAKE_SECRET"])
 
     # We are hacking here, but we are setting the secrets file to a different file to determine if it works
-    TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
-    ALT_SECRETS_FILE = TEST_ASSETS_DIR / "alt_secrets.toml"
-    ALT_SECRETS_FILE2 = TEST_ASSETS_DIR / "alt_secrets2.toml"
+    STATIC_DIR: Final[Path] = Path(__file__).parent / "static"
+    ALT_SECRETS_FILE = STATIC_DIR / "alt_secrets.toml"
+    ALT_SECRETS_FILE2 = STATIC_DIR / "alt_secrets2.toml"
     config.set_option("secrets.files", [str(ALT_SECRETS_FILE)])
     st.secrets._secrets = None
 

@@ -22,27 +22,39 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 import pytest
+from starlette.applications import Starlette
 from starlette.middleware import Middleware
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, PlainTextResponse
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
 from streamlit import file_util
 from streamlit.proto.BackMsg_pb2 import BackMsg
+from streamlit.proto.openmetrics_data_model_pb2 import MetricSet as MetricSetProto
 from streamlit.runtime.media_file_manager import MediaFileManager, MediaFileMetadata
 from streamlit.runtime.media_file_storage import MediaFileKind
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.stats import CacheStat, CounterStat, GaugeStat
 from streamlit.runtime.uploaded_file_manager import UploadedFileRec
-from streamlit.web.server.routes import STATIC_ASSET_CACHE_MAX_AGE_SECONDS
 from streamlit.web.server.starlette import starlette_app_utils
 from streamlit.web.server.starlette.starlette_app import (
     _RESERVED_ROUTE_PREFIXES,
     App,
     create_starlette_app,
+    create_streamlit_middleware,
 )
-from streamlit.web.server.stats_request_handler import StatsRequestHandler
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    SelectiveGZipMiddleware,
+    _should_bypass_static_gzip,
+)
+from streamlit.web.server.starlette.starlette_routes import _stats_to_proto
+from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
+)
+from streamlit.web.server.starlette.starlette_static_routes import (
+    STATIC_ASSET_CACHE_MAX_AGE_SECONDS,
+)
 from tests.testutil import patch_config_options
 
 if TYPE_CHECKING:
@@ -55,12 +67,20 @@ class _DummyStatsManager:
     def __init__(self) -> None:
         self._stats: dict[str, list[CacheStat | CounterStat | GaugeStat]] = {
             "cache_memory_bytes": [CacheStat("test_cache", "", 1)],
-            "session_events_total": [
+            "session_events": [
                 CounterStat(
-                    family_name="session_events_total",
+                    family_name="session_events",
                     value=5,
                     labels={"type": "connect"},
                     help="Total count of session events by type.",
+                )
+            ],
+            "session_duration_seconds": [
+                CounterStat(
+                    family_name="session_duration_seconds",
+                    value=42,
+                    unit="seconds",
+                    help="Total time spent in active sessions, in seconds.",
                 )
             ],
             "active_sessions": [
@@ -120,12 +140,30 @@ class _DummyRuntime:
         self.last_user_info: dict[str, str | bool | None] | None = None
         self.last_existing_session_id: str | None = None
         self.script_health = (True, "ok")
+        # Configurable health response for testing
+        self._is_ready: tuple[bool, str] = (True, "ok")
+        # Runtime state for testing health endpoint messages
+        self._state: str = "ONE_OR_MORE_SESSIONS_CONNECTED"
+
+    @property
+    def state(self) -> Any:
+        """Return a mock runtime state."""
+        from streamlit.runtime import RuntimeState
+
+        state_map = {
+            "INITIAL": RuntimeState.INITIAL,
+            "NO_SESSIONS_CONNECTED": RuntimeState.NO_SESSIONS_CONNECTED,
+            "ONE_OR_MORE_SESSIONS_CONNECTED": RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED,
+            "STOPPING": RuntimeState.STOPPING,
+            "STOPPED": RuntimeState.STOPPED,
+        }
+        return state_map.get(self._state, RuntimeState.ONE_OR_MORE_SESSIONS_CONNECTED)
 
     @property
     def is_ready_for_browser_connection(self) -> asyncio.Future[tuple[bool, str]]:
         loop = asyncio.get_event_loop()
         fut: asyncio.Future[tuple[bool, str]] = loop.create_future()
-        fut.set_result((True, "ok"))
+        fut.set_result(self._is_ready)
         return fut
 
     def does_script_run_without_error(self) -> asyncio.Future[tuple[bool, str]]:
@@ -183,7 +221,7 @@ def starlette_client(tmp_path: Path) -> Iterator[tuple[TestClient, _DummyRuntime
         {
             "server.baseUrlPath": "",
             "global.developmentMode": False,
-            # Disable XSRF for basic tests (matches Tornado test behavior)
+            # Disable XSRF for basic tests
             "server.enableXsrfProtection": False,
         }
     ):
@@ -206,6 +244,96 @@ def test_health_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> 
     assert response.text == "ok"
 
 
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/", True),
+        ("/static/app.123.js", True),
+        ("/app/static/logo.svg", False),
+        ("/assets/theme.css", False),
+        ("/_stcore/metrics", False),
+        ("/media/file", False),
+    ],
+    ids=[
+        "root",
+        "static-bundle",
+        "app-static",
+        "hashed-style",
+        "api-route",
+        "media-route",
+    ],
+)
+def test_should_bypass_static_gzip(path: str, expected: bool) -> None:
+    """Only root and `/static/...` paths should bypass the gzip middleware."""
+    assert _should_bypass_static_gzip(path) is expected
+
+
+def test_create_streamlit_middleware_uses_selective_gzip() -> None:
+    """The Streamlit middleware stack should use the selective gzip wrapper."""
+    middleware_list = create_streamlit_middleware()
+
+    assert middleware_list[2].cls is SelectiveGZipMiddleware
+
+
+def test_selective_gzip_skips_static_like_paths() -> None:
+    """Only `/static/...` paths should bypass gzip while API paths compress."""
+
+    async def javascript_asset(_: Any) -> PlainTextResponse:
+        return PlainTextResponse("x" * 2000, media_type="application/javascript")
+
+    async def json_api(_: Any) -> PlainTextResponse:
+        return PlainTextResponse("x" * 2000, media_type="application/json")
+
+    app = Starlette(
+        routes=[
+            Route("/static/app.123.js", javascript_asset),
+            Route("/_stcore/data", json_api),
+        ],
+        middleware=create_streamlit_middleware(),
+    )
+
+    with TestClient(app) as client:
+        static_response = client.get(
+            "/static/app.123.js", headers={"Accept-Encoding": "gzip"}
+        )
+        api_response = client.get("/_stcore/data", headers={"Accept-Encoding": "gzip"})
+
+    assert static_response.status_code == HTTPStatus.OK
+    assert static_response.headers.get("content-encoding") is None
+    assert api_response.status_code == HTTPStatus.OK
+    assert api_response.headers.get("content-encoding") == "gzip"
+
+
+def test_create_starlette_app_sets_anyio_thread_limiter(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The Starlette app lifespan should apply the measured AnyIO thread limit."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>test</html>")
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    observed: dict[str, int] = {}
+
+    async def start() -> None:
+        from anyio import to_thread
+
+        observed["tokens"] = to_thread.current_default_thread_limiter().total_tokens
+
+    runtime.start = start
+    app = create_starlette_app(runtime)
+
+    with TestClient(app):
+        pass
+
+    assert observed["tokens"] == ANYIO_STATIC_FILE_THREAD_TOKENS
+
+
 def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) -> None:
     """Test that the metrics endpoint returns stats in text format."""
     client, _ = starlette_client
@@ -213,7 +341,21 @@ def test_metrics_endpoint(starlette_client: tuple[TestClient, _DummyRuntime]) ->
     assert response.status_code == 200
     assert "cache_memory_bytes" in response.text
     assert "session_events_total" in response.text
+    assert "# TYPE session_events counter" in response.text
+    assert (
+        "# HELP session_events Total count of session events by type." in response.text
+    )
+    assert "# UNIT session_events " not in response.text
+    assert "# TYPE session_duration_seconds counter" in response.text
+    assert "# UNIT session_duration_seconds seconds" in response.text
+    assert (
+        "# HELP session_duration_seconds Total time spent in active sessions, in seconds."
+        in response.text
+    )
+    assert "session_duration_seconds_total 42" in response.text
     assert "active_sessions" in response.text
+    assert "# HELP active_sessions Current number of active sessions." in response.text
+    assert "# UNIT active_sessions " not in response.text
 
 
 def test_metrics_endpoint_filters_single_family(
@@ -221,7 +363,7 @@ def test_metrics_endpoint_filters_single_family(
 ) -> None:
     """Test that the metrics endpoint filters by a single family."""
     client, _ = starlette_client
-    response = client.get("/_stcore/metrics?families=session_events_total")
+    response = client.get("/_stcore/metrics?families=session_events")
     assert response.status_code == 200
     assert "session_events_total" in response.text
     assert "cache_memory_bytes" not in response.text
@@ -234,7 +376,7 @@ def test_metrics_endpoint_filters_multiple_families(
     """Test that the metrics endpoint filters by multiple families."""
     client, _ = starlette_client
     response = client.get(
-        "/_stcore/metrics?families=session_events_total&families=active_sessions"
+        "/_stcore/metrics?families=session_events&families=active_sessions"
     )
     assert response.status_code == 200
     assert "session_events_total" in response.text
@@ -264,8 +406,27 @@ def test_metrics_endpoint_protobuf(
     )
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/x-protobuf"
-    expected_proto = StatsRequestHandler._stats_to_proto(expected).SerializeToString()
+    expected_proto = _stats_to_proto(expected).SerializeToString()
     assert response.content == expected_proto
+
+
+def test_metrics_endpoint_protobuf_uses_canonical_family_name(
+    starlette_client: tuple[TestClient, _DummyRuntime],
+) -> None:
+    """Unitful counters should use the canonical family name in protobuf."""
+    client, _ = starlette_client
+    response = client.get(
+        "/_stcore/metrics",
+        headers={"Accept": "application/x-protobuf"},
+    )
+    assert response.status_code == 200
+
+    metric_set = MetricSetProto()
+    metric_set.ParseFromString(response.content)
+    family_names = {metric_family.name for metric_family in metric_set.metric_families}
+
+    assert "session_duration_seconds" in family_names
+    assert "session_duration_seconds_total" not in family_names
 
 
 def test_media_endpoint_serves_file(
@@ -671,6 +832,108 @@ def test_host_config_includes_localhost_in_dev(tmp_path: Path) -> None:
     response = client.get("/_stcore/host-config")
     assert response.status_code == HTTPStatus.OK
     body = response.json()
+    assert "http://localhost" in body["allowedOrigins"]
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": False,
+        "client.allowedOrigins": [
+            "https://custom.example.com",
+            "https://another.example.com",
+        ],
+    }
+)
+def test_host_config_custom_allowed_origins(tmp_path: Path) -> None:
+    """Test that custom client.allowedOrigins values are used."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["allowedOrigins"] == [
+        "https://custom.example.com",
+        "https://another.example.com",
+    ]
+    # Verify defaults are NOT included when custom values are set
+    assert "https://*.streamlit.app" not in body["allowedOrigins"]
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": False,
+        "client.allowedOrigins": [],
+    }
+)
+def test_host_config_empty_allowed_origins(tmp_path: Path) -> None:
+    """Test that empty client.allowedOrigins results in empty list."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    assert body["allowedOrigins"] == []
+
+    monkeypatch.undo()
+
+
+@patch_config_options(
+    {
+        "global.developmentMode": True,
+        "client.allowedOrigins": [
+            "https://custom.example.com",
+            "https://another.example.com",
+        ],
+    }
+)
+def test_host_config_custom_origins_with_dev_mode(tmp_path: Path) -> None:
+    """Test that localhost is appended to custom origins in dev mode."""
+    component_dir = tmp_path / "component"
+    component_dir.mkdir()
+    (component_dir / "index.html").write_text("component")
+
+    static_dir = tmp_path / "static"
+    static_dir.mkdir()
+    monkeypatch = pytest.MonkeyPatch()
+    monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    runtime = _DummyRuntime(component_dir)
+    app = create_starlette_app(runtime)
+    client = TestClient(app)
+
+    response = client.get("/_stcore/host-config")
+    assert response.status_code == HTTPStatus.OK
+    body = response.json()
+    # Custom origins should be present
+    assert "https://custom.example.com" in body["allowedOrigins"]
+    assert "https://another.example.com" in body["allowedOrigins"]
+    # localhost should be appended in dev mode
     assert "http://localhost" in body["allowedOrigins"]
 
     monkeypatch.undo()
@@ -1394,6 +1657,7 @@ class TestAppExports:
         assert "/_stcore/" in _RESERVED_ROUTE_PREFIXES
         assert "/media/" in _RESERVED_ROUTE_PREFIXES
         assert "/component/" in _RESERVED_ROUTE_PREFIXES
+        assert "/static/" in _RESERVED_ROUTE_PREFIXES
 
 
 # --- Integration Tests for App class ---
@@ -1579,3 +1843,245 @@ class TestAppAsgi:
             assert startup_called
             assert app.state == {}
             client.get("/_stcore/health")
+
+
+class TestHealthEndpointMessages:
+    """Tests for health endpoint state-specific messages."""
+
+    @pytest.mark.parametrize(
+        ("runtime_state", "expected_text"),
+        [
+            ("INITIAL", "Runtime not started"),
+            ("STOPPING", "shutting down"),
+            ("STOPPED", "stopped"),
+        ],
+        ids=["initial", "stopping", "stopped"],
+    )
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_health_returns_503_with_state_message(
+        self,
+        tmp_path: Path,
+        runtime_state: str,
+        expected_text: str,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Test that health endpoint returns 503 with state-specific messages."""
+        component_dir = tmp_path / "component"
+        component_dir.mkdir()
+        (component_dir / "index.html").write_text("component")
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+        runtime = _DummyRuntime(component_dir)
+        runtime._is_ready = (False, "not ready")
+        runtime._state = runtime_state
+
+        app = create_starlette_app(runtime)
+        client = TestClient(app, raise_server_exceptions=False)
+
+        response = client.get("/_stcore/health")
+
+        assert response.status_code == 503
+        assert expected_text.lower() in response.text.lower()
+
+
+class TestAppAutoStart:
+    """Tests for App auto-start runtime behavior when mounted without explicit lifespan."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_runtime(self, reset_runtime: None) -> None:
+        """Auto-use the reset_runtime fixture for all tests in this class."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_static_dir(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Mock the static directory for all tests in this class."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>test</html>")
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    @pytest.fixture(autouse=True)
+    def _reset_server_mode(self) -> Iterator[None]:
+        """Reset the server mode before and after each test."""
+        from streamlit import config
+
+        original_mode = config._server_mode
+        config._server_mode = None
+        yield
+        config._server_mode = original_mode
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_auto_start_runtime_when_mounted_without_lifespan(
+        self, simple_script: Path
+    ) -> None:
+        """Test that runtime auto-starts when App is mounted without explicit lifespan."""
+        from starlette.applications import Starlette
+
+        from streamlit import config
+        from streamlit.runtime import RuntimeState
+
+        app = App(simple_script)
+
+        # Mount without using lifespan()
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        # Before first request, runtime should not exist
+        assert app._runtime is None
+
+        with TestClient(wrapper) as client:
+            # First request should trigger auto-start
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+            # Runtime should now exist and be running
+            assert app._runtime is not None
+            assert app._auto_started is True
+            # The runtime should have been started
+            assert app._runtime.state != RuntimeState.INITIAL
+
+        # Server mode should be set to asgi-mounted
+        assert config._server_mode == "asgi-mounted"
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_auto_start_does_not_run_when_lifespan_used(
+        self, simple_script: Path
+    ) -> None:
+        """Test that auto-start is not triggered when lifespan() is used."""
+        from starlette.applications import Starlette
+
+        app = App(simple_script)
+        lifespan_cm = app.lifespan()
+
+        wrapper = Starlette(lifespan=lifespan_cm)
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+            # Runtime should exist but auto_started should be False
+            assert app._runtime is not None
+            assert app._auto_started is False
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_auto_start_warns_when_user_lifespan_provided_but_not_used(
+        self, simple_script: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that a warning is logged when user provides lifespan but mounts without using it."""
+        from contextlib import asynccontextmanager
+        from unittest.mock import MagicMock
+
+        from starlette.applications import Starlette
+
+        from streamlit import logger
+
+        # Mock the logger to capture warning calls
+        mock_logger = MagicMock()
+        monkeypatch.setattr(logger, "get_logger", lambda name: mock_logger)
+
+        # User provides a lifespan to App.__init__
+        @asynccontextmanager
+        async def user_lifespan(app):
+            yield
+
+        app = App(simple_script, lifespan=user_lifespan)
+
+        # But then mounts without calling app.lifespan() - this is a misconfiguration
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+        # Should warn about the skipped lifespan
+        mock_logger.warning.assert_called_once()
+        warning_msg = mock_logger.warning.call_args[0][0].lower()
+        assert "auto-starting runtime" in warning_msg
+        assert "lifespan" in warning_msg
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_concurrent_requests_do_not_trigger_multiple_startups(
+        self, simple_script: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that concurrent requests don't trigger multiple runtime startups.
+
+        The lock should ensure only one request can start the runtime even if
+        multiple requests arrive simultaneously.
+        """
+        import asyncio
+        from concurrent.futures import ThreadPoolExecutor
+
+        from starlette.applications import Starlette
+
+        from streamlit import config
+
+        app = App(simple_script)
+
+        # Track how many times _auto_start_runtime is called
+        auto_start_call_count = 0
+        original_auto_start = app._auto_start_runtime
+
+        async def counting_auto_start() -> None:
+            nonlocal auto_start_call_count
+            auto_start_call_count += 1
+            # Add small delay to increase chance of race condition
+            await asyncio.sleep(0.1)
+            await original_auto_start()
+
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        # Patch after wrapper is created but before requests
+        monkeypatch.setattr(app, "_auto_start_runtime", counting_auto_start)
+
+        with TestClient(wrapper) as client:
+            # Make multiple concurrent requests
+            with ThreadPoolExecutor(max_workers=5) as executor:
+                futures = [
+                    executor.submit(client.get, "/streamlit/_stcore/health")
+                    for _ in range(5)
+                ]
+                responses = [f.result() for f in futures]
+
+            # All requests should succeed
+            for response in responses:
+                assert response.status_code == 200
+
+        # Despite concurrent requests, _auto_start_runtime should only be called once
+        assert auto_start_call_count == 1
+        assert app._auto_started is True
+        assert config._server_mode == "asgi-mounted"

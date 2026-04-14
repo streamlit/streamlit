@@ -19,14 +19,14 @@ import { userEvent } from "@testing-library/user-event"
 
 import {
   ButtonGroup as ButtonGroupProto,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
 import {
   BaseButtonKind,
   BaseButtonSize,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -39,12 +39,12 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let expectCheck: any = expect(element)
-  if (!should_exist) {
-    expectCheck = expect.not
+  if (should_exist) {
+    // Active/selected buttons have the primary color (rgb(255, 75, 75))
+    expect(element).toHaveStyle("color: rgb(255, 75, 75);")
+  } else {
+    expect(element).not.toHaveStyle("color: rgb(255, 75, 75);")
   }
-  expectCheck.toHaveStyle("color: rgb(49, 51, 63);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {
@@ -52,14 +52,13 @@ const getButtonGroupButtons = (): HTMLElement[] => {
   return within(buttonGroupWidget).getAllByRole("button")
 }
 
-// options where content is only a material icon; used by st.feedback
+// options where content is only a material icon
 const materialIconOnlyOptions = [
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[0]}:`,
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[1]}:`,
-    selectedContentIcon: ":material/icon_2_selected:",
   }),
   ButtonGroupProto.Option.create({
     contentIcon: `:material/${materialIconNames[2]}:`,
@@ -91,9 +90,7 @@ const getProps = (
     disabled: false,
     label: "My ButtonGroup label",
     options: [...materialIconOnlyOptions, ...options],
-    selectionVisualization:
-      ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
-    style: ButtonGroupProto.Style.BORDERLESS,
+    style: ButtonGroupProto.Style.SEGMENTED_CONTROL,
     ...elementProps,
   }),
   disabled: false,
@@ -125,7 +122,7 @@ describe("ButtonGroup widget", () => {
     const buttons = getButtonGroupButtons()
     expect(buttons).toHaveLength(materialIconOnlyOptions.length)
     buttons.forEach((button, index) => {
-      expect(button).toHaveAttribute("kind", "borderlessIcon")
+      expect(button).toHaveAttribute("kind", "segmented_control")
       const icon = within(button).getByTestId("stIconMaterial")
       expect(icon.textContent).toContain(materialIconNames[index])
     })
@@ -160,12 +157,13 @@ describe("ButtonGroup widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+    // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      [`:material/${materialIconNames[defaultSelectedIndex]}:`],
       {
         fromUi: false,
       },
@@ -187,49 +185,50 @@ describe("ButtonGroup widget", () => {
     it("onClick prop for single select", async () => {
       const user = userEvent.setup()
       const props = getProps()
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(1)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
 
       // click element at index 1 to select it
       await user.click(buttons[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [1],
+        [`:material/${materialIconNames[1]}:`],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(2)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(2)
 
       // click element at index 0 to select it
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [0],
+        [`:material/${materialIconNames[0]}:`],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(3)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(3)
 
       // click on same button does deselect it
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
         [],
         { fromUi: true },
         undefined
       )
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledTimes(4)
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(4)
     })
 
     it("onClick prop for multi select", async () => {
@@ -237,39 +236,50 @@ describe("ButtonGroup widget", () => {
       const props = getProps({
         clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
       })
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<ButtonGroup {...props} />)
 
       const buttons = getButtonGroupButtons()
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      // defaultSelectedIndex=2 corresponds to `:material/icon_3:`
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         undefined
       )
 
       await user.click(buttons[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        // the 2 is default value
-        [2, 1],
+        // the defaultSelectedIndex is default value, index 1 is newly clicked
+        [
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[1]}:`,
+        ],
         { fromUi: true },
         undefined
       )
 
       await user.click(getButtonGroupButtons()[0])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [2, 1, 0],
+        [
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[1]}:`,
+          `:material/${materialIconNames[0]}:`,
+        ],
         { fromUi: true },
         undefined
       )
 
       // unselect the second button
       await user.click(getButtonGroupButtons()[1])
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [2, 0],
+        [
+          `:material/${materialIconNames[defaultSelectedIndex]}:`,
+          `:material/${materialIconNames[0]}:`,
+        ],
         { fromUi: true },
         undefined
       )
@@ -283,21 +293,21 @@ describe("ButtonGroup widget", () => {
           fragmentId: "myFragmentId",
         }
       )
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
       render(<ButtonGroup {...props} />)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[defaultSelectedIndex]}:`],
         { fromUi: false },
         "myFragmentId"
       )
 
       const button = getButtonGroupButtons()[0]
       await user.click(button)
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        [0],
+        [`:material/${materialIconNames[0]}:`],
         { fromUi: true },
         "myFragmentId"
       )
@@ -316,17 +326,21 @@ describe("ButtonGroup widget", () => {
     })
 
     it("sets widget value on update", () => {
-      const props = getProps({ value: [3], setValue: true })
-      vi.spyOn(props.widgetMgr, "setIntArrayValue")
+      // Use rawValues with string values instead of value with indices
+      const props = getProps({
+        rawValues: [`:material/${materialIconNames[3]}:`],
+        setValue: true,
+      })
+      vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()
       expectHighlightStyle(buttons[3])
       expectHighlightStyle(buttons[defaultSelectedIndex], false)
 
-      expect(props.widgetMgr.setIntArrayValue).toHaveBeenCalledWith(
+      expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
         props.element,
-        props.element.default,
+        [`:material/${materialIconNames[3]}:`],
         {
           fromUi: false,
         },
@@ -375,7 +389,7 @@ describe("ButtonGroup widget", () => {
     it("passes labelVisibility prop correctly when hidden", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+          value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
         },
       })
       render(<ButtonGroup {...props} />)
@@ -387,7 +401,7 @@ describe("ButtonGroup widget", () => {
     it("passes labelVisibility prop correctly when collapsed", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+          value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
         },
       })
       render(<ButtonGroup {...props} />)
@@ -408,104 +422,20 @@ describe("ButtonGroup widget", () => {
       expect(helpText).toBeInTheDocument()
     })
 
-    describe("visualizes selection behavior", () => {
-      // eslint-disable-next-line vitest/expect-expect
-      it("visualize only selected option", async () => {
-        const user = userEvent.setup()
-        const props = getProps({
-          selectionVisualization:
-            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED,
-        })
-        render(<ButtonGroup {...props} />)
-
-        await user.click(getButtonGroupButtons()[0])
-        const buttons = getButtonGroupButtons()
-        expectHighlightStyle(buttons[0])
-        expectHighlightStyle(buttons[1], false)
-        expectHighlightStyle(buttons[2], false)
-      })
-
-      // eslint-disable-next-line vitest/expect-expect
-      it("visualizes all up to the selected option", async () => {
-        const user = userEvent.setup()
-        const props = getProps({
-          selectionVisualization:
-            ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED,
-        })
-        render(<ButtonGroup {...props} />)
-
-        const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-        const buttons = within(buttonGroupWidget).getAllByRole("button")
-        const buttonToClick = buttons[2]
-        await user.click(buttonToClick)
-        expectHighlightStyle(buttonToClick)
-        expectHighlightStyle(buttons[0])
-        // the second button has selectedContent set, so it should not be highlighted visually
-        expectHighlightStyle(buttons[1], false)
-        expectHighlightStyle(buttons[3], false)
-      })
-
-      // eslint-disable-next-line vitest/expect-expect
-      it("has no default visualization when selected content present", async () => {
-        const user = userEvent.setup()
-        // used for example by feedback stars
-        const disabledVisualizationOption = [
-          ButtonGroupProto.Option.create({
-            content: "Some text",
-            selectedContent: "Some text selected",
-          }),
-          ButtonGroupProto.Option.create({
-            content: "Some text 2",
-            selectedContent: "Some text selected 2",
-          }),
-        ]
-        const props = getProps({
-          selectionVisualization:
-            ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED,
-          options: disabledVisualizationOption,
-        })
-        render(<ButtonGroup {...props} />)
-
-        const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-        const buttons = within(buttonGroupWidget).getAllByRole("button")
-        const buttonToClick = buttons[1]
-        await user.click(buttonToClick)
-        expectHighlightStyle(buttonToClick, false)
-        expectHighlightStyle(buttons[0], false)
-      })
-    })
-
-    it("shows selection content when selected and available", async () => {
+    // eslint-disable-next-line vitest/expect-expect
+    it("visualizes only selected option", async () => {
       const user = userEvent.setup()
-      const props = getProps({ default: [], options: materialIconOnlyOptions })
+      const props = getProps()
       render(<ButtonGroup {...props} />)
 
+      await user.click(getButtonGroupButtons()[0])
       const buttons = getButtonGroupButtons()
-      buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "borderlessIcon")
-        const icon = within(button).getByTestId("stIconMaterial")
-        expect(icon.textContent).toContain(materialIconNames[index])
-      })
-
-      await user.click(buttons[1])
-      expect(getButtonGroupButtons()[1].textContent).toContain(
-        "icon_2_selected"
-      )
+      expectHighlightStyle(buttons[0])
+      expectHighlightStyle(buttons[1], false)
+      expectHighlightStyle(buttons[2], false)
     })
 
-    it("shows bigger icons for borderless ButtonGroup", () => {
-      const props = getProps({ default: [], options: materialIconOnlyOptions })
-      render(<ButtonGroup {...props} />)
-      const buttons = getButtonGroupButtons()
-      buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "borderlessIcon")
-        const icon = within(button).getByTestId("stIconMaterial")
-        expect(icon.textContent).toContain(materialIconNames[index])
-        expect(icon).toHaveStyle("width: 1.25rem")
-      })
-    })
-
-    it("shows smaller icons for non-borderless ButtonGroup", () => {
+    it("shows icons with correct size for segmented control ButtonGroup", () => {
       const props = getProps({
         default: [],
         options: materialIconOnlyOptions,
@@ -531,7 +461,7 @@ describe("ButtonGroup widget", () => {
     })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntArrayValue")
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
 
     render(<ButtonGroup {...props} />)
 
@@ -541,9 +471,8 @@ describe("ButtonGroup widget", () => {
     await user.click(getButtonGroupButtons()[1])
     let buttons = getButtonGroupButtons()
     expectHighlightStyle(buttons[0])
-    // the second button has selectedContent set, so it should not be highlighted visually
-    expectHighlightStyle(buttons[1], false)
-    expectHighlightStyle(buttons[2], false)
+    expectHighlightStyle(buttons[1])
+    expectHighlightStyle(buttons[2])
     expectHighlightStyle(buttons[3], false)
 
     // "Submit" the form
@@ -554,9 +483,9 @@ describe("ButtonGroup widget", () => {
     expectHighlightStyle(buttons[0], false)
     expectHighlightStyle(buttons[1], false)
     expectHighlightStyle(buttons[2])
-    expect(props.widgetMgr.setIntArrayValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      [`:material/${materialIconNames[defaultSelectedIndex]}:`],
       { fromUi: true },
       undefined
     )
@@ -564,61 +493,7 @@ describe("ButtonGroup widget", () => {
 })
 
 describe("ButtonGroup getContentElement", () => {
-  it("tests element with content, icon and borderless-style", () => {
-    const { element, kind, size } = getContentElement(
-      "foo",
-      "bar",
-      ButtonGroupProto.Style.BORDERLESS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "foo",
-      icon: "bar",
-      iconSize: "lg",
-      useSmallerFont: false,
-    })
-    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
-    expect(size).toBe(BaseButtonSize.XSMALL)
-  })
-
-  it("tests element with content and no icon and borderless-style", () => {
-    const { element, kind, size } = getContentElement(
-      "foo",
-      undefined,
-      ButtonGroupProto.Style.BORDERLESS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "foo",
-      icon: undefined,
-      iconSize: "lg",
-      useSmallerFont: false,
-    })
-    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
-    expect(size).toBe(BaseButtonSize.XSMALL)
-  })
-
-  it("tests element with no content, an icon and borderless-style", () => {
-    const { element, kind, size } = getContentElement(
-      "",
-      "foo",
-      ButtonGroupProto.Style.BORDERLESS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "",
-      icon: "foo",
-      iconSize: "lg",
-      useSmallerFont: false,
-    })
-    expect(kind).toBe(BaseButtonKind.BORDERLESS_ICON)
-    expect(size).toBe(BaseButtonSize.XSMALL)
-  })
-
-  it("tests element with content, icon and non-borderless-style", () => {
+  it("tests element with content, icon and pills-style", () => {
     const { element, kind, size } = getContentElement(
       "foo",
       "bar",
@@ -634,5 +509,220 @@ describe("ButtonGroup getContentElement", () => {
     })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)
+  })
+
+  it("tests element with content and no icon and segmented-control-style", () => {
+    const { element, kind, size } = getContentElement(
+      "foo",
+      undefined,
+      ButtonGroupProto.Style.SEGMENTED_CONTROL
+    )
+
+    expect(element.type).toBe(DynamicButtonLabel)
+    expect(element.props).toEqual({
+      label: "foo",
+      icon: undefined,
+      iconSize: "base",
+      useSmallerFont: true,
+    })
+    expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
+    expect(size).toBe(BaseButtonSize.MEDIUM)
+  })
+})
+
+describe("ButtonGroup query param binding", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "cat" }),
+    ButtonGroupProto.Option.create({ content: "dog" }),
+    ButtonGroupProto.Option.create({ content: "bird" }),
+  ]
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["cat"],
+      true,
+      "repeated"
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+    })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<ButtonGroup {...props} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("registers query param binding for multi-select with same config", () => {
+    const props = getProps({
+      queryParamKey: "my_multi_pills",
+      options: simpleOptions,
+      default: [0, 2],
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_multi_pills",
+      "string_array_value",
+      ["cat", "bird"],
+      true,
+      "repeated"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps({ options: simpleOptions, default: [0] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+})
+
+describe("ButtonGroup required parameter", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "apple" }),
+    ButtonGroupProto.Option.create({ content: "banana" }),
+    ButtonGroupProto.Option.create({ content: "cherry" }),
+  ]
+
+  it("allows deselection when required=false (default)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    // Click the already-selected button (apple) to deselect it
+    await user.click(buttons[0])
+
+    // Should have been called with empty array (deselected)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("prevents deselection when required=true in single-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    // Initial mount call
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["apple"],
+      { fromUi: false },
+      undefined
+    )
+
+    const buttons = getButtonGroupButtons()
+
+    // Click the already-selected button (apple) to try to deselect it
+    await user.click(buttons[0])
+
+    // No additional call should have been made - click was a no-op
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+  })
+
+  it("allows changing selection when required=true in single-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    // Click a different button (banana) - this should work
+    await user.click(buttons[1])
+
+    // Should have changed to "banana"
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["banana"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("sets aria-required attribute when required=true", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).toHaveAttribute("aria-required", "true")
+  })
+
+  it("does not set aria-required attribute when required=false", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).not.toHaveAttribute("aria-required")
   })
 })

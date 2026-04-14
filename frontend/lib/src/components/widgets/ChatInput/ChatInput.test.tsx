@@ -37,6 +37,13 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import ChatInput, { Props } from "./ChatInput"
 
+const useWaveformControllerMock = vi.fn()
+
+vi.mock("~lib/components/audio/core/useWaveformController", () => ({
+  useWaveformController: (...args: unknown[]) =>
+    useWaveformControllerMock(...args),
+}))
+
 const getProps = (
   elementProps: Partial<ChatInputProto> = {},
   widgetProps: Partial<Props> = {}
@@ -85,8 +92,37 @@ const mockChatInputValue = (text: string): IChatInputValue => {
   }
 }
 
+const createMockWaveformController = (): WaveformController => ({
+  state: "idle",
+  isPlaybackPlaying: false,
+  mountRef: { current: null },
+  playback: {
+    isPlaying: vi.fn().mockReturnValue(false),
+    play: vi.fn().mockResolvedValue(undefined),
+    pause: vi.fn().mockReturnValue(undefined),
+    load: vi.fn().mockResolvedValue(undefined),
+    getDurationMs: vi.fn().mockReturnValue(5000),
+    getCurrentTimeMs: vi.fn().mockReturnValue(0),
+  },
+  start: vi.fn().mockResolvedValue(undefined),
+  stop: vi.fn().mockResolvedValue({
+    blob: new Blob(["audio data"], { type: "audio/wav" }),
+    meta: {
+      durationMs: 5000,
+      sampleRate: 44100,
+      mimeType: "audio/wav",
+      size: 1024,
+    },
+  }),
+  approve: vi.fn().mockResolvedValue(undefined),
+  cancel: vi.fn().mockReturnValue(undefined),
+  destroy: vi.fn().mockReturnValue(undefined),
+  setEventHandlers: vi.fn().mockReturnValue(undefined),
+})
+
 describe("ChatInput widget", () => {
   afterEach(() => {
+    useWaveformControllerMock.mockReset()
     vi.restoreAllMocks()
   })
 
@@ -95,6 +131,7 @@ describe("ChatInput widget", () => {
       elementRef: { current: null },
       values: [250],
     })
+    useWaveformControllerMock.mockImplementation(createMockWaveformController)
   })
 
   it("renders without crashing", () => {
@@ -597,7 +634,7 @@ describe("ChatInput widget", () => {
 
     // Wait for files to be displayed (order-agnostic check)
     await waitFor(() => {
-      const fileNames = screen.getAllByTestId("stChatInputFileName")
+      const fileNames = screen.getAllByTestId("stFileChipName")
       expect(fileNames).toHaveLength(2)
 
       // Check that both files are present using title attribute (full filename)
@@ -609,11 +646,11 @@ describe("ChatInput widget", () => {
     })
 
     // Find and delete file1
-    const deleteButtons = screen.getAllByTestId("stChatInputDeleteBtn")
+    const deleteButtons = screen.getAllByTestId("stFileChipDeleteBtn")
     expect(deleteButtons).toHaveLength(2)
 
     // Find which delete button corresponds to file1 using title attribute
-    const fileNames = screen.getAllByTestId("stChatInputFileName")
+    const fileNames = screen.getAllByTestId("stFileChipName")
     const file1Index = Array.from(fileNames).findIndex(
       el => el.getAttribute("title") === "folder/file1.txt"
     )
@@ -625,7 +662,7 @@ describe("ChatInput widget", () => {
 
     // Verify only file2 remains (check title for full filename)
     await waitFor(() => {
-      const remainingFileNames = screen.getAllByTestId("stChatInputFileName")
+      const remainingFileNames = screen.getAllByTestId("stFileChipName")
       expect(remainingFileNames).toHaveLength(1)
       expect(remainingFileNames[0]).toHaveAttribute(
         "title",
@@ -634,9 +671,7 @@ describe("ChatInput widget", () => {
     })
 
     // Delete the remaining file
-    const remainingDeleteButtons = screen.getAllByTestId(
-      "stChatInputDeleteBtn"
-    )
+    const remainingDeleteButtons = screen.getAllByTestId("stFileChipDeleteBtn")
     const remainingDeleteButton =
       remainingDeleteButtons[0].querySelector("button")
     expect(remainingDeleteButton).toBeTruthy()
@@ -644,7 +679,7 @@ describe("ChatInput widget", () => {
 
     // Verify all files are removed
     await waitFor(() => {
-      const fileNames = screen.queryAllByTestId("stChatInputFileName")
+      const fileNames = screen.queryAllByTestId("stFileChipName")
       expect(fileNames).toHaveLength(0)
     })
   })
@@ -730,7 +765,7 @@ describe("ChatInput widget", () => {
 
     // Wait for file to be displayed
     await waitFor(() => {
-      const fileName = screen.getByTestId("stChatInputFileName")
+      const fileName = screen.getByTestId("stFileChipName")
       expect(fileName).toHaveTextContent("docs/readme.md")
     })
   })
@@ -806,11 +841,7 @@ describe("ChatInput widget", () => {
       setEventHandlers: vi.fn().mockReturnValue(undefined),
     }
 
-    // Mock useWaveformController
-    const useWaveformController = await import("~lib/components/audio")
-    vi.spyOn(useWaveformController, "useWaveformController").mockReturnValue(
-      mockController
-    )
+    useWaveformControllerMock.mockReturnValue(mockController)
 
     render(<ChatInput {...props} />)
 
@@ -819,9 +850,7 @@ describe("ChatInput widget", () => {
     // Instead, let's directly test by triggering the onApprove event from the mock
 
     // Find the calls to useWaveformController and get the onApprove callback
-    const mockCalls = (
-      useWaveformController.useWaveformController as ReturnType<typeof vi.fn>
-    ).mock.calls
+    const mockCalls = useWaveformControllerMock.mock.calls
     const lastCallArgs = mockCalls[mockCalls.length - 1]
     const { events } = lastCallArgs[0]
     const onApprove = events?.onApprove
@@ -854,6 +883,54 @@ describe("ChatInput widget", () => {
     // After upload completes, verify upload was called
     await waitFor(() => {
       expect(props.uploadClient.uploadFile).toHaveBeenCalled()
+    })
+  })
+
+  describe("heightConfig", () => {
+    it("applies height: 100% when useStretch is true", () => {
+      const props = getProps({}, { heightConfig: { useStretch: true } })
+      render(<ChatInput {...props} />)
+
+      expect(screen.getByTestId("stChatInput")).toHaveStyle({ height: "100%" })
+    })
+
+    it.each([
+      [undefined, "undefined config"],
+      [{ useContent: true }, "content mode"],
+      [{ pixelHeight: 200 }, "pixel height mode"],
+    ])("does not apply height: 100%% for %s", (heightConfig, _description) => {
+      const props = getProps({}, { heightConfig })
+      render(<ChatInput {...props} />)
+
+      expect(screen.getByTestId("stChatInput")).not.toHaveStyle({
+        height: "100%",
+      })
+    })
+
+    it("renders with correct calculated min-height in pixel height mode", () => {
+      // pixelHeight = 200
+      // theme.spacing.md = 0.75rem = 12px
+      // borderWidth = 1px
+      // containerPadding = (12 * 2) + (1 * 2) = 26px
+      // adjustedHeight = 200 - 26 = 174px
+      const props = getProps({}, { heightConfig: { pixelHeight: 200 } })
+      render(<ChatInput {...props} />)
+
+      // Container should not have stretch height
+      expect(screen.getByTestId("stChatInput")).not.toHaveStyle({
+        height: "100%",
+      })
+
+      // Verify the textarea element is rendered and enabled
+      const textarea = screen.getByTestId("stChatInputTextArea")
+      expect(textarea).not.toBeDisabled()
+
+      // The min-height is applied via baseweb overrides to the textarea Root element.
+      // While we can't easily assert the exact style value through toHaveStyle
+      // (baseweb injects styles in a way that's not directly accessible),
+      // we verify the component renders correctly with the height config.
+      const rootElement = textarea.closest('[data-baseweb="textarea"]')
+      expect(rootElement).toBeInTheDocument()
     })
   })
 })

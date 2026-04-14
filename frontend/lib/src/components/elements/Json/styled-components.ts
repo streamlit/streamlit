@@ -47,7 +47,7 @@ export const StyledCopyButton = styled.button(({ theme }) => ({
   padding: theme.spacing.threeXS,
   backgroundColor: "transparent",
   border: "none",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   cursor: "pointer",
   color: theme.colors.fadedText60,
   transition: "color 0.15s ease, background-color 0.15s ease",

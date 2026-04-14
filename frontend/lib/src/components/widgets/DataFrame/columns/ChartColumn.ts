@@ -21,7 +21,8 @@ import {
 } from "@glideapps/glide-data-grid"
 import { SparklineCellType } from "@glideapps/glide-data-grid-cells"
 
-import { EmotionTheme } from "~lib/theme"
+import { resolveNamedColor } from "~lib/theme/getColors"
+import type { ChartColor, EmotionTheme } from "~lib/theme/types"
 import { formatNumber } from "~lib/util/formatNumber"
 import { isNullOrUndefined } from "~lib/util/utils"
 
@@ -39,46 +40,6 @@ import {
 export const LINE_CHART_TYPE = "line_chart"
 export const AREA_CHART_TYPE = "area_chart"
 export const BAR_CHART_TYPE = "bar_chart"
-
-/**
- * Get the color mapping to map a user-defined color to the our
- * theme colors.
- *
- * @param theme The theme to use.
- * @returns The color mapping.
- */
-const getColorMapping = (theme: EmotionTheme): Map<string, string> => {
-  return new Map(
-    Object.entries({
-      red: theme.colors.redColor,
-      blue: theme.colors.blueColor,
-      green: theme.colors.greenColor,
-      yellow: theme.colors.yellowColor,
-      violet: theme.colors.violetColor,
-      orange: theme.colors.orangeColor,
-      gray: theme.colors.grayColor,
-      grey: theme.colors.grayColor,
-      primary: theme.colors.primary,
-    })
-  )
-}
-
-type ChartAutoColor = "auto" | "auto-inverse"
-type ChartNamedSwatch =
-  | "red"
-  | "blue"
-  | "green"
-  | "yellow"
-  | "violet"
-  | "orange"
-  | "gray"
-  | "grey"
-  | "primary"
-
-declare const __cssColorBrand: unique symbol
-type CSSColorString = string & { readonly [__cssColorBrand]?: never }
-
-type ChartColor = ChartAutoColor | ChartNamedSwatch | CSSColorString
 
 export interface ChartColumnParams {
   /**
@@ -108,7 +69,7 @@ function BaseChartColumn(
   chart_type: "line" | "bar" | "area",
   theme: EmotionTheme
 ): BaseColumn {
-  const parameters = mergeColumnParameters(
+  const parameters = mergeColumnParameters<ChartColumnParams>(
     // Default parameters:
     {
       y_min: null,
@@ -117,16 +78,14 @@ function BaseChartColumn(
     },
     // User parameters:
     props.columnTypeOptions
-  ) as ChartColumnParams
-
-  const colorMapping = getColorMapping(theme)
+  )
 
   let defaultColor: string | undefined
   if (parameters.color === "auto" || parameters.color === "auto-inverse") {
     defaultColor = theme.colors.greenColor
   } else {
     defaultColor = parameters.color
-      ? (colorMapping.get(parameters.color) ?? parameters.color)
+      ? resolveNamedColor(parameters.color, theme)
       : undefined
   }
 
@@ -156,8 +115,7 @@ function BaseChartColumn(
           : ":material/area_chart:",
     sortMode: "default",
     isEditable: false, // Chart column is always read-only
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       if (isNullOrUndefined(data)) {
         // TODO(lukasmasuch): Use a missing cell?
         return getEmptyCell()

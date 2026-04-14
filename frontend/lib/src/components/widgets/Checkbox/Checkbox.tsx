@@ -24,15 +24,15 @@ import {
 
 import { Checkbox as CheckboxProto } from "@streamlit/protobuf"
 
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -51,6 +51,15 @@ function Checkbox({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "bool_value" as const,
+        // Checkbox/toggle is not clearable (always true or false)
+        clearable: false,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     boolean,
     CheckboxProto
@@ -62,6 +71,8 @@ function Checkbox({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const onChange = useCallback(
@@ -235,18 +246,18 @@ function getStateFromWidgetMgr(
 }
 
 function getDefaultStateFromProto(element: CheckboxProto): boolean {
-  return element.default ?? null
+  return element.default ?? false
 }
 
 function getCurrStateFromProto(element: CheckboxProto): boolean {
-  return element.value ?? null
+  return element.value ?? false
 }
 
 function updateWidgetMgrState(
   element: CheckboxProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<boolean>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setBoolValue(
     element,

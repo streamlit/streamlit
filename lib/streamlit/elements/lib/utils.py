@@ -31,7 +31,7 @@ from streamlit import config
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
@@ -68,15 +68,15 @@ SAFE_VALUES: TypeAlias = Union[
 
 def get_label_visibility_proto_value(
     label_visibility_string: LabelVisibility,
-) -> LabelVisibilityMessage.LabelVisibilityOptions.ValueType:
-    """Returns one of LabelVisibilityMessage enum constants.py based on string value."""
+) -> LabelVisibilityProto.LabelVisibilityOptions.ValueType:
+    """Returns one of LabelVisibilityProto enum constants based on string value."""
 
     if label_visibility_string == "visible":
-        return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+        return LabelVisibilityProto.LabelVisibilityOptions.VISIBLE
     if label_visibility_string == "hidden":
-        return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
+        return LabelVisibilityProto.LabelVisibilityOptions.HIDDEN
     if label_visibility_string == "collapsed":
-        return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+        return LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED
 
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
 

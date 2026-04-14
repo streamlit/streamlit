@@ -20,6 +20,8 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
     wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
@@ -32,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
 )
 
-NUM_DATETIME_INPUTS = 15
+NUM_DATETIME_INPUTS = 18
 
 
 def test_datetime_input_widget_rendering(
@@ -295,3 +297,45 @@ def test_dynamic_props_update(app: Page):
     )
     # Anti-regression: ensure the old out-of-bounds value is not retained
     expect(app.get_by_text("2028-01-01")).not_to_be_visible()
+
+
+# --- Query param binding tests ---
+
+
+def test_datetime_input_query_param_seeding(page: Page, app_base_url: str):
+    """Test that datetime input value can be seeded from URL query params using ISO format."""
+    page.goto(build_app_url(app_base_url, query={"bound_datetime": "2025-11-20T10:30"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound datetime:", "2025-11-20 10:30:00")
+    expect(page).to_have_url(re.compile(r"bound_datetime=2025-11-20T10%3A30"))
+
+
+def test_datetime_input_query_param_clearable_empty(page: Page, app_base_url: str):
+    """Test that a clearable datetime input (value=None) can be seeded as empty from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_clearable_dt": ""}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound clearable datetime:", "None")
+
+
+def test_datetime_input_query_param_invalid_reverts_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that an invalid URL value reverts to the default."""
+    page.goto(build_app_url(app_base_url, query={"bound_datetime": "not-a-datetime"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound datetime:", "2025-11-19 16:45:00")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_datetime="))
+
+
+def test_datetime_input_query_param_out_of_range_resets(page: Page, app_base_url: str):
+    """Test that out-of-bounds datetime values revert to default."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_minmax_dt": "2024-06-15T12:00"})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound minmax datetime:", "2025-11-19 16:45:00")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_dt="))

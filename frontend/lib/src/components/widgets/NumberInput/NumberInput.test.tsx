@@ -18,7 +18,7 @@ import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   NumberInput as NumberInputProto,
 } from "@streamlit/protobuf"
 
@@ -190,7 +190,7 @@ describe("NumberInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getIntProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<NumberInput {...props} />)
@@ -202,7 +202,7 @@ describe("NumberInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getIntProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<NumberInput {...props} />)
@@ -1449,5 +1449,90 @@ describe("NumberInput widget", () => {
 
       expect(input).toHaveValue(0.51)
     })
+  })
+})
+
+describe("NumberInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getIntProps({ queryParamKey: "my_number" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_number",
+      "double_value",
+      props.element.default,
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getIntProps({ queryParamKey: "my_number" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<NumberInput {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getIntProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with float default value", () => {
+    const props = getProps({
+      queryParamKey: "my_float",
+      dataType: NumberInputProto.DataType.FLOAT,
+      default: 3.14,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_float",
+      "double_value",
+      3.14,
+      false,
+      undefined
+    )
+  })
+
+  it("registers with clearable=true when no default", () => {
+    const props = getProps({
+      queryParamKey: "my_number",
+      default: null,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<NumberInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_number",
+      "double_value",
+      null,
+      true,
+      undefined
+    )
   })
 })

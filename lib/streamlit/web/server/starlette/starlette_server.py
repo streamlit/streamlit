@@ -17,7 +17,7 @@
 This module provides two classes for running Streamlit apps with uvicorn:
 
 1. **UvicornServer** (async): For embedding in an existing event loop.
-   Used by the `Server` class when `server.useStarlette=true`.
+   Used by the `Server` class for running Streamlit apps.
 
 2. **UvicornRunner** (sync): For standalone CLI usage with blocking execution.
    Used by `run_asgi_app()` when running `st.App` via `streamlit run`.
@@ -149,7 +149,9 @@ def _get_uvicorn_config_kwargs() -> dict[str, Any]:
         "ws_max_size": ws_max_size,
         "ws_per_message_deflate": ws_per_message_deflate,
         "use_colors": False,
-        "log_config": None,
+        # Don't override uvicorn's default logging config to ensure logs appear.
+        # Disable access logs to reduce noise (error logs will still appear).
+        "access_log": False,
     }
 
 
@@ -209,7 +211,7 @@ def _bind_socket(address: str, port: int, backlog: int) -> socket.socket:
 class UvicornServer:
     """Async uvicorn server for embedding in an existing event loop.
 
-    This class is used by Streamlit's `Server` class when `server.useStarlette=true`.
+    This class is used by Streamlit's `Server` class for running Streamlit apps.
     It wraps `uvicorn.Server` and provides:
 
     - `start()`: Async method that returns when the server is ready to accept connections
@@ -228,7 +230,7 @@ class UvicornServer:
 
     Examples
     --------
-    Used internally by Server._start_starlette():
+    Used internally by Server.start():
 
     >>> server = UvicornServer(runtime)
     >>> await server.start()  # Returns when ready
@@ -250,8 +252,7 @@ class UvicornServer:
             import uvicorn
         except ModuleNotFoundError as exc:  # pragma: no cover
             raise RuntimeError(
-                "uvicorn is required for server.useStarlette but is not installed. "
-                "Install it via `pip install streamlit[starlette]`."
+                "uvicorn is not installed. Please reinstall Streamlit."
             ) from exc
 
         if _server_address_is_unix_socket():
@@ -303,6 +304,12 @@ class UvicornServer:
                         ) from exc
                     continue
                 raise
+
+            # Port 0 means the OS assigns an ephemeral port. Read it back
+            # so that config and displayed URLs reflect the real port.
+            if port == 0:
+                port = self._socket.getsockname()[1]
+                uvicorn_config.port = port
 
             self._server = uvicorn.Server(uvicorn_config)
             config.set_option("server.port", port, ConfigOption.STREAMLIT_DEFINITION)

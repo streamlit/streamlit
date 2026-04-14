@@ -14,48 +14,34 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement } from "react"
+import { memo, ReactElement, ReactNode } from "react"
 
-import {
-  StyledUploadedFiles,
-  StyledUploadedFilesList,
-  StyledUploadedFilesListItem,
-} from "./styled-components"
-import UploadedFile from "./UploadedFile"
-import { UploadFileInfo } from "./UploadFileInfo"
-import withPagination, { PaginationProps } from "./withPagination"
+import UploadedFileChips from "~lib/components/shared/UploadedFile/UploadedFileChips"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 
-export interface Props {
+import { StyledUploadedFiles } from "./styled-components"
+
+interface Props {
   items: UploadFileInfo[]
   onDelete: (id: number) => void
-  disabled: boolean
+  disabled?: boolean
+  trailingContent?: ReactNode
 }
 
-const UploadedFileList = ({
+const UploadedFiles = ({
   items,
   onDelete,
   disabled,
-}: Props): ReactElement => {
-  return (
-    <StyledUploadedFilesList>
-      {items.map(file => (
-        <StyledUploadedFilesListItem key={file.id}>
-          <UploadedFile
-            fileInfo={file}
-            onDelete={onDelete}
-            disabled={disabled}
-          />
-        </StyledUploadedFilesListItem>
-      ))}
-    </StyledUploadedFilesList>
-  )
-}
-
-export const PaginatedFiles = withPagination(UploadedFileList)
-
-const UploadedFiles = (props: Props & PaginationProps): ReactElement => (
+  trailingContent,
+}: Props): ReactElement => (
   <StyledUploadedFiles>
-    <PaginatedFiles {...props} />
+    <UploadedFileChips
+      items={items}
+      onDelete={onDelete}
+      disabled={disabled}
+      trailingContent={trailingContent}
+    />
   </StyledUploadedFiles>
 )
+
 export default memo(UploadedFiles)

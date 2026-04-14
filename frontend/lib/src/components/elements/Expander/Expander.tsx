@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, ReactElement, useCallback, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { notNullOrUndefined } from "~lib/util/utils"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  BORDER_SIZE,
   StyledDetails,
   StyledDetailsPanel,
   StyledExpandableContainer,
@@ -31,8 +31,9 @@ import {
   StyledSummaryHeading,
   StyledSummaryLabelWrapper,
 } from "./styled-components"
+import { useDetailsAnimation } from "./useDetailsAnimation"
 
-export interface ExpanderIconProps {
+interface ExpanderIconProps {
   icon?: string
 }
 
@@ -46,7 +47,7 @@ export interface ExpanderIconProps {
  * @param {string} icon - The icon to render.
  * @returns {ReactElement}
  */
-export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
+const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
   const { icon } = props
 
   const statusIconTestIds: Record<string, string> = {
@@ -69,141 +70,82 @@ export const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 export interface ExpanderProps {
   element: BlockProto.Expandable
   isStale: boolean
+  widgetMgr: WidgetStateManager
+  /** Block-level ID for CSS key styling (may be set without widget mode). */
+  blockId?: string
+  fragmentId?: string
 }
 
 const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   element,
   isStale,
+  widgetMgr,
+  blockId,
+  fragmentId,
   children,
 }): ReactElement => {
-  const { label, expanded: initialExpanded } = element
-  const [expanded, setExpanded] = useState<boolean>(initialExpanded || false)
+  const { label, icon } = element
   const [isHovered, setIsHovered] = useState(false)
-  const detailsRef = useRef<HTMLDetailsElement>(null)
-  const summaryRef = useRef<HTMLElement>(null)
-  const animationRef = useRef<Animation | null>(null)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    // Only apply the expanded state if it was actually set in the proto.
-    if (notNullOrUndefined(initialExpanded)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
-      setExpanded(initialExpanded)
+  // element.id is only set when the backend registers the expander as a
+  // stateful widget (on_change="rerun"). block.id may still be set for
+  // CSS key styling without implying widget mode.
+  const widgetId = element.id || undefined
+  const isWidget = Boolean(widgetMgr && widgetId)
+  const isPassivelyKeyed = Boolean(blockId) && !isWidget
 
-      // We manage the open attribute via the detailsRef and not with React state
-      if (detailsRef.current) {
-        detailsRef.current.open = initialExpanded
-      }
-    }
+  // Persist expanded state across remounts via elementStates.
+  // The hook is always called (Rules of Hooks) but only effective when
+  // isPassivelyKeyed — otherwise the empty id produces a no-op entry.
+  const [storedExpanded, setStoredExpanded] =
+    useWidgetManagerElementState<boolean>({
+      widgetMgr,
+      id: isPassivelyKeyed ? (blockId ?? "") : "",
+      key: "expanded",
+      defaultValue: element.expanded ?? false,
+    })
 
-    // Having `label` in the dependency array here is necessary because
-    // sometimes two distinct expanders look so similar that even the react
-    // diffing algorithm decides that they're the same element with updated
-    // props (this happens when something in the app removes one expander and
-    // replaces it with another in the same position).
-    //
-    // By adding `label` as a dependency, we ensure that we reset the
-    // expander's `expanded` state in this edge case.
-  }, [label, initialExpanded])
+  const initialExpanded = isPassivelyKeyed ? storedExpanded : element.expanded
 
-  const onAnimationFinish = (open: boolean): void => {
-    if (!detailsRef.current) {
-      return
-    }
-
-    detailsRef.current.open = open
-    animationRef.current = null
-    detailsRef.current.style.height = ""
-    detailsRef.current.style.overflow = ""
-  }
-
-  const toggleAnimation = (
-    detailsEl: HTMLDetailsElement,
-    startHeight: number,
-    endHeight: number
-  ): void => {
-    const isOpen = endHeight > startHeight
-
-    if (animationRef.current) {
-      animationRef.current.cancel()
-
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-        timeoutRef.current = null
-      }
-    }
-
-    const animation = detailsEl.animate(
-      {
-        height: [`${startHeight}px`, `${endHeight}px`],
-      },
-      {
-        duration: 500,
-        easing: "cubic-bezier(0.23, 1, 0.32, 1)",
-      }
-    )
-
-    animation.addEventListener("finish", () => onAnimationFinish(isOpen))
-    animationRef.current = animation
-  }
-
-  const toggle = (e: React.MouseEvent<HTMLDetailsElement>): void => {
-    e.preventDefault()
-
-    setExpanded(!expanded)
-    const detailsEl = detailsRef.current
-    if (!detailsEl || !summaryRef.current) {
-      return
-    }
-
-    detailsEl.style.overflow = "hidden"
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const detailsHeight = detailsEl.getBoundingClientRect().height
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-    const summaryHeight = summaryRef.current.getBoundingClientRect().height
-
-    if (!expanded) {
-      detailsEl.style.height = `${detailsHeight}px`
-      detailsEl.open = true
-
-      window.requestAnimationFrame(() => {
-        // For expansion animations, we rely on the rendered width and height
-        // of the children content. However, in Safari, the children are not
-        // rendered because Safari doesn't paint elements that are not visible
-        // (in this case, the details element is not visible because it's
-        // not open). This operation produces inconsistent heights to animate.
-        // To work around this, we force a repaint by animating a tiny bit
-        // and animate the rest of it later.
-        toggleAnimation(
-          detailsEl,
-          detailsHeight,
-          summaryHeight + 2 * BORDER_SIZE + 5 // Arbitrary size of 5px
+  // Callback to notify backend of toggle (only used in widget mode)
+  const handleWidgetToggle = useCallback(
+    (newOpen: boolean): void => {
+      if (widgetMgr && widgetId) {
+        widgetMgr.setBoolValue(
+          { id: widgetId },
+          newOpen,
+          { fromUi: true },
+          fragmentId
         )
+      }
+    },
+    [widgetMgr, widgetId, fragmentId]
+  )
 
-        timeoutRef.current = setTimeout(() => {
-          if (!contentRef.current) {
-            return
-          }
+  // Callback for passive persistence (only when passively keyed)
+  const handlePersistToggle = useCallback(
+    (newOpen: boolean): void => {
+      setStoredExpanded(newOpen)
+    },
+    [setStoredExpanded]
+  )
 
-          const contentHeight =
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-            contentRef.current.getBoundingClientRect().height
-          toggleAnimation(
-            detailsEl,
-            detailsHeight,
-            summaryHeight + contentHeight + 2 * BORDER_SIZE
-          )
-        }, 100)
-      })
-    } else {
-      toggleAnimation(
-        detailsEl,
-        detailsHeight,
-        summaryHeight + 2 * BORDER_SIZE
-      )
-    }
-  }
+  const onToggle = isWidget
+    ? handleWidgetToggle
+    : isPassivelyKeyed
+      ? handlePersistToggle
+      : undefined
+
+  const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
+    useDetailsAnimation({
+      backendExpanded: initialExpanded,
+      label,
+      onToggle,
+    })
+
+  // Determine which icon to show
+  const showChevron = !icon || isHovered
+  const showUserIcon = icon && !isHovered
 
   const handleMouseEnter = (): void => {
     setIsHovered(true)
@@ -212,10 +154,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const handleMouseLeave = (): void => {
     setIsHovered(false)
   }
-
-  // Determine which icon to show
-  const showChevron = !element.icon || isHovered
-  const showUserIcon = element.icon && !isHovered
 
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
@@ -226,23 +164,23 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
         onMouseLeave={handleMouseLeave}
       >
         <StyledSummary
-          onClick={toggle}
+          onClick={handleToggle}
           ref={summaryRef}
           isStale={isStale}
-          expanded={expanded}
+          expanded={isOpen}
         >
           <StyledSummaryHeading>
             {showChevron && (
               <DynamicIcon
                 iconValue={
-                  expanded
+                  isOpen
                     ? ":material/keyboard_arrow_down:"
                     : ":material/keyboard_arrow_right:"
                 }
                 size="lg"
               />
             )}
-            {showUserIcon && <ExpanderIcon icon={element.icon} />}
+            {showUserIcon && <ExpanderIcon icon={icon} />}
 
             <StyledSummaryLabelWrapper>
               <StreamlitMarkdown
@@ -254,7 +192,13 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             </StyledSummaryLabelWrapper>
           </StyledSummaryHeading>
         </StyledSummary>
-        <StyledDetailsPanel data-testid="stExpanderDetails" ref={contentRef}>
+        <StyledDetailsPanel
+          data-testid="stExpanderDetails"
+          ref={contentRef}
+          // Exclude collapsed content from browser find-in-page (Cmd+F) searches.
+          // Using "" instead of true for consistent behavior in jsdom tests.
+          inert={!isOpen ? "" : undefined}
+        >
           {children}
         </StyledDetailsPanel>
       </StyledDetails>

@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ArrowNamedDataSetProto";
-
-import "streamlit/proto/Arrow.proto";
+import "streamlit/proto/ArrowData.proto";
 
 // A dataset that can be referenced by name.
 message ArrowNamedDataSet {
@@ -31,5 +28,5 @@ message ArrowNamedDataSet {
   bool has_name = 3;
 
   // The data itself.
-  Arrow data = 2;
+  ArrowData data = 2;
 }

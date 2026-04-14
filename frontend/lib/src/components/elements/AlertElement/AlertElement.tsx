@@ -16,9 +16,11 @@
 
 import { memo, ReactElement } from "react"
 
-import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import AlertContainer, {
+  Kind,
+} from "~lib/components/shared/AlertContainer/AlertContainer"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import { StyledAlertContent, StyledAlertIcon } from "./styled-components"

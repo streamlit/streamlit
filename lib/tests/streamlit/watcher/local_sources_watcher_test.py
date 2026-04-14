@@ -19,6 +19,7 @@ from __future__ import annotations
 import contextlib
 import os
 import sys
+import types
 import unittest
 from unittest.mock import MagicMock, call, patch
 
@@ -290,6 +291,46 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             assert "pkg" not in sys.modules
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_namespace_partial_eviction_evicts_unwatched_children(self, fob):
+        """Unwatched site-packages children are evicted with the namespace parent.
+
+        When a PEP 420 namespace spans watched local code and blacklisted paths,
+        only watched modules were previously removed from sys.modules; orphaned
+        children broke attribute access on the re-created parent after rerun.
+        """
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(NOOP_CALLBACK)
+
+        myns = types.ModuleType("myns")
+        myns_core = types.ModuleType("myns.core")
+        myns_spec = types.ModuleType("myns.spec")
+
+        trigger_path = os.path.realpath(NESTED_MODULE_CHILD_FILE)
+        script_real = os.path.realpath(SCRIPT_PATH)
+        lsw._watched_modules = {
+            trigger_path: local_sources_watcher.WatchedModule(MagicMock(), "myns.core"),
+            script_real: local_sources_watcher.WatchedModule(MagicMock(), "myns"),
+        }
+
+        myns_extra = types.ModuleType("myns_extra")
+
+        with patch.dict(
+            sys.modules,
+            {
+                "myns": myns,
+                "myns.core": myns_core,
+                "myns.spec": myns_spec,
+                "myns_extra": myns_extra,
+            },
+        ):
+            lsw.on_path_changed(trigger_path)
+
+            assert "myns" not in sys.modules
+            assert "myns.core" not in sys.modules
+            assert "myns.spec" not in sys.modules
+            assert "myns_extra" in sys.modules
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_module_caching(self, _fob):

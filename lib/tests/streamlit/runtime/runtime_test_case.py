@@ -117,7 +117,6 @@ class RuntimeTestCase(IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         config = RuntimeConfig(
             script_path="mock/script/path.py",
-            command_line=None,
             component_registry=LocalComponentRegistry(),
             media_file_storage=MemoryMediaFileStorage("/mock/media"),
             uploaded_file_manager=MemoryUploadedFileManager("/mock/upload"),

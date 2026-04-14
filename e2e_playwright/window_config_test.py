@@ -64,24 +64,30 @@ def test_window_config_captured_at_preload(
     # Verify URL config was captured
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
-        == "https://host.example.com/my-app",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+            == "https://host.example.com/my-app"
+        ),
     )
 
     # Verify client ID config was captured
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID")
-        == "preload-test-client-id",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID")
+            == "preload-test-client-id"
+        ),
     )
 
     # Verify boolean flag config was captured
     wait_until(
         app,
-        lambda: app.evaluate(
-            "() => window.__streamlit?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION"
-        )
-        is False,
+        lambda: (
+            app.evaluate(
+                "() => window.__streamlit?.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION"
+            )
+            is False
+        ),
     )
 
     # Verify app is functional with all configs applied
@@ -117,8 +123,10 @@ def test_window_theme_config_immutable_after_load(
     # Verify window.__streamlit exists and has our value
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.LIGHT_THEME?.primaryColor")
-        == "#042604",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.LIGHT_THEME?.primaryColor")
+            == "#042604"
+        ),
     )
 
     # Take snapshot of the initial green theme
@@ -142,8 +150,10 @@ def test_window_theme_config_immutable_after_load(
     # Verify window.__streamlit was actually changed
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.LIGHT_THEME?.primaryColor")
-        == "#FF0000",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.LIGHT_THEME?.primaryColor")
+            == "#FF0000"
+        ),
     )
 
     # Take another snapshot immediately - should still show green theme, NOT red
@@ -178,8 +188,10 @@ def test_window_config_backend_base_url_immutable(app: Page):
     # Verify window.__streamlit was modified
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.BACKEND_BASE_URL")
-        == "https://malicious.example.com",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.BACKEND_BASE_URL")
+            == "https://malicious.example.com"
+        ),
     )
 
     # App should still be functional with original frozen config
@@ -212,8 +224,10 @@ def test_window_config_main_page_url(app: Page):
     # Verify config was captured
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
-        == "https://example.com/my-app",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+            == "https://example.com/my-app"
+        ),
     )
 
     # Now modify window.__streamlit AFTER load to a DIFFERENT pathname
@@ -228,8 +242,10 @@ def test_window_config_main_page_url(app: Page):
     # Verify window.__streamlit was modified
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
-        == "https://example.com/hacked-path",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+            == "https://example.com/hacked-path"
+        ),
     )
 
     # Navigate to Page 2 - this triggers maybeUpdatePageUrl() which retrieves the
@@ -270,8 +286,10 @@ def test_window_config_direct_property_modification(app: Page):
     # Verify config was captured
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
-        == "https://example.com/my-app",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+            == "https://example.com/my-app"
+        ),
     )
 
     # Modify window.__streamlit AFTER load via direct property assignment
@@ -285,8 +303,10 @@ def test_window_config_direct_property_modification(app: Page):
     # Verify window.__streamlit property was directly modified
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
-        == "https://example.com/hacked-path",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.MAIN_PAGE_BASE_URL")
+            == "https://example.com/hacked-path"
+        ),
     )
 
     # Navigate to Page 2 - this triggers maybeUpdatePageUrl() which should use
@@ -330,8 +350,10 @@ def test_window_config_download_url(app: Page):
     # Verify config was captured
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL")
-        == "https://cdn.example.com",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL")
+            == "https://cdn.example.com"
+        ),
     )
 
     # Now modify window.__streamlit AFTER load to a DIFFERENT URL
@@ -346,8 +368,10 @@ def test_window_config_download_url(app: Page):
     # Verify window.__streamlit was modified
     wait_until(
         app,
-        lambda: app.evaluate("() => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL")
-        == "https://malicious.example.com",
+        lambda: (
+            app.evaluate("() => window.__streamlit?.DOWNLOAD_ASSETS_BASE_URL")
+            == "https://malicious.example.com"
+        ),
     )
 
     # Set up request interception to capture any URL requests

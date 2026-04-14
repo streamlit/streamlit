@@ -21,8 +21,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.TextInput_pb2 import TextInput
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -39,8 +43,7 @@ class TextInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.text_input
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == ""
         assert c.HasField("default")
@@ -177,9 +180,9 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -330,6 +333,63 @@ class TextInputTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.text_input
             id2 = c2.id
             assert id1 != id2
+
+    def test_bind_query_params_sets_query_param_key(self) -> None:
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.text_input("the label", key="my_text", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_text"
+
+    def test_bind_query_params_without_key_raises_exception(self) -> None:
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text_input("the label", bind="query-params")
+
+        assert "must have a unique 'key' parameter" in str(exc.value)
+
+    def test_no_bind_does_not_set_query_param_key(self) -> None:
+        """Test that without bind parameter, query_param_key is not set."""
+        st.text_input("the label", key="my_text")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self) -> None:
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            st.text_input("the label", key="my_text", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)
+
+    def test_bind_query_params_with_default_value(self) -> None:
+        """Test that bind works with a default value."""
+        st.text_input("the label", value="hello", key="my_text", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_text"
+        assert c.default == "hello"
+
+    def test_bind_query_params_with_max_chars(self) -> None:
+        """Test that bind works with max_chars."""
+        st.text_input("the label", key="my_text", bind="query-params", max_chars=5)
+
+        c = self.get_delta_from_queue().new_element.text_input
+        assert c.query_param_key == "my_text"
+        assert c.max_chars == 5
+
+    def test_bind_query_params_with_password_raises_exception(self) -> None:
+        """Test that bind='query-params' with type='password' raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text_input(
+                "the label",
+                key="my_text",
+                bind="query-params",
+                type="password",
+            )
+
+        assert "password" in str(exc.value).lower()
 
 
 class SomeObj:

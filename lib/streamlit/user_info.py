@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Keep Attributes before Examples in API docstrings.
+
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
@@ -392,8 +394,7 @@ def _get_user_info() -> UserInfoType:
 
 class TokensProxy(Mapping[str, str]):
     """
-    A read-only, dict-like object for accessing exposed tokens from the\
-    identity provider.
+    A read-only, dict-like object for accessing exposed tokens from the identity provider.
 
     This class provides access to tokens that have been explicitly exposed via
     the ``expose_tokens`` setting in your authentication configuration. Tokens
@@ -527,8 +528,7 @@ class TokensProxy(Mapping[str, str]):
 
 class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
     """
-    A read-only, dict-like object for accessing information about the current\
-    user.
+    A read-only, dict-like object for accessing information about the current user.
 
     ``st.user`` is dependent on the host platform running your
     Streamlit app. If your host platform has not configured the object,
@@ -558,8 +558,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         Whether a user is logged in. For a locally running app, this attribute
         is only available when authentication (``st.login()``) is configured in
         ``secrets.toml``. Otherwise, it does not exist.
-
-    tokens: TokensProxy
+    tokens : TokensProxy
         A read-only, dict-like object for accessing exposed tokens from the
         identity provider.
 
@@ -605,7 +604,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             "iat":{issued_time}
             "exp":{expiration_time}
             "tokens":{}
-    }
+        }
 
     **Example 2: Microsoft's identity token**
 
@@ -646,6 +645,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
             "aio":"{opaque_string}"
             "tokens":{}
         }
+
     """
 
     def __getitem__(self, key: str) -> str | bool | TokensProxy | None:
@@ -688,6 +688,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
         -------
         Dict[str,str]
             A dictionary of the current user's information.
+
         """
         return _get_user_info()
 

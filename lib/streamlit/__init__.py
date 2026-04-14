@@ -79,12 +79,22 @@ from streamlit.elements.lib.mutable_status_container import (
     StatusContainer as _StatusContainer,
 )
 from streamlit.elements.lib.dialog import Dialog as _Dialog
+from streamlit.elements.lib.mutable_expander_container import (
+    ExpanderContainer as _ExpanderContainer,
+)
+from streamlit.elements.lib.mutable_tab_container import TabContainer as _TabContainer
+from streamlit.elements.lib.mutable_popover_container import (
+    PopoverContainer as _PopoverContainer,
+)
 
 # instantiate the DeltaGeneratorSingleton
 _dg_singleton = _DeltaGeneratorSingleton(
     delta_generator_cls=_DeltaGenerator,
     status_container_cls=_StatusContainer,
     dialog_container_cls=_Dialog,
+    expander_container_cls=_ExpanderContainer,
+    tab_container_cls=_TabContainer,
+    popover_container_cls=_PopoverContainer,
 )
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
@@ -141,7 +151,7 @@ from streamlit.commands.execution_control import (
 def _update_logger() -> None:
     _logger.set_log_level(_config.get_option("logger.level").upper())
     _logger.update_formatter()
-    _logger.init_tornado_logs()
+    _logger.init_uvicorn_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
@@ -189,6 +199,7 @@ graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
 html = _main.html
+iframe = _main.iframe
 image = _main.image
 info = _main.info
 json = _main.json
@@ -197,6 +208,7 @@ line_chart = _main.line_chart
 link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
+menu_button = _main.menu_button
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input

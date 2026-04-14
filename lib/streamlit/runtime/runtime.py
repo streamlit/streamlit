@@ -86,10 +86,6 @@ class RuntimeConfig:
     # The filesystem path of the Streamlit script to run.
     script_path: str
 
-    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
-    # longer use this anywhere.
-    command_line: str | None
-
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
 
@@ -405,7 +401,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if existing_session_id and session_id_override:
+        if existing_session_id and session_id_override:  # pragma: no cover - defensive
             raise RuntimeError(
                 "Only one of existing_session_id and session_id_override should be set. "
                 "This should never happen."

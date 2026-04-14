@@ -17,7 +17,11 @@
 import {
   BYTE_CONVERSION_SIZE,
   FileSize,
+  formatTypeForDisplay,
+  formatTypesForDisplay,
   getSizeDisplay,
+  isFileTypeAllowed,
+  isMimeType,
   sizeConverter,
 } from "./FileHelper"
 
@@ -111,5 +115,221 @@ describe("sizeConverter", () => {
     expect(() =>
       sizeConverter(-1, FileSize.Gigabyte, FileSize.Gigabyte)
     ).toThrow("Size must be 0 or greater")
+  })
+})
+
+describe("formatTypeForDisplay", () => {
+  it("formats MIME wildcards by removing /*", () => {
+    expect(formatTypeForDisplay("image/*")).toEqual("image")
+    expect(formatTypeForDisplay("audio/*")).toEqual("audio")
+    expect(formatTypeForDisplay("video/*")).toEqual("video")
+    expect(formatTypeForDisplay("text/*")).toEqual("text")
+  })
+
+  it("keeps full MIME types as is", () => {
+    expect(formatTypeForDisplay("image/jpeg")).toEqual("image/jpeg")
+    expect(formatTypeForDisplay("application/pdf")).toEqual("application/pdf")
+    expect(formatTypeForDisplay("text/plain")).toEqual("text/plain")
+  })
+
+  it("formats extensions by removing dot and uppercasing", () => {
+    expect(formatTypeForDisplay(".jpg")).toEqual("JPG")
+    expect(formatTypeForDisplay(".pdf")).toEqual("PDF")
+    expect(formatTypeForDisplay(".tar.gz")).toEqual("TAR.GZ")
+    expect(formatTypeForDisplay("png")).toEqual("PNG")
+  })
+})
+
+describe("isMimeType", () => {
+  it("returns true for MIME types with slash", () => {
+    expect(isMimeType("image/jpeg")).toBe(true)
+    expect(isMimeType("image/*")).toBe(true)
+    expect(isMimeType("application/pdf")).toBe(true)
+    expect(isMimeType("audio/mpeg")).toBe(true)
+  })
+
+  it("returns false for extensions", () => {
+    expect(isMimeType(".jpg")).toBe(false)
+    expect(isMimeType("pdf")).toBe(false)
+    expect(isMimeType(".tar.gz")).toBe(false)
+  })
+})
+
+describe("isFileTypeAllowed", () => {
+  const createFile = (name: string, type = ""): File => {
+    const file = new File([""], name, { type })
+    return file
+  }
+
+  it("allows all files when no types specified", () => {
+    const file = createFile("test.xyz", "application/octet-stream")
+    expect(isFileTypeAllowed(file, [])).toBe(true)
+    expect(isFileTypeAllowed(file, undefined)).toBe(true)
+  })
+
+  describe("MIME type matching", () => {
+    it("matches exact MIME types", () => {
+      const jpegFile = createFile("photo.jpg", "image/jpeg")
+      expect(isFileTypeAllowed(jpegFile, ["image/jpeg"])).toBe(true)
+      expect(isFileTypeAllowed(jpegFile, ["image/png"])).toBe(false)
+    })
+
+    it("matches MIME wildcards", () => {
+      const jpegFile = createFile("photo.jpg", "image/jpeg")
+      const pngFile = createFile("photo.png", "image/png")
+      const audioFile = createFile("song.mp3", "audio/mpeg")
+
+      expect(isFileTypeAllowed(jpegFile, ["image/*"])).toBe(true)
+      expect(isFileTypeAllowed(pngFile, ["image/*"])).toBe(true)
+      expect(isFileTypeAllowed(audioFile, ["image/*"])).toBe(false)
+      expect(isFileTypeAllowed(audioFile, ["audio/*"])).toBe(true)
+    })
+
+    it("is case insensitive for MIME types", () => {
+      const file = createFile("photo.jpg", "IMAGE/JPEG")
+      expect(isFileTypeAllowed(file, ["image/jpeg"])).toBe(true)
+      expect(isFileTypeAllowed(file, ["IMAGE/*"])).toBe(true)
+    })
+  })
+
+  describe("extension matching", () => {
+    it("matches extensions with dot", () => {
+      const file = createFile("document.pdf")
+      expect(isFileTypeAllowed(file, [".pdf"])).toBe(true)
+      expect(isFileTypeAllowed(file, [".txt"])).toBe(false)
+    })
+
+    it("matches extensions without dot", () => {
+      const file = createFile("document.pdf")
+      expect(isFileTypeAllowed(file, ["pdf"])).toBe(true)
+      expect(isFileTypeAllowed(file, ["txt"])).toBe(false)
+    })
+
+    it("is case insensitive for extensions", () => {
+      const file = createFile("document.PDF")
+      expect(isFileTypeAllowed(file, [".pdf"])).toBe(true)
+      expect(isFileTypeAllowed(file, ["PDF"])).toBe(true)
+    })
+
+    it("matches multi-part extensions like .tar.gz", () => {
+      const tarGzFile = createFile("archive.tar.gz")
+      expect(isFileTypeAllowed(tarGzFile, [".tar.gz"])).toBe(true)
+      expect(isFileTypeAllowed(tarGzFile, ["tar.gz"])).toBe(true)
+      expect(isFileTypeAllowed(tarGzFile, [".gz"])).toBe(true)
+      expect(isFileTypeAllowed(tarGzFile, [".tar"])).toBe(false)
+      expect(isFileTypeAllowed(tarGzFile, [".zip"])).toBe(false)
+    })
+
+    it("matches csv.gz and similar compound extensions", () => {
+      const csvGzFile = createFile("data.csv.gz")
+      expect(isFileTypeAllowed(csvGzFile, [".csv.gz"])).toBe(true)
+      expect(isFileTypeAllowed(csvGzFile, ["csv.gz"])).toBe(true)
+      expect(isFileTypeAllowed(csvGzFile, [".gz"])).toBe(true)
+    })
+  })
+
+  describe("mixed types (MIME + extensions)", () => {
+    it("allows file matching MIME pattern even if extension doesn't match", () => {
+      // This is the key bug fix test case
+      const jpegFile = createFile("photo.jpg", "image/jpeg")
+      expect(isFileTypeAllowed(jpegFile, ["image/*", ".json"])).toBe(true)
+    })
+
+    it("allows file matching extension when MIME doesn't match", () => {
+      const jsonFile = createFile("data.json", "application/json")
+      expect(isFileTypeAllowed(jsonFile, ["image/*", ".json"])).toBe(true)
+    })
+
+    it("allows file matching either MIME or extension", () => {
+      const pngFile = createFile("image.png", "image/png")
+      expect(isFileTypeAllowed(pngFile, ["image/*", ".json"])).toBe(true)
+
+      const jsonFile = createFile("data.json", "application/json")
+      expect(isFileTypeAllowed(jsonFile, ["image/*", ".json"])).toBe(true)
+    })
+
+    it("rejects file matching neither MIME nor extension", () => {
+      // File with audio MIME type and .gif extension
+      const file = createFile("audio.gif", "audio/mpeg")
+      expect(isFileTypeAllowed(file, ["image/*", ".json"])).toBe(false)
+    })
+  })
+
+  describe("directory upload scenarios", () => {
+    it("allows image files with image/* type", () => {
+      // Simulates directory upload filtering
+      const files = [
+        createFile("photo1.jpg", "image/jpeg"),
+        createFile("photo2.png", "image/png"),
+        createFile("readme.txt", "text/plain"),
+      ]
+
+      const imageTypes = ["image/*"]
+      const allowed = files.filter(f => isFileTypeAllowed(f, imageTypes))
+
+      expect(allowed).toHaveLength(2)
+      expect(allowed.map(f => f.name)).toEqual(["photo1.jpg", "photo2.png"])
+    })
+
+    it("allows files with shortcut types (via normalized MIME)", () => {
+      // When user specifies type="image", backend normalizes to "image/*"
+      const normalizedTypes = ["image/*"]
+      const jpegFile = createFile("photo.jpg", "image/jpeg")
+      expect(isFileTypeAllowed(jpegFile, normalizedTypes)).toBe(true)
+    })
+  })
+})
+
+describe("formatTypesForDisplay", () => {
+  it("formats a list of types separated by commas", () => {
+    expect(formatTypesForDisplay([".png", ".pdf"])).toBe("PNG, PDF")
+    expect(formatTypesForDisplay(["image/*", ".json"])).toBe("image, JSON")
+  })
+
+  // Backend sends both extensions in each pair when user specifies either
+  it.each([
+    // [input, expected, description]
+    [[".jpg", ".jpeg"], "JPG", "jpg/jpeg pair (dotted)"],
+    [[".jpeg", ".jpg"], "JPG", "jpeg/jpg pair reversed (dotted)"],
+    [[".tif", ".tiff"], "TIF", "tif/tiff pair (dotted)"],
+    [[".tiff", ".tif"], "TIF", "tiff/tif pair reversed (dotted)"],
+    [[".htm", ".html"], "HTML", "htm/html pair (dotted)"],
+    [[".html", ".htm"], "HTML", "html/htm pair reversed (dotted)"],
+    [[".mpg", ".mpeg"], "MPG", "mpg/mpeg pair (dotted)"],
+    [[".mpeg", ".mpg"], "MPG", "mpeg/mpg pair reversed (dotted)"],
+    [[".mp4", ".mpeg4"], "MP4", "mp4/mpeg4 pair (dotted)"],
+    [[".mpeg4", ".mp4"], "MP4", "mpeg4/mp4 pair reversed (dotted)"],
+    [["jpg", "jpeg"], "JPG", "jpg/jpeg pair (dotless)"],
+    [["tif", "tiff", "png"], "TIF, PNG", "tif/tiff pair with extra type"],
+    [[".png", ".jpg", ".jpeg"], "PNG, JPG", "jpg/jpeg pair with leading type"],
+    [[".jpg", "jpg"], "JPG", "mixed dotted/dotless same extension"],
+    [["jpg", ".jpeg"], "JPG", "mixed dotted/dotless equivalent pair"],
+    [[".png", ".jpg", "jpg"], "PNG, JPG", "mixed with leading type"],
+    [[".JPG", ".jpeg"], "JPG", "mixed case uppercase first"],
+    [[".JPEG", ".jpg"], "JPG", "mixed case uppercase alias"],
+  ])(
+    "deduplicates equivalent extensions: %s -> %s (%s)",
+    (input, expected) => {
+      expect(formatTypesForDisplay(input)).toBe(expected)
+    }
+  )
+
+  it("preserves MIME types without deduplication", () => {
+    expect(formatTypesForDisplay(["image/jpeg", "image/png"])).toBe(
+      "image/jpeg, image/png"
+    )
+    expect(formatTypesForDisplay(["image/*", ".jpg", ".jpeg"])).toBe(
+      "image, JPG"
+    )
+  })
+
+  it("deduplicates multiple pairs in one list", () => {
+    expect(
+      formatTypesForDisplay([".jpg", ".jpeg", ".tif", ".tiff", ".png"])
+    ).toBe("JPG, TIF, PNG")
+  })
+
+  it("returns empty string for empty array", () => {
+    expect(formatTypesForDisplay([])).toBe("")
   })
 })

@@ -16,11 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "AppPageProto";
-
-// A page in the app. Includes both the name of the page as well as the full
-// path to the corresponding script file.
+// A page in the app with display metadata and a navigation destination.
 //
 // NOTE: This proto type is used by some external services so needs to remain
 // relatively stable. While it isn't entirely set in stone, changing it
@@ -34,4 +30,11 @@ message AppPage {
   bool is_default = 4;
   string section_header = 5;
   string url_pathname = 6;
+
+  // Whether the page is hidden from navigation menu
+  bool is_hidden = 7;
+
+  // If set, this page links to an external URL that opens in a new browser tab
+  // instead of navigating within the app. Only set by the navigation payload.
+  optional string external_url = 8;
 }

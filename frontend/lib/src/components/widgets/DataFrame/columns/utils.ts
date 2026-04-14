@@ -31,7 +31,7 @@ import "moment-timezone"
 import numbro from "numbro"
 
 import { ArrowType } from "~lib/dataframes/arrowTypeUtils"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 /**
@@ -73,8 +73,7 @@ export interface BaseColumnProps {
   /**
    * Configuration options related to the column type.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  readonly columnTypeOptions?: Record<string, any>
+  readonly columnTypeOptions?: Record<string, unknown>
   /** The content alignment of the column. */
   readonly contentAlignment?: "left" | "center" | "right"
   /** The default value of the column used when adding a new row. */
@@ -103,14 +102,11 @@ export interface BaseColumn extends BaseColumnProps {
   // Validate the input data for compatibility with the column type:
   // Either returns a boolean indicating if the data is valid or not, or
   // returns the corrected value.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
-  validateInput?(data?: any): boolean | any
+  validateInput?(data?: unknown): unknown
   // Get a cell with the provided data for the column type:
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getCell(data?: any, validate?: boolean): GridCell
+  getCell(data?: unknown, validate?: boolean): GridCell
   // Get the raw value of the given cell:
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-redundant-type-constituents -- TODO: Replace 'any' with a more specific type.
-  getCellValue(cell: GridCell): any | null
+  getCellValue(cell: GridCell): unknown
 }
 
 /**
@@ -268,22 +264,19 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
  *
  * @returns The merged column parameters.
  */
-export function mergeColumnParameters(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  defaultParams: Record<string, any> | undefined | null,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  userParams: Record<string, any> | undefined | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> {
+export function mergeColumnParameters<T = Record<string, unknown>>(
+  defaultParams: Record<string, unknown> | undefined | null,
+  userParams: Record<string, unknown> | undefined | null
+): T {
   if (isNullOrUndefined(defaultParams)) {
-    return userParams || {}
+    return (userParams || {}) as T
   }
 
   if (isNullOrUndefined(userParams)) {
-    return defaultParams || {}
+    return (defaultParams || {}) as T
   }
 
-  return merge(defaultParams, userParams)
+  return merge(defaultParams, userParams) as T
 }
 
 /**
@@ -294,8 +287,7 @@ export function mergeColumnParameters(
  *
  * @returns The converted array or an empty array if the value cannot be interpreted as an array.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toSafeArray(data: any): any[] {
+export function toSafeArray(data: unknown): unknown[] {
   if (isNullOrUndefined(data)) {
     return []
   }
@@ -316,8 +308,7 @@ export function toSafeArray(data: any): any[] {
       // Support for JSON arrays: ["foo", 1, null, "test"]
       try {
         return JSON.parse(data)
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
+      } catch {
         return [data]
       }
     } else {
@@ -336,14 +327,12 @@ export function toSafeArray(data: any): any[] {
       return [toSafeString(parsedData)]
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    return parsedData.map((value: any) =>
+    return parsedData.map((value: unknown) =>
       ["string", "number", "boolean", "null"].includes(typeof value)
         ? value
         : toSafeString(value)
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     return [toSafeString(data)]
   }
 }
@@ -379,9 +368,8 @@ export function isEditableArrayValue(data: unknown): boolean {
  *
  * @returns `true` if the data might be a JSON string.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function isMaybeJson(data: any): boolean {
-  return data?.startsWith("{") && data.endsWith("}")
+export function isMaybeJson(data: unknown): boolean {
+  return typeof data === "string" && data.startsWith("{") && data.endsWith("}")
 }
 
 /**
@@ -392,19 +380,16 @@ export function isMaybeJson(data: any): boolean {
  *
  * @return The converted string or a string showing the type of the object as fallback.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toSafeString(data: any): string {
+export function toSafeString(data: unknown): string {
   try {
     try {
       return toString(data)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       return JSON.stringify(data, (_key, value) =>
         typeof value === "bigint" ? Number(value) : value
       )
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // This is most likely an object that cannot be converted to a string
     // console.log converts this to `[object Object]` which we are doing here as well:
     return `[${typeof data}]`
@@ -420,8 +405,7 @@ export function toSafeString(data: any): string {
  * @return The converted boolean, null if the value is empty or undefined if the
  *         value cannot be interpreted as a boolean.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toSafeBoolean(value: any): boolean | null | undefined {
+export function toSafeBoolean(value: unknown): boolean | null | undefined {
   if (isNullOrUndefined(value)) {
     return null
   }
@@ -451,8 +435,7 @@ export function toSafeBoolean(value: any): boolean | null | undefined {
  * @returns The converted number or null if the value is empty or undefined or NaN if the
  *          value cannot be interpreted as a number.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toSafeNumber(value: any): number | null {
+export function toSafeNumber(value: unknown): number | null {
   // TODO(lukasmasuch): Should this return null as replacement for NaN?
 
   if (isNullOrUndefined(value)) {
@@ -476,8 +459,7 @@ export function toSafeNumber(value: any): number | null {
       if (notNullOrUndefined(unformattedValue)) {
         return unformattedValue
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (error) {
+    } catch {
       // Do nothing here
     }
   } else if (value instanceof Int32Array) {
@@ -494,18 +476,16 @@ export function toSafeNumber(value: any): number | null {
  * @param array - The array to convert.
  * @returns The string representation of the array.
  */
-export function arrayToCopyValue(array?: object[] | null): string {
+export function arrayToCopyValue(array?: unknown[] | null): string {
   if (isNullOrUndefined(array)) {
     return ""
   }
 
   return toSafeString(
-    array.map((x: object) =>
+    array.map((x: unknown) =>
       // Replace commas with spaces since commas are used to
       // separate the list items.
-      typeof x === "string" && (x as string).includes(",")
-        ? (x as string).replace(/,/g, " ")
-        : x
+      typeof x === "string" && x.includes(",") ? x.replace(/,/g, " ") : x
     )
   )
 }
@@ -518,8 +498,7 @@ export function arrayToCopyValue(array?: object[] | null): string {
  *
  * @returns The converted JSON string or a string showing the type of the object as fallback.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toJsonString(value: any): string {
+export function toJsonString(value: unknown): string {
   if (isNullOrUndefined(value)) {
     return ""
   }
@@ -536,8 +515,7 @@ export function toJsonString(value: any): string {
       // so we convert them to a number as fallback
       typeof val === "bigint" ? Number(val) : val
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // If the value cannot be converted to a JSON string, return the stringified value
     return toSafeString(value)
   }
@@ -553,8 +531,7 @@ export function toJsonString(value: any): string {
  *
  * @returns The converted date or null if the value cannot be interpreted as a date.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toSafeDate(value: any): Date | null | undefined {
+export function toSafeDate(value: unknown): Date | null | undefined {
   if (isNullOrUndefined(value)) {
     return null
   }
@@ -620,8 +597,7 @@ export function toSafeDate(value: any): Date | null | undefined {
         return parsedMomentTime.toDate()
       }
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     return undefined
   }
 
@@ -733,8 +709,7 @@ export function getLinkDisplayValueFromRegex(
 
     // if the regex doesn't find a match with the url, just use the url as display value
     return href
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error) {
+  } catch {
     // if there was any error return the href
     return href
   }

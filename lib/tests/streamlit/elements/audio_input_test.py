@@ -23,7 +23,7 @@ import streamlit as st
 from streamlit.elements.widgets.audio_input import AudioInputSerde
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.uploaded_file_manager import (
     DeletedFile,
     UploadedFile,
@@ -41,17 +41,16 @@ class AudioInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.audio_input
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         # Default sample_rate should be 16000
         assert c.sample_rate == 16000
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):

@@ -36,7 +36,6 @@ class FormUtilsTest(unittest.TestCase):
         super().setUpClass()
         config = RuntimeConfig(
             script_path="",
-            command_line=None,
             media_file_storage=None,
             uploaded_file_manager=None,
         )

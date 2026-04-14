@@ -48,6 +48,11 @@ type DataEditorReturn = Pick<
 interface UseDataEditorParams {
   /** The columns of the table. */
   columns: BaseColumn[]
+  /**
+   * All columns including hidden ones.
+   * Used to initialize cells for all columns when a row is added.
+   */
+  allColumns: BaseColumn[]
   /** Whether rows can be added (DYNAMIC or ADD_ONLY modes). */
   canAddRows: boolean
   /** Whether rows can be deleted (DYNAMIC or DELETE_ONLY modes). */
@@ -84,6 +89,7 @@ const LOG = getLogger("useDataEditor")
  */
 function useDataEditor({
   columns,
+  allColumns,
   canAddRows,
   canDeleteRows,
   editingState,
@@ -149,14 +155,17 @@ function useDataEditor({
     }
 
     const newRow: Map<number, GridCell> = new Map()
-    columns.forEach(column => {
+    // We use allColumns (including hidden columns) to ensure that
+    // cells are created for all columns. This prevents issues when
+    // a hidden column is later made visible (see issue #13915).
+    allColumns.forEach(column => {
       // For the default value, we trust the developer to make a valid choice,
       // so we do not validate the value here.
       newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
     updateNumRows()
-  }, [columns, editingState, canAddRows, updateNumRows])
+  }, [allColumns, editingState, canAddRows, updateNumRows])
 
   /**
    * Callback used by glide-data-grid when the user adds a new row in the table UI.

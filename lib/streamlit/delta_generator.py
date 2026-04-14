@@ -51,12 +51,12 @@ from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
-from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
+from streamlit.elements.help import HelpMixin
 from streamlit.elements.html import HtmlMixin
 from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
@@ -80,6 +80,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.space import SpaceMixin
 from streamlit.elements.spinner import SpinnerMixin
+from streamlit.elements.table import TableMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -91,7 +92,9 @@ from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
 from streamlit.elements.widgets.color_picker import ColorPickerMixin
 from streamlit.elements.widgets.data_editor import DataEditorMixin
+from streamlit.elements.widgets.feedback import FeedbackMixin
 from streamlit.elements.widgets.file_uploader import FileUploaderMixin
+from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
 from streamlit.elements.widgets.radio import RadioMixin
@@ -189,6 +192,7 @@ class DeltaGenerator(
     ColorPickerMixin,
     EmptyMixin,
     ExceptionMixin,
+    FeedbackMixin,
     FileUploaderMixin,
     FormMixin,
     GraphvizMixin,
@@ -202,6 +206,7 @@ class DeltaGenerator(
     MapMixin,
     MediaMixin,
     MetricMixin,
+    MenuButtonMixin,
     MultiSelectMixin,
     NumberInputMixin,
     PdfMixin,
@@ -216,6 +221,7 @@ class DeltaGenerator(
     SnowMixin,
     SpaceMixin,
     SpinnerMixin,
+    TableMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
@@ -432,7 +438,7 @@ class DeltaGenerator(
         return self._provided_cursor is None
 
     @property
-    def id(self) -> str:
+    def _id(self) -> str:
         return str(id(self))
 
     def _get_transient_cursor(self) -> cursor.Cursor:
@@ -553,9 +559,9 @@ class DeltaGenerator(
         caching.save_element_message(
             delta_type,
             element_proto,
-            invoked_dg_id=self.id,
-            used_dg_id=dg.id,
-            returned_dg_id=output_dg.id,
+            invoked_dg_id=self._id,
+            used_dg_id=dg._id,
+            returned_dg_id=output_dg._id,
             layout_config=layout_config,
         )
 
@@ -614,9 +620,9 @@ class DeltaGenerator(
 
         caching.save_block_message(
             block_proto,
-            invoked_dg_id=self.id,
-            used_dg_id=dg.id,
-            returned_dg_id=block_dg.id,
+            invoked_dg_id=self._id,
+            used_dg_id=dg._id,
+            returned_dg_id=block_dg._id,
         )
 
         return block_dg

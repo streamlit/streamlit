@@ -204,3 +204,46 @@ v20 = st.selectbox(
     key="selectbox20",
 )
 st.write("value 20:", v20)
+
+v21 = st.selectbox(
+    "selectbox 21 (filter_mode='prefix')",
+    ["A123", "A1234", "BA123", "CA123"],
+    index=None,
+    filter_mode="prefix",
+)
+st.write("value 21:", v21)
+
+v22 = st.selectbox(
+    "selectbox 22 (filter_mode='contains')",
+    ["alice@example.com", "bob@company.com", "carol@example.com"],
+    index=None,
+    filter_mode="contains",
+)
+st.write("value 22:", v22)
+
+v23 = st.selectbox(
+    "selectbox 23 (filter_mode=None)",
+    ["Yes", "No", "Maybe"],
+    index=None,
+    filter_mode=None,
+)
+st.write("value 23:", v23)
+
+# --- Bound widgets (query-params) ---
+
+v_bound = st.selectbox(
+    "Bound selectbox",
+    ["cat", "dog", "bird"],
+    key="bound_select",
+    bind="query-params",
+)
+st.write("bound select value:", v_bound)
+
+v_bound_clear = st.selectbox(
+    "Bound clearable",
+    ["red", "green", "blue"],
+    index=None,
+    key="bound_select_clear",
+    bind="query-params",
+)
+st.write("bound select clear value:", v_bound_clear)

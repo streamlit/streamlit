@@ -47,7 +47,7 @@ runs:
     #   - runner.os and runner.arch: to scope to the correct platform
     #   - Playwright version: to bust cache on browser upgrades
     - name: Cache Playwright browsers
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ~/.cache/ms-playwright
         key: ${{ runner.os }}-${{ runner.arch }}-playwright-${{ steps.pw-version.outputs.version }}

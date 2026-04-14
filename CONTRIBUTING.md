@@ -16,11 +16,79 @@ This helps make sure:
 4. Your time is well spent!
 
 > [!TIP]
-> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) *without* prior support from the Streamlit team, the chances of getting it merged are *extremely low*. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
+> To be clear: if you open a PR that adds a new feature (and isn't just a bug fix or similar) _without_ prior support from the Streamlit team, the chances of getting it merged are _extremely low_. Adding a new feature comes with a lot of baggage, such as thinking through the exact API, making sure it fulfills our standards, and maintaining it in the future – even if it's just a small parameter.
+
+## Pull request expectations
+
+These expectations apply to all contributors and all pull requests.
+
+### Expectations for all contributions
+
+- Properly fill out the [PR template](./.github/pull_request_template.md) with concrete details (not placeholders).
+- Keep PRs narrowly scoped. If your changes are broad, split them into smaller, reviewable PRs.
+- Address prior review feedback before requesting another review cycle.
+- Please respond to requested changes or maintainer questions within 14 days. If you need more time, leave a short status comment.
+- If you open additional PRs while prior feedback remains unaddressed, maintainers may pause or close review of newer PRs until earlier feedback is handled.
+- Repeated non-response may result in newer PRs being deprioritized or closed.
+
+### Issue and pull request discussion expectations
+
+Help us keep GitHub issues and PR threads readable and actionable.
+
+- Keep comments **relevant and constructive**. Add new information (a minimal repro, logs, screenshots, answers to maintainer questions, or review follow-ups).
+- Avoid low-signal replies like **"+1" / "same"**. Use GitHub reactions instead.
+- **No spam or promotion.** Do not post recruiting links, unsolicited links to third-party products/services, link-only replies, or repeated off-topic advertising.
+- Avoid duplicate comments that only restate existing points (including copy/paste or light paraphrasing). If you have nothing new to add, consider using a reaction instead of commenting.
+
+Maintainers may hide, edit, or delete comments that don’t contribute to the discussion, lock threads, limit interactions, and take other moderation actions when needed. Repeated or severe abuse may result in restrictions or bans. See our [Code of Conduct](./CODE_OF_CONDUCT.md).
+
+### Expectations for AI-assisted contributions
+
+We welcome responsible use of AI-assisted tools in this repository. AI can help contributors move faster, but it does not replace author ownership. If you open a PR, you are responsible for the correctness, scope, testing, and maintainability of that change.
+
+### Maintainer discretion for repeated low-quality patterns
+
+To protect maintainer bandwidth and keep the process fair for active contributors, maintainers may take stricter action when a contributor repeatedly submits low-quality or non-responsive PRs, spams issues/PRs with low-signal or duplicative comments, or posts promotional/spam links. This may include deprioritizing reviews, requesting that existing feedback be resolved first, closing PRs, removing disruptive content, locking threads, limiting interactions, or other GitHub moderation actions. When necessary, we also reserve the right to protect the project and community up to and including banning users in severe or repeated abuse cases.
+
+## AI Agent Skills and Subagents
+
+This repository includes skills and subagents in `.claude/` usable with Claude Code and Cursor to assist AI coding agents with common development tasks. Skills are invoked automatically based on their description, but can also be triggered manually via `/skill-name` (e.g., `/checking-changes`).
+
+### Skills
+
+| Skill | When to use |
+|-------|-------------|
+| `checking-changes` | After making backend or frontend changes, before committing |
+| `assessing-external-test-risk` | When reviewing branch or PR changes to decide whether `@pytest.mark.external_test` coverage is needed for externally hosted or embedded scenarios |
+| `debugging-streamlit` | When testing code changes, investigating bugs, or checking UI behavior |
+| `discovering-make-commands` | To list available `make` commands for build, test, lint, or format tasks |
+| `fixing-streamlit-ci` | When CI checks fail and you need to diagnose and fix errors |
+| `fixing-flaky-e2e-tests` | When E2E tests fail intermittently, show timeout errors, have snapshot mismatches, or exhibit browser-specific failures |
+| `implementing-feature` | When you have a spec folder, URL, or GitHub issue to implement end-to-end |
+| `understanding-streamlit-architecture` | When debugging cross-layer issues, understanding how features work end-to-end, or onboarding to the codebase |
+| `creating-pull-requests` | When changes are ready to be submitted as a PR with proper labels and formatting |
+| `addressing-pr-review-comments` | When a PR has reviewer feedback to address, including inline and general PR comments |
+| `updating-internal-docs` | After significant codebase changes to review and update internal documentation |
+| `sharing-pr-agent-artifacts` | When you have agent-generated artifacts (specs, plans) relevant for the current PR to share for reviewing |
+| `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
+| `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
+| `generating-changelog` | When preparing release notes between two git tags |
+| `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
+| `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
+
+### Subagents
+
+Subagents run autonomously in a fresh context, which optimizes for context size and cost. They can be triggered manually via `/subagent-name` (e.g., `/reviewing-local-changes`).
+
+| Subagent | When to use |
+|----------|-------------|
+| `reviewing-local-changes` | When you want a code review of the current branch's changes |
+| `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
+| `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
 
 ## Style Guide
 
-Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettier](https://prettier.io), [Ruff](https://github.com/astral-sh/ruff) and [ESLint](https://eslint.org/) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://github.com/nicolo-ribaudo/oxfmt), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
@@ -33,10 +101,16 @@ Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [Prettie
 $ xcode-select --install
 
 # Install Homebrew
-$ /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+$ /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 
 # Install the Protobuf compiler
 $ brew install protobuf
+
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+$ brew install gh
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ brew install ripgrep
 ```
 
 **Installing Node JS and yarn**
@@ -73,10 +147,11 @@ $ corepack enable
 # Install uv for Python
 $ curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install virtual environment in lib:
-$ cd lib/
-$ uv venv --python 3.12
-$ source .venv/bin/activate
+# (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
+# See https://cli.github.com/ for installation instructions
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ sudo apt-get install -y ripgrep
 ```
 
 #### Windows
@@ -85,7 +160,7 @@ Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing 
 
 ### 2. Grab the code
 
-*(You probably already know how to do this, but just in case...)*
+_(You probably already know how to do this, but just in case...)_
 
 First fork [the repo](https://github.com/streamlit/streamlit) via the UI on Github and then do the following:
 
@@ -94,28 +169,22 @@ git clone https://github.com/${YOUR_NAME}/streamlit.git
 cd streamlit
 git remote add remote https://github.com/streamlit/streamlit.git
 git checkout develop
-git submodule update --init
 git checkout -b ${BRANCH_NAME}
 ```
 
 ### 3. Create a new Python environment
 
-Create a virtual environment for Streamlit using your favorite tool (`virtualenv`, `pipenv`, etc) and activate it. Here's how we do it with [`venv`](https://docs.python.org/3/library/venv.html):
+We use [uv](https://docs.astral.sh/uv/) to manage Python dependencies and virtual environments. If you don't have uv installed, you can install it with:
 
 ```bash
-cd lib
-python -m venv venv
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Note that, with `venv` this process should be done from any directory, but it is recommended to do it from the `lib/` directory to keep all python files in one directory.
-
-```bash
-source ./venv/bin/activate
-```
+The virtual environment and dependencies will be automatically created and managed when you run `make all-dev` in the next step. uv creates a `.venv` directory in the repository root.
 
 ## How to develop Streamlit
 
-The basic developer workflow is that you run a React development server on port 3000 in one terminal and run Streamlit CLI commands in another terminal.
+The basic developer workflow is that you run a React development server (default port `3000`) in one terminal and run Streamlit CLI commands in another terminal.
 
 ### 1. One-time setup
 
@@ -138,28 +207,24 @@ make frontend-dev
 ```
 
 > [!Note]
-> This server listens on port `3000` rather than `8501` (i.e. Streamlit's production port). Normally you don't have to worry about this, but it may matter when you're developing certain features. The server is automatically updating to the changes you apply in the frontend code (hot-reloading).
+> This server defaults to port `3000` rather than `8501` (i.e. Streamlit's production port), but you can change it with `VITE_PORT` (or `PORT`), for example: `VITE_PORT=3002 make frontend-dev`.
+> To point the frontend dev server at a different backend, set `DEV_SERVER_BACKEND_URL`, for example: `DEV_SERVER_BACKEND_URL=http://localhost:8502 make frontend-dev`.
+> The server automatically updates when frontend code changes (hot-reloading).
 
 ### 4. Run Streamlit
 
-Open another terminal, start your Python environment and run Streamlit.
-
-If you're using `venv`, that's:
+Open another terminal and run Streamlit using `uv run`:
 
 ```bash
-$ cd lib
-$ source ./venv/bin/activate
-$ cd ..
-
-# Now run any Streamlit command you want, such as:
-$ streamlit hello
+# Run any Streamlit command, such as:
+uv run streamlit hello
 ```
 
 ### 5. What to do when you modify some code
 
 #### When you modify JS, or CSS code
 
-Since we use that awesome dev server above, when you change any JS/CSS code everything should automatically *just work* without the need to restart any of the servers.
+Since we use that awesome dev server above, when you change any JS/CSS code everything should automatically _just work_ without the need to restart any of the servers.
 
 #### When you modify Python code
 
@@ -198,19 +263,19 @@ You should always write unit tests and end-to-end tests! This is true for new fe
 - Run a specific test file with:
 
   ```bash
-  PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py
+  uv run pytest lib/tests/streamlit/the_test_name.py
   ```
 
 - Run a specific test inside a test file with:
 
   ```bash
-  PYTHONPATH=lib pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
+  uv run pytest lib/tests/streamlit/the_test_name.py -k test_that_something_works
   ```
 
 - Some tests require you to set up credentials to connect to Snowflake and install [the `snowflake-snowpark-python` package](https://pypi.org/project/snowflake-snowpark-python/). Information on how the Snowflake environment is set up is in our [test utils](./lib/tests/testutil.py) including environment variables to be set. They are skipped by default when running tests. To enable them and disable all others, pass the `--require-integration` flag to `pytest`.
 
   ```bash
-  PYTHONPATH=lib pytest --require-integration
+  uv run pytest --require-integration
   ```
 
 #### JS unit tests
@@ -251,7 +316,7 @@ make python-format
 
 ```
 
-Alternatively, you can use the `ruff format` command directly.
+Alternatively, you can use `uv run ruff format` directly.
 
 #### Linting
 
@@ -262,7 +327,7 @@ make python-lint
 
 ```
 
-Alternatively, you can use the `ruff check` command directly.
+Alternatively, you can use `uv run ruff check` directly.
 
 #### Type-checking
 
@@ -274,7 +339,7 @@ make python-types
 
 ### Javascript / Typescript
 
-For Javascript/Typescript, we utilize Prettier and ESLint.
+For Javascript/Typescript, we utilize oxfmt, oxlint, and ESLint.
 
 #### Formatting
 
@@ -305,6 +370,9 @@ make frontend-types
 
 For development in VS Code, we recommend installing the extensions listed in [`.vscode/extensions.json`](./.vscode/extensions.json) and for an optimized configuration you can use the VS-Code settings from [`.devcontainer/devcontainer.json`](./.devcontainer/devcontainer.json).
 
+> [!TIP]
+> **For Cursor users:** We suggest enabling the "Include third-party skills, subagents, and other configs" setting in Cursor's preferences to take full advantage of all available agent skills and configs.
+
 ### Pre-commit hooks
 
 When Streamlit's pre-commit detects that one of the linters has failed,
@@ -318,13 +386,13 @@ But you can run pre-commit hooks manually as needed.
 - Run all checks on your staged files by using:
 
   ```shell
-  pre-commit run
+  uv run pre-commit run
   ```
 
 - Run all checks on all files by using:
 
   ```shell
-  pre-commit run --all-files
+  uv run pre-commit run --all-files
   ```
 
 ## Troubleshooting
@@ -342,16 +410,14 @@ def test_streamlit_version(self):
       ?      ^
 ```
 
-To fix this make sure you have setup your Python's venv environments correctly, upgrade your dependencies or recreate your environment and repeat setup.
-
-You might have double environments which mismatch for example by accident you could have created venv Python environment inside `streamlit` repository and second one inside `streamlit/lib`. Remove them.
+To fix this make sure your Python environment is set up correctly. Try running `uv sync --group dev` to reinstall dependencies, or delete the `.venv` directory and run `make all-dev` again to recreate the environment.
 
 #### `protoc` command fails because of version mismatch
 
 If the `protoc` command fails and there is a version mismatch reported, try to install the correct version.
 
 - Go to [Protobuf releases](https://github.com/protocolbuffers/protobuf/releases)
-- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `pip show protobuf` or equivalent to find this out.
+- Choose the [Protobuf tag](https://github.com/protocolbuffers/protobuf/tags) which matches Python's environment Protobuf version, for example [3.20.0](https://github.com/protocolbuffers/protobuf/releases/tag/v3.20.0). Call `uv run pip show protobuf` or equivalent to find this out.
 - Download zip containing protoc for your system, example: [protoc-3.20.0-osx-x86_64.zip](https://github.com/protocolbuffers/protobuf/releases/download/v3.20.0/protoc-3.20.0-osx-x86_64.zip)
 
 <details>

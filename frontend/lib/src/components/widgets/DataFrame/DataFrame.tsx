@@ -47,45 +47,43 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
+import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
-import {
-  useColumnFormatting,
-  useColumnLoader,
-  useColumnPinning,
-  useColumnReordering,
-  useColumnSizer,
-  useColumnSort,
-  useColumnVisibility,
-  useCustomEditors,
-  useCustomRenderer,
-  useCustomTheme,
-  useDataEditor,
-  useDataExporter,
-  useDataLoader,
-  useRowHover,
-  useSelectionHandler,
-  useTableSizer,
-  useTooltips,
-  useWidgetState,
-} from "./hooks"
-import { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
+import useColumnFormatting from "./hooks/useColumnFormatting"
+import useColumnLoader from "./hooks/useColumnLoader"
+import useColumnPinning from "./hooks/useColumnPinning"
+import useColumnReordering from "./hooks/useColumnReordering"
+import useColumnSizer from "./hooks/useColumnSizer"
+import useColumnSort from "./hooks/useColumnSort"
+import useColumnVisibility from "./hooks/useColumnVisibility"
+import useCustomEditors from "./hooks/useCustomEditors"
+import useCustomRenderer from "./hooks/useCustomRenderer"
+import useCustomTheme from "./hooks/useCustomTheme"
+import useDataEditor from "./hooks/useDataEditor"
+import useDataExporter from "./hooks/useDataExporter"
+import useDataLoader from "./hooks/useDataLoader"
+import useRowHover from "./hooks/useRowHover"
+import useSelectionHandler from "./hooks/useSelectionHandler"
+import useTableSizer from "./hooks/useTableSizer"
+import useTooltips from "./hooks/useTooltips"
+import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -105,7 +103,7 @@ const LARGE_TABLE_ROWS_THRESHOLD = 150000
 const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 export interface DataFrameProps {
-  element: ArrowProto
+  element: DataframeProto
   data: Quiver
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
@@ -148,6 +146,13 @@ function DataFrame({
 
   const resizableRef = useRef<Resizable>(null)
   const dataEditorRef = useRef<DataEditorRef>(null)
+  // Stores original data row indices that need remapping after a sort operation.
+  // Used to preserve row selection in single-row-required mode when columns are sorted.
+  const pendingRowSelectionRemapRef = useRef<{
+    originalRowIndices: number[]
+    columns: CompactSelection
+    current: GridSelection["current"]
+  } | null>(null)
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
@@ -189,7 +194,7 @@ function DataFrame({
 
   // Determine if the device is primary using touch as input:
   const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia && window.matchMedia("(pointer: coarse)").matches,
+    () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
     []
   )
 
@@ -198,10 +203,11 @@ function DataFrame({
   // would still work. Those messages don't have the
   // editingMode field defined.
   if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = ArrowProto.EditingMode.READ_ONLY
+    element.editingMode = DataframeProto.EditingMode.READ_ONLY
   }
 
-  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } = ArrowProto.EditingMode
+  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
+    DataframeProto.EditingMode
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
@@ -265,6 +271,7 @@ function DataFrame({
     createSyncSelectionState,
     onFormCleared: handleFormCleared,
     loadInitialSelectionState,
+    getProgrammaticSelectionState,
   } = useWidgetState({
     element,
     widgetMgr,
@@ -282,6 +289,10 @@ function DataFrame({
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+
+  // Ref to access the latest getOriginalIndex in deferred callbacks.
+  const getOriginalIndexRef = useRef(getOriginalIndex)
+  getOriginalIndexRef.current = getOriginalIndex
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
   // This is done here because it needs the output from useColumnSort.
@@ -307,6 +318,7 @@ function DataFrame({
     isRowSelected,
     isColumnSelected,
     isCellSelected,
+    isRequiredRowSelectionActivated,
     clearSelection,
     processSelectionChange,
   } = useSelectionHandler(
@@ -357,13 +369,14 @@ function DataFrame({
       const initialSelection = loadInitialSelectionState({
         columns,
         isRowSelectionActivated,
+        isRequiredRowSelectionActivated,
         isColumnSelectionActivated,
         isCellSelectionActivated,
         isMultiCellSelectionActivated,
       })
 
       if (initialSelection) {
-        processSelectionChange(initialSelection)
+        processSelectionChange(initialSelection, { shouldSync: false })
       }
     },
     // We only want to run this effect once during the initial component load
@@ -371,6 +384,93 @@ function DataFrame({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
     []
   )
+
+  /**
+   * Remap row selection after sort in single-row-required mode.
+   * Scheduled via useTimeout to run after React applies the sort state.
+   */
+  const performRowSelectionRemap = useCallback(() => {
+    if (pendingRowSelectionRemapRef.current === null) {
+      return
+    }
+
+    const { originalRowIndices, columns, current } =
+      pendingRowSelectionRemapRef.current
+    pendingRowSelectionRemapRef.current = null
+
+    const currentGetOriginalIndex = getOriginalIndexRef.current
+
+    // Find the new display indices for the original data rows
+    const newDisplayIndices: number[] = []
+    for (const origIdx of originalRowIndices) {
+      for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
+        if (currentGetOriginalIndex(displayIdx) === origIdx) {
+          newDisplayIndices.push(displayIdx)
+          break
+        }
+      }
+    }
+
+    if (newDisplayIndices.length > 0) {
+      const newSelection: GridSelection = {
+        columns,
+        rows: CompactSelection.fromSingleSelection(newDisplayIndices[0]),
+        current,
+      }
+      processSelectionChange(newSelection)
+    }
+  }, [originalNumRows, processSelectionChange])
+
+  /**
+   * Schedule row selection remapping after sort. The 0ms delay ensures
+   * the remap runs after React applies the sort state changes.
+   */
+  const { restart: scheduleRowSelectionRemap } = useTimeout(
+    performRowSelectionRemap,
+    0,
+    { autoStart: false }
+  )
+
+  /**
+   * Apply programmatic selection changes set via st.session_state.
+   * selectionState is a one-shot signal from the backend (only present on
+   * the rerun where the value changed); we clear it after consuming.
+   */
+  useEffect(() => {
+    if (!element.selectionState) {
+      return
+    }
+
+    const selectionState = element.selectionState
+    element.selectionState = null
+
+    const programmaticSelection = getProgrammaticSelectionState({
+      selectionState,
+      columns,
+      isRowSelectionActivated,
+      isColumnSelectionActivated,
+      isCellSelectionActivated,
+      isMultiCellSelectionActivated,
+      getOriginalIndex,
+    })
+
+    if (programmaticSelection) {
+      processSelectionChange(programmaticSelection, { shouldSync: false })
+    }
+    // We depend on `element.selectionState` instead of `element` for stability;
+    // `element` is only referenced to clear the one-shot signal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    element.selectionState,
+    columns,
+    isRowSelectionActivated,
+    isColumnSelectionActivated,
+    isCellSelectionActivated,
+    isMultiCellSelectionActivated,
+    getProgrammaticSelectionState,
+    processSelectionChange,
+    getOriginalIndex,
+  ])
 
   const { exportToCsv } = useDataExporter(
     getCellContent,
@@ -382,6 +482,7 @@ function DataFrame({
   const { onCellEdited, onPaste, onRowAppended, onDelete, validateCell } =
     useDataEditor({
       columns,
+      allColumns,
       canAddRows,
       canDeleteRows,
       editingState,
@@ -509,59 +610,78 @@ function DataFrame({
     setColumnOrder
   )
 
+  const measureTableScrollbars = useCallback(() => {
+    if (resizableContainerRef.current && dataEditorRef.current) {
+      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+      const scrollAreaBounds = resizableContainerRef.current
+        ?.querySelector(".dvn-stack")
+        ?.getBoundingClientRect()
+
+      // We might also be able to use the following as an alternative,
+      // but it seems to cause "Maximum update depth exceeded" when scrollbars
+      // are activated or deactivated.
+      // const scrollAreaBounds = dataEditorRef.current?.getBounds()
+      // Also see: https://github.com/glideapps/glide-data-grid/issues/784
+      if (scrollAreaBounds) {
+        setHasVerticalScroll(
+          scrollAreaBounds.height >
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+            resizableContainerRef.current.clientHeight
+        )
+        setHasHorizontalScroll(
+          scrollAreaBounds.width >
+            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+            resizableContainerRef.current.clientWidth
+        )
+      }
+    }
+  }, [dataEditorRef, resizableContainerRef])
+
+  const {
+    clear: clearMeasureTableScrollbarsTimeout,
+    restart: restartMeasureTableScrollbarsTimeout,
+  } = useTimeout(measureTableScrollbars, 0, { autoStart: false })
+
+  const remeasureColumnIdxRef = useRef<number | null>(null)
+  const { restart: restartDelayedColumnRemeasure } = useTimeout(
+    () => {
+      if (isNullOrUndefined(remeasureColumnIdxRef.current)) {
+        return
+      }
+
+      dataEditorRef.current?.remeasureColumns(
+        CompactSelection.fromSingleSelection(remeasureColumnIdxRef.current)
+      )
+      remeasureColumnIdxRef.current = null
+    },
+    100,
+    { autoStart: false }
+  )
+
   // Determine if the table requires horizontal or vertical scrolling:
   useEffect(() => {
     // Use requestAnimationFrame + setTimeout to ensure the DOM is fully rendered
     // before measuring. This is more reliable than setTimeout alone.
     // requestAnimationFrame ensures the browser has calculated layout,
     // and setTimeout pushes the callback to the next event loop tick.
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
-
     const rafId = requestAnimationFrame(() => {
-      timeoutId = setTimeout(() => {
-        if (resizableContainerRef.current && dataEditorRef.current) {
-          // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-          // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-          const scrollAreaBounds = resizableContainerRef.current
-            ?.querySelector(".dvn-stack")
-            ?.getBoundingClientRect()
-
-          // We might also be able to use the following as an alternative,
-          // but it seems to cause "Maximum update depth exceeded" when scrollbars
-          // are activated or deactivated.
-          // const scrollAreaBounds = dataEditorRef.current?.getBounds()
-          // Also see: https://github.com/glideapps/glide-data-grid/issues/784
-          if (scrollAreaBounds) {
-            setHasVerticalScroll(
-              scrollAreaBounds.height >
-                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-                resizableContainerRef.current.clientHeight
-            )
-            setHasHorizontalScroll(
-              scrollAreaBounds.width >
-                // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-                resizableContainerRef.current.clientWidth
-            )
-          }
-        }
-      }, 0)
+      restartMeasureTableScrollbarsTimeout()
     })
 
     // Cleanup on unmount
     return () => {
       cancelAnimationFrame(rafId)
-      if (timeoutId) {
-        clearTimeout(timeoutId)
-      }
+      clearMeasureTableScrollbarsTimeout()
     }
-  }, [resizableSize, numRows, glideColumns, resizableContainerRef])
-
-  // Hide the column visibility menu if all columns are visible:
-  useEffect(() => {
-    if (allColumns.length == columns.length) {
-      setShowColumnVisibilityMenu(false)
-    }
-  }, [allColumns.length, columns.length])
+  }, [
+    clearMeasureTableScrollbarsTimeout,
+    glideColumns,
+    numRows,
+    resizableContainerRef,
+    resizableSize,
+    restartMeasureTableScrollbarsTimeout,
+  ])
 
   // Disable resize if the dataframe is in a horizontal layout or if it is a content-width dataframe
   // and not in the root container. This is because the feature requires measurements from the parent container
@@ -645,13 +765,16 @@ function DataFrame({
         target={StyledResizableContainer}
       >
         {customToolbarActions?.map(action => action)}
-        {((isRowSelectionActivated && isRowSelected) ||
+        {((isRowSelectionActivated &&
+          isRowSelected &&
+          !isRequiredRowSelectionActivated) ||
           (isColumnSelectionActivated && isColumnSelected) ||
           (isCellSelectionActivated && isCellSelected)) && (
           // Add clear selection action if selections are active
           // and a valid selections currently exists. Cell selections
           // are not relevant since they are not synced to the backend
-          // at the moment.
+          // at the moment. Hide for single-row-required mode since
+          // clearing is not allowed.
           <ToolbarAction
             label="Clear selection"
             icon={Close}
@@ -689,7 +812,7 @@ function DataFrame({
             }}
           />
         )}
-        {!isEmptyTable && allColumns.length > columns.length && (
+        {!isEmptyTable && allColumns.length > 0 && (
           <ColumnVisibilityMenu
             columns={allColumns}
             columnOrder={columnOrder}
@@ -853,33 +976,50 @@ function DataFrame({
               setShowSearch(false)
             }
 
-            if (isRowSelectionActivated && isRowSelected) {
+            if (isRequiredRowSelectionActivated && isRowSelected) {
+              // In single-row-required mode, preserve the row selection by remapping
+              // it to the same data row after sort. Capture the original data indices
+              // and current column selection before sorting.
+              const originalRowIndices = gridSelection.rows
+                .toArray()
+                .map(getOriginalIndex)
+              pendingRowSelectionRemapRef.current = {
+                originalRowIndices,
+                columns: gridSelection.columns,
+                // Don't capture current cell selection - it uses display coordinates
+                // that become stale after sorting
+                current: undefined,
+              }
+              // Clear cell selections but keep row and column selections
+              clearSelection(true, true)
+            } else if (isRowSelectionActivated && isRowSelected) {
+              // For other row selection modes, clear the selection before sorting.
               // Keeping row selections when sorting columns is not supported at the moment.
-              // So we need to clear the selection before we do the sorting.
-              // The reason is that the user would expect the selection to be kept on
-              // the same row after sorting, hover that would require us to map the selection
-              // to the new index of the selected row which adds complexity.
               clearSelection()
             } else {
-              // Cell selection are kept on the old position,
+              // Cell selections are kept on the old position,
               // which can be confusing. So we clear all cell selections before sorting.
               clearSelection(true, true)
             }
 
             sortColumn(columnIdx, "auto")
+            // Schedule remap after sorting (ref was just set above)
+            if (isRequiredRowSelectionActivated && isRowSelected) {
+              scheduleRowSelectionRemap()
+            }
           }}
           gridSelection={gridSelection}
           // We don't have to react to "onSelectionCleared" since
           // we already correctly process selections in
           // the "onGridSelectionChange" callback.
           onGridSelectionChange={(newSelection: GridSelection) => {
-            // Only allow selection changes if the grid is focused.
-            // This is mainly done because there is a bug when overlay click actions
-            // are outside of the bounds of the table (e.g. select dropdown or date picker).
-            // This results in the first cell being selected for a short period of time
-            // But for touch devices, preventing this can cause issues to select cells.
-            // So we allow selection changes for touch devices even when it is not focused.
-            if (isFocused || isTouchDevice) {
+            // Guard against spurious cell selections from overlay clicks outside
+            // the table bounds. Row/column selections are always allowed because
+            // isFocused may be stale when the user clicks back into the grid.
+            // Touch devices bypass the guard entirely.
+            const hasRowOrColumnSelection =
+              newSelection.rows.length > 0 || newSelection.columns.length > 0
+            if (isFocused || isTouchDevice || hasRowOrColumnSelection) {
               processSelectionChange(newSelection)
               if (tooltip !== undefined) {
                 // Remove the tooltip on every grid selection change:
@@ -946,7 +1086,10 @@ function DataFrame({
             rowMarkers: {
               // Apply style settings for the row markers column:
               kind: "checkbox-visible",
-              checkboxStyle: "square",
+              // Use circle style for single-row-required mode (radio-like behavior)
+              checkboxStyle: isRequiredRowSelectionActivated
+                ? "circle"
+                : "square",
               theme: {
                 bgCell: gridTheme.glideTheme.bgHeader,
                 bgCellMedium: gridTheme.glideTheme.bgHeader,
@@ -1047,7 +1190,24 @@ function DataFrame({
                       setShowSearch(false)
                     }
 
-                    if (isRowSelectionActivated && isRowSelected) {
+                    if (isRequiredRowSelectionActivated && isRowSelected) {
+                      // In single-row-required mode, preserve the row selection by remapping
+                      // it to the same data row after sort. Capture the original data indices
+                      // and current column selection before sorting.
+                      const originalRowIndices = gridSelection.rows
+                        .toArray()
+                        .map(getOriginalIndex)
+                      pendingRowSelectionRemapRef.current = {
+                        originalRowIndices,
+                        columns: gridSelection.columns,
+                        // Don't capture current cell selection - it uses display coordinates
+                        // that become stale after sorting
+                        current: undefined,
+                      }
+                      // Clear cell selections but keep row and column selections
+                      clearSelection(true, true)
+                    } else if (isRowSelectionActivated && isRowSelected) {
+                      // For other row selection modes, clear the selection before sorting.
                       // Keeping row selections when sorting columns is not supported at the moment.
                       // So we need to clear the selected rows before we do the sorting (Issue #11345).
                       // Maintain column selections as these are not impacted.
@@ -1059,6 +1219,10 @@ function DataFrame({
                     }
 
                     sortColumn(showMenu.columnIdx, direction, true)
+                    // Schedule remap after sorting (ref was just set above)
+                    if (isRequiredRowSelectionActivated && isRowSelected) {
+                      scheduleRowSelectionRemap()
+                    }
                   }
                 : undefined
             }
@@ -1082,11 +1246,8 @@ function DataFrame({
               // We need to apply a short timeout here to ensure that
               // the column format already has been fully applied to all cells
               // before we remeasure the column.
-              setTimeout(() => {
-                dataEditorRef.current?.remeasureColumns(
-                  CompactSelection.fromSingleSelection(showMenu.columnIdx)
-                )
-              }, 100)
+              remeasureColumnIdxRef.current = showMenu.columnIdx
+              restartDelayedColumnRemeasure()
             }}
             onAutosize={() => {
               dataEditorRef.current?.remeasureColumns(

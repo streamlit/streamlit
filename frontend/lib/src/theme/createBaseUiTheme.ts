@@ -14,15 +14,20 @@
  * limitations under the License.
  */
 
-import {
-  createTheme as createBaseTheme,
-  lightThemePrimitives as lightBaseThemePrimitives,
-  Primitives as ThemePrimitives,
-} from "baseui"
-import { Theme as BaseTheme } from "baseui/theme"
+import type { Primitives as ThemePrimitives } from "baseui"
+import * as baseuiCjs from "baseui/index.js"
+import type { Theme as BaseTheme } from "baseui/theme"
 import { transparentize } from "color2k"
 
 import { EmotionTheme } from "./types"
+
+const {
+  createTheme: createBaseTheme,
+  lightThemePrimitives: lightBaseThemePrimitives,
+} = baseuiCjs as unknown as Pick<
+  typeof import("baseui"),
+  "createTheme" | "lightThemePrimitives"
+>
 
 /**
  * Creates theme primitives for the BaseUI theme.
@@ -84,8 +89,7 @@ const createBaseUiThemePrimitives = (
  */
 const createBaseUiThemeOverrides = (
   theme: EmotionTheme
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): Record<string, any> => {
+): Record<string, unknown> => {
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
 
@@ -121,19 +125,19 @@ const createBaseUiThemeOverrides = (
       /** Datepicker (Range), Progress Bar, Slider, Tag */
       useRoundedCorners: true,
       /** Button, ButtonGroup */
-      buttonBorderRadiusMini: radii.md, // Unused today.
+      buttonBorderRadiusMini: radii.sm, // Unused today.
       buttonBorderRadius: radii.default,
       /** Checkbox */
-      checkboxBorderRadius: `min(${radii.md}, ${radii.maxCheckbox})`,
+      checkboxBorderRadius: `min(${radii.sm}, ${radii.maxCheckbox})`,
       /** Input, Select, Textarea */
-      inputBorderRadiusMini: radii.md, // Unused today.
+      inputBorderRadiusMini: radii.sm, // Unused today.
       inputBorderRadius: radii.default,
       /** Popover, Menu, Tooltip */
       popoverBorderRadius: radii.default,
       /** Card, Datepicker, Modal, Toast, Notification */
       surfaceBorderRadius: radii.default,
       /** Tag */
-      tagBorderRadius: radii.md,
+      tagBorderRadius: radii.sm,
     },
     typography: {
       // Here we override some fonts that are used in widgets. We don't care
@@ -247,8 +251,7 @@ const createBaseUiThemeOverrides = (
 export const createBaseUiTheme = (
   theme: EmotionTheme,
   primitives = lightBaseThemePrimitives
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): BaseTheme & Record<string, any> =>
+): BaseTheme =>
   createBaseTheme(
     createBaseUiThemePrimitives(primitives, theme),
     createBaseUiThemeOverrides(theme)

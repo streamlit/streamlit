@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "IFrameProto";
-
 message IFrame {
   oneof type {
     // A URL to load
@@ -28,15 +25,8 @@ message IFrame {
     string srcdoc = 2;
   }
 
-  // Deprecated: Use width_config on Element.proto instead
-  float width = 3 [deprecated = true];
-
-  // Deprecated: Width is now handled through width_config on Element.proto
-  bool has_width = 4 [deprecated = true];
-
-  // Deprecated: Use height_config on Element.proto instead
-  float height = 5 [deprecated = true];
-
   bool scrolling = 7;
   optional int32 tab_index = 8;
+
+  reserved 3, 4, 5;
 }

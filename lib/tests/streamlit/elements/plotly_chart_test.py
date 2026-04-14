@@ -36,11 +36,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
 
-        # Check that deprecated properties are empty
-        assert el.plotly_chart.figure.spec == ""
-        assert el.plotly_chart.figure.config == ""
-        assert not el.plotly_chart.HasField("url")
-
     @parameterized.expand(
         [
             ("streamlit", "streamlit"),
@@ -77,7 +72,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data)
 
         el = self.get_delta_from_queue().new_element
-        assert not el.plotly_chart.HasField("url")
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
 

@@ -64,12 +64,95 @@ SIZE_TO_REM_MAPPING = {
 
 @dataclass
 class LayoutConfig:
+    """Pure data container bundling dimension and alignment config for ``_enqueue()``.
+
+    Each field maps to a proto config (``WidthConfig``, ``HeightConfig``,
+    ``TextAlignmentConfig``) that the frontend uses to size and align the
+    element within its container.
+
+    Prefer ``create_layout_config()`` for validated construction from
+    user-supplied values.  Direct construction is appropriate for internal use
+    with known-valid literals (e.g. hardcoded ``"content"`` or ``"stretch"``).
+
+    See ``lib/streamlit/elements/plotly_chart.py`` for a reference example.
+    """
+
     width: Width | SpaceSize | None = None
     height: Height | SpaceSize | None = None
     text_alignment: TextAlignment | None = None
 
 
-def validate_width(width: Width, allow_content: bool = False) -> None:
+_UNSET: Width | Height = cast("Width", object())
+
+
+def create_layout_config(
+    *,
+    width: Width | None = _UNSET,
+    height: Height | None = _UNSET,
+    text_alignment: TextAlignment | None = None,
+    allow_content_width: bool = False,
+    allow_content_height: bool = False,
+    allow_stretch_height: bool = True,
+    additional_allowed_height: list[str] | None = None,
+) -> LayoutConfig:
+    """Validate inputs and construct a ``LayoutConfig`` in one step.
+
+    Consolidates the common validate-then-construct pattern into a single call
+    so that callers cannot accidentally skip validation.
+
+    When ``width`` or ``height`` is omitted, no validation runs and the
+    resulting ``LayoutConfig`` field is ``None``.  When the caller
+    *explicitly* passes a value — including ``None`` — the corresponding
+    validator runs (and will reject ``None`` as invalid).
+
+    Parameters
+    ----------
+    width : Width | None
+        Desired width.  Validated via ``validate_width`` when provided.
+        Omit (or leave as default) to skip width validation entirely.
+    height : Height | None
+        Desired height.  Validated via ``validate_height`` when provided.
+        Omit (or leave as default) to skip height validation entirely.
+    text_alignment : TextAlignment | None
+        Text alignment.  Validated via ``validate_text_alignment`` when not
+        ``None``.
+    allow_content_width : bool
+        Passed as ``allow_content`` to ``validate_width``.
+    allow_content_height : bool
+        Passed as ``allow_content`` to ``validate_height``.
+    allow_stretch_height : bool
+        Passed as ``allow_stretch`` to ``validate_height``.
+    additional_allowed_height : list[str] | None
+        Passed as ``additional_allowed`` to ``validate_height``.
+
+    Returns
+    -------
+    LayoutConfig
+        A validated ``LayoutConfig`` instance.
+    """
+    actual_width: Width | None = None
+    if width is not _UNSET:
+        validate_width(width, allow_content=allow_content_width)
+        actual_width = width
+
+    actual_height: Height | None = None
+    if height is not _UNSET:
+        validate_height(
+            height,
+            allow_content=allow_content_height,
+            allow_stretch=allow_stretch_height,
+            additional_allowed=additional_allowed_height,
+        )
+        actual_height = height
+
+    if text_alignment is not None:
+        validate_text_alignment(text_alignment)
+    return LayoutConfig(
+        width=actual_width, height=actual_height, text_alignment=text_alignment
+    )
+
+
+def validate_width(width: Width | None, allow_content: bool = False) -> None:
     """Validate the width parameter.
 
     Parameters
@@ -99,7 +182,7 @@ def validate_width(width: Width, allow_content: bool = False) -> None:
 
 
 def validate_height(
-    height: Height | Literal["auto"],
+    height: Height | Literal["auto"] | None,
     allow_content: bool = False,
     allow_stretch: bool = True,
     additional_allowed: list[str] | None = None,

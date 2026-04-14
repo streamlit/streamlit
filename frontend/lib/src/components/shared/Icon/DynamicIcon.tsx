@@ -16,7 +16,7 @@
 
 import { Suspense } from "react"
 
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 
 import { EmojiIcon } from "./Icon"
 import MaterialFontIcon from "./Material/MaterialFontIcon"
@@ -52,6 +52,64 @@ export function isMaterialIcon(iconName: string): boolean {
   }
   const parsedIcon = parseIconPackEntry(iconName)
   return parsedIcon.pack === "material" && parsedIcon.icon !== ""
+}
+
+/** Result of extracting a leading material icon from a label string. */
+interface ExtractedLeadingIcon {
+  /** The material icon value (e.g., ":material/edit:"), or null if none found. */
+  icon: string | null
+  /** The remaining text after the icon prefix is removed. */
+  text: string
+}
+
+/**
+ * Extracts a leading material icon from a label string.
+ * If the label starts with `:material/icon_name:`, returns the icon and remaining text.
+ * Otherwise, returns null for the icon and the original label as text.
+ *
+ * Icon names must consist of word characters only (alphanumeric and underscore),
+ * matching the Material Symbols naming convention.
+ *
+ * @example
+ * extractLeadingMaterialIcon(":material/edit: Edit item")
+ * // => { icon: ":material/edit:", text: "Edit item" }
+ *
+ * extractLeadingMaterialIcon("No icon here")
+ * // => { icon: null, text: "No icon here" }
+ */
+export function extractLeadingMaterialIcon(
+  label: string
+): ExtractedLeadingIcon {
+  const match = label.match(/^(:material\/\w+:)\s*(.*)$/)
+  if (match) {
+    return { icon: match[1], text: match[2] }
+  }
+  return { icon: null, text: label }
+}
+
+/** Icons that indicate a menu-style trigger where the chevron should be hidden. */
+const MENU_STYLE_ICONS = new Set([
+  ":material/menu:",
+  ":material/more_vert:",
+  ":material/more_horiz:",
+])
+
+/**
+ * Checks if a label is a menu-style icon-only label (no separate icon prop, no text).
+ * When true, expansion chevrons should be hidden as the icon itself indicates a menu.
+ *
+ * @param icon - The icon prop (from element.icon)
+ * @param label - The label prop (from element.label)
+ * @returns true if label is exactly one of the menu-style icons with no additional text
+ */
+export function isMenuStyleIconLabel(
+  icon: string | undefined,
+  label: string | undefined
+): boolean {
+  if (icon) {
+    return false
+  }
+  return Boolean(label && MENU_STYLE_ICONS.has(label.trim()))
 }
 
 /**

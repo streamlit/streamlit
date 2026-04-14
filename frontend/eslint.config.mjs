@@ -25,7 +25,6 @@ import react from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
@@ -100,13 +99,69 @@ export const getNoRestrictedImports = (
   ]
 }
 
+const restrictedGlobals = [
+  {
+    name: "localStorage",
+    message:
+      "Please use window.localStorage instead since localStorage is not " +
+      "supported in some browsers (e.g. Android WebView).",
+  },
+  {
+    name: "innerWidth",
+    message: "Please use the `useWindowDimensionsContext` hook instead.",
+  },
+  {
+    name: "innerHeight",
+    message: "Please use the `useWindowDimensionsContext` hook instead.",
+  },
+]
+
+const useTimeoutRestrictedGlobals = [
+  {
+    name: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of direct `setTimeout` in non-test source files.",
+  },
+]
+
+const useTimeoutRestrictedProperties = [
+  {
+    object: "window",
+    property: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of `window.setTimeout` in non-test source files.",
+  },
+  {
+    object: "globalThis",
+    property: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of `globalThis.setTimeout` in non-test source files.",
+  },
+]
+
+/**
+ * Helper to create the no-restricted-globals rule config.
+ *
+ * @param {Object} options
+ * @param {boolean} [options.includeUseTimeout] - Whether to add setTimeout restrictions.
+ */
+export const getNoRestrictedGlobals = ({ includeUseTimeout = false } = {}) => {
+  return [
+    "error",
+    ...restrictedGlobals,
+    ...(includeUseTimeout ? useTimeoutRestrictedGlobals : []),
+  ]
+}
+
 /**
  * Helper to create the no-restricted-properties rule config.
  *
- * @param {boolean} allowWindowStreamlit - Whether to allow window.__streamlit access.
- *   Set to true for test files that need to mock the config module itself.
+ * @param {Object} options
+ * @param {boolean} [options.allowWindowStreamlit] - Whether to allow window.__streamlit access.
+ *   Set to true for files that need to mock the config module itself.
+ * @param {boolean} [options.includeUseTimeout] - Whether to add setTimeout restrictions.
  */
-export const getNoRestrictedProperties = (allowWindowStreamlit = false) => {
+const getRestrictedProperties = ({ allowWindowStreamlit = false } = {}) => {
   const restrictions = [
     {
       object: "window",
@@ -134,7 +189,18 @@ export const getNoRestrictedProperties = (allowWindowStreamlit = false) => {
     })
   }
 
-  return ["error", ...restrictions]
+  return restrictions
+}
+
+export const getNoRestrictedProperties = ({
+  allowWindowStreamlit = false,
+  includeUseTimeout = false,
+} = {}) => {
+  return [
+    "error",
+    ...getRestrictedProperties({ allowWindowStreamlit }),
+    ...(includeUseTimeout ? useTimeoutRestrictedProperties : []),
+  ]
 }
 
 export default defineConfig([
@@ -144,7 +210,6 @@ export default defineConfig([
   reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
-  eslintPluginPrettierRecommended,
   // Global configuration for all files
   {
     languageOptions: {
@@ -232,13 +297,11 @@ export default defineConfig([
           args: "all",
           ignoreRestSiblings: false,
           argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": [
-        "warn",
-        { functions: false },
-      ],
+      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -282,23 +345,7 @@ export default defineConfig([
             "Please use the useEmotionTheme hook instead.",
         },
       ],
-      "no-restricted-globals": [
-        "error",
-        {
-          name: "localStorage",
-          message:
-            "Please use window.localStorage instead since localStorage is not " +
-            "supported in some browsers (e.g. Android WebView).",
-        },
-        {
-          name: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          name: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-      ],
+      "no-restricted-globals": getNoRestrictedGlobals(),
       "no-restricted-properties": getNoRestrictedProperties(),
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
@@ -414,6 +461,18 @@ export default defineConfig([
       },
     },
   },
+  {
+    files: ["**/src/**/*.ts", "**/src/**/*.tsx"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "no-restricted-globals": getNoRestrictedGlobals({
+        includeUseTimeout: true,
+      }),
+      "no-restricted-properties": getNoRestrictedProperties({
+        includeUseTimeout: true,
+      }),
+    },
+  },
   // Test files specific configuration
   {
     files: ["**/*.test.ts", "**/*.test.tsx"],
@@ -447,7 +506,9 @@ export default defineConfig([
     files: ["utils/src/config/index.test.ts", "lib/src/theme/utils.test.ts"],
     rules: {
       // These test files need to set window.__streamlit to test the config capture behavior
-      "no-restricted-properties": getNoRestrictedProperties(true),
+      "no-restricted-properties": getNoRestrictedProperties({
+        allowWindowStreamlit: true,
+      }),
     },
   },
   // Config module - allow direct window.__streamlit access for capturing values
@@ -457,7 +518,9 @@ export default defineConfig([
       // This is the only place where direct window.__streamlit access is allowed
       // as it captures values at module load time and exports frozen copies.
       // Other restrictions (innerWidth, innerHeight, clipboard) still apply.
-      "no-restricted-properties": getNoRestrictedProperties(true),
+      "no-restricted-properties": getNoRestrictedProperties({
+        allowWindowStreamlit: true,
+      }),
     },
   },
   // Theme files specific configuration
@@ -487,9 +550,10 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
+    "vitest.config.ts",
+    "vitest.setup.ts",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
-    "**/vendor/*",
     "**/node_modules/*",
     "**/dist/*",
     "**/build/*",

@@ -22,7 +22,7 @@ export const StyledNavLinkContainer = styled.div({
   width: "100%",
 })
 
-export interface StyledNavLinkProps {
+interface StyledNavLinkProps {
   disabled: boolean
   isCurrentPage: boolean
 }
@@ -84,7 +84,7 @@ export const StyledNavLink = styled.a<StyledNavLinkProps>(
   })
 )
 
-export interface StyledNavLinkTextProps {
+interface StyledNavLinkTextProps {
   disabled: boolean
 }
 

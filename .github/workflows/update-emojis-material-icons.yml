@@ -41,9 +41,11 @@ jobs:
 
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
 
       - name: Install Python deps for notifications
         run: |
@@ -73,8 +75,8 @@ jobs:
       - name: Configure Git
         if: steps.check-updates.outputs.updates_needed == 'true'
         run: |
-          git config user.name "${{ github.actor }}"
-          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
 
       - name: Create & switch to new branch for emojis/material icons update PR
         id: create-branch
@@ -86,16 +88,18 @@ jobs:
 
       - name: Add changes to the branch
         if: steps.check-updates.outputs.updates_needed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           # Add only expected modified files
           git add lib/ frontend/app/src/assets/fonts/MaterialSymbols/ e2e_playwright/st_alert.py
           git commit -m "Update emojis/material icons"
-          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR to merge changes into develop
         id: create_pr_update_assets
         if: ${{ steps.check-updates.outputs.updates_needed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:
@@ -121,7 +125,7 @@ jobs:
 
             core.setOutput('pr_url', pr.html_url);
 
-            const labels = ['change:chore', 'impact:users'];
+            const labels = ['change:chore', 'impact:users', 'autofix', 'update-snapshots'];
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,

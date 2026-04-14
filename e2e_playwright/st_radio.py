@@ -174,3 +174,31 @@ else:
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial radio value:", dr_value)
+
+# --- Bound widgets (query-params) ---
+
+v_bound = st.radio(
+    "Bound radio",
+    ["cat", "dog", "bird"],
+    key="bound_radio",
+    bind="query-params",
+)
+st.write("bound radio value:", v_bound)
+
+v_bound_fmt = st.radio(
+    "Bound formatted",
+    ["cat", "dog"],
+    format_func=str.upper,
+    key="bound_radio_fmt",
+    bind="query-params",
+)
+st.write("bound radio fmt value:", v_bound_fmt)
+
+v_bound_clear = st.radio(
+    "Bound clearable",
+    ["red", "green", "blue"],
+    index=None,
+    key="bound_radio_clear",
+    bind="query-params",
+)
+st.write("bound radio clear value:", v_bound_clear)

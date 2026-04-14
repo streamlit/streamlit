@@ -15,6 +15,7 @@
  */
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
@@ -512,21 +513,37 @@ describe("useVegaElementPreprocessor", () => {
         expectedWidths: [undefined, 400],
       },
       {
-        name: "layer",
+        name: "concat",
         spec: {
           vconcat: [
-            { layer: [{ mark: "line" }, { mark: "point" }] },
+            { concat: [{ mark: "bar" }, { mark: "point" }] },
+            { mark: "line" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "facet",
+        spec: {
+          vconcat: [
+            {
+              facet: { column: { field: "group" } },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
             { mark: "bar" },
           ],
         },
         expectedWidths: [undefined, 400],
       },
       {
-        name: "concat",
+        name: "repeat",
         spec: {
           vconcat: [
-            { concat: [{ mark: "bar" }, { mark: "point" }] },
-            { mark: "line" },
+            {
+              repeat: { row: ["a", "b"] },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
+            { mark: "bar" },
           ],
         },
         expectedWidths: [undefined, 400],
@@ -551,5 +568,195 @@ describe("useVegaElementPreprocessor", () => {
         expect(spec.vconcat[1].width).toBe(expectedWidths[1])
       }
     )
+
+    it("sets width on vconcat children that contain layer", () => {
+      const layerVconcatSpec = {
+        vconcat: [
+          { layer: [{ mark: "line" }, { mark: "point" }] },
+          { mark: "bar" },
+        ],
+      }
+
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 400, 300, true, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify(layerVconcatSpec),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        vconcat: { width?: number }[]
+      }
+      expect(spec.vconcat[0].width).toBe(400)
+      expect(spec.vconcat[1].width).toBe(400)
+    })
+  })
+
+  describe("builtin color name resolution", () => {
+    const themeColors = lightTheme.emotion.colors
+
+    it("resolves single builtin color name to theme color", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: { value: "red" },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { value: string } }
+      }
+      expect(spec.encoding.color.value).toBe(themeColors.redColor)
+    })
+
+    it("resolves builtin color names in scale range", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: {
+                  field: "category",
+                  scale: { range: ["blue", "green"] },
+                },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { scale: { range: string[] } } }
+      }
+      expect(spec.encoding.color.scale.range).toEqual([
+        themeColors.blueColor,
+        themeColors.greenColor,
+      ])
+    })
+
+    it("resolves builtin colors in layer specs", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              layer: [
+                {
+                  mark: "line",
+                  encoding: {
+                    x: { field: "a" },
+                    y: { field: "b" },
+                    color: { value: "violet" },
+                  },
+                },
+              ],
+            }),
+          }),
+        }
+      )
+
+      type LayerSpec = {
+        layer: Array<{ encoding: { color: { value: string } } }>
+      }
+      const spec = result.current.spec as unknown as LayerSpec
+      expect(spec.layer[0].encoding.color.value).toBe(themeColors.violetColor)
+    })
+
+    it("leaves hex colors unchanged", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: { value: "#ff0000" },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { value: string } }
+      }
+      expect(spec.encoding.color.value).toBe("#ff0000")
+    })
+
+    it("resolves primary color to theme primary", () => {
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(
+            element,
+            containerWidth,
+            containerHeight,
+            useContainerWidth,
+            useContainerHeight
+          ),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify({
+              mark: "bar",
+              encoding: {
+                x: { field: "a" },
+                y: { field: "b" },
+                color: { value: "primary" },
+              },
+            }),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        encoding: { color: { value: string } }
+      }
+      expect(spec.encoding.color.value).toBe(themeColors.primary)
+    })
   })
 })
