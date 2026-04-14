@@ -50,62 +50,52 @@ function AlertElement({
   const theme = useEmotionTheme()
 
   // Fix issue #6394 - Need to account for icon size (iconSizes.lg) + gap when icon present.
-  // Only needed for the no-title layout where icon and body are side by side (row).
-  // When there's a title, the layout is vertical (column) and body has its own full-width row.
-  const markdownWidth = {
-    width: icon
-      ? `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))`
-      : "100%",
-  }
+  // Only needed for the no-title layout where icon and body are side by side in a flex row.
+  // In the title layout, StyledAlertTitle already constrains width via flexbox.
+  const markdownWidth = icon
+    ? { width: `calc(100% - (${theme.iconSizes.lg} + ${theme.spacing.sm}))` }
+    : undefined
 
-  // When there's a title: icon+title in header row, body below
-  // When no title: icon and body side by side (original layout)
-  if (title) {
-    return (
-      <div className="stAlert" data-testid="stAlert">
-        <AlertContainer kind={kind}>
-          <StyledAlertContent $hasTitle>
-            <StyledAlertHeader>
-              {icon && (
-                <StyledAlertIcon>
-                  <DynamicIcon
-                    iconValue={icon}
-                    size="lg"
-                    testid="stAlertDynamicIcon"
-                  />
-                </StyledAlertIcon>
-              )}
-              <StyledAlertTitle data-testid="stAlertTitle">
-                <StreamlitMarkdown source={title} allowHTML={false} />
-              </StyledAlertTitle>
-            </StyledAlertHeader>
-            <StyledAlertBody>
-              <StreamlitMarkdown source={body} allowHTML={false} />
-            </StyledAlertBody>
-          </StyledAlertContent>
-        </AlertContainer>
-      </div>
-    )
-  }
+  // Extract icon element to avoid duplication between title and no-title layouts.
+  const iconElement = icon ? (
+    <StyledAlertIcon>
+      <DynamicIcon iconValue={icon} size="lg" testid="stAlertDynamicIcon" />
+    </StyledAlertIcon>
+  ) : null
 
+  // When there's a title: icon+title in header row, body below (column layout).
+  // When no title: icon and body side by side (row layout).
   return (
     <div className="stAlert" data-testid="stAlert">
       <AlertContainer kind={kind}>
-        <StyledAlertContent>
-          {icon && (
-            <StyledAlertIcon>
-              <DynamicIcon
-                iconValue={icon}
-                size="lg"
-                testid="stAlertDynamicIcon"
+        <StyledAlertContent $hasTitle={!!title}>
+          {title ? (
+            <>
+              <StyledAlertHeader>
+                {iconElement}
+                <StyledAlertTitle data-testid="stAlertTitle">
+                  <StreamlitMarkdown
+                    source={title}
+                    allowHTML={false}
+                    isLabel
+                    largerLabel
+                  />
+                </StyledAlertTitle>
+              </StyledAlertHeader>
+              <StyledAlertBody>
+                <StreamlitMarkdown source={body} allowHTML={false} />
+              </StyledAlertBody>
+            </>
+          ) : (
+            <>
+              {iconElement}
+              <StreamlitMarkdown
+                source={body}
+                allowHTML={false}
+                style={markdownWidth}
               />
-            </StyledAlertIcon>
+            </>
           )}
-          <StreamlitMarkdown
-            source={body}
-            allowHTML={false}
-            style={markdownWidth}
-          />
         </StyledAlertContent>
       </AlertContainer>
     </div>
