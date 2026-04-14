@@ -476,7 +476,7 @@ describe("DateInput widget", () => {
       const calendar = await waitFor(() => {
         const panel = document.querySelector(
           '[data-scope="date-picker"][data-part="content"]'
-        ) as HTMLElement | null
+        )
         if (!panel || panel.hasAttribute("hidden")) {
           throw new Error("calendar panel not visible")
         }
@@ -492,12 +492,11 @@ describe("DateInput widget", () => {
       const locale = "de"
 
       it("renders expected week day ordering", async () => {
+        const user = userEvent.setup()
         const props = getProps()
         renderDateInputWithLocale(props, locale)
 
-        await act(async () => {
-          fireEvent.click(screen.getByTestId("stDateInputField"))
-        })
+        await user.click(screen.getByTestId("stDateInputField"))
 
         expect(await getWeekdayAbbreviationRowText()).toBe("MoDiMiDoFrSaSo")
       })
@@ -507,12 +506,11 @@ describe("DateInput widget", () => {
       const locale = "ar"
 
       it("renders expected week day ordering", async () => {
+        const user = userEvent.setup()
         const props = getProps()
         renderDateInputWithLocale(props, locale)
 
-        await act(async () => {
-          fireEvent.click(screen.getByTestId("stDateInputField"))
-        })
+        await user.click(screen.getByTestId("stDateInputField"))
 
         expect(await getWeekdayAbbreviationRowText()).toBe(
           "السبتالأحدالاثنينالثلاثاءالأربعاءالخميسالجمعة"
@@ -524,12 +522,11 @@ describe("DateInput widget", () => {
       const locale = "en-US"
 
       it("renders expected week day ordering", async () => {
+        const user = userEvent.setup()
         const props = getProps()
         renderDateInputWithLocale(props, locale)
 
-        await act(async () => {
-          fireEvent.click(screen.getByTestId("stDateInputField"))
-        })
+        await user.click(screen.getByTestId("stDateInputField"))
 
         expect(await getWeekdayAbbreviationRowText()).toBe(
           "SunMonTueWedThuFriSat"
@@ -541,12 +538,11 @@ describe("DateInput widget", () => {
       const locale = "does-not-exist"
 
       it("falls back to en-US locale", async () => {
+        const user = userEvent.setup()
         const props = getProps()
         renderDateInputWithLocale(props, locale)
 
-        await act(async () => {
-          fireEvent.click(screen.getByTestId("stDateInputField"))
-        })
+        await user.click(screen.getByTestId("stDateInputField"))
 
         expect(await getWeekdayAbbreviationRowText()).toBe(
           "SunMonTueWedThuFriSat"

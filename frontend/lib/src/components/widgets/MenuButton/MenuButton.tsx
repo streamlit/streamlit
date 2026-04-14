@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import styled from "@emotion/styled"
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 import {
   memo,
   ReactElement,
@@ -24,6 +22,9 @@ import {
   useMemo,
   useState,
 } from "react"
+
+import styled from "@emotion/styled"
+import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-use-before-define -- styled components are declared below usage */
+
 import {
   type ChangeEvent,
   type ComponentProps,
@@ -532,18 +534,23 @@ function DateInput({
                       <DatePicker.Table>
                         <DatePicker.TableHead>
                           <DatePicker.TableRow>
-                            {datePicker.weekDays.map((day, i) => (
-                              <DatePicker.TableHeader key={i}>
+                            {datePicker.weekDays.map(day => (
+                              <DatePicker.TableHeader key={day.short}>
                                 {day.short}
                               </DatePicker.TableHeader>
                             ))}
                           </DatePicker.TableRow>
                         </DatePicker.TableHead>
                         <DatePicker.TableBody>
-                          {datePicker.weeks.map((week, weekIdx) => (
-                            <DatePicker.TableRow key={weekIdx}>
-                              {week.map((day, dayIdx) => (
-                                <DatePicker.TableCell key={dayIdx} value={day}>
+                          {datePicker.weeks.map(week => (
+                            <DatePicker.TableRow
+                              key={week.map(d => d.toString()).join("|")}
+                            >
+                              {week.map(day => (
+                                <DatePicker.TableCell
+                                  key={day.toString()}
+                                  value={day}
+                                >
                                   <DatePicker.TableCellTrigger />
                                 </DatePicker.TableCell>
                               ))}
@@ -609,11 +616,15 @@ function SingleTextField({
   )
 
   useEffect(() => {
-    setDraft(null)
+    queueMicrotask(() => {
+      setDraft(null)
+    })
   }, [valueSyncKey])
 
   useEffect(() => {
-    setDraft(null)
+    queueMicrotask(() => {
+      setDraft(null)
+    })
   }, [draftResetSeq])
 
   useEffect(() => {
@@ -655,7 +666,7 @@ function SingleTextField({
       el.removeEventListener("input", onNativeInput, { capture: true })
       el.removeEventListener("change", onNativeChange, { capture: true })
     }
-  }, [valueSyncKey, draftResetSeq])
+  }, [valueSyncKey, draftResetSeq, setIsEmpty])
 
   return (
     <DatePicker.Context>
@@ -839,11 +850,15 @@ function RangeTextField({
   )
 
   useEffect(() => {
-    setDraft(null)
+    queueMicrotask(() => {
+      setDraft(null)
+    })
   }, [valueSyncKey])
 
   useEffect(() => {
-    setDraft(null)
+    queueMicrotask(() => {
+      setDraft(null)
+    })
   }, [draftResetSeq])
 
   useEffect(() => {
@@ -1069,7 +1084,7 @@ const StyledClearTrigger = styled(DatePicker.ClearTrigger)(({ theme }) => ({
   padding: theme.spacing.threeXS,
   height: theme.sizes.clearIconSize,
   width: theme.sizes.clearIconSize,
-  lineHeight: 1,
+  lineHeight: theme.lineHeights.none,
   border: "none",
   background: "transparent",
   cursor: "pointer",
@@ -1097,12 +1112,12 @@ const StyledQuickSelect = styled("select")(({ theme }) => ({
   borderBottomWidth: theme.sizes.borderWidth,
 }))
 
-const StyledViewControl = styled(DatePicker.ViewControl)({
+const StyledViewControl = styled(DatePicker.ViewControl)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  marginBottom: "0.5rem",
-})
+  marginBottom: theme.spacing.sm,
+}))
 
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,

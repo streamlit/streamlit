@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-use-before-define -- styled components and helpers are declared below their usage */
+
 import {
   FC,
   type KeyboardEvent,
@@ -34,6 +36,7 @@ import {
 } from "@ark-ui/react/collection"
 import { Combobox, useComboboxContext } from "@ark-ui/react/combobox"
 import { Portal } from "@ark-ui/react/portal"
+import type { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { streamlit } from "@streamlit/protobuf"
@@ -47,6 +50,7 @@ import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
+import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   isNullOrUndefined,
@@ -102,7 +106,7 @@ function SelectboxDropdownContent({
 
 type EmotionThemeT = ReturnType<typeof useEmotionTheme>
 
-function cssInput(theme: EmotionThemeT, selectDisabled: boolean) {
+function cssInput(theme: EmotionThemeT, selectDisabled: boolean): CSSObject {
   return {
     lineHeight: theme.lineHeights.inputWidget,
     color: theme.colors.bodyText,
@@ -125,7 +129,7 @@ function cssInput(theme: EmotionThemeT, selectDisabled: boolean) {
   }
 }
 
-function cssClearTrigger(theme: EmotionThemeT) {
+function cssClearTrigger(theme: EmotionThemeT): CSSObject {
   return {
     display: "flex",
     alignItems: "center",
@@ -143,7 +147,7 @@ function cssClearTrigger(theme: EmotionThemeT) {
   }
 }
 
-function cssTrigger(theme: EmotionThemeT, selectDisabled: boolean) {
+function cssTrigger(theme: EmotionThemeT, selectDisabled: boolean): CSSObject {
   return {
     display: "flex",
     alignItems: "center",
@@ -156,7 +160,7 @@ function cssTrigger(theme: EmotionThemeT, selectDisabled: boolean) {
   }
 }
 
-function cssList(theme: EmotionThemeT) {
+function cssList(theme: EmotionThemeT): CSSObject {
   return {
     maxHeight: `min(${theme.sizes.maxDropdownHeight}, 70vh)`,
     overflowY: "auto" as const,
@@ -167,7 +171,7 @@ function cssList(theme: EmotionThemeT) {
   }
 }
 
-function cssEmpty(theme: EmotionThemeT) {
+function cssEmpty(theme: EmotionThemeT): CSSObject {
   return {
     padding: theme.spacing.sm,
     textAlign: "center" as const,
@@ -279,9 +283,19 @@ const Selectbox: FC<Props> = ({
   /** Next input-change "" right after close should show the committed label, not a blank field. */
   const suppressEmptyInputAfterCloseRef = useRef(false)
 
+  const { restart: scheduleSuppressEmptyReset } = useTimeout(
+    useCallback(() => {
+      suppressEmptyInputAfterCloseRef.current = false
+    }, []),
+    null,
+    { autoStart: false }
+  )
+
   useLayoutEffect(() => {
-    setValue(propValue ?? null)
     valueBeforeRemovalRef.current = null
+    queueMicrotask(() => {
+      setValue(propValue ?? null)
+    })
   }, [propValue])
 
   const opts = propOptions
@@ -311,10 +325,14 @@ const Selectbox: FC<Props> = ({
   }, [propValue, selectOptions])
 
   const propDerivedLabelRef = useRef(propDerivedLabel)
-  propDerivedLabelRef.current = propDerivedLabel
+  useLayoutEffect(() => {
+    propDerivedLabelRef.current = propDerivedLabel
+  }, [propDerivedLabel])
 
   useLayoutEffect(() => {
-    setInputQuery(propDerivedLabel)
+    queueMicrotask(() => {
+      setInputQuery(propDerivedLabel)
+    })
   }, [propDerivedLabel])
 
   const handleBlur = useCallback(() => {
@@ -580,13 +598,11 @@ const Selectbox: FC<Props> = ({
         }
       } else {
         suppressEmptyInputAfterCloseRef.current = true
-        window.setTimeout(() => {
-          suppressEmptyInputAfterCloseRef.current = false
-        }, 0)
+        scheduleSuppressEmptyReset(0)
         handleBlur()
       }
     },
-    [handleBlur]
+    [handleBlur, scheduleSuppressEmptyReset]
   )
 
   const onInputKeyDown = useCallback(
@@ -642,7 +658,7 @@ const Selectbox: FC<Props> = ({
         return
       }
     },
-    [acceptNewOptions, clearable, inputQuery, onChange, selectOptions, value]
+    [acceptNewOptions, clearable, inputQuery, onChange, selectOptions]
   )
 
   const positioning = useMemo(
