@@ -108,6 +108,7 @@ st.dataframe(
 
 **Column types:**
 - `AreaChartColumn` → Area sparklines
+- `AudioColumn` → Audio playback
 - `BarChartColumn` → Bar sparklines
 - `CheckboxColumn` → Boolean as checkbox
 - `DateColumn` → Date only (no time)
@@ -123,6 +124,7 @@ st.dataframe(
 - `SelectboxColumn` → Editable dropdown
 - `TextColumn` → Text with formatting
 - `TimeColumn` → Time only (no date)
+- `VideoColumn` → Video playback
 
 ## Choosing the right data widget
 
