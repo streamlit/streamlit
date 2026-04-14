@@ -186,6 +186,7 @@ own thread with a working event loop, and multiple async calls within it run con
 | `st.stop()` / `st.rerun(scope="app")` | Stop/rerun the entire run; cancel sibling threads via cooperative cancellation | Consistent with regular fragment behavior — preserves the "drop-in upgrade" goal. |
 | `st.rerun(scope="fragment")` | Local to the calling fragment's thread | Same as regular fragments; siblings unaffected. |
 | `@st.dialog` | Prohibited during parallel execution; dialogs gated behind user interactions work normally | Non-deterministic dialog ordering during parallel runs violates principle #33. Dialogs triggered by user actions (button click, row selection) only execute during sequential fragment reruns, so they are unaffected. |
+| `st.switch_page` | Prohibited during parallel execution; page navigation from sequential fragment reruns works normally | Navigating aborts all sibling threads and races on the destination page. Navigation triggered by user actions only executes during sequential fragment reruns, so there is no conflict. |
 | Nesting | Regular and parallel fragments can nest inside parallel fragments | Thread count bounded by call sites, not depth. Outer waits for inner parallel fragments. |
 | Loading UX (initial) | Loading skeleton placeholder in reserved container; configurable via `show_loading` parameter (default `True`) | Gives visual feedback and prevents layout shift; `show_loading=False` for side-effect-only fragments. Follows `@st.cache_data(show_spinner=...)` precedent. |
 | Loading UX (rerun) | Stale ghosting of previous content | Existing fragment rerun behavior — no change. |
@@ -423,6 +424,13 @@ def dashboard_card():
 
 The runtime can distinguish parallel and sequential execution contexts because the fragment
 already knows whether it is executing as part of a full-app run or a fragment rerun.
+
+**Page navigation:** `st.switch_page` is prohibited during parallel execution for the same
+reason. Navigating mutates query params and requests a rerun with a new page hash —
+effectively aborting all sibling parallel threads to redirect to a different page. If
+multiple fragments attempted to navigate simultaneously, the destination page would be
+non-deterministic. During sequential fragment reruns (e.g., a button click that navigates
+to a detail page), `st.switch_page` works normally — only one fragment is executing.
 
 #### Session state
 
