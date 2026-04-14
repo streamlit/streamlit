@@ -159,14 +159,6 @@ exclude = ["tests", "tests.*"]
 streamlit = [
     "py.typed",
     ".agents/**/*.md",
-    ".agents/**/*.py",
-    ".agents/**/*.toml",
-    ".agents/**/*.yml",
-    ".agents/**/*.tmpl",
-    ".agents/**/*.example",
-    ".agents/**/*.lock",
-    ".agents/**/.gitignore",
-    ".agents/**/.gitattributes",
     "hello/**/*.py",
 ]
 
