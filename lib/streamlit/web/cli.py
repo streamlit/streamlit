@@ -38,6 +38,12 @@ if TYPE_CHECKING:
 
 ACCEPTED_FILE_EXTENSIONS: Final = ("py", "py3")
 
+# Known non-Python file extensions that indicate a likely file path typo rather than
+# a dotted module name. Used to provide better error messages.
+_KNOWN_NON_PY_EXTENSIONS: Final = frozenset(
+    ["doc", "docx", "txt", "csv", "json", "yaml", "yml", "toml", "ini", "md", "rst"]
+)
+
 LOG_LEVELS: Final = ("error", "warning", "info", "debug")
 
 
@@ -263,6 +269,11 @@ def main_run(target: str, args: list[str] | None = None, **kwargs: Any) -> None:
             # If target looks like a file path (contains separators), show a file error
             if os.sep in target or (os.altsep and os.altsep in target):
                 raise click.BadParameter(f"File does not exist: {path}")
+            # If target has a known non-Python file extension (e.g., .doc, .txt),
+            # give the original extension error instead of a confusing module error
+            _, ext = os.path.splitext(target)
+            if ext and ext[1:].lower() in _KNOWN_NON_PY_EXTENSIONS:
+                _check_extension_or_raise(target)
             main_script_path = _resolve_module(target)
 
         _main_run(main_script_path, args, flag_options=kwargs)
@@ -295,6 +306,13 @@ def _resolve_module(module_name: str) -> str:
     Uses importlib.util.find_spec to locate the module. If the module is a package,
     looks for __main__.py first, then streamlit_app.py.
 
+    Note
+    ----
+    For dotted names (e.g., ``mypackage.app``), ``find_spec`` automatically imports
+    the parent package as part of resolution, which executes ``mypackage/__init__.py``.
+    This behavior mirrors ``python -m`` and means parent package code runs at CLI
+    argument-parsing time, before Streamlit's own setup.
+
     Parameters
     ----------
     module_name : str
@@ -314,15 +332,13 @@ def _resolve_module(module_name: str) -> str:
 
     # Helper to generate a hint for file-like module names
     def _get_file_hint(name: str) -> str:
-        """Return a hint if the module name looks like a file path."""
-        if "." in name and not name.endswith((".py", ".py3")):
-            _, ext = os.path.splitext(name)
-            if ext and ext[1:].isalnum() and len(ext) <= 5:
-                # Looks like it might be a file with an extension
-                return (
-                    " If you meant to specify a file, check that the path exists "
-                    "and has a .py extension."
-                )
+        """Return a hint if the module name looks like a non-Python file path."""
+        _, ext = os.path.splitext(name)
+        if ext and ext[1:].lower() in _KNOWN_NON_PY_EXTENSIONS:
+            return (
+                " If you meant to specify a file, check that the path exists "
+                "and has a .py extension."
+            )
         return ""
 
     try:

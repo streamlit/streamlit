@@ -142,10 +142,8 @@ class CliTest(unittest.TestCase):
         result = self.runner.invoke(cli, ["run", "file_name.doc"])
 
         assert result.exit_code != 0
-        # With module resolution, non-py files that don't exist trigger module lookup
-        # which fails with "No module named" error and a helpful hint
-        assert "No module named" in result.output
-        assert "If you meant to specify a file" in result.output
+        # Known non-Python extensions like .doc should give the original extension error
+        assert "Streamlit requires raw Python (.py) files, not .doc." in result.output
 
     @tempdir()
     def test_run_valid_url(self, temp_dir):
