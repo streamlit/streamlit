@@ -66,7 +66,7 @@ const StyledMermaidContainer = styled.div<{
     height: "auto",
     // Limit height in normal mode to prevent diagrams from dominating the page
     // Users can expand to fullscreen to see the full diagram
-    maxHeight: isFullScreen ? "100%" : "400px",
+    maxHeight: isFullScreen ? "100%" : "25rem",
     objectFit: "contain",
     borderRadius: theme.radii.default,
   },
