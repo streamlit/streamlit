@@ -53,7 +53,11 @@ const createMockParams = (
   acceptMultipleFiles: true,
   maxFileSize: 1024 * 1024,
   uploadClient: {
-    fetchFileURLs: vi.fn().mockResolvedValue([]),
+    fetchFileURLs: vi
+      .fn()
+      .mockImplementation((files: File[]) =>
+        Promise.resolve(files.map(() => FileURLsProto.create({})))
+      ),
   } as unknown as FileUploadClient,
   uploadFile: vi.fn(),
   addFiles: vi.fn(),
@@ -66,6 +70,7 @@ const createMockParams = (
 
 describe("createDropHandler", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(validateFileType).mockReturnValue({ isValid: true })
   })
 
