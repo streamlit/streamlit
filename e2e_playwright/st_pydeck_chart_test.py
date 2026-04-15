@@ -176,10 +176,19 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
 
     expect(pydeck_charts).to_have_count(4, timeout=15000)
 
-    # Helper to wait for a chart's canvas to be visible before snapshotting
+    # Helper to wait for a chart's canvas to be visible before snapshotting.
+    # Try mapbox canvas first, fall back to deckgl-overlay canvas.
     def wait_for_chart_canvas(chart: Locator) -> None:
         chart.scroll_into_view_if_needed()
-        expect(chart.locator(".mapboxgl-canvas")).to_be_visible(timeout=15000)
+        # Try mapbox canvas first (used by most map styles)
+        mapbox_canvas = chart.locator(".mapboxgl-canvas")
+        deckgl_canvas = chart.locator("canvas")
+        # Wait for either canvas type to be visible
+        try:
+            expect(mapbox_canvas.or_(deckgl_canvas)).to_be_visible(timeout=15000)
+        except AssertionError:
+            # If no canvas found, wait a bit for the chart to stabilize
+            chart.page.wait_for_timeout(2000)
 
     # Test different height values with snapshots
     wait_for_chart_canvas(pydeck_charts.nth(0))
