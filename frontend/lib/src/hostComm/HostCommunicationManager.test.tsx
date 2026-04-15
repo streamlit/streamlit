@@ -136,58 +136,99 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
-  it("dispatches GUEST_READY on own window for in-iframe detection", () => {
-    const postMessageSpy = vi.spyOn(window, "postMessage")
+  describe("self-dispatch GUEST_READY", () => {
+    let postMessageSpy: MockInstance
+    const originalParent = window.parent
 
-    hostCommunicationMgr.closeHostCommunication()
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
+    beforeEach(() => {
+      postMessageSpy = vi.spyOn(window, "postMessage")
     })
 
-    expect(postMessageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        stCommVersion: HOST_COMM_VERSION,
-        type: "GUEST_READY",
-        streamlitExecutionStartedAt: expect.any(Number),
-        guestReadyAt: expect.any(Number),
-      }),
-      window.location.origin
-    )
-
-    postMessageSpy.mockRestore()
-  })
-
-  it("does not dispatch GUEST_READY on own window when already open", () => {
-    const postMessageSpy = vi.spyOn(window, "postMessage")
-
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
+    afterEach(() => {
+      postMessageSpy.mockRestore()
+      Object.defineProperty(window, "parent", {
+        value: originalParent,
+        configurable: true,
+      })
     })
 
-    expect(postMessageSpy).not.toHaveBeenCalled()
+    it("dispatches on own window when embedded in an iframe", () => {
+      const fakeParent = { postMessage: vi.fn() } as unknown as Window
+      Object.defineProperty(window, "parent", {
+        value: fakeParent,
+        configurable: true,
+      })
 
-    postMessageSpy.mockRestore()
-  })
+      hostCommunicationMgr.closeHostCommunication()
+      postMessageSpy.mockClear()
 
-  it("re-dispatches GUEST_READY on own window after close and reopen", () => {
-    const postMessageSpy = vi.spyOn(window, "postMessage")
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
 
-    hostCommunicationMgr.closeHostCommunication()
-    postMessageSpy.mockClear()
-
-    hostCommunicationMgr.setAllowedOrigins({
-      allowedOrigins: ["https://devel.streamlit.test"],
-      useExternalAuthToken: false,
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stCommVersion: HOST_COMM_VERSION,
+          type: "GUEST_READY",
+          streamlitExecutionStartedAt: expect.any(Number),
+          guestReadyAt: expect.any(Number),
+        }),
+        window.location.origin
+      )
     })
 
-    expect(postMessageSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ type: "GUEST_READY" }),
-      window.location.origin
-    )
+    it("does not dispatch when not embedded (top-level window)", () => {
+      hostCommunicationMgr.closeHostCommunication()
+      postMessageSpy.mockClear()
 
-    postMessageSpy.mockRestore()
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      const selfDispatchCalls = postMessageSpy.mock.calls.filter(
+        ([, targetOrigin]) => targetOrigin === window.location.origin
+      )
+      expect(selfDispatchCalls).toHaveLength(0)
+    })
+
+    it("does not dispatch when already open", () => {
+      const fakeParent = { postMessage: vi.fn() } as unknown as Window
+      Object.defineProperty(window, "parent", {
+        value: fakeParent,
+        configurable: true,
+      })
+      postMessageSpy.mockClear()
+
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      expect(postMessageSpy).not.toHaveBeenCalled()
+    })
+
+    it("re-dispatches after close and reopen", () => {
+      const fakeParent = { postMessage: vi.fn() } as unknown as Window
+      Object.defineProperty(window, "parent", {
+        value: fakeParent,
+        configurable: true,
+      })
+
+      hostCommunicationMgr.closeHostCommunication()
+      postMessageSpy.mockClear()
+
+      hostCommunicationMgr.setAllowedOrigins({
+        allowedOrigins: ["https://devel.streamlit.test"],
+        useExternalAuthToken: false,
+      })
+
+      expect(postMessageSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "GUEST_READY" }),
+        window.location.origin
+      )
+    })
   })
 
   it("only sends GUEST_READY once when setAllowedOrigins is called multiple times", () => {

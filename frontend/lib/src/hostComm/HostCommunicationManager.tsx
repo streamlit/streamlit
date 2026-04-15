@@ -106,16 +106,14 @@ export default class HostCommunicationManager {
     }
     this.sendMessageToHost(guestReadyMessage)
     // Also dispatch on own window so in-iframe embed code can detect readiness
-    // without monkey-patching or retry loops. Safe because window.location.origin
-    // is always a valid string in production (Streamlit is always served over
-    // HTTP/HTTPS — never file:// or data:). See MDN Location.origin.
-    window.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...guestReadyMessage,
-      } as VersionedMessage<IGuestToHostMessage>,
-      window.location.origin
-    )
+    // without monkey-patching or retry loops. Only when actually embedded
+    // (window !== window.parent) to avoid duplicate delivery at top level.
+    if (window !== window.parent) {
+      window.postMessage(
+        this.buildVersionedMessage(guestReadyMessage),
+        window.location.origin
+      )
+    }
   }
 
   /**
@@ -171,10 +169,7 @@ export default class HostCommunicationManager {
     message: IGuestToHostMessage
   ): void => {
     window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
+      this.buildVersionedMessage(message),
       window.location.origin
     )
   }
@@ -183,13 +178,16 @@ export default class HostCommunicationManager {
    * Register a function to deliver a message to the Host
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
-    window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
-      "*"
-    )
+    window.parent.postMessage(this.buildVersionedMessage(message), "*")
+  }
+
+  private buildVersionedMessage(
+    message: IGuestToHostMessage
+  ): VersionedMessage<IGuestToHostMessage> {
+    return {
+      stCommVersion: HOST_COMM_VERSION,
+      ...message,
+    } as VersionedMessage<IGuestToHostMessage>
   }
 
   /**
