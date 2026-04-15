@@ -23,23 +23,26 @@ interface StyledDeckGlChartProps {
 }
 
 export const StyledDeckGlChart = styled.div<StyledDeckGlChartProps>(
-  ({ theme, isStretchHeight }) => ({
+  ({ isStretchHeight }) => ({
     position: "relative",
     height: "100%",
     width: "100%",
     // Minimum height is not used when pixel height is provided by user so we don't restrict users from setting small heights.
     ...(isStretchHeight && { minHeight: "6.25rem" }),
-
-    // Apply border-radius and clipping to the deck.gl canvas container.
-    // Using a child selector instead of overflow: hidden on this element
-    // to avoid clipping the toolbar which is positioned above this container.
-    "& > .mapboxgl-map, & > #deckgl-overlay, & > #deckgl-wrapper, & > div:not([class]):not([data-testid])":
-      {
-        borderRadius: theme.radii.default,
-        overflow: "hidden",
-      },
   })
 )
+
+/**
+ * Wrapper around the DeckGL component that clips the map content with border-radius.
+ * Kept separate from StyledDeckGlChart to avoid clipping the toolbar.
+ */
+export const StyledMapContainer = styled.div(({ theme }) => ({
+  position: "relative",
+  height: "100%",
+  width: "100%",
+  borderRadius: theme.radii.default,
+  overflow: "hidden",
+}))
 
 export const StyledNavigationControlContainer = styled.div(({ theme }) => ({
   position: "absolute",
