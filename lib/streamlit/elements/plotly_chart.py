@@ -390,7 +390,7 @@ class PlotlyMixin:
             "box",
             "lasso",
         ),
-        **kwargs: Any,
+        config: dict[str, Any] | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -409,7 +409,7 @@ class PlotlyMixin:
             "box",
             "lasso",
         ),
-        **kwargs: Any,
+        config: dict[str, Any] | None = None,
     ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
@@ -429,7 +429,6 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
-        **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
@@ -572,18 +571,6 @@ class PlotlyMixin:
             configuration options, see Plotly's documentation on `Configuration
             in Python <https://plotly.com/python/configuration-options/>`_.
 
-        **kwargs
-            Additional arguments accepted by Plotly's ``plot()`` function.
-
-            This supports ``config``, a dictionary of Plotly configuration
-            options. For more information about Plotly configuration options,
-            see Plotly's documentation on `Configuration in Python
-            <https://plotly.com/python/configuration-options/>`_.
-
-            .. deprecated::
-               ``**kwargs`` are deprecated and will be removed in a future
-               release. Use ``config`` instead.
-
         Returns
         -------
         element or dict
@@ -673,14 +660,6 @@ class PlotlyMixin:
         # NOTE: "figure_or_data" is the name used in Plotly's .plot() method
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
-
-        if kwargs:
-            show_deprecation_warning(
-                "Variable keyword arguments for `st.plotly_chart` have been "
-                "deprecated and will be removed in a future release. Use the "
-                "`config` argument instead to specify Plotly configuration "
-                "options."
-            )
 
         if theme not in {"streamlit", None}:
             raise StreamlitAPIException(
