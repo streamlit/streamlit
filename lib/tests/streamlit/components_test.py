@@ -38,7 +38,10 @@ from streamlit.components.v1.component_registry import (
     _get_module_name,
 )
 from streamlit.components.v1.custom_component import CustomComponent
-from streamlit.dataframe_util import is_pyarrow_version_less_than
+from streamlit.dataframe_util import (
+    is_pandas_version_less_than,
+    is_pyarrow_version_less_than,
+)
 from streamlit.errors import DuplicateWidgetID, StreamlitAPIException
 from streamlit.proto.Components_pb2 import ArrowTable as ArrowTableProto
 from streamlit.proto.Components_pb2 import SpecialArg
@@ -766,23 +769,27 @@ class ComponentArrowTest(unittest.TestCase):
         assert len(proto.data) > 0
         assert len(proto.columns) > 0
 
+    @pytest.mark.skipif(
+        is_pandas_version_less_than("3.0.0"),
+        reason="Downcasting is only enabled for pandas >= 3.0",
+    )
     def test_marshall_downcasts_large_string(self):
         """Test that large_string columns are downcast to string for custom components."""
         import pyarrow as pa
 
-        # Use ArrowDtype to ensure the downcast path is exercised on all pandas
-        # versions, including pandas < 3 where to_pandas() would convert
-        # large_string to object dtype and re-infer standard string on round-trip.
         df = pd.DataFrame({"col": pd.array(["a", "b", "c"], dtype="string[pyarrow]")})
 
         proto = ArrowTableProto()
         component_arrow.marshall(proto, df)
 
-        # Read back the serialized data and verify the type is string, not large_string
         result_table = pa.ipc.open_stream(proto.data).read_all()
         for field in result_table.schema:
             assert field.type == pa.string(), f"Expected string type, got {field.type}"
 
+    @pytest.mark.skipif(
+        is_pandas_version_less_than("3.0.0"),
+        reason="Downcasting is only enabled for pandas >= 3.0",
+    )
     def test_marshall_downcasts_large_binary(self):
         """Test that large_binary columns are downcast to binary for custom components."""
         import pyarrow as pa
@@ -800,6 +807,10 @@ class ComponentArrowTest(unittest.TestCase):
                     f"Expected binary type, got {field.type}"
                 )
 
+    @pytest.mark.skipif(
+        is_pandas_version_less_than("3.0.0"),
+        reason="Downcasting is only enabled for pandas >= 3.0",
+    )
     def test_marshall_downcasts_large_list(self):
         """Test that large_list columns are downcast to list for custom components."""
         import pyarrow as pa
@@ -818,6 +829,10 @@ class ComponentArrowTest(unittest.TestCase):
                     f"Expected list type, got {field.type}"
                 )
 
+    @pytest.mark.skipif(
+        is_pandas_version_less_than("3.0.0"),
+        reason="Downcasting is only enabled for pandas >= 3.0",
+    )
     def test_marshall_downcasts_nested_large_list_with_large_string(self):
         """Test that large_list(large_string()) is recursively downcast to list(string)."""
         import pyarrow as pa
