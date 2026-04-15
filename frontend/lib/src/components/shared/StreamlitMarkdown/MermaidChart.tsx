@@ -14,23 +14,38 @@
  * limitations under the License.
  */
 
-import { memo, useEffect, useId, useMemo, useRef, useState } from "react"
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import styled from "@emotion/styled"
+import { ContentCopy, FileDownload } from "@emotion-icons/material-outlined"
 import { getLuminance } from "color2k"
 import dompurify from "dompurify"
+import { getLogger } from "loglevel"
 
 import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
 
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import {
-  blend,
-  convertRemToPx,
-  EmotionTheme,
-  getThemeBackgroundColors,
-} from "~lib/theme"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import { getThemeBackgroundColors } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { blend, convertRemToPx } from "~lib/theme/utils"
+
+const LOG = getLogger("MermaidChart")
 
 // Module-level tracking for mermaid initialization
 // Stores the theme mode (light/dark) that was used for initialization
@@ -50,21 +65,28 @@ const SANITIZE_SVG_OPTIONS = {
   ADD_ATTR: ["xlink:href"],
 }
 
-const StyledMermaidContainer = styled.div<{ hasError: boolean }>(
-  ({ theme, hasError }) => ({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: hasError ? "flex-start" : "center",
-    justifyContent: "center",
-    minHeight: "2rem",
-    padding: theme.spacing.sm,
-    // Ensure SVG is responsive
-    "& svg": {
-      maxWidth: "100%",
-      height: "auto",
-    },
-  })
-)
+const StyledMermaidContainer = styled.div<{
+  hasError: boolean
+  isFullScreen: boolean
+}>(({ theme, hasError, isFullScreen }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: hasError ? "flex-start" : "center",
+  justifyContent: isFullScreen ? "center" : "flex-start",
+  minHeight: "2rem",
+  padding: theme.spacing.sm,
+  height: isFullScreen ? "100%" : "auto",
+  width: "100%",
+  // Make SVG fill the container width while maintaining aspect ratio
+  "& svg": {
+    width: "100%",
+    maxWidth: "100%",
+    height: "auto",
+    ...(isFullScreen && {
+      maxHeight: "100%",
+    }),
+  },
+}))
 
 const StyledErrorMessage = styled.div(({ theme }) => ({
   color: theme.colors.redTextColor,
@@ -249,7 +271,7 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
  * A component that renders Mermaid diagrams.
  * Lazy loads the mermaid library and renders diagrams client-side.
  */
-export const MermaidChart = memo(function MermaidChart({
+const MermaidChart = memo(function MermaidChart({
   source,
 }: Readonly<MermaidChartProps>) {
   const theme = useEmotionTheme()
@@ -260,6 +282,16 @@ export const MermaidChart = memo(function MermaidChart({
   const [isLoading, setIsLoading] = useState(true)
   // Store bindFunctions to call after SVG is inserted into DOM
   const bindFunctionsRef = useRef<((element: Element) => void) | null>(null)
+
+  const {
+    expanded: isFullScreen,
+    width: containerWidth,
+    height: fullScreenHeight,
+    expand,
+    collapse,
+  } = useRequiredContext(ElementFullscreenContext)
+
+  const { copyToClipboard, label: copyLabel } = useCopyToClipboard()
 
   useEffect(() => {
     let isCancelled = false
@@ -332,36 +364,163 @@ export const MermaidChart = memo(function MermaidChart({
   // Sanitize SVG content for defense-in-depth
   // Mermaid uses DOMPurify internally, but we sanitize again to ensure safety
   // even if Mermaid's behavior changes or is misconfigured
-  const sanitizedSvgContent = useMemo(
-    () =>
-      svgContent ? dompurify.sanitize(svgContent, SANITIZE_SVG_OPTIONS) : "",
-    [svgContent]
-  )
+  const sanitizedSvgContent = useMemo(() => {
+    if (!svgContent) {
+      return ""
+    }
+
+    const sanitized = dompurify.sanitize(svgContent, SANITIZE_SVG_OPTIONS)
+
+    // Mermaid sets explicit width/height attributes on the SVG that prevent
+    // CSS-based responsive sizing. Parse the SVG and remove these attributes
+    // to allow the SVG to scale with CSS while preserving the viewBox.
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(sanitized, "image/svg+xml")
+    const svg = doc.querySelector("svg")
+
+    if (svg) {
+      // Get dimensions before removing (needed for fallback viewBox)
+      const width = svg.getAttribute("width") || "100"
+      const height = svg.getAttribute("height") || "100"
+
+      // Ensure viewBox exists for proper scaling (most Mermaid SVGs have it)
+      if (!svg.hasAttribute("viewBox")) {
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`)
+      }
+
+      // Remove explicit dimensions to allow CSS to control sizing
+      svg.removeAttribute("width")
+      svg.removeAttribute("height")
+      // Add preserveAspectRatio for consistent scaling
+      svg.setAttribute("preserveAspectRatio", "xMidYMid meet")
+
+      return new XMLSerializer().serializeToString(svg)
+    }
+
+    return sanitized
+  }, [svgContent])
+
+  /**
+   * Copy the mermaid source code to clipboard.
+   */
+  const handleCopySource = useCallback((): void => {
+    copyToClipboard(source)
+  }, [copyToClipboard, source])
+
+  /**
+   * Download the rendered diagram as a PNG image.
+   */
+  const handleDownloadPng = useCallback((): void => {
+    if (!containerRef.current) {
+      return
+    }
+
+    const svgElement = containerRef.current.querySelector("svg")
+    if (!svgElement) {
+      return
+    }
+
+    // Clone the SVG to avoid modifying the displayed one
+    const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
+
+    // Get the SVG dimensions
+    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for PNG export dimensions
+    const svgRect = svgElement.getBoundingClientRect()
+    const width = svgRect.width
+    const height = svgRect.height
+
+    // Set explicit dimensions on the cloned SVG
+    clonedSvg.setAttribute("width", String(width))
+    clonedSvg.setAttribute("height", String(height))
+
+    // Serialize the SVG
+    const serializer = new XMLSerializer()
+    const svgString = serializer.serializeToString(clonedSvg)
+    const svgBlob = new Blob([svgString], {
+      type: "image/svg+xml;charset=utf-8",
+    })
+    const svgUrl = URL.createObjectURL(svgBlob)
+
+    // Create an image and draw it to canvas
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      // Use 2x scale for better quality
+      const scale = 2
+      canvas.width = width * scale
+      canvas.height = height * scale
+
+      const ctx = canvas.getContext("2d")
+      if (!ctx) {
+        URL.revokeObjectURL(svgUrl)
+        return
+      }
+
+      // Fill with white background
+      ctx.fillStyle = theme.colors.bgColor
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+
+      // Scale and draw the image
+      ctx.scale(scale, scale)
+      ctx.drawImage(img, 0, 0)
+
+      // Download the PNG
+      const pngUrl = canvas.toDataURL("image/png")
+      const link = document.createElement("a")
+      link.download = "mermaid-diagram.png"
+      link.href = pngUrl
+      link.click()
+
+      URL.revokeObjectURL(svgUrl)
+    }
+    img.onerror = () => {
+      LOG.error("Failed to load SVG for PNG export")
+      URL.revokeObjectURL(svgUrl)
+    }
+    img.src = svgUrl
+  }, [theme.colors.bgColor])
 
   if (isLoading) {
     return (
-      <StyledMermaidContainer
-        hasError={false}
-        data-testid="stMermaidChart"
-        aria-busy="true"
-        aria-label="Loading mermaid diagram"
+      <StyledToolbarElementContainer
+        width={containerWidth}
+        height={fullScreenHeight}
+        useContainerWidth={true}
       >
-        <Skeleton
-          element={SkeletonProto.create({
-            style: SkeletonProto.SkeletonStyle.ELEMENT,
-          })}
-        />
-      </StyledMermaidContainer>
+        <StyledMermaidContainer
+          hasError={false}
+          isFullScreen={false}
+          data-testid="stMermaidChart"
+          aria-busy="true"
+          aria-label="Loading mermaid diagram"
+        >
+          <Skeleton
+            element={SkeletonProto.create({
+              style: SkeletonProto.SkeletonStyle.ELEMENT,
+            })}
+          />
+        </StyledMermaidContainer>
+      </StyledToolbarElementContainer>
     )
   }
 
   if (error) {
     return (
-      <StyledMermaidContainer hasError={true} data-testid="stMermaidChart">
-        <StyledErrorMessage data-testid="stMermaidError" role="alert">
-          Mermaid diagram error: {error}
-        </StyledErrorMessage>
-      </StyledMermaidContainer>
+      <StyledToolbarElementContainer
+        width={containerWidth}
+        height={fullScreenHeight}
+        useContainerWidth={true}
+      >
+        <StyledMermaidContainer
+          hasError={true}
+          isFullScreen={false}
+          data-testid="stMermaidChart"
+        >
+          <StyledErrorMessage data-testid="stMermaidError" role="alert">
+            Mermaid diagram error: {error}
+          </StyledErrorMessage>
+        </StyledMermaidContainer>
+      </StyledToolbarElementContainer>
     )
   }
 
@@ -370,15 +529,42 @@ export const MermaidChart = memo(function MermaidChart({
   // and again by DOMPurify in this component.
   return (
     <ErrorBoundary>
-      <StyledMermaidContainer
-        ref={containerRef}
-        hasError={false}
-        data-testid="stMermaidChart"
-        role="img"
-        aria-label="Mermaid diagram"
-        // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
-        dangerouslySetInnerHTML={{ __html: sanitizedSvgContent }}
-      />
+      <StyledToolbarElementContainer
+        width={containerWidth}
+        height={fullScreenHeight}
+        useContainerWidth={true}
+      >
+        <Toolbar
+          target={StyledToolbarElementContainer}
+          isFullScreen={isFullScreen}
+          onExpand={expand}
+          onCollapse={collapse}
+        >
+          <ToolbarAction
+            label="Download as PNG"
+            icon={FileDownload}
+            onClick={handleDownloadPng}
+          />
+          <ToolbarAction
+            label={copyLabel}
+            icon={ContentCopy}
+            onClick={handleCopySource}
+          />
+        </Toolbar>
+        <StyledMermaidContainer
+          ref={containerRef}
+          hasError={false}
+          isFullScreen={isFullScreen}
+          data-testid="stMermaidChart"
+          role="img"
+          aria-label="Mermaid diagram"
+          // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
+          dangerouslySetInnerHTML={{ __html: sanitizedSvgContent }}
+        />
+      </StyledToolbarElementContainer>
     </ErrorBoundary>
   )
 })
+
+const MermaidChartWithFullScreen = withFullScreenWrapper(MermaidChart)
+export { MermaidChartWithFullScreen as MermaidChart }
