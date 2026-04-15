@@ -537,3 +537,9 @@ Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
 
 Emoji: 🎉 Array: array[index] Dict: dict[key]""",
 )
+
+# Shimmer directive test
+with st.container(key="shimmer_elements"):
+    st.markdown(
+        "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
+    )

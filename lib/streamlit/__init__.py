@@ -286,6 +286,9 @@ logout = _logout
 # User
 user = _UserInfoProxy()
 
+# Starlette integration
+from streamlit.starlette import App as App
+
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because
 # streamlit.components.v1 also uses some streamlit imports

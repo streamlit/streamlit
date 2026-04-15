@@ -74,10 +74,10 @@ st.markdown("Status: :shimmer[Analyzing data...]")
 **Animation:**
 
 The shimmer effect is a smooth, continuous CSS animation where a highlight gradient sweeps
-across the text from left to right. The animation:
+across the text from right to left. The animation:
 
 - Loops indefinitely until the element is removed or replaced
-- Uses a 2-second cycle duration
+- Uses an 8-second cycle duration for a subtle, non-distracting effect
 - Applies a linear gradient that creates a subtle "shine" effect
 
 **Theme integration:**
@@ -113,7 +113,7 @@ st.markdown(":shimmer[[Click here](https://example.com)]")
 ### Design
 
 The shimmer effect uses CSS `background-clip: text` with an animated linear gradient. A
-highlight band continuously sweeps across the text from left to right, creating a subtle
+highlight band continuously sweeps across the text from right to left, creating a subtle
 "shine" effect. The gradient transitions smoothly from the base text color to a brighter
 highlight and back, giving the appearance of light passing over the text.
 
