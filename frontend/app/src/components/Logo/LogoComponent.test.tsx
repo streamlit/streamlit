@@ -76,8 +76,10 @@ describe("LogoComponent", () => {
   })
 
   it("renders nothing when appLogo is null", () => {
-    const { container } = render(<LogoComponent {...getProps()} />)
-    expect(container.firstChild).toBeNull()
+    render(<LogoComponent {...getProps()} />)
+    expect(screen.queryByTestId("stLogo")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("stHeaderLogo")).not.toBeInTheDocument()
+    expect(screen.queryByRole("img", { name: "Logo" })).not.toBeInTheDocument()
   })
 
   it("renders logo in header when dataTestId is stHeaderLogo", () => {

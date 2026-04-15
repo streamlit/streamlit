@@ -336,7 +336,9 @@ describe("BlockNodeRenderer CSS key class placement", () => {
     const layoutWrapper = screen.getByTestId("stLayoutWrapper")
     expect(layoutWrapper).toHaveClass("st-key-my_popover")
 
-    const innerBlock = screen.getByTestId("stVerticalBlock")
-    expect(innerBlock.className).not.toContain("st-key-")
+    // React Aria popover content is not wrapped in stVerticalBlock while collapsed;
+    // assert the key stays off the interactive popover shell instead.
+    const popover = screen.getByTestId("stPopover")
+    expect(popover.className).not.toContain("st-key-")
   })
 })

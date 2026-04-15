@@ -72,6 +72,13 @@ async function setDateInputValue(
   await user.type(el, value, { skipClick: true })
 }
 
+/** Display text sync runs in a queueMicrotask after value updates. */
+async function waitForDateFieldValue(expected: string): Promise<void> {
+  await waitFor(() => {
+    expect(screen.getByTestId("stDateInputField")).toHaveValue(expected)
+  })
+}
+
 const getProps = (
   elementProps: Partial<DateInputProto> = {},
   widgetProps: Partial<Props> = {}
@@ -105,13 +112,13 @@ describe("DateInput widget", () => {
     expect(screen.getByText("Label")).toBeVisible()
   })
 
-  it("displays the correct placeholder and value for the provided format", () => {
+  it("displays the correct placeholder and value for the provided format", async () => {
     const props = getProps({
       format: "DD.MM.YYYY",
     })
     render(<DateInput {...props} />)
     expect(screen.getByPlaceholderText("DD.MM.YYYY")).toBeVisible()
-    expect(screen.getByDisplayValue("20.01.1970")).toBeVisible()
+    await waitForDateFieldValue("20.01.1970")
   })
 
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
@@ -174,13 +181,11 @@ describe("DateInput widget", () => {
     expect(dateInput).toHaveAttribute("class", "stDateInput")
   })
 
-  it("renders a default value", () => {
+  it("renders a default value", async () => {
     const props = getProps()
     render(<DateInput {...props} />)
 
-    expect(screen.getByTestId("stDateInputField")).toHaveValue(
-      originalDateDisplay
-    )
+    await waitForDateFieldValue(originalDateDisplay)
   })
 
   it("can be disabled", () => {
@@ -220,11 +225,15 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2020/01/30"
 
-    await typeInDateField(user, dateInput, currNewDate)
+    await waitForDateFieldValue(originalDateDisplay)
+    await setDateInputValue(user, dateInput, currNewDate)
 
     const root = screen.getByTestId("stDateInput")
-    const errorIcon = within(root).getByTestId("stTooltipErrorHoverTarget")
-    expect(errorIcon).toBeVisible()
+    await waitFor(() => {
+      expect(
+        within(root).getByTestId("stTooltipErrorHoverTarget")
+      ).toBeVisible()
+    })
 
     expect(root).toHaveAttribute("data-validation-error", "true")
     const msg = root.getAttribute("data-validation-message")
@@ -235,7 +244,6 @@ describe("DateInput widget", () => {
   })
 
   it("displays correct error tooltip when the entered date for range input below min date", async () => {
-    const user = userEvent.setup()
     const props = getProps({
       default: ["2020-02-01", "2020-02-07"],
       min: "2020-01-01",
@@ -246,11 +254,16 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2019/01/05 - 2020/02/07"
 
-    await setDateInputValue(user, dateInput, currNewDate)
+    // Range validation needs a complete parseable string; fireEvent.input applies in one update
+    // eslint-disable-next-line testing-library/prefer-user-event -- controlled field uses onInput (see DateInput)
+    fireEvent.input(dateInput, { target: { value: currNewDate } })
 
     const root = screen.getByTestId("stDateInput")
-    const errorIcon = within(root).getByTestId("stTooltipErrorHoverTarget")
-    expect(errorIcon).toBeVisible()
+    await waitFor(() => {
+      expect(
+        within(root).getByTestId("stTooltipErrorHoverTarget")
+      ).toBeVisible()
+    })
 
     expect(root).toHaveAttribute("data-validation-error", "true")
     const msg = root.getAttribute("data-validation-message")
@@ -260,7 +273,6 @@ describe("DateInput widget", () => {
   })
 
   it("displays correct error tooltip when the entered date for range input above max date", async () => {
-    const user = userEvent.setup()
     const props = getProps({
       default: ["2020-02-01", "2020-02-07"],
       min: "2020-01-01",
@@ -271,11 +283,15 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const currNewDate = "2020/02/01 - 2021/02/07"
 
-    await setDateInputValue(user, dateInput, currNewDate)
+    // eslint-disable-next-line testing-library/prefer-user-event -- controlled field uses onInput (see DateInput)
+    fireEvent.input(dateInput, { target: { value: currNewDate } })
 
     const root = screen.getByTestId("stDateInput")
-    const errorIcon = within(root).getByTestId("stTooltipErrorHoverTarget")
-    expect(errorIcon).toBeVisible()
+    await waitFor(() => {
+      expect(
+        within(root).getByTestId("stTooltipErrorHoverTarget")
+      ).toBeVisible()
+    })
 
     expect(root).toHaveAttribute("data-validation-error", "true")
     const msg = root.getAttribute("data-validation-message")
@@ -403,6 +419,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
 
     const dateInput = screen.getByTestId("stDateInputField")
+    await waitForDateFieldValue(originalDateDisplay)
     await user.clear(dateInput)
     await typeInDateField(user, dateInput, newDateDisplay)
     await user.keyboard("{Enter}")
@@ -423,7 +440,7 @@ describe("DateInput widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(dateInput).toHaveValue(originalDateDisplay)
+    await waitForDateFieldValue(originalDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
       props.element,
       [originalDateWire],
@@ -438,9 +455,9 @@ describe("DateInput widget", () => {
     const user = userEvent.setup()
     const props = getProps({
       formId: "form",
-      default: ["2026/01/15"],
-      min: "2026/01/01",
-      max: "2026/12/31",
+      default: ["2026-01-15"],
+      min: "2026-01-01",
+      max: "2026-12-31",
     })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
@@ -448,11 +465,13 @@ describe("DateInput widget", () => {
     const dateInput = screen.getByTestId("stDateInputField")
     const root = screen.getByTestId("stDateInput")
 
-    await user.clear(dateInput)
-    await typeInDateField(user, dateInput, "2025/12/01")
+    await waitForDateFieldValue("2026/01/15")
+    await setDateInputValue(user, dateInput, "2025/12/01")
     await user.keyboard("{Enter}")
 
-    expect(within(root).getByTestId("stTooltipErrorHoverTarget")).toBeVisible()
+    expect(
+      await within(root).findByTestId("stTooltipErrorHoverTarget")
+    ).toBeVisible()
 
     act(() => {
       props.widgetMgr.submitForm("form", undefined)
@@ -463,7 +482,7 @@ describe("DateInput widget", () => {
         within(root).queryByTestId("stTooltipErrorHoverTarget")
       ).not.toBeInTheDocument()
     })
-    expect(dateInput).toHaveValue("2026/01/15")
+    await waitForDateFieldValue("2026/01/15")
   })
 
   describe("localization", () => {
@@ -781,7 +800,7 @@ describe("DateInput query param binding", () => {
     )
   })
 
-  it("uses URL-seeded value (setValue) instead of proto default", () => {
+  it("uses URL-seeded value (setValue) instead of proto default", async () => {
     const seededDateWire = "2025-08-20"
     const seededDateDisplay = "2025/08/20"
     const props = getProps({
@@ -793,11 +812,13 @@ describe("DateInput query param binding", () => {
     render(<DateInput {...props} />)
 
     const input = screen.getByTestId("stDateInputField")
-    expect(input).toHaveValue(seededDateDisplay)
+    await waitFor(() => {
+      expect(input).toHaveValue(seededDateDisplay)
+    })
     expect(input).not.toHaveValue(originalDateDisplay)
   })
 
-  it("uses URL-seeded range value instead of proto default", () => {
+  it("uses URL-seeded range value instead of proto default", async () => {
     const props = getProps({
       queryParamKey: "my_date",
       isRange: true,
@@ -809,7 +830,9 @@ describe("DateInput query param binding", () => {
     render(<DateInput {...props} />)
 
     const input = screen.getByTestId("stDateInputField")
-    expect(input).toHaveValue("2025/07/01 – 2025/07/10")
+    await waitFor(() => {
+      expect(input).toHaveValue("2025/07/01 – 2025/07/10")
+    })
     expect(input).not.toHaveValue("2025/03/01 – 2025/03/15")
   })
 })

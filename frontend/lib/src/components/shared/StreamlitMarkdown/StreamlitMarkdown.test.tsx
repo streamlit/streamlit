@@ -1181,18 +1181,13 @@ describe("CustomCodeTag Element", () => {
 
   it("should render inline", () => {
     const props = getCustomCodeTagProps({ inline: true })
-    const { baseElement } = render(<CustomCodeTag {...props} />)
-    const codeWithoutClass = baseElement.innerHTML.replace(
-      /class="(.*)"/,
-      'class="foo"'
-    )
-
-    expect(codeWithoutClass).toBe(
-      '<div><code class="foo">' +
-        "import streamlit as st\n\n" +
-        'st.write("Hello")\n' +
-        "</code></div>"
-    )
+    render(<CustomCodeTag {...props} />)
+    const code = screen.getByText(/import streamlit as st/, {
+      selector: "code",
+    })
+    expect(code.tagName).toBe("CODE")
+    expect(code).toHaveTextContent("import streamlit as st")
+    expect(code).toHaveTextContent('st.write("Hello")')
   })
 
   it.each([

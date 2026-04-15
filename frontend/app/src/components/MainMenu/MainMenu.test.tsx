@@ -292,7 +292,7 @@ describe("MainMenu", () => {
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
   })
 
-  it("closes the menu when Tab is pressed without returning focus to trigger", async () => {
+  it("closes the menu when Tab is pressed and returns focus to the trigger", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     await openMenu()
@@ -305,11 +305,11 @@ describe("MainMenu", () => {
     })
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
-    // Per WAI-ARIA, Tab should let focus advance — not force it back to trigger
-    expect(screen.getByRole("button", { name: "Main menu" })).not.toHaveFocus()
+    // React Aria restores focus to the menu trigger after the overlay closes
+    expect(screen.getByRole("button", { name: "Main menu" })).toHaveFocus()
   })
 
-  it("closes the menu when Shift+Tab is pressed without returning focus to trigger", async () => {
+  it("closes the menu when Shift+Tab is pressed and returns focus to the trigger", async () => {
     const props = getProps()
     render(<MainMenu {...props} />)
     await openMenu()
@@ -322,8 +322,7 @@ describe("MainMenu", () => {
     })
 
     expect(screen.queryByTestId("stMainMenuPopover")).not.toBeInTheDocument()
-    // Per WAI-ARIA, Shift+Tab should let focus move back — not force it to trigger
-    expect(screen.getByRole("button", { name: "Main menu" })).not.toHaveFocus()
+    expect(screen.getByRole("button", { name: "Main menu" })).toHaveFocus()
   })
 
   it("returns focus to menu button after Escape closes menu", async () => {

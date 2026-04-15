@@ -576,9 +576,7 @@ function DateInput({
       valueWireRef.current = wire
       return
     }
-    queueMicrotask(() => {
-      syncDisplayTextFromValue()
-    })
+    syncDisplayTextFromValue()
   }, [syncDisplayTextFromValue, value, displayPattern])
 
   const handleClose = useCallback((): void => {
