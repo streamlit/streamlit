@@ -273,7 +273,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </div>
         </PopoverPrimitive.Trigger>
 
-        <PopoverPrimitive.Portal>
+        {/* Match BaseWeb `renderAll`: keep body mounted while closed so layout/tests see inner blocks. */}
+        <PopoverPrimitive.Portal forceMount>
           <StyledPopoverContent
             ref={contentRef}
             data-testid="stPopoverBody"

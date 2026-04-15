@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { act, screen, within } from "@testing-library/react"
+import { act, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
@@ -93,7 +93,7 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
 
     const selectbox = screen.getByTestId("stSelectbox")
-    expect(within(selectbox).getByText("c")).toBeVisible()
+    expect(within(selectbox).getByDisplayValue("c")).toBeVisible()
   })
 
   it("can pass fragmentId to setStringValue", () => {
@@ -126,8 +126,8 @@ describe("Selectbox widget", () => {
       { fromUi: true },
       undefined
     )
-    expect(screen.queryByText("a")).not.toBeInTheDocument()
-    expect(screen.getByText("b")).toBeInTheDocument()
+    expect(screen.queryByDisplayValue("a")).not.toBeInTheDocument()
+    expect(screen.getByDisplayValue("b")).toBeInTheDocument()
   })
 
   it("resets its value when form is cleared", async () => {
@@ -156,8 +156,10 @@ describe("Selectbox widget", () => {
     })
 
     // Our widget should be reset, and the widgetMgr should be updated
-    expect(screen.getByText("a")).toBeInTheDocument()
-    expect(screen.queryByText("b")).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("a")).toBeInTheDocument()
+    })
+    expect(screen.queryByDisplayValue("b")).not.toBeInTheDocument()
     expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
       props.element.options[props.element.default ?? 0],
@@ -175,7 +177,9 @@ describe("Selectbox widget", () => {
     })
     render(<Selectbox {...props} />)
 
-    expect(screen.getByText("Please select an option...")).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText("Please select an option...")
+    ).toBeInTheDocument()
   })
 })
 

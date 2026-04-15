@@ -275,7 +275,6 @@ const Selectbox: FC<Props> = ({
   const [value, setValue] = useState<string | null>(propValue ?? null)
   const valueBeforeRemovalRef = useRef<string | null>(null)
   const clearIntentRef = useRef(false)
-  const [inputQuery, setInputQuery] = useState("")
   const [isFocused, setIsFocused] = useState(false)
   const comboboxOpenRef = useRef(false)
   /** True after the user has changed the input this focus session (vs spurious empty from the combobox on focus). */
@@ -323,6 +322,8 @@ const Selectbox: FC<Props> = ({
     const opt = selectOptions.find(o => o.value === propValue)
     return opt?.label ?? propValue
   }, [propValue, selectOptions])
+
+  const [inputQuery, setInputQuery] = useState(propDerivedLabel)
 
   const propDerivedLabelRef = useRef(propDerivedLabel)
   useLayoutEffect(() => {
