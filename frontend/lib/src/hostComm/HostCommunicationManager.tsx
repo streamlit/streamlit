@@ -105,16 +105,17 @@ export default class HostCommunicationManager {
       guestReadyAt: Date.now(),
     }
     this.sendMessageToHost(guestReadyMessage)
-    const origin = window.location?.origin
-    if (origin && origin !== "null") {
-      window.postMessage(
-        {
-          stCommVersion: HOST_COMM_VERSION,
-          ...guestReadyMessage,
-        } as VersionedMessage<IGuestToHostMessage>,
-        origin
-      )
-    }
+    // Also dispatch on own window so in-iframe embed code can detect readiness
+    // without monkey-patching or retry loops. Safe because window.location.origin
+    // is always a valid string in production (Streamlit is always served over
+    // HTTP/HTTPS — never file:// or data:). See MDN Location.origin.
+    window.postMessage(
+      {
+        stCommVersion: HOST_COMM_VERSION,
+        ...guestReadyMessage,
+      } as VersionedMessage<IGuestToHostMessage>,
+      window.location.origin
+    )
   }
 
   /**
