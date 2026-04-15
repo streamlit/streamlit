@@ -50,12 +50,15 @@ const pickOption = async (
   value: string
 ): Promise<void> => {
   const user = userEvent.setup()
-  // Click on the selectbox to open the dropdown
   await user.click(selectbox)
-  // Find the desired option and click on it to select
-  const valueElement = screen.getByText(value)
+  // Opening copies the selected label into the filter input; fuzzy mode would
+  // hide other options (e.g. "b" when value is "a"). Clear so every option is listed.
+  const combobox = screen.getByRole("combobox") as HTMLInputElement
+  if (!combobox.readOnly) {
+    await user.clear(combobox)
+  }
+  const valueElement = await screen.findByRole("option", { name: value })
   await user.click(valueElement)
-  // Select outside the widget to close the dropdown
   await user.click(document.body)
 }
 

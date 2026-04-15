@@ -220,7 +220,8 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
           </BaseButtonTooltip>
         </div>
 
-        <BasePopover.Portal>
+        {/* Match Base Web `renderAll`: keep body mounted for layout stability and tests. */}
+        <BasePopover.Portal keepMounted>
           <BasePopover.Positioner
             side="bottom"
             align="start"
