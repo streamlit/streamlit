@@ -250,10 +250,14 @@ def _dispatch_parallel_fragment(
             is_parallel_worker.set(False)
 
             # Show a loading skeleton while the worker thread runs. The
-            # skeleton is enqueued *after* the context copy so the worker's
-            # cursor starts at position 0 — its first element will replace
-            # the skeleton at the same delta path.
+            # skeleton is enqueued after the context copy, then the cursor is
+            # reset to 0 so the worker's first element replaces the skeleton
+            # at the same delta path. The cursor object is shared between the
+            # main thread and the copied context (copy_context is shallow for
+            # DG objects), so the reset must happen before the thread starts.
             active_dg._skeleton(height=200)
+            if active_dg._cursor:
+                active_dg._cursor._index = 0
 
     # Restore main thread state
     ctx.current_fragment_id = prev_fragment_id
