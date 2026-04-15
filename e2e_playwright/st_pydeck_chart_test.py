@@ -176,13 +176,20 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
 
     expect(pydeck_charts).to_have_count(4, timeout=15000)
 
+    # Helper to wait for a chart's canvas to be visible before snapshotting
+    def wait_for_chart_canvas(chart: Locator) -> None:
+        chart.scroll_into_view_if_needed()
+        expect(chart.locator(".mapboxgl-canvas")).to_be_visible(timeout=15000)
+
     # Test different height values with snapshots
+    wait_for_chart_canvas(pydeck_charts.nth(0))
     assert_snapshot(
         pydeck_charts.nth(0),
         name="st_pydeck_chart-height_default",
         pixel_threshold=PIXEL_THRESHOLD,
     )
 
+    wait_for_chart_canvas(pydeck_charts.nth(1))
     assert_snapshot(
         pydeck_charts.nth(1),
         name="st_pydeck_chart-height_stretch_outside_container",
@@ -193,12 +200,14 @@ def test_height_parameter(app: Page, assert_snapshot: ImageCompareFunction) -> N
     from e2e_playwright.shared.app_utils import get_element_by_key
 
     stretch_container = get_element_by_key(app, "test_height_stretch")
+    wait_for_chart_canvas(pydeck_charts.nth(2))
     assert_snapshot(
         stretch_container,
         name="st_pydeck_chart-height_stretch",
         pixel_threshold=PIXEL_THRESHOLD,
     )
 
+    wait_for_chart_canvas(pydeck_charts.nth(3))
     assert_snapshot(
         pydeck_charts.nth(3),
         name="st_pydeck_chart-height_50px",
