@@ -14,25 +14,16 @@
  * limitations under the License.
  */
 
-import { render, RenderResult, screen } from "@testing-library/react"
+import { screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
-import ThemeProvider from "~lib/components/core/ThemeProvider"
-import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/test_util"
 
 import { MermaidChart } from "./MermaidChart"
 
-const renderMermaidChart = (source: string): RenderResult => {
-  return render(
-    <ThemeProvider theme={mockTheme.emotion}>
-      <MermaidChart source={source} />
-    </ThemeProvider>
-  )
-}
-
 describe("MermaidChart", () => {
   it("renders with correct test id", () => {
-    renderMermaidChart("graph TD\nA-->B")
+    render(<MermaidChart source="graph TD\nA-->B" />)
     expect(screen.getByTestId("stMermaidChart")).toBeVisible()
   })
 
