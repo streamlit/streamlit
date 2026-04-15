@@ -425,7 +425,12 @@ export function computeDateTimeStatistics(
       if (v instanceof Date) {
         timestamp = v.getTime()
       } else if (typeof v === "number") {
-        // Assume milliseconds timestamp
+        // Assume milliseconds timestamp.
+        // Note: Unlike toSafeDate() which treats numbers as seconds with heuristic
+        // detection, this path handles less common cases where a datetime column
+        // contains JS numbers. Quiver datetime columns typically use bigint (handled
+        // below) with nanosecond precision. The milliseconds assumption here aligns
+        // with JavaScript Date conventions (Date.now() returns ms).
         timestamp = v
       } else if (typeof v === "bigint") {
         // Arrow timestamps may be bigints in various units (ns, us, ms, s).
