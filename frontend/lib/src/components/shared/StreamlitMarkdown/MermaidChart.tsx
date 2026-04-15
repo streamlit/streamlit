@@ -14,15 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { memo, useCallback, useEffect, useId, useRef, useState } from "react"
 
 import styled from "@emotion/styled"
 import {
@@ -31,7 +23,6 @@ import {
   FileDownload,
 } from "@emotion-icons/material-outlined"
 import { getLuminance } from "color2k"
-import dompurify from "dompurify"
 import { getLogger } from "loglevel"
 
 import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
@@ -55,22 +46,6 @@ const LOG = getLogger("MermaidChart")
 // Stores the theme mode (light/dark) that was used for initialization
 let initializedThemeMode: boolean | null = null
 
-/**
- * DOMPurify options for sanitizing Mermaid SVG output.
- * This provides defense-in-depth by sanitizing the SVG even though
- * Mermaid uses DOMPurify internally.
- *
- * Configuration allows SVG elements and common SVG/MathML attributes
- * needed for diagram rendering while blocking potentially dangerous content.
- * HTML profile is needed because Mermaid uses <foreignObject> with HTML
- * content (divs, spans) for text labels in flowcharts.
- */
-const SANITIZE_SVG_OPTIONS = {
-  USE_PROFILES: { svg: true, svgFilters: true, html: true },
-  // Allow xlink:href for SVG links (used in some diagram types)
-  ADD_ATTR: ["xlink:href"],
-}
-
 const StyledMermaidContainer = styled.div<{
   hasError: boolean
   isFullScreen: boolean
@@ -80,17 +55,20 @@ const StyledMermaidContainer = styled.div<{
   alignItems: hasError ? "flex-start" : "center",
   justifyContent: isFullScreen ? "center" : "flex-start",
   minHeight: "2rem",
-  padding: theme.spacing.sm,
+  padding: theme.spacing.md,
   height: isFullScreen ? "100%" : "auto",
   width: "100%",
-  // Make SVG fill the container width while maintaining aspect ratio
-  "& svg": {
-    width: "100%",
+  "& img": {
+    // In fullscreen mode: fill available space while maintaining aspect ratio
+    // In normal mode: use natural size up to constraints
+    width: isFullScreen ? "100%" : "auto",
     maxWidth: "100%",
     height: "auto",
-    ...(isFullScreen && {
-      maxHeight: "100%",
-    }),
+    // Limit height in normal mode to prevent diagrams from dominating the page
+    // Users can expand to fullscreen to see the full diagram
+    maxHeight: isFullScreen ? "100%" : "400px",
+    objectFit: "contain",
+    borderRadius: theme.radii.default,
   },
 }))
 
@@ -276,18 +254,20 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
 /**
  * A component that renders Mermaid diagrams.
  * Lazy loads the mermaid library and renders diagrams client-side.
+ *
+ * Uses htmlLabels: false to generate native SVG text elements instead of
+ * foreignObject with HTML. This allows rendering via an <img> tag, which
+ * provides browser-enforced security sandboxing (no script execution possible).
  */
 const MermaidChart = memo(function MermaidChart({
   source,
 }: Readonly<MermaidChartProps>) {
   const theme = useEmotionTheme()
   const uniqueId = useId()
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [svgContent, setSvgContent] = useState<string | null>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
+  const [svgBlobUrl, setSvgBlobUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  // Store bindFunctions to call after SVG is inserted into DOM
-  const bindFunctionsRef = useRef<((element: Element) => void) | null>(null)
 
   const {
     expanded: isFullScreen,
@@ -301,6 +281,7 @@ const MermaidChart = memo(function MermaidChart({
 
   useEffect(() => {
     let isCancelled = false
+    let blobUrl: string | null = null
 
     const renderMermaid = async (): Promise<void> => {
       setIsLoading(true)
@@ -323,6 +304,9 @@ const MermaidChart = memo(function MermaidChart({
             startOnLoad: false,
             securityLevel: "strict",
             suppressErrorRendering: true,
+            // Use native SVG text instead of foreignObject with HTML.
+            // This enables rendering via <img> tag for browser-enforced security.
+            htmlLabels: false,
             ...themeConfig,
           })
           initializedThemeMode = isLightTheme
@@ -332,13 +316,44 @@ const MermaidChart = memo(function MermaidChart({
         // Remove colons from the id since mermaid uses it as a CSS selector
         const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}`
 
-        // Render the diagram
-        const { svg, bindFunctions } = await mermaid.render(diagramId, source)
+        // Render the diagram (bindFunctions not used since we render via <img>)
+        const { svg } = await mermaid.render(diagramId, source)
+
+        if (isCancelled) return
+
+        // Process SVG for responsive sizing
+        const parser = new DOMParser()
+        const doc = parser.parseFromString(svg, "image/svg+xml")
+        const svgElement = doc.querySelector("svg")
+
+        let finalSvg = svg
+        if (svgElement) {
+          // Get dimensions before removing (needed for fallback viewBox)
+          const width = svgElement.getAttribute("width") || "100"
+          const height = svgElement.getAttribute("height") || "100"
+
+          // Ensure viewBox exists for proper scaling
+          if (!svgElement.hasAttribute("viewBox")) {
+            svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
+          }
+
+          // Remove explicit dimensions to allow CSS to control sizing
+          svgElement.removeAttribute("width")
+          svgElement.removeAttribute("height")
+          svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet")
+
+          finalSvg = new XMLSerializer().serializeToString(svgElement)
+        }
+
+        // Create blob URL for rendering via <img> tag
+        // This provides browser-enforced security sandboxing
+        const blob = new Blob([finalSvg], {
+          type: "image/svg+xml;charset=utf-8",
+        })
+        blobUrl = URL.createObjectURL(blob)
 
         if (!isCancelled) {
-          // Store bindFunctions to be called after DOM update
-          bindFunctionsRef.current = bindFunctions || null
-          setSvgContent(svg)
+          setSvgBlobUrl(blobUrl)
           setIsLoading(false)
         }
       } catch (err) {
@@ -355,56 +370,21 @@ const MermaidChart = memo(function MermaidChart({
 
     return () => {
       isCancelled = true
+      // Clean up blob URL to prevent memory leaks
+      if (blobUrl) {
+        URL.revokeObjectURL(blobUrl)
+      }
     }
   }, [source, theme, uniqueId])
 
-  // Call bindFunctions after SVG content is inserted into the DOM
-  // This enables interactive features like click handlers in diagrams
+  // Clean up blob URL when component unmounts or URL changes
   useEffect(() => {
-    if (containerRef.current && bindFunctionsRef.current) {
-      bindFunctionsRef.current(containerRef.current)
-      bindFunctionsRef.current = null
-    }
-  }, [svgContent])
-
-  // Sanitize SVG content for defense-in-depth
-  // Mermaid uses DOMPurify internally, but we sanitize again to ensure safety
-  // even if Mermaid's behavior changes or is misconfigured
-  const sanitizedSvgContent = useMemo(() => {
-    if (!svgContent) {
-      return ""
-    }
-
-    const sanitized = dompurify.sanitize(svgContent, SANITIZE_SVG_OPTIONS)
-
-    // Mermaid sets explicit width/height attributes on the SVG that prevent
-    // CSS-based responsive sizing. Parse the SVG and remove these attributes
-    // to allow the SVG to scale with CSS while preserving the viewBox.
-    const parser = new DOMParser()
-    const doc = parser.parseFromString(sanitized, "image/svg+xml")
-    const svg = doc.querySelector("svg")
-
-    if (svg) {
-      // Get dimensions before removing (needed for fallback viewBox)
-      const width = svg.getAttribute("width") || "100"
-      const height = svg.getAttribute("height") || "100"
-
-      // Ensure viewBox exists for proper scaling (most Mermaid SVGs have it)
-      if (!svg.hasAttribute("viewBox")) {
-        svg.setAttribute("viewBox", `0 0 ${width} ${height}`)
+    return () => {
+      if (svgBlobUrl) {
+        URL.revokeObjectURL(svgBlobUrl)
       }
-
-      // Remove explicit dimensions to allow CSS to control sizing
-      svg.removeAttribute("width")
-      svg.removeAttribute("height")
-      // Add preserveAspectRatio for consistent scaling
-      svg.setAttribute("preserveAspectRatio", "xMidYMid meet")
-
-      return new XMLSerializer().serializeToString(svg)
     }
-
-    return sanitized
-  }, [svgContent])
+  }, [svgBlobUrl])
 
   /**
    * Copy the mermaid source code to clipboard.
@@ -417,37 +397,19 @@ const MermaidChart = memo(function MermaidChart({
    * Download the rendered diagram as a PNG image.
    */
   const handleDownloadPng = useCallback((): void => {
-    if (!containerRef.current) {
+    if (!imgRef.current || !svgBlobUrl) {
       return
     }
 
-    const svgElement = containerRef.current.querySelector("svg")
-    if (!svgElement) {
-      return
-    }
+    const imgElement = imgRef.current
 
-    // Clone the SVG to avoid modifying the displayed one
-    const clonedSvg = svgElement.cloneNode(true) as SVGSVGElement
-
-    // Get the SVG dimensions
+    // Get the rendered image dimensions
     // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for PNG export dimensions
-    const svgRect = svgElement.getBoundingClientRect()
-    const width = svgRect.width
-    const height = svgRect.height
+    const imgRect = imgElement.getBoundingClientRect()
+    const width = imgRect.width
+    const height = imgRect.height
 
-    // Set explicit dimensions on the cloned SVG
-    clonedSvg.setAttribute("width", String(width))
-    clonedSvg.setAttribute("height", String(height))
-
-    // Serialize the SVG
-    const serializer = new XMLSerializer()
-    const svgString = serializer.serializeToString(clonedSvg)
-    const svgBlob = new Blob([svgString], {
-      type: "image/svg+xml;charset=utf-8",
-    })
-    const svgUrl = URL.createObjectURL(svgBlob)
-
-    // Create an image and draw it to canvas
+    // Create an image from the blob URL and draw to canvas
     const img = new Image()
     img.onload = () => {
       const canvas = document.createElement("canvas")
@@ -458,17 +420,16 @@ const MermaidChart = memo(function MermaidChart({
 
       const ctx = canvas.getContext("2d")
       if (!ctx) {
-        URL.revokeObjectURL(svgUrl)
         return
       }
 
-      // Fill with white background
+      // Fill with background color
       ctx.fillStyle = theme.colors.bgColor
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // Scale and draw the image
       ctx.scale(scale, scale)
-      ctx.drawImage(img, 0, 0)
+      ctx.drawImage(img, 0, 0, width, height)
 
       // Download the PNG
       const pngUrl = canvas.toDataURL("image/png")
@@ -476,15 +437,12 @@ const MermaidChart = memo(function MermaidChart({
       link.download = "mermaid-diagram.png"
       link.href = pngUrl
       link.click()
-
-      URL.revokeObjectURL(svgUrl)
     }
     img.onerror = () => {
       LOG.error("Failed to load SVG for PNG export")
-      URL.revokeObjectURL(svgUrl)
     }
-    img.src = svgUrl
-  }, [theme.colors.bgColor])
+    img.src = svgBlobUrl
+  }, [svgBlobUrl, theme.colors.bgColor])
 
   if (isLoading) {
     return (
@@ -530,9 +488,8 @@ const MermaidChart = memo(function MermaidChart({
     )
   }
 
-  // Mermaid generates SVG content that must be injected as HTML.
-  // The content is sanitized twice for defense-in-depth: once by Mermaid internally,
-  // and again by DOMPurify in this component.
+  // Render the SVG via an <img> tag with blob URL.
+  // This provides browser-enforced security sandboxing - no script execution possible.
   return (
     <ErrorBoundary>
       <StyledToolbarElementContainer
@@ -558,15 +515,16 @@ const MermaidChart = memo(function MermaidChart({
           />
         </Toolbar>
         <StyledMermaidContainer
-          ref={containerRef}
           hasError={false}
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
           role="img"
           aria-label="Mermaid diagram"
-          // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
-          dangerouslySetInnerHTML={{ __html: sanitizedSvgContent }}
-        />
+        >
+          {svgBlobUrl && (
+            <img ref={imgRef} src={svgBlobUrl} alt="Mermaid diagram" />
+          )}
+        </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>
   )
