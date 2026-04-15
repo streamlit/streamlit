@@ -1395,6 +1395,13 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}
         )
 
+    def test_kwargs_raises_type_error(self):
+        """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
+        # Passing spec-as-kwargs that were previously supported should now
+        # raise a TypeError since **kwargs support was removed.
+        with pytest.raises(TypeError):
+            st.vega_lite_chart(df1, x="foo", boink_boop=100)  # type: ignore[call-overload]
+
     def test_pyarrow_table_data(self):
         """Test that you can pass pyarrow.Table as data."""
         table = pa.Table.from_pandas(df1)

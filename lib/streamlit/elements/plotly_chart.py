@@ -433,11 +433,9 @@ class PlotlyMixin:
         """Display an interactive Plotly chart.
 
         `Plotly <https://plot.ly/python>`_ is a charting library for Python.
-        The arguments to this function closely follow the ones for Plotly's
-        ``plot()`` function.
 
-        To show Plotly charts in Streamlit, call ``st.plotly_chart`` wherever
-        you would call Plotly's ``py.plot`` or ``py.iplot``.
+        To show Plotly charts in Streamlit, pass a Plotly ``Figure`` or
+        ``Data`` object to ``st.plotly_chart``.
 
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's

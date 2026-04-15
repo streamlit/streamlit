@@ -258,6 +258,18 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert '"displayModeBar": false' in el.plotly_chart.config
         assert '"responsive": true' in el.plotly_chart.config
 
+    def test_kwargs_raises_type_error(self):
+        """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
+        import plotly.graph_objs as go
+
+        trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
+        data = [trace0]
+
+        # Passing kwargs that were previously supported (like `sharing`) should now
+        # raise a TypeError since **kwargs support was removed.
+        with pytest.raises(TypeError):
+            st.plotly_chart(data, sharing="streamlit")  # type: ignore[call-overload]
+
 
 class PlotlyChartWidthTest(DeltaGeneratorTestCase):
     """Test plotly_chart width parameter functionality."""
