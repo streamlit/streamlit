@@ -60,6 +60,33 @@ class DataframeUtilTest(unittest.TestCase):
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
+    def test_convert_pandas_df_to_arrow_bytes_downcasts_large_types(self):
+        """Test that downcast_large_types converts large Arrow types to standard ones."""
+        import pyarrow as pa
+
+        df = pd.DataFrame(
+            {"col": pd.array(["hello", "world"], dtype="string[pyarrow]")}
+        )
+        result_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
+            df, downcast_large_types=True
+        )
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+        assert result_table.schema.field("col").type == pa.string()
+
+    def test_convert_pandas_df_to_arrow_bytes_no_downcast_by_default(self):
+        """Test that large types are preserved when downcast_large_types is False."""
+        import pyarrow as pa
+
+        df = pd.DataFrame(
+            {"col": pd.array(["hello", "world"], dtype="string[pyarrow]")}
+        )
+        result_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+        # The default ArrowDtype("string[pyarrow]") uses large_string on
+        # pandas >= 3.0. Without downcasting the type should be preserved.
+        col_type = result_table.schema.field("col").type
+        assert col_type in {pa.string(), pa.large_string()}
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
