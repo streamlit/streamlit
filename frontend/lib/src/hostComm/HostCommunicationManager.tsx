@@ -99,11 +99,19 @@ export default class HostCommunicationManager {
     }
     this.isHostCommOpen = true
     window.addEventListener("message", this.receiveHostMessage)
-    this.sendMessageToHost({
+    const guestReadyMessage: IGuestToHostMessage = {
       type: "GUEST_READY",
       streamlitExecutionStartedAt: this.props.streamlitExecutionStartedAt,
       guestReadyAt: Date.now(),
-    })
+    }
+    this.sendMessageToHost(guestReadyMessage)
+    window.postMessage(
+      {
+        stCommVersion: HOST_COMM_VERSION,
+        ...guestReadyMessage,
+      } as VersionedMessage<IGuestToHostMessage>,
+      window.location.origin
+    )
   }
 
   /**

@@ -136,6 +136,41 @@ describe("HostCommunicationManager messaging", () => {
     )
   })
 
+  it("dispatches GUEST_READY on own window for in-iframe detection", () => {
+    const postMessageSpy = vi.spyOn(window, "postMessage")
+
+    hostCommunicationMgr.closeHostCommunication()
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stCommVersion: HOST_COMM_VERSION,
+        type: "GUEST_READY",
+        streamlitExecutionStartedAt: expect.any(Number),
+        guestReadyAt: expect.any(Number),
+      }),
+      window.location.origin
+    )
+
+    postMessageSpy.mockRestore()
+  })
+
+  it("does not dispatch GUEST_READY on own window when already open", () => {
+    const postMessageSpy = vi.spyOn(window, "postMessage")
+
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    expect(postMessageSpy).not.toHaveBeenCalled()
+
+    postMessageSpy.mockRestore()
+  })
+
   it("only sends GUEST_READY once when setAllowedOrigins is called multiple times", () => {
     expect(countHostMessages("GUEST_READY")).toBe(1)
     expect(getListenerCount("message")).toBe(1)
