@@ -100,7 +100,7 @@ test = [
   "tomli>=2.0.0; python_version < '3.11'",
   # Packages used to test things users may do with Streamlit:
   "Authlib>=1.3.2",
-  "graphviz>=0.17",
+  "graphviz>=0.21",
   "matplotlib>=3.3.4",
   "plotly>=5.3.1",
   "seaborn>=0.11.2",
