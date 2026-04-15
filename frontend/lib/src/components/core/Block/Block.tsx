@@ -45,6 +45,8 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { notNullOrUndefined } from "~lib/util/utils"
 
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
+
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {
   StyledColumn,
@@ -69,6 +71,16 @@ import {
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
+
+  if (props.node.deltaBlock.loading_skeleton && props.node.isEmpty) {
+    return (
+      <SquareSkeleton
+        className="stSkeleton"
+        data-testid="stSkeleton"
+        height="200px"
+      />
+    )
+  }
 
   return <>{RenderNodeVisitor.collectReactElements(props)}</>
 }

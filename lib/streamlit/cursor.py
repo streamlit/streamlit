@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
 from streamlit import util
@@ -199,7 +200,7 @@ class RunningCursor(Cursor):
         """A moving pointer to a delta location in the app.
 
         RunningCursors auto-increment to the next available location when you
-        call get_locked_cursor() on them.
+        call ``lock_element()`` or ``open_block()`` on them.
 
         Parameters
         ----------
@@ -218,6 +219,27 @@ class RunningCursor(Cursor):
         self._root_container = root_container
         self._parent_path = parent_path
         self._index = 0
+        self._owner_ident: int | None = None
+
+    def _check_owner(self) -> None:
+        """Enforce single-thread ownership via lazy claiming.
+
+        The first thread to call ``lock_element()`` or ``open_block()`` becomes
+        the owner. Any subsequent call from a different thread raises
+        ``RuntimeError``.  Using ``threading.get_ident()`` (an int) rather than
+        ``threading.current_thread()`` avoids a dictionary lookup on every
+        ``st.*`` call.
+        """
+        current_ident = threading.get_ident()
+        if self._owner_ident is None:
+            self._owner_ident = current_ident
+        elif self._owner_ident != current_ident:
+            raise RuntimeError("Cursor accessed from a thread that doesn't own it")
+
+    def _advance(self) -> None:
+        self._index += 1
+        self._transient_index = None
+        self._transient_elements = SparseList[Element]()
 
     @property
     def root_container(self) -> int:
@@ -235,19 +257,31 @@ class RunningCursor(Cursor):
     def is_locked(self) -> bool:
         return False
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
-        locked_cursor = LockedCursor(
+    def lock_element(self, **props: Any) -> LockedCursor:
+        """Reserve the current position for an element and advance."""
+        self._check_owner()
+        locked = LockedCursor(
             root_container=self._root_container,
             parent_path=self._parent_path,
             index=self._index,
             **props,
         )
+        self._advance()
+        return locked
 
-        self._index += 1
-        self._transient_index = None
-        self._transient_elements = SparseList[Element]()
+    def open_block(self) -> RunningCursor:
+        """Create a child cursor for a new block and advance."""
+        self._check_owner()
+        child = RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )
+        self._advance()
+        return child
 
-        return locked_cursor
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+        """Deprecated alias for ``lock_element()``."""
+        return self.lock_element(**props)
 
 
 class LockedCursor(Cursor):

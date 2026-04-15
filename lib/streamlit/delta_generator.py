@@ -534,7 +534,7 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                dg._cursor.get_locked_cursor(
+                dg._cursor.lock_element(
                     delta_type=delta_type, add_rows_metadata=add_rows_metadata
                 )
                 if dg._cursor is not None
@@ -588,13 +588,9 @@ class DeltaGenerator(
         msg.metadata.delta_path[:] = dg._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
 
-        # Normally we'd return a new DeltaGenerator that uses the locked cursor
-        # below. But in this case we want to return a DeltaGenerator that uses
-        # a brand new cursor for this new block we're creating.
-        block_cursor = cursor.RunningCursor(
-            root_container=dg._root_container,
-            parent_path=(*dg._cursor.parent_path, dg._cursor.index),
-        )
+        # Create a child cursor for the new block. open_block() also advances
+        # the parent cursor past this slot.
+        block_cursor = dg._cursor.open_block()
 
         # `dg_type` param added for st.status container. It allows us to
         # instantiate DeltaGenerator subclasses from the function.
@@ -614,8 +610,6 @@ class DeltaGenerator(
         # NOTE: Container form ids aren't set in proto.
         block_dg._form_data = FormData(current_form_id(dg))
 
-        # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor(add_rows_metadata=None)
         _enqueue_message(msg)
 
         caching.save_block_message(

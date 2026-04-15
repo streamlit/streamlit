@@ -209,55 +209,57 @@ def _check_not_parallel_worker(api_name: str) -> None:
 def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
-    user_func: Callable[..., Any],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
-    initialized_active_script_hash: str,
+    wrapped_fragment: Callable[[], Any],
+    show_loading: bool,
 ) -> None:
     """Pre-create the fragment container on the main thread, then dispatch
-    the user function to a worker thread.
+    ``wrapped_fragment`` to a worker thread.
 
-    The container Block must be created on the main thread to maintain
-    delta_path ordering (the frontend validates that child indices are
-    sequential). After the container exists, the context is copied so the
-    worker thread inherits the correct DG stack / cursor position.
+    The container Block is created on the main thread so that:
+    1. delta_path ordering is preserved (the frontend requires sequential
+       child indices).
+    2. A ``loading_skeleton`` flag can be set on the Block proto so the
+       frontend renders a skeleton placeholder immediately.
+    3. The child RunningCursor has ``_owner_ident = None`` — the worker
+       thread claims it on first use via ``_check_owner()``.
+
+    ``wrapped_fragment`` handles fragment-ID setup, active-hash context,
+    error handling, and running the user function.  When it detects
+    ``is_parallel_worker`` is ``True``, it skips creating its own
+    ``st.container()`` and uses the pre-created container from the DG stack.
     """
-    import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
+    from streamlit.proto.Block_pb2 import Block as Block_pb2
 
     prev_fragment_id = ctx.current_fragment_id
     ctx.current_fragment_id = fragment_id
     ctx.new_fragment_ids.add(fragment_id)
 
-    active_hash_context = (
-        ctx.run_with_active_hash(initialized_active_script_hash)
-        if initialized_active_script_hash != ctx.active_script_hash
-        else contextlib.nullcontext()
-    )
+    # Pre-create the container on the main thread.  open_block() on the
+    # parent cursor advances it past this slot; the child RunningCursor
+    # starts with _owner_ident = None.
+    block_proto = Block_pb2()
+    if show_loading:
+        block_proto.loading_skeleton = True
+    active_dg = context_dg_stack.get()[-1]
+    container_dg = active_dg._block(block_proto)
 
-    with active_hash_context:
-        with st.container():
-            active_dg = context_dg_stack.get()[-1]
+    # Push the container DG onto the stack so the worker thread inherits it.
+    # context_dg_stack stores tuples (immutable), so copy_context() captures
+    # a snapshot — the main thread's subsequent pop won't affect the copy.
+    context_dg_stack.set((*context_dg_stack.get(), container_dg))
 
-            # Show a loading skeleton in a placeholder at position 0.
-            # The placeholder occupies a separate delta_path from the
-            # worker's content (position 1+), avoiding ForwardMsgQueue
-            # coalescing that would swallow the skeleton before flush.
-            skeleton_placeholder = active_dg.empty()
-            skeleton_placeholder._skeleton(height=200)
+    # Set ContextVars before copying so the worker thread inherits them.
+    parallel_fragment_id.set(fragment_id)
+    is_parallel_worker.set(True)
+    parent_context = contextvars.copy_context()
+    parallel_fragment_id.set(None)
+    is_parallel_worker.set(False)
 
-            fragment_delta_path = (
-                active_dg._cursor.delta_path if active_dg._cursor else []
-            )[:-1]
+    # Pop the container DG from the main thread's stack.
+    context_dg_stack.set(context_dg_stack.get()[:-1])
 
-            # Set ContextVars before copying so the worker thread inherits them.
-            parallel_fragment_id.set(fragment_id)
-            is_parallel_worker.set(True)
-            parent_context = contextvars.copy_context()
-            parallel_fragment_id.set(None)
-            is_parallel_worker.set(False)
-
-    # Restore main thread state
+    # Restore main thread state.
     ctx.current_fragment_id = prev_fragment_id
     ctx.current_fragment_delta_path = []
 
@@ -267,16 +269,7 @@ def _dispatch_parallel_fragment(
 
     thread = threading.Thread(
         target=_run_parallel_fragment,
-        args=(
-            coordinator,
-            user_func,
-            args,
-            kwargs,
-            fragment_id,
-            parent_context,
-            fragment_delta_path,
-            skeleton_placeholder,
-        ),
+        args=(coordinator, wrapped_fragment, fragment_id, parent_context),
         name=f"parallel_fragment_{fragment_id[:8]}",
     )
     add_script_run_ctx(thread, ctx)
@@ -286,35 +279,23 @@ def _dispatch_parallel_fragment(
 
 def _run_parallel_fragment(
     coordinator: ParallelFragmentCoordinator,
-    user_func: Callable[..., Any],
-    args: tuple[Any, ...],
-    kwargs: dict[str, Any],
+    wrapped_fragment: Callable[[], Any],
     fragment_id: str,
     parent_context: contextvars.Context,
-    fragment_delta_path: list[int],
-    skeleton_placeholder: Any = None,
 ) -> None:
     """Thread entry point for a parallel fragment.
 
-    Runs the user function inside the copied context so each thread gets
-    its own context_dg_stack and cursor state. Handles control-flow
-    exceptions (RerunException, StopException) and cooperative cancellation.
+    Runs ``wrapped_fragment`` inside the copied context so each thread gets
+    its own ``context_dg_stack`` and cursor state.  ``wrapped_fragment``
+    handles fragment setup, error rendering, and the user function call.
     """
 
     def run_fragment() -> None:
-        ctx = get_script_run_ctx(suppress_warning=True)
-        if ctx is None:  # pragma: no cover - defensive
-            return
-
-        ctx.current_fragment_delta_path = fragment_delta_path
-
         while True:
             if coordinator.is_cancelled():
                 break
             try:
-                user_func(*args, **kwargs)
-                if skeleton_placeholder is not None:
-                    skeleton_placeholder.empty()
+                wrapped_fragment()
                 break
             except RerunException as e:
                 if e.rerun_data.fragment_id_queue:
@@ -339,6 +320,7 @@ def _fragment(
     run_every: int | float | timedelta | str | None = None,
     additional_hash_info: str = "",
     parallel: bool = False,
+    show_loading: bool | str = "auto",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -354,6 +336,7 @@ def _fragment(
                 func=f,
                 run_every=run_every,
                 parallel=parallel,
+                show_loading=show_loading,
             )
 
         return wrapper
@@ -420,15 +403,16 @@ def _fragment(
                 )
                 result = None
                 with active_hash_context:
-                    with st.container():
+                    # For parallel workers, the container was pre-created by
+                    # _dispatch_parallel_fragment and is already on the DG
+                    # stack. For sequential runs, create a new container.
+                    container_ctx: contextlib.AbstractContextManager[Any] = (
+                        contextlib.nullcontext()
+                        if is_parallel_worker.get()
+                        else st.container()
+                    )
+                    with container_ctx:
                         try:
-                            # use dg_stack instead of active_dg to have correct copy
-                            # during execution (otherwise we can run into concurrency
-                            # issues with multiple fragments). Use dg_stack because we
-                            # just entered a container and [:-1] of the delta path
-                            # because thats the prefix of the fragment,
-                            # e.g. [0, 3, 0] -> [0, 3].
-                            # All fragment elements start with [0, 3].
                             active_dg = context_dg_stack.get()[-1]
                             ctx.current_fragment_delta_path = (
                                 active_dg._cursor.delta_path
@@ -440,18 +424,9 @@ def _fragment(
                             RerunException,
                             StopException,
                         ):
-                            # The wrapped_fragment function is executed
-                            # inside of a exec_func_with_error_handling call, so
-                            # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
-                            # render error here so that the delta path is correct
-                            # for full app runs, the error will be displayed by the
-                            # main code handler
-                            # if not is_full_app_run:
                             handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
                             raise FragmentHandledException(e)
                     return result
             finally:
@@ -477,10 +452,8 @@ def _fragment(
             _dispatch_parallel_fragment(
                 ctx=ctx,
                 fragment_id=fragment_id,
-                user_func=non_optional_func,
-                args=args,
-                kwargs=kwargs,
-                initialized_active_script_hash=initialized_active_script_hash,
+                wrapped_fragment=wrapped_fragment,
+                show_loading=show_loading in {True, "auto"},
             )
             return None
 
@@ -503,6 +476,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    show_loading: bool | str = "auto",
 ) -> F: ...
 
 
@@ -514,6 +488,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    show_loading: bool | str = "auto",
 ) -> Callable[[F], F]: ...
 
 
@@ -523,6 +498,7 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
+    show_loading: bool | str = "auto",
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -670,4 +646,6 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(func, run_every=run_every, parallel=parallel)
+    return _fragment(
+        func, run_every=run_every, parallel=parallel, show_loading=show_loading
+    )
