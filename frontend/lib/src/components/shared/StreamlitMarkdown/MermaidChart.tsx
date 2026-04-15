@@ -25,7 +25,11 @@ import {
 } from "react"
 
 import styled from "@emotion/styled"
-import { ContentCopy, FileDownload } from "@emotion-icons/material-outlined"
+import {
+  Check,
+  ContentCopy,
+  FileDownload,
+} from "@emotion-icons/material-outlined"
 import { getLuminance } from "color2k"
 import dompurify from "dompurify"
 import { getLogger } from "loglevel"
@@ -58,9 +62,11 @@ let initializedThemeMode: boolean | null = null
  *
  * Configuration allows SVG elements and common SVG/MathML attributes
  * needed for diagram rendering while blocking potentially dangerous content.
+ * HTML profile is needed because Mermaid uses <foreignObject> with HTML
+ * content (divs, spans) for text labels in flowcharts.
  */
 const SANITIZE_SVG_OPTIONS = {
-  USE_PROFILES: { svg: true, svgFilters: true },
+  USE_PROFILES: { svg: true, svgFilters: true, html: true },
   // Allow xlink:href for SVG links (used in some diagram types)
   ADD_ATTR: ["xlink:href"],
 }
@@ -291,7 +297,7 @@ const MermaidChart = memo(function MermaidChart({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { copyToClipboard, label: copyLabel } = useCopyToClipboard()
+  const { copyToClipboard, isCopied, label: copyLabel } = useCopyToClipboard()
 
   useEffect(() => {
     let isCancelled = false
@@ -547,7 +553,7 @@ const MermaidChart = memo(function MermaidChart({
           />
           <ToolbarAction
             label={copyLabel}
-            icon={ContentCopy}
+            icon={isCopied ? Check : ContentCopy}
             onClick={handleCopySource}
           />
         </Toolbar>
