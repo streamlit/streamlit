@@ -142,7 +142,7 @@ integration = [
   "snowflake-connector-python>=3.3.0",
   # Required for testing the langchain integration:
   "langchain>=0.2.0,<0.4",
-  "langchain-community>=0.2.0,<0.4",
+  "langchain-community>=0.3.13,<0.4",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
