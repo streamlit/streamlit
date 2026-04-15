@@ -238,6 +238,14 @@ def _dispatch_parallel_fragment(
     with active_hash_context:
         with st.container():
             active_dg = context_dg_stack.get()[-1]
+
+            # Show a loading skeleton in a placeholder at position 0.
+            # The placeholder occupies a separate delta_path from the
+            # worker's content (position 1+), avoiding ForwardMsgQueue
+            # coalescing that would swallow the skeleton before flush.
+            skeleton_placeholder = active_dg.empty()
+            skeleton_placeholder._skeleton(height=200)
+
             fragment_delta_path = (
                 active_dg._cursor.delta_path if active_dg._cursor else []
             )[:-1]
@@ -248,16 +256,6 @@ def _dispatch_parallel_fragment(
             parent_context = contextvars.copy_context()
             parallel_fragment_id.set(None)
             is_parallel_worker.set(False)
-
-            # Show a loading skeleton while the worker thread runs. The
-            # skeleton is enqueued after the context copy, then the cursor is
-            # reset to 0 so the worker's first element replaces the skeleton
-            # at the same delta path. The cursor object is shared between the
-            # main thread and the copied context (copy_context is shallow for
-            # DG objects), so the reset must happen before the thread starts.
-            active_dg._skeleton(height=200)
-            if active_dg._cursor:
-                active_dg._cursor._index = 0
 
     # Restore main thread state
     ctx.current_fragment_id = prev_fragment_id
@@ -277,6 +275,7 @@ def _dispatch_parallel_fragment(
             fragment_id,
             parent_context,
             fragment_delta_path,
+            skeleton_placeholder,
         ),
         name=f"parallel_fragment_{fragment_id[:8]}",
     )
@@ -293,6 +292,7 @@ def _run_parallel_fragment(
     fragment_id: str,
     parent_context: contextvars.Context,
     fragment_delta_path: list[int],
+    skeleton_placeholder: Any = None,
 ) -> None:
     """Thread entry point for a parallel fragment.
 
@@ -313,6 +313,8 @@ def _run_parallel_fragment(
                 break
             try:
                 user_func(*args, **kwargs)
+                if skeleton_placeholder is not None:
+                    skeleton_placeholder.empty()
                 break
             except RerunException as e:
                 if e.rerun_data.fragment_id_queue:
