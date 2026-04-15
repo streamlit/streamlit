@@ -172,22 +172,20 @@ describe("HostCommunicationManager messaging", () => {
   })
 
   it("re-dispatches GUEST_READY on own window after close and reopen", () => {
-    // window.parent === window in test env, so sendMessageToHost's
-    // postMessage(msg, "*") also appears on window.postMessage spy.
-    // Filter to calls targeting own origin to isolate our new code path.
     const postMessageSpy = vi.spyOn(window, "postMessage")
 
     hostCommunicationMgr.closeHostCommunication()
+    postMessageSpy.mockClear()
+
     hostCommunicationMgr.setAllowedOrigins({
       allowedOrigins: ["https://devel.streamlit.test"],
       useExternalAuthToken: false,
     })
 
-    const selfOriginCalls = postMessageSpy.mock.calls.filter(
-      call => call[1] !== "*"
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "GUEST_READY" }),
+      window.location.origin
     )
-    expect(selfOriginCalls).toHaveLength(1)
-    expect(selfOriginCalls[0][1]).toBe(window.location.origin)
 
     postMessageSpy.mockRestore()
   })
