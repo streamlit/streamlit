@@ -171,6 +171,77 @@ describe("HostCommunicationManager messaging", () => {
     postMessageSpy.mockRestore()
   })
 
+  it("re-dispatches GUEST_READY on own window after close and reopen", () => {
+    // window.parent === window in test env, so sendMessageToHost's
+    // postMessage(msg, "*") also appears on window.postMessage spy.
+    // Filter to calls targeting own origin to isolate our new code path.
+    const postMessageSpy = vi.spyOn(window, "postMessage")
+
+    hostCommunicationMgr.closeHostCommunication()
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    const selfOriginCalls = postMessageSpy.mock.calls.filter(
+      call => call[1] !== "*"
+    )
+    expect(selfOriginCalls).toHaveLength(1)
+    expect(selfOriginCalls[0][1]).toBe(window.location.origin)
+
+    postMessageSpy.mockRestore()
+  })
+
+  it("skips window.postMessage when window.location.origin is undefined", () => {
+    const originalLocation = window.location
+
+    // @ts-expect-error - simulate mocked location without origin (like App.test.tsx)
+    delete window.location
+    // @ts-expect-error
+    window.location = { assign: vi.fn(), hostname: "localhost" }
+
+    const postMessageSpy = vi.spyOn(window, "postMessage")
+
+    hostCommunicationMgr.closeHostCommunication()
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    const selfOriginCalls = postMessageSpy.mock.calls.filter(
+      call => call[1] !== "*"
+    )
+    expect(selfOriginCalls).toHaveLength(0)
+
+    window.location = originalLocation
+    postMessageSpy.mockRestore()
+  })
+
+  it('skips window.postMessage when window.location.origin is "null"', () => {
+    const originalLocation = window.location
+
+    // @ts-expect-error - file:// protocol sets origin to the string "null"
+    delete window.location
+    // @ts-expect-error
+    window.location = { origin: "null", assign: vi.fn(), hostname: "" }
+
+    const postMessageSpy = vi.spyOn(window, "postMessage")
+
+    hostCommunicationMgr.closeHostCommunication()
+    hostCommunicationMgr.setAllowedOrigins({
+      allowedOrigins: ["https://devel.streamlit.test"],
+      useExternalAuthToken: false,
+    })
+
+    const selfOriginCalls = postMessageSpy.mock.calls.filter(
+      call => call[1] !== "*"
+    )
+    expect(selfOriginCalls).toHaveLength(0)
+
+    window.location = originalLocation
+    postMessageSpy.mockRestore()
+  })
+
   it("only sends GUEST_READY once when setAllowedOrigins is called multiple times", () => {
     expect(countHostMessages("GUEST_READY")).toBe(1)
     expect(getListenerCount("message")).toBe(1)

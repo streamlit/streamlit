@@ -105,13 +105,16 @@ export default class HostCommunicationManager {
       guestReadyAt: Date.now(),
     }
     this.sendMessageToHost(guestReadyMessage)
-    window.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...guestReadyMessage,
-      } as VersionedMessage<IGuestToHostMessage>,
-      window.location.origin
-    )
+    const origin = window.location?.origin
+    if (origin && origin !== "null") {
+      window.postMessage(
+        {
+          stCommVersion: HOST_COMM_VERSION,
+          ...guestReadyMessage,
+        } as VersionedMessage<IGuestToHostMessage>,
+        origin
+      )
+    }
   }
 
   /**
