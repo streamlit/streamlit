@@ -18,8 +18,8 @@ import { memo, ReactElement, useCallback, useEffect, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { notNullOrUndefined } from "~lib/util/utils"
 
 import {
@@ -35,12 +35,14 @@ import {
   StyledStepLabel,
 } from "./styled-components"
 
-export interface StepProps {
+interface StepProps {
   element: BlockProto.Step
+  empty: boolean
 }
 
 const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
   element,
+  empty,
   children,
 }): ReactElement => {
   const {
@@ -50,7 +52,8 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
     state,
     expanded: initialExpanded,
   } = element
-  const hasChildren = Boolean(children)
+  // Only allow expand/collapse if the step has actual content
+  const hasChildren = !empty
 
   const [isExpanded, setIsExpanded] = useState(initialExpanded ?? true)
   const [isHovered, setIsHovered] = useState(false)

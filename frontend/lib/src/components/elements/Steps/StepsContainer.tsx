@@ -20,7 +20,7 @@ import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { StyledStepsContainer, StyledStepsList } from "./styled-components"
 
-export interface StepsContainerProps {
+interface StepsContainerProps {
   element: BlockProto.StepsContainer
   isStale: boolean
 }

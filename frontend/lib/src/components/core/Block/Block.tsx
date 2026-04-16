@@ -397,7 +397,12 @@ export const BlockNodeRenderer = (
 
   if (node.deltaBlock.step) {
     containerElement = (
-      <Step element={node.deltaBlock.step as BlockProto.Step}>{child}</Step>
+      <Step
+        element={node.deltaBlock.step as BlockProto.Step}
+        empty={node.isEmpty}
+      >
+        {child}
+      </Step>
     )
   }
 

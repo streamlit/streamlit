@@ -36,7 +36,7 @@ export const StyledStepsList = styled.div({
 
 // ===== Step styles =====
 
-export interface StyledStepProps {
+interface StyledStepProps {
   state: BlockProto.Step.State
 }
 
