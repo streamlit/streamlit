@@ -655,9 +655,19 @@ class SliderOnChangeModeTest(DeltaGeneratorTestCase):
         assert c.ignore_rerun is expected_ignore_rerun
 
     def test_on_change_invalid_mode_raises_exception(self):
-        """Test that invalid on_change mode raises StreamlitAPIException."""
-        with pytest.raises(st.errors.StreamlitAPIException) as exc_info:
+        """Test that invalid on_change mode raises StreamlitValueError."""
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
             st.slider("the label", on_change="invalid")
 
-        assert "'invalid'" in str(exc_info.value)
+        assert "on_change" in str(exc_info.value)
+        assert "'rerun'" in str(exc_info.value)
+        assert "'ignore'" in str(exc_info.value)
+
+    def test_on_change_unhashable_value_raises_exception(self):
+        """Test that unhashable on_change value raises StreamlitValueError."""
+        # Passing a list (unhashable) should raise StreamlitValueError,
+        # not TypeError from set membership check
+        with pytest.raises(st.errors.StreamlitValueError) as exc_info:
+            st.slider("the label", on_change=[])  # type: ignore[arg-type]
+
         assert "on_change" in str(exc_info.value)
