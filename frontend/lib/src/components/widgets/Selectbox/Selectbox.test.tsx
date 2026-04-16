@@ -53,8 +53,8 @@ const pickOption = async (
   await user.click(selectbox)
   // Opening copies the selected label into the filter input; fuzzy mode would
   // hide other options (e.g. "b" when value is "a"). Clear so every option is listed.
-  const combobox = screen.getByRole("combobox") as HTMLInputElement
-  if (!combobox.readOnly) {
+  const combobox = screen.getByRole("combobox")
+  if (combobox instanceof HTMLInputElement && !combobox.readOnly) {
     await user.clear(combobox)
   }
   const valueElement = await screen.findByRole("option", { name: value })
