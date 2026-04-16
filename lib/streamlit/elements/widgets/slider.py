@@ -633,8 +633,10 @@ class SliderMixin:
               in the frontend only until another interaction triggers a
               rerun. Use this for batching multiple widget changes before
               processing them together.
-            - A callable: Trigger a script rerun and execute the callback
-              with the new value.
+            - A callable: Trigger a script rerun and invoke the callback.
+              The callback receives the values from ``args`` and ``kwargs``,
+              if provided. To access the new slider value, use the return
+              value or ``st.session_state``.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
@@ -782,6 +784,21 @@ class SliderMixin:
             enable_check_callback_rules=is_callback,
         )
         maybe_raise_label_warnings(label, label_visibility)
+
+        # Validate on_change mode early, before any expensive setup.
+        if (
+            on_change is not None
+            and not callable(on_change)
+            and (not isinstance(on_change, str) or on_change not in {"ignore", "rerun"})
+        ):
+            raise StreamlitAPIException(
+                f"You have passed {on_change!r} to `on_change`. "
+                "Only 'ignore', 'rerun', or a callable is supported."
+            )
+
+        on_change_callback: WidgetCallback | None = None
+        if callable(on_change):
+            on_change_callback = on_change
 
         element_id = compute_and_register_element_id(
             "slider",
@@ -1070,22 +1087,9 @@ class SliderMixin:
         if bind and key:
             slider_proto.query_param_key = str(key)
 
-        # Validate and handle on_change mode
-        if (
-            on_change is not None
-            and on_change not in {"ignore", "rerun"}
-            and not callable(on_change)
-        ):
-            raise StreamlitAPIException(
-                f"You have passed {on_change!r} to `on_change`. "
-                "Only 'ignore', 'rerun', or a callable is supported."
-            )
-
-        on_change_callback: WidgetCallback | None = None
+        # Set ignore_rerun flag on proto if mode is "ignore"
         if on_change == "ignore":
             slider_proto.ignore_rerun = True
-        elif callable(on_change):
-            on_change_callback = on_change
 
         serde = SliderSerde(
             prepared_value,
