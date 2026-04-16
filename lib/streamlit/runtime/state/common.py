@@ -34,6 +34,7 @@ from typing import (
 from streamlit import util
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitValueError,
 )
 
 if TYPE_CHECKING:
@@ -281,9 +282,6 @@ def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> 
     StreamlitValueError
         If on_change is not None, not callable, and not a valid mode string.
     """
-    # Import here to avoid circular import
-    from streamlit.errors import StreamlitValueError
-
     if on_change is None or callable(on_change):
         return
 
