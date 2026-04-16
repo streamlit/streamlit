@@ -105,8 +105,8 @@ dependencies = [
 [project.optional-dependencies]
 # Optional dependency required for Snowflake connection:
 snowflake = [
-  "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
-  "snowflake-connector-python>=3.3.0; python_version<'3.12'",
+  "snowflake-snowpark-python[modin]>=1.17.0",
+  "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=1.0.0"]
