@@ -155,13 +155,10 @@ if prompt and prompt.audio:
     st.rerun()
 ```
 
-## Related references
-
-- `snowflake-connection.md`: Database queries and Cortex chat example
-- `performance.md`: Caching strategies for LLM calls
-
 ## References
 
+- `snowflake-connection.md` — Database queries and Cortex chat example
+- `performance.md` — Caching strategies for LLM calls
 - [st.chat_message](https://docs.streamlit.io/develop/api-reference/chat/st.chat_message)
 - [st.chat_input](https://docs.streamlit.io/develop/api-reference/chat/st.chat_input)
 - [st.write_stream](https://docs.streamlit.io/develop/api-reference/write-magic/st.write_stream)

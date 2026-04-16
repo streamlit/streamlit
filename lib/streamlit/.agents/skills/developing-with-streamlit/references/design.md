@@ -3,10 +3,10 @@
 
 Small touches that make apps feel polished.
 
-**Related references:** Visual design works hand-in-hand with other references:
-- `selection-widgets.md` → Choosing the right widget (segmented control, pills, toggle)
-- `data-display.md` → Column config, sparklines, bordered metrics
-- `layouts.md` → Containers, alignment, dashboard cards
+Visual design works hand-in-hand with other references:
+- `selection-widgets.md` — Choosing the right widget (segmented control, pills, toggle)
+- `data-display.md` — Column config, sparklines, bordered metrics
+- `layouts.md` — Containers, alignment, dashboard cards
 
 ## Page config
 

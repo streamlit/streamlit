@@ -111,14 +111,11 @@ with st.sidebar:
 # Main area is all dashboard content
 ```
 
-## Related references
-
-- `layouts.md`: Columns, containers, tabs, dialogs
-- `data-display.md`: Charts, dataframes, column configuration
-- `performance.md`: Caching and fragments for heavy dashboards
-
 ## References
 
+- `layouts.md` — Columns, containers, tabs, dialogs
+- `data-display.md` — Charts, dataframes, column configuration
+- `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
