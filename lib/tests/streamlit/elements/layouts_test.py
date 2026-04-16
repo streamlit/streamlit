@@ -2063,3 +2063,38 @@ class StepsContainerTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException):
             step.update(state="invalid")
+
+    def test_step_context_manager_auto_complete(self):
+        """Test that running step auto-transitions to complete on normal exit."""
+        steps = st.steps()
+        with steps.step("Step", state="running"):
+            pass
+
+        # Get the update message (last delta is the auto-transition update)
+        update_delta = self.get_delta_from_queue()
+        assert update_delta.add_block.step.state == BlockProto.Step.State.COMPLETE
+
+    def test_step_context_manager_auto_error(self):
+        """Test that running step auto-transitions to error on exception."""
+        steps = st.steps()
+        with pytest.raises(ValueError, match="test error"):
+            with steps.step("Step", state="running"):
+                raise ValueError("test error")
+
+        # Get the update message (last delta is the auto-transition update)
+        update_delta = self.get_delta_from_queue()
+        assert update_delta.add_block.step.state == BlockProto.Step.State.ERROR
+
+    def test_step_context_manager_no_auto_transition_non_running(self):
+        """Test that non-running state steps do not auto-transition on exit."""
+        steps = st.steps()
+        with steps.step("Step", state="complete"):
+            pass
+
+        # Should have exactly 2 deltas: steps container and step
+        # No auto-transition update should occur
+        all_deltas = self.get_all_deltas_from_queue()
+        assert len(all_deltas) == 2
+        # The step should remain in COMPLETE state
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.state == BlockProto.Step.State.COMPLETE

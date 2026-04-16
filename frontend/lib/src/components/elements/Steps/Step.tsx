@@ -98,6 +98,7 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       data-testid="stStep"
       state={state}
       data-state={BlockProto.Step.State[state]}
+      role="listitem"
     >
       <StyledStepIconColumn>
         <StyledStepConnector data-testid="stStepConnector" />

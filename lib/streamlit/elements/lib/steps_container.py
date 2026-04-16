@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import time
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
 from typing_extensions import Self
@@ -108,6 +109,12 @@ class StepContainer(DeltaGenerator):
         step_container._current_state = state
         step_container._user_icon = icon
 
+        # We need to sleep here for a very short time to prevent issues when
+        # the step is updated too quickly. If an .update() directly follows the
+        # the initialization, sometimes only the latest update is applied.
+        # Adding a short timeout here allows the frontend to render the update before.
+        time.sleep(0.05)
+
         return step_container
 
     def __init__(
@@ -159,7 +166,9 @@ class StepContainer(DeltaGenerator):
             Whether the step content should be expanded. If None, the expanded
             state is not changed.
         """
-        if self._current_proto is None or self._delta_path is None:
+        if (
+            self._current_proto is None or self._delta_path is None
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 "StepContainer is not correctly initialized. This should never happen."
             )
@@ -209,6 +218,12 @@ class StepContainer(DeltaGenerator):
     ) -> Literal[False]:
         # Only auto-transition if the current state is running
         if self._current_state == "running":
+            # We need to sleep here for a very short time to prevent issues when
+            # the step is updated too quickly. If an .update() is directly followed
+            # by the exit of the context manager, sometimes only the last update
+            # (to complete) is applied. Adding a short timeout here allows the frontend
+            # to render the update before.
+            time.sleep(0.05)
             if exc_type is not None:
                 self.update(state="error")
             else:

@@ -33,7 +33,9 @@ const StepsContainer: React.FC<
 }): ReactElement => {
   return (
     <StyledStepsContainer className="stSteps" data-testid="stSteps">
-      <StyledStepsList data-testid="stStepsList">{children}</StyledStepsList>
+      <StyledStepsList role="list" data-testid="stStepsList">
+        {children}
+      </StyledStepsList>
     </StyledStepsContainer>
   )
 }
