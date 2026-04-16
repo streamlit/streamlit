@@ -43,8 +43,8 @@ import { blend, convertRemToPx } from "~lib/theme/utils"
 const LOG = getLogger("MermaidChart")
 
 // Module-level tracking for mermaid initialization
-// Stores the theme mode (light/dark) that was used for initialization
-let initializedThemeMode: boolean | null = null
+// Stores a fingerprint of the full theme config to detect any theme changes
+let lastThemeConfigKey: string | null = null
 
 const StyledMermaidContainer = styled.div<{
   hasError: boolean
@@ -281,12 +281,14 @@ const MermaidChart = memo(function MermaidChart({
 
   useEffect(() => {
     let isCancelled = false
-    let blobUrl: string | null = null
+    // Track if blob URL was committed to state (so cleanup knows not to revoke it)
+    let committedToState = false
 
     const renderMermaid = async (): Promise<void> => {
       setIsLoading(true)
       setError(null)
 
+      let blobUrl: string | null = null
       try {
         // Lazy load mermaid
         const mermaidModule = await import("mermaid")
@@ -296,10 +298,10 @@ const MermaidChart = memo(function MermaidChart({
 
         // Configure mermaid with theme-aware settings
         const themeConfig = getMermaidThemeConfig(theme)
-        const isLightTheme = getLuminance(theme.colors.bgColor) > 0.5
+        const themeConfigKey = JSON.stringify(themeConfig)
 
-        // Only re-initialize if theme mode changed (light <-> dark)
-        if (initializedThemeMode !== isLightTheme) {
+        // Re-initialize mermaid when theme config changes
+        if (lastThemeConfigKey !== themeConfigKey) {
           mermaid.initialize({
             startOnLoad: false,
             securityLevel: "strict",
@@ -309,7 +311,7 @@ const MermaidChart = memo(function MermaidChart({
             htmlLabels: false,
             ...themeConfig,
           })
-          initializedThemeMode = isLightTheme
+          lastThemeConfigKey = themeConfigKey
         }
 
         // Generate a unique ID for this render
@@ -354,9 +356,17 @@ const MermaidChart = memo(function MermaidChart({
 
         if (!isCancelled) {
           setSvgBlobUrl(blobUrl)
+          committedToState = true
           setIsLoading(false)
+        } else {
+          // Cancelled after creating URL but before committing - clean up
+          URL.revokeObjectURL(blobUrl)
         }
       } catch (err) {
+        // Clean up blob URL if render failed after creating it
+        if (blobUrl && !committedToState) {
+          URL.revokeObjectURL(blobUrl)
+        }
         if (!isCancelled) {
           const errorMessage =
             err instanceof Error ? err.message : "Failed to render diagram"
@@ -370,10 +380,7 @@ const MermaidChart = memo(function MermaidChart({
 
     return () => {
       isCancelled = true
-      // Clean up blob URL to prevent memory leaks
-      if (blobUrl) {
-        URL.revokeObjectURL(blobUrl)
-      }
+      // Don't revoke here - let the svgBlobUrl cleanup effect handle committed URLs
     }
   }, [source, theme, uniqueId])
 
@@ -518,8 +525,6 @@ const MermaidChart = memo(function MermaidChart({
           hasError={false}
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
-          role="img"
-          aria-label="Mermaid diagram"
         >
           {svgBlobUrl && (
             <img ref={imgRef} src={svgBlobUrl} alt="Mermaid diagram" />
