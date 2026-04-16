@@ -163,6 +163,7 @@ streamlit = [
     ".agents/**/*.toml",
     ".agents/**/*.tmpl",
     ".agents/**/*.yml",
+    ".agents/**/*.example",
     ".agents/**/.gitignore",
     ".agents/**/.gitattributes",
     "hello/**/*.py",
