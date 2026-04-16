@@ -72,7 +72,7 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  if (props.node.deltaBlock.loading_skeleton && props.node.isEmpty) {
+  if (props.node.deltaBlock.loadingSkeleton && props.node.isEmpty) {
     return (
       <SquareSkeleton
         className="stSkeleton"
@@ -278,7 +278,11 @@ export const BlockNodeRenderer = (
     minStretchBehavior,
   })
 
-  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
+  if (
+    node.isEmpty &&
+    !node.deltaBlock.allowEmpty &&
+    !node.deltaBlock.loadingSkeleton
+  ) {
     return <></>
   }
 
