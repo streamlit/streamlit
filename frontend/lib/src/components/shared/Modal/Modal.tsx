@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
-import { FunctionComponent, ReactElement, ReactNode, useEffect } from "react"
+import {
+  forwardRef,
+  FunctionComponent,
+  ReactElement,
+  ReactNode,
+  useCallback,
+} from "react"
 
 import {
   type ModalProps,
@@ -24,6 +30,8 @@ import {
   ModalFooter as UIModalFooter,
   ModalHeader as UIModalHeader,
 } from "baseui/modal"
+import { DialogContainer as BaseDialogContainer } from "baseui/modal/styled-components"
+import type { SharedStylePropsArg } from "baseui/modal/types"
 import { merge } from "lodash-es"
 
 import BaseButton, {
@@ -172,29 +180,41 @@ export function calculateModalSize(
   return SIZE.default
 }
 
+/**
+ * A component override for baseui's DialogContainer that resets scroll
+ * position to the top on mount. Uses forwardRef to preserve baseui's
+ * internal dialogContainerRef (needed for backdrop-click dismissal).
+ * Passing ref via the override's props field would shadow baseui's ref;
+ * this component override merges both refs instead.
+ */
+const ScrollResetDialogContainer = forwardRef<
+  HTMLDivElement,
+  SharedStylePropsArg & Record<string, unknown>
+>(function ScrollResetDialogContainer(containerProps, forwardedRef) {
+  const mergedRef = useCallback(
+    (node: HTMLDivElement | null): void => {
+      if (node) {
+        node.scrollTop = 0
+      }
+      if (typeof forwardedRef === "function") {
+        forwardedRef(node)
+      } else if (forwardedRef) {
+        forwardedRef.current = node
+      }
+    },
+    [forwardedRef]
+  )
+  return (
+    <BaseDialogContainer
+      {...(containerProps as SharedStylePropsArg)}
+      ref={mergedRef}
+      data-testid="stDialogContainer"
+    />
+  )
+})
+
 function Modal(props: StreamlitModalProps): ReactElement {
   const { spacing, radii, colors, sizes } = useEmotionTheme()
-
-  /**
-   * Reset the DialogContainer scroll position to the top whenever the modal
-   * opens. Without this, reopening a long dialog may show the content scrolled
-   * to the bottom because baseui's DialogContainer retains its scroll position
-   * across open/close cycles (the DOM element stays alive during close animation).
-   */
-  useEffect(() => {
-    if (!props.isOpen) {
-      return
-    }
-    const frameId = requestAnimationFrame(() => {
-      const container = document.querySelector<HTMLElement>(
-        '[data-testid="stDialogContainer"]'
-      )
-      if (container) {
-        container.scrollTop = 0
-      }
-    })
-    return () => cancelAnimationFrame(frameId)
-  }, [props.isOpen])
 
   const defaultOverrides = {
     Root: {
@@ -211,9 +231,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
         alignItems: "start",
         paddingTop: spacing.threeXL,
       },
-      props: {
-        "data-testid": "stDialogContainer",
-      },
+      component: ScrollResetDialogContainer,
     },
     Dialog: {
       style: {

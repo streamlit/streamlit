@@ -68,12 +68,11 @@ describe("Modal component", () => {
       </BaseProvider>
     )
 
-    // Note: In JSDOM, requestAnimationFrame is polyfilled as setTimeout(fn, 0).
-    // The scroll reset effect fires asynchronously, so we verify the container
-    // exists and has the expected test ID. The actual scroll reset behavior
-    // is validated by the E2E test.
+    // The scroll-reset callback ref fires synchronously on mount, so
+    // scrollTop should already be reset to 0 after the reopen rerender.
     const reopenedContainer = screen.getByTestId("stDialogContainer")
     expect(reopenedContainer).toBeVisible()
+    expect(reopenedContainer.scrollTop).toBe(0)
   })
 })
 describe("calculateModalSize", () => {
