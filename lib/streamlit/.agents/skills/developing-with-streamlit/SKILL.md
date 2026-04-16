@@ -87,24 +87,23 @@ Use this routing table to select reference(s). **Always read the reference file*
 
 | User Need | Reference to Read |
 |-----------|-------------------|
-| **Performance issues, slow apps, caching** | `read references/performance.md` |
-| **Building a dashboard with KPIs/metrics** | `read references/dashboards.md` |
-| **Improving visual design, icons, polish** | `read references/design.md` |
-| **Choosing widgets (selectbox vs radio vs pills)** | `read references/selection-widgets.md` |
-| **Styling widgets (button colors, backgrounds, CSS)** | `read references/theme.md` |
-| **Layouts (columns, tabs, sidebar, containers)** | `read references/layouts.md` |
-| **Displaying or editing data (dataframes, charts, data editors)** | `read references/data-display.md` |
-| **Multi-page app architecture** | `read references/multipage-apps.md` |
-| **Session state and callbacks** | `read references/session-state.md` |
-| **Markdown, colored text, badges** | `read references/markdown.md` |
-| **Custom themes and colors** | `read references/theme.md` |
-| **Chat interfaces and AI assistants** | `read references/chat-ui.md` |
-| **Connecting to Snowflake** | `read references/snowflake-connection.md` |
-| **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | `read references/custom-components-v2.md` — **IMPORTANT: `st.components.v1` is deprecated. Never use v1 for new components; always use `st.components.v2.component()`.** |
-| **Third-party components** | `read references/third-party-components.md` |
-| **Code organization** | `read references/code-organization.md` |
-| **Environment setup** | `read references/environment-setup.md` |
-| **CLI commands** | `read references/cli.md` |
+| **Performance issues, slow apps, caching** | read `references/performance.md` |
+| **Building a dashboard with KPIs/metrics** | read `references/dashboards.md` |
+| **Improving visual design, icons, polish** | read `references/design.md` |
+| **Choosing widgets (selectbox vs radio vs pills)** | read `references/selection-widgets.md` |
+| **Styling widgets (button colors, backgrounds, CSS)** | read `references/theme.md` |
+| **Layouts (columns, tabs, sidebar, containers)** | read `references/layouts.md` |
+| **Displaying or editing data (dataframes, charts, data editors)** | read `references/data-display.md` |
+| **Multi-page app architecture** | read `references/multipage-apps.md` |
+| **Session state and callbacks** | read `references/session-state.md` |
+| **Markdown, colored text, badges** | read `references/markdown.md` |
+| **Chat interfaces and AI assistants** | read `references/chat-ui.md` |
+| **Connecting to Snowflake** | read `references/snowflake-connection.md` |
+| **Building or packaging a custom component, triggering events back to Python from JS/HTML, custom HTML/JS with event handling (CCv2), OR any UI element that doesn't exist as a native Streamlit widget** (e.g., drag-and-drop, custom interactive visualization, canvas drawing) | read `references/custom-components-v2.md` — **IMPORTANT: `st.components.v1` is deprecated. Never use v1 for new components; always use `st.components.v2.component()`.** |
+| **Third-party components** | read `references/third-party-components.md` |
+| **Code organization** | read `references/code-organization.md` |
+| **Environment setup** | read `references/environment-setup.md` |
+| **CLI commands** | read `references/cli.md` |
 
 **Fallback — "this widget doesn't exist in Streamlit":**
 
