@@ -257,7 +257,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -280,7 +280,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -304,7 +304,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -326,7 +326,7 @@ class SliderMixin:
         format: str | NumberFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -349,7 +349,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -373,7 +373,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -395,7 +395,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -420,7 +420,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
@@ -443,7 +443,7 @@ class SliderMixin:
         format: str | DateTimeFormat | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,
@@ -465,7 +465,7 @@ class SliderMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
@@ -627,9 +627,9 @@ class SliderMixin:
             Controls what happens when this slider's value changes. This
             can be one of the following:
 
-            - ``"rerun"`` (default when ``None``): Trigger a script rerun
-              when the value changes. The new value is available via the
-              return value or ``st.session_state``.
+            - ``"rerun"`` (default): Trigger a script rerun when the value
+              changes. The new value is available via the return value or
+              ``st.session_state``.
             - ``"ignore"``: Suppress automatic reruns. The value is stored
               in the frontend only until another interaction triggers a
               rerun. Use this for batching multiple widget changes before
@@ -762,7 +762,7 @@ class SliderMixin:
         format: str | None = None,
         key: Key | None = None,
         help: str | None = None,
-        on_change: WidgetCallback | OnChangeMode | None = None,
+        on_change: WidgetCallback | OnChangeMode | None = "rerun",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         *,  # keyword-only arguments:
