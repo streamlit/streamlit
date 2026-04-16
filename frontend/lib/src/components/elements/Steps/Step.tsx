@@ -102,7 +102,7 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
     >
       <StyledStepIconColumn>
         <StyledStepConnector data-testid="stStepConnector" />
-        <StyledStepIconWrapper state={state} isHovered={showChevron}>
+        <StyledStepIconWrapper isHovered={showChevron}>
           <DynamicIcon iconValue={displayIcon} size="lg" />
         </StyledStepIconWrapper>
       </StyledStepIconColumn>

@@ -126,7 +126,7 @@ All parameters are keyword-only and optional. Only specified parameters are upda
 
 | State       | Default Icon              | Visual Style |
 |-------------|---------------------------|--------------|
-| `"running"` | Animated spinner          | Primary color |
+| `"running"` | Animated spinner          | Faded appearance |
 | `"complete"`| `:material/check_circle:` | Faded appearance |
 | `"error"`   | `:material/error:`        | Faded appearance |
 | `None`      | `:material/circle:`       | Faded appearance |

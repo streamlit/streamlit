@@ -64,21 +64,16 @@ export const StyledStepIconColumn = styled.div({
 })
 
 interface StyledStepIconWrapperProps {
-  state: BlockProto.Step.State
   isHovered?: boolean
 }
 
 export const StyledStepIconWrapper = styled.div<StyledStepIconWrapperProps>(
-  ({ theme, state, isHovered }) => {
-    // When hovered (showing chevron), use faded color
-    // When running (showing spinner), use primary color
-    // Otherwise use default faded color
-    let color = theme.colors.fadedText60
-    if (isHovered) {
-      color = theme.colors.fadedText40
-    } else if (state === BlockProto.Step.State.RUNNING) {
-      color = theme.colors.primary
-    }
+  ({ theme, isHovered }) => {
+    // When hovered (showing chevron), use slightly more faded color
+    // Otherwise use default faded color for all states
+    const color = isHovered
+      ? theme.colors.fadedText40
+      : theme.colors.fadedText60
 
     return {
       display: "flex",
