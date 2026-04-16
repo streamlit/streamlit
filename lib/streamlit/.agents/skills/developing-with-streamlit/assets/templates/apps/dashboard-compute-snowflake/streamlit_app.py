@@ -56,8 +56,18 @@ CHART_HEIGHT = 350
 # Base values for synthetic data generation
 BASE_VALUES = {
     "account_type": {"Paying": 8000, "Trial": 2000, "Internal": 1000},
-    "instance_type": {"Standard": 5000, "High Memory": 3000, "High CPU": 2000, "GPU": 1500},
-    "region": {"us-west-2": 4000, "us-east-1": 3500, "eu-west-1": 2500, "ap-northeast-1": 1500},
+    "instance_type": {
+        "Standard": 5000,
+        "High Memory": 3000,
+        "High CPU": 2000,
+        "GPU": 1500,
+    },
+    "region": {
+        "us-west-2": 4000,
+        "us-east-1": 3500,
+        "eu-west-1": 2500,
+        "ap-northeast-1": 1500,
+    },
 }
 
 
@@ -102,6 +112,7 @@ def get_snowflake_connection():
 # The synthetic data generation below uses f-strings only because the values
 # are hardcoded constants, not user input. Never use f-strings with user input.
 
+
 def _validate_sql_identifier(name: str) -> str:
     """Validate that a string is a safe SQL identifier (letters, digits, underscores).
 
@@ -113,7 +124,9 @@ def _validate_sql_identifier(name: str) -> str:
     return name
 
 
-def build_synthetic_query(category_col: str, categories: list[str], base_values: dict[str, int]) -> str:
+def build_synthetic_query(
+    category_col: str, categories: list[str], base_values: dict[str, int]
+) -> str:
     """Build SQL query for synthetic data.
 
     WARNING: This function uses f-strings for demo purposes only.
@@ -170,7 +183,9 @@ def build_synthetic_query(category_col: str, categories: list[str], base_values:
 def load_account_type_data() -> pd.DataFrame:
     """Load credits by account type from Snowflake."""
     conn = get_snowflake_connection()
-    query = build_synthetic_query("account_type", ACCOUNT_TYPES, BASE_VALUES["account_type"])
+    query = build_synthetic_query(
+        "account_type", ACCOUNT_TYPES, BASE_VALUES["account_type"]
+    )
     df = conn.query(query)
     df.columns = df.columns.str.lower()
     return df
@@ -180,7 +195,9 @@ def load_account_type_data() -> pd.DataFrame:
 def load_instance_type_data() -> pd.DataFrame:
     """Load credits by instance type from Snowflake."""
     conn = get_snowflake_connection()
-    query = build_synthetic_query("instance_type", INSTANCE_TYPES, BASE_VALUES["instance_type"])
+    query = build_synthetic_query(
+        "instance_type", INSTANCE_TYPES, BASE_VALUES["instance_type"]
+    )
     df = conn.query(query)
     df.columns = df.columns.str.lower()
     return df
@@ -247,7 +264,9 @@ def create_line_chart(
             color=alt.Color(f"{color_col}:N", legend=alt.Legend(orient="bottom")),
             tooltip=[
                 alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip(f"{color_col}:N", title=color_col.replace("_", " ").title()),
+                alt.Tooltip(
+                    f"{color_col}:N", title=color_col.replace("_", " ").title()
+                ),
                 alt.Tooltip(f"{y_col}:Q", title="Credits", format=y_format),
             ],
         )
@@ -316,7 +335,11 @@ def account_type_metric():
     data = load_account_type_data()
 
     with st.container(border=True):
-        with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
+        with st.container(
+            horizontal=True,
+            horizontal_alignment="distribute",
+            vertical_alignment="center",
+        ):
             st.markdown("**Credits by account type**")
 
             view_mode = st.segmented_control(
@@ -349,7 +372,9 @@ def account_type_metric():
                     key="acct_chart",
                 )
                 show_percent = st.toggle(
-                    "Show %", value=False, key="acct_pct",
+                    "Show %",
+                    value=False,
+                    key="acct_pct",
                     disabled="Line" in (chart_type or ""),
                 )
                 time_range = st.segmented_control(
@@ -368,10 +393,14 @@ def account_type_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True)
+            st.dataframe(
+                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
+            )
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
-                create_bar_chart(filtered, "ds", y_col, "account_type", CHART_HEIGHT, show_percent),
+                create_bar_chart(
+                    filtered, "ds", y_col, "account_type", CHART_HEIGHT, show_percent
+                ),
                 use_container_width=True,
             )
         else:
@@ -387,7 +416,11 @@ def instance_type_metric():
     data = load_instance_type_data()
 
     with st.container(border=True):
-        with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
+        with st.container(
+            horizontal=True,
+            horizontal_alignment="distribute",
+            vertical_alignment="center",
+        ):
             st.markdown("**Credits by instance type**")
 
             view_mode = st.segmented_control(
@@ -420,7 +453,9 @@ def instance_type_metric():
                     key="inst_chart",
                 )
                 show_percent = st.toggle(
-                    "Show %", value=False, key="inst_pct",
+                    "Show %",
+                    value=False,
+                    key="inst_pct",
                     disabled="Line" in (chart_type or ""),
                 )
                 time_range = st.segmented_control(
@@ -439,10 +474,14 @@ def instance_type_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True)
+            st.dataframe(
+                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
+            )
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
-                create_bar_chart(filtered, "ds", y_col, "instance_type", CHART_HEIGHT, show_percent),
+                create_bar_chart(
+                    filtered, "ds", y_col, "instance_type", CHART_HEIGHT, show_percent
+                ),
                 use_container_width=True,
             )
         else:
@@ -458,7 +497,11 @@ def region_metric():
     data = load_region_data()
 
     with st.container(border=True):
-        with st.container(horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"):
+        with st.container(
+            horizontal=True,
+            horizontal_alignment="distribute",
+            vertical_alignment="center",
+        ):
             st.markdown("**Credits by region**")
 
             view_mode = st.segmented_control(
@@ -491,7 +534,9 @@ def region_metric():
                     key="region_chart",
                 )
                 show_percent = st.toggle(
-                    "Show %", value=False, key="region_pct",
+                    "Show %",
+                    value=False,
+                    key="region_pct",
                     disabled="Line" in (chart_type or ""),
                 )
                 time_range = st.segmented_control(
@@ -510,10 +555,14 @@ def region_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True)
+            st.dataframe(
+                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
+            )
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
-                create_bar_chart(filtered, "ds", y_col, "region", CHART_HEIGHT, show_percent),
+                create_bar_chart(
+                    filtered, "ds", y_col, "region", CHART_HEIGHT, show_percent
+                ),
                 use_container_width=True,
             )
         else:

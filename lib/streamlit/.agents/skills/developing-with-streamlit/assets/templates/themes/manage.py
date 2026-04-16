@@ -271,7 +271,7 @@ def cmd_new(name):
 
 if __name__ == "__main__":
     if len(sys.argv) < 2 or sys.argv[1] in ("-h", "--help"):
-        print(__doc__.strip())
+        print((__doc__ or "").strip())
         sys.exit(0 if len(sys.argv) > 1 else 1)
 
     if not SHARED.is_dir():

@@ -477,4 +477,6 @@ with row2[0]:
     metric_card("Revenue", metrics_data["revenue"], "revenue", chart_type="bar")
 
 with row2[1]:
-    metric_card("Conversions", metrics_data["conversions"], "conversions", chart_type="point")
+    metric_card(
+        "Conversions", metrics_data["conversions"], "conversions", chart_type="point"
+    )

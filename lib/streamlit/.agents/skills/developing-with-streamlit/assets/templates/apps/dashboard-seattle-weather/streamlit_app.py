@@ -216,10 +216,7 @@ with cols[0].container(border=True, height="stretch"):
 
     # Calculate 14-day rolling average per year
     wind_pivot = wind_df.pivot_table(
-        index="month_day",
-        columns="year",
-        values="wind",
-        aggfunc="mean"
+        index="month_day", columns="year", values="wind", aggfunc="mean"
     ).sort_index()
 
     st.line_chart(wind_pivot, height=300)

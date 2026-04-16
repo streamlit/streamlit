@@ -86,10 +86,12 @@ def generate_metric_data(
     values = trend * noise
 
     # Calculate rolling averages
-    df = pd.DataFrame({
-        "ds": dates,
-        "daily_value": values,
-    })
+    df = pd.DataFrame(
+        {
+            "ds": dates,
+            "daily_value": values,
+        }
+    )
     df["value_7d_ma"] = df["daily_value"].rolling(7, min_periods=1).mean()
 
     return df
@@ -102,10 +104,18 @@ def load_all_metrics() -> dict[str, pd.DataFrame]:
     start_date = end_date - timedelta(days=730)  # 2 years of data
 
     return {
-        "users": generate_metric_data("users", start_date, end_date, base_value=5000, growth_rate=0.002),
-        "sessions": generate_metric_data("sessions", start_date, end_date, base_value=15000, growth_rate=0.003),
-        "revenue": generate_metric_data("revenue", start_date, end_date, base_value=50000, growth_rate=0.001),
-        "conversions": generate_metric_data("conversions", start_date, end_date, base_value=500, growth_rate=0.0015),
+        "users": generate_metric_data(
+            "users", start_date, end_date, base_value=5000, growth_rate=0.002
+        ),
+        "sessions": generate_metric_data(
+            "sessions", start_date, end_date, base_value=15000, growth_rate=0.003
+        ),
+        "revenue": generate_metric_data(
+            "revenue", start_date, end_date, base_value=50000, growth_rate=0.001
+        ),
+        "conversions": generate_metric_data(
+            "conversions", start_date, end_date, base_value=500, growth_rate=0.0015
+        ),
     }
 
 
@@ -440,4 +450,6 @@ with row2[0]:
     metric_card("Revenue", metrics_data["revenue"], "revenue", chart_type="bar")
 
 with row2[1]:
-    metric_card("Conversions", metrics_data["conversions"], "conversions", chart_type="point")
+    metric_card(
+        "Conversions", metrics_data["conversions"], "conversions", chart_type="point"
+    )

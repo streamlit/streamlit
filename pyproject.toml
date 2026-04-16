@@ -303,6 +303,25 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
+"lib/streamlit/.agents/**" = [
+  "ANN",     # Ignore annotation rules (templates prioritize readability).
+  "B018",    # Allow useless expressions (Streamlit magic renders bare variables).
+  "B905",    # Allow zip without strict (templates target broad Python versions).
+  "D",       # Ignore docstring rules (templates use informational docstrings).
+  "DOC",     # Ignore docstring correctness rules.
+  "ERA001",  # Allow commented-out code (templates include commented alternatives).
+  "EXE001",  # Allow shebang absence.
+  "FLY002",  # Allow f-string joins.
+  "INP",     # Allow implicit namespace packages (templates are standalone apps).
+  "NPY002",  # Allow legacy numpy random generation (simpler for synthetic data).
+  "PD",      # Ignore pandas-vet rules (templates use common pandas patterns).
+  "PERF",    # Ignore performance rules (clarity over speed in templates).
+  "PLR6104", # Allow non-augmented assignment.
+  "PLR6201", # Allow set membership test on list literal.
+  "S",       # Ignore bandit security rules (templates are demo apps).
+  "T20",     # Allow print statements (templates use print for CLI tools).
+  "TRY",     # Ignore tryceratops rules (simpler exception handling in templates).
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
@@ -431,6 +450,7 @@ include = ["lib/streamlit", "e2e_playwright", "scripts"]
 exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",
+  "lib/streamlit/.agents/**",
 ]
 
 [tool.ty.rules]

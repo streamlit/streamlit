@@ -46,11 +46,26 @@ st.set_page_config(
 # =============================================================================
 
 COMPANY_NAMES = [
-    "Acme Corp", "TechFlow Inc", "DataDriven Co", "CloudFirst Ltd",
-    "InnovateTech", "ScaleUp Systems", "PrimeData Inc", "FutureStack",
-    "ByteWise Corp", "StreamLine Co", "Quantum Labs", "NexGen Solutions",
-    "AlphaMetrics", "BetaAnalytics", "GammaInsights", "DeltaData",
-    "OmegaTech", "SigmaSoft", "ThetaCloud", "ZetaDigital",
+    "Acme Corp",
+    "TechFlow Inc",
+    "DataDriven Co",
+    "CloudFirst Ltd",
+    "InnovateTech",
+    "ScaleUp Systems",
+    "PrimeData Inc",
+    "FutureStack",
+    "ByteWise Corp",
+    "StreamLine Co",
+    "Quantum Labs",
+    "NexGen Solutions",
+    "AlphaMetrics",
+    "BetaAnalytics",
+    "GammaInsights",
+    "DeltaData",
+    "OmegaTech",
+    "SigmaSoft",
+    "ThetaCloud",
+    "ZetaDigital",
 ]
 
 ACCOUNT_TYPES = ["Enterprise", "Growth", "Startup", "Trial", "Internal"]
@@ -93,14 +108,16 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
             # Random noise
             daily_credits = max(0, trend * np.random.uniform(0.7, 1.3))
 
-            records.append({
-                "company_name": company,
-                "date": dt,
-                "daily_credits": daily_credits,
-                "account_type": account_type,
-                "region": region,
-                "segment": segment,
-            })
+            records.append(
+                {
+                    "company_name": company,
+                    "date": dt,
+                    "daily_credits": daily_credits,
+                    "account_type": account_type,
+                    "region": region,
+                    "segment": segment,
+                }
+            )
 
     return pd.DataFrame(records)
 
@@ -133,13 +150,17 @@ def aggregate_companies(
         return pd.DataFrame()
 
     # Aggregate to company level
-    agg = result.groupby("company_name").agg(
-        total_credits=("daily_credits", "sum"),
-        active_days=("date", "nunique"),
-        account_type=("account_type", "first"),
-        region=("region", "first"),
-        segment=("segment", "first"),
-    ).reset_index()
+    agg = (
+        result.groupby("company_name")
+        .agg(
+            total_credits=("daily_credits", "sum"),
+            active_days=("date", "nunique"),
+            account_type=("account_type", "first"),
+            region=("region", "first"),
+            segment=("segment", "first"),
+        )
+        .reset_index()
+    )
 
     # Calculate daily average
     agg["daily_avg"] = agg["total_credits"] / agg["active_days"]
@@ -184,7 +205,9 @@ def render_company_dialog(company_name: str, company_row: pd.Series, df: pd.Data
         return
 
     # Company info badges - extract from list format back to single value
-    account_type = company_row["account_type"][0] if company_row["account_type"] else "Unknown"
+    account_type = (
+        company_row["account_type"][0] if company_row["account_type"] else "Unknown"
+    )
     region = company_row["region"][0] if company_row["region"] else "Unknown"
     segment = company_row["segment"][0] if company_row["segment"] else "Unknown"
     total_credits = company_row["total_credits"]
@@ -351,8 +374,14 @@ with st.container(border=True):
             ),
         },
         column_order=[
-            "company_name", "account_type", "total_credits", "growth_score",
-            "usage_trend", "daily_avg", "region", "segment",
+            "company_name",
+            "account_type",
+            "total_credits",
+            "growth_score",
+            "usage_trend",
+            "daily_avg",
+            "region",
+            "segment",
         ],
         hide_index=True,
         use_container_width=True,
