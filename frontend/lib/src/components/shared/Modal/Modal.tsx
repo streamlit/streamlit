@@ -182,17 +182,18 @@ function Modal(props: StreamlitModalProps): ReactElement {
    * across open/close cycles (the DOM element stays alive during close animation).
    */
   useEffect(() => {
-    if (props.isOpen) {
-      const frameId = requestAnimationFrame(() => {
-        const container = document.querySelector<HTMLElement>(
-          '[data-testid="stDialogContainer"]'
-        )
-        if (container) {
-          container.scrollTop = 0
-        }
-      })
-      return () => cancelAnimationFrame(frameId)
+    if (!props.isOpen) {
+      return
     }
+    const frameId = requestAnimationFrame(() => {
+      const container = document.querySelector<HTMLElement>(
+        '[data-testid="stDialogContainer"]'
+      )
+      if (container) {
+        container.scrollTop = 0
+      }
+    })
+    return () => cancelAnimationFrame(frameId)
   }, [props.isOpen])
 
   const defaultOverrides = {
