@@ -25,7 +25,7 @@ from collections.abc import Callable, Sized
 from functools import wraps
 from typing import Any, Final, TypeVar, cast, overload
 
-from streamlit import config, file_util, util
+from streamlit import config, file_util, type_util, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -44,13 +44,18 @@ _MAX_TRACKED_PER_COMMAND: Final = 25
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
     "streamlit.delta_generator.DeltaGenerator": "DG",
+    # pandas 2.x paths
     "pandas.core.frame.DataFrame": "DataFrame",
+    "pandas.core.indexes.base.Index": "PandasIndex",
+    "pandas.core.series.Series": "PandasSeries",
+    # pandas 3.x paths (module changed from pandas.core.* to pandas.*)
+    "pandas.DataFrame": "DataFrame",
+    "pandas.Index": "PandasIndex",
+    "pandas.Series": "PandasSeries",
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
     "bokeh.plotting.figure.Figure": "BokehFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
-    "pandas.core.indexes.base.Index": "PandasIndex",
-    "pandas.core.series.Series": "PandasSeries",
     "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
     "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
@@ -87,7 +92,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pyspark",
     "cudf",
     "xarray",
-    "ray",
     "geopandas",
     "mars",
     "tables",
@@ -366,11 +370,42 @@ def _get_arg_metadata(arg: object) -> str | None:
     return None
 
 
+def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
+    """Return argument names from a function's signature.
+
+    This returns argument names matching the behavior of getfullargspec().args:
+    - Both POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameters (not keyword-only)
+    - Includes 'self' for bound methods
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names (not
+    annotations), we use ``annotation_format=Format.STRING`` to avoid
+    evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+
+    params = type_util.get_func_parameters(func)
+    # Filter to POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD to match getfullargspec().args
+    names = [
+        p.name
+        for p in params
+        if p.kind
+        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    ]
+    # For bound methods, prepend 'self' since signature() removes it but
+    # getfullargspec() includes it
+    if inspect.ismethod(func):
+        names.insert(0, "self")
+    return names
+
+
 def _get_command_telemetry(
     _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
-    arg_keywords = inspect.getfullargspec(_command_func).args
+    arg_keywords = _get_arg_keywords(_command_func)
     self_arg: Any | None = None
     arguments: list[Argument] = []
     is_method = inspect.ismethod(_command_func)
@@ -450,19 +485,15 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
     Parameters
     ----------
-    func : callable
-    The function to track for telemetry.
+    name : str
+        The name to use for telemetry tracking.
+    func : callable or None
+        The function to track for telemetry. If ``None`` (default), returns a
+        decorator that can be applied to a function.
 
-    name : str or None
-    Overwrite the function name with a custom name that is used for telemetry tracking.
-
-    Example
-    -------
-    >>> @st.gather_metrics
-    ... def my_command(url):
-    ...     return url
-
-    >>> @st.gather_metrics(name="custom_name")
+    Examples
+    --------
+    >>> @st.gather_metrics("my_command")
     ... def my_command(url):
     ...     return url
     """
@@ -549,9 +580,11 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
         return result
 
-    with contextlib.suppress(AttributeError):
+    with contextlib.suppress(AttributeError, NameError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports in inspect.signature()
         wrapped_func.__dict__.update(non_optional_func.__dict__)
         wrapped_func.__signature__ = inspect.signature(non_optional_func)  # type: ignore
     return cast("F", wrapped_func)

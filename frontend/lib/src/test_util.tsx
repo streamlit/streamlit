@@ -21,7 +21,6 @@ import {
   RenderOptions,
   RenderResult,
 } from "@testing-library/react"
-import { Vector } from "apache-arrow"
 
 import { Config, PageConfig } from "@streamlit/protobuf"
 
@@ -436,19 +435,6 @@ export const renderWithContexts = (
       result.rerender(newComponent)
     },
   }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function arrayFromVector(vector: any): any {
-  if (Array.isArray(vector)) {
-    return vector.map(arrayFromVector)
-  }
-
-  if (vector instanceof Vector) {
-    return Array.from(vector)
-  }
-
-  return vector
 }
 
 /**

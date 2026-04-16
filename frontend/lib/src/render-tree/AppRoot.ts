@@ -377,15 +377,27 @@ export class AppRoot {
 
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
+    return this.getActiveIds().elements
+  }
+
+  /**
+   * Return all active element IDs and block IDs in the tree.
+   * Block IDs are collected from blocks that have a stable identity
+   * (e.g. keyed layout containers), and are needed to prevent
+   * elementStates entries from being garbage-collected.
+   */
+  public getActiveIds(): {
+    elements: Set<Element>
+    blockIds: Set<string>
+  } {
     const visitor = new ElementsSetVisitor()
 
-    // Visit each major section of the app
     this.main.accept(visitor)
     this.sidebar.accept(visitor)
     this.event.accept(visitor)
     this.bottom.accept(visitor)
 
-    return visitor.elements
+    return { elements: visitor.elements, blockIds: visitor.blockIds }
   }
 
   private addElement(

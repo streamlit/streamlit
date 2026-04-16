@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  MutableRefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export const usePrevious = (value: any): any => {
-  const valueRef = useRef()
-
-  useEffect(() => {
-    valueRef.current = value
-  }, [value])
-
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  return valueRef.current
-}
+import { MutableRefObject, useCallback, useEffect, useState } from "react"
 
 export const useIsOverflowing = (
   ref: MutableRefObject<HTMLElement | null>,

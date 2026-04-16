@@ -25,6 +25,7 @@ import {
 } from "react"
 
 import { X } from "@emotion-icons/open-iconic"
+import type { AxiosProgressEvent } from "axios"
 import { isEqual } from "lodash-es"
 import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
@@ -37,17 +38,15 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
-import Icon from "~lib/components/shared/Icon"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import Icon from "~lib/components/shared/Icon/Icon"
 import {
   UploadedStatus,
   UploadFileInfo,
   UploadingStatus,
-} from "~lib/components/widgets/FileUploader/UploadFileInfo"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import useTimeout from "~lib/hooks/useTimeout"
@@ -366,13 +365,15 @@ const CameraInput = ({
    * Callback for file upload progress. Updates a single file's local progress state.
    */
   const onUploadProgress = useCallback(
-    (event: ProgressEvent, fileId: number): void => {
+    (event: AxiosProgressEvent, fileId: number): void => {
       const file = getFile(fileId)
       if (isNullOrUndefined(file) || file.status.type !== "uploading") {
         return
       }
 
-      const newProgress = Math.round((event.loaded * 100) / event.total)
+      const newProgress = event.total
+        ? Math.round((event.loaded * 100) / event.total)
+        : 0
       if (file.status.progress === newProgress) {
         return
       }

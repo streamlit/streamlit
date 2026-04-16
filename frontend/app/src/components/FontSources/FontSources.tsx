@@ -18,7 +18,7 @@ import { Helmet } from "react-helmet-async"
 
 import { FontSources as FontSourcesType } from "@streamlit/app/src/util/useThemeManager"
 
-export interface FontSourcesProps {
+interface FontSourcesProps {
   fontSources: FontSourcesType
 }
 

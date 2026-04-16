@@ -36,11 +36,6 @@ def get_latest_streamlit_version() -> Version:
     NB: this involves a network call, so it could raise an error
     or take a long time.
 
-    Parameters
-    ----------
-    timeout : float or None
-        The request timeout.
-
     Returns
     -------
     str

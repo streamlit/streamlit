@@ -12,12 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import re
+
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
+    click_checkbox,
     expect_markdown,
     get_element_by_key,
     get_popover,
@@ -30,7 +34,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(21)
+    expect(popover_elements).to_have_count(25)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -185,8 +189,8 @@ def test_fullscreen_mode_is_disabled_in_popover(app: Page):
     dataframe_toolbar = dataframe_element.get_by_test_id("stElementToolbar")
     # Hover over dataframe
     dataframe_element.hover()
-    # Should only have  two buttons, search + download CSV
-    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(2)
+    # Should have three buttons: search, download CSV, column visibility
+    expect(dataframe_toolbar.get_by_test_id("stElementToolbarButton")).to_have_count(3)
 
 
 def test_show_tooltip_on_hover(app: Page):
@@ -352,3 +356,65 @@ def test_popover_callback_in_fragment(app: Page):
 
     # Callback should have fired again
     expect(app.get_by_text("Fragment callback count: 2")).to_be_visible()
+
+
+def test_keyed_popover_persists_open_state_across_remount(app: Page):
+    """Clicking a checkbox inside a keyed popover that adds an element above the
+    popover shifts the delta path, but the open state should be preserved via
+    elementStates.
+    """
+    # Open the keyed popover
+    open_popover(app, "Persist popover")
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+    # Click the checkbox inside the popover — triggers a rerun that inserts an
+    # element above the popover, shifting its delta path (remount)
+    click_checkbox(app, "Shift delta path")
+
+    # The extra text should now appear above the popover
+    expect(app.get_by_text("Extra text above popover")).to_be_visible()
+
+    # The popover should still be open after the delta-path shift
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+    # Uncheck — another delta-path shift back
+    click_checkbox(app, "Shift delta path")
+    expect(app.get_by_text("Extra text above popover")).not_to_be_visible()
+
+    # Still open
+    expect(app.get_by_text("Persist popover content")).to_be_visible()
+
+
+def test_keyed_popover_css_key_class(app: Page):
+    """Keyed popover should have the st-key-* CSS class on the outermost element."""
+    keyed_popover = get_element_by_key(app, "persist_popover")
+    expect(keyed_popover).to_have_class(re.compile(r"st-key-persist_popover"))
+
+
+def test_popover_menu_style_icons_hide_chevron(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that menu-style icon labels hide the chevron (expand/collapse icon)."""
+    container = get_element_by_key(app, "menu_style_icons_container")
+
+    # Verify all three popovers are visible
+    popovers = container.get_by_test_id("stPopover")
+    expect(popovers).to_have_count(3)
+
+    # Check that chevron icons are NOT present in these buttons
+    # The chevron uses expand_more/expand_less material icons
+    menu_icon_popover = get_element_by_key(app, "menu_icon_popover")
+    more_vert_popover = get_element_by_key(app, "more_vert_icon_popover")
+    more_horiz_popover = get_element_by_key(app, "more_horiz_icon_popover")
+
+    # None of these buttons should have expand_more or expand_less icons
+    expect(menu_icon_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_vert_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_horiz_popover.get_by_text("expand_more")).not_to_be_visible()
+
+    # Verify that regular popovers DO have the chevron (for contrast)
+    regular_popover = get_popover(app, "popover 3 (with widgets)")
+    expect(regular_popover.get_by_text("expand_more")).to_be_visible()
+
+    # Snapshot the container with all three menu-style icon popovers
+    assert_snapshot(container, name="st_popover-menu_style_icons")

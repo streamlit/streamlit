@@ -2,6 +2,8 @@
 applyTo: ".claude/skills/**/*"
 ---
 
+<!-- Generated from .claude/skills/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # AGENTS.md
 
 This file provides guidance to AI coding agents (Claude Code, Cursor, Copilot, etc.) when working with skills in this repository.
@@ -58,7 +60,7 @@ Instructions for the AI agent...
 Use **gerund form** (verb + -ing) for skill names:
 - `checking-changes`
 - `debugging-streamlit`
-- `implementing-new-features`
+- `finalizing-pr`
 
 Avoid vague names (`helper`, `utils`) or reserved words (`anthropic-*`, `claude-*`).
 

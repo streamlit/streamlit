@@ -42,8 +42,9 @@ message UInt32Array {
   repeated uint32 data = 1;
 }
 
-// DEPRECATED: This proto message is deprecated and unused. The ChatInputValue
-// proto message should be used instead.
+// A trigger value that carries a single string payload.
+// Used for trigger-based widgets that need to return a string value
+// (e.g., menu button selections). The value auto-resets after each script run.
 message StringTriggerValue {
   optional string data = 1;
 }

@@ -8,7 +8,18 @@
   - `lib/AGENTS.md` — for any Python changes (`*.py` files)
   - `lib/streamlit/AGENTS.md` — for any Python library changes (inside `lib/streamlit/`)
   - `proto/streamlit/proto/AGENTS.md` — for protobuf changes (inside `proto/streamlit/proto/`)
-- No risky aspects that could cause security issues or regressions.
+- No risky aspects that could cause security issues or regressions. Pay closer attention to changes in these security-sensitive areas:
+  - WebSocket connection handling, server endpoints, authentication, and session management
+  - File upload, file/asset serving, and path traversal risks
+  - Cookies, XSRF protection, CORS, cross-origin behavior, and security headers (CSP, etc.)
+  - New backend or frontend dependencies, or requests to external assets/services
+  - Runtime JavaScript execution (e.g., `eval`, `unsafe-eval`, `Function()` constructor)
+  - Command/code injection risks (e.g., `subprocess`, `exec`, `eval` in Python)
+  - HTML/Markdown rendering and sanitization (XSS risks)
+  - iframe embedding and `postMessage` handling
+  - Sensitive data handling (secrets, credentials, tokens)
+  - `st.login()`/`st.logout()` and OAuth token handling
+- External-test risk is explicitly assessed using `/assessing-external-test-risk`, and the review includes a clear `external_test` recommendation.
 - Frontend changes follow accessibility best practices.
 - The code follows other best practices from the Streamlit code base.
 
@@ -18,8 +29,9 @@
 2. Gather relevant context (branch diff, PR details if available).
 3. Read and analyze the changed files to understand the full context.
 4. Important: Read the relevant sub-directory `AGENTS.md` files based on changed files (see checklist above).
-5. Perform a thorough code review based on the checklist above.
-6. Write your review following the output format below.
+5. Run an explicit external-test risk assessment using `/assessing-external-test-risk` and determine whether this branch should include `@pytest.mark.external_test` coverage.
+6. Perform a thorough code review based on the checklist above.
+7. Write your review following the output format below.
 
 ## Output Format
 
@@ -46,6 +58,10 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 
 [Any security concerns or regression risks identified.]
 
+## External test recommendation
+
+[State `external_test` recommendation (Yes/No), triggered categories (or "None"), key evidence from changed files, suggested external test focus areas, and confidence plus assumptions/gaps.]
+
 ## Accessibility
 
 [Assessment of accessibility considerations for frontend changes.]
@@ -68,3 +84,4 @@ Write your review using valid GitHub Flavored Markdown in the following structur
 - Do NOT attempt to post comments, edit PRs, or perform any write operations.
 - Focus on the root cause of issues, not cascading failures.
 - Be specific with file references and line numbers when noting issues.
+- Findings that are covered by inline comments should NOT be repeated in the PR-level review body. The PR-level review covers high-level and cross-cutting concerns only. Inline comments handle line-specific findings.

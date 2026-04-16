@@ -18,7 +18,7 @@ import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
-import UIRadio from "~lib/components/shared/Radio"
+import UIRadio from "~lib/components/shared/Radio/Radio"
 import {
   useBasicWidgetState,
   ValueWithSource,

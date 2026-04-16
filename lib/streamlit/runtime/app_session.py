@@ -600,13 +600,11 @@ class AppSession:
             The fragment IDs of the fragments being executed in this script run. Only
             set for the SCRIPT_STARTED event. If this value is falsy, this script run
             must be for the full script.
-
-        clear_forward_msg_queue : bool
-            If set (the default), clears the queue of forward messages to be sent to the
-            browser. Set only for the SCRIPT_STARTED event.
         """
 
-        if self._event_loop != asyncio.get_running_loop():
+        if (
+            self._event_loop != asyncio.get_running_loop()
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 "This function must only be called on the eventloop thread the AppSession was created on. "
                 "This should never happen."
@@ -626,7 +624,7 @@ class AppSession:
         if event == ScriptRunnerEvent.SCRIPT_STARTED:
             if self._state != AppSessionState.SHUTDOWN_REQUESTED:
                 self._state = AppSessionState.APP_IS_RUNNING
-            if page_script_hash is None:
+            if page_script_hash is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "page_script_hash must be set for the SCRIPT_STARTED event. This should never happen."
                 )
@@ -677,7 +675,7 @@ class AppSession:
             else:
                 # The script didn't complete successfully: send the exception
                 # to the frontend.
-                if exception is None:
+                if exception is None:  # pragma: no cover - defensive
                     raise RuntimeError(
                         "exception must be set for the SCRIPT_STOPPED_WITH_COMPILE_ERROR event. "
                         "This should never happen."
@@ -699,7 +697,7 @@ class AppSession:
                 self._local_sources_watcher.update_watched_modules()
 
         elif event == ScriptRunnerEvent.SHUTDOWN:
-            if client_state is None:
+            if client_state is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "client_state must be set for the SHUTDOWN event. This should never happen."
                 )
@@ -714,7 +712,7 @@ class AppSession:
             self._scriptrunner = None
 
         elif event == ScriptRunnerEvent.ENQUEUE_FORWARD_MSG:
-            if forward_msg is None:
+            if forward_msg is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "null forward_msg in ENQUEUE_FORWARD_MSG event. This should never happen."
                 )

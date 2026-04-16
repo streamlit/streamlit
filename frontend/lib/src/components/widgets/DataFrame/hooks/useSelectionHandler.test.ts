@@ -32,123 +32,108 @@ describe("useSelectionHandler hook", () => {
     vi.clearAllMocks()
   })
 
-  it("detects single row selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
+  it.each([
+    {
+      name: "single row",
+      modes: [DataframeProto.SelectionMode.SINGLE_ROW],
+      isRow: true,
+      isMultiRow: false,
+      isCol: false,
+      isMultiCol: false,
+      isCell: false,
+      isMultiCell: false,
+    },
+    {
+      name: "multi row",
+      modes: [DataframeProto.SelectionMode.MULTI_ROW],
+      isRow: true,
+      isMultiRow: true,
+      isCol: false,
+      isMultiCol: false,
+      isCell: false,
+      isMultiCell: false,
+    },
+    {
+      name: "single column",
+      modes: [DataframeProto.SelectionMode.SINGLE_COLUMN],
+      isRow: false,
+      isMultiRow: false,
+      isCol: true,
+      isMultiCol: false,
+      isCell: false,
+      isMultiCell: false,
+    },
+    {
+      name: "multi column",
+      modes: [DataframeProto.SelectionMode.MULTI_COLUMN],
+      isRow: false,
+      isMultiRow: false,
+      isCol: true,
+      isMultiCol: true,
+      isCell: false,
+      isMultiCell: false,
+    },
+    {
+      name: "single cell",
+      modes: [DataframeProto.SelectionMode.SINGLE_CELL],
+      isRow: false,
+      isMultiRow: false,
+      isCol: false,
+      isMultiCol: false,
+      isCell: true,
+      isMultiCell: false,
+    },
+    {
+      name: "multi cell",
+      modes: [DataframeProto.SelectionMode.MULTI_CELL],
+      isRow: false,
+      isMultiRow: false,
+      isCol: false,
+      isMultiCol: false,
+      isCell: true,
+      isMultiCell: true,
+    },
+    {
+      name: "mixed multi row+column",
+      modes: [
+        DataframeProto.SelectionMode.MULTI_ROW,
+        DataframeProto.SelectionMode.MULTI_COLUMN,
+      ],
+      isRow: true,
+      isMultiRow: true,
+      isCol: true,
+      isMultiCol: true,
+      isCell: false,
+      isMultiCell: false,
+    },
+  ])(
+    "detects $name selection",
+    ({ modes, isRow, isMultiRow, isCol, isMultiCol, isCell, isMultiCell }) => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({ selectionMode: modes }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
       )
-    )
 
-    expect(result.current.isRowSelectionActivated).toEqual(true)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-  })
-
-  it("detects multi row selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [DataframeProto.SelectionMode.MULTI_ROW],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
+      expect(result.current.isRowSelectionActivated).toEqual(isRow)
+      expect(result.current.isMultiRowSelectionActivated).toEqual(isMultiRow)
+      expect(result.current.isColumnSelectionActivated).toEqual(isCol)
+      expect(result.current.isMultiColumnSelectionActivated).toEqual(
+        isMultiCol
       )
-    )
+      expect(result.current.isCellSelectionActivated).toEqual(isCell)
+      expect(result.current.isMultiCellSelectionActivated).toEqual(isMultiCell)
+    }
+  )
 
-    expect(result.current.isRowSelectionActivated).toEqual(true)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(true)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-  })
-
-  it("detects single column selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [DataframeProto.SelectionMode.SINGLE_COLUMN],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(true)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-  })
-  it("detects multi column selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [DataframeProto.SelectionMode.MULTI_COLUMN],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(true)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(true)
-  })
-  it("detects single cell selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [DataframeProto.SelectionMode.SINGLE_CELL],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(true)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(false)
-  })
-  it("detects multi cell selection", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [DataframeProto.SelectionMode.MULTI_CELL],
-        }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-
-    expect(result.current.isCellSelectionActivated).toEqual(true)
-    expect(result.current.isMultiCellSelectionActivated).toEqual(true)
-  })
-  it("detects mixed multi selection", () => {
+  it.each([
+    { name: "empty table", isEmpty: true, isDisabled: false },
+    { name: "disabled table", isEmpty: false, isDisabled: true },
+  ])("disables all selections if $name", ({ isEmpty, isDisabled }) => {
     const { result } = renderHook(() =>
       useSelectionHandler(
         DataframeProto.create({
@@ -157,30 +142,8 @@ describe("useSelectionHandler hook", () => {
             DataframeProto.SelectionMode.MULTI_COLUMN,
           ],
         }),
-        false,
-        false,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(true)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(true)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(true)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(true)
-  })
-  it("disables all selections if empty table", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [
-            DataframeProto.SelectionMode.MULTI_ROW,
-            DataframeProto.SelectionMode.MULTI_COLUMN,
-          ],
-        }),
-        true,
-        false,
+        isEmpty,
+        isDisabled,
         [],
         syncSelectionStateMock
       )
@@ -188,32 +151,8 @@ describe("useSelectionHandler hook", () => {
 
     expect(result.current.isRowSelectionActivated).toEqual(false)
     expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
     expect(result.current.isColumnSelectionActivated).toEqual(false)
     expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-  })
-  it("disables all selections if table is disabled", () => {
-    const { result } = renderHook(() =>
-      useSelectionHandler(
-        DataframeProto.create({
-          selectionMode: [
-            DataframeProto.SelectionMode.MULTI_ROW,
-            DataframeProto.SelectionMode.MULTI_COLUMN,
-          ],
-        }),
-        false,
-        true,
-        [],
-        syncSelectionStateMock
-      )
-    )
-
-    expect(result.current.isRowSelectionActivated).toEqual(false)
-    expect(result.current.isMultiRowSelectionActivated).toEqual(false)
-
-    expect(result.current.isColumnSelectionActivated).toEqual(false)
-    expect(result.current.isMultiColumnSelectionActivated).toEqual(false)
-
     expect(result.current.isCellSelectionActivated).toEqual(false)
     expect(result.current.isMultiCellSelectionActivated).toEqual(false)
   })
@@ -645,5 +584,204 @@ describe("useSelectionHandler hook", () => {
     expect(result.current.isCellSelected).toEqual(false)
     expect(result.current.isRowSelected).toEqual(false)
     expect(result.current.isColumnSelected).toEqual(false)
+  })
+
+  describe("single-row-required mode", () => {
+    it("detects single-row-required selection mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      expect(result.current.isRowSelectionActivated).toEqual(true)
+      expect(result.current.isRequiredRowSelectionActivated).toEqual(true)
+      expect(result.current.isMultiRowSelectionActivated).toEqual(false)
+    })
+
+    it("prevents clearing row selection in single-row-required mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select a row
+      const selectionWithRow = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(1),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithRow)
+      })
+
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+
+      // Try to clear the row selection
+      const emptySelection = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.empty(),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(emptySelection)
+      })
+
+      // The row selection should be preserved
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+    })
+
+    it("allows changing row selection in single-row-required mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select row 1
+      const firstSelection = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(1),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(firstSelection)
+      })
+
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+
+      // Change selection to row 2
+      const secondSelection = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(2),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(secondSelection)
+      })
+
+      // The selection should be changed to row 2
+      expect(result.current.gridSelection.rows.toArray()).toEqual([2])
+    })
+
+    it("clearSelection preserves row selection in single-row-required mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select a row
+      const selectionWithRow = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(2),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithRow)
+      })
+
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([2])
+      expect(syncSelectionStateMock).toBeCalledTimes(1)
+
+      // Try to clear all selections via clearSelection()
+      // This simulates what happens when a user sorts a column
+      act(() => {
+        result.current.clearSelection()
+      })
+
+      // The row selection should be preserved because single-row-required
+      // mode requires that a row always remains selected
+      expect(result.current.isRowSelected).toEqual(true)
+      expect(result.current.gridSelection.rows.toArray()).toEqual([2])
+
+      // syncSelectionState should NOT be called again since the row
+      // selection didn't actually change
+      expect(syncSelectionStateMock).toBeCalledTimes(1)
+    })
+
+    it("syncs column selection even when row clearing is prevented in combined mode", () => {
+      const { result } = renderHook(() =>
+        useSelectionHandler(
+          DataframeProto.create({
+            selectionMode: [
+              DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
+              DataframeProto.SelectionMode.MULTI_COLUMN,
+            ],
+          }),
+          false,
+          false,
+          [],
+          syncSelectionStateMock
+        )
+      )
+
+      // First, select a row
+      const selectionWithRow = {
+        columns: CompactSelection.empty(),
+        rows: CompactSelection.fromSingleSelection(1),
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithRow)
+      })
+
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+      expect(syncSelectionStateMock).toBeCalledTimes(1)
+
+      // Simulate glide-data-grid event when clicking a column header:
+      // it tries to clear rows and select the column
+      const selectionWithColumnAndNoRows = {
+        columns: CompactSelection.fromSingleSelection(2),
+        rows: CompactSelection.empty(), // tries to clear rows
+        current: undefined,
+      }
+
+      act(() => {
+        result.current.processSelectionChange(selectionWithColumnAndNoRows)
+      })
+
+      // Row selection should be preserved
+      expect(result.current.gridSelection.rows.toArray()).toEqual([1])
+      // Column selection should be applied
+      expect(result.current.gridSelection.columns.toArray()).toEqual([2])
+
+      // syncSelectionState should be called again to sync the column change
+      expect(syncSelectionStateMock).toBeCalledTimes(2)
+    })
   })
 })

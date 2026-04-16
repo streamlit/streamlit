@@ -1033,3 +1033,37 @@ class TestDateInputSerdeISO:
             "2025-03-15",
         ]
         assert serde.serialize(None) == []
+
+
+def test_datetime_session_state_value_with_date_bounds():
+    """Test that datetime values in session_state can be compared with date bounds.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14109
+    When a datetime.datetime value is stored in session_state and compared against
+    datetime.date min/max bounds, the validation should not raise TypeError.
+    """
+    from datetime import datetime as dt
+
+    def script():
+        import datetime
+
+        import streamlit as st
+
+        # Initialize session_state with a datetime value
+        if "date" not in st.session_state:
+            st.session_state["date"] = datetime.datetime(2025, 6, 15, 12, 30, 0)
+
+        # Use date_input with date bounds - this should not raise TypeError
+        result = st.date_input(
+            "Select date",
+            key="date",
+            min_value=datetime.date(2025, 1, 1),
+            max_value=datetime.date(2025, 12, 31),
+        )
+        st.write(f"result: {result}")
+
+    at = AppTest.from_function(script).run()
+    # This should not raise TypeError (the bug being fixed)
+    assert not at.exception
+    # The widget preserves the datetime type from session_state
+    assert at.date_input[0].value == dt(2025, 6, 15, 12, 30, 0)

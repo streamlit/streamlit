@@ -104,7 +104,7 @@ const calculateMaxHeight = (maxHeight: number): string => {
   return maxHeight ? `${maxHeight}px` : ""
 }
 
-export interface UseTextInputAutoExpandResult {
+interface UseTextInputAutoExpandResult {
   /** Whether the textarea is currently in extended state */
   isExtended: boolean
   /** Calculated height style for the textarea */
@@ -117,7 +117,7 @@ export interface UseTextInputAutoExpandResult {
   clearScrollHeight: () => void
 }
 
-export interface UseTextInputAutoExpandOptions {
+interface UseTextInputAutoExpandOptions {
   /** Ref to the textarea element */
   textareaRef: RefObject<HTMLTextAreaElement>
   /** Dependencies that should trigger scroll height recalculation */

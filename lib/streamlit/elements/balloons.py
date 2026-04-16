@@ -28,8 +28,8 @@ class BalloonsMixin:
     def balloons(self) -> DeltaGenerator:
         """Draw celebratory balloons.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.balloons()

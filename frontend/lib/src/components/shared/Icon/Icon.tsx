@@ -18,7 +18,7 @@ import { ReactElement, ReactNode } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 
 import { StyledEmojiIcon, StyledIcon } from "./styled-components"
 

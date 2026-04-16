@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from streamlit.components.v2.bidi_component import BidiComponentResult
+    from streamlit.components.v2.bidi_component import ComponentResult
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
 
@@ -149,7 +149,7 @@ def _create_component_callable(
         width: Width = "stretch",
         height: Height = "content",
         **on_callbacks: WidgetCallback | None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         """Mount the component.
 
         Parameters
@@ -171,7 +171,7 @@ def _create_component_callable(
 
         Returns
         -------
-        BidiComponentResult
+        ComponentResult
             Component state.
         """
         import streamlit as st
@@ -291,7 +291,7 @@ def component(
         The component's mounting command.
 
         This callable accepts the component parameters like ``key`` and
-        ``data`` and returns a ``BidiComponentResult`` object with the
+        ``data`` and returns a ``ComponentResult`` object with the
         component's state. The mounting command can be included in a
         user-friendly wrapper function to provide a simpler API. A mounting
         command can be called multiple times in an app to create multiple

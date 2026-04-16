@@ -460,7 +460,6 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
         "string_value",
         "default",
         false,
-        undefined,
         undefined
       )
     })
@@ -532,23 +531,22 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       expect(unregisterSpy).toHaveBeenCalledWith("widget-unmount-test")
     })
 
-    it("passes urlFormat and optionStrings correctly", () => {
+    it("passes urlFormat correctly", () => {
       const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
 
       const element: MockProto = {
         formId: "",
         setValue: false,
-        id: "widget-with-options",
-        value: 0,
-        default: 0,
+        id: "widget-with-format",
+        value: "hello",
+        default: "hello",
       }
 
       const queryParamBinding: QueryParamBindingConfig = {
-        paramKey: "color",
-        valueType: "int_value",
+        paramKey: "greeting",
+        valueType: "string_value",
         clearable: false,
         urlFormat: "comma",
-        optionStrings: ["Red", "Green", "Blue"],
       }
 
       renderHook(() =>
@@ -566,14 +564,109 @@ describe("useBasicWidgetState - getDefaultState logic", () => {
       )
 
       expect(registerSpy).toHaveBeenCalledWith(
-        "widget-with-options",
-        "color",
-        "int_value",
-        0,
+        "widget-with-format",
+        "greeting",
+        "string_value",
+        "hello",
         false,
-        "comma",
-        ["Red", "Green", "Blue"]
+        "comma"
       )
+    })
+
+    it("uses urlDefault when provided instead of getDefaultStateFromProto", () => {
+      const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-with-url-default",
+        value: 0,
+        default: 0,
+      }
+
+      const queryParamBinding: QueryParamBindingConfig = {
+        paramKey: "color",
+        valueType: "string_array_value",
+        clearable: false,
+        urlFormat: "repeated",
+        urlDefault: ["Red"],
+      }
+
+      renderHook(() =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+          queryParamBinding,
+        })
+      )
+
+      expect(registerSpy).toHaveBeenCalledWith(
+        "widget-with-url-default",
+        "color",
+        "string_array_value",
+        ["Red"],
+        false,
+        "repeated"
+      )
+    })
+
+    it("does not re-register when urlDefault is a new reference with same value", () => {
+      const registerSpy = vi.spyOn(widgetMgr, "registerQueryParamBinding")
+
+      const element: MockProto = {
+        formId: "",
+        setValue: false,
+        id: "widget-stable-default",
+        value: 0,
+        default: 0,
+      }
+
+      const { rerender } = renderHook(
+        ({ binding }) =>
+          useBasicWidgetState({
+            getStateFromWidgetMgr,
+            getCurrStateFromProto,
+            getDefaultStateFromProto,
+            updateWidgetMgrState,
+            element,
+            widgetMgr,
+            fragmentId: undefined,
+            formClearBehavior: "resetValueOnly",
+            queryParamBinding: binding,
+          }),
+        {
+          initialProps: {
+            binding: {
+              paramKey: "color",
+              valueType: "string_array_value" as const,
+              clearable: false,
+              urlFormat: "repeated" as const,
+              urlDefault: ["Red"],
+            },
+          },
+        }
+      )
+
+      expect(registerSpy).toHaveBeenCalledTimes(1)
+
+      // Re-render with a new array reference containing the same value
+      rerender({
+        binding: {
+          paramKey: "color",
+          valueType: "string_array_value" as const,
+          clearable: false,
+          urlFormat: "repeated" as const,
+          urlDefault: ["Red"],
+        },
+      })
+
+      expect(registerSpy).toHaveBeenCalledTimes(1)
     })
   })
 })

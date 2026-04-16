@@ -250,6 +250,27 @@ i20 = st.multiselect(
 )
 st.text(f"value 20: {[opt.value for opt in i20]}")
 
+i21 = st.multiselect(
+    "multiselect 21 (filter_mode='prefix')",
+    ["A123", "A1234", "BA123", "CA123"],
+    filter_mode="prefix",
+)
+st.text(f"value 21: {i21}")
+
+i22 = st.multiselect(
+    "multiselect 22 (filter_mode='contains')",
+    ["apple", "grape", "banana"],
+    filter_mode="contains",
+)
+st.text(f"value 22: {i22}")
+
+i23 = st.multiselect(
+    "multiselect 23 (filter_mode=None)",
+    ["Yes", "No", "Maybe"],
+    filter_mode=None,
+)
+st.text(f"value 23: {i23}")
+
 # --- Bound multiselect widgets ---
 
 bound_multi = st.multiselect(

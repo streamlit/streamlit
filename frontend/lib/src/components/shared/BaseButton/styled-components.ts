@@ -19,7 +19,7 @@ import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
@@ -51,8 +51,7 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   // If true, the button should take up container's full width
   containerWidth?: boolean
@@ -93,7 +92,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
-export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
+const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
   ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",

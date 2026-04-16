@@ -19,24 +19,24 @@
 import { lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
 
-import { ThemeConfig } from "~lib/theme"
 import { createBaseUiTheme } from "~lib/theme/createBaseUiTheme"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
+import { breakpoints } from "~lib/theme/primitives/breakpoints"
+import { colors } from "~lib/theme/primitives/colors"
+import { iconSizes } from "~lib/theme/primitives/iconSizes"
+import { radii } from "~lib/theme/primitives/radii"
+import { sizes } from "~lib/theme/primitives/sizes"
+import { spacing } from "~lib/theme/primitives/spacing"
 import {
-  breakpoints,
-  colors,
   fonts,
   fontSizes,
   fontWeights,
   genericFonts,
-  iconSizes,
   lineHeights,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "~lib/theme/primitives"
+} from "~lib/theme/primitives/typography"
+import { zIndices } from "~lib/theme/primitives/zIndices"
+import type { ThemeConfig } from "~lib/theme/types"
 
 const requiredThemeColors = {
   bgColor: colors.white,

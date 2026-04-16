@@ -83,8 +83,8 @@ def cache(
         The maximum number of seconds to keep an entry in the cache, or
         None if cache entries should not expire. The default is None.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> @st.cache

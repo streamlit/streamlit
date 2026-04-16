@@ -41,6 +41,13 @@ message Dataframe {
   optional uint32 row_height = 9;
   // Placeholder string used when rendering missing values (e.g. nulls, NaNs).
   optional string placeholder = 10;
+  // Selection state (JSON serialized), set when selection is changed programmatically
+  // via session state. When present, frontend applies this selection.
+  // When absent, frontend manages its own selection state.
+  optional string selection_state = 11;
+  // Default selection state (JSON serialized), set when selection_default is provided.
+  // Applied by the frontend only when there is no stored selection state.
+  optional string selection_default = 12;
 
   // Available editing modes:
   enum EditingMode {
@@ -59,5 +66,6 @@ message Dataframe {
     MULTI_COLUMN = 3; // Multiple columns can be selected at a time.
     SINGLE_CELL = 4; // Only one cell can be selected at a time.
     MULTI_CELL = 5; // Multiple cells (continuous range) can be selected.
+    SINGLE_ROW_REQUIRED = 6; // Single row, cannot be cleared (radio-like behavior).
   }
 }

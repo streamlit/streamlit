@@ -24,7 +24,7 @@ export const StyledActionButtonContainer = styled.div(({ theme }) => ({
   lineHeight: theme.iconSizes.md,
 }))
 
-export interface StyledActionButtonIconProps {
+interface StyledActionButtonIconProps {
   icon: string
 }
 

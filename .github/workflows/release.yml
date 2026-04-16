@@ -30,6 +30,11 @@ jobs:
     uses: ./.github/workflows/playwright.yml
     with:
       ref: ${{ github.ref_name }}
+    permissions:
+      # Required by check-e2e-test-count job (only runs on PRs, not releases)
+      contents: read
+      actions: read
+      pull-requests: write
 
   build-release:
     runs-on: ubuntu-latest
@@ -106,12 +111,12 @@ jobs:
           sudo apt install rsync
           make package
       - name: Store Package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: Release
           path: lib/dist
       - name: Upload to PyPI
-        uses: pypa/gh-action-pypi-publish@ed0c53931b1dc9bd32cbe73a98c7f6766f8a527e # v1.13.0
+        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
         with:
           packages-dir: lib/dist/
       - name: Create GitHub Release

@@ -51,6 +51,11 @@ all: init frontend
 # Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
 	uv run pre-commit install
+	@# Clone wiki repo for agent artifacts if not present
+	@if [ ! -d "agent-wiki" ]; then \
+		echo "Cloning streamlit.wiki into agent-wiki/..."; \
+		git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki; \
+	fi
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -231,7 +236,7 @@ frontend:
 	cd frontend/ ; yarn workspaces foreach --all --topological --parallel run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
-	# Move manifest.json to a location that can actually be served by the Tornado
+	# Move manifest.json to a location that can actually be served by the
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
@@ -350,7 +355,7 @@ debug:
 			exit 1; \
 		fi; \
 		if [[ -z "$$BACKEND_PORT" ]]; then \
-			BACKEND_PORT=$$(awk '/Server started on port [0-9]+/ {print $$NF; exit}' "$$DEBUG_DIR/backend.log"); \
+			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
 		fi; \
 		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
@@ -447,6 +452,11 @@ frontend-format:
 frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
 
+.PHONY: frontend-knip
+# Run Knip with default reporter.
+frontend-knip:
+	cd frontend/ ; yarn knip
+
 .PHONY: frontend-typesync
 # Check for unsynced frontend types.
 frontend-typesync:
@@ -460,8 +470,6 @@ frontend-typesync:
 update-frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
 	cd frontend/ ; yarn
-	cd component-lib/ ; yarn typesync
-	cd component-lib/ ; yarn
 
 .PHONY: update-snapshots
 # Update e2e playwright snapshots based on the latest completed CI run.
@@ -607,17 +615,23 @@ check:
 	echo "Changed files:"; \
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
-	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
+	@# Start frontend (format, lint, knip, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@# Set E2E_CHECK=true to also run changed e2e tests (in background, parallel to frontend)
 	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
 	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
+	E2E_OUT=""; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
 	( \
 		if [ -n "$$FE_FILES" ]; then \
-			echo "=== Frontend: format (prettier) ===" && \
-			cd frontend && yarn exec prettier --write $$FE_FILES && \
+			echo "=== Frontend: format (oxfmt) ===" && \
+			cd frontend && yarn exec oxfmt --config ./.oxfmtrc.json $$FE_FILES && \
+			cd .. && \
+			echo "" && \
+			echo "=== Frontend: lint (oxlint) ===" && \
+			cd frontend && yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings $$FE_FILES && \
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
@@ -626,6 +640,11 @@ check:
 			echo ""; \
 		else \
 			echo "No frontend files changed." && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_CHECK" ]; then \
+			echo "=== Frontend: dependency check (knip) ===" && \
+			$(MAKE) frontend-knip && \
 			echo ""; \
 		fi && \
 		if [ -n "$$FE_CHECK" ] && [ "$$FAST_CHECK" != "true" ]; then \
@@ -639,6 +658,18 @@ check:
 			cd frontend && yarn vitest run $$FE_TESTS; \
 		fi \
 	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
+	E2E_PID=""; \
+	if [ "$$E2E_CHECK" = "true" ]; then \
+		E2E_OUT=$$(mktemp) || { echo "Failed to create E2E temp file"; exit 1; }; \
+		E2E_TESTS=$$(uv run python scripts/get_changed_files.py --e2e --strip-prefix e2e_playwright/); \
+		if [ -n "$$E2E_TESTS" ]; then \
+			( \
+				echo "=== E2E: tests (playwright) ===" && \
+				echo "Running: $$E2E_TESTS" && \
+				cd e2e_playwright && uv run pytest $$E2E_TESTS --tracing retain-on-failure --reruns 0 \
+			) > "$$E2E_OUT" 2>&1 & E2E_PID=$$!; \
+		fi; \
+	fi; \
 	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
 	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
@@ -662,17 +693,19 @@ check:
 	fi; \
 	if [ $$PY_EXIT -ne 0 ]; then \
 		kill $$FE_PID 2>/dev/null; \
-		rm -f "$$FE_OUT"; \
+		[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+		rm -f "$$FE_OUT" "$$E2E_OUT"; \
 		echo "=== Python checks failed! ==="; \
 		exit 1; \
 	fi; \
 	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ===" && \
-		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		SKIP=oxlint-frontend,oxfmt-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
-			rm -f "$$FE_OUT"; \
+			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+			rm -f "$$FE_OUT" "$$E2E_OUT"; \
 			echo "=== Pre-commit hooks failed! ==="; \
 			exit 1; \
 		}; \
@@ -684,7 +717,8 @@ check:
 		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
-			rm -f "$$FE_OUT"; \
+			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+			rm -f "$$FE_OUT" "$$E2E_OUT"; \
 			echo "=== Python tests failed! ==="; \
 			exit 1; \
 		}; \
@@ -693,8 +727,20 @@ check:
 	wait $$FE_PID || FE_EXIT=1; \
 	cat "$$FE_OUT"; \
 	rm -f "$$FE_OUT"; \
+	E2E_EXIT=0; \
+	if [ -n "$$E2E_PID" ]; then \
+		wait $$E2E_PID || E2E_EXIT=1; \
+		cat "$$E2E_OUT"; \
+	fi; \
+	rm -f "$$E2E_OUT"; \
 	if [ $$FE_EXIT -ne 0 ]; then \
 		echo "=== Frontend checks failed! ==="; \
+		exit 1; \
+	fi; \
+	if [ $$E2E_EXIT -ne 0 ]; then \
+		echo "=== E2E tests failed! ==="; \
+		echo "If you implemented changes in the frontend, make sure to call 'make frontend-fast' to use the up-to-date frontend build in the test."; \
+		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1; \
 	fi
 	@echo "=== All checks passed! ==="
@@ -709,6 +755,7 @@ autofix:
 	make frontend-init
 	make frontend-format
 	cd frontend/ ; yarn lint:fix || true  # Continue on unfixable errors
+	cd frontend/ ; yarn knip --fix --allow-remove-files || true  # Continue on unfixable errors
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:

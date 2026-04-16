@@ -142,17 +142,17 @@ class BaseCustomComponent(ABC):
         **kwargs
             Keyword args to pass to the component.
 
+        Returns
+        -------
+        any or None
+            The component's widget value.
+
         Raises
         ------
         MarshallComponentException
             Raised when args is not empty or component cannot be marshalled.
         StreamlitAPIException
             Raised when PyArrow is not installed.
-
-        Returns
-        -------
-        any or None
-            The component's widget value.
 
         """
         raise NotImplementedError

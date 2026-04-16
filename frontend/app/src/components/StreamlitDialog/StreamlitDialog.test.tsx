@@ -18,8 +18,8 @@ import { Fragment } from "react"
 
 import { screen } from "@testing-library/react"
 
-import { StreamlitDialog } from "@streamlit/app/src/components/StreamlitDialog"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import { StreamlitDialog } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { render } from "@streamlit/lib/testing"
 
 function flushPromises(): Promise<void> {

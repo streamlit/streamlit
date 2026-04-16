@@ -26,7 +26,7 @@ import {
 } from "./emotionBaseTheme/themeColors"
 import { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
-import { PrimitiveColors } from "./primitives"
+import { type PrimitiveColors } from "./primitives/colors"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -104,8 +104,6 @@ export interface EmotionTheme extends Omit<
 > {
   colors: EmotionThemeColors
   shadows: ThemeShadows
-  metricValueFontSize?: string
-  metricValueFontWeight?: number
 }
 
 export type ThemeConfig = {
@@ -127,11 +125,9 @@ export type ThemeSelection = "System" | "Light" | "Dark"
 export type CachedTheme = ThemeSelection
 
 type IconSizes = typeof emotionBaseTheme.iconSizes
-export type ThemeSizings = typeof emotionBaseTheme.sizes
 export type ThemeSpacings = typeof emotionBaseTheme.spacing
 
 export type IconSize = keyof IconSizes
-export type ThemeSizing = keyof ThemeSizings
 export type ThemeSpacing = keyof ThemeSpacings
 export type PresetThemeName = "Light" | "Dark"
 

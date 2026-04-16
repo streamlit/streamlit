@@ -16,7 +16,7 @@
 
 import { ReactElement } from "react"
 
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 
 import {
   StyledMaterialIcon,

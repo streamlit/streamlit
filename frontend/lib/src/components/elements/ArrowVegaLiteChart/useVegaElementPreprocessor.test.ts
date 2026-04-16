@@ -15,7 +15,7 @@
  */
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
-import { lightTheme } from "~lib/theme"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"

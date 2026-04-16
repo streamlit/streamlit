@@ -27,34 +27,34 @@ import {
 import { ChevronDown } from "baseui/icon"
 import { type OnChangeParams, Select as UISelect } from "baseui/select"
 
+import { streamlit } from "@streamlit/protobuf"
+
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import {
   getBorderColor,
   getPopoverContainerStyle,
 } from "~lib/components/shared/Base/styled-components"
 import VirtualDropdown from "~lib/components/shared/Dropdown/VirtualDropdown"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useSelectCommon } from "~lib/hooks/useSelectCommon"
-import { convertRemToPx } from "~lib/theme"
+import { convertRemToPx } from "~lib/theme/utils"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export interface Props {
   value: string | null
   onChange: (value: string | null) => void
   disabled: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  options: any[]
+  options: string[]
   label?: string | null
   labelVisibility?: LabelVisibilityOptions
   help?: string
   placeholder: string
   clearable?: boolean
   acceptNewOptions: boolean
+  filterMode?: streamlit.SelectWidgetFilterMode | null
 }
 
 const Selectbox: FC<Props> = ({
@@ -68,6 +68,7 @@ const Selectbox: FC<Props> = ({
   placeholder,
   clearable,
   acceptNewOptions,
+  filterMode,
 }) => {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
@@ -125,9 +126,10 @@ const Selectbox: FC<Props> = ({
     valueToUiSingle,
     createFilterOptions,
   } = useSelectCommon({
-    options: opts as string[],
+    options: opts,
     isMulti: false,
     acceptNewOptions,
+    filterMode,
     placeholderInput: placeholder,
   })
 

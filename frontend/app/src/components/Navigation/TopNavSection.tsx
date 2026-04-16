@@ -27,11 +27,13 @@ import {
   convertRemToPx,
   getPopoverContainerStyle,
   Icon,
+  StreamlitMarkdown,
   useEmotionTheme,
 } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledIconContainer,
   StyledNavSection,
@@ -40,8 +42,7 @@ import {
   StyledSectionName,
   StyledTopNavSidebarNavLinkContainer,
 } from "./styled-components"
-
-import { SidebarNavLink } from "./index"
+import { getExternalPageUrl, isExternalPage } from "./utils"
 
 interface TopNavSectionProps {
   handlePageChange: (pageScriptHash: string) => void
@@ -86,13 +87,18 @@ const TopNavSection = ({
             const sectionName = section[0].sectionHeader
 
             return section.map((item, index) => {
-              const handleClick = (e: React.MouseEvent): boolean => {
+              const isExternal = isExternalPage(item)
+              const handleClick = (e: React.MouseEvent): void => {
+                // External links are handled by the browser (target="_blank")
+                if (isExternal) {
+                  setOpen(false)
+                  return
+                }
                 e.preventDefault()
                 if (item.pageScriptHash) {
                   handlePageChange(item.pageScriptHash)
                 }
                 setOpen(false)
-                return false
               }
 
               // Convert potentially null pageName to string safely
@@ -101,11 +107,19 @@ const TopNavSection = ({
               return (
                 <Fragment key={`${item.pageScriptHash}-${pageName}`}>
                   {index === 0 && showSections && (
-                    <StyledSectionName>{sectionName}</StyledSectionName>
+                    <StyledSectionName>
+                      <StreamlitMarkdown
+                        source={sectionName || ""}
+                        allowHTML={false}
+                        isLabel
+                        disableLinks
+                        truncate
+                        inheritFont
+                      />
+                    </StyledSectionName>
                   )}
                   <StyledTopNavSidebarNavLinkContainer>
                     <SidebarNavLink
-                      {...item}
                       icon={item.icon || null}
                       isTopNav={true}
                       isInDropdown={true}
@@ -116,6 +130,8 @@ const TopNavSection = ({
                         item
                       )}
                       widgetsDisabled={widgetsDisabled}
+                      isExternal={isExternal}
+                      externalUrl={getExternalPageUrl(item)}
                     >
                       {pageName}
                     </SidebarNavLink>
@@ -160,7 +176,16 @@ const TopNavSection = ({
           isOpen={open}
           data-testid="stTopNavSection"
         >
-          <StyledNavSectionText>{title}</StyledNavSectionText>
+          <StyledNavSectionText>
+            <StreamlitMarkdown
+              source={title}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate
+              inheritFont
+            />
+          </StyledNavSectionText>
           {!hideChevron && (
             <StyledIconContainer>
               <Icon

@@ -39,6 +39,7 @@ import {
   BaseButtonKind,
   CopyButton,
   DynamicIcon,
+  getPopoverContainerStyle,
   Icon,
   IGuestToHostMessage,
   IMenuItem,
@@ -55,6 +56,7 @@ import {
   StyledMenuItemLabel,
   StyledMenuItemRow,
   StyledMenuItemShortcut,
+  StyledMenuPopoverContent,
   StyledMenuVersionFooter,
   StyledMenuVersionRow,
   StyledMenuVersionText,
@@ -156,7 +158,7 @@ interface MenuActionItem {
 }
 
 /** Configuration for a radio menu item (mutually exclusive choice) */
-export interface MenuRadioItem {
+interface MenuRadioItem {
   type: "radio"
   key: string
   label: string
@@ -194,6 +196,26 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
   return item.type === "toggle"
 }
 
+interface BuildMenuDataOptions {
+  isServerConnected: boolean
+  developmentMode: boolean
+  screenCastState: Steps
+  menuItems: PageConfig.IMenuItems | null | undefined
+  hostMenuItems: IMenuItem[]
+  quickRerunCallback: () => void
+  clearCacheCallback: () => void
+  printCallback: () => void
+  screencastCallback: () => void
+  aboutCallback: () => void
+  sendMessageToHost: (message: IGuestToHostMessage) => void
+  isMinimalMode: boolean
+  themeSection: MenuSection
+  runOnSave: boolean
+  onRunOnSaveChange: (runOnSave: boolean) => void
+  allowRunOnSave: boolean
+  metricsMgr: MetricsManager
+}
+
 /**
  * Builds all menu sections as pure data.
  * Returns an array of sections, where each section is an array of item configs.
@@ -216,25 +238,25 @@ function isToggleItem(item: MenuItem): item is MenuToggleItem {
  *   Section 1: Report a bug, Get help, Host items, About
  *   (only shown if any items are configured)
  */
-function buildMenuData(
-  isServerConnected: boolean,
-  developmentMode: boolean,
-  screenCastState: Steps,
-  menuItems: PageConfig.IMenuItems | null | undefined,
-  hostMenuItems: IMenuItem[],
-  quickRerunCallback: () => void,
-  clearCacheCallback: () => void,
-  printCallback: () => void,
-  screencastCallback: () => void,
-  aboutCallback: () => void,
-  sendMessageToHost: (message: IGuestToHostMessage) => void,
-  isMinimalMode: boolean,
-  themeSection: MenuSection,
-  runOnSave: boolean,
-  onRunOnSaveChange: (runOnSave: boolean) => void,
-  allowRunOnSave: boolean,
-  metricsMgr: MetricsManager
-): MenuSection[] {
+function buildMenuData({
+  isServerConnected,
+  developmentMode,
+  screenCastState,
+  menuItems,
+  hostMenuItems,
+  quickRerunCallback,
+  clearCacheCallback,
+  printCallback,
+  screencastCallback,
+  aboutCallback,
+  sendMessageToHost,
+  isMinimalMode,
+  themeSection,
+  runOnSave,
+  onRunOnSaveChange,
+  allowRunOnSave,
+  metricsMgr,
+}: BuildMenuDataOptions): MenuSection[] {
   const isServerDisconnected = !isServerConnected
 
   const commonItems = buildCommonItems(
@@ -703,13 +725,37 @@ function MenuContent({
         break
       }
       case "Tab": {
-        // Per WAI-ARIA, Tab/Shift+Tab close the menu and move focus to
-        // the next/previous tabbable element.  preventDefault is needed
-        // to stop react-focus-lock from cycling focus within the popover.
-        // The returnFocus callback uses focusNextElement/focusPrevElement
-        // to advance focus from the menu button after the popover unmounts.
+        if (streamlitVersion) {
+          // A CopyButton exists in the version footer outside role="menu"
+          // but inside the popover's focus-lock.  Let focus-lock move
+          // focus there instead of closing the menu immediately.
+          break
+        }
+        // No footer — close the menu and advance focus per WAI-ARIA.
         event.preventDefault()
         closeMenu(event.shiftKey ? "shift-tab" : "tab")
+        break
+      }
+      default:
+        break
+    }
+  }
+
+  const handleFooterKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    switch (event.key) {
+      case "Tab": {
+        if (!event.shiftKey) {
+          // Forward Tab from the footer: close menu and advance focus
+          // past the trigger, same as Tab from a bare menu.
+          event.preventDefault()
+          closeMenu("tab")
+        }
+        // Shift+Tab: focus-lock moves focus back into the menu.
+        break
+      }
+      case "Escape": {
+        event.preventDefault()
+        closeMenu("escape")
         break
       }
       default:
@@ -799,17 +845,19 @@ function MenuContent({
   }
 
   return (
-    <StyledMenuContainer
-      ref={menuListRef}
-      data-testid="stMainMenuList"
-      aria-label="Main menu"
-      role="menu"
-      onFocus={handleMenuFocus}
-      onKeyDown={handleKeyDown}
-    >
-      {elements}
+    <StyledMenuPopoverContent>
+      <StyledMenuContainer
+        ref={menuListRef}
+        data-testid="stMainMenuList"
+        aria-label="Main menu"
+        role="menu"
+        onFocus={handleMenuFocus}
+        onKeyDown={handleKeyDown}
+      >
+        {elements}
+      </StyledMenuContainer>
       {streamlitVersion && (
-        <StyledMenuVersionFooter>
+        <StyledMenuVersionFooter onKeyDown={handleFooterKeyDown}>
           <StyledMenuVersionRow>
             <StyledMenuVersionText>
               Made with Streamlit v{formatDisplayVersion(streamlitVersion)}
@@ -825,7 +873,7 @@ function MenuContent({
           </StyledMenuVersionRow>
         </StyledMenuVersionFooter>
       )}
-    </StyledMenuContainer>
+    </StyledMenuPopoverContent>
   )
 }
 
@@ -868,7 +916,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
   // when data props (isServerConnected, developmentMode, etc.) change.
   const sections = useMemo(
     () =>
-      buildMenuData(
+      buildMenuData({
         isServerConnected,
         developmentMode,
         screenCastState,
@@ -885,8 +933,8 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
         runOnSave,
         onRunOnSaveChange,
         allowRunOnSave,
-        metricsMgr
-      ),
+        metricsMgr,
+      }),
     [
       isServerConnected,
       developmentMode,
@@ -1004,7 +1052,7 @@ function MainMenu(props: Readonly<Props>): ReactElement | null {
             className: "stMainMenuPopover",
           },
           style: {
-            boxShadow: theme.shadows.popover,
+            ...getPopoverContainerStyle(theme),
           },
         },
       }}

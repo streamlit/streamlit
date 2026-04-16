@@ -18,7 +18,7 @@ import { transparentize } from "color2k"
 
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
-import { darkTheme, lightTheme } from "~lib/theme/index"
+import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
   getMetricBackgroundColor,

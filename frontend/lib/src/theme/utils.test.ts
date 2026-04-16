@@ -20,20 +20,13 @@ import { MockInstance } from "vitest"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
-import {
-  baseTheme,
-  createAutoTheme,
-  darkTheme,
-  lightTheme,
-} from "~lib/theme/index"
+import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
-import { LocalStore } from "~lib/util/storageUtils"
-
-import { hasLightBackgroundColor } from "./getColors"
 import {
   AUTO_THEME_NAME,
   bgColorToBaseString,
   computeSpacingStyle,
+  createAutoTheme,
   createCustomThemes,
   createEmotionTheme,
   createSidebarTheme,
@@ -57,7 +50,10 @@ import {
   setCachedThemeSelection,
   sortThemeInputKeys,
   toThemeInput,
-} from "./utils"
+} from "~lib/theme/utils"
+import { LocalStore } from "~lib/util/storageUtils"
+
+import { hasLightBackgroundColor } from "./getColors"
 
 const matchMediaFillers = {
   onchange: null,
@@ -70,17 +66,16 @@ const matchMediaFillers = {
 
 const LOG = getLogger("theme:utils")
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowLocationSearch = (search: string): any => ({
+const windowLocationSearch = (search: string): Pick<Window, "location"> => ({
   location: {
     search,
-  },
+  } as Location,
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const windowMatchMedia = (theme: "light" | "dark"): any => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  matchMedia: (query: any) => ({
+const windowMatchMedia = (
+  theme: "light" | "dark"
+): Pick<Window, "matchMedia"> => ({
+  matchMedia: (query: string) => ({
     matches: query === `(prefers-color-scheme: ${theme})`,
     media: query,
     ...matchMediaFillers,
@@ -503,6 +498,54 @@ describe("createTheme", () => {
       lightTheme.emotion.colors.secondaryBg
     )
   })
+
+  const modernThemeColors = [
+    "oklch(0.21 0.01 260)",
+    "oklab(0.5 0.1 -0.1)",
+    "lab(50 40 -20)",
+    "lch(50 30 270)",
+    "rgb(34 139 34)",
+    "hsl(145 63% 49%)",
+    "hwb(120 0% 0%)",
+  ]
+
+  const acceptedColors = new Set(modernThemeColors)
+
+  it.each(modernThemeColors)(
+    "keeps accepted modern theme color syntax '%s'",
+    color => {
+      class MockOption {
+        style = {
+          storedColor: "",
+          get color(): string {
+            return this.storedColor
+          },
+          set color(value: string) {
+            this.storedColor = acceptedColors.has(value) ? value : ""
+          },
+        }
+      }
+
+      vi.stubGlobal("Option", MockOption as unknown as typeof Option)
+
+      try {
+        const customTheme = createTheme(
+          CUSTOM_THEME_NAME,
+          new CustomThemeConfig({
+            backgroundColor: color,
+            primaryColor: color,
+          })
+        )
+
+        expect(customTheme.emotion.colors.bgColor).toBe(color)
+        expect(customTheme.emotion.colors.primary).toBe(color)
+        expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
+        expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    }
+  )
 })
 
 describe("getSystemTheme", () => {
@@ -3282,24 +3325,18 @@ describe("createEmotionTheme", () => {
 
       const theme = createEmotionTheme(themeInput)
 
-      expect(theme.metricValueFontSize).toBe(expectedFontSize)
+      expect(theme.fontSizes.metricValueFontSize).toBe(expectedFontSize)
     }
   )
 
-  it("does not set metricValueFontSize if not configured", () => {
+  it("uses default metricValueFontSize if not configured", () => {
     const theme = createEmotionTheme({})
 
-    expect(theme.metricValueFontSize).toBeUndefined()
+    expect(theme.fontSizes.metricValueFontSize).toBe("2.25rem")
   })
 
-  it.each([
-    // Invalid format values
-    "invalid",
-    "rem",
-    "px",
-    " ",
-  ])(
-    "logs a warning and does not set metricValueFontSize for invalid value '%s'",
+  it.each(["invalid", "rem", "px", " ", "0px", "0rem"])(
+    "logs a warning and uses default metricValueFontSize for invalid value '%s'",
     metricValueFontSize => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -3311,39 +3348,12 @@ describe("createEmotionTheme", () => {
       expect(logWarningSpy).toHaveBeenCalledWith(
         `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
       )
-      expect(theme.metricValueFontSize).toBeUndefined()
+      expect(theme.fontSizes.metricValueFontSize).toBe("2.25rem")
     }
   )
 
-  it.each([
-    // Zero with unit (caught by parseFontSize due to falsy 0)
-    "0px",
-    "0rem",
-  ])(
-    "logs a warning and does not set metricValueFontSize for zero value '%s'",
-    metricValueFontSize => {
-      const logWarningSpy = vi.spyOn(LOG, "warn")
-      const themeInput: Partial<CustomThemeConfig> = {
-        metricValueFontSize,
-      }
-
-      const theme = createEmotionTheme(themeInput)
-
-      expect(logWarningSpy).toHaveBeenCalledWith(
-        `Invalid size passed for metricValueFontSize in theme: ${metricValueFontSize}. Falling back to default metricValueFontSize.`
-      )
-      expect(theme.metricValueFontSize).toBeUndefined()
-    }
-  )
-
-  it.each([
-    // Zero without unit, negative values (caught by additional validation)
-    "0",
-    "-10",
-    "-10px",
-    "-10rem",
-  ])(
-    "logs a warning and does not set metricValueFontSize for zero/negative value '%s'",
+  it.each(["0", "-10", "-10px", "-10rem"])(
+    "logs a warning and uses default metricValueFontSize for zero/negative value '%s'",
     metricValueFontSize => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -3355,7 +3365,7 @@ describe("createEmotionTheme", () => {
       expect(logWarningSpy).toHaveBeenCalledWith(
         `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
       )
-      expect(theme.metricValueFontSize).toBeUndefined()
+      expect(theme.fontSizes.metricValueFontSize).toBe("2.25rem")
     }
   )
 
@@ -3366,17 +3376,17 @@ describe("createEmotionTheme", () => {
 
     const theme = createEmotionTheme(themeInput)
 
-    expect(theme.metricValueFontWeight).toBe(600)
+    expect(theme.fontWeights.metricValueFontWeight).toBe(600)
   })
 
-  it("does not set metricValueFontWeight if not configured", () => {
+  it("uses default metricValueFontWeight if not configured", () => {
     const theme = createEmotionTheme({})
 
-    expect(theme.metricValueFontWeight).toBeUndefined()
+    expect(theme.fontWeights.metricValueFontWeight).toBe(400)
   })
 
   it.each([50, 950, -100])(
-    "logs a warning and does not set metricValueFontWeight if value is out of range: %s",
+    "logs a warning and uses default metricValueFontWeight if value is out of range: %s",
     metricValueFontWeight => {
       const logWarningSpy = vi.spyOn(LOG, "warn")
       const themeInput: Partial<CustomThemeConfig> = {
@@ -3388,7 +3398,7 @@ describe("createEmotionTheme", () => {
       expect(logWarningSpy).toHaveBeenCalledWith(
         `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
       )
-      expect(theme.metricValueFontWeight).toBeUndefined()
+      expect(theme.fontWeights.metricValueFontWeight).toBe(400)
     }
   )
 
@@ -3605,6 +3615,7 @@ describe("Font weight configuration coverage", () => {
       "h4FontWeight",
       "h5FontWeight",
       "h6FontWeight",
+      "metricValueFontWeight",
     ]
 
     // List of font weights that SHOULD be calculated based on baseFontWeight

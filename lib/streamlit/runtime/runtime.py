@@ -401,7 +401,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if existing_session_id and session_id_override:
+        if existing_session_id and session_id_override:  # pragma: no cover - defensive
             raise RuntimeError(
                 "Only one of existing_session_id and session_id_override should be set. "
                 "This should never happen."

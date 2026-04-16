@@ -74,7 +74,7 @@ export const sizes = {
   // The minimum width of the menu (used for the dataframe column menu)
   minMenuWidth: "8rem",
   minChatInputFileListHeight: "3rem",
-  chatInputFileIconSize: "2.25rem",
+  uploadedFileIconSize: "2rem",
   headerItemHeight: "1.75rem",
   headerRightContentMaxWidth: "12.5rem",
   chatInputTextareaMinHeight: "1.5rem",
@@ -87,4 +87,5 @@ export const sizes = {
   metricStrokeWidth: 2,
   // Default for box-shadow focus ring width
   focusRingWidth: "0.2rem",
+  fileChipNameMinWidth: "4.875rem",
 }

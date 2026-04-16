@@ -70,18 +70,21 @@ st.header("Spinner - width examples")
 
 if st.button("Run spinner with content width (default)"):
     with st.spinner("Loading with content width...", width="content"):
-        time.sleep(2)
+        # Longer sleep for snapshot tests to complete before spinner disappears
+        time.sleep(5)
 
 if st.button("Run spinner with stretch width"):
     with st.spinner("Loading with stretch width...", width="stretch"):
-        time.sleep(2)
+        # Longer sleep for snapshot tests to complete before spinner disappears
+        time.sleep(5)
 
 if st.button("Run spinner with 300px width"):
     with st.spinner(
         "Loading with 300px width.... the text is long and does not fit in the width",
         width=300,
     ):
-        time.sleep(2)
+        # Longer sleep for snapshot tests to complete before spinner disappears
+        time.sleep(5)
 
 # Regression test for issue #13658: container elements in spinner context
 if st.button("Run spinner with container"):

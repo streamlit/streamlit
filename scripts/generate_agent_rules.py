@@ -32,11 +32,18 @@ List of all `make` commands available for execution from the repository root fol
 ```
 """
 
+GENERATED_FILE_NOTICE: Final[str] = (
+    "<!-- Generated from {agents_md}. Edit that file instead, "
+    "then run: uv run python scripts/generate_agent_rules.py -->"
+)
+
 CURSOR_RULE_TEMPLATE_GLOBS: Final[str] = """---
 description:
 globs: {globs}
 alwaysApply: false
 ---
+
+{notice}
 
 {agents_md_content}
 """
@@ -48,6 +55,8 @@ globs:
 alwaysApply: true
 ---
 
+{notice}
+
 {agents_md_content}
 """
 
@@ -55,11 +64,17 @@ GITHUB_COPILOT_RULE_TEMPLATE_GLOBS: Final[str] = """---
 applyTo: "{globs}"
 ---
 
+{notice}
+
 {agents_md_content}
 """
 
-GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{agents_md_content}
+GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{notice}
+
+{agents_md_content}
 """
+
+CLAUDE_MD_CONTENT: Final[str] = "@./AGENTS.md\n"
 
 
 class AgentRuleFile(TypedDict):
@@ -125,6 +140,20 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "github_copilot": ".github/instructions/workflows.instructions.md",
         "agents_md": ".github/workflows/AGENTS.md",
         "globs": ".github/workflows/**/*.yml",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/scripts.mdc",
+        "github_copilot": ".github/instructions/scripts.instructions.md",
+        "agents_md": "scripts/AGENTS.md",
+        "globs": "scripts/**/*",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/specs.mdc",
+        "github_copilot": ".github/instructions/specs.instructions.md",
+        "agents_md": "specs/AGENTS.md",
+        "globs": "specs/**/*",
         "always_apply": False,
     },
     {
@@ -253,15 +282,20 @@ def generate_agent_rules() -> None:
         with open(agents_md_path, encoding="utf-8") as f:
             agents_md_content = f.read()
 
+        notice = GENERATED_FILE_NOTICE.format(agents_md=rule["agents_md"])
+
         # Write cursor rule file:
 
         if always_apply:
             content = CURSOR_RULE_TEMPLATE_GLOBAL.format(
+                notice=notice,
                 agents_md_content=agents_md_content.strip(),
             )
         else:
             content = CURSOR_RULE_TEMPLATE_GLOBS.format(
-                globs=globs, agents_md_content=agents_md_content.strip()
+                globs=globs,
+                notice=notice,
+                agents_md_content=agents_md_content.strip(),
             )
 
         with open(cursor_mdc_path, "w", encoding="utf-8") as f:
@@ -272,11 +306,14 @@ def generate_agent_rules() -> None:
 
         if always_apply:
             content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL.format(
+                notice=notice,
                 agents_md_content=agents_md_content.strip(),
             )
         else:
             content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBS.format(
-                globs=globs, agents_md_content=agents_md_content.strip()
+                globs=globs,
+                notice=notice,
+                agents_md_content=agents_md_content.strip(),
             )
 
         with open(github_copilot_path, "w", encoding="utf-8") as f:
@@ -284,7 +321,38 @@ def generate_agent_rules() -> None:
         print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 
+def generate_claude_md_files() -> None:
+    """Generate CLAUDE.md files alongside AGENTS.md files.
+
+    Creates a CLAUDE.md file in the same directory as each AGENTS.md file,
+    containing a reference to the AGENTS.md file. Skips the root-level
+    AGENTS.md since the root CLAUDE.md is maintained manually.
+    """
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    for rule in AGENT_RULE_FILES:
+        agents_md_rel_path = rule["agents_md"]
+
+        # Skip root-level AGENTS.md - the root CLAUDE.md is maintained manually
+        if agents_md_rel_path == "AGENTS.md":
+            continue
+
+        agents_md_path = os.path.join(workspace_root, agents_md_rel_path)
+        if not os.path.isfile(agents_md_path):
+            # Skip if AGENTS.md doesn't exist (will be caught by generate_agent_rules)
+            continue
+
+        # Create CLAUDE.md in the same directory as AGENTS.md
+        agents_md_dir = os.path.dirname(agents_md_path)
+        claude_md_path = os.path.join(agents_md_dir, "CLAUDE.md")
+
+        with open(claude_md_path, "w", encoding="utf-8") as f:
+            f.write(CLAUDE_MD_CONTENT)
+        print(f"Generated CLAUDE.md file: {claude_md_path}")
+
+
 if __name__ == "__main__":
     generate_make_commands_skill()
     generate_agent_rules()
+    generate_claude_md_files()
     sync_code_review_instructions()

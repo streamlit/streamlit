@@ -22,6 +22,7 @@ import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
 import viteTsconfigPaths from "vite-tsconfig-paths"
+import path from "path"
 
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
@@ -134,6 +135,10 @@ export default defineConfig(({ command }) => ({
   ],
   resolve: {
     alias: [
+      {
+        find: /^react-uid$/,
+        replacement: path.resolve(__dirname, "src/util/reactUidCompat.ts"),
+      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565
@@ -190,15 +195,21 @@ export default defineConfig(({ command }) => ({
     assetsDir: "static",
     sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
-    rollupOptions: {
+    rolldownOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
         chunkFileNames: `static/js/[name]${HASH}.js`,
         entryFileNames: `static/js/[name]${HASH}.js`,
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
+          const assetNames = assetInfo.names || []
+          const hasAssetExtension = (extensions: string[]): boolean =>
+            assetNames.some(name =>
+              extensions.some(extension => name.endsWith(extension))
+            )
+
           // For CSS files, place them in the /static/css/ directory
-          if (assetInfo.name?.endsWith(".css")) {
+          if (hasAssetExtension([".css"])) {
             // If OMIT_HASH_FROM_MAIN_FILES is set, we don't want to include the
             // hash in the filename of the entry file at the minimum. There could
             // be other files with the same name that cause a conflict, which would
@@ -228,6 +239,18 @@ export default defineConfig(({ command }) => ({
           runtime: `(window.__WEBPACK_PUBLIC_PATH_OVERRIDE || "/") + ${JSON.stringify(
             filename
           )}`,
+        }
+      }
+
+      // Keep CSS font URLs stable under Rolldown by ensuring they point to
+      // the media directory where font assets are emitted.
+      if (hostType === "css" && /\.(woff2?|ttf|otf|eot)$/i.test(filename)) {
+        if (filename.startsWith("static/media/")) {
+          return filename.replace("static/media/", "../media/")
+        }
+
+        if (!filename.includes("/")) {
+          return `../media/${filename}`
         }
       }
 

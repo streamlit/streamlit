@@ -16,7 +16,7 @@
 
 import { FC, memo, useRef, useState } from "react"
 
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useHandleHtmlAndCssContent } from "~lib/components/widgets/BidiComponent/hooks/useHandleHtmlAndCssContent"
 import { useHandleJsContent } from "~lib/components/widgets/BidiComponent/hooks/useHandleJsContent"
 

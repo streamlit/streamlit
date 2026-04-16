@@ -22,22 +22,22 @@ import { getLogger } from "loglevel"
 import { flushSync } from "react-dom"
 import Hotkeys from "react-hot-keys"
 
-import AppView from "@streamlit/app/src/components/AppView"
-import DeployButton from "@streamlit/app/src/components/DeployButton"
-import MainMenu from "@streamlit/app/src/components/MainMenu"
-import StatusWidget from "@streamlit/app/src/components/StatusWidget"
+import AppView from "@streamlit/app/src/components/AppView/AppView"
+import DeployButton from "@streamlit/app/src/components/DeployButton/DeployButton"
+import MainMenu from "@streamlit/app/src/components/MainMenu/MainMenu"
+import StatusWidget from "@streamlit/app/src/components/StatusWidget/StatusWidget"
 import StreamlitContextProvider from "@streamlit/app/src/components/StreamlitContextProvider"
+import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
+import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
 import {
   ConnectionErrorProps,
   DialogProps,
   ScriptCompileErrorProps,
   StreamlitDialog,
   WarningProps,
-} from "@streamlit/app/src/components/StreamlitDialog"
-import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import DialogErrorMessage from "@streamlit/app/src/components/StreamlitDialog/DialogErrorMessage"
+} from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
-import ToolbarActions from "@streamlit/app/src/components/ToolbarActions"
+import ToolbarActions from "@streamlit/app/src/components/ToolbarActions/ToolbarActions"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -193,6 +193,7 @@ interface State {
   hideTopBar: boolean
   hideSidebarNav: boolean
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   navigationPosition: Navigation.Position
   appPages: IAppPage[]
   navSections: string[]
@@ -227,10 +228,14 @@ export const LOG = getLogger("App")
 
 declare global {
   interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    streamlitDebug: any
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    iFrameResizer: any
+    streamlitDebug: {
+      clearForwardMsgCache: () => void
+      disconnectWebsocket: () => void
+      shutdownRuntime: () => void
+    }
+    iFrameResizer: {
+      heightCalculationMethod: () => number
+    }
     __streamlit_profiles__?: Record<
       string,
       CircularBuffer<{
@@ -511,6 +516,9 @@ export class App extends PureComponent<Props, State> {
       blockErrorDialogs: hostConfig.blockErrorDialogs,
     })
 
+    // This can be called again later from onHostConfigResp during reconciliation.
+    // HostCommunicationManager.openHostCommunication is intentionally idempotent,
+    // so repeated setAllowedOrigins calls only update config values.
     this.hostCommunicationMgr.setAllowedOrigins(appConfig)
     this.setAppConfig(appConfig)
 
@@ -606,7 +614,10 @@ export class App extends PureComponent<Props, State> {
 
         // Set the metrics configuration:
         this.metricsMgr.setMetricsConfig(metricsUrl)
-        // Set the allowed origins configuration for the host communication:
+        // Set the allowed origins configuration for the host communication.
+        // This is called even in bypass mode where applyInitialHostConfig may have
+        // already called setAllowedOrigins. HostCommunicationManager handles this
+        // safely by making openHostCommunication idempotent.
         this.hostCommunicationMgr.setAllowedOrigins(appConfig)
         // Set the streamlit-app specific config settings in AppContext:
         this.setAppConfig(appConfig)
@@ -685,8 +696,7 @@ export class App extends PureComponent<Props, State> {
             ScriptRunState.RUNNING,
             ScriptRunState.NOT_RUNNING
           )
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        } catch (err) {
+        } catch {
           // It's okay if this fails, the `measure` call is for debugging/profiling
         }
       }
@@ -941,11 +951,20 @@ export class App extends PureComponent<Props, State> {
   handleMessage = (msgProto: ForwardMsg): void => {
     // We don't have an immutableProto here, so we can't use
     // the dispatchOneOf helper
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const dispatchProto = (obj: any, name: string, funcs: any): any => {
-      const whichOne = obj[name]
+
+    const dispatchProto = (
+      obj: ForwardMsg,
+      name: string,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
+      funcs: Record<string, (value: any) => void>
+    ): void => {
+      const whichOne = (obj as unknown as Record<string, unknown>)[
+        name
+      ] as string
       if (whichOne in funcs) {
-        return funcs[whichOne](obj[whichOne])
+        return funcs[whichOne](
+          (obj as unknown as Record<string, unknown>)[whichOne]
+        )
       }
       throw new Error(`Cannot handle ${name} "${whichOne}".`)
     }
@@ -1590,16 +1609,7 @@ export class App extends PureComponent<Props, State> {
             }
           },
           () => {
-            // Tell the WidgetManager which widgets still exist. It will remove
-            // widget state for widgets that have been removed.
-            const activeWidgetIds = new Set(
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-              Array.from(this.state.elements.getElements())
-                .map(element => getElementId(element))
-                .filter(notUndefined)
-            )
-            this.widgetMgr.removeInactive(activeWidgetIds)
+            this.removeInactiveWidgetState()
           }
         )
       }
@@ -1653,16 +1663,27 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
-        const activeWidgetIds = new Set(
-          // TODO: Update to match React best practices
-          // eslint-disable-next-line @eslint-react/no-access-state-in-setstate
-          Array.from(this.state.elements.getElements())
-            .map(element => getElementId(element))
-            .filter(notUndefined)
-        )
-        this.widgetMgr.removeInactive(activeWidgetIds)
+        this.removeInactiveWidgetState()
       }
     )
+  }
+
+  /**
+   * Remove widget and element state for items no longer present in the
+   * current render tree. Called from setState callbacks where this.state
+   * access is a false positive (the callback runs after the update is
+   * committed). Converting App to a functional component would let us
+   * use useEffect and remove this suppress entirely.
+   */
+  private removeInactiveWidgetState(): void {
+    const { elements, blockIds } = this.state.elements.getActiveIds()
+    const activeIds = new Set([
+      ...Array.from(elements)
+        .map(element => getElementId(element))
+        .filter(notUndefined),
+      ...blockIds,
+    ])
+    this.widgetMgr.removeInactive(activeIds)
   }
 
   /**
@@ -2130,8 +2151,7 @@ export class App extends PureComponent<Props, State> {
       } else {
         windowToPrint = window
       }
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (err) {
+    } catch {
       windowToPrint = window
     } finally {
       if (!windowToPrint) windowToPrint = window
@@ -2208,15 +2228,10 @@ export class App extends PureComponent<Props, State> {
     return "dark"
   }
 
-  isInCloudEnvironment = (): boolean => {
-    const { hostMenuItems } = this.state
-    return hostMenuItems && hostMenuItems?.length > 0
-  }
-
   showDeployButton = (): boolean => {
     return (
+      isLocalhost() &&
       showDevelopmentOptions(this.state.isOwner, this.state.toolbarMode) &&
-      !this.isInCloudEnvironment() &&
       this.sessionInfo.isSet &&
       !this.sessionInfo.isHello
     )
@@ -2399,6 +2414,7 @@ export class App extends PureComponent<Props, State> {
       hideTopBar,
       hideSidebarNav,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       currentPageScriptHash,
       hostHideSidebarNav,
       pageLinkBaseUrl,
@@ -2457,6 +2473,7 @@ export class App extends PureComponent<Props, State> {
         appLogo={elements.logo}
         sidebarChevronDownshift={sidebarChevronDownshift}
         expandSidebarNav={expandSidebarNav}
+        sidebarNavVisibleItems={sidebarNavVisibleItems}
         hideSidebarNav={
           hideSidebarNav ||
           hostHideSidebarNav ||

@@ -56,6 +56,7 @@ pytestmark = pytest.mark.filterwarnings(
                 ("section_header", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("url_pathname", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
                 ("is_hidden", FD.LABEL_OPTIONAL, FD.TYPE_BOOL),
+                ("external_url", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
             },
         ),
         (
@@ -250,6 +251,7 @@ def test_alert_proto_stable():
         ("body", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
         ("format", FD.LABEL_OPTIONAL, FD.TYPE_ENUM),
         ("icon", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
+        ("title", FD.LABEL_OPTIONAL, FD.TYPE_STRING),
         ("width_config", FD.LABEL_OPTIONAL, FD.TYPE_MESSAGE),
     }
 

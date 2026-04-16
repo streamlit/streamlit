@@ -33,14 +33,15 @@ message Block {
     Popover popover = 10;
     Dialog dialog = 11;
     FlexContainer flex_container = 13;
-    StepsContainer steps_container = 16;
-    Step step = 17;
+    StepsContainer steps_container = 18;
+    Step step = 19;
   }
 
   bool allow_empty = 8;
   optional string id = 12;
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
+  optional bool autoscroll = 16;
 
   message Vertical {
     bool border = 1;
@@ -203,5 +204,5 @@ message Block {
     optional bool expanded = 5;
   }
 
-  // Next ID: 18
+  // Next ID: 20
 }

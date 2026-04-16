@@ -20,7 +20,7 @@ import { PLACEMENT, ToasterContainer } from "baseui/toast"
 
 import { useEmotionTheme } from "@streamlit/lib"
 
-export interface EventContainerProps {
+interface EventContainerProps {
   children?: ReactNode
 }
 

@@ -22,6 +22,7 @@ from e2e_playwright.conftest import (
     ImageCompareFunction,
     build_app_url,
     wait_for_app_loaded,
+    wait_for_app_run,
 )
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
@@ -224,6 +225,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Select last option:
     time_dropdown = app.locator('[data-baseweb="popover"]').first
     time_dropdown.get_by_text("00:00").first.click()
+    # Wait for app to process the change before checking values
+    wait_for_app_run(app)
 
     # Check that selection worked:
     expect_markdown(app, "Value 6: 00:00:00")
@@ -235,6 +238,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Type an option:
     empty_time_input_field.type("00:15")
     empty_time_input_field.press("Enter")
+    # Wait for app to process the change before checking values
+    wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 00:15:00")
     expect_markdown(app, "Value 6: 00:00:00")
@@ -282,6 +287,7 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Ensure the previously entered value remains visible
     expect_prefixed_markdown(app, "Updated time input value:", "00:15:00")
 
+    # Ensure element is scrolled into view and stable before snapshot
     dynamic_time_input.scroll_into_view_if_needed()
     assert_snapshot(dynamic_time_input, name="st_time_input-dynamic_updated")
 
@@ -310,9 +316,9 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     # Click on the first time input to open the dropdown
     get_time_input(app, "Time input 1 (8:45)").locator("input").click()
 
-    # Hover over the first option:
+    # Wait for the dropdown to be visible before taking snapshot
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.get_by_text("00:00").first.hover()
+    expect(selection_dropdown).to_be_visible()
 
     # Take a snapshot of the time selection dropdown:
     assert_snapshot(selection_dropdown, name="st_time_input-dropdown-custom-theme")

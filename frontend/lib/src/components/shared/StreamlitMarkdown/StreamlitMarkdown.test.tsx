@@ -18,6 +18,7 @@ import { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
 import { transparentize } from "color2k"
+import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
@@ -970,6 +971,45 @@ describe("StreamlitMarkdown", () => {
     )
   })
 
+  it("renders shimmer text with correct class", () => {
+    render(
+      <StreamlitMarkdown source=":shimmer[Loading...]" allowHTML={false} />
+    )
+    const element = screen.getByText("Loading...")
+    expect(element.tagName.toLowerCase()).toBe("span")
+    expect(element).toHaveClass("stMarkdownShimmer")
+  })
+
+  it("does not apply shimmer class to regular text", () => {
+    render(
+      <StreamlitMarkdown
+        source="Regular text without shimmer"
+        allowHTML={false}
+      />
+    )
+    const element = screen.getByText("Regular text without shimmer")
+    expect(element).not.toHaveClass("stMarkdownShimmer")
+  })
+
+  it("renders shimmer nested inside color directive with correct DOM structure", () => {
+    render(
+      <StreamlitMarkdown
+        source=":red[:shimmer[Loading...]]"
+        allowHTML={false}
+      />
+    )
+    const shimmerElement = screen.getByText("Loading...")
+    expect(shimmerElement).toHaveClass("stMarkdownShimmer")
+    // Verify the parent span has the color directive class (shimmer uses fadedText60,
+    // but the outer :red[] span still has its color class applied)
+    const parentSpan = shimmerElement.parentElement
+    expect(parentSpan).not.toBeNull()
+    expect(parentSpan).toHaveClass("stMarkdownColoredText")
+    // The color style should be applied (the exact value comes from the theme)
+    expect(parentSpan).toHaveAttribute("style")
+    expect(parentSpan?.getAttribute("style")).toContain("color:")
+  })
+
   it("applies truncate styles when truncate is true", () => {
     const source = "This is some text that should be truncated"
     render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)
@@ -1181,11 +1221,146 @@ describe("CustomPreTag", () => {
       'import streamlit as st st.write("Hello")'
     )
   })
+
+  describe("remend integration (streaming markdown)", () => {
+    it.each([
+      ["**incomplete bold", "incomplete bold", "STRONG"],
+      ["*incomplete italic", "incomplete italic", "EM"],
+      ["`incomplete code", "incomplete code", "CODE"],
+      ["**complete bold** text", "complete bold", "STRONG"],
+    ])(
+      "completes incomplete markdown when unterminatedParsing=true: %s -> %s (%s)",
+      (source, expectedText, expectedTag) => {
+        render(
+          <StreamlitMarkdown
+            source={`This is ${source}`}
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+        const element = screen.getByText(expectedText)
+        expect(element).toBeVisible()
+        expect(element.tagName).toBe(expectedTag)
+      }
+    )
+
+    it.each([
+      [
+        "isLabel=true",
+        { isLabel: true, allowHTML: false, unterminatedParsing: true },
+      ],
+      [
+        "allowHTML=true",
+        { isLabel: false, allowHTML: true, unterminatedParsing: true },
+      ],
+      [
+        "unterminatedParsing=false",
+        { isLabel: false, allowHTML: false, unterminatedParsing: false },
+      ],
+      ["unterminatedParsing not set", { isLabel: false, allowHTML: false }],
+    ])("does NOT apply remend when %s", async (_, props) => {
+      const source = "Content with **incomplete bold"
+      render(<StreamlitMarkdown source={source} {...props} />)
+      // Wait for content to render (allowHTML=true triggers async plugin load)
+      const textElement = await screen.findByText(source, { exact: false })
+      expect(textElement).toBeVisible()
+      const container = screen.getByTestId("stMarkdownContainer")
+      expect(container.querySelector("strong")).toBeNull()
+    })
+
+    describe("directive completion during streaming", () => {
+      it.each([
+        // Incomplete directives - should be completed without artifact
+        [":red[incomplete text", "incomplete text"],
+        [":blue[streaming", "streaming"],
+        [":red-background[highlighted", "highlighted"],
+        [":small[small text", "small text"],
+        // Complete directive - should render normally
+        [":red[complete]", "complete"],
+      ])(
+        "renders directive %s without streamdown:incomplete-link artifact",
+        (source, expectedText) => {
+          render(
+            <StreamlitMarkdown
+              source={`This is ${source}`}
+              allowHTML={false}
+              unterminatedParsing={true}
+            />
+          )
+
+          expect(screen.getByText(expectedText)).toBeVisible()
+
+          const container = screen.getByTestId("stMarkdownContainer")
+          expect(container.textContent).not.toContain(
+            "streamdown:incomplete-link"
+          )
+        }
+      )
+
+      it("completes nested incomplete directives", () => {
+        render(
+          <StreamlitMarkdown
+            source=":red-background[:rainbow[nested text"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        expect(container.textContent).toContain("nested text")
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+      })
+
+      it("does not close non-directive brackets in markdown links", () => {
+        // This tests the fix for the issue where `:red[text] and [link`
+        // would incorrectly close the `[link` bracket too.
+        // The handler should only close directive brackets, not markdown link brackets.
+        render(
+          <StreamlitMarkdown
+            source=":red[red text] and [incomplete link"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        expect(container.textContent).toContain("red text")
+        // The important thing is that no streamdown artifact appears and no extra ]
+        // is appended that would break the rendering
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+        // Should not have extra closing brackets added for non-directive [
+        expect(container.textContent).not.toContain("link]")
+      })
+
+      it("handles nested brackets inside directives", () => {
+        // This tests the fix for `:red[text [link` where a non-directive `[`
+        // appears inside an open directive. The handler should track nested brackets
+        // to ensure proper balancing.
+        render(
+          <StreamlitMarkdown
+            source=":red[text [link"
+            allowHTML={false}
+            unterminatedParsing={true}
+          />
+        )
+
+        const container = screen.getByTestId("stMarkdownContainer")
+        // The text should be rendered without the artifact
+        expect(container.textContent).toContain("text [link")
+        expect(container.textContent).not.toContain(
+          "streamdown:incomplete-link"
+        )
+      })
+    })
+  })
 })
 
 describe("CustomMediaTag", () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const mockNode = { tagName: "img" } as any
+  const mockNode = { tagName: "img" } as Element
   const mockProps = {
     src: "test-image.jpg",
     alt: "Test image",
@@ -1260,8 +1435,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element with crossOrigin='$expected' when $scenario",
       ({ tagName, expected, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(
@@ -1326,8 +1500,7 @@ describe("CustomMediaTag", () => {
     ])(
       "should render $tagName element without crossOrigin when $scenario",
       ({ tagName, resourceCrossOriginMode, src, extraProps }) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const node = { tagName } as any
+        const node = { tagName } as Element
         const props = { src, ...extraProps }
 
         const { container } = renderWithContexts(

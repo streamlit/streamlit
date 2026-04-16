@@ -18,7 +18,7 @@ import styled from "@emotion/styled"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 
-export interface StyledResizableContainerProps {
+interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
   minHeight: number
   disableResize: boolean
@@ -42,10 +42,8 @@ export const StyledResizableContainer =
       },
 
       "& .dvn-scroller": {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        ["overflowX" as any]: "auto !important",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        ["overflowY" as any]: "auto !important",
+        ["overflowX" as unknown as string]: "auto !important",
+        ["overflowY" as unknown as string]: "auto !important",
       },
       "& .gdg-search-bar": {
         ...getPopoverContainerStyle(theme),

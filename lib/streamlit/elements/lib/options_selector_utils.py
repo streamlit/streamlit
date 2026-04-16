@@ -15,11 +15,14 @@
 from __future__ import annotations
 
 from enum import Enum, EnumMeta
-from typing import TYPE_CHECKING, Any, Final, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit import config, logger
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.runtime.state import get_session_state
 from streamlit.runtime.state.common import RegisterWidgetResult
 from streamlit.type_util import (
@@ -34,6 +37,45 @@ _LOGGER: Final = logger.get_logger(__name__)
 _FLOAT_EQUALITY_EPSILON: Final[float] = 0.000000000005
 _Value = TypeVar("_Value")
 T = TypeVar("T")
+
+SelectWidgetFilterMode = Literal["fuzzy", "contains", "prefix"] | None
+
+_VALID_SELECT_WIDGET_FILTER_MODES: Final = frozenset(
+    {"fuzzy", "contains", "prefix", None}
+)
+_SELECT_WIDGET_FILTER_MODE_PROTO_MAP: Final = {
+    "fuzzy": ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
+    "contains": ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+    "prefix": ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
+    None: ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
+}
+
+
+def validate_select_widget_filter_mode(
+    filter_mode: SelectWidgetFilterMode,
+    *,
+    accept_new_options: bool,
+    command: Literal["st.selectbox", "st.multiselect"],
+) -> ProtoSelectWidgetFilterMode.ValueType:
+    """Validate ``filter_mode`` and return the protobuf enum value."""
+    try:
+        is_valid_filter_mode = filter_mode in _VALID_SELECT_WIDGET_FILTER_MODES
+    except TypeError:
+        is_valid_filter_mode = False
+
+    if not is_valid_filter_mode:
+        raise StreamlitValueError(
+            "filter_mode",
+            ["fuzzy", "contains", "prefix", "None"],
+        )
+
+    if filter_mode is None and accept_new_options:
+        raise StreamlitAPIException(
+            f"The `filter_mode` argument to `{command}` cannot be None when "
+            "`accept_new_options=True`."
+        )
+
+    return _SELECT_WIDGET_FILTER_MODE_PROTO_MAP[filter_mode]
 
 
 def index_(iterable: Iterable[_Value], x: _Value) -> int:

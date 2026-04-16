@@ -345,8 +345,7 @@ describe("ChartColumn", () => {
     [false, [0]],
   ])(
     "supports numerical array-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: any[] | null) => {
+    (input: unknown, value: number[] | null) => {
       const mockColumn = getBarChartColumn()
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
@@ -361,8 +360,7 @@ describe("ChartColumn", () => {
     [["foo", "bar"]],
     [[0.1, 0.4, "foo"]],
     [[0.1, 0.4, null]],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ])("%p results in error cell", (input: any) => {
+  ])("%p results in error cell", (input: unknown) => {
     const mockColumn = getLineChartColumn()
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)

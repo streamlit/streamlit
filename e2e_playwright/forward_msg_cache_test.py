@@ -87,7 +87,9 @@ def test_check_total_websocket_message_number_and_size(page: Page, app_base_url:
     EXPECTED_WEBSOCKET_MESSAGES_SENT: Final = 34  # noqa: N806
 
     # ForwardMsg's
-    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 55  # noqa: N806
+    # Note: Pandas 3.x uses large_string (64-bit offsets) by default, which produces
+    # ~18% larger Arrow IPC serialization compared to pandas 2.x's string (32-bit).
+    TOTAL_WEBSOCKET_RECEIVED_SIZE_THRESHOLD_MB: Final = 70  # noqa: N806
     # Max number of websocket messages received.
     EXPECTED_WEBSOCKET_MESSAGES_RECEIVED: Final = 2540  # noqa: N806
     # There can be a bit of fluctuation because of optimization logic:
