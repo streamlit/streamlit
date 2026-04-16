@@ -186,6 +186,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
 
     await waitForDateFieldValue(originalDateDisplay)
+    expect(screen.getByTestId("stDateInputField")).toBeVisible()
   })
 
   it("can be disabled", () => {
