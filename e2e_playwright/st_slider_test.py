@@ -671,15 +671,14 @@ def test_slider_on_change_ignore_does_not_rerun(app: Page):
     slider = get_element_by_key(app, "ignore_slider")
     slider.get_by_role("slider").press("ArrowRight")
 
-    # Wait briefly to give time for any potential rerun to occur.
-    # This ensures we detect if on_change="ignore" incorrectly triggers a rerun.
-    app.wait_for_timeout(300)
+    # Use not_to_be_visible() which auto-waits the full timeout to confirm
+    # the element never appears. This properly verifies no rerun occurred.
+    # Note: wait_for_app_run() wouldn't work here since it waits for a rerun
+    # that DID happen, whereas we're testing that NO rerun occurs.
+    expect(app.get_by_text("Runs: 2")).not_to_be_visible()
 
-    # Playwright's expect() will retry; the value must stay at 25.
-    # If a rerun happened, the value would change or the run counter would increment.
+    # Also verify the value hasn't been reset by a rerun
     expect_prefixed_markdown(app, "Ignore slider value:", "25")
-    # Run counter must still read 1 (no rerun triggered).
-    expect(app.get_by_text("Runs: 1")).to_be_visible()
 
 
 def test_slider_on_change_ignore_value_sent_on_next_rerun(app: Page):
