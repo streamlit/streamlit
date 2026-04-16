@@ -111,17 +111,23 @@ jobs:
           PR_HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
           PR_TITLE: ${{ steps.pr-info.outputs.title }}
         run: |
-          PROMPT="You are operating in a GitHub Actions runner to perform QA testing on a pull request.
+          # Create work-tmp directory first
+          mkdir -p work-tmp
+
+          # Write prompt to file using heredoc to avoid shell injection from user-controlled values
+          # Use awk to safely substitute environment variables
+          cat > work-tmp/prompt-template.txt << 'PROMPT_EOF'
+          You are operating in a GitHub Actions runner to perform QA testing on a pull request.
 
           ## Context
 
-          - Repository: $REPOSITORY
+          - Repository: %%REPOSITORY%%
           - Main branch: develop
-          - PR Number: $PR_NUMBER_ENV
-          - PR URL: $PR_HTML_URL
-          - PR Title: $PR_TITLE
-          - Base Ref: $PR_BASE_REF
-          - Head Ref: $PR_HEAD_REF
+          - PR Number: %%PR_NUMBER_ENV%%
+          - PR URL: %%PR_HTML_URL%%
+          - PR Title: %%PR_TITLE%%
+          - Base Ref: %%PR_BASE_REF%%
+          - Head Ref: %%PR_HEAD_REF%%
 
           The repository is checked out at the PR's head commit with full git history.
           The dev environment is fully set up - you can run make commands.
@@ -143,7 +149,7 @@ jobs:
              - Accessibility considerations
              - Performance implications
 
-          3. **Execute manual testing**: Use \`make debug <test_script.py>\` to start the Streamlit app and test interactively using Playwright. Create test scripts as needed to verify functionality.
+          3. **Execute CI-safe testing**: Use only non-interactive, headless, time-bounded commands that exit on their own. Do not use `make debug`, `make frontend-dev`, or any other long-running dev server. Prefer targeted repo-supported commands such as `make check`, `make python-tests`, `make frontend-tests`, and `make run-e2e-test <filename>` for relevant Playwright/E2E coverage. If you run shell commands directly, ensure each one has an explicit timeout so the workflow cannot hang.
 
           4. **Document findings**: Write a comprehensive QA report including:
              - Test scenarios executed
@@ -153,11 +159,11 @@ jobs:
 
           ## Output
 
-          Write your QA report to \`work-tmp/qa-report.md\` (create the directory if needed).
+          Write your QA report to `work-tmp/qa-report.md` (create the directory if needed).
 
           The report should use this structure:
 
-          \`\`\`markdown
+          ```markdown
           # QA Testing Report
 
           ## PR Summary
@@ -181,11 +187,24 @@ jobs:
           **PASS** / **FAIL** / **NEEDS_WORK**
 
           Brief justification for the verdict.
-          \`\`\`
-          "
-          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+          ```
+          PROMPT_EOF
 
-          # Ensure report exists
+          # Safely substitute environment variables using awk
+          awk '{
+            gsub(/%%REPOSITORY%%/, ENVIRON["REPOSITORY"]);
+            gsub(/%%PR_NUMBER_ENV%%/, ENVIRON["PR_NUMBER_ENV"]);
+            gsub(/%%PR_HTML_URL%%/, ENVIRON["PR_HTML_URL"]);
+            gsub(/%%PR_TITLE%%/, ENVIRON["PR_TITLE"]);
+            gsub(/%%PR_BASE_REF%%/, ENVIRON["PR_BASE_REF"]);
+            gsub(/%%PR_HEAD_REF%%/, ENVIRON["PR_HEAD_REF"]);
+            print
+          }' work-tmp/prompt-template.txt > work-tmp/prompt.txt
+
+          PROMPT=$(cat work-tmp/prompt.txt)
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
+
+          # Ensure report exists (fallback if cursor-agent fails)
           mkdir -p work-tmp
           if [ ! -f work-tmp/qa-report.md ]; then
             echo "# QA Testing Report" > work-tmp/qa-report.md
@@ -196,13 +215,16 @@ jobs:
             echo "**UNKNOWN**" >> work-tmp/qa-report.md
           fi
 
-          # Extract verdict for labeling
-          if grep -q "**PASS**" work-tmp/qa-report.md; then
-            echo "PASS" > work-tmp/verdict.txt
-          elif grep -q "**FAIL**" work-tmp/qa-report.md; then
+          # Extract verdict for labeling from the Verdict section only
+          # Use sed to extract the Verdict section, then grep with -F for fixed-string matching
+          # Check FAIL and NEEDS_WORK first to avoid false positives from test result tables
+          VERDICT_SECTION=$(sed -n '/^## Verdict/,/^## /p' work-tmp/qa-report.md | head -5)
+          if echo "$VERDICT_SECTION" | grep -qF "**FAIL**"; then
             echo "FAIL" > work-tmp/verdict.txt
-          elif grep -q "**NEEDS_WORK**" work-tmp/qa-report.md; then
+          elif echo "$VERDICT_SECTION" | grep -qF "**NEEDS_WORK**"; then
             echo "NEEDS_WORK" > work-tmp/verdict.txt
+          elif echo "$VERDICT_SECTION" | grep -qF "**PASS**"; then
+            echo "PASS" > work-tmp/verdict.txt
           else
             echo "UNKNOWN" > work-tmp/verdict.txt
           fi
@@ -241,6 +263,7 @@ jobs:
         continue-on-error: true
         with:
           name: qa-testing-output
+          path: qa-artifacts
 
       - name: Post missing key notice
         if: needs.check-secrets.outputs.has_key == 'false'
@@ -267,15 +290,15 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           MODEL_NAME: ${{ env.MODEL }}
         run: |
-          if [ -f qa-report.md ]; then
+          if [ -f qa-artifacts/work-tmp/qa-report.md ]; then
             # Add footer to report
             {
               echo ""
               echo "---"
               echo "*This is an automated QA report by \`$MODEL_NAME\`.*"
-            } >> qa-report.md
+            } >> qa-artifacts/work-tmp/qa-report.md
 
-            gh pr comment "$PR_NUMBER_ENV" --body-file qa-report.md --repo "$REPOSITORY"
+            gh pr comment "$PR_NUMBER_ENV" --body-file qa-artifacts/work-tmp/qa-report.md --repo "$REPOSITORY"
           else
             gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI QA Testing completed but no report was generated.**
 
@@ -304,12 +327,12 @@ jobs:
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
         run: |
-          if [ ! -f verdict.txt ]; then
+          if [ ! -f qa-artifacts/work-tmp/verdict.txt ]; then
             echo "Warning: verdict.txt not found, skipping label"
             exit 0
           fi
 
-          VERDICT=$(cat verdict.txt | tr -d '[:space:]')
+          VERDICT=$(cat qa-artifacts/work-tmp/verdict.txt | tr -d '[:space:]')
           case "$VERDICT" in
             FAIL)
               echo "Adding 'do-not-merge' label"
@@ -337,7 +360,7 @@ jobs:
             if [ "$HAS_KEY" = "false" ]; then
               echo "- Note: API key not available (fork PR)"
             fi
-            if [ -f verdict.txt ]; then
-              echo "- Verdict: $(cat verdict.txt)"
+            if [ -f qa-artifacts/work-tmp/verdict.txt ]; then
+              echo "- Verdict: $(cat qa-artifacts/work-tmp/verdict.txt)"
             fi
           } >> "$GITHUB_STEP_SUMMARY"
