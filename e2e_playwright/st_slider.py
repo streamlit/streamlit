@@ -369,3 +369,19 @@ bound_ss = st.slider(
     bind="query-params",
 )
 st.write("Bound ss value:", bound_ss)
+
+# --- on_change="ignore" slider ---
+
+# Slider 37 - on_change="ignore" suppresses rerun
+ignore_slider = st.slider(
+    "Ignore change slider",
+    min_value=0,
+    max_value=100,
+    value=25,
+    key="ignore_slider",
+    on_change="ignore",
+)
+st.write("Ignore slider value:", ignore_slider)
+
+if st.button("Apply ignore slider", key="apply_ignore"):
+    st.write("Applied ignore slider value:", ignore_slider)

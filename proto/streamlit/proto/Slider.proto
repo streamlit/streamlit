@@ -61,5 +61,9 @@ message Slider {
 
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 19;
-  // Next: 20
+
+  // Controls whether changing the widget value triggers a rerun.
+  // When true, value changes are stored in frontend only without triggering a rerun.
+  bool ignore_rerun = 20;
+  // Next: 21
 }

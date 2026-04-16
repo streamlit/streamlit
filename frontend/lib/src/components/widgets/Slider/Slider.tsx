@@ -490,23 +490,17 @@ function updateWidgetMgrState(
   vws: ValueWithSource<number[]>,
   fragmentId: string | undefined
 ): void {
+  // ignoreRerun suppresses reruns outside forms; forms already batch changes.
+  const shouldIgnoreRerun = element.ignoreRerun && !element.formId
+  const source = { fromUi: vws.fromUi && !shouldIgnoreRerun }
+
   if (isSelectSlider(element)) {
     // For select_slider, convert indices to string values
     const stringValues = indicesToStringValues(vws.value, element.options)
-    widgetMgr.setStringArrayValue(
-      element,
-      stringValues,
-      { fromUi: vws.fromUi },
-      fragmentId
-    )
+    widgetMgr.setStringArrayValue(element, stringValues, source, fragmentId)
   } else {
     // For regular slider, use numeric values directly
-    widgetMgr.setDoubleArrayValue(
-      element,
-      vws.value,
-      { fromUi: vws.fromUi },
-      fragmentId
-    )
+    widgetMgr.setDoubleArrayValue(element, vws.value, source, fragmentId)
   }
 }
 

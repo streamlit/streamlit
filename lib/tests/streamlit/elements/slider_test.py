@@ -15,6 +15,7 @@
 """slider unit test."""
 
 from datetime import date, datetime, time, timedelta, timezone
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -631,3 +632,32 @@ class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.slider
         assert c.query_param_key == "my_key"
         assert list(c.default) == [25, 75]
+
+
+class SliderOnChangeModeTest(DeltaGeneratorTestCase):
+    """Test on_change mode functionality (rerun, ignore, callable)."""
+
+    @parameterized.expand(
+        [
+            ("ignore", "ignore", True),
+            ("rerun", "rerun", False),
+            ("none", None, False),
+            ("callback", lambda: None, False),
+        ]
+    )
+    def test_on_change_mode_sets_ignore_rerun_proto_field(
+        self, _name: str, on_change: Any, expected_ignore_rerun: bool
+    ):
+        """Test that on_change modes correctly set the ignore_rerun proto field."""
+        st.slider("the label", on_change=on_change)
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.ignore_rerun is expected_ignore_rerun
+
+    def test_on_change_invalid_mode_raises_exception(self):
+        """Test that invalid on_change mode raises StreamlitAPIException."""
+        with pytest.raises(st.errors.StreamlitAPIException) as exc_info:
+            st.slider("the label", on_change="invalid")
+
+        assert "'invalid'" in str(exc_info.value)
+        assert "on_change" in str(exc_info.value)

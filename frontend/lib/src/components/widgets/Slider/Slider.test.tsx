@@ -733,3 +733,49 @@ describe("Slider query param binding", () => {
     expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
   })
 })
+
+describe("on_change='ignore' mode", () => {
+  it.each([
+    [true, false], // ignoreRerun=true -> fromUi=false (prevents rerun)
+    [false, true], // ignoreRerun=false -> fromUi=true (normal behavior)
+  ])(
+    "sets fromUi based on ignoreRerun=%s (outside form)",
+    async (ignoreRerun, expectedFromUi) => {
+      const props = getProps({ ignoreRerun })
+      vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+      render(<Slider {...props} />)
+
+      const slider = screen.getByRole("slider")
+      await triggerChangeEvent(slider, "ArrowRight")
+
+      expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+        props.element,
+        [6],
+        { fromUi: expectedFromUi },
+        undefined
+      )
+    }
+  )
+
+  it("keeps fromUi true when ignoreRerun is true but widget is in a form", async () => {
+    const props = getProps({
+      ignoreRerun: true,
+      formId: "testForm",
+    })
+    vi.spyOn(props.widgetMgr, "setDoubleArrayValue")
+
+    render(<Slider {...props} />)
+
+    const slider = screen.getByRole("slider")
+    await triggerChangeEvent(slider, "ArrowRight")
+
+    // In a form, ignoreRerun has no effect - forms already batch changes
+    expect(props.widgetMgr.setDoubleArrayValue).toHaveBeenCalledWith(
+      props.element,
+      [6],
+      { fromUi: true },
+      undefined
+    )
+  })
+})

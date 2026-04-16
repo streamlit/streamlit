@@ -51,6 +51,11 @@ WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
 
+# Type for the on_change/on_click mode parameter
+# "rerun" (default): triggers a rerun when the widget value changes
+# "ignore": stores the value without triggering a rerun
+OnChangeMode: TypeAlias = Literal["rerun", "ignore"]
+
 # Type for the bind parameter on widgets
 # Currently only supports binding to query params
 BindOption: TypeAlias = Literal["query-params"] | None

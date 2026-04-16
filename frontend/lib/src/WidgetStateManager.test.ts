@@ -235,6 +235,18 @@ describe("Widget State Manager", () => {
     }
   )
 
+  it("does not trigger rerun when fromUi is false", () => {
+    const widget = MOCK_WIDGET
+    widgetMgr.setDoubleArrayValue(
+      widget,
+      [4.4, 5.5],
+      { fromUi: false },
+      undefined
+    )
+    expect(widgetMgr.getDoubleArrayValue(widget)).toEqual([4.4, 5.5])
+    expect(sendBackMsg).not.toHaveBeenCalled()
+  })
+
   it.each([false, true])(
     "sets ArrowTable value correctly (insideForm=%s)",
     async insideForm => {
