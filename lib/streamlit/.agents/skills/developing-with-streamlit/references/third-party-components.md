@@ -113,18 +113,29 @@ st_folium(m, width=700)
 
 ### streamlit-pivot-table
 
-Interactive pivot table component for data exploration.
+Interactive pivot tables with drag-and-drop dimensions, aggregation, and drill-down. Maintained by Streamlit.
 
 - **Repo:** https://github.com/streamlit/streamlit-pivot-table
+- **Docs:** https://pypi.org/project/streamlit-pivot/
 
 ```bash
-uv add streamlit-pivot-table
+uv add streamlit-pivot
 ```
 
 ```python
-from streamlit_pivot_table import pivot_table
+import pandas as pd
+from streamlit_pivot import st_pivot_table
 
-pivot_table(df)
+df = pd.read_csv("sales.csv")
+result = st_pivot_table(
+    df,
+    key="my_pivot",
+    rows=["Region"],
+    columns=["Year"],
+    values=["Revenue"],
+    aggregation={"Revenue": "sum"},
+    show_totals=True,
+)
 ```
 
 ### streamlit-extras
@@ -139,17 +150,22 @@ uv add streamlit-extras
 ```
 
 ```python
-from streamlit_extras.image_selector import image_selector
+from streamlit_extras.pagination import pagination
 
-# Let users click on regions of an image
-selection = image_selector(image, selections=["Region A", "Region B"])
+page = pagination(num_pages=10, default=1, key="my_pages")
+st.write(f"Current page: {page}")
 ```
 
 ```python
-from streamlit_extras.pagination import pagination
+from annotated_text import annotated_text
 
-# Paginate through a list of items
-page = pagination(st.session_state.get("items", list(range(100))), page_size=10)
+annotated_text(
+    "This ",
+    ("is", "verb", "#8ef"),
+    " some ",
+    ("annotated", "adj", "#faa"),
+    ("text", "noun", "#afa"),
+)
 ```
 
 ## Discover more
