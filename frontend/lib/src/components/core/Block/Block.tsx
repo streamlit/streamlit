@@ -38,14 +38,13 @@ import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import Tabs from "~lib/components/elements/Tabs/Tabs"
 import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { notNullOrUndefined } from "~lib/util/utils"
-
-import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
 import {

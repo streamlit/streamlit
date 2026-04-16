@@ -343,6 +343,9 @@ class LockedCursor(Cursor):
     def props(self) -> Any:
         return self._props
 
-    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+    def lock_element(self, **props: Any) -> LockedCursor:
         self._props = props
         return self
+
+    def get_locked_cursor(self, **props: Any) -> LockedCursor:
+        return self.lock_element(**props)
