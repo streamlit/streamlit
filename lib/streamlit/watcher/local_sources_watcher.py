@@ -192,8 +192,7 @@ class LocalSourcesWatcher:
                 all_to_evict.add(key)
 
         for name in all_to_evict:
-            if name in sys.modules:
-                del sys.modules[name]
+            sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():

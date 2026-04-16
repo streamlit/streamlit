@@ -18,7 +18,6 @@ import gc
 import sys
 import threading
 import types
-from collections.abc import Callable
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer

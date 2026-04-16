@@ -592,6 +592,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_module_eviction_deferred_until_flush(self, fob):
+        """Modules stay in sys.modules after on_path_changed until flush."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         key = os.path.realpath(DUMMY_MODULE_1_FILE)
         lsw._watched_modules = {
@@ -605,6 +606,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_second_flush_pending_evictions_is_noop(self, fob):
+        """A second flush after clearing pending evictions is a safe no-op."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         key = os.path.realpath(DUMMY_MODULE_1_FILE)
         lsw._watched_modules = {
@@ -617,6 +619,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_pep420_child_names_evicted_on_flush(self, fob):
+        """Child submodules (PEP 420) are evicted along with the parent on flush."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         mypackage = types.ModuleType("mypackage")
         sub = types.ModuleType("mypackage.sub")
@@ -634,6 +637,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_callbacks_see_sys_modules_before_flush(self, fob):
+        """Callbacks fire during on_path_changed and observe pre-eviction sys.modules."""
         seen: list[bool] = []
 
         def callback(_filepath: str) -> None:
@@ -651,6 +655,7 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
     @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
     def test_concurrent_on_path_changed_accumulates_evictions(self, fob):
+        """Concurrent watcher threads accumulate evictions without losing entries."""
         lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
         trigger1 = os.path.realpath(DUMMY_MODULE_1_FILE)
         trigger2 = os.path.realpath(DUMMY_MODULE_2_FILE)

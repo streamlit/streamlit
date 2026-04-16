@@ -56,6 +56,7 @@ def test_pickling_fails_when_class_rebound_in_sys_modules() -> None:
 
 
 def test_pickling_succeeds_when_sys_modules_unchanged() -> None:
+    """Pickle round-trips successfully when sys.modules is not mutated."""
     name = "_streamlit_gh14593_pickle_ok_mod"
     mod = types.ModuleType(name)
 
