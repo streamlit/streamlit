@@ -630,11 +630,13 @@ class SliderMixin:
             - ``"rerun"`` (default): Trigger a script rerun when the value
               changes. The new value is available via the return value or
               ``st.session_state``.
+
             - ``"ignore"``: Suppress automatic reruns. The value is stored
               in the frontend only until another interaction triggers a
               rerun. Use this for batching multiple widget changes before
               processing them together.
-            - A callable: Trigger a script rerun and invoke the callback.
+
+            - A ``callable``: Trigger a script rerun and invoke the callback.
               The callback receives the values from ``args`` and ``kwargs``,
               if provided. To access the new slider value, use the return
               value or ``st.session_state``.
