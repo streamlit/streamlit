@@ -95,6 +95,10 @@ jobs:
       - name: Build frontend
         run: make frontend-fast
 
+      - name: Clone agent-wiki
+        run: |
+          git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki
+
       - name: Install Cursor CLI
         run: |
           curl https://cursor.com/install -fsS | bash
