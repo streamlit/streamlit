@@ -18,6 +18,7 @@ import gc
 import sys
 import threading
 import types
+from collections.abc import Callable
 from contextlib import contextmanager
 from enum import Enum
 from timeit import default_timer as timer
@@ -178,6 +179,7 @@ class ScriptRunner:
         user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
+        flush_modules_callback: Callable[[], None] | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -216,6 +218,10 @@ class ScriptRunner:
 
         fragment_storage
             The AppSession's FragmentStorage instance.
+
+        flush_modules_callback
+            If set, invoked at the start of each script run (on the script thread)
+            to apply deferred ``sys.modules`` updates from the file watcher.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -228,6 +234,7 @@ class ScriptRunner:
         self._fragment_storage = fragment_storage
 
         self._pages_manager = pages_manager
+        self._flush_modules_callback = flush_modules_callback
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -484,6 +491,9 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
+            if self._flush_modules_callback is not None:
+                self._flush_modules_callback()
+
             _LOGGER.debug("Running script")
             start_time: float = timer()
             prep_time: float = 0  # This will be overwritten once preparations are done.

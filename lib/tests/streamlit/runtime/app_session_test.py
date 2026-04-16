@@ -362,6 +362,7 @@ class AppSessionTest(unittest.TestCase):
             user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
+            flush_modules_callback=session._local_sources_watcher.flush_pending_evictions,
         )
 
         assert session._scriptrunner is not None
