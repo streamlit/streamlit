@@ -60,6 +60,7 @@ from streamlit.runtime.state import (
     WidgetKwargs,
     get_session_state,
     register_widget,
+    validate_on_change_mode,
 )
 
 if TYPE_CHECKING:
@@ -786,15 +787,7 @@ class SliderMixin:
         maybe_raise_label_warnings(label, label_visibility)
 
         # Validate on_change mode early, before any expensive setup.
-        if (
-            on_change is not None
-            and not callable(on_change)
-            and (not isinstance(on_change, str) or on_change not in {"ignore", "rerun"})
-        ):
-            raise StreamlitAPIException(
-                f"You have passed {on_change!r} to `on_change`. "
-                "Only 'ignore', 'rerun', or a callable is supported."
-            )
+        validate_on_change_mode(on_change)
 
         on_change_callback: WidgetCallback | None = None
         if callable(on_change):

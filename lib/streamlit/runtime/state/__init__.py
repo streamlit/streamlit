@@ -18,6 +18,7 @@ from streamlit.runtime.state.common import (
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
+    validate_on_change_mode,
 )
 from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
@@ -46,4 +47,5 @@ __all__ = [
     "WidgetKwargs",
     "get_session_state",
     "register_widget",
+    "validate_on_change_mode",
 ]

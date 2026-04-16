@@ -259,3 +259,33 @@ def require_valid_user_key(key: str) -> None:
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."
         )
+
+
+def validate_on_change_mode(on_change: WidgetCallback | OnChangeMode | None) -> None:
+    """Validate the on_change parameter for widgets that support mode strings.
+
+    Widgets that support on_change="ignore" or on_change="rerun" should call this
+    function early in their implementation to validate the on_change parameter.
+
+    Parameters
+    ----------
+    on_change
+        The on_change parameter value from the widget call. Can be:
+        - None: No callback, default rerun behavior
+        - A callable: The callback function to execute on change
+        - "rerun": Explicit rerun mode (same as default)
+        - "ignore": Store value without triggering a rerun
+
+    Raises
+    ------
+    StreamlitValueError
+        If on_change is not None, not callable, and not a valid mode string.
+    """
+    # Import here to avoid circular import
+    from streamlit.errors import StreamlitValueError
+
+    if on_change is None or callable(on_change):
+        return
+
+    if not isinstance(on_change, str) or on_change not in {"ignore", "rerun"}:
+        raise StreamlitValueError("on_change", ["'rerun'", "'ignore'", "a callable"])
