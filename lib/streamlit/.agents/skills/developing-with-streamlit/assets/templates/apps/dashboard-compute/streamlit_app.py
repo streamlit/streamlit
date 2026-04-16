@@ -28,6 +28,7 @@ This template uses synthetic data. Replace generate_*_data()
 with your actual data source (e.g., Snowflake queries, cloud APIs, etc.)
 """
 
+import hashlib
 from datetime import date, timedelta
 
 import altair as alt
@@ -67,7 +68,8 @@ def generate_time_series(
     base_values: dict[str, float] | None = None,
 ) -> pd.DataFrame:
     """Generate synthetic time series data by category."""
-    np.random.seed(hash(category_name) % 2**32)
+    seed = int(hashlib.sha256(category_name.encode()).hexdigest(), 16) % 2**32
+    np.random.seed(seed)
 
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
     records = []
@@ -338,20 +340,16 @@ def account_type_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
-            )
+            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
                     filtered, "ds", y_col, "account_type", CHART_HEIGHT, show_percent
                 ),
-                use_container_width=True,
             )
         else:
             st.altair_chart(
                 create_line_chart(filtered, "ds", y_col, "account_type", CHART_HEIGHT),
-                use_container_width=True,
             )
 
 
@@ -419,20 +417,16 @@ def instance_type_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
-            )
+            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
                     filtered, "ds", y_col, "instance_type", CHART_HEIGHT, show_percent
                 ),
-                use_container_width=True,
             )
         else:
             st.altair_chart(
                 create_line_chart(filtered, "ds", y_col, "instance_type", CHART_HEIGHT),
-                use_container_width=True,
             )
 
 
@@ -500,20 +494,16 @@ def region_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
-            )
+            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
                     filtered, "ds", y_col, "region", CHART_HEIGHT, show_percent
                 ),
-                use_container_width=True,
             )
         else:
             st.altair_chart(
                 create_line_chart(filtered, "ds", y_col, "region", CHART_HEIGHT),
-                use_container_width=True,
             )
 
 

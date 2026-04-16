@@ -25,6 +25,8 @@ This template uses synthetic stock data generated in Snowflake.
 Replace the synthetic query with your actual stock data table.
 """
 
+import hashlib
+
 import altair as alt
 import pandas as pd
 
@@ -32,7 +34,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="Stock peer analysis dashboard",
-    page_icon=":chart_with_upwards_trend:",
+    page_icon=":material/query_stats:",
     layout="wide",
 )
 
@@ -42,7 +44,7 @@ st.set_page_config(
 Easily compare stocks against others in their peer group.
 """
 
-""  # Add some space.
+st.space("small")
 
 
 # =============================================================================
@@ -244,6 +246,11 @@ def stocks_to_str(stocks):
 # -----------------------------------------------------------------------------
 
 
+def _stable_hash(s: str) -> int:
+    """Deterministic hash that doesn't vary across Python sessions."""
+    return int(hashlib.sha256(s.encode()).hexdigest(), 16)
+
+
 def _validate_sql_identifier(name: str) -> str:
     """Validate that a string is a safe SQL identifier (letters, digits, underscores).
 
@@ -253,7 +260,10 @@ def _validate_sql_identifier(name: str) -> str:
     import re
 
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
-        raise ValueError(f"Invalid SQL identifier: {name!r}")
+        raise ValueError(
+            f"Ticker {name!r} contains special characters and can't be used "
+            f"with Snowflake synthetic data. Use only letters, digits, and underscores."
+        )
     return name
 
 
@@ -269,9 +279,9 @@ def generate_stock_data_query(tickers: list[str], days: int) -> str:
     ticker_values = []
     for ticker in tickers:
         _validate_sql_identifier(ticker)
-        base_price = STOCK_BASE_PRICES.get(ticker, 100 + hash(ticker) % 400)
-        growth_rate = 0.0003 + (hash(ticker) % 10) * 0.00005
-        volatility = 0.02 + (hash(ticker) % 5) * 0.005
+        base_price = STOCK_BASE_PRICES.get(ticker, 100 + _stable_hash(ticker) % 400)
+        growth_rate = 0.0003 + (_stable_hash(ticker) % 10) * 0.00005
+        volatility = 0.02 + (_stable_hash(ticker) % 5) * 0.005
         ticker_values.append(f"('{ticker}', {base_price}, {growth_rate}, {volatility})")
 
     tickers_cte = ", ".join(ticker_values)
@@ -435,8 +445,7 @@ with right_cell:
         .properties(height=400)
     )
 
-""
-""
+st.space("medium")
 
 # Plot individual stock vs peer average
 """
@@ -484,8 +493,7 @@ for i, ticker in enumerate(tickers):
     )
 
     cell = chart_cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.write("")
-    cell.altair_chart(chart, use_container_width=True)
+    cell.altair_chart(chart)
 
     # Create Delta chart
     plot_data = pd.DataFrame(
@@ -506,11 +514,9 @@ for i, ticker in enumerate(tickers):
     )
 
     cell = chart_cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell.write("")
-    cell.altair_chart(chart, use_container_width=True)
+    cell.altair_chart(chart)
 
-""
-""
+st.space("medium")
 
 """
 ## Raw data

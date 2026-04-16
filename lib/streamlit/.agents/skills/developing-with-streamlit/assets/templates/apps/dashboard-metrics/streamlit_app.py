@@ -25,6 +25,7 @@ This template uses synthetic data. Replace the generate_*_data() functions
 with your own data sources (e.g., Snowflake queries, APIs, etc.)
 """
 
+import hashlib
 from datetime import date, timedelta
 
 import altair as alt
@@ -68,7 +69,8 @@ def generate_metric_data(
     - API call
     - Database query
     """
-    np.random.seed(hash(metric_name) % 2**32)
+    seed = int(hashlib.sha256(metric_name.encode()).hexdigest(), 16) % 2**32
+    np.random.seed(seed)
 
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
     n_days = len(dates)
@@ -395,14 +397,12 @@ def metric_card(
         if "table" in (view_mode or ""):
             st.dataframe(
                 filtered_df,
-                use_container_width=True,
                 height=CHART_HEIGHT,
                 hide_index=True,
             )
         elif y_cols:
             st.altair_chart(
                 render_chart(filtered_df, "ds", y_cols, labels),
-                use_container_width=True,
             )
         else:
             st.info("Select at least one line option.")

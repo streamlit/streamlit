@@ -221,7 +221,7 @@ category_map = {
 }
 selected_category = category_map[category]
 
-st.subheader(f"{category} endpoints", divider="gray")
+st.subheader(f"{category} endpoints")
 
 # Layout: filters on left, chart on right
 filter_col, chart_col = st.columns([1, 2])
@@ -347,13 +347,18 @@ with chart_col:
             .interactive()
         )
 
-        st.altair_chart(chart, width="stretch")
+        st.altair_chart(chart)
 
 # Raw data section
 with st.expander("Raw data", expanded=False, icon=":material/table:"):
     display_df = filtered_data.copy()
+    column_config = {}
     if normalize:
-        display_df["request_count"] = display_df["request_count"].apply(
-            lambda x: f"{x:.2%}"
+        column_config["request_count"] = st.column_config.NumberColumn(
+            "Requests", format="percent"
         )
-    st.dataframe(display_df, width="stretch", hide_index=True)
+    st.dataframe(
+        display_df,
+        hide_index=True,
+        column_config=column_config or None,
+    )

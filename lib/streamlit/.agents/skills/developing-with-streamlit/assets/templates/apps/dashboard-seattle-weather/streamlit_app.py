@@ -17,16 +17,21 @@ import vega_datasets
 
 import streamlit as st
 
-full_df = vega_datasets.data("seattle_weather")
-
 st.set_page_config(
     # Title and icon for the browser's tab bar:
     page_title="Seattle Weather",
-    page_icon=":mostly_sunny:",
+    page_icon=":material/wb_sunny:",
     # Make the content take up the width of the page:
     layout="wide",
 )
 
+
+@st.cache_data
+def load_weather_data():
+    return vega_datasets.data("seattle_weather")
+
+
+full_df = load_weather_data()
 
 """
 # Seattle Weather
@@ -35,14 +40,13 @@ Let's explore the [classic Seattle Weather
 dataset](https://altair-viz.github.io/case_studies/exploring-weather.html)!
 """
 
-""  # Add a little vertical space. Same as st.write("").
-""
+st.space("medium")
 
 """
 ## 2015 Summary
 """
 
-""
+st.space("small")
 
 df_2015 = full_df[full_df["date"].dt.year == 2015]
 df_2014 = full_df[full_df["date"].dt.year == 2014]
@@ -149,8 +153,7 @@ with st.container(horizontal=True, gap="medium"):
             f":material/{weather_icons[weather_name]}: {weather_name.upper()}",
         )
 
-""
-""
+st.space("medium")
 
 """
 ## Compare different years
@@ -169,7 +172,7 @@ df = full_df[full_df["date"].dt.year.isin(selected_years)]
 cols = st.columns([3, 1])
 
 with cols[0].container(border=True, height="stretch"):
-    "### 🌡️ Temperature"
+    "### :material/thermostat: Temperature"
 
     st.altair_chart(
         alt.Chart(df)
@@ -207,7 +210,7 @@ with cols[1].container(border=True, height="stretch"):
 cols = st.columns(2)
 
 with cols[0].container(border=True, height="stretch"):
-    "### 💨 Wind"
+    "### :material/air: Wind"
 
     # Prepare data for st.line_chart - pivot by year
     wind_df = df.copy()
@@ -222,7 +225,7 @@ with cols[0].container(border=True, height="stretch"):
     st.line_chart(wind_pivot, height=300)
 
 with cols[1].container(border=True, height="stretch"):
-    "### 🌧️ Precipitation"
+    "### :material/water_drop: Precipitation"
 
     st.altair_chart(
         alt.Chart(df)
@@ -243,8 +246,7 @@ with cols[1].container(border=True, height="stretch"):
 cols = st.columns(2)
 
 with cols[0].container(border=True, height="stretch"):
-    "### Monthly weather breakdown"
-    ""
+    "### :material/calendar_month: Monthly weather breakdown"
 
     st.altair_chart(
         alt.Chart(df)
@@ -258,6 +260,6 @@ with cols[0].container(border=True, height="stretch"):
     )
 
 with cols[1].container(border=True, height="stretch"):
-    "### Raw data"
+    "### :material/table: Raw data"
 
-    st.dataframe(df)
+    st.dataframe(df, hide_index=True)

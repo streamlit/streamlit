@@ -26,7 +26,9 @@ import pandas as pd
 
 import streamlit as st
 
-st.set_page_config(page_title="Element Explorer", page_icon="🎨", layout="wide")
+st.set_page_config(
+    page_title="Element Explorer", page_icon=":material/palette:", layout="wide"
+)
 
 # Initialize sample data in session state
 if "chart_data" not in st.session_state:
@@ -75,7 +77,7 @@ if section == "Widgets":
         form_cols = st.columns(2)
         form_cols[0].text_input("Name", placeholder="Enter your name")
         form_cols[1].text_input("Email", placeholder="you@example.com")
-        st.form_submit_button("Submit", type="primary", use_container_width=True)
+        st.form_submit_button("Submit", type="primary")
 
     # Selection widgets
     st.subheader("Selection Widgets")
@@ -158,7 +160,6 @@ elif section == "Data":
     )
     st.dataframe(
         df,
-        use_container_width=True,
         hide_index=True,
         column_config={
             "Salary": st.column_config.NumberColumn(format="$%d"),
@@ -283,7 +284,7 @@ elif section == "Layouts":
     st.subheader("Expander")
     with st.expander("Click to expand"):
         st.write("This content is hidden by default.")
-        st.image("https://placehold.co/400x200/29B5E8/white?text=Expanded+Content")
+        st.image("https://placehold.co/400x200?text=Expanded+Content")
 
     # Popover
     st.subheader("Popover")

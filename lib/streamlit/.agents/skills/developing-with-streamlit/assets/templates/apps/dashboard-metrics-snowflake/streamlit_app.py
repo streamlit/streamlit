@@ -421,14 +421,12 @@ def metric_card(
         if "table" in (view_mode or ""):
             st.dataframe(
                 filtered_df,
-                use_container_width=True,
                 height=CHART_HEIGHT,
                 hide_index=True,
             )
         elif y_cols:
             st.altair_chart(
                 render_chart(filtered_df, "ds", y_cols, labels),
-                use_container_width=True,
             )
         else:
             st.info("Select at least one line option.")

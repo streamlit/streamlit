@@ -332,7 +332,7 @@ with st.container(border=True):
         leaderboard,
         column_config={
             "company_name": st.column_config.TextColumn(
-                "Company (👋 click to view details)",
+                "Company (click to view details)",
                 width="medium",
             ),
             "account_type": st.column_config.MultiselectColumn(
@@ -384,7 +384,6 @@ with st.container(border=True):
             "segment",
         ],
         hide_index=True,
-        use_container_width=True,
         on_select="rerun",
         selection_mode="single-cell",
         key="company_leaderboard",

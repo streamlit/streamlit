@@ -120,7 +120,10 @@ def _validate_sql_identifier(name: str) -> str:
     SQL injection if the function is ever modified to accept dynamic input.
     """
     if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
-        raise ValueError(f"Invalid SQL identifier: {name!r}")
+        raise ValueError(
+            f"Identifier {name!r} contains special characters and can't be used "
+            f"in Snowflake synthetic queries. Use only letters, digits, and underscores."
+        )
     return name
 
 
@@ -393,20 +396,16 @@ def account_type_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
-            )
+            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
                     filtered, "ds", y_col, "account_type", CHART_HEIGHT, show_percent
                 ),
-                use_container_width=True,
             )
         else:
             st.altair_chart(
                 create_line_chart(filtered, "ds", y_col, "account_type", CHART_HEIGHT),
-                use_container_width=True,
             )
 
 
@@ -474,20 +473,16 @@ def instance_type_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
-            )
+            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
                     filtered, "ds", y_col, "instance_type", CHART_HEIGHT, show_percent
                 ),
-                use_container_width=True,
             )
         else:
             st.altair_chart(
                 create_line_chart(filtered, "ds", y_col, "instance_type", CHART_HEIGHT),
-                use_container_width=True,
             )
 
 
@@ -555,20 +550,16 @@ def region_metric():
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 
         if "table" in (view_mode or ""):
-            st.dataframe(
-                filtered, use_container_width=True, height=CHART_HEIGHT, hide_index=True
-            )
+            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
                     filtered, "ds", y_col, "region", CHART_HEIGHT, show_percent
                 ),
-                use_container_width=True,
             )
         else:
             st.altair_chart(
                 create_line_chart(filtered, "ds", y_col, "region", CHART_HEIGHT),
-                use_container_width=True,
             )
 
 

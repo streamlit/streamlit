@@ -20,7 +20,7 @@ import streamlit as st
 
 st.set_page_config(
     page_title="Stock peer analysis dashboard",
-    page_icon=":chart_with_upwards_trend:",
+    page_icon=":material/query_stats:",
     layout="wide",
 )
 
@@ -30,8 +30,7 @@ st.set_page_config(
 Easily compare stocks against others in their peer group.
 """
 
-""  # Add some space.
-
+st.space("small")
 cols = st.columns([1, 3])
 # Will declare right cell later to avoid showing it when no data.
 
@@ -198,7 +197,7 @@ right_cell = cols[1].container(
 )
 
 
-@st.cache_resource(show_spinner=False, ttl="6h")
+@st.cache_data(show_spinner=False, ttl="6h")
 def load_data(tickers, period):
     tickers_obj = yf.Tickers(tickers)
     data = tickers_obj.history(period=period)
@@ -267,8 +266,7 @@ with right_cell:
         .properties(height=400)
     )
 
-""
-""
+st.space("medium")
 
 # Plot individual stock vs peer average
 """
@@ -316,8 +314,7 @@ for i, ticker in enumerate(tickers):
     )
 
     cell = cols[(i * 2) % NUM_COLS].container(border=True)
-    cell.write("")
-    cell.altair_chart(chart, width="stretch")
+    cell.altair_chart(chart)
 
     # Create Delta chart
     plot_data = pd.DataFrame(
@@ -338,11 +335,9 @@ for i, ticker in enumerate(tickers):
     )
 
     cell = cols[(i * 2 + 1) % NUM_COLS].container(border=True)
-    cell.write("")
-    cell.altair_chart(chart, width="stretch")
+    cell.altair_chart(chart)
 
-""
-""
+st.space("medium")
 
 """
 ## Raw data
