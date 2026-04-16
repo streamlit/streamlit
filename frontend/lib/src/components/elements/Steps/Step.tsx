@@ -86,21 +86,11 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
   const chevronIcon = isExpanded
     ? ":material/keyboard_arrow_down:"
     : ":material/keyboard_arrow_right:"
-  const isRunning = state === BlockProto.Step.State.RUNNING
 
   // Determine which icon to show:
-  // 1. Chevron when hovering expandable step
-  // 2. Spinner when running
-  // 3. Custom icon or default circle otherwise
-  const getIconValue = (): string => {
-    if (showChevron) {
-      return chevronIcon
-    }
-    if (isRunning) {
-      return "spinner"
-    }
-    return icon || ":material/circle:"
-  }
+  // 1. Chevron when hovering expandable step (overrides all other icons)
+  // 2. Icon from backend (already derived from state if not custom)
+  const displayIcon = showChevron ? chevronIcon : icon || ":material/circle:"
 
   return (
     <StyledStep
@@ -112,7 +102,7 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       <StyledStepIconColumn>
         <StyledStepConnector data-testid="stStepConnector" />
         <StyledStepIconWrapper state={state} isHovered={showChevron}>
-          <DynamicIcon iconValue={getIconValue()} size="lg" />
+          <DynamicIcon iconValue={displayIcon} size="lg" />
         </StyledStepIconWrapper>
       </StyledStepIconColumn>
       <StyledStepContent>

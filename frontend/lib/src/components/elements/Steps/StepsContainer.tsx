@@ -27,7 +27,10 @@ interface StepsContainerProps {
 
 const StepsContainer: React.FC<
   React.PropsWithChildren<StepsContainerProps>
-> = ({ children }): ReactElement => {
+> = ({
+  // element and isStale are required by Block.tsx but not used
+  children,
+}): ReactElement => {
   return (
     <StyledStepsContainer className="stSteps" data-testid="stSteps">
       <StyledStepsList data-testid="stStepsList">{children}</StyledStepsList>

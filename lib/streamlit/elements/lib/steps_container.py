@@ -242,33 +242,10 @@ class StepsContainer(DeltaGenerator):
                 raise StreamlitAPIException("height must be a positive integer")
             block_proto.height_config.pixel_height = height
 
-        delta_path: list[int] = (
-            parent._active_dg._cursor.delta_path if parent._active_dg._cursor else []
-        )
-
-        steps_container = cast(
+        return cast(
             "StepsContainer",
             parent._block(block_proto=block_proto, dg_type=StepsContainer),
         )
-
-        # Apply initial configuration
-        steps_container._delta_path = delta_path
-        steps_container._current_proto = block_proto
-
-        return steps_container
-
-    def __init__(
-        self,
-        root_container: int | None,
-        cursor: Cursor | None,
-        parent: DeltaGenerator | None,
-        block_type: str | None,
-    ) -> None:
-        super().__init__(root_container, cursor, parent, block_type)
-
-        # Initialized in `_create()`:
-        self._current_proto: BlockProto | None = None
-        self._delta_path: list[int] | None = None
 
     def step(
         self,

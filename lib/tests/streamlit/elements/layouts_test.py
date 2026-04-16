@@ -2009,35 +2009,22 @@ class StepsContainerTest(DeltaGeneratorTestCase):
         step_block = all_deltas[1]
         assert step_block.add_block.step.description == "Step description"
 
-    def test_step_state_running(self):
-        """Test that step state 'running' sets spinner icon."""
+    @parameterized.expand(
+        [
+            ("running", BlockProto.Step.State.RUNNING, "spinner"),
+            ("complete", BlockProto.Step.State.COMPLETE, ":material/check_circle:"),
+            ("error", BlockProto.Step.State.ERROR, ":material/error:"),
+        ]
+    )
+    def test_step_state(self, state, expected_proto_state, expected_icon):
+        """Test that step states set the correct proto state and icon."""
         steps = st.steps()
-        steps.step("Step", state="running")
+        steps.step("Step", state=state)
 
         all_deltas = self.get_all_deltas_from_queue()
         step_block = all_deltas[1]
-        assert step_block.add_block.step.state == BlockProto.Step.State.RUNNING
-        assert step_block.add_block.step.icon == "spinner"
-
-    def test_step_state_complete(self):
-        """Test that step state 'complete' sets check icon."""
-        steps = st.steps()
-        steps.step("Step", state="complete")
-
-        all_deltas = self.get_all_deltas_from_queue()
-        step_block = all_deltas[1]
-        assert step_block.add_block.step.state == BlockProto.Step.State.COMPLETE
-        assert step_block.add_block.step.icon == ":material/check_circle:"
-
-    def test_step_state_error(self):
-        """Test that step state 'error' sets error icon."""
-        steps = st.steps()
-        steps.step("Step", state="error")
-
-        all_deltas = self.get_all_deltas_from_queue()
-        step_block = all_deltas[1]
-        assert step_block.add_block.step.state == BlockProto.Step.State.ERROR
-        assert step_block.add_block.step.icon == ":material/error:"
+        assert step_block.add_block.step.state == expected_proto_state
+        assert step_block.add_block.step.icon == expected_icon
 
     def test_step_custom_icon(self):
         """Test that custom icon overrides state-derived icon."""
