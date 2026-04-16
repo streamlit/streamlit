@@ -102,15 +102,12 @@ def step.update(
 All parameters are keyword-only and optional. Only specified parameters are updated;
 omitting a parameter (or passing `None`) means "don't change this field."
 
-To explicitly clear a field back to its default/empty state, pass `st.UNSET`. This
-pattern avoids ambiguity between "don't change" and "clear to default."
-
 | Parameter     | Type                                              | Description |
 |---------------|---------------------------------------------------|-------------|
-| `label`       | `str \| None`                                     | Update the step label. Pass `st.UNSET` to reset to original. |
-| `description` | `str \| None`                                     | Update the description. Pass `st.UNSET` to clear. |
-| `icon`        | `str \| None`                                     | Update the icon. Pass `st.UNSET` to clear (reverts to state-derived icon). |
-| `state`       | `Literal["running", "complete", "error"] \| None` | Update the state. Pass `st.UNSET` to clear to no-state styling. |
+| `label`       | `str \| None`                                     | Update the step label. |
+| `description` | `str \| None`                                     | Update the description. |
+| `icon`        | `str \| None`                                     | Update the icon. |
+| `state`       | `Literal["running", "complete", "error"] \| None` | Update the state. |
 | `expanded`    | `bool \| None`                                    | Expand or collapse the step's content. |
 
 ### Return Types
@@ -287,6 +284,7 @@ The following features are intentionally excluded from the initial implementatio
 | Step navigation / wizard behavior | Tracked separately in [#10748](https://github.com/streamlit/streamlit/issues/10748) |
 | Nested sub-steps | Adds complexity; defer until user demand is validated |
 | Step reordering/removal APIs | Not needed for streaming use case |
+| `st.UNSET` sentinel for clearing fields | New pattern not used elsewhere; `st.status` works without it. Revisit if users need to distinguish "don't change" from "clear to default" |
 
 ## Checklist
 
