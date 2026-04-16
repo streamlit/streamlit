@@ -4,14 +4,14 @@ created: 2026-04-16
 status: Draft
 ---
 
-# Timeline container for progress steps / chain of thought
+# `st.steps` — Timeline container for progress steps
 
 ## Summary
 
 Add a new `st.steps` container that displays a vertical timeline of steps, each with an icon,
 label, and optional content. Steps can be added dynamically and support state transitions
-(running → complete/error), making it ideal for AI chain-of-thought visualization, multi-stage
-pipelines, and activity feeds.
+(running → complete/error), making it ideal for AI chain-of-thought visualization,
+multi-stage pipelines, and activity feeds.
 
 ## Problem
 
@@ -23,11 +23,11 @@ expanders, markdown with manual formatting, or custom components.
 **User request:**
 
 - [#13248](https://github.com/streamlit/streamlit/issues/13248) — Add a container element to
-  render progress steps / timeline / chain of thought
+  render progress steps / timeline / chain-of-thought
 
 **Use cases:**
 
-- **AI chain of thought**: Display LLM reasoning steps with expandable details
+- **AI chain-of-thought**: Display LLM reasoning steps with expandable details
 - **Multi-agent workflows**: Show which agent is active and what each has accomplished
 - **Data pipelines**: Visualize ETL stages with status indicators
 - **Activity feeds**: Display chronological events
@@ -56,29 +56,29 @@ expanders, markdown with manual formatting, or custom components.
 # Create a steps container
 steps = st.steps()
 
-# Add individual steps
-step = steps.step(
+# Add individual steps (function signature)
+def steps.step(
     label: str,
     *,
     description: str | None = None,
     icon: str | None = None,
     state: Literal["running", "complete", "error"] | None = None,
     expanded: bool = True,
-)
+) -> StepContainer: ...
 
 # Use step as context manager to add content
-with step:
+with steps.step("Processing", state="running") as step:
     st.write("Step content here")
 
-# Update step state after creation
-step.update(
+# Update step state after creation (function signature)
+def step.update(
     *,
     label: str | None = None,
     description: str | None = None,
     icon: str | None = None,
     state: Literal["running", "complete", "error"] | None = None,
     expanded: bool | None = None,
-)
+) -> None: ...
 ```
 
 > **Alternative names considered:** `st.timeline`, `st.progress_steps`, `st.status_steps`,
@@ -93,24 +93,24 @@ step.update(
 |---------------|---------------------------------------------------|----------|-------------|
 | `label`       | `str`                                             | required | Step label. Supports markdown (bold, italics, links, inline code, emoji, and Material icons via `:material/icon_name:`). |
 | `description` | `str \| None`                                     | `None`   | Optional subtitle shown below the label. Supports the same markdown syntax as `label`. |
-| `icon`        | `str \| None`                                     | `None`   | Icon to display. Accepts emoji, Material icon (`:material/name:`), or `"spinner"`. If `None`, icon is derived from `state`. |
-| `state`       | `Literal["running", "complete", "error"] \| None` | `None`   | Step state. Affects default icon and visual styling. If `None`, no state styling is applied. |
+| `icon`        | `str \| None`                                     | `None`   | Icon to display. Accepts emoji or Material icon (`:material/name:`). If `None`, icon is derived from `state`. |
+| `state`       | `Literal["running", "complete", "error"] \| None` | `None`   | Step state. Affects default icon and visual styling. If `None`, a neutral circle icon is shown with no state styling. |
 | `expanded`    | `bool`                                            | `True`   | Initial expanded/collapsed state for the step's content area. Only applies if the step has content. |
 
 #### `step.update()` — Modify Step After Creation
 
 All parameters are keyword-only and optional. Only specified parameters are updated;
-parameters passed as `None` are treated as "no change" (not as "clear to None").
+omitting a parameter (or passing `None`) means "don't change this field."
 
-To explicitly clear `state` to "no state styling", pass the special sentinel
-`state=st.UNSET`. This pattern avoids ambiguity between "don't change" and "clear".
+To explicitly clear a field back to its default/empty state, pass `st.UNSET`. This
+pattern avoids ambiguity between "don't change" and "clear to default."
 
 | Parameter     | Type                                              | Description |
 |---------------|---------------------------------------------------|-------------|
-| `label`       | `str \| None`                                     | Update the step label. |
-| `description` | `str \| None`                                     | Update the description. |
-| `icon`        | `str \| None`                                     | Update the icon. |
-| `state`       | `Literal["running", "complete", "error"] \| None` | Update the state. |
+| `label`       | `str \| None`                                     | Update the step label. Pass `st.UNSET` to reset to original. |
+| `description` | `str \| None`                                     | Update the description. Pass `st.UNSET` to clear. |
+| `icon`        | `str \| None`                                     | Update the icon. Pass `st.UNSET` to clear (reverts to state-derived icon). |
+| `state`       | `Literal["running", "complete", "error"] \| None` | Update the state. Pass `st.UNSET` to clear to no-state styling. |
 | `expanded`    | `bool \| None`                                    | Expand or collapse the step's content. |
 
 ### Return Types
@@ -152,7 +152,7 @@ The vertical line connects steps visually, similar to GitHub's activity timeline
 |-------------|---------------------------|--------------|
 | `"running"` | Animated spinner          | Primary color |
 | `"complete"`| `:material/check_circle:` | Faded appearance |
-| `"error"`   | `:material/error:`        | Faded appearance |
+| `"error"`   | `:material/error:`        | Error/destructive color (red accent) |
 | `None`      | `:material/circle:`       | Faded appearance |
 
 > **Note:** `st.status` uses `:material/check:` for its complete state, while `st.steps`
@@ -182,6 +182,12 @@ pattern established by `st.status`.
 - Collapsed steps still show their icon, label, and description
 - The `expanded` parameter in `step.update()` controls programmatic expansion
 - Steps without content are not collapsible: no chevron icon on hover, no button role, and no keyboard interaction
+
+**Accessibility:**
+
+- Collapsible step headers have `role="button"` and respond to `Enter`/`Space` keypresses
+- The header exposes `aria-expanded` to indicate current state
+- Focus styles follow the standard Streamlit focus ring pattern
 
 ### Examples
 
@@ -226,7 +232,7 @@ with st.steps() as pipeline:
             process_batch(batch)
 ```
 
-**Scrollable container with auto-scroll:**
+**Scrollable container:**
 
 ```python
 import streamlit as st
@@ -238,6 +244,10 @@ with st.container(height=400):
             with activity.step(event.action, icon=event.icon, state="complete"):
                 st.write(event.details)
 ```
+
+> **Note:** `st.container(height=...)` provides a scrollable region. If you need auto-scroll
+> behavior (scroll to bottom as new content is added), pass `autoscroll=True` explicitly.
+> By default, auto-scroll only activates for containers with `st.chat_message` children.
 
 **Collapsing step content:**
 
