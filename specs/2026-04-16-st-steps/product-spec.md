@@ -147,7 +147,7 @@ The vertical line connects steps visually, similar to GitHub's activity timeline
 
 | State       | Default Icon              | Visual Style |
 |-------------|---------------------------|--------------|
-| `"running"` | Animated spinner          | Primary color |
+| `"running"` | Animated spinner          | Faded appearance |
 | `"complete"`| `:material/check_circle:` | Faded appearance |
 | `"error"`   | `:material/error:`        | Error/destructive color (red accent) |
 | `None`      | `:material/circle:`       | Faded appearance |
@@ -278,7 +278,7 @@ The following features are intentionally excluded from the initial implementatio
 | Container label/title | Use `st.expander` wrapper for a titled, collapsible container |
 | Container `expanded` state | Use `st.expander` wrapper if container-level collapse is needed |
 | Container `state` (running/complete/error) | Simplifies the API; state is per-step |
-| Container `.update()` method | No mutable container properties in initial version |
+| `st.steps().update()` method | No mutable properties on the outer container; only individual steps have `.update()` |
 | Container `width` parameter | Follow standard Streamlit container width behavior |
 | Horizontal timeline layout | Validate vertical design first; add `direction` parameter based on demand |
 | Step navigation / wizard behavior | Tracked separately in [#10748](https://github.com/streamlit/streamlit/issues/10748) |
