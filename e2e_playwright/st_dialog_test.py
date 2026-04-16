@@ -769,7 +769,7 @@ def test_switching_dialogs_does_not_show_stale_content(app: Page):
     expect(dialog.get_by_test_id("stTextInput")).not_to_be_attached()
 
 
-@pytest.mark.skip_browser("webkit")
+@pytest.mark.skip_browser("webkit")  # viewport assertions are flaky on WebKit
 def test_long_dialog_starts_scrolled_to_top(app: Page):
     """Test that a long dialog starts scrolled to the top when opened and reopened.
 
