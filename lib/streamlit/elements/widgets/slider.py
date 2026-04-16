@@ -624,22 +624,18 @@ class SliderMixin:
             parameter of ``st.markdown``.
 
         on_change : "rerun", "ignore", or callable
-            Controls what happens when this slider's value changes. This
-            can be one of the following:
+            How the slider should respond to value changes. This controls
+            whether or not the slider triggers a rerun and if a callback
+            function is called. This can be one of the following values:
 
-            - ``"rerun"`` (default): Trigger a script rerun when the value
-              changes. The new value is available via the return value or
-              ``st.session_state``.
+            - ``"rerun"`` (default): The slider value changes and the app
+              reruns. No callback function is called.
 
-            - ``"ignore"``: Suppress automatic reruns. The value is stored
-              in the frontend only until another interaction triggers a
-              rerun. Use this for batching multiple widget changes before
-              processing them together.
+            - ``"ignore"``: The slider value changes and the app doesn't
+              rerun. No callback function is called.
 
-            - A ``callable``: Trigger a script rerun and invoke the callback.
-              The callback receives the values from ``args`` and ``kwargs``,
-              if provided. To access the new slider value, use the return
-              value or ``st.session_state``.
+            - A ``callable``: The slider value changes and the app reruns.
+              The callable is called before the rest of the app.
 
         args : list or tuple
             An optional list or tuple of args to pass to the callback.
