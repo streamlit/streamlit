@@ -657,19 +657,16 @@ def test_slider_ui_value_wins_on_rerun_and_syncs_url(page: Page, app_base_url: s
     expect(page).to_have_url(re.compile(r"bound_ss=76"))
 
 
-# --- on_change="ignore" tests ---
-
-
-def test_slider_on_change_ignore_does_not_rerun(app: Page):
-    """Test that on_change='ignore' suppresses rerun when slider value changes."""
-    runs_text = app.get_by_text("Runs: 1")
-    expect(runs_text).to_be_visible()
-
-    # Initial value
+def test_slider_on_change_ignore(app: Page):
+    """Test that on_change='ignore' suppresses rerun and sends value on next rerun."""
+    expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect_prefixed_markdown(app, "Ignore slider value:", "25")
 
     slider = get_element_by_key(app, "ignore_slider")
-    slider.get_by_role("slider").press("ArrowRight")
+    slider_role = slider.get_by_role("slider")
+
+    # Change slider value - should NOT trigger a rerun
+    slider_role.press("ArrowRight")
 
     # Wait for any potential rerun to complete. If on_change="ignore" is working
     # correctly, no rerun will occur, but this ensures that if a bug causes
@@ -680,25 +677,15 @@ def test_slider_on_change_ignore_does_not_rerun(app: Page):
     expect(app.get_by_text("Runs: 1")).to_be_visible()
     expect(app.get_by_text("Runs: 2")).not_to_be_visible()
 
-    # Verify the value hasn't been reset by a rerun
-    expect_prefixed_markdown(app, "Ignore slider value:", "25")
-
-
-def test_slider_on_change_ignore_value_sent_on_next_rerun(app: Page):
-    """Test that on_change='ignore' slider value is sent on next rerun."""
-    expect(app.get_by_text("Ignore slider value: 25", exact=True)).to_be_visible()
-
-    slider = get_element_by_key(app, "ignore_slider")
-    slider_role = slider.get_by_role("slider")
-    # Increment value from 25 to 30
-    for _ in range(5):
+    # Increment value further (from 26 to 30)
+    for _ in range(4):
         slider_role.press("ArrowRight")
 
-    # Click the button to trigger a rerun
+    # Click button to trigger a rerun - accumulated value should be sent
     app.get_by_role("button", name="Apply ignore slider", exact=True).click()
     wait_for_app_run(app)
 
-    # Now the updated value should be visible
+    # Verify the updated value is now visible
     expect(app.get_by_text("Ignore slider value: 30", exact=True)).to_be_visible()
     expect(
         app.get_by_text("Applied ignore slider value: 30", exact=True)
