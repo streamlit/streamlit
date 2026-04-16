@@ -14,6 +14,8 @@
 
 """E2E tests for mermaid charts in st.markdown."""
 
+import re
+
 from playwright.sync_api import Page, expect
 
 
@@ -24,15 +26,21 @@ def test_mermaid_charts_render(app: Page):
     expect(mermaid_charts).to_have_count(5)
 
 
-def test_mermaid_charts_contain_svg(app: Page):
-    """Test that rendered mermaid charts contain SVG content."""
+def test_mermaid_charts_contain_rendered_image(app: Page):
+    """Test that rendered mermaid charts contain rendered image content.
+
+    MermaidChart renders diagrams as <img> tags with blob URLs for security
+    sandboxing, rather than inline SVG elements.
+    """
     # Get the first few mermaid charts (valid diagrams)
     mermaid_charts = app.locator('[data-testid="stMermaidChart"]')
 
-    # Check that they contain SVG elements
+    # Check that they contain img elements with blob URLs
     for i in range(4):  # First 4 are valid diagrams
-        svg = mermaid_charts.nth(i).locator("svg")
-        expect(svg).to_be_visible()
+        img = mermaid_charts.nth(i).locator("img")
+        expect(img).to_be_visible()
+        # Verify the img has a blob URL src (security sandboxing)
+        expect(img).to_have_attribute("src", re.compile(r"^blob:"))
 
 
 def test_mermaid_invalid_syntax_shows_error(app: Page):
