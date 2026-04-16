@@ -14,12 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  FunctionComponent,
-  ReactElement,
-  ReactNode,
-  useCallback,
-} from "react"
+import { FunctionComponent, ReactElement, ReactNode, useEffect } from "react"
 
 import {
   type ModalProps,
@@ -181,15 +176,24 @@ function Modal(props: StreamlitModalProps): ReactElement {
   const { spacing, radii, colors, sizes } = useEmotionTheme()
 
   /**
-   * Callback ref that resets the DialogContainer scroll position to the top
-   * when the modal is mounted. Without this, reopening a long dialog may
-   * show the content scrolled to the bottom instead of the top.
+   * Reset the DialogContainer scroll position to the top whenever the modal
+   * opens. Without this, reopening a long dialog may show the content scrolled
+   * to the bottom because baseui's DialogContainer retains its scroll position
+   * across open/close cycles (the DOM element stays alive during close animation).
    */
-  const dialogContainerRef = useCallback((node: HTMLElement | null): void => {
-    if (node) {
-      node.scrollTop = 0
+  useEffect(() => {
+    if (props.isOpen) {
+      const frameId = requestAnimationFrame(() => {
+        const container = document.querySelector<HTMLElement>(
+          '[data-testid="stDialogContainer"]'
+        )
+        if (container) {
+          container.scrollTop = 0
+        }
+      })
+      return () => cancelAnimationFrame(frameId)
     }
-  }, [])
+  }, [props.isOpen])
 
   const defaultOverrides = {
     Root: {
@@ -207,7 +211,7 @@ function Modal(props: StreamlitModalProps): ReactElement {
         paddingTop: spacing.threeXL,
       },
       props: {
-        ref: dialogContainerRef,
+        "data-testid": "stDialogContainer",
       },
     },
     Dialog: {
