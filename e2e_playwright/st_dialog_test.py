@@ -776,7 +776,7 @@ def test_long_dialog_starts_scrolled_to_top(app: Page):
     Reproduces issue #12716: When a dialog has enough content to require scrolling,
     reopening the dialog should show the top of the content, not the bottom.
     """
-    for i in range(3):
+    for _ in range(3):
         click_button(app, "Open Long Dialog")
         dialog = app.get_by_test_id(modal_test_id)
         expect(dialog).to_be_visible()
