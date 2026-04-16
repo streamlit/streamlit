@@ -23,6 +23,7 @@ from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
 
 if TYPE_CHECKING:
@@ -72,6 +73,14 @@ class StepContainer(DeltaGenerator):
         state: StepStates | None = None,
     ) -> StepContainer:
         """Create a new step within a steps container."""
+        from streamlit.string_util import validate_icon_or_emoji
+
+        # Validate state if provided
+        if state is not None and state not in {"running", "complete", "error"}:
+            raise StreamlitAPIException(
+                f"Unknown state ({state}). Must be one of 'running', 'complete', or 'error'."
+            )
+
         step_proto = BlockProto.Step()
         step_proto.label = label or ""
 
@@ -80,7 +89,7 @@ class StepContainer(DeltaGenerator):
 
         # Use provided icon or derive from state
         if icon is not None:
-            step_proto.icon = icon
+            step_proto.icon = validate_icon_or_emoji(icon)
         else:
             step_proto.icon = _state_to_icon(state)
 
@@ -196,7 +205,9 @@ class StepContainer(DeltaGenerator):
                 msg.delta.add_block.step.icon = _state_to_icon(state)
 
         if icon is not None:
-            msg.delta.add_block.step.icon = icon
+            from streamlit.string_util import validate_icon_or_emoji
+
+            msg.delta.add_block.step.icon = validate_icon_or_emoji(icon)
             self._user_icon = icon
 
         if expanded is not None:
@@ -262,6 +273,7 @@ class StepsContainer(DeltaGenerator):
             parent._block(block_proto=block_proto, dg_type=StepsContainer),
         )
 
+    @gather_metrics("step")
     def step(
         self,
         label: str,

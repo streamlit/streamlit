@@ -122,6 +122,15 @@ export const StyledStepHeader = styled.div<StyledStepHeaderProps>(
     gap: theme.spacing.twoXS,
     cursor: hasChildren ? "pointer" : "default",
     minHeight: "24px",
+    width: "100%",
+    textAlign: "left",
+    // Reset button styles when used as a button element
+    background: "none",
+    border: "none",
+    padding: 0,
+    margin: 0,
+    font: "inherit",
+    color: "inherit",
   })
 )
 

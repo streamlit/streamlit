@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useEffect, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useId,
+  useState,
+} from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
@@ -57,6 +64,7 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
 
   const [isExpanded, setIsExpanded] = useState(initialExpanded ?? true)
   const [isHovered, setIsHovered] = useState(false)
+  const bodyIdRef = useId()
 
   useEffect(() => {
     if (notNullOrUndefined(initialExpanded)) {
@@ -70,16 +78,6 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       setIsExpanded(prev => !prev)
     }
   }, [hasChildren])
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent): void => {
-      if (hasChildren && (e.key === "Enter" || e.key === " ")) {
-        e.preventDefault()
-        setIsExpanded(prev => !prev)
-      }
-    },
-    [hasChildren]
-  )
 
   // Show chevron instead of icon when hovering and has children
   const showChevron = hasChildren && isHovered
@@ -108,13 +106,12 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
       </StyledStepIconColumn>
       <StyledStepContent>
         <StyledStepHeader
+          as={hasChildren ? "button" : "div"}
           onClick={handleToggle}
-          onKeyDown={handleKeyDown}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          role={hasChildren ? "button" : undefined}
-          tabIndex={hasChildren ? 0 : undefined}
           aria-expanded={hasChildren ? isExpanded : undefined}
+          aria-controls={hasChildren ? bodyIdRef : undefined}
           hasChildren={hasChildren}
         >
           <StyledStepHeaderContent>
@@ -138,7 +135,9 @@ const Step: React.FC<React.PropsWithChildren<StepProps>> = ({
           </StyledStepHeaderContent>
         </StyledStepHeader>
         {isExpanded && hasChildren && (
-          <StyledStepBody data-testid="stStepBody">{children}</StyledStepBody>
+          <StyledStepBody id={bodyIdRef} data-testid="stStepBody">
+            {children}
+          </StyledStepBody>
         )}
       </StyledStepContent>
     </StyledStep>

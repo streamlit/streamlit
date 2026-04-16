@@ -257,7 +257,6 @@ The following features are intentionally excluded from the initial implementatio
 
 | Feature | Reason |
 |---------|--------|
-| Container `height` parameter | Use `st.container(height=...)` wrapper for scrollable steps |
 | Container label/title | Use `st.expander` wrapper for a titled, collapsible container |
 | Container `expanded` state | Use `st.expander` wrapper if container-level collapse is needed |
 | Container `state` (running/complete/error) | Simplifies the API; state is per-step |
