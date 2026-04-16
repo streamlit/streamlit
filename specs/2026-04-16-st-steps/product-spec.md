@@ -63,6 +63,7 @@ step = steps.step(
     description: str | None = None,
     icon: str | None = None,
     state: Literal["running", "complete", "error"] | None = None,
+    expanded: bool = True,
 )
 
 # Use step as context manager to add content
@@ -94,10 +95,15 @@ step.update(
 | `description` | `str \| None`                                     | `None`   | Optional subtitle shown below the label. Supports the same markdown syntax as `label`. |
 | `icon`        | `str \| None`                                     | `None`   | Icon to display. Accepts emoji, Material icon (`:material/name:`), or `"spinner"`. If `None`, icon is derived from `state`. |
 | `state`       | `Literal["running", "complete", "error"] \| None` | `None`   | Step state. Affects default icon and visual styling. If `None`, no state styling is applied. |
+| `expanded`    | `bool`                                            | `True`   | Initial expanded/collapsed state for the step's content area. Only applies if the step has content. |
 
 #### `step.update()` — Modify Step After Creation
 
-All parameters are keyword-only and optional. Only specified parameters are updated.
+All parameters are keyword-only and optional. Only specified parameters are updated;
+parameters passed as `None` are treated as "no change" (not as "clear to None").
+
+To explicitly clear `state` to "no state styling", pass the special sentinel
+`state=st.UNSET`. This pattern avoids ambiguity between "don't change" and "clear".
 
 | Parameter     | Type                                              | Description |
 |---------------|---------------------------------------------------|-------------|
@@ -149,6 +155,10 @@ The vertical line connects steps visually, similar to GitHub's activity timeline
 | `"error"`   | `:material/error:`        | Faded appearance |
 | `None`      | `:material/circle:`       | Faded appearance |
 
+> **Note:** `st.status` uses `:material/check:` for its complete state, while `st.steps`
+> uses `:material/check_circle:`. The filled circle icon is more visually distinct at
+> small sizes in a vertical timeline where multiple states appear in sequence.
+
 **Context manager behavior:**
 
 When using `steps.step()` as a context manager with `state="running"`:
@@ -157,11 +167,14 @@ When using `steps.step()` as a context manager with `state="running"`:
 with steps.step("Processing", state="running") as step:
     result = expensive_operation()
     st.write(result)
-# On normal exit: state auto-transitions to "complete"
-# On exception: state auto-transitions to "error"
+# On normal exit: state auto-transitions to "complete" (if still "running")
+# On exception: state auto-transitions to "error" (if still "running")
 ```
 
-This follows the same pattern established by `st.status`.
+Auto-transitions only apply if `state` is still `"running"` at context exit. If you manually
+call `step.update(state="error")` or `step.update(state="complete")` inside the context
+manager, that state is preserved—the auto-transition is skipped. This follows the same
+pattern established by `st.status`.
 
 **Collapsibility:**
 
@@ -195,7 +208,7 @@ with st.steps() as thinking:
 import streamlit as st
 
 with st.steps() as pipeline:
-    with pipeline.step("Loading data", icon=":material/download:", state="running") as load_step:
+    with pipeline.step("Loading data", icon=":material/download:", state="running"):
         data = load_dataset()
         st.write(f"Loaded {len(data)} rows")
 
