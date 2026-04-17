@@ -111,9 +111,6 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           PR_HTML_URL: ${{ steps.pr-info.outputs.html_url }}
-          PR_BASE_REF: ${{ steps.pr-info.outputs.base_ref }}
-          PR_HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
-          PR_TITLE: ${{ steps.pr-info.outputs.title }}
         run: |
           PROMPT="You are operating in a GitHub Actions runner to perform QA testing on a pull request.
 
@@ -123,69 +120,21 @@ jobs:
           - Main branch: develop
           - PR Number: $PR_NUMBER_ENV
           - PR URL: $PR_HTML_URL
-          - PR Title: $PR_TITLE
-          - Base Ref: $PR_BASE_REF
-          - Head Ref: $PR_HEAD_REF
 
           The repository is checked out at the PR's head commit with full git history.
-          The dev environment is fully set up - you can run make commands.
+          The dev environment is set up - you can run make commands.
           Playwright browsers are installed for testing.
           The frontend is built and ready.
 
-          The GitHub CLI (gh) is available for READ operations to get PR details, diff, and file contents.
+          The GitHub CLI (gh) is available for READ operations.
 
           ## Task
 
-          Perform comprehensive QA testing on the feature implemented in this PR:
+          Run the /qa-testing-feature skill to perform comprehensive QA testing on this PR.
 
-          1. **Understand the changes**: Read the PR diff, any linked specs or issues, and relevant documentation to understand what this PR implements.
+          Do not ask for confirmation. Execute tests and document all findings.
 
-          2. **Create a QA test plan**: Based on the changes, create a test plan covering:
-             - Happy path scenarios
-             - Edge cases and error handling
-             - Cross-browser compatibility (if UI changes)
-             - Accessibility considerations
-             - Performance implications
-
-          3. **Execute CI-safe testing**: Use only non-interactive, headless, time-bounded commands that exit on their own. Do not use \`make debug\`, \`make frontend-dev\`, or any other long-running dev server. Prefer targeted repo-supported commands such as \`make check\`, \`make python-tests\`, \`make frontend-tests\`, and \`make run-e2e-test <filename>\` for relevant Playwright/E2E coverage.
-
-          4. **Document findings**: Write a comprehensive QA report including:
-             - Test scenarios executed
-             - Issues found (with reproduction steps)
-             - Screenshots or logs for any failures
-             - Overall assessment (pass/fail/needs-work)
-
-          ## Output
-
-          Write your QA report to \`work-tmp/qa-report.md\` (create the directory if needed).
-
-          The report should use this structure:
-
-          \`\`\`markdown
-          # QA Testing Report
-
-          ## PR Summary
-          Brief description of what was tested.
-
-          ## Test Plan
-          List of test scenarios.
-
-          ## Test Results
-          | Scenario | Status | Notes |
-          |----------|--------|-------|
-          | ...      | ...    | ...   |
-
-          ## Issues Found
-          Detailed description of any issues, with reproduction steps.
-
-          ## Screenshots/Evidence
-          Any relevant screenshots or logs.
-
-          ## Verdict
-          **PASS** / **FAIL** / **NEEDS_WORK**
-
-          Brief justification for the verdict.
-          \`\`\`
+          After completing the QA testing, write the report to 'work-tmp/qa-report.md' (create the directory if needed).
           "
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
 
@@ -201,8 +150,6 @@ jobs:
           fi
 
           # Extract verdict for labeling from the Verdict section only
-          # Use sed to extract the Verdict section, then grep with -F for fixed-string matching
-          # Check FAIL and NEEDS_WORK first to avoid false positives from test result tables
           VERDICT_SECTION=$(sed -n '/^## Verdict/,/^## /p' work-tmp/qa-report.md | head -5)
           if echo "$VERDICT_SECTION" | grep -qF "**FAIL**"; then
             echo "FAIL" > work-tmp/verdict.txt
