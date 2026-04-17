@@ -130,11 +130,13 @@ jobs:
 
           ## Task
 
-          Run the /qa-testing-feature skill to perform comprehensive QA testing on this PR.
+          Follow the QA testing methodology defined in \`.claude/agents/qa-testing-feature.md\` to perform comprehensive QA testing on this PR.
+
+          Read that file first to understand the full workflow, then execute it.
 
           Do not ask for confirmation. Execute tests and document all findings.
 
-          After completing the QA testing, write the report to 'work-tmp/qa-report.md' (create the directory if needed).
+          Write the final QA report to 'work-tmp/qa-report.md'.
           "
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
 
