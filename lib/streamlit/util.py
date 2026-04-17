@@ -25,6 +25,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from hashlib import _Hash
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -65,12 +66,12 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-def create_fast_hasher() -> hashlib.blake2b:
+def create_fast_hasher() -> _Hash:
     """Create a fast hasher for incremental hashing.
 
     Uses BLAKE2b which produces 32-character hex digests (16 bytes).
     """
-    return hashlib.blake2b(digest_size=16)
+    return hashlib.blake2b(digest_size=16)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
 
 def calc_hash(s: bytes | str) -> str:
