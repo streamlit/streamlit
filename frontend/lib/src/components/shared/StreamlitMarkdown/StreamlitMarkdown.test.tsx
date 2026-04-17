@@ -971,6 +971,45 @@ describe("StreamlitMarkdown", () => {
     )
   })
 
+  it("renders shimmer text with correct class", () => {
+    render(
+      <StreamlitMarkdown source=":shimmer[Loading...]" allowHTML={false} />
+    )
+    const element = screen.getByText("Loading...")
+    expect(element.tagName.toLowerCase()).toBe("span")
+    expect(element).toHaveClass("stMarkdownShimmer")
+  })
+
+  it("does not apply shimmer class to regular text", () => {
+    render(
+      <StreamlitMarkdown
+        source="Regular text without shimmer"
+        allowHTML={false}
+      />
+    )
+    const element = screen.getByText("Regular text without shimmer")
+    expect(element).not.toHaveClass("stMarkdownShimmer")
+  })
+
+  it("renders shimmer nested inside color directive with correct DOM structure", () => {
+    render(
+      <StreamlitMarkdown
+        source=":red[:shimmer[Loading...]]"
+        allowHTML={false}
+      />
+    )
+    const shimmerElement = screen.getByText("Loading...")
+    expect(shimmerElement).toHaveClass("stMarkdownShimmer")
+    // Verify the parent span has the color directive class (shimmer uses fadedText60,
+    // but the outer :red[] span still has its color class applied)
+    const parentSpan = shimmerElement.parentElement
+    expect(parentSpan).not.toBeNull()
+    expect(parentSpan).toHaveClass("stMarkdownColoredText")
+    // The color style should be applied (the exact value comes from the theme)
+    expect(parentSpan).toHaveAttribute("style")
+    expect(parentSpan?.getAttribute("style")).toContain("color:")
+  })
+
   it("applies truncate styles when truncate is true", () => {
     const source = "This is some text that should be truncated"
     render(<StreamlitMarkdown source={source} allowHTML={false} truncate />)

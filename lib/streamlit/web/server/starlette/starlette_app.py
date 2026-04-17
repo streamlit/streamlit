@@ -26,6 +26,12 @@ from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
 )
 from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    SelectiveGZipMiddleware,
+)
+from streamlit.web.server.starlette.starlette_path_security_middleware import (
+    PathSecurityMiddleware,
+)
 from streamlit.web.server.starlette.starlette_routes import (
     BASE_ROUTE_COMPONENT,
     BASE_ROUTE_CORE,
@@ -43,6 +49,7 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_upload_routes,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
     GZIP_COMPRESSLEVEL,
     GZIP_MINIMUM_SIZE,
     SESSION_COOKIE_NAME,
@@ -74,6 +81,15 @@ _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
     f"/{BASE_ROUTE_COMPONENT}/",  # Custom component serving
     f"/{BASE_ROUTE_STATIC}/",  # Frontend assets (JS/CSS bundles)
 )
+
+
+def _set_anyio_thread_limiter() -> None:
+    """Apply the measured AnyIO thread limit for Starlette file serving."""
+    from anyio import to_thread
+
+    to_thread.current_default_thread_limiter().total_tokens = (
+        ANYIO_STATIC_FILE_THREAD_TOKENS
+    )
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -153,13 +169,6 @@ def create_streamlit_middleware() -> list[Middleware]:
     from starlette.middleware import Middleware
     from starlette.middleware.sessions import SessionMiddleware
 
-    from streamlit.web.server.starlette.starlette_gzip_middleware import (
-        MediaAwareGZipMiddleware,
-    )
-    from streamlit.web.server.starlette.starlette_path_security_middleware import (
-        PathSecurityMiddleware,
-    )
-
     middleware: list[Middleware] = []
 
     # FIRST: Path security middleware to block dangerous paths before any other processing.
@@ -176,15 +185,12 @@ def create_streamlit_middleware() -> list[Middleware]:
         )
     )
 
-    # Add GZip compression middleware.
-    # We use a custom MediaAwareGZipMiddleware that excludes audio/video content
-    # from compression. Compressing binary media content breaks playback in browsers,
-    # especially with range requests. Using a custom middleware instead of setting
-    # Content-Encoding: identity provides better browser compatibility, as some
-    # browsers (especially WebKit) have issues with explicit identity encoding.
+    # Keep static asset responses out of the gzip middleware. Local load testing
+    # showed that bypassing gzip on these paths materially improves initial load
+    # times and peak RSS, while a session-only bypass regressed.
     middleware.append(
         Middleware(
-            MediaAwareGZipMiddleware,
+            SelectiveGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )
@@ -212,13 +218,13 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         from starlette.applications import Starlette
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
-            "Starlette is not installed. Run `pip install streamlit[starlette]` "
-            "or disable `server.useStarlette`."
+            "Starlette is not installed. Please reinstall Streamlit."
         ) from exc
 
     # Define lifespan context manager for startup/shutdown events
     @asynccontextmanager
     async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+        _set_anyio_thread_limiter()
         # Startup
         await runtime.start()
         yield
@@ -470,6 +476,8 @@ class App:
         # Use resolved path to ensure correct directory for static folder check
         prepare_streamlit_environment(str(self._resolve_script_path()))
 
+        _set_anyio_thread_limiter()
+
         # Start runtime (enables full cache support)
         await self._runtime.start()
 
@@ -614,6 +622,8 @@ class App:
 
         # Prepare the Streamlit environment
         prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        _set_anyio_thread_limiter()
 
         # Start runtime
         await self._runtime.start()

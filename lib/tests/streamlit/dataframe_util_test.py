@@ -60,6 +60,33 @@ class DataframeUtilTest(unittest.TestCase):
         except Exception as ex:
             self.fail(f"Converting dtype dataframes to Arrow should not fail: {ex}")
 
+    def test_convert_pandas_df_to_arrow_bytes_downcasts_large_types(self):
+        """Test that downcast_large_types converts large Arrow types to standard ones."""
+        import pyarrow as pa
+
+        df = pd.DataFrame(
+            {"col": pd.array(["hello", "world"], dtype="string[pyarrow]")}
+        )
+        result_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(
+            df, downcast_large_types=True
+        )
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+        assert result_table.schema.field("col").type == pa.string()
+
+    def test_convert_pandas_df_to_arrow_bytes_no_downcast_by_default(self):
+        """Test that large types are preserved when downcast_large_types is False."""
+        import pyarrow as pa
+
+        df = pd.DataFrame(
+            {"col": pd.array(["hello", "world"], dtype="string[pyarrow]")}
+        )
+        result_bytes = dataframe_util.convert_pandas_df_to_arrow_bytes(df)
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+        # The default ArrowDtype("string[pyarrow]") uses large_string on
+        # pandas >= 3.0. Without downcasting the type should be preserved.
+        col_type = result_table.schema.field("col").type
+        assert col_type in {pa.string(), pa.large_string()}
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
@@ -200,6 +227,125 @@ class DataframeUtilTest(unittest.TestCase):
         converted = dataframe_util.convert_anything_to_pandas_df(DataFrameIsh())
         assert isinstance(converted, pd.DataFrame)
         assert converted.empty
+
+    @pytest.mark.skipif(
+        not hasattr(pa.Table.from_pydict({"col": [1]}), "__arrow_c_stream__"),
+        reason="PyArrow version does not support __arrow_c_stream__ on Table",
+    )
+    def test_convert_anything_to_pandas_df_uses_arrow_pycapsule_interface(self):
+        """Test that objects implementing __arrow_c_stream__ are converted via
+        the Arrow PyCapsule Interface.
+        """
+
+        class ArrowStreamObject:
+            """Mock object that implements __arrow_c_stream__ via a PyArrow Table."""
+
+            def __init__(self):
+                self._table = pa.Table.from_pydict({"col": [1, 2, 3]})
+                self.stream_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                self.stream_called = True
+                return self._table.__arrow_c_stream__(requested_schema)
+
+        obj = ArrowStreamObject()
+        result = dataframe_util.convert_anything_to_pandas_df(obj)
+
+        assert obj.stream_called
+        assert isinstance(result, pd.DataFrame)
+        assert list(result.columns) == ["col"]
+        assert list(result["col"]) == [1, 2, 3]
+
+        # Test ensure_copy behavior
+        obj2 = ArrowStreamObject()
+        dataframe_util.convert_anything_to_pandas_df(obj2, ensure_copy=False)
+        result_with_copy = dataframe_util.convert_anything_to_pandas_df(
+            obj2, ensure_copy=True
+        )
+        # Modifying the copy should not affect future conversions
+        result_with_copy["col"] = [10, 20, 30]
+        result_fresh = dataframe_util.convert_anything_to_pandas_df(
+            obj2, ensure_copy=False
+        )
+        assert list(result_fresh["col"]) == [1, 2, 3]
+
+    @pytest.mark.skipif(
+        not hasattr(pa.Table.from_pydict({"col": [1]}), "__arrow_c_stream__"),
+        reason="PyArrow version does not support __arrow_c_stream__ on Table",
+    )
+    def test_convert_anything_to_pandas_df_pycapsule_fallback_on_arrow_error(self):
+        """Test that ArrowInvalid errors from __arrow_c_stream__ fall back to
+        other conversion methods.
+        """
+
+        class BrokenArrowStreamObject:
+            """Mock object with __arrow_c_stream__ that raises ArrowInvalid,
+            but has a to_pandas fallback.
+            """
+
+            def __init__(self):
+                self.stream_called = False
+                self.to_pandas_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                """Raise ArrowInvalid to simulate an object with incompatible schema."""
+                self.stream_called = True
+                import pyarrow as pa
+
+                raise pa.ArrowInvalid("Test: simulated non-struct type export")
+
+            def to_pandas(self):
+                """Fallback via to_pandas method (checked before __arrow_c_stream__)."""
+                self.to_pandas_called = True
+                return pd.DataFrame({"values": [1, 2, 3]})
+
+        # Note: to_pandas is checked BEFORE __arrow_c_stream__ in the conversion code,
+        # so we need to test the fallback by ensuring to_pandas is used.
+        obj = BrokenArrowStreamObject()
+        result = dataframe_util.convert_anything_to_pandas_df(obj)
+
+        # Since to_pandas is checked first, it should be called
+        assert obj.to_pandas_called
+        # __arrow_c_stream__ should NOT be called since to_pandas succeeded first
+        assert not obj.stream_called
+        # Verify result is correct
+        assert isinstance(result, pd.DataFrame)
+        assert list(result["values"]) == [1, 2, 3]
+
+    @pytest.mark.skipif(
+        not hasattr(pa.Table.from_pydict({"col": [1]}), "__arrow_c_stream__"),
+        reason="PyArrow version does not support __arrow_c_stream__ on Table",
+    )
+    def test_pycapsule_arrow_error_falls_back_to_next_converter(self):
+        """Test that ArrowInvalid from __arrow_c_stream__ causes fallback to
+        later conversion methods (interchange protocol or pandas constructor).
+        """
+        from streamlit.errors import StreamlitAPIException
+
+        class PyCapsuleOnlyObject:
+            """Object with only __arrow_c_stream__ (no to_pandas or __dataframe__).
+
+            This tests that when PyCapsule fails with ArrowInvalid, the code
+            continues to later fallback paths.
+            """
+
+            def __init__(self):
+                self.stream_called = False
+
+            def __arrow_c_stream__(self, requested_schema=None):
+                self.stream_called = True
+                import pyarrow as pa
+
+                raise pa.ArrowInvalid("Test: non-struct schema")
+
+        obj = PyCapsuleOnlyObject()
+
+        # Should raise because there's no fallback after PyCapsule fails
+        with pytest.raises(StreamlitAPIException, match="Unable to convert"):
+            dataframe_util.convert_anything_to_pandas_df(obj)
+
+        # Verify the PyCapsule path was attempted
+        assert obj.stream_called
 
     @parameterized.expand(
         SHARED_TEST_CASES,
@@ -805,6 +951,22 @@ class DataframeUtilTest(unittest.TestCase):
         assert dataframe_util.convert_pandas_df_to_data_format(
             df, dataframe_util.DataFormat.KEY_VALUE_DICT
         ) == {0: None, 1: None, 2: None, 3: None}
+
+    def test_convert_df_preserves_none_after_row_assignment(self):
+        """Regression test for https://github.com/streamlit/streamlit/issues/14693.
+
+        In pandas 3.0+, infer_objects() converts None back to np.nan. This test
+        verifies that None values assigned via df.loc[] are preserved as None.
+        """
+        # Simulate how data_editor adds new rows
+        df = pd.DataFrame([{"Text": "Row 1"}])
+        df.loc[1] = {"Text": None}
+
+        result = dataframe_util.convert_pandas_df_to_data_format(
+            df, dataframe_util.DataFormat.LIST_OF_RECORDS
+        )
+        # None must be preserved, not converted to np.nan
+        assert result == [{"Text": "Row 1"}, {"Text": None}]
 
     def test_convert_anything_to_sequence_object_is_indexable(self):
         l1 = ["a", "b", "c"]

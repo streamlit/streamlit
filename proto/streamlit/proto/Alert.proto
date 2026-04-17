@@ -30,6 +30,9 @@ message Alert {
   // Indicates the width setting: "stetch", "content" or a pixel value.
   streamlit.WidthConfig width_config = 4;
 
+  // Optional title displayed above the body.
+  string title = 5;
+
   // Type of Alert
   enum Format {
     // Plain, fixed width text.

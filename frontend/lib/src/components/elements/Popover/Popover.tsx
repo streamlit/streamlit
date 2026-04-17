@@ -32,7 +32,10 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  isMenuStyleIconLabel,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
@@ -146,6 +149,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     kind = BaseButtonKind.TERTIARY
   }
 
+  // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
+  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <UIPopover
@@ -214,21 +220,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               containerWidth={true}
               onClick={handleToggle}
             >
-              <StyledPopoverLabelContainer>
+              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
                 <DynamicButtonLabel
                   icon={element.icon}
                   label={element.label}
                 />
-                <StyledPopoverExpansionIcon>
-                  <DynamicIcon
-                    iconValue={
-                      open
-                        ? ":material/expand_less:"
-                        : ":material/expand_more:"
-                    }
-                    size="lg"
-                  />
-                </StyledPopoverExpansionIcon>
+                {!hideChevron && (
+                  <StyledPopoverExpansionIcon aria-hidden="true">
+                    <DynamicIcon
+                      iconValue={
+                        open
+                          ? ":material/expand_less:"
+                          : ":material/expand_more:"
+                      }
+                      size="lg"
+                    />
+                  </StyledPopoverExpansionIcon>
+                )}
               </StyledPopoverLabelContainer>
             </BaseButton>
           </BaseButtonTooltip>

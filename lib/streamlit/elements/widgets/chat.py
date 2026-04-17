@@ -40,7 +40,7 @@ from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
     WidthWithoutContent,
-    validate_height,
+    create_layout_config,
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
@@ -1038,9 +1038,9 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
-        validate_width(width)
-        validate_height(height, allow_content=True)
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width, height=height, allow_content_height=True
+        )
 
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:
