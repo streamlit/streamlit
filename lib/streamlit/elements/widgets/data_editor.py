@@ -73,7 +73,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -1151,7 +1151,7 @@ class DataEditorMixin:
 
         if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
-            # Get first 10 chars of md5 hash of the key or delta path as styler uuid
+            # Get first 10 chars of content hash of the key or delta path as styler uuid
             # and set it as styler uuid.
             # We are only using the first 10 chars to keep the uuid short since
             # it will be used for all the cells in the dataframe. Therefore, this
@@ -1159,7 +1159,7 @@ class DataEditorMixin:
             # should be good enough to avoid  potential collisions in this case.
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
-            styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
+            styler_uuid = calc_hash(key or self.dg._get_delta_path_str())[:10]
             data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, unresolved-attribute]
             marshall_styler(proto.arrow_data, data, styler_uuid)
 

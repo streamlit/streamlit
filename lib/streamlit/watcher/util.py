@@ -26,29 +26,29 @@ from pathlib import Path
 from typing import TYPE_CHECKING, TypeVar
 
 from streamlit.errors import StreamlitMaxRetriesError
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-# How many times to try to grab the MD5 hash.
+# How many times to try to grab the content hash.
 _MAX_RETRIES = 5
 
 # How long to wait between retries.
 _RETRY_WAIT_SECS = 0.1
 
 
-def calc_md5_with_blocking_retries(
+def calc_hash_with_blocking_retries(
     path: str,
     *,  # keyword-only arguments:
     glob_pattern: str | None = None,
     allow_nonexistent: bool = False,
 ) -> str:
-    """Calculate the MD5 checksum of a given path.
+    """Calculate the hash of a given path.
 
-    For a file, this means calculating the md5 of the file's contents. For a
+    For a file, this means calculating the hash of the file's contents. For a
     directory, we concatenate the directory's path with the names of all the
-    files in it and calculate the md5 of that.
+    files in it and calculate the hash of that.
 
     IMPORTANT: This method calls time.sleep(), which blocks execution. So you
     should only use this outside the main thread.
@@ -77,7 +77,7 @@ def calc_md5_with_blocking_retries(
             else:
                 raise
 
-    return calc_md5(content)
+    return calc_hash(content)
 
 
 def path_modification_time(path: str, allow_nonexistent: bool = False) -> float:
