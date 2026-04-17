@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover - optional dep
     _xxhash = None
 
 
-class Hasher(Protocol):
+class _Hasher(Protocol):
     """Protocol for hashlib-compatible hasher objects."""
 
     def update(self, data: bytes) -> None: ...
@@ -79,21 +79,23 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-def create_fast_hasher() -> Hasher:
+def create_fast_hasher() -> _Hasher:
     """Create a fast hasher for incremental hashing.
 
-    Uses xxhash64 when available, falls back to BLAKE2b.
+    Uses xxhash128 when available, falls back to BLAKE2b.
+    Both produce 32-character hex digests (16 bytes).
     """
     if _xxhash is not None:
-        return _xxhash.xxh64()  # type: ignore[no-any-return]
+        return _xxhash.xxh128()  # type: ignore[no-any-return]
     return hashlib.blake2b(digest_size=16)  # ty: ignore[invalid-return-type]
 
 
 def calc_hash(s: bytes | str) -> str:
     """Return a fast hash of the given string.
 
-    Uses xxhash64 when available (~15x faster), falls back to BLAKE2b (~2.4x faster
-    than MD5). This should not be used for security-related purposes.
+    Uses xxhash128 when available (~10x faster), falls back to BLAKE2b (~2.4x faster
+    than MD5). Both produce 32-character hex digests. This should not be used for
+    security-related purposes.
     """
     b = s.encode("utf-8") if isinstance(s, str) else s
     h = create_fast_hasher()

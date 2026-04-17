@@ -176,8 +176,8 @@ class RaceConditionTests(unittest.TestCase):
             "deleted_file.toml", allow_nonexistent=True
         )
         # Hash of "deleted_file.toml" encoded as UTF-8
-        expected_md5 = util.calc_hash(b"deleted_file.toml")
-        assert result == expected_md5
+        expected_hash = util.calc_hash(b"deleted_file.toml")
+        assert result == expected_hash
 
         # Without allow_nonexistent, should raise
         with pytest.raises(StreamlitMaxRetriesError):

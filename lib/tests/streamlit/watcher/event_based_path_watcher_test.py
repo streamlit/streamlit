@@ -1033,16 +1033,16 @@ def test_windows_stability_hash_verification_max_retries_keeps_initial_change(
 
     mock_util.path_modification_time = lambda *args, **kwargs: 102.0
 
-    md5_phase = 0
+    hash_phase = 0
 
-    def md5_side_effect(*_args: object, **_kwargs: object) -> str:
-        nonlocal md5_phase
-        md5_phase += 1
-        if md5_phase == 1:
+    def hash_side_effect(*_args: object, **_kwargs: object) -> str:
+        nonlocal hash_phase
+        hash_phase += 1
+        if hash_phase == 1:
             return "2"
         raise StreamlitMaxRetriesError("verification failed")
 
-    mock_util.calc_hash_with_blocking_retries = mock.Mock(side_effect=md5_side_effect)
+    mock_util.calc_hash_with_blocking_retries = mock.Mock(side_effect=hash_side_effect)
 
     ev = events.FileSystemEvent("/this/is/my/file.py")
     ev.event_type = events.EVENT_TYPE_MODIFIED

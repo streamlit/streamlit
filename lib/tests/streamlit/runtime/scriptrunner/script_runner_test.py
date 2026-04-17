@@ -1034,7 +1034,7 @@ class ScriptRunnerTest(unittest.TestCase):
         shutdown_data = scriptrunner.event_data[-1]
         assert (
             shutdown_data["client_state"].page_script_hash
-            == "f0b2ab81496648a6f2af976dfd35f4a8"
+            == "74c2683ab3d8427292ef911e1e05a630"
         )
 
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:

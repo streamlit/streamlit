@@ -1104,7 +1104,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.dataframe
         assert (
             proto.arrow_data.styler.styles
-            == "#T_29028a0632_row1_col2 { background-color: yellow }"
+            == "#T_be55047acf_row1_col2 { background-color: yellow }"
         )
 
         # Check that different delta paths lead to different element ids
@@ -1113,7 +1113,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.dataframe
         assert (
             proto.arrow_data.styler.styles
-            == "#T_e94cd2b42e_row1_col2 { background-color: yellow }"
+            == "#T_f74f894054_row1_col2 { background-color: yellow }"
         )
 
         st.container().container().data_editor(styler, width=100)
@@ -1121,7 +1121,7 @@ class DataEditorTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.dataframe
         assert (
             proto.arrow_data.styler.styles
-            == "#T_9e33af1e69_row1_col2 { background-color: yellow }"
+            == "#T_8b1f1a9d3a_row1_col2 { background-color: yellow }"
         )
 
     def test_duplicate_column_names_raise_exception(self):
