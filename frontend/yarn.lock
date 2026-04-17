@@ -10753,10 +10753,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globals@npm:^17.4.0":
-  version: 17.4.0
-  resolution: "globals@npm:17.4.0"
-  checksum: 10c0/2be9e8c2b9035836f13d420b22f0247a328db82967d3bebfc01126d888ed609305f06c05895914e969653af5c6ba35fd7a0920f3e6c869afa60666c810630feb
+"globals@npm:^17.5.0":
+  version: 17.5.0
+  resolution: "globals@npm:17.5.0"
+  checksum: 10c0/92828102ed2f5637907725f0478038bed02fc83e9fc89300bb753639ba7c022b6c02576fc772117302b431b204591db1f2fa909d26f3f0a9852cc856a941df3f
   languageName: node
   linkType: hard
 
@@ -17440,7 +17440,7 @@ __metadata:
     eslint-plugin-react-hooks: "npm:^7.0.1"
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.15.4"
-    globals: "npm:^17.4.0"
+    globals: "npm:^17.5.0"
     jiti: "npm:^2.6.1"
     knip: "npm:^6.3.1"
     oxfmt: "npm:^0.44.0"
