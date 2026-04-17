@@ -33,7 +33,6 @@ if TYPE_CHECKING:
 
     # Basic error - returns DeltaGenerator
     assert_type(error("An error occurred!"), DeltaGenerator)
-    assert_type(error("Something went wrong"), DeltaGenerator)
 
     # Error with icon parameter (keyword-only)
     assert_type(error("Error!", icon="🚨"), DeltaGenerator)
@@ -151,3 +150,16 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch" or int)
+    error("Error!", width="invalid")  # type: ignore[arg-type]
+
+    # Invalid icon type (not str or None)
+    error("Error!", icon=123)  # type: ignore[arg-type]
+
+    # Passing icon as positional argument (should be keyword-only)
+    error("Error!", "icon")  # type: ignore[misc]
