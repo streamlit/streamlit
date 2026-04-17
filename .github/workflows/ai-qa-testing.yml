@@ -115,23 +115,17 @@ jobs:
           PR_HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
           PR_TITLE: ${{ steps.pr-info.outputs.title }}
         run: |
-          # Create work-tmp directory first
-          mkdir -p work-tmp
-
-          # Write prompt to file using heredoc to avoid shell injection from user-controlled values
-          # Use awk to safely substitute environment variables
-          cat > work-tmp/prompt-template.txt << 'PROMPT_EOF'
-          You are operating in a GitHub Actions runner to perform QA testing on a pull request.
+          PROMPT="You are operating in a GitHub Actions runner to perform QA testing on a pull request.
 
           ## Context
 
-          - Repository: %%REPOSITORY%%
+          - Repository: $REPOSITORY
           - Main branch: develop
-          - PR Number: %%PR_NUMBER_ENV%%
-          - PR URL: %%PR_HTML_URL%%
-          - PR Title: %%PR_TITLE%%
-          - Base Ref: %%PR_BASE_REF%%
-          - Head Ref: %%PR_HEAD_REF%%
+          - PR Number: $PR_NUMBER_ENV
+          - PR URL: $PR_HTML_URL
+          - PR Title: $PR_TITLE
+          - Base Ref: $PR_BASE_REF
+          - Head Ref: $PR_HEAD_REF
 
           The repository is checked out at the PR's head commit with full git history.
           The dev environment is fully set up - you can run make commands.
@@ -153,7 +147,7 @@ jobs:
              - Accessibility considerations
              - Performance implications
 
-          3. **Execute CI-safe testing**: Use only non-interactive, headless, time-bounded commands that exit on their own. Do not use `make debug`, `make frontend-dev`, or any other long-running dev server. Prefer targeted repo-supported commands such as `make check`, `make python-tests`, `make frontend-tests`, and `make run-e2e-test <filename>` for relevant Playwright/E2E coverage. If you run shell commands directly, ensure each one has an explicit timeout so the workflow cannot hang.
+          3. **Execute CI-safe testing**: Use only non-interactive, headless, time-bounded commands that exit on their own. Do not use \`make debug\`, \`make frontend-dev\`, or any other long-running dev server. Prefer targeted repo-supported commands such as \`make check\`, \`make python-tests\`, \`make frontend-tests\`, and \`make run-e2e-test <filename>\` for relevant Playwright/E2E coverage.
 
           4. **Document findings**: Write a comprehensive QA report including:
              - Test scenarios executed
@@ -163,11 +157,11 @@ jobs:
 
           ## Output
 
-          Write your QA report to `work-tmp/qa-report.md` (create the directory if needed).
+          Write your QA report to \`work-tmp/qa-report.md\` (create the directory if needed).
 
           The report should use this structure:
 
-          ```markdown
+          \`\`\`markdown
           # QA Testing Report
 
           ## PR Summary
@@ -191,21 +185,8 @@ jobs:
           **PASS** / **FAIL** / **NEEDS_WORK**
 
           Brief justification for the verdict.
-          ```
-          PROMPT_EOF
-
-          # Safely substitute environment variables using awk
-          awk '{
-            gsub(/%%REPOSITORY%%/, ENVIRON["REPOSITORY"]);
-            gsub(/%%PR_NUMBER_ENV%%/, ENVIRON["PR_NUMBER_ENV"]);
-            gsub(/%%PR_HTML_URL%%/, ENVIRON["PR_HTML_URL"]);
-            gsub(/%%PR_TITLE%%/, ENVIRON["PR_TITLE"]);
-            gsub(/%%PR_BASE_REF%%/, ENVIRON["PR_BASE_REF"]);
-            gsub(/%%PR_HEAD_REF%%/, ENVIRON["PR_HEAD_REF"]);
-            print
-          }' work-tmp/prompt-template.txt > work-tmp/prompt.txt
-
-          PROMPT=$(cat work-tmp/prompt.txt)
+          \`\`\`
+          "
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
 
           # Ensure report exists (fallback if cursor-agent fails)
