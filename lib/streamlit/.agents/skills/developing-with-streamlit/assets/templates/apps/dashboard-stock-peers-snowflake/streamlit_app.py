@@ -286,6 +286,7 @@ def generate_stock_data_query(tickers: list[str], days: int) -> str:
 
     tickers_cte = ", ".join(ticker_values)
 
+    # S608: each ticker validated above, days is a typed int — safe for synthetic VALUES.
     return f"""
     WITH tickers AS (
         SELECT column1 AS ticker, column2 AS base_price, column3 AS growth_rate, column4 AS volatility
@@ -311,7 +312,7 @@ def generate_stock_data_query(tickers: list[str], days: int) -> str:
         ROUND(close_price, 2) AS close_price
     FROM raw_prices
     ORDER BY trade_date, ticker
-    """
+    """  # noqa: S608
 
 
 @st.cache_data(ttl=3600, show_spinner="Loading stock data from Snowflake...")

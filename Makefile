@@ -684,8 +684,14 @@ check:
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
-			uv run mypy $$PY_FILES && \
-			echo "" || PY_EXIT=1; \
+			PY_MYPY_FILES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			if [ -n "$$(echo "$$PY_MYPY_FILES" | tr -d ' ')" ]; then \
+				uv run mypy $$PY_MYPY_FILES && \
+				echo "" || PY_EXIT=1; \
+			else \
+				echo "(only template files changed; skipped — templates share module names)" && \
+				echo ""; \
+			fi; \
 		fi; \
 	else \
 		echo "No Python files changed."; \

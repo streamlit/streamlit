@@ -84,12 +84,6 @@ repos:
           |^scripts/generate_agent_rules\.py$
           |^scripts/assets/code-review-instructions\.md$
           |^Makefile$
-      - id: check-theme-templates
-        name: Check theme template sync
-        entry: python lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/themes/manage.py check
-        language: system
-        pass_filenames: false
-        files: ^lib/streamlit/\.agents/skills/developing-with-streamlit/assets/templates/themes/
       - id: vscode-devcontainer-sync
         name: Check VSCode/devcontainer sync
         entry: ./scripts/sync_vscode_devcontainer.py --check

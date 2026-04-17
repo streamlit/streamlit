@@ -137,10 +137,10 @@ When **editing an existing app**, use templates as reference for best practices:
 - Check `assets/templates/apps/` for caching patterns, layout structure, and Snowflake integration
 - Apply consistent patterns from templates to improve the existing code
 
-When applying a **custom theme**, use a template from `assets/templates/themes/`:
-- Copy a theme directory (snowflake, dracula, nord, stripe, solarized-light, spotify, github, minimal)
+When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
+- Copy one config file (snowflake, dracula, nord, stripe, solarized-light, spotify, github, minimal) to the app's `.streamlit/config.toml`
 - Themes include custom fonts via Google Fonts
-- See `assets/templates/themes/README.md` for theme previews
+- See `assets/templates/themes/README.md` for previews and setup
 
 For **performance optimization**, read:
 1. `references/performance.md`

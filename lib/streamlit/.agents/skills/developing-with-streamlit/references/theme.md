@@ -453,7 +453,9 @@ Test your theme with: buttons (primary contrast), forms (borders, focus), datafr
 
 ## Theme templates
 
-Ready-to-use themes with Google Fonts are available in `assets/templates/themes/`:
+Ready-to-use theme configs (Google Fonts, no local font files) are available in
+`assets/templates/themes/configs/`. Copy one to `.streamlit/config.toml` in your
+app:
 
 | Theme | Base | Primary Color | Fonts |
 |-------|------|---------------|-------|

@@ -19,7 +19,6 @@ A comprehensive single-page app showcasing all major Streamlit components
 with custom theming. Use this to preview how your theme looks across
 different element types.
 """
-# DO NOT EDIT — managed by manage.py, edit _shared/streamlit_app.py instead
 
 import numpy as np
 import pandas as pd
@@ -379,4 +378,3 @@ with st.sidebar:
     st.slider("Confidence threshold", 0.0, 1.0, 0.8)
     st.divider()
     st.caption("Element Explorer v1.0")
-    st.caption("Theme: **Minimal**")

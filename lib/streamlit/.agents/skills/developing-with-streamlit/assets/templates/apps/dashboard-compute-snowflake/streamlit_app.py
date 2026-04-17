@@ -149,6 +149,7 @@ def build_synthetic_query(
         for cat, orig in zip(safe_categories, categories)
     )
 
+    # S608: identifier validated above, string values escaped — safe for synthetic VALUES.
     return f"""
     WITH categories AS (
         SELECT column1 AS category, column2 AS base_val
@@ -179,7 +180,7 @@ def build_synthetic_query(
         ), 2) AS credits_7d_ma
     FROM base_data
     ORDER BY ds, {category_col}
-    """
+    """  # noqa: S608
 
 
 @st.cache_data(ttl=3600, show_spinner="Loading account type data...")

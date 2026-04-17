@@ -1,6 +1,7 @@
 # Streamlit theme templates
 
-Ready-to-use theme templates for Streamlit apps.
+Ready-to-use theme configurations for Streamlit apps. Each file in `configs/` is
+a complete `[theme]` block you can drop into any app's `.streamlit/config.toml`.
 
 ## Available themes
 
@@ -15,13 +16,32 @@ Ready-to-use theme templates for Streamlit apps.
 | **github** | Light | `#0969DA` (blue) | Inter, JetBrains Mono |
 | **minimal** | Dark | `#6366f1` (indigo) | Inter, JetBrains Mono |
 
-## Quick start
+## Apply a theme to your app
+
+Copy the chosen config file into your app's `.streamlit/` directory:
 
 ```bash
-# Run a theme locally
-cd assets/templates/themes/spotify
+mkdir -p .streamlit
+cp path/to/themes/configs/dracula.toml .streamlit/config.toml
+```
+
+## Preview themes locally
+
+The `streamlit_app.py` in this directory is an "Element Explorer" that renders
+every major Streamlit component, so you can see how any theme looks before
+committing to it:
+
+```bash
+cd path/to/themes
 uv sync
+
+# Preview a theme by copying its config and running the app
+mkdir -p .streamlit
+cp configs/dracula.toml .streamlit/config.toml
 uv run streamlit run streamlit_app.py
+
+# Swap to a different theme by overwriting config.toml
+cp configs/nord.toml .streamlit/config.toml
 ```
 
 ## How Streamlit theming works
@@ -32,13 +52,13 @@ A custom theme requires two things:
 
 ```toml
 [theme]
-base = "dark"                      # "dark" or "light"
-primaryColor = "#1DB954"           # Buttons, links, highlights
-backgroundColor = "#121212"        # Main background
+base = "dark"                         # "dark" or "light"
+primaryColor = "#1DB954"              # Buttons, links, highlights
+backgroundColor = "#121212"           # Main background
 secondaryBackgroundColor = "#181818"  # Sidebar, cards
-textColor = "#FFFFFF"              # Main text color
-font = "Inter"                     # Body font
-codeFont = "FiraCode"              # Code blocks
+textColor = "#FFFFFF"                 # Main text color
+font = "Inter"                        # Body font
+codeFont = "FiraCode"                 # Code blocks
 ```
 
 ### 2. Custom fonts via Google Fonts
@@ -66,28 +86,10 @@ secondaryBackgroundColor = "#121212"
 borderColor = "#282828"
 ```
 
-## Theme file structure
+## Fonts used
 
-Each theme directory contains:
-
-```
-{theme}/
-├── .streamlit/config.toml   # Theme colors and fonts (Google Fonts)
-├── streamlit_app.py         # Demo app showing the theme
-├── pyproject.toml           # Dependencies
-```
-
-## Dependencies
-
-All themes require Python >=3.11 and use:
-- `streamlit`
-- `altair>=5.5.0`
-- `pandas>=2.2.3`
-- `numpy>=1.26.0`
-
-## Fonts
-
-All themes use [Google Fonts](https://fonts.google.com/) loaded via URL in `[[theme.fontFaces]]` entries:
+All themes use [Google Fonts](https://fonts.google.com/) loaded via URL in
+`[[theme.fontFaces]]` entries — no local font files required.
 
 | Font | Used by |
 |------|---------|

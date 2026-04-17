@@ -314,11 +314,10 @@ extend-safe-fixes = ["TC002", "TC003"]
   "FLY002",  # Allow f-string joins.
   "INP",     # Allow implicit namespace packages (templates are standalone apps).
   "NPY002",  # Allow legacy numpy random generation (simpler for synthetic data).
-  "PD",      # Ignore pandas-vet rules (templates use common pandas patterns).
+  "PD",      # Ignore pandas-vet rules (opinionated style, not real bugs).
   "PERF",    # Ignore performance rules (clarity over speed in templates).
   "PLR6104", # Allow non-augmented assignment.
   "PLR6201", # Allow set membership test on list literal.
-  "S",       # Ignore bandit security rules (templates are demo apps).
   "T20",     # Allow print statements (templates use print for CLI tools).
   "TRY",     # Ignore tryceratops rules (simpler exception handling in templates).
 ]
@@ -370,6 +369,8 @@ files = [
 exclude = [
   # The compilation error test file breaks mypy because of the syntax error.
   "^e2e_playwright/compilation_error_dialog\\.py$",
+  # Template apps have duplicate module names (each is `streamlit_app`).
+  "^lib/streamlit/\\.agents/",
 ]
 
 # Strict mode settings:
