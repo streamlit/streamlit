@@ -19,23 +19,9 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 from streamlit.proto.RootContainer_pb2 import RootContainer
-
-try:
-    import xxhash as _xxhash  # type: ignore[import-not-found]
-except ImportError:  # pragma: no cover - optional dep
-    _xxhash = None
-
-
-class _Hasher(Protocol):
-    """Protocol for hashlib-compatible hasher objects."""
-
-    def update(self, data: bytes) -> None: ...
-    def hexdigest(self) -> str: ...
-    def digest(self) -> bytes: ...
-
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -79,23 +65,19 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-def create_fast_hasher() -> _Hasher:
+def create_fast_hasher() -> hashlib.blake2b:
     """Create a fast hasher for incremental hashing.
 
-    Uses xxhash128 when available, falls back to BLAKE2b.
-    Both produce 32-character hex digests (16 bytes).
+    Uses BLAKE2b which produces 32-character hex digests (16 bytes).
     """
-    if _xxhash is not None:
-        return _xxhash.xxh128()  # type: ignore[no-any-return]
-    return hashlib.blake2b(digest_size=16)  # ty: ignore[invalid-return-type]
+    return hashlib.blake2b(digest_size=16)
 
 
 def calc_hash(s: bytes | str) -> str:
     """Return a fast hash of the given string.
 
-    Uses xxhash128 when available (~10x faster), falls back to BLAKE2b (~2.4x faster
-    than MD5). Both produce 32-character hex digests. This should not be used for
-    security-related purposes.
+    Uses BLAKE2b (~2.4x faster than MD5) and produces 32-character hex digests.
+    This should not be used for security-related purposes.
     """
     b = s.encode("utf-8") if isinstance(s, str) else s
     h = create_fast_hasher()

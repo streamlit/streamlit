@@ -106,9 +106,8 @@ test = [
   "seaborn>=0.11.2",
   "watchdog>=2.1.5",
   "streamlit-pdf>=1.0.0",
-  # Optional dependencies for better performance:
+  # Optional dependency for better performance:
   "uvloop>=0.15.2; sys_platform != 'win32'",
-  "xxhash>=3.0.0",
   # Optional dependency used for improved exception formatting:
   "rich>=10.14.0",
   # Used by vega-lite / altair e2e tests:
