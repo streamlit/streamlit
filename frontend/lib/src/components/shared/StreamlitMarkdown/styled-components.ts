@@ -14,10 +14,23 @@
  * limitations under the License.
  */
 
-import { Theme } from "@emotion/react"
+import { keyframes, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
+
+// Shimmer animation: sweeps a mask gradient from right to left across the text.
+// Uses mask-position animation to fade text opacity in/out.
+const shimmerAnimation = keyframes`
+  0% {
+    mask-position: 600% center;
+    -webkit-mask-position: 600% center;
+  }
+  100% {
+    mask-position: -600% center;
+    -webkit-mask-position: -600% center;
+  }
+`
 
 interface StyledStreamlitMarkdownProps {
   isCaption: boolean
@@ -366,6 +379,43 @@ export const StyledStreamlitMarkdown =
           maxWidth: "100%",
           display: "inline-block",
           verticalAlign: "middle",
+        },
+
+        // Shimmer animation for loading/thinking text. Uses mask-image with an
+        // animated gradient to fade text opacity in and out. The shimmer uses
+        // fadedText60 as its base color. When nesting with color directives:
+        // - :shimmer[:red[text]] - inner color wins (displays red)
+        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        "span.stMarkdownShimmer": {
+          // Use theme's secondary text color for shimmer text
+          color: theme.colors.fadedText60,
+          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          maskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          WebkitMaskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          maskSize: "200% 100%",
+          WebkitMaskSize: "200% 100%",
+          animation: `${shimmerAnimation} 8s linear infinite`,
+
+          // Respect user's motion preferences for accessibility
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            maskImage: "none",
+            WebkitMaskImage: "none",
+          },
         },
 
         "p, ol, ul, dl, li": {

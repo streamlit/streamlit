@@ -69,6 +69,10 @@ Progress:
 ### Phase 4: Verify against spec
 
 - Re-read the spec to verify all requirements are met; document any necessary divergences in `work-tmp/`
+- Run the `/qa-testing-feature` subagent to perform comprehensive QA testing of the implementation. Provide:
+  - A brief description of the feature being tested
+  - Paths to relevant documents (spec, implementation plan, API files with docstrings)
+- Review the QA report and address any issues found before proceeding
 
 ### Phase 5: Finalize for merge
 
