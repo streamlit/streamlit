@@ -269,10 +269,16 @@ def normalize_latex_delimiters(text: str) -> str:
     >>> normalize_latex_delimiters(r"Area is \(A = \pi r^2\).")
     'Area is $A = \\pi r^2$.'
     >>> normalize_latex_delimiters(r"\[E = mc^2\]")
-    '$$E = mc^2$$'
+    '$$\nE = mc^2\n$$'
     """
     # Block math first (so a \[ is not accidentally caught by the inline rule).
-    text = _BLOCK_LATEX_DELIMITER.sub(r"$$\1$$", text)
+    # Streamlit's Markdown renderer requires $$ fences to be on their own lines,
+    # so we strip any existing leading/trailing newlines from the captured
+    # content and then re-add exactly one newline on each side.
+    def _block_sub(m: re.Match) -> str:
+        return "$$\n" + m.group(1).strip("\n") + "\n$$"
+
+    text = _BLOCK_LATEX_DELIMITER.sub(_block_sub, text)
     text = _INLINE_LATEX_DELIMITER.sub(r"$\1$", text)
     return text
 

@@ -201,7 +201,7 @@ class StCaptionAPITest(DeltaGeneratorTestCase):
         st.caption("some caption", help=r"Inline \\(x+y\\) and block \\[z\\]")
 
         el = self.get_delta_from_queue().new_element
-        assert el.markdown.help == "Inline $x+y$ and block $$z$$"
+        assert el.markdown.help == "Inline $x+y$ and block $$\nz\n$$"
 
     def test_st_caption_with_width(self):
         """Test st.caption with different width types."""

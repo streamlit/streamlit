@@ -291,10 +291,10 @@ class NormalizeLatexDelimitersTest(unittest.TestCase):
                 r"Area is \(A = \pi r^2\).",
                 r"Area is $A = \pi r^2$.",
             ),
-            # Block \[ ... \] → $$ ... $$
+            # Block \[ ... \] → $$\n...\n$$ (fences on own lines, required by renderer)
             (
                 r"\[E = mc^2\]",
-                r"$$E = mc^2$$",
+                "$$\nE = mc^2\n$$",
             ),
             # Multiple inline expressions in one string
             (
@@ -304,7 +304,7 @@ class NormalizeLatexDelimitersTest(unittest.TestCase):
             # Mixed inline and block
             (
                 r"Inline \(a + b\) and block \[c + d\].",
-                r"Inline $a + b$ and block $$c + d$$.",
+                "Inline $a + b$ and block $$\nc + d\n$$.",
             ),
             # Already using $ delimiters — must not be double-converted
             (
