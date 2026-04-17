@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import json
 import pickle  # noqa: S403
 from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
 from copy import deepcopy
@@ -27,7 +26,7 @@ from typing import (
     cast,
 )
 
-from streamlit import config, util
+from streamlit import config, json_util, util
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
 from streamlit.logger import get_logger
@@ -109,14 +108,14 @@ def _sanitize_url_array(
     return result if result != parsed else None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
 
     value: WidgetStateProto
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Value:
     """A widget value that's not serialized. Immutable."""
 
@@ -126,7 +125,10 @@ class Value:
 WState: TypeAlias = Value | Serialized
 
 
-@dataclass
+_NOT_CACHED: Any = object()  # Sentinel for cache miss
+
+
+@dataclass(slots=True)
 class WStates(MutableMapping[str, Any]):
     """A mapping of widget IDs to values. Widget values can be stored in
     serialized or deserialized form, but when values are retrieved from the
@@ -135,6 +137,10 @@ class WStates(MutableMapping[str, Any]):
 
     states: dict[str, WState] = field(default_factory=dict)
     widget_metadata: dict[str, WidgetMetadata[Any]] = field(default_factory=dict)
+    # Cache for deserialized values to avoid isinstance checks and Value wrapper
+    # overhead on repeated access. Keys are widget IDs, values are the raw
+    # deserialized Python values (not wrapped in Value).
+    _deserialized_cache: dict[str, Any] = field(default_factory=dict)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -144,13 +150,21 @@ class WStates(MutableMapping[str, Any]):
         If the widget's value is currently stored in serialized form, it
         will be deserialized first.
         """
+        # Fast path: check deserialized cache first (most common case after first access)
+        cached = self._deserialized_cache.get(k, _NOT_CACHED)
+        if cached is not _NOT_CACHED:
+            return cached
+
+        # Slow path: need to check states dict
         wstate = self.states.get(k)
         if wstate is None:
             raise KeyError(k)
 
         if isinstance(wstate, Value):
-            # The widget's value is already deserialized - return it directly.
-            return wstate.value
+            # The widget's value is already deserialized - cache and return
+            value = wstate.value
+            self._deserialized_cache[k] = value
+            return value
 
         # The widget's value is serialized. We deserialize it, and return
         # the deserialized value.
@@ -175,7 +189,7 @@ class WStates(MutableMapping[str, Any]):
             # Array types are messages with data in a `data` field
             value = cast("Any", value).data
         elif value_field_name == "json_value":
-            value = json.loads(cast("str", value))
+            value = json_util.loads(cast("str", value))
         elif value_field_name == "string_trigger_value":
             # StringTriggerValue is a message with data in a `data` field
             value = cast("Any", value).data
@@ -191,13 +205,17 @@ class WStates(MutableMapping[str, Any]):
         )
 
         self.states[k] = Value(deserialized)
+        self._deserialized_cache[k] = deserialized
         return deserialized
 
     def __setitem__(self, k: str, v: WState) -> None:
         self.states[k] = v
+        # Invalidate cache - will be repopulated on next access
+        self._deserialized_cache.pop(k, None)
 
     def __delitem__(self, k: str) -> None:
         del self.states[k]
+        self._deserialized_cache.pop(k, None)
 
     def __len__(self) -> int:
         return len(self.states)
@@ -223,14 +241,24 @@ class WStates(MutableMapping[str, Any]):
         """
         self.states.update(other.states)
         self.widget_metadata.update(other.widget_metadata)
+        # Copy the deserialized cache from other and invalidate our cache
+        # for keys being overwritten
+        for k in other.states:
+            self._deserialized_cache.pop(k, None)
+        self._deserialized_cache.update(other._deserialized_cache)
 
     def set_widget_from_proto(self, widget_state: WidgetStateProto) -> None:
         """Set a widget's serialized value, overwriting any existing value it has."""
-        self[widget_state.id] = Serialized(widget_state)
+        wid = widget_state.id
+        self.states[wid] = Serialized(widget_state)
+        # Invalidate cache - will be repopulated on next access
+        self._deserialized_cache.pop(wid, None)
 
     def set_from_value(self, k: str, v: Any) -> None:
         """Set a widget's deserialized value, overwriting any existing value it has."""
-        self[k] = Value(v)
+        self.states[k] = Value(v)
+        # Directly populate cache since we know the value
+        self._deserialized_cache[k] = v
 
     def set_widget_metadata(self, widget_meta: WidgetMetadata[Any]) -> None:
         """Set a widget's metadata, overwriting any existing metadata it has."""
@@ -242,15 +270,18 @@ class WStates(MutableMapping[str, Any]):
         fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
-        self.states = {
-            k: v
-            for k, v in self.states.items()
-            if not _is_stale_widget(
+        stale_keys = {
+            k
+            for k in self.states
+            if _is_stale_widget(
                 self.widget_metadata.get(k),
                 active_widget_ids,
                 fragment_ids_this_run,
             )
         }
+        for k in stale_keys:
+            del self.states[k]
+            self._deserialized_cache.pop(k, None)
 
     def get_serialized(self, k: str) -> WidgetStateProto | None:
         """Get the serialized value of the widget with the given id.
@@ -284,7 +315,7 @@ class WStates(MutableMapping[str, Any]):
             arr = getattr(widget, field)
             arr.data.extend(serialized)
         elif field in {"json_value", "json_trigger_value"}:
-            setattr(widget, field, json.dumps(serialized))
+            setattr(widget, field, json_util.dumps(serialized))
         elif field == "file_uploader_state_value":
             widget.file_uploader_state_value.CopyFrom(serialized)
         elif field == "string_trigger_value":
@@ -343,7 +374,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class KeyIdMapper:
     """A mapping of user-provided keys to element IDs.
     It also maps element IDs to user-provided keys so that this reverse mapping
@@ -393,7 +424,7 @@ class KeyIdMapper:
         del self._id_key_mapping[widget_id]
 
 
-@dataclass
+@dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.

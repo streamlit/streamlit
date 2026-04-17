@@ -128,6 +128,8 @@ performance = [
   "orjson>=3.5.0",
   # uvloop speeds up the event loop:
   "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
+  # xxhash is ~3-10x faster than MD5 for non-security hashing in caching:
+  "xxhash>=3.0.0",
 ]
 # Install all optional dependencies:
 all = [

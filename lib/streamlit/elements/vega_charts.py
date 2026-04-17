@@ -16,7 +16,6 @@
 
 from __future__ import annotations
 
-import json
 import re
 import threading
 from contextlib import nullcontext
@@ -35,7 +34,7 @@ from typing import (
 
 from typing_extensions import Required
 
-from streamlit import dataframe_util, type_util
+from streamlit import dataframe_util, json_util, type_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -243,7 +242,7 @@ class VegaLiteStateSerde:
         selection_state = (
             empty_selection_state
             if ui_value is None
-            else cast("VegaLiteState", AttributeDictionary(json.loads(ui_value)))
+            else cast("VegaLiteState", AttributeDictionary(json_util.loads(ui_value)))
         )
 
         if "selection" not in selection_state:
@@ -252,7 +251,7 @@ class VegaLiteStateSerde:
         return cast("VegaLiteState", AttributeDictionary(selection_state))
 
     def serialize(self, selection_state: VegaLiteState) -> str:
-        return json.dumps(selection_state, default=str)
+        return json_util.dumps(selection_state, default=str)
 
 
 def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
@@ -2436,7 +2435,7 @@ class VegaChartsMixin:
         _marshall_chart_data(vega_lite_proto, spec, data)
 
         # Prevent the spec from changing across reruns:
-        vega_lite_proto.spec = _stabilize_vega_json_spec(json.dumps(spec))
+        vega_lite_proto.spec = _stabilize_vega_json_spec(json_util.dumps(spec))
 
         if use_container_width is not None:
             vega_lite_proto.use_container_width = use_container_width
@@ -2444,7 +2443,7 @@ class VegaChartsMixin:
 
         if is_selection_activated:
             # Load the stabilized spec again as a dict:
-            final_spec = json.loads(vega_lite_proto.spec)
+            final_spec = json_util.loads(vega_lite_proto.spec)
 
             # Parse and check the specified selection modes
             parsed_selection_modes = _parse_selection_mode(final_spec, selection_mode)

@@ -400,6 +400,24 @@ class DeltaGenerator(
         dg._form_data = deepcopy(self._form_data)
         return dg
 
+    def __copy__(self) -> DeltaGenerator:
+        """Create a shallow copy of the DeltaGenerator.
+
+        This is more efficient than deepcopy for fragment snapshotting.
+        Only the cursor (which contains mutable state) is shallow-copied.
+        Parent references and immutable attributes are shared.
+        """
+        from copy import copy
+
+        dg = DeltaGenerator(
+            root_container=self._root_container,
+            cursor=copy(self._provided_cursor) if self._provided_cursor else None,
+            parent=copy(self._parent) if self._parent else None,
+            block_type=self._block_type,
+        )
+        dg._form_data = self._form_data
+        return dg
+
     @property
     def _ancestors(self) -> Iterable[DeltaGenerator]:
         current_dg: DeltaGenerator | None = self

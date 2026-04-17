@@ -119,7 +119,7 @@ def is_array_value_field_name(obj: object) -> TypeGuard[ArrayValueFieldName]:
 WidgetValuePresenter: TypeAlias = Callable[[Any, "SessionState"], Any]
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class WidgetMetadata(Generic[T]):
     """Metadata associated with a single widget. Immutable."""
 
@@ -188,7 +188,7 @@ class WidgetMetadata(Generic[T]):
         return util.repr_(self)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class RegisterWidgetResult(Generic[T_co]):
     """Result returned by the `register_widget` family of functions/methods.
 

@@ -18,7 +18,6 @@ import contextlib
 import inspect
 from abc import abstractmethod
 from collections.abc import Callable
-from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
@@ -37,6 +36,9 @@ from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
+    from streamlit.cursor import RunningCursor
+    from streamlit.delta_generator import DeltaGenerator
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -133,6 +135,40 @@ class MemoryFragmentStorage(FragmentStorage):
         return key in self._fragments
 
 
+def _shallow_copy_cursors(
+    cursors: dict[int, RunningCursor],
+) -> dict[int, RunningCursor]:
+    """Create a shallow copy of the cursors dict.
+
+    This is more efficient than deepcopy as cursor's __copy__ method only
+    copies mutable state while sharing immutable attributes.
+    """
+    from copy import copy, deepcopy
+
+    # Handle the expected case: a dict of cursors
+    if isinstance(cursors, dict):
+        return {k: copy(v) for k, v in cursors.items()}
+    # Fallback for unexpected types (e.g., mocks in tests)
+    return deepcopy(cursors)  # type: ignore[unreachable]  # pragma: no cover
+
+
+def _shallow_copy_dg_stack(
+    dg_stack: tuple[DeltaGenerator, ...],
+) -> tuple[DeltaGenerator, ...]:
+    """Create a shallow copy of the DG stack.
+
+    This is more efficient than deepcopy as DeltaGenerator's __copy__ method
+    only copies mutable cursor state while sharing parent references.
+    """
+    from copy import copy, deepcopy
+
+    # Check if all items have __copy__ (real DeltaGenerators do, mocks may not)
+    if all(hasattr(dg, "__copy__") for dg in dg_stack):
+        return tuple(copy(dg) for dg in dg_stack)
+    # Fallback for unexpected types (e.g., mocks in tests)
+    return deepcopy(dg_stack)  # pragma: no cover - only for test mocks
+
+
 def _fragment(
     func: F | None = None,
     *,
@@ -165,8 +201,8 @@ def _fragment(
         if ctx is None:
             return None
 
-        cursors_snapshot = deepcopy(ctx.cursors)
-        dg_stack_snapshot = deepcopy(context_dg_stack.get())
+        cursors_snapshot = _shallow_copy_cursors(ctx.cursors)
+        dg_stack_snapshot = _shallow_copy_dg_stack(context_dg_stack.get())
         fragment_id = calc_md5(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
@@ -190,8 +226,8 @@ def _fragment(
                 # This script run is a run of one or more fragments. We restore the
                 # state of ctx.cursors and dg_stack to the snapshots we took when this
                 # fragment was declared.
-                ctx.cursors = deepcopy(cursors_snapshot)
-                context_dg_stack.set(deepcopy(dg_stack_snapshot))
+                ctx.cursors = _shallow_copy_cursors(cursors_snapshot)
+                context_dg_stack.set(_shallow_copy_dg_stack(dg_stack_snapshot))
 
             # Always add the fragment id to new_fragment_ids. For full app runs
             # we need to add them anyways and for fragment runs we add them

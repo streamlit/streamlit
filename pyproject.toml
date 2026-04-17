@@ -84,6 +84,7 @@ dev = [
   # pandas-stubs have caused a couple of CI breaks, so we pin to a specific version.
   # We need to pin 2.3.3.260113 since higher versions require a min Python 3.11 support.
   "pandas-stubs==2.3.3.260113",
+  "xxhash>=3.6.0",
 ]
 
 # Test dependencies

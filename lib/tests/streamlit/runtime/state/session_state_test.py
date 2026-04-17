@@ -248,7 +248,11 @@ class WStateTests(unittest.TestCase):
 
         serialized = self.wstates.get_serialized("widget_id_3")
         assert serialized.id == "widget_id_3"
-        assert serialized.json_value == '{"foo": 5}'
+        # Compare deserialized values to avoid whitespace differences
+        # between json and orjson serializers
+        import json
+
+        assert json.loads(serialized.json_value) == {"foo": 5}
 
     def test_as_widget_states(self):
         widget_states = self.wstates.as_widget_states()

@@ -19,14 +19,39 @@ from __future__ import annotations
 import dataclasses
 import functools
 import hashlib
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol, cast, runtime_checkable
 
 from streamlit.proto.RootContainer_pb2 import RootContainer
+
+# Try to import xxhash for faster hashing. Falls back to MD5 if not available.
+try:
+    import xxhash
+
+    _XXHASH_AVAILABLE = True
+except ImportError:  # pragma: no cover - optional dep
+    _XXHASH_AVAILABLE = False
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
     from streamlit.delta_generator import DeltaGenerator
+
+
+@runtime_checkable
+class Hasher(Protocol):
+    """Protocol for hashlib-like hasher objects."""
+
+    def update(self, data: bytes) -> None:
+        """Update the hash with the given bytes."""
+        ...
+
+    def digest(self) -> bytes:
+        """Return the hash as bytes."""
+        ...
+
+    def hexdigest(self) -> str:
+        """Return the hash as a hexadecimal string."""
+        ...
 
 
 def memoize(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -69,14 +94,31 @@ def calc_md5(s: bytes | str) -> str:
     """Return the md5 hash of the given string.
 
     This should not be used for security-related purposes.
-    """
-    # Due to security issue in md5 and sha1, usedforsecurity
-    h = hashlib.new("md5", usedforsecurity=False)
 
+    Note: Despite the name, this function uses xxhash64 when available
+    for better performance (~3x faster). The name is kept for backwards
+    compatibility.
+    """
     b = s.encode("utf-8") if isinstance(s, str) else s
 
+    if _XXHASH_AVAILABLE:
+        return xxhash.xxh64(b).hexdigest()
+
+    # Fall back to MD5 if xxhash is not available
+    h = hashlib.new("md5", usedforsecurity=False)
     h.update(b)
     return h.hexdigest()
+
+
+def create_fast_hasher() -> Hasher:
+    """Create a fast hasher for non-security hashing.
+
+    Returns an object with update() and hexdigest() methods, similar to
+    hashlib hashers. Uses xxhash64 when available, otherwise falls back to MD5.
+    """
+    if _XXHASH_AVAILABLE:
+        return cast("Hasher", xxhash.xxh64())
+    return cast("Hasher", hashlib.new("md5", usedforsecurity=False))
 
 
 class AttributeDictionary(dict[Any, Any]):  # noqa: FURB189

@@ -14,12 +14,23 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Final
 
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# Pre-defined set of lifecycle message types to avoid recreating on each clear() call.
+_LIFECYCLE_MSG_TYPES: Final[frozenset[str]] = frozenset(
+    {
+        "new_session",
+        "script_finished",
+        "session_status_changed",
+        "parent_message",
+        "page_info_changed",
+    }
+)
 
 
 class ForwardMsgQueue:
@@ -125,39 +136,39 @@ class ForwardMsgQueue:
         preserved to prevent clearing messages unrelated to the running fragments.
         """
 
+        # Fast path: simple clear without retaining lifecycle messages
         if not retain_lifecycle_msgs:
             self._queue = []
-        else:
-            self._queue = [
-                _update_script_finished_message(msg, fragment_ids_this_run is not None)
-                for msg in self._queue
-                if msg.WhichOneof("type")
-                in {
-                    "new_session",
-                    "script_finished",
-                    "session_status_changed",
-                    "parent_message",
-                    "page_info_changed",
-                }
-                or (
-                    # preserve all messages if this is a fragment rerun and...
-                    fragment_ids_this_run is not None
-                    and (
-                        # the message is not a delta message
-                        # (not associated with a fragment) or...
-                        msg.delta is None
-                        or (
-                            # it is a delta but not associated with any of the passed
-                            # fragments
-                            msg.delta is not None
-                            and (
-                                msg.delta.fragment_id is None
-                                or msg.delta.fragment_id not in fragment_ids_this_run
-                            )
-                        )
-                    )
+            self._delta_index_map = {}
+            return
+
+        # Fast path: nothing to filter if queue is empty
+        if not self._queue:
+            self._delta_index_map = {}
+            return
+
+        # Slow path: filter messages to retain lifecycle messages and potentially
+        # preserve delta messages from unrelated fragments.
+        is_fragment_run = fragment_ids_this_run is not None
+        fragment_ids_set: set[str] = (
+            set(fragment_ids_this_run) if fragment_ids_this_run is not None else set()
+        )
+        self._queue = [
+            _update_script_finished_message(msg, is_fragment_run)
+            for msg in self._queue
+            if msg.WhichOneof("type") in _LIFECYCLE_MSG_TYPES
+            or (
+                # Preserve messages if this is a fragment rerun and either:
+                # - the message is not a delta message, or
+                # - it is a delta but not associated with any of the passed fragments
+                is_fragment_run
+                and (
+                    msg.delta is None
+                    or msg.delta.fragment_id is None
+                    or msg.delta.fragment_id not in fragment_ids_set
                 )
-            ]
+            )
+        ]
 
         self._delta_index_map = {}
 

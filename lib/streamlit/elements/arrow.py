@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -27,7 +26,7 @@ from typing import (
     overload,
 )
 
-from streamlit import dataframe_util
+from streamlit import dataframe_util, json_util
 from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
@@ -252,7 +251,7 @@ class DataframeSelectionSerde:
         }
 
         if ui_value is not None:
-            selection_state: DataframeState = json.loads(ui_value)
+            selection_state: DataframeState = json_util.loads(ui_value)
         elif self.selection_default is not None:
             # When a selection_default is provided, use it as the initial
             # deserialized value so the first-render Python return matches
@@ -293,7 +292,7 @@ class DataframeSelectionSerde:
         return cast("DataframeState", ReadOnlyAttributeDictionary(selection_state))
 
     def serialize(self, state: DataframeState) -> str:
-        return json.dumps(state)
+        return json_util.dumps(state)
 
 
 def parse_selection_mode(
@@ -1025,7 +1024,7 @@ class ArrowMixin:
                     column_names=column_names,
                     selection_mode_set=selection_mode_set,
                 )
-                selection_default_json = json.dumps(validated_default)
+                selection_default_json = json_util.dumps(validated_default)
                 proto.selection_default = selection_default_json
 
             ctx = get_script_run_ctx()
@@ -1074,7 +1073,7 @@ class ArrowMixin:
                     column_names=column_names,
                     selection_mode_set=selection_mode_set,
                 )
-                proto.selection_state = json.dumps(validated_state)
+                proto.selection_state = json_util.dumps(validated_state)
                 self.dg._enqueue("dataframe", proto, layout_config=layout_config)
                 # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
                 return cast(

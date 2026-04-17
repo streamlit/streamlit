@@ -14,10 +14,10 @@
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
+from streamlit import json_util
 from streamlit.components.v2.bidi_component.constants import ARROW_REF_KEY
 from streamlit.dataframe_util import convert_anything_to_arrow_bytes, is_dataframe_like
 from streamlit.logger import get_logger
@@ -118,11 +118,11 @@ def serialize_mixed_data(data: Any, bidi_component_proto: BidiComponentProto) ->
         # We have dataframes, use mixed data serialization
         mixed_proto = MixedDataProto()
         try:
-            mixed_proto.json = json.dumps(processed_data)
+            mixed_proto.json = json_util.dumps(processed_data)
         except TypeError:
             # If JSON serialization fails (e.g., due to undetected dataframes),
             # fall back to string representation
-            mixed_proto.json = json.dumps(str(processed_data))
+            mixed_proto.json = json_util.dumps(str(processed_data))
 
         # Add Arrow blobs to the protobuf
         for ref_id, arrow_bytes in arrow_blobs.items():
@@ -132,11 +132,11 @@ def serialize_mixed_data(data: Any, bidi_component_proto: BidiComponentProto) ->
     else:
         # No dataframes found, use regular JSON serialization
         try:
-            bidi_component_proto.json = json.dumps(processed_data)
+            bidi_component_proto.json = json_util.dumps(processed_data)
         except TypeError:
             # If JSON serialization fails (e.g., due to dataframes in lists/tuples),
             # fall back to string representation
-            bidi_component_proto.json = json.dumps(str(processed_data))
+            bidi_component_proto.json = json_util.dumps(str(processed_data))
 
 
 def handle_deserialize(s: str | None) -> Any:
@@ -157,8 +157,8 @@ def handle_deserialize(s: str | None) -> Any:
     if s is None:
         return None
     try:
-        return json.loads(s)
-    except json.JSONDecodeError:
+        return json_util.loads(s)
+    except json_util.JSONDecodeError:
         return s
 
 
@@ -232,9 +232,9 @@ class BidiComponentSerde:
             deserialized_value = ui_value
         elif isinstance(ui_value, str):
             try:
-                parsed = json.loads(ui_value)
+                parsed = json_util.loads(ui_value)
                 deserialized_value = parsed if isinstance(parsed, dict) else {}
-            except (json.JSONDecodeError, TypeError) as e:
+            except (json_util.JSONDecodeError, TypeError) as e:
                 _LOGGER.warning(
                     "Failed to deserialize component state from frontend: %s",
                     e,
@@ -269,4 +269,4 @@ class BidiComponentSerde:
             A JSON string representation of the value.
 
         """
-        return json.dumps(value)
+        return json_util.dumps(value)

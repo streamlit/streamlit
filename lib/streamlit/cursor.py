@@ -66,6 +66,12 @@ class SparseList(Generic[T]):
     def __init__(self) -> None:
         self._data: dict[int, T] = {}
 
+    def __copy__(self) -> SparseList[T]:
+        """Create a shallow copy of the sparse list."""
+        new_list: SparseList[T] = SparseList()
+        new_list._data = self._data.copy()
+        return new_list
+
     def __setitem__(self, index: int, value: T) -> None:
         if not isinstance(index, int) or index < 0:
             raise IndexError("SparseList indices must be non-negative integers")
@@ -219,6 +225,23 @@ class RunningCursor(Cursor):
         self._parent_path = parent_path
         self._index = 0
 
+    def __copy__(self) -> RunningCursor:
+        """Create a shallow copy of the cursor.
+
+        This is more efficient than deepcopy as it only copies mutable state.
+        Immutable attributes (root_container, parent_path) are shared.
+        """
+        from copy import copy
+
+        new_cursor = RunningCursor(
+            root_container=self._root_container,
+            parent_path=self._parent_path,  # Tuple is immutable, safe to share
+            transient_index=self._transient_index,
+            transient_elements=copy(self._transient_elements),
+        )
+        new_cursor._index = self._index
+        return new_cursor
+
     @property
     def root_container(self) -> int:
         return self._root_container
@@ -288,6 +311,23 @@ class LockedCursor(Cursor):
         self._index = index
         self._parent_path = parent_path
         self._props = props
+
+    def __copy__(self) -> LockedCursor:
+        """Create a shallow copy of the cursor.
+
+        This is more efficient than deepcopy as it only copies mutable state.
+        Immutable attributes (root_container, parent_path, index) are shared.
+        """
+        from copy import copy
+
+        return LockedCursor(
+            root_container=self._root_container,
+            parent_path=self._parent_path,  # Tuple is immutable, safe to share
+            index=self._index,
+            transient_index=self._transient_index,
+            transient_elements=copy(self._transient_elements),
+            **self._props,  # Props dict is shallow copied by **kwargs
+        )
 
     @property
     def root_container(self) -> int:

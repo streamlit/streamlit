@@ -52,6 +52,44 @@ class UtilTest(unittest.TestCase):
     def test_calc_md5_can_handle_bytes_and_strings(self):
         assert util.calc_md5("eventually bytes") == util.calc_md5(b"eventually bytes")
 
+    def test_create_fast_hasher_returns_hasher_with_expected_interface(self):
+        """Test that create_fast_hasher returns a hasher with update/digest/hexdigest."""
+        hasher = util.create_fast_hasher()
+
+        # Should have the expected interface
+        assert hasattr(hasher, "update")
+        assert hasattr(hasher, "digest")
+        assert hasattr(hasher, "hexdigest")
+
+        # Should work correctly
+        hasher.update(b"test data")
+        digest = hasher.digest()
+        hexdigest = hasher.hexdigest()
+
+        assert isinstance(digest, bytes)
+        assert isinstance(hexdigest, str)
+        assert len(hexdigest) > 0
+
+    def test_create_fast_hasher_deterministic(self):
+        """Test that create_fast_hasher produces consistent results."""
+        hasher1 = util.create_fast_hasher()
+        hasher2 = util.create_fast_hasher()
+
+        hasher1.update(b"test data")
+        hasher2.update(b"test data")
+
+        assert hasher1.hexdigest() == hasher2.hexdigest()
+
+    def test_create_fast_hasher_different_inputs_produce_different_hashes(self):
+        """Test that different inputs produce different hashes."""
+        hasher1 = util.create_fast_hasher()
+        hasher2 = util.create_fast_hasher()
+
+        hasher1.update(b"data1")
+        hasher2.update(b"data2")
+
+        assert hasher1.hexdigest() != hasher2.hexdigest()
+
 
 # Pytest-style tests for ReadOnlyAttributeDictionary
 
