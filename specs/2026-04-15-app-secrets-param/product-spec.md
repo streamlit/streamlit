@@ -22,6 +22,8 @@ Kubernetes, Azure App Service). Users face friction when deploying outside Strea
 
 - [#10543](https://github.com/streamlit/streamlit/issues/10543) — "Set [auth] secrets config from
   environment variables or through st.login"
+- [#9016](https://github.com/streamlit/streamlit/issues/9016) — "Cannot Use kwargs Only in Snowflake
+  Connection" (users want to pass credentials programmatically without secrets.toml)
 
 **Current workarounds (from issue comments):**
 
