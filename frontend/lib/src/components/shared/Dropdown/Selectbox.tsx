@@ -50,7 +50,6 @@ import {
   ListBoxItem,
   Popover,
 } from "react-aria-components"
-import { flushSync } from "react-dom"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -265,13 +264,11 @@ const SelectComboInput = memo(
     {
       onFocusProp,
       onClickProp,
-      onKeyDownCaptureProp,
       placeholderColor,
       ...rest
     }: Omit<ComponentProps<typeof StyledInput>, "$placeholderColor"> & {
       onFocusProp: (e: FocusEvent<HTMLInputElement>) => void
       onClickProp: (e: MouseEvent<HTMLInputElement>) => void
-      onKeyDownCaptureProp?: (e: KeyboardEvent<HTMLInputElement>) => void
       /** Placeholder text color (RAC Input does not accept Emotion `css`). */
       placeholderColor?: string
     },
@@ -326,16 +323,6 @@ const SelectComboInput = memo(
 
     const { onKeyDownCapture: racKeyDownCapture, ...restForDom } = rest
 
-    const mergedKeyDownCapture = useCallback(
-      (e: KeyboardEvent<HTMLInputElement>) => {
-        onKeyDownCaptureProp?.(e)
-        if (!e.defaultPrevented) {
-          racKeyDownCapture?.(e)
-        }
-      },
-      [onKeyDownCaptureProp, racKeyDownCapture]
-    )
-
     return (
       <StyledInput
         {...restForDom}
@@ -343,7 +330,7 @@ const SelectComboInput = memo(
         $placeholderColor={placeholderColor}
         onFocus={mergedFocus}
         onClick={mergedClick}
-        onKeyDownCapture={mergedKeyDownCapture}
+        onKeyDownCapture={racKeyDownCapture}
       />
     )
   })
@@ -573,130 +560,6 @@ const Selectbox: FC<Props> = ({
       }
     },
     [handleComboChange, inputReadOnly, selectedKey]
-  )
-
-  const tryHandleSelectboxBackspace = useCallback(
-    (t: HTMLInputElement): boolean => {
-      // Prefer non-empty ref text (tracks our edits); when ref is still "" but the field
-      // shows the committed label (focus/RA timing), fall back to the DOM value so the
-      // first Backspace is not a no-op (vitest + real browsers).
-      const refVal = inputTextRef.current
-      const domVal = t.value
-      const v = refVal.length > 0 ? refVal : domVal
-      let start = t.selectionStart ?? v.length
-      let end = t.selectionEnd ?? v.length
-      if (t.value !== v && start === end) {
-        start = end = v.length
-      }
-
-      if (start !== end) {
-        const committedLabel = getDisplayString(value)
-        // With the menu open, RA may leave the full committed label selected after click.
-        // One Backspace should trim the suffix (same as End + Backspace); clearing the whole
-        // field in one key triggers userCleared + prop sync and restores the label (vitest/e2e).
-        if (
-          start === 0 &&
-          end === v.length &&
-          v.length > 0 &&
-          v === committedLabel
-        ) {
-          const next = v.slice(0, -1)
-          inputTextRef.current = next
-          /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-           * ComboBox input must commit synchronously so selection range updates match the trimmed value.
-           */
-          flushSync(() => {
-            handleInputChange(next)
-          })
-          if (document.activeElement === t) {
-            const c = next.length
-            t.setSelectionRange(c, c)
-          }
-          return true
-        }
-        const next = v.slice(0, start) + v.slice(end)
-        inputTextRef.current = next
-        /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-         * ComboBox input must commit synchronously so selection range updates match the trimmed value.
-         */
-        flushSync(() => {
-          handleInputChange(next)
-        })
-        if (document.activeElement === t) {
-          t.setSelectionRange(start, start)
-        }
-        return true
-      }
-
-      const committedLabel = getDisplayString(value)
-      const trimmingCommitted =
-        committedLabel.length > 0 &&
-        (v === committedLabel ||
-          (committedLabel.startsWith(v) &&
-            v.length > 0 &&
-            v.length < committedLabel.length))
-
-      if (trimmingCommitted && v.length > 0) {
-        const next = v.slice(0, -1)
-        inputTextRef.current = next
-        /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-         * ComboBox input must commit synchronously so selection range updates match the trimmed value.
-         */
-        flushSync(() => {
-          handleInputChange(next)
-        })
-        if (document.activeElement === t) {
-          const caret = next.length
-          t.setSelectionRange(caret, caret)
-        }
-        return true
-      }
-
-      if (start > 0) {
-        const next = v.slice(0, start - 1) + v.slice(start)
-        const caret = start - 1
-        inputTextRef.current = next
-        /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
-         * ComboBox input must commit synchronously so selection range updates match the trimmed value.
-         */
-        flushSync(() => {
-          handleInputChange(next)
-        })
-        if (document.activeElement === t) {
-          t.setSelectionRange(caret, caret)
-        }
-        return true
-      }
-      return false
-    },
-    [getDisplayString, handleInputChange, value]
-  )
-
-  const handleSelectboxInputBackspaceCapture = useCallback(
-    (e: KeyboardEvent<HTMLInputElement>) => {
-      if (isFilterTypingLocked) {
-        return
-      }
-      if (
-        e.key !== "Backspace" ||
-        e.nativeEvent.isComposing ||
-        selectDisabled ||
-        inputReadOnly
-      ) {
-        return
-      }
-      const handled = tryHandleSelectboxBackspace(e.currentTarget)
-      if (handled) {
-        e.preventDefault()
-        e.stopPropagation()
-      }
-    },
-    [
-      inputReadOnly,
-      isFilterTypingLocked,
-      selectDisabled,
-      tryHandleSelectboxBackspace,
-    ]
   )
 
   const handleBlur = useCallback(() => {
@@ -1047,7 +910,6 @@ const Selectbox: FC<Props> = ({
               }
               onFocusProp={handleInputFocus}
               onClickProp={handleInputClick}
-              onKeyDownCaptureProp={handleSelectboxInputBackspaceCapture}
               onKeyDown={handleSelectboxKeyDown}
               style={{
                 color: theme.colors.bodyText,

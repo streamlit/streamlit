@@ -52,7 +52,6 @@ import {
   Popover,
   RangeCalendar,
 } from "react-aria-components"
-import { flushSync } from "react-dom"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
@@ -300,10 +299,7 @@ const PickerTextInput = memo(function PickerTextInput({
       if (e.key === "Escape") {
         if (overlayState?.isOpen) {
           e.preventDefault()
-          // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- commit DOM before closing overlay (RAC calendar sync)
-          flushSync(() => {
-            commitDomValue()
-          })
+          commitDomValue()
           overlayState.setOpen(false)
           return
         }
@@ -331,31 +327,17 @@ const PickerTextInput = memo(function PickerTextInput({
           e.preventDefault()
           e.stopPropagation()
           const el = e.currentTarget as HTMLInputElement
-          // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- commit before closing overlay in same turn
-          flushSync(() => {
-            commitFromDomValue(el.value)
-          })
+          commitFromDomValue(el.value)
           const os = racOverlayRef.current
           if (os?.isOpen) {
             os.setOpen(false)
           }
         }
       }}
-      onInput={e => {
-        const el = e.currentTarget as HTMLInputElement
-        onTextInputChange(el.value)
-        // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- keep widget state aligned with DOM during typing
-        flushSync(() => {
-          commitFromDomValue(el.value)
-        })
-      }}
       onChange={e => {
         const el = e.currentTarget as HTMLInputElement
         onTextInputChange(el.value)
-        // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- keep widget state aligned with DOM during typing
-        flushSync(() => {
-          commitFromDomValue(el.value)
-        })
+        commitFromDomValue(el.value)
       }}
       onFocus={e => {
         editingRef.current = true
@@ -518,10 +500,7 @@ function DateInput({
       resetError()
 
       if (isNullOrUndefined(nextDates) || nextDates.length === 0) {
-        // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- clear calendar + text in same turn
-        flushSync(() => {
-          setValueWithSource({ value: [], fromUi: true })
-        })
+        setValueWithSource({ value: [], fromUi: true })
         setIsEmpty(true)
         setTextValue("")
         return
@@ -545,12 +524,7 @@ function DateInput({
         // Do not push invalid dates to widget/session state (matches e2e: value unchanged).
         return
       }
-      // Flush so DatePicker/RAC sees the new CalendarDate value in the same
-      // turn as controlled text updates (avoids fill()/input fighting value).
-      // eslint-disable-next-line @eslint-react/dom/no-flush-sync -- RAC controlled sync
-      flushSync(() => {
-        setValueWithSource({ value: newDates, fromUi: true })
-      })
+      setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates.length)
     },
     [createErrorMessage, maxDate, minDate, resetError, setValueWithSource]
