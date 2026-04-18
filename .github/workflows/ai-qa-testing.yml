@@ -130,9 +130,7 @@ jobs:
 
           ## Task
 
-          Follow the QA testing methodology defined in \`.claude/agents/qa-testing-feature.md\` to perform comprehensive QA testing on this PR.
-
-          Read that file first to understand the full workflow, then execute it.
+          Run the /qa-testing-feature subagent to perform comprehensive QA testing on this PR.
 
           Do not ask for confirmation. Execute tests and document all findings.
 
