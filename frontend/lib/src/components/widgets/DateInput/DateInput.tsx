@@ -71,7 +71,6 @@ import {
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { convertRemToPx } from "~lib/theme/utils"
 import {
   isNullOrUndefined,
@@ -795,7 +794,10 @@ function DateInput({
             aria-label={element.label || "Date range"}
           >
             <StyledPickerRoot>
-              <StyledGroup data-testid="stDateInputGroup">
+              <StyledGroup
+                data-testid="stDateInputGroup"
+                $hasError={Boolean(error)}
+              >
                 <PickerTextInput
                   disabled={disabled}
                   placeholderText={placeholderText}
@@ -852,11 +854,7 @@ function DateInput({
                 style={getPopoverContainerStyle(theme)}
               >
                 <StyledDialog>
-                  <StyledCalendarContainer
-                    data-testid="stDateInputCalendar"
-                    $hasLightBg={hasLightBackgroundColor(theme)}
-                    $theme={theme}
-                  >
+                  <StyledCalendarContainer data-testid="stDateInputCalendar">
                     {enableQuickSelect && (
                       <QuickSelect
                         element={element}
@@ -885,7 +883,10 @@ function DateInput({
             aria-label={element.label || "Date"}
           >
             <StyledPickerRoot>
-              <StyledGroup data-testid="stDateInputGroup">
+              <StyledGroup
+                data-testid="stDateInputGroup"
+                $hasError={Boolean(error)}
+              >
                 <PickerTextInput
                   disabled={disabled}
                   placeholderText={placeholderText}
@@ -942,11 +943,7 @@ function DateInput({
                 style={getPopoverContainerStyle(theme)}
               >
                 <StyledDialog>
-                  <StyledCalendarContainer
-                    data-testid="stDateInputCalendar"
-                    $hasLightBg={hasLightBackgroundColor(theme)}
-                    $theme={theme}
-                  >
+                  <StyledCalendarContainer data-testid="stDateInputCalendar">
                     <Calendar
                       firstDayOfWeek={firstDayOfWeek}
                       aria-label="Calendar."
@@ -969,16 +966,44 @@ const StyledPickerRoot = styled.div({
   width: "100%",
 })
 
-const StyledGroup = styled(Group)(({ theme: t }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  flexWrap: "wrap",
-  gap: t.spacing.twoXS,
-  width: "100%",
-  position: "relative",
-}))
+/**
+ * Outer wrapper: owns border, background, rounded corners, and min height.
+ * Follows the token-based "container + transparent input" pattern used by
+ * Selectbox and NumberInput in this codebase, so the widget visually fits
+ * with the rest of Streamlit's input family via shared theme tokens rather
+ * than trying to reproduce BaseWeb's internal styling.
+ */
+const StyledGroup = styled(Group)<{ $hasError: boolean }>(
+  ({ theme, $hasError }) => ({
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "stretch",
+    width: "100%",
+    position: "relative",
+    fontSize: theme.fontSizes.md,
+    lineHeight: theme.lineHeights.inputWidget,
+    fontWeight: theme.fontWeights.normal,
+    minHeight: theme.sizes.minElementHeight,
+    borderLeftWidth: theme.sizes.borderWidth,
+    borderRightWidth: theme.sizes.borderWidth,
+    borderTopWidth: theme.sizes.borderWidth,
+    borderBottomWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderColor: getBorderColor(theme.colors, false),
+    boxSizing: "border-box",
+    borderRadius: theme.radii.default,
+    backgroundColor: $hasError
+      ? theme.colors.redBackgroundColor
+      : theme.colors.widgetBackgroundColor,
+    "&[data-focus-within]": {
+      borderColor: getBorderColor(theme.colors, true),
+    },
+  })
+)
 
+/**
+ * Inner input: transparent, borderless, inherits sizing from StyledGroup.
+ */
 const StyledTextInput = styled.input<{
   $hasError: boolean
   $colors: ReturnType<typeof useEmotionTheme>["colors"]
@@ -997,81 +1022,81 @@ const StyledTextInput = styled.input<{
     $lineHeights,
     $fontWeights,
     $zIndices,
-    $radii,
-  }) => {
-    const idle = getBorderColor($colors, false)
-    const focused = getBorderColor($colors, true)
-    return {
-      flex: 1,
-      minWidth: 0,
-      boxSizing: "border-box",
-      borderLeftWidth: $sizes.borderWidth,
-      borderRightWidth: $sizes.borderWidth,
-      borderTopWidth: $sizes.borderWidth,
-      borderBottomWidth: $sizes.borderWidth,
-      borderStyle: "solid",
-      borderTopColor: idle,
-      borderRightColor: idle,
-      borderBottomColor: idle,
-      borderLeftColor: idle,
-      borderRadius: $radii.default,
-      paddingRight: $spacing.sm,
-      paddingLeft: `calc(${$spacing.sm} + ${$sizes.tagMarginInsideBorder})`,
-      paddingBottom: $spacing.sm,
-      paddingTop: $spacing.sm,
-      lineHeight: $lineHeights.inputWidget,
-      fontWeight: $fontWeights.normal,
-      position: "relative",
-      zIndex: $zIndices.priority,
-      backgroundColor: $hasError
-        ? $colors.redBackgroundColor
-        : $colors.widgetBackgroundColor,
-      color: $hasError ? $colors.redTextColor : $colors.bodyText,
-      outline: 0,
-      "::placeholder": {
-        color: $colors.fadedText60,
-      },
-      ":focus": {
-        borderTopColor: focused,
-        borderRightColor: focused,
-        borderBottomColor: focused,
-        borderLeftColor: focused,
-        outline: 0,
-      },
-    }
-  }
+  }) => ({
+    flexGrow: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    boxSizing: "border-box",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    marginLeft: $sizes.tagMarginInsideBorder,
+    paddingLeft: $spacing.sm,
+    paddingRight: $spacing.sm,
+    paddingTop: $spacing.sm,
+    paddingBottom: $spacing.sm,
+    lineHeight: $lineHeights.inputWidget,
+    fontWeight: $fontWeights.normal,
+    position: "relative",
+    zIndex: $zIndices.priority,
+    color: $hasError ? $colors.redTextColor : $colors.bodyText,
+    caretColor: $colors.bodyText,
+    "::placeholder": {
+      color: $colors.fadedText60,
+    },
+    ":focus": {
+      outline: "none",
+    },
+  })
 )
 
 const ClearButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  boxSizing: "border-box",
+  padding: theme.spacing.threeXS,
+  marginRight: theme.spacing.twoXS,
+  alignSelf: "center",
+  height: theme.sizes.clearIconSize,
+  width: theme.sizes.clearIconSize,
   border: "none",
   background: "transparent",
   cursor: "pointer",
   color: theme.colors.grayTextColor,
-  fontSize: theme.fontSizes.lg,
   lineHeight: theme.lineHeights.none,
-  padding: theme.spacing.threeXS,
+  fontSize: theme.fontSizes.md,
   ":hover": {
     color: theme.colors.bodyText,
+  },
+  ":disabled": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
   },
 }))
 
 const ErrorIconWrap = styled.span(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  backgroundColor: theme.colors.transparent,
   display: "inline-flex",
   alignItems: "center",
+  alignSelf: "center",
+  marginRight: theme.spacing.twoXS,
+  color: theme.colors.redTextColor,
+  backgroundColor: "transparent",
 }))
 
 const CalendarOpenButton = styled(Button)(({ theme }) => ({
-  border: "none",
-  background: "transparent",
-  cursor: "pointer",
-  padding: theme.spacing.twoXS,
-  display: "inline-flex",
+  display: "flex",
   alignItems: "center",
   justifyContent: "center",
   flexShrink: 0,
-  ":disabled": {
+  paddingRight: theme.spacing.sm,
+  paddingLeft: theme.spacing.twoXS,
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  color: theme.colors.bodyText,
+  "&[data-disabled]": {
     opacity: 0.5,
     cursor: "not-allowed",
   },
@@ -1081,17 +1106,11 @@ const StyledDialog = styled(Dialog)({
   outline: "none",
 })
 
-const StyledCalendarContainer = styled.div<{
-  $hasLightBg: boolean
-  $theme: ReturnType<typeof useEmotionTheme>
-}>(({ $hasLightBg, $theme }) => ({
-  fontSize: $theme.fontSizes.sm,
-  paddingRight: $theme.spacing.sm,
-  paddingLeft: $theme.spacing.sm,
-  paddingBottom: $theme.spacing.sm,
-  paddingTop: $theme.spacing.sm,
-  borderWidth: $theme.spacing.none,
-  ...($hasLightBg && { borderWidth: $theme.spacing.none }),
+const StyledCalendarContainer = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  padding: theme.spacing.sm,
+  color: theme.colors.bodyText,
+  backgroundColor: theme.colors.bgColor,
 }))
 
 const CalendarNavRow = styled.div(({ theme }) => ({
@@ -1103,13 +1122,38 @@ const CalendarNavRow = styled.div(({ theme }) => ({
 }))
 
 const StyledCalendarCell = styled(CalendarCell)(({ theme }) => ({
-  fontSize: theme.fontSizes.sm,
+  padding: theme.spacing.none,
   lineHeight: theme.lineHeights.base,
+  "& > div": {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxSizing: "border-box",
+    minHeight: theme.sizes.elementHighlightHeight,
+    fontSize: theme.fontSizes.sm,
+    borderTopLeftRadius: theme.radii.md2,
+    borderTopRightRadius: theme.radii.md2,
+    borderBottomRightRadius: theme.radii.md2,
+    borderBottomLeftRadius: theme.radii.md2,
+    cursor: "default",
+    outline: "none",
+    "&[data-hovered]:not([data-disabled]):not([data-outside-month])": {
+      backgroundColor: theme.colors.darkenedBgMix15,
+    },
+    "&[data-selected]": {
+      backgroundColor: theme.colors.primary,
+      color: theme.colors.white,
+    },
+    "&[data-disabled], &[data-outside-month]": {
+      color: theme.colors.fadedText40,
+    },
+  },
 }))
 
 const QuickSelectControl = styled.select<{
   $theme: ReturnType<typeof useEmotionTheme>
 }>(({ $theme }) => ({
+  boxSizing: "border-box",
   height: $theme.sizes.minElementHeight,
   borderLeftWidth: $theme.sizes.borderWidth,
   borderRightWidth: $theme.sizes.borderWidth,
@@ -1117,7 +1161,7 @@ const QuickSelectControl = styled.select<{
   borderBottomWidth: $theme.sizes.borderWidth,
   borderStyle: "solid",
   borderColor: $theme.colors.fadedText10,
-  borderRadius: $theme.radii.md2,
+  borderRadius: $theme.radii.default,
   backgroundColor: $theme.colors.widgetBackgroundColor,
   color: $theme.colors.bodyText,
   fontSize: $theme.fontSizes.sm,
