@@ -339,3 +339,47 @@ def test_keyed_tabs_persist_active_tab_across_remount(app: Page):
     expect(keyed_tabs.get_by_role("tab", name="Details")).to_have_attribute(
         "aria-selected", "true"
     )
+
+
+def test_tabs_height_stretch_fills_parent(app: Page):
+    """``height='stretch'`` should make the tabs container stretch to fill
+    the remaining space of its (fixed-height) parent ``st.container``."""
+    parent = get_element_by_key(app, "tabs_height_parent")
+    stretch_tabs = get_element_by_key(app, "tabs_height_stretch")
+    expect(parent).to_be_visible()
+    expect(stretch_tabs).to_be_visible()
+
+    parent_box = parent.bounding_box()
+    stretch_box = stretch_tabs.bounding_box()
+    assert parent_box is not None
+    assert stretch_box is not None
+
+    # The stretch tabs should occupy the majority of the remaining parent
+    # height (after the first, content-sized tabs block and paddings).
+    assert stretch_box["height"] >= parent_box["height"] * 0.4
+
+
+def test_tabs_height_pixel_is_fixed(app: Page):
+    """A fixed pixel ``height`` should clamp the tabs container to that
+    height and enable vertical scrolling of the active tab panel."""
+    pixel_tabs = get_element_by_key(app, "tabs_height_pixel")
+    expect(pixel_tabs).to_be_visible()
+
+    box = pixel_tabs.bounding_box()
+    assert box is not None
+    # Allow a small tolerance for padding/border rounding.
+    assert 140 <= box["height"] <= 170
+
+
+def test_tabs_height_content_is_default(app: Page):
+    """Without ``height``, tabs should size to their content and stay
+    considerably smaller than the fixed-height parent container."""
+    parent = get_element_by_key(app, "tabs_height_parent")
+    content_tabs = get_element_by_key(app, "tabs_height_content")
+    expect(content_tabs).to_be_visible()
+
+    parent_box = parent.bounding_box()
+    content_box = content_tabs.bounding_box()
+    assert parent_box is not None
+    assert content_box is not None
+    assert content_box["height"] < parent_box["height"]

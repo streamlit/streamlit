@@ -20,13 +20,24 @@ import { transparentize } from "color2k"
 interface StyledTabContainerProps {
   isOverflowing: boolean
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
+  isStretchHeight: boolean
+  isFixedHeight: boolean
   flex: React.CSSProperties["flex"]
 }
 
 export const StyledTabContainer = styled.div<StyledTabContainerProps>(
-  ({ isOverflowing, width, flex }) => ({
+  ({ isOverflowing, width, height, isStretchHeight, isFixedHeight, flex }) => ({
     position: isOverflowing ? "relative" : undefined,
     width: width || undefined,
+    // When a non-default height is requested (stretch or fixed pixel height),
+    // apply flex column layout so the tab panel can fill the available space.
+    height: isStretchHeight || isFixedHeight ? height || undefined : undefined,
+    display: isStretchHeight || isFixedHeight ? "flex" : undefined,
+    flexDirection: isStretchHeight || isFixedHeight ? "column" : undefined,
+    // Allow this flex child to shrink below its content size so that the
+    // inner scroll area (TabPanel) can activate its own overflow.
+    minHeight: isStretchHeight || isFixedHeight ? 0 : undefined,
     flex: flex || undefined,
   })
 )

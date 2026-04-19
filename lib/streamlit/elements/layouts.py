@@ -632,6 +632,7 @@ class LayoutsMixin:
         tabs: Sequence[str],
         *,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
         default: str | None = None,
         key: Key | None = None,
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
@@ -685,6 +686,27 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
+
+        height : "content", "stretch", or int
+            The height of the tab container. This can be one of the following:
+
+            - ``"content"`` (default): The height of the container matches the
+              height of its content.
+            - ``"stretch"``: The height of the container matches the height of
+              its content or the height of the parent container, whichever is
+              larger. This is useful when placing ``st.tabs`` inside a fixed-
+              height ``st.container`` or a horizontal flex layout, so that
+              each tab panel fills the available vertical space.
+            - An integer specifying the height in pixels: The container has a
+              fixed height. If the content of a tab is larger than the specified
+              height, scrolling is enabled for that tab's contents.
+
+            .. note::
+                Use scrolling tab containers (fixed ``int`` height) sparingly.
+                If you use scrolling tabs, avoid heights that exceed 500 pixels.
+                Otherwise, the scroll surface of the container might cover the
+                majority of the screen on mobile devices, which makes it hard
+                to scroll the rest of the app.
 
         default : str or None
             The default tab to select. If this is ``None`` (default), the first
@@ -916,6 +938,7 @@ class LayoutsMixin:
                 dg=self.dg,
                 tabs=tuple(tabs),
                 width=width,
+                height=height,
                 default=default,
             )
             block_id = element_id
@@ -954,6 +977,8 @@ class LayoutsMixin:
         block_proto.tab_container.SetInParent()
         validate_width(width)
         block_proto.width_config.CopyFrom(get_width_config(width))
+        validate_height(height, allow_content=True)
+        block_proto.height_config.CopyFrom(get_height_config(height))
 
         # Compute the current tab index from the label
         try:

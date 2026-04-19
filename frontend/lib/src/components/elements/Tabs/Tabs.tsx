@@ -72,6 +72,7 @@ export interface TabProps extends BlockPropsWithoutWidth {
     childProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
   ) => ReactElement
   width: React.CSSProperties["width"]
+  height: React.CSSProperties["height"]
   flex: React.CSSProperties["flex"]
   fragmentId?: string
 }
@@ -82,10 +83,20 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     node,
     isStale,
     width,
+    height,
     flex,
     widgetMgr,
     fragmentId,
   } = props
+
+  // `height` comes pre-computed from `useLayoutStyles`:
+  //   - "auto"    => "content" (default tabs behaviour)
+  //   - "100%"    => "stretch" (fill parent)
+  //   - "<N>px"   => fixed pixel height (scrolling tab panels)
+  const isStretchHeight = height === "100%"
+  const isFixedHeight =
+    typeof height === "string" && height !== "auto" && height !== "100%"
+  const hasExplicitHeight = isStretchHeight || isFixedHeight
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const defaultTabIndex = node.deltaBlock?.tabContainer?.defaultTabIndex ?? 0
@@ -266,6 +277,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       data-testid="stTabs"
       isOverflowing={isOverflowing}
       width={width}
+      height={height}
+      isStretchHeight={isStretchHeight}
+      isFixedHeight={isFixedHeight}
       flex={flex}
     >
       <UITabs
@@ -320,6 +334,18 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             style: () => ({
               // resetting transform to fix full screen wrapper
               transform: "none",
+              // When the tabs container has an explicit height (stretch or
+              // a fixed pixel value), make the BaseUI root a flex column so
+              // that the active TabPanel can fill the remaining vertical
+              // space below the tab list.
+              ...(hasExplicitHeight
+                ? {
+                    display: "flex",
+                    flexDirection: "column" as const,
+                    height: "100%",
+                    minHeight: 0,
+                  }
+                : {}),
             }),
           },
         }}
@@ -366,6 +392,17 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
                     paddingRight: theme.spacing.none,
                     paddingBottom: theme.spacing.none,
                     paddingTop: theme.spacing.lg,
+                    // When an explicit height is set on st.tabs, let each
+                    // TabPanel expand to fill the remaining space.  For
+                    // fixed pixel heights we also enable internal scrolling
+                    // so that overflow content is reachable.
+                    ...(hasExplicitHeight
+                      ? {
+                          flex: 1,
+                          minHeight: 0,
+                          ...(isFixedHeight ? { overflow: "auto" } : {}),
+                        }
+                      : {}),
                   }),
                 },
                 Tab: {

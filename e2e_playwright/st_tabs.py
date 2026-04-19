@@ -264,3 +264,32 @@ st.write(
     f"Tabs callback args result: "
     f"{st.session_state.get('tabs_cb_args_result', 'Not called')}"
 )
+
+
+# --- Height parameter (issue #12217) ---------------------------------------
+# Three tab containers inside a fixed-height parent container exercise the
+# three values accepted by ``height``: default (``"content"``), ``"stretch"``
+# and a fixed pixel value.  The first one should keep its natural (small)
+# height; the second should expand to fill the outer container; the third
+# should be clamped to 150px with its own scroll area.
+with st.container(height=360, border=True, key="tabs_height_parent"):
+    content_tabs = st.tabs(["Default", "Other"], key="tabs_height_content")
+    with content_tabs[0]:
+        st.write("Content height tab")
+    with content_tabs[1]:
+        st.write("Second tab, default height")
+
+    stretch_tabs = st.tabs(
+        ["Stretch", "Other"], height="stretch", key="tabs_height_stretch"
+    )
+    with stretch_tabs[0]:
+        st.write("Stretch tab fills the remaining vertical space.")
+    with stretch_tabs[1]:
+        st.write("Second stretch tab")
+
+px_tabs = st.tabs(["Pixel", "Other"], height=150, key="tabs_height_pixel")
+with px_tabs[0]:
+    for i in range(30):
+        st.write(f"scroll line {i}")
+with px_tabs[1]:
+    st.write("Second pixel tab")

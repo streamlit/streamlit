@@ -399,11 +399,23 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.tabContainer) {
+    // When the tabs container has an explicit (non-default) height — either
+    // "stretch" (100%) or a fixed pixel height — render each tab's content
+    // wrapper at 100% so it can fill the TabPanel.  Otherwise keep the
+    // historical "auto" behaviour so content-sized tabs stay unchanged.
+    const tabHeight = styles.height
+    const hasExplicitHeight =
+      typeof tabHeight === "string" && tabHeight !== "auto"
     const renderTabContent = (
       mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
     ): ReactElement => {
       // avoid circular dependency where Tab uses VerticalBlock but VerticalBlock uses tabs
-      return <ContainerContentsWrapper {...mappedChildProps} height="auto" />
+      return (
+        <ContainerContentsWrapper
+          {...mappedChildProps}
+          height={hasExplicitHeight ? "100%" : "auto"}
+        />
+      )
     }
     // We can't use StyledLayoutWrapper for tabs currently because of the horizontal scrolling
     // management that is handled in the Tabs component. TODO(lwilby): Investigate whether it makes
@@ -413,6 +425,7 @@ export const BlockNodeRenderer = (
       isStale,
       renderTabContent,
       width: styles.width,
+      height: styles.height,
       flex: styles.flex,
       fragmentId: node.fragmentId,
     }

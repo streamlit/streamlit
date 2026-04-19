@@ -1707,6 +1707,81 @@ class TabsTest(DeltaGeneratorTestCase):
         with st.form("form"):
             st.tabs(["A", "B"], on_change="rerun")
 
+    def test_default_height_is_content(self):
+        """Test that the default height config is ``use_content``."""
+        st.tabs(["A", "B"])
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        height_config = tab_container_block.add_block.height_config
+        assert height_config.WhichOneof("height_spec") == "use_content"
+        assert height_config.use_content is True
+
+    def test_height_stretch(self):
+        """Test that ``height='stretch'`` sets ``use_stretch`` on the proto."""
+        st.tabs(["A", "B"], height="stretch")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        height_config = tab_container_block.add_block.height_config
+        assert height_config.WhichOneof("height_spec") == "use_stretch"
+        assert height_config.use_stretch is True
+
+    def test_height_content_explicit(self):
+        """Test that ``height='content'`` explicitly sets ``use_content``."""
+        st.tabs(["A", "B"], height="content")
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        height_config = tab_container_block.add_block.height_config
+        assert height_config.WhichOneof("height_spec") == "use_content"
+
+    def test_height_pixels(self):
+        """Test that an ``int`` height is written as ``pixel_height``."""
+        st.tabs(["A", "B"], height=300)
+        tab_container_block = self.get_all_deltas_from_queue()[0]
+        height_config = tab_container_block.add_block.height_config
+        assert height_config.WhichOneof("height_spec") == "pixel_height"
+        assert height_config.pixel_height == 300
+
+    @parameterized.expand(
+        [
+            ("invalid_string", "auto"),
+            ("negative", -1),
+            ("zero", 0),
+            ("wrong_type", 1.5),
+            ("none", None),
+        ]
+    )
+    def test_invalid_height_raises(self, _name: str, invalid_height) -> None:
+        """Test that invalid ``height`` values raise ``StreamlitAPIException``."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], height=invalid_height)
+
+    def test_height_included_in_stateful_widget_id(self) -> None:
+        """Test that ``height`` affects the computed widget id for stateful tabs.
+
+        Two otherwise-identical stateful ``st.tabs`` that differ only in the
+        ``height`` argument must produce different widget ids so that the
+        frontend can invalidate cached state when the user changes the
+        height.  We use distinct user keys to avoid the duplicate-key guard
+        and compare the hash portion of the resulting ids.
+        """
+        st.tabs(["A", "B"], key="tabs_a", on_change="rerun", height="content")
+        st.tabs(["A", "B"], key="tabs_b", on_change="rerun", height="stretch")
+        st.tabs(["A", "B"], key="tabs_c", on_change="rerun", height=250)
+
+        deltas = self.get_all_deltas_from_queue()
+        # Each ``st.tabs`` emits one tab_container delta followed by per-tab deltas.
+        tab_container_deltas = [
+            d for d in deltas if d.add_block.HasField("tab_container")
+        ]
+        assert len(tab_container_deltas) == 3
+
+        def _hash_part(delta) -> str:
+            # element ids have the form ``$$ID-<hash>-<user_key>``
+            full_id = delta.add_block.tab_container.id
+            assert full_id, "stateful tabs must emit a non-empty id"
+            return full_id.split("-")[1]
+
+        hashes = {_hash_part(d) for d in tab_container_deltas}
+        # All three heights must produce distinct hashes.
+        assert len(hashes) == 3
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog

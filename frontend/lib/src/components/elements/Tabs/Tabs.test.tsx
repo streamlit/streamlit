@@ -116,6 +116,33 @@ describe("st.tabs", () => {
     expect(tabs).toHaveLength(5)
   })
 
+  it("applies stretch height as flex column with 100% height", () => {
+    render(<Tabs {...getProps({ height: "100%" })} />)
+    const tabsElement = screen.getByTestId("stTabs")
+    expect(tabsElement).toHaveStyle({
+      height: "100%",
+      display: "flex",
+      flexDirection: "column",
+    })
+  })
+
+  it("applies a fixed pixel height as flex column", () => {
+    render(<Tabs {...getProps({ height: "250px" })} />)
+    const tabsElement = screen.getByTestId("stTabs")
+    expect(tabsElement).toHaveStyle({
+      height: "250px",
+      display: "flex",
+      flexDirection: "column",
+    })
+  })
+
+  it("does not apply explicit height styling for the default 'auto' height", () => {
+    render(<Tabs {...getProps({ height: "auto" })} />)
+    const tabsElement = screen.getByTestId("stTabs")
+    // No flex column layout should be forced when height is the default 'auto'.
+    expect(tabsElement).not.toHaveStyle({ display: "flex" })
+  })
+
   it("sets the tab labels correctly", () => {
     render(<Tabs {...getProps()} />)
     const tabs = screen.getAllByRole("tab")
