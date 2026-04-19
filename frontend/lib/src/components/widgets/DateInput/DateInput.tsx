@@ -41,6 +41,9 @@ import {
   Calendar,
   CalendarCell,
   CalendarGrid,
+  CalendarGridBody,
+  CalendarGridHeader,
+  CalendarHeaderCell,
   DatePicker,
   DatePickerStateContext,
   DateRangePicker,
@@ -744,17 +747,22 @@ function DateInput({
   const calendarChrome = (
     <>
       <CalendarNavRow>
-        <Button slot="previous">
+        <CalendarNavButton slot="previous">
           <Icon content={ChevronLeft} size="lg" />
-        </Button>
-        <Heading />
-        <Button slot="next">
+        </CalendarNavButton>
+        <CalendarHeading />
+        <CalendarNavButton slot="next">
           <Icon content={ChevronRight} size="lg" />
-        </Button>
+        </CalendarNavButton>
       </CalendarNavRow>
-      <CalendarGrid weekdayStyle="narrow">
-        {date => <StyledCalendarCell date={date} />}
-      </CalendarGrid>
+      <StyledCalendarGrid weekdayStyle="short">
+        <CalendarGridHeader>
+          {day => <StyledHeaderCell>{day}</StyledHeaderCell>}
+        </CalendarGridHeader>
+        <CalendarGridBody>
+          {date => <StyledCalendarCell date={date} />}
+        </CalendarGridBody>
+      </StyledCalendarGrid>
     </>
   )
 
@@ -855,21 +863,26 @@ function DateInput({
               >
                 <StyledDialog>
                   <StyledCalendarContainer data-testid="stDateInputCalendar">
-                    {enableQuickSelect && (
-                      <QuickSelect
-                        element={element}
-                        disabled={disabled}
-                        onSelectRange={(start, end) => {
-                          handleChange([start, end])
-                        }}
-                      />
-                    )}
                     <RangeCalendar
                       firstDayOfWeek={firstDayOfWeek}
                       aria-label="Calendar."
                     >
                       {calendarChrome}
                     </RangeCalendar>
+                    {enableQuickSelect && (
+                      <QuickSelectFooter>
+                        <QuickSelectLabel>
+                          Choose a date range
+                        </QuickSelectLabel>
+                        <QuickSelect
+                          element={element}
+                          disabled={disabled}
+                          onSelectRange={(start, end) => {
+                            handleChange([start, end])
+                          }}
+                        />
+                      </QuickSelectFooter>
+                    )}
                   </StyledCalendarContainer>
                 </StyledDialog>
               </Popover>
@@ -1113,41 +1126,147 @@ const StyledCalendarContainer = styled.div(({ theme }) => ({
   backgroundColor: theme.colors.bgColor,
 }))
 
+/**
+ * Zero out default `<table>` spacing/padding on the grid so the day cells
+ * control their own geometry end-to-end.
+ */
+const StyledCalendarGrid = styled(CalendarGrid)({
+  borderCollapse: "collapse",
+  borderSpacing: 0,
+  "& td": {
+    padding: 0,
+  },
+})
+
 const CalendarNavRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  marginBottom: theme.spacing.xs,
-  gap: theme.spacing.sm,
+  marginBottom: theme.spacing.sm,
+  paddingLeft: theme.spacing.twoXS,
+  paddingRight: theme.spacing.twoXS,
 }))
 
-const StyledCalendarCell = styled(CalendarCell)(({ theme }) => ({
+/**
+ * Centered calendar title ("July 2019"). Uses React Aria's `Heading` slot
+ * so the month/year string is managed by the library; we just restyle it.
+ */
+const CalendarHeading = styled(Heading)(({ theme }) => ({
+  flex: 1,
+  margin: 0,
+  textAlign: "center",
+  fontSize: theme.fontSizes.md,
+  fontWeight: theme.fontWeights.bold,
+  color: theme.colors.bodyText,
+}))
+
+/**
+ * Previous / next month buttons. Square icon buttons that match the
+ * size rhythm of the day cells below.
+ */
+const CalendarNavButton = styled(Button)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  boxSizing: "border-box",
+  width: theme.sizes.elementHighlightHeight,
+  height: theme.sizes.elementHighlightHeight,
   padding: theme.spacing.none,
-  lineHeight: theme.lineHeights.base,
-  "& > div": {
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    boxSizing: "border-box",
-    minHeight: theme.sizes.elementHighlightHeight,
-    fontSize: theme.fontSizes.sm,
-    borderTopLeftRadius: theme.radii.md2,
-    borderTopRightRadius: theme.radii.md2,
-    borderBottomRightRadius: theme.radii.md2,
-    borderBottomLeftRadius: theme.radii.md2,
-    cursor: "default",
-    outline: "none",
-    "&[data-hovered]:not([data-disabled]):not([data-outside-month])": {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-    "&[data-selected]": {
-      backgroundColor: theme.colors.primary,
-      color: theme.colors.white,
-    },
-    "&[data-disabled], &[data-outside-month]": {
-      color: theme.colors.fadedText40,
-    },
+  border: "none",
+  background: "transparent",
+  borderRadius: theme.radii.default,
+  cursor: "pointer",
+  color: theme.colors.bodyText,
+  "&[data-hovered]:not([data-disabled])": {
+    backgroundColor: theme.colors.darkenedBgMix15,
   },
+  "&[data-disabled]": {
+    opacity: 0.5,
+    cursor: "not-allowed",
+  },
+}))
+
+/**
+ * Day-of-week header cell ("Su", "Mo", ...). Small, grayed-out label
+ * that sits above each day column.
+ */
+const StyledHeaderCell = styled(CalendarHeaderCell)(({ theme }) => ({
+  boxSizing: "border-box",
+  width: theme.sizes.elementHighlightHeight,
+  height: theme.sizes.elementHighlightHeight,
+  paddingTop: theme.spacing.threeXS,
+  paddingBottom: theme.spacing.threeXS,
+  textAlign: "center",
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  color: theme.colors.fadedText60,
+}))
+
+/**
+ * React Aria's CalendarCell renders `<td><div .../></td>` and forwards any
+ * className / data-attributes onto the inner div (via renderProps). So when
+ * we wrap it with `styled(CalendarCell)`, our class lands on that inner div,
+ * which is also the element that carries `data-selected`, `data-today`, etc.
+ * Styles below are therefore written against the inner div directly.
+ */
+const StyledCalendarCell = styled(CalendarCell)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  boxSizing: "border-box",
+  width: theme.sizes.elementHighlightHeight,
+  height: theme.sizes.elementHighlightHeight,
+  margin: theme.spacing.threeXS,
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.base,
+  borderRadius: theme.radii.full ?? "50%",
+  cursor: "default",
+  outline: "none",
+  color: theme.colors.bodyText,
+  "&[data-hovered]:not([data-disabled]):not([data-outside-month])": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+  "&[data-focus-visible]:not([data-disabled])": {
+    boxShadow: `0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
+  },
+  "&[data-selected]": {
+    backgroundColor: theme.colors.primary,
+    color: theme.colors.white,
+    fontWeight: theme.fontWeights.bold,
+  },
+  "&[data-disabled]": {
+    color: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
+  "&[data-outside-month]": {
+    color: theme.colors.fadedText10,
+  },
+  // "Today" ring: subtle outline on the cell that represents the current
+  // day, so it stays visible even when nothing is selected. RAC exposes
+  // `data-today` automatically via useCalendarCell.
+  "&[data-today]:not([data-selected])": {
+    boxShadow: `inset 0 0 0 ${theme.sizes.borderWidth} ${theme.colors.primary}`,
+    color: theme.colors.primary,
+    fontWeight: theme.fontWeights.bold,
+  },
+}))
+
+const QuickSelectFooter = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.twoXS,
+  marginTop: theme.spacing.sm,
+  paddingTop: theme.spacing.sm,
+  borderTopWidth: theme.sizes.borderWidth,
+  borderTopStyle: "solid",
+  borderTopColor: theme.colors.borderColor,
+}))
+
+const QuickSelectLabel = styled.span(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  color: theme.colors.bodyText,
 }))
 
 const QuickSelectControl = styled.select<{
@@ -1160,13 +1279,18 @@ const QuickSelectControl = styled.select<{
   borderTopWidth: $theme.sizes.borderWidth,
   borderBottomWidth: $theme.sizes.borderWidth,
   borderStyle: "solid",
-  borderColor: $theme.colors.fadedText10,
+  borderColor: getBorderColor($theme.colors, false),
   borderRadius: $theme.radii.default,
   backgroundColor: $theme.colors.widgetBackgroundColor,
   color: $theme.colors.bodyText,
   fontSize: $theme.fontSizes.sm,
-  marginBottom: $theme.spacing.xs,
+  paddingLeft: $theme.spacing.sm,
+  paddingRight: $theme.spacing.sm,
   width: "100%",
+  "&:focus": {
+    outline: "none",
+    borderColor: getBorderColor($theme.colors, true),
+  },
 }))
 
 const QuickSelect = memo(function QuickSelect({

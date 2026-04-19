@@ -487,8 +487,27 @@ describe("DateInput widget", () => {
   })
 
   describe("localization", () => {
-    /** Weekday row from React Aria CalendarGrid (narrow column headers). */
-    const getWeekdayHeaderConcat = async (): Promise<string> => {
+    /**
+     * Returns the first character of each weekday column header, in render
+     * order. This keeps the assertion stable across `weekdayStyle` changes
+     * (narrow / short / long) so we can verify week-start ordering without
+     * pinning the tests to a specific label length. Not usable for locales
+     * whose weekday names share a common leading character (e.g. Arabic
+     * weekdays all start with the definite article "ال") — use
+     * `getWeekdayFullTextConcat` for those.
+     */
+    const getWeekdayFirstCharConcat = async (): Promise<string> => {
+      const grid = await screen.findByRole("grid", { name: /Calendar/ })
+      const headers = within(grid).getAllByRole("columnheader", {
+        hidden: true,
+      })
+      return headers
+        .map(el => (el.textContent ?? "").trim().charAt(0))
+        .join("")
+    }
+
+    /** Returns the full text of each weekday column header, concatenated. */
+    const getWeekdayFullTextConcat = async (): Promise<string> => {
       const grid = await screen.findByRole("grid", { name: /Calendar/ })
       const headers = within(grid).getAllByRole("columnheader", {
         hidden: true,
@@ -510,7 +529,7 @@ describe("DateInput widget", () => {
           await screen.findByTestId("stDateInputCalendarButton")
         )
 
-        expect(await getWeekdayHeaderConcat()).toBe("MDMDFSS")
+        expect(await getWeekdayFirstCharConcat()).toBe("MDMDFSS")
       })
     })
 
@@ -528,7 +547,12 @@ describe("DateInput widget", () => {
           await screen.findByTestId("stDateInputCalendarButton")
         )
 
-        expect(await getWeekdayHeaderConcat()).toBe("سحنثرخج")
+        // Weekday ordering for ar locale starts with Saturday ("السبت") and
+        // ends with Friday ("الجمعة"). jsdom's Intl returns full names here
+        // (not narrow/short forms), so assert on the concatenated full text.
+        expect(await getWeekdayFullTextConcat()).toBe(
+          "السبتالأحدالاثنينالثلاثاءالأربعاءالخميسالجمعة"
+        )
       })
     })
 
@@ -546,7 +570,7 @@ describe("DateInput widget", () => {
           await screen.findByTestId("stDateInputCalendarButton")
         )
 
-        expect(await getWeekdayHeaderConcat()).toBe("SMTWTFS")
+        expect(await getWeekdayFirstCharConcat()).toBe("SMTWTFS")
       })
     })
 
@@ -564,7 +588,7 @@ describe("DateInput widget", () => {
           await screen.findByTestId("stDateInputCalendarButton")
         )
 
-        expect(await getWeekdayHeaderConcat()).toBe("SMTWTFS")
+        expect(await getWeekdayFirstCharConcat()).toBe("SMTWTFS")
       })
     })
   })
