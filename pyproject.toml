@@ -119,7 +119,7 @@ test = [
   "playwright==1.58.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
-  "pytest-xdist>=3.6.1",
+  "pytest-xdist>=3.8.0",
   # pytest-rerunfailures 16.0 is breaking our CI:
   # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
   "pytest-rerunfailures>=15.0,!=16.0",
