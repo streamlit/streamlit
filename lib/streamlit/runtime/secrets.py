@@ -237,6 +237,8 @@ class Secrets(Mapping[str, Any]):
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
         self._file_watchers_installed = False
+        # Store programmatic secrets separately so they survive file-change reloads
+        self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
         self.file_change_listener = Signal(
             doc="Emitted when a `secrets.toml` file has been changed."
@@ -449,24 +451,39 @@ class Secrets(Mapping[str, Any]):
             _validate_secrets_value(value, key)
 
         with self._lock:
-            # Create a mutable copy of current secrets
-            current_secrets: dict[str, Any] = (
-                dict(self._secrets) if self._secrets is not None else {}
-            )
+            # Store programmatic secrets so they survive file-change reloads
+            self._programmatic_secrets = programmatic_secrets
+            self._apply_programmatic_secrets(programmatic_secrets)
 
-            for key, value in programmatic_secrets.items():
-                # Remove old environment variable if the key existed
-                if key in current_secrets:
-                    self._maybe_delete_environment_variable(key, current_secrets[key])
+    def _apply_programmatic_secrets(
+        self, programmatic_secrets: Mapping[str, SecretsValue]
+    ) -> None:
+        """Apply programmatic secrets to the secrets store.
 
-                # Shallow-merge: replace entire top-level key (deep copy to prevent
-                # external mutation)
-                current_secrets[key] = deepcopy(value)
+        This is an internal helper that merges the given programmatic secrets
+        into `self._secrets`. It does NOT store them in `_programmatic_secrets`
+        (that is the caller's responsibility).
 
-                # Promote to os.environ if appropriate
-                self._maybe_set_environment_variable(key, value)
+        Must be called with `self._lock` held.
+        """
+        # Create a mutable copy of current secrets
+        current_secrets: dict[str, Any] = (
+            dict(self._secrets) if self._secrets is not None else {}
+        )
 
-            self._secrets = current_secrets
+        for key, value in programmatic_secrets.items():
+            # Remove old environment variable if the key existed
+            if key in current_secrets:
+                self._maybe_delete_environment_variable(key, current_secrets[key])
+
+            # Shallow-merge: replace entire top-level key (deep copy to prevent
+            # external mutation)
+            current_secrets[key] = deepcopy(value)
+
+            # Promote to os.environ if appropriate
+            self._maybe_set_environment_variable(key, value)
+
+        self._secrets = current_secrets
 
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:
@@ -522,6 +539,9 @@ class Secrets(Mapping[str, Any]):
             _LOGGER.debug("Secret path %s changed, reloading", changed_file_path)
             self._reset()
             self._parse()
+            # Re-apply programmatic secrets so they survive file-change reloads
+            if self._programmatic_secrets:
+                self._apply_programmatic_secrets(self._programmatic_secrets)
 
         # Emit a signal to notify receivers that the `secrets.toml` file
         # has been changed.
@@ -564,6 +584,7 @@ class Secrets(Mapping[str, Any]):
             "_lock",
             "_file_watchers_installed",
             "_suppress_print_error_on_exception",
+            "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",
         }:

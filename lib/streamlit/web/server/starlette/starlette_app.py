@@ -665,10 +665,11 @@ class App:
         prepare_streamlit_environment(str(self._resolve_script_path()))
 
         # Merge programmatic secrets (after file-based secrets are loaded)
-        if self._programmatic_secrets:
+        if self._programmatic_secrets and not self._secrets_applied:
             from streamlit.runtime.secrets import secrets_singleton
 
             secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+            self._secrets_applied = True
 
         _set_anyio_thread_limiter()
 

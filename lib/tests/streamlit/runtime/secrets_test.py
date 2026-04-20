@@ -908,6 +908,45 @@ class TestMergeProgrammaticSecrets:
 
         assert not errors, f"Thread errors: {errors}"
 
+    def test_programmatic_secrets_survive_file_reload(self, tmp_path: Path) -> None:
+        """Programmatic secrets are re-applied after file-change reload."""
+        # Create a secrets.toml file
+        toml_file = tmp_path / "secrets.toml"
+        toml_file.write_text('file_key = "file_value"', encoding="utf-8")
+
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"secrets.files": [str(toml_file)]}
+        )
+
+        with patch("streamlit.config.get_option", new=mock_get_option):
+            with patch("streamlit.watcher.path_watcher.watch_file"):
+                secrets = Secrets()
+
+                # Parse the file first to load file-based secrets
+                secrets.load_if_toml_exists()
+
+                # Merge programmatic secrets
+                secrets.merge_programmatic_secrets(
+                    {"prog_key": "prog_value", "prog_int": 42}
+                )
+
+                # Verify both file and programmatic secrets are present
+                assert secrets["file_key"] == "file_value"
+                assert secrets["prog_key"] == "prog_value"
+                assert os.environ.get("prog_int") == "42"
+
+                # Simulate file change (which triggers _on_secrets_changed)
+                toml_file.write_text('file_key = "new_file_value"', encoding="utf-8")
+                secrets._on_secrets_changed(str(toml_file))
+
+                # After reload, file-based secrets should be updated
+                assert secrets["file_key"] == "new_file_value"
+
+                # Programmatic secrets should survive the reload
+                assert secrets["prog_key"] == "prog_value"
+                # Environment variables should also be re-applied
+                assert os.environ.get("prog_int") == "42"
+
 
 def test_parse_directory_raises_when_top_level_entry_is_not_folder(
     tmp_path: Path,
