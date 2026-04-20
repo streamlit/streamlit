@@ -1019,15 +1019,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@floating-ui/core@npm:^1.6.0":
-  version: 1.6.8
-  resolution: "@floating-ui/core@npm:1.6.8"
-  dependencies:
-    "@floating-ui/utils": "npm:^0.2.8"
-  checksum: 10c0/d6985462aeccae7b55a2d3f40571551c8c42bf820ae0a477fc40ef462e33edc4f3f5b7f11b100de77c9b58ecb581670c5c3f46d0af82b5e30aa185c735257eb9
-  languageName: node
-  linkType: hard
-
 "@floating-ui/core@npm:^1.7.5":
   version: 1.7.5
   resolution: "@floating-ui/core@npm:1.7.5"
@@ -1037,17 +1028,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@floating-ui/dom@npm:^1.0.1":
-  version: 1.6.11
-  resolution: "@floating-ui/dom@npm:1.6.11"
-  dependencies:
-    "@floating-ui/core": "npm:^1.6.0"
-    "@floating-ui/utils": "npm:^0.2.8"
-  checksum: 10c0/02ef34a75a515543c772880338eea7b66724997bd5ec7cd58d26b50325709d46d480a306b84e7d5509d734434411a4bcf23af5680c2e461e6e6a8bf45d751df8
-  languageName: node
-  linkType: hard
-
-"@floating-ui/dom@npm:^1.7.5":
+"@floating-ui/dom@npm:^1.0.1, @floating-ui/dom@npm:^1.7.5":
   version: 1.7.6
   resolution: "@floating-ui/dom@npm:1.7.6"
   dependencies:
@@ -1061,13 +1042,6 @@ __metadata:
   version: 0.2.11
   resolution: "@floating-ui/utils@npm:0.2.11"
   checksum: 10c0/f4bcea1559bdbb721ecc8e8ead423ac58d6a5b6e70b602cf0810ba6ad4ed1c77211b207faa88b278a9042f0c743133de08a203ed6741c1b6443423332884d5b3
-  languageName: node
-  linkType: hard
-
-"@floating-ui/utils@npm:^0.2.8":
-  version: 0.2.8
-  resolution: "@floating-ui/utils@npm:0.2.8"
-  checksum: 10c0/a8cee5f17406c900e1c3ef63e3ca89b35e7a2ed645418459a73627b93b7377477fc888081011c6cd177cac45ec2b92a6cab018c14ea140519465498dddd2d3f9
   languageName: node
   linkType: hard
 
@@ -10918,14 +10892,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"h3-js@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "h3-js@npm:4.1.0"
-  checksum: 10c0/58adb7c7a19ff6e6959ef97a60b383bb06c560ffd12826ce603470b25bb34bb26b9bedee6e406591b97017fb888a6194b4043d16abd0d100e6cb51d449e9c3d1
-  languageName: node
-  linkType: hard
-
-"h3-js@npm:^4.4.0":
+"h3-js@npm:^4.1.0, h3-js@npm:^4.4.0":
   version: 4.4.0
   resolution: "h3-js@npm:4.4.0"
   checksum: 10c0/3a324b3a879601e1d012c2f67b2f78e9a480b0fa8e51c54b77ee281b421343ae735c3d892ab80c2cc8c47522ad0822ccb457b97b3792a040e41991016801f3ed
