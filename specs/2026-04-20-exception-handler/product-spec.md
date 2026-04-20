@@ -9,7 +9,8 @@ created: 2026-04-20
 
 Add support for custom exception handlers that intercept uncaught exceptions from Streamlit
 user scripts. This enables integration with error monitoring services like Sentry, Datadog,
-and custom logging pipelines without modifying exception display behavior.
+and custom logging pipelines while preserving the default exception display behavior unless
+a handler explicitly suppresses it to show custom UI.
 
 ## Problem
 
@@ -65,7 +66,7 @@ Add a dedicated `on_script_error` parameter alongside the existing `exception_ha
 st.App(
     script_path: str | Path,
     *,
-    on_script_error: Callable[[BaseException], None] | None = None,  # NEW
+    on_script_error: Callable[[BaseException], bool | None] | None = None,  # NEW
     exception_handlers: Mapping[Any, ExceptionHandler] | None = None,  # HTTP layer
     # ... other parameters
 )
@@ -80,7 +81,11 @@ import sentry_sdk
 sentry_sdk.init(dsn="...")
 
 def handle_script_error(exc: BaseException) -> None:
-    """Called for every uncaught exception in user script code."""
+    """Called for every uncaught exception in user script code.
+
+    Returns None to preserve the default exception display behavior.
+    Return True instead to suppress the default display and show custom UI.
+    """
     sentry_sdk.capture_exception(exc)
 
 app = st.App(
@@ -111,7 +116,7 @@ st.App(
     *,
     exception_handlers: (
         Mapping[Any, ExceptionHandler] |           # HTTP layer (existing)
-        Callable[[BaseException], None] |          # Script layer (new)
+        Callable[[BaseException], bool | None] |   # Script layer (new)
         None
     ) = None,
     # ... other parameters
@@ -151,8 +156,8 @@ st.App(
     *,
     exception_handlers: (
         Mapping[Any, ExceptionHandler] |
-        Callable[[BaseException], None] |
-        tuple[Mapping[Any, ExceptionHandler], Callable[[BaseException], None]] |
+        Callable[[BaseException], bool | None] |
+        tuple[Mapping[Any, ExceptionHandler], Callable[[BaseException], bool | None]] |
         None
     ) = None,
 )
@@ -207,7 +212,7 @@ st.App(
     lifespan: ... = None,
     routes: ... = None,
     middleware: ... = None,
-    on_script_error: Callable[[BaseException], None] | None = None,  # Script exceptions
+    on_script_error: Callable[[BaseException], bool | None] | None = None,  # Script exceptions
     exception_handlers: Mapping[Any, ExceptionHandler] | None = None,  # HTTP exceptions
     debug: bool = False,
 )
@@ -247,6 +252,13 @@ def handler(exc: BaseException) -> bool | None:
         The exception that was raised. Includes full traceback via
         exc.__traceback__.
 
+        Note: The existing ``exec_func_with_error_handling`` catches
+        ``Exception``, not ``BaseException``. This means ``KeyboardInterrupt``,
+        ``SystemExit``, and ``GeneratorExit`` are NOT passed to this handler.
+        The type hint uses ``BaseException`` for forward compatibility if we
+        later widen the catch, but in practice only ``Exception`` subclasses
+        (including ``SyntaxError``) will trigger the handler.
+
     Returns
     -------
     bool | None
@@ -259,7 +271,12 @@ def handler(exc: BaseException) -> bool | None:
     - The handler is called BEFORE the exception is displayed in the UI
     - The handler CAN call ``st.*`` commands to display custom error UI
     - The handler runs in the script thread (blocking)
-    - If the handler itself raises, that exception is logged but not displayed
+    - If the handler itself raises an exception, that exception is logged to
+      the console but not displayed in the UI. The original exception's
+      default display behavior proceeds as if the handler returned False/None.
+      This ensures the handler cannot break the app's error display, but be
+      aware that errors in your custom ``st.*`` error UI will be silently
+      swallowed from the user's perspective.
     """
     pass
 ```
@@ -282,9 +299,10 @@ def handler(exc: BaseException) -> bool | None:
 | User code exceptions | Yes | Main use case |
 | `st.stop()` | No | Control flow, not an error |
 | `st.rerun()` | No | Control flow, not an error |
-| Compile errors | Yes | Syntax errors in user code |
+| Compile/syntax errors | Yes | `SyntaxError` is an `Exception` subclass; caught in `exec_func_with_error_handling` |
 | Fragment exceptions | Yes | Errors in `@st.fragment` code |
 | Callback exceptions | Yes | Errors in widget callbacks |
+| `KeyboardInterrupt`, `SystemExit` | No | Not caught by `except Exception`; propagate normally |
 
 **Thread safety:**
 
@@ -293,6 +311,21 @@ The handler runs in the script thread, same as the user's code. This means:
 - Handler can access `st.session_state` safely
 - Handler can call `st.*` commands to display custom error UI
 - Handler should be quick (blocking delays UI update)
+
+**Implementation notes:**
+
+The handler must be propagated from `st.App` construction to `exec_func_with_error_handling`.
+The current call chain is:
+
+```
+st.App.__call__ → Starlette → Runtime → ScriptRunner → exec_func_with_error_handling
+                                                      → handle_uncaught_app_exception
+```
+
+The recommended approach is to add the handler as a field on `ScriptRunContext`, which is
+already threaded through to `exec_func_with_error_handling`. The `handle_uncaught_app_exception`
+function (or its caller) can then check `ctx.on_script_error` and invoke it at the appropriate
+point in the exception handling flow.
 
 ### Examples
 
@@ -344,7 +377,7 @@ def log_exception(exc: BaseException) -> None:
         exc_info=(type(exc), exc, exc.__traceback__),
         extra={
             "session_id": st.session_state.get("_session_id"),
-            "user": st.context.user.email if st.context.user else None,
+            "user": st.user.email if st.user.is_logged_in else None,
         }
     )
 
