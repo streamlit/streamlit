@@ -399,6 +399,11 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     - Includes 'self' for bound methods
 
     Uses caching to avoid repeated expensive inspect.signature() calls.
+
+    Note: The underlying LRU cache holds strong references to function objects.
+    This is fine for typical Streamlit usage with module-level functions, but
+    dynamically created callables (e.g., closures, partials) may be retained
+    until evicted from the cache.
     """
     # For bound methods, use __func__ as cache key: this ensures cache hits
     # across different bound instances of the same method, and
