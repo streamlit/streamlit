@@ -88,7 +88,6 @@ coverage/
 ########################################################################
 .streamlit/
 !e2e_playwright/.streamlit/
-!lib/streamlit/.agents/**/apps/**/.streamlit/
 lib/streamlit/static
 streamlit-storage
 # Directory for temporary files (can be used by agents):

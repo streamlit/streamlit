@@ -12,7 +12,6 @@ These templates are based on official Streamlit demo apps and work out of the bo
 |----------|-------------|--------------|
 | **dashboard-seattle-weather** | Weather data exploration dashboard | `st.metric`, `st.pills`, `st.altair_chart`, year comparison |
 | **dashboard-stock-peers** | Stock peer analysis and comparison | `st.multiselect`, normalized charts, peer average calculation |
-| **dashboard-stock-peers-snowflake** | Same as above but using Snowflake | `st.connection("snowflake")`, synthetic stock data in SQL |
 
 ### Analytics Dashboard Templates
 
@@ -21,11 +20,9 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 | Template | Description | Key Features |
 |----------|-------------|--------------|
 | **dashboard-metrics** | Core metrics dashboard with KPIs | Chart/table toggle, `st.popover` filters, TIME_RANGES (1M/6M/1Y/QTD/YTD/All) |
-| **dashboard-metrics-snowflake** | Same as above but using Snowflake | `st.connection("snowflake")`, SQL-based data generation |
 | **dashboard-feature-usage** | API endpoint usage analytics | Segmented control, starter kits, normalization toggle, rolling averages |
 | **dashboard-companies** | Company leaderboard with drill-down | Interactive dataframe, sparkline columns, growth scores |
 | **dashboard-compute** | Resource consumption monitoring | `@st.fragment`, `st.popover` filters, TIME_RANGES, line/bar toggle |
-| **dashboard-compute-snowflake** | Same as above but using Snowflake | `st.connection("snowflake")`, SQL-based data generation |
 
 ## Quick Start
 
@@ -142,29 +139,6 @@ def metric_card():
         ...
 ```
 
-### Snowflake Column Normalization
-
-Snowflake returns uppercase column names. Always normalize after queries:
-
-```python
-df = conn.query(query)
-df.columns = df.columns.str.lower()
-```
-
-### Snowflake Connection Error Handling
-
-```python
-try:
-    get_snowflake_connection()
-except Exception as e:
-    st.error(f"Failed to connect to Snowflake: {e}")
-    st.info(
-        "Make sure you have configured your Snowflake connection in "
-        "`.streamlit/secrets.toml` or via environment variables."
-    )
-    st.stop()
-```
-
 ### Data Loading with Caching
 
 ```python
@@ -172,9 +146,9 @@ except Exception as e:
 def load_metric_data() -> pd.DataFrame:
     """Load metric data. Replace with your actual data source."""
     # Replace this with:
-    # - Snowflake query via st.connection("snowflake")
     # - API call
     # - Database query
+    # - Data warehouse query via st.connection
     return generate_synthetic_data()
 ```
 
@@ -185,7 +159,3 @@ All templates require Python >=3.11 and use:
 - `altair>=5.5.0`
 - `pandas>=2.2.3`
 - `numpy>=1.26.0` (most templates)
-
-Snowflake variants (`*-snowflake`) additionally require:
-- `snowflake-connector-python>=3.3.0`
-- `streamlit[snowflake]>=1.54.0`

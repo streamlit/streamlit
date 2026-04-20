@@ -7,7 +7,6 @@ a complete `[theme]` block you can drop into any app's `.streamlit/config.toml`.
 
 | Theme | Base | Primary color | Fonts |
 |-------|------|---------------|-------|
-| **snowflake** | Light | `#29B5E8` (cyan) | Inter, JetBrains Mono |
 | **dracula** | Dark | `#BD93F9` (purple) | Fira Sans, JetBrains Mono |
 | **nord** | Dark | `#88C0D0` (frost blue) | Inter, JetBrains Mono |
 | **stripe** | Light | `#635BFF` (indigo) | Inter, Source Code Pro |
@@ -93,8 +92,8 @@ All themes use [Google Fonts](https://fonts.google.com/) loaded via URL in
 
 | Font | Used by |
 |------|---------|
-| Inter | snowflake, nord, spotify, github, minimal, stripe |
-| JetBrains Mono | snowflake, dracula, nord, github, minimal |
+| Inter | nord, spotify, github, minimal, stripe |
+| JetBrains Mono | dracula, nord, github, minimal |
 | Fira Sans | dracula |
 | Fira Code | spotify |
 | Source Sans 3 | solarized-light |
