@@ -66,6 +66,8 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
                 )
             nested_path = f"{path}.{key}" if path else key
             _validate_secrets_value(nested_value, nested_path)
+    # Use type() instead of isinstance() because bool is a subclass of int,
+    # and we need to distinguish them for os.environ promotion (bool excluded).
     elif type(value) not in _ALLOWED_SCALAR_TYPES:
         type_name = type(value).__name__
         path_info = f" at '{path}'" if path else ""
@@ -454,6 +456,13 @@ class Secrets(Mapping[str, Any]):
         ``os.environ`` (as strings), matching the behavior of file-based secrets.
         """
         for key, value in programmatic_secrets.items():
+            # Validate top-level keys are strings (defensive; App.__init__ already
+            # checks this, but direct callers might bypass that)
+            if not isinstance(key, str):
+                raise TypeError(
+                    f"Dictionary keys in secrets must be strings, "
+                    f"got {type(key).__name__!r} at top level."
+                )
             _validate_secrets_value(value, key)
 
         with self._lock:

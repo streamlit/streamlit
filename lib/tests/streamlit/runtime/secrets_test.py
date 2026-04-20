@@ -800,11 +800,13 @@ class TestMergeProgrammaticSecrets:
 
     @pytest.fixture(autouse=True)
     def _reset_secrets(self, restore_os_environ: None) -> Iterator[None]:
-        """Reset secrets before and after each test."""
-        secrets = Secrets()
-        secrets._reset()
-        yield
-        secrets._reset()
+        """Ensure os.environ is restored after each test.
+
+        This fixture depends on restore_os_environ to save/restore os.environ.
+        Tests in this class create fresh Secrets() instances, so no singleton
+        reset is needed - the fixture's role is purely environment cleanup.
+        """
+        return
 
     def test_merge_into_empty_secrets(self) -> None:
         """Merging into empty secrets store works correctly."""
@@ -891,6 +893,15 @@ class TestMergeProgrammaticSecrets:
 
         with pytest.raises(TypeError, match="Unsupported type 'list'"):
             secrets.merge_programmatic_secrets({"bad": [1, 2, 3]})
+
+    def test_merge_validates_top_level_keys_are_strings(self) -> None:
+        """Merging with non-string top-level keys raises TypeError."""
+        secrets = Secrets()
+
+        with pytest.raises(
+            TypeError, match=r"Dictionary keys in secrets must be strings.*at top level"
+        ):
+            secrets.merge_programmatic_secrets({123: "value"})  # type: ignore[dict-item]
 
     def test_merge_thread_safety(self) -> None:
         """Merging is thread-safe with concurrent reads."""
