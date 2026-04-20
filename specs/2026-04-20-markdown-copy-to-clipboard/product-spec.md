@@ -183,7 +183,3 @@ The toolbar follows existing Streamlit patterns:
 | Metrics collected            | ✅ Yes - Automatically tracked via `gather_metrics`                  |
 | Any security/legal impact?   | ✅ None - just clipboard write, no data exfiltration                 |
 | Any docs changes needed?     | ✅ Yes - Document `copy_to_clipboard` parameter                      |
-
-**Implementation notes:**
-- Requires adding `copy_to_clipboard` field to the `Markdown` proto message
-- Frontend uses existing `useCopyToClipboard` hook from `st.code` implementation
