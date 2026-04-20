@@ -179,10 +179,15 @@ def aggregate_companies(
     # Calculate daily average
     agg["daily_avg"] = agg["total_credits"] / agg["active_days"]
 
-    # Build sparkline data (list of daily values)
+    # Build sparkline data (list of daily values).
+    # `include_groups=False` silences a pandas 2.2+ FutureWarning about
+    # groupby keys being included in the applied function's input frame.
     sparklines = (
         result.groupby("company_name")
-        .apply(lambda x: x.sort_values("date")["daily_credits"].tolist())
+        .apply(
+            lambda x: x.sort_values("date")["daily_credits"].tolist(),
+            include_groups=False,
+        )
         .reset_index()
     )
     sparklines.columns = ["company_name", "usage_trend"]
