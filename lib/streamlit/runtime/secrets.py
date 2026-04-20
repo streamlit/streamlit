@@ -33,6 +33,41 @@ from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
+# Type alias for programmatic secrets values.
+# Supported types: str, int, float, bool, and nested dicts.
+SecretsValue = str | int | float | bool | dict[str, "SecretsValue"]
+
+# Allowed scalar types for secrets values
+_ALLOWED_SCALAR_TYPES: Final[frozenset[type]] = frozenset({str, int, float, bool})
+
+
+def _validate_secrets_value(value: Any, path: str = "") -> None:
+    """Validate that a secrets value has an allowed type.
+
+    Parameters
+    ----------
+    value
+        The value to validate.
+    path
+        The dotted path to this value (for error messages).
+
+    Raises
+    ------
+    TypeError
+        If the value has an unsupported type.
+    """
+    if isinstance(value, dict):
+        for key, nested_value in value.items():
+            nested_path = f"{path}.{key}" if path else key
+            _validate_secrets_value(nested_value, nested_path)
+    elif type(value) not in _ALLOWED_SCALAR_TYPES:
+        type_name = type(value).__name__
+        path_info = f" at '{path}'" if path else ""
+        raise TypeError(
+            f"Unsupported type '{type_name}'{path_info} in secrets. "
+            f"Allowed types are: str, int, float, bool, and nested dicts."
+        )
+
 
 class SecretErrorMessages:
     """SecretErrorMessages stores all error messages we use for secrets to allow customization
@@ -382,6 +417,55 @@ class Secrets(Mapping[str, Any]):
         """
         secrets = self._parse()
         return _convert_to_dict(secrets)
+
+    def merge_programmatic_secrets(
+        self, programmatic_secrets: Mapping[str, SecretsValue]
+    ) -> None:
+        """Merge programmatic secrets into the secrets store.
+
+        Programmatic secrets are shallow-merged with file-based secrets at the
+        top level: entire top-level keys are replaced, not individual nested keys.
+
+        Parameters
+        ----------
+        programmatic_secrets
+            A dictionary of secrets to merge. Supported value types are:
+            ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+
+        Raises
+        ------
+        TypeError
+            If any value in the dictionary has an unsupported type.
+
+        Notes
+        -----
+        This method is intended to be called once during application startup,
+        after file-based secrets have been loaded. It is thread-safe.
+
+        Top-level ``str``, ``int``, and ``float`` values are promoted to
+        ``os.environ`` (as strings), matching the behavior of file-based secrets.
+        """
+        for key, value in programmatic_secrets.items():
+            _validate_secrets_value(value, key)
+
+        with self._lock:
+            # Create a mutable copy of current secrets
+            current_secrets: dict[str, Any] = (
+                dict(self._secrets) if self._secrets is not None else {}
+            )
+
+            for key, value in programmatic_secrets.items():
+                # Remove old environment variable if the key existed
+                if key in current_secrets:
+                    self._maybe_delete_environment_variable(key, current_secrets[key])
+
+                # Shallow-merge: replace entire top-level key
+                current_secrets[key] = value
+
+                # Promote to os.environ if appropriate
+                self._maybe_set_environment_variable(key, value)
+
+            self._secrets = current_secrets
 
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:

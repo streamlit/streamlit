@@ -717,6 +717,185 @@ def test_attr_dict_repr() -> None:
     assert len(attr_dict) == 2
 
 
+# --- Tests for _validate_secrets_value ---
+
+
+class TestValidateSecretsValue:
+    """Tests for the _validate_secrets_value function."""
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param("string", id="str"),
+            pytest.param(42, id="int"),
+            pytest.param(3.14, id="float"),
+            pytest.param(True, id="bool_true"),
+            pytest.param(False, id="bool_false"),
+            pytest.param({"level1": {"level2": {"value": "deep"}}}, id="nested_dict"),
+            pytest.param(
+                {"mixed": {"str": "a", "int": 1, "float": 2.5, "bool": True}},
+                id="mixed_nested",
+            ),
+        ],
+    )
+    def test_valid_types_pass_validation(self, value: object) -> None:
+        """Valid scalar types and nested dicts pass validation."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        # Should not raise
+        _validate_secrets_value(value, "key")
+
+    @pytest.mark.parametrize(
+        ("value", "expected_match"),
+        [
+            pytest.param(["a", "b"], "Unsupported type 'list'", id="list"),
+            pytest.param(None, "Unsupported type 'NoneType'", id="none"),
+        ],
+    )
+    def test_invalid_types_raise_typeerror(
+        self, value: object, expected_match: str
+    ) -> None:
+        """Invalid types raise TypeError with descriptive message."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=expected_match):
+            _validate_secrets_value(value, "key")
+
+    def test_invalid_nested_list_includes_path(self) -> None:
+        """Nested invalid types include the path in the error message."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=r"at 'key\.outer\.inner'"):
+            _validate_secrets_value({"outer": {"inner": [1, 2, 3]}}, "key")
+
+    def test_invalid_custom_object(self) -> None:
+        """Custom objects raise TypeError."""
+        from datetime import datetime
+
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match="Unsupported type 'datetime'"):
+            _validate_secrets_value(datetime.now(), "key")
+
+
+# --- Tests for Secrets.merge_programmatic_secrets ---
+
+
+class TestMergeProgrammaticSecrets:
+    """Tests for the Secrets.merge_programmatic_secrets method."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_secrets(self, restore_os_environ: None) -> Iterator[None]:
+        """Reset secrets before and after each test."""
+        secrets = Secrets()
+        secrets._reset()
+        yield
+        secrets._reset()
+
+    def test_merge_into_empty_secrets(self) -> None:
+        """Merging into empty secrets store works correctly."""
+        secrets = Secrets()
+        secrets.merge_programmatic_secrets({"api_key": "secret123"})
+
+        assert secrets["api_key"] == "secret123"
+
+    def test_merge_shallow_override(self) -> None:
+        """Programmatic secrets shallow-override file-based secrets at top level."""
+        secrets = Secrets()
+        secrets._secrets = {"auth": {"user": "file_user", "pass": "file_pass"}}
+
+        secrets.merge_programmatic_secrets({"auth": {"client_id": "prog_id"}})
+
+        # The entire "auth" section is replaced (shallow merge)
+        assert secrets["auth"]["client_id"] == "prog_id"
+        assert "user" not in secrets["auth"]
+
+    def test_merge_preserves_other_keys(self) -> None:
+        """Merging preserves keys not in programmatic secrets."""
+        secrets = Secrets()
+        secrets._secrets = {"existing": "value", "keep": {"nested": True}}
+
+        secrets.merge_programmatic_secrets({"new": "added"})
+
+        assert secrets["existing"] == "value"
+        assert secrets["keep"]["nested"] is True
+        assert secrets["new"] == "added"
+
+    @pytest.mark.parametrize(
+        ("key", "value", "expected_environ"),
+        [
+            pytest.param("str_key", "string_value", "string_value", id="str"),
+            pytest.param("int_key", 42, "42", id="int"),
+            pytest.param("float_key", 3.14, "3.14", id="float"),
+        ],
+    )
+    def test_merge_promotes_scalars_to_environ(
+        self, key: str, value: str | int | float, expected_environ: str
+    ) -> None:
+        """Top-level str/int/float values are promoted to os.environ."""
+        secrets = Secrets()
+        secrets.merge_programmatic_secrets({key: value})
+
+        assert os.environ[key] == expected_environ
+
+    def test_merge_does_not_promote_dicts_or_bools(self) -> None:
+        """Dict and bool values are not promoted to os.environ."""
+        secrets = Secrets()
+        secrets.merge_programmatic_secrets(
+            {"dict_key": {"nested": "value"}, "bool_key": True}
+        )
+
+        assert "dict_key" not in os.environ
+        assert "bool_key" not in os.environ
+
+    def test_merge_replaces_environ_on_override(self) -> None:
+        """When overriding a key, the environ value is updated."""
+        secrets = Secrets()
+        secrets._secrets = {"key": "old_value"}
+        os.environ["key"] = "old_value"
+
+        secrets.merge_programmatic_secrets({"key": "new_value"})
+
+        assert os.environ["key"] == "new_value"
+
+    def test_merge_validates_types(self) -> None:
+        """Merging invalid types raises TypeError."""
+        secrets = Secrets()
+
+        with pytest.raises(TypeError, match="Unsupported type 'list'"):
+            secrets.merge_programmatic_secrets({"bad": [1, 2, 3]})
+
+    def test_merge_thread_safety(self) -> None:
+        """Merging is thread-safe with concurrent reads."""
+        secrets = Secrets()
+        secrets._secrets = {"counter": 0}
+        errors: list[Exception] = []
+
+        def reader() -> None:
+            try:
+                for _ in range(100):
+                    _ = secrets["counter"]
+            except Exception as e:
+                errors.append(e)
+
+        def writer() -> None:
+            try:
+                for i in range(100):
+                    secrets.merge_programmatic_secrets({"counter": i})
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=reader) for _ in range(3)]
+        threads.append(threading.Thread(target=writer))
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Thread errors: {errors}"
+
+
 def test_parse_directory_raises_when_top_level_entry_is_not_folder(
     tmp_path: Path,
 ) -> None:

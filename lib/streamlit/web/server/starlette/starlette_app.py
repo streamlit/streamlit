@@ -73,6 +73,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+    from streamlit.runtime.secrets import SecretsValue
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
@@ -256,6 +257,12 @@ class App:
         paths are resolved based on context: when started via ``streamlit run``,
         they resolve relative to the main script; when started directly via uvicorn
         or another ASGI server, they resolve relative to the current working directory.
+    secrets : Mapping[str, SecretsValue] | None
+        A dictionary of secrets to make available via ``st.secrets``. Supported
+        value types are: ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+        When provided, these secrets are shallow-merged with file-based secrets
+        (programmatic secrets override file-based secrets at the top level).
+        Unsupported types raise ``TypeError`` at construction.
     lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         Async context manager for startup/shutdown logic. The context manager
         receives the App instance and can yield a dictionary of state that will
@@ -301,12 +308,28 @@ class App:
     ...     return JSONResponse({"status": "ok"})
     >>>
     >>> app = App("main.py", routes=[Route("/health", health)])
+
+    With programmatic secrets:
+
+    >>> import os
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> app = App(
+    ...     "main.py",
+    ...     secrets={
+    ...         "database": {
+    ...             "host": os.environ["DB_HOST"],
+    ...             "password": os.environ["DB_PASSWORD"],
+    ...         }
+    ...     },
+    ... )
     """
 
     def __init__(
         self,
         script_path: str | Path,
         *,
+        secrets: Mapping[str, SecretsValue] | None = None,
         lifespan: (
             Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         ) = None,
@@ -315,6 +338,8 @@ class App:
         exception_handlers: Mapping[Any, ExceptionHandler] | None = None,
         debug: bool = False,
     ) -> None:
+        from streamlit.runtime.secrets import _validate_secrets_value
+
         self._script_path = Path(script_path)
         self._user_lifespan = lifespan
         self._user_routes = list(routes) if routes else []
@@ -323,6 +348,12 @@ class App:
             dict(exception_handlers) if exception_handlers else {}
         )
         self._debug = debug
+
+        # Validate and store programmatic secrets
+        if secrets is not None:
+            for key, value in secrets.items():
+                _validate_secrets_value(value, key)
+        self._programmatic_secrets = dict(secrets) if secrets else None
 
         self._runtime: Runtime | None = None
         self._starlette_app: Starlette | None = None
@@ -476,6 +507,12 @@ class App:
         # Use resolved path to ensure correct directory for static folder check
         prepare_streamlit_environment(str(self._resolve_script_path()))
 
+        # Merge programmatic secrets (after file-based secrets are loaded)
+        if self._programmatic_secrets:
+            from streamlit.runtime.secrets import secrets_singleton
+
+            secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+
         _set_anyio_thread_limiter()
 
         # Start runtime (enables full cache support)
@@ -622,6 +659,12 @@ class App:
 
         # Prepare the Streamlit environment
         prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        # Merge programmatic secrets (after file-based secrets are loaded)
+        if self._programmatic_secrets:
+            from streamlit.runtime.secrets import secrets_singleton
+
+            secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
 
         _set_anyio_thread_limiter()
 
