@@ -178,6 +178,12 @@ with top_left_cell:
         default="6 Months",
     )
 
+# `st.pills` returns None if the user deselects the active pill. Stop early
+# so we don't hit a KeyError when looking up `horizon_map[horizon]` below.
+if horizon is None:
+    top_left_cell.info("Pick a time horizon", icon=":material/info:")
+    st.stop()
+
 tickers = [t.upper() for t in tickers]
 
 # Update query param when text input changes
@@ -220,8 +226,10 @@ if empty_columns:
     st.error(f"Error loading data for the tickers: {', '.join(empty_columns)}.")
     st.stop()
 
-# Normalize prices (start at 1)
-normalized = data.div(data.iloc[0])
+# Normalize prices (start at 1). Use the first non-null value per ticker so
+# tickers whose first row is NaN (e.g. newer listings over a long horizon)
+# don't get normalized to NaN.
+normalized = data.div(data.bfill().iloc[0])
 
 # Build list of (normalized_value, ticker) tuples for safe comparison
 # (using a dict with float keys could silently drop tickers with identical values).
