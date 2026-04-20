@@ -516,6 +516,40 @@ def test_get_arg_keywords_includes_positional_only_params() -> None:
     assert metrics_util._get_arg_keywords(func_without_posonly) == expected
 
 
+def test_get_arg_keywords_caches_results_and_handles_bound_methods() -> None:
+    """Verify caching works and bound methods include 'self' for backwards compatibility."""
+    metrics_util._get_arg_keywords_cached.cache_clear()
+
+    def simple_func(a: int, b: str) -> None:
+        pass
+
+    class MyClass:
+        def my_method(self, x: int, y: str) -> None:
+            pass
+
+    # Test regular function caching
+    result1 = metrics_util._get_arg_keywords(simple_func)
+    result2 = metrics_util._get_arg_keywords(simple_func)
+    assert result1 == ["a", "b"]
+    assert result1 == result2
+    cache_info = metrics_util._get_arg_keywords_cached.cache_info()
+    assert cache_info.hits >= 1, "Cache should have hits for repeated calls"
+
+    # Test bound method includes 'self' (backwards compatibility)
+    obj = MyClass()
+    bound_result = metrics_util._get_arg_keywords(obj.my_method)
+    assert bound_result == ["self", "x", "y"], "Bound methods must include 'self'"
+
+    # Test different bound instances share cache via __func__
+    obj2 = MyClass()
+    hits_before = metrics_util._get_arg_keywords_cached.cache_info().hits
+    metrics_util._get_arg_keywords(obj2.my_method)
+    hits_after = metrics_util._get_arg_keywords_cached.cache_info().hits
+    assert hits_after > hits_before, (
+        "Different instances should share cache via __func__"
+    )
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
