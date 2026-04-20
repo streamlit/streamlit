@@ -164,15 +164,6 @@ The toolbar follows existing Streamlit patterns:
 - Checkmark confirmation animation on successful copy
 - Semi-transparent background to avoid obscuring content
 
-### Accessibility
-
-The copy button follows accessibility best practices:
-
-- Keyboard-focusable via Tab navigation with visible focus indicator
-- `aria-label="Copy to clipboard"` for screen reader users
-- Confirmation state uses `aria-live="polite"` for screen reader announcements
-- Animations respect `prefers-reduced-motion` user preference
-
 ## Out of Scope (Future Work)
 
 - **Copy button for other text elements** (`st.text`, `st.caption`, `st.title`): Could be
