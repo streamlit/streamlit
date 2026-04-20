@@ -74,14 +74,19 @@ def Page(  # noqa: N802
     Parameters
     ----------
     page : str, Path, or callable
-        The page source as a ``Callable``, path to a Python file, or external
-        URL. If the page source is defined by a Python file, the path can be a
-        string or ``pathlib.Path`` object. Paths can be absolute or relative to
-        the entrypoint file. If the page source is defined by a ``Callable``,
-        the ``Callable`` can't accept arguments. If the page source is an
-        external URL (starting with ``http://`` or ``https://``), clicking the
-        page in the navigation menu will open the URL in a new browser tab.
-        When using an external URL, the ``title`` parameter is required.
+        The source for the internal or external page. This can be one of the
+        following values:
+
+        - ``callable``: Streamlit executes the callable when it runs the page.
+          The ``callable`` can't accept arguments.
+        - Path to a Python file: Streamlit executes the Python script when it
+          runs the page. The path can be a string or ``pathlib.Path``
+          object. It can be absolute or relative to the entrypoint file.
+        - URL: Streamlit opens the URL in a new tab when a user selects it
+          in the navigation menu or a page link. In this case, the app doesn't
+          rerun. The URL must contain an HTTP or HTTPS scheme, like
+          ``"https://docs.streamlit.io"``. If the page is defined by a URL,
+          then the ``title`` parameter is required.
 
     title : str or None
         The title of the page. If this is ``None`` (default), the page title
@@ -155,18 +160,17 @@ def Page(  # noqa: N802
         Whether the page is shown in the navigation menu. If this is
         ``"visible"`` (default), the page appears in the navigation menu. If
         this is ``"hidden"``, the page is excluded from the navigation menu.
-        For internal pages (Python files or callables), hidden pages remain
-        accessible via direct URL, ``st.page_link``, or ``st.switch_page``.
-        For external URL pages, hidden pages can only be opened via
-        ``st.page_link``. Direct URL access and ``st.switch_page`` are not
-        supported for external pages.
+        Hidden pages defined by Python files or callables remain accessible
+        by ``st.page_link`` and ``st.switch_page``. External URLs can always
+        be accessed using ``st.page_link`` regardless of their inclusion or
+        visibility in the navigation menu.
 
         .. note::
 
-           Navigating to a page by URL starts a new session. For a
-           hidden page to be accessible by URL, it must be passed to
+           Navigating to an internal page by URL starts a new session. For
+           any internal page to be accessible by URL, it must be passed to
            ``st.navigation`` during the new session's initial script
-           run.
+           run. The page can be visible or hidden.
 
     Returns
     -------
@@ -175,17 +179,24 @@ def Page(  # noqa: N802
 
     Example
     -------
-    >>> import streamlit as st
-    >>>
-    >>> def page2():
-    >>>     st.title("Second page")
-    >>>
-    >>> pg = st.navigation([
-    >>>     st.Page("page1.py", title="First page", icon="🔥"),
-    >>>     st.Page(page2, title="Second page", icon=":material/favorite:"),
-    >>>     st.Page("https://streamlit.io", title="Streamlit Docs", icon=":material/open_in_new:"),
-    >>> ])
-    >>> pg.run()
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        def page2():
+            st.title("Second page")
+
+        pg = st.navigation([
+            st.Page("page1.py", title="First page", icon="🔥"),
+            st.Page(page2, title="Second page", icon=":material/favorite:"),
+            st.Page(
+                "https://docs.streamlit.io",
+                title="Streamlit Docs",
+                icon=":material/open_in_new:"
+            ),
+        ])
+        pg.run()
     """
     return StreamlitPage(
         page,

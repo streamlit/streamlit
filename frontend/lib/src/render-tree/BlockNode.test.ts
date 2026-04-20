@@ -20,7 +20,7 @@ import { TransientNode } from "./TransientNode"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
-// prettier-ignore
+// oxfmt-ignore
 const BLOCK = block([
   text("1"),
   block([

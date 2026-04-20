@@ -457,7 +457,7 @@ function sendForwardMessage(
   })
 }
 
-function openCacheModal(): void {
+async function openCacheModal(): Promise<void> {
   // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyDown(document.body, {
     key: "c",
@@ -475,6 +475,10 @@ function openCacheModal(): void {
       "Are you sure you want to clear the app's function caches?"
     )
   ).toBeInTheDocument()
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
 }
 
 describe("App", () => {
@@ -1466,6 +1470,20 @@ describe("App", () => {
   })
 
   describe("DeployButton", () => {
+    let prevWindowLocation: Location
+
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
@@ -1572,6 +1590,23 @@ describe("App", () => {
       })
 
       expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
+    })
+
+    it("button should be hidden for non-localhost hostname", () => {
+      mockWindowLocation("myapp.streamlit.app")
+
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      // Deploy button should not appear even in DEVELOPER mode when not on localhost
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
   })
 
@@ -3966,20 +4001,26 @@ describe("App", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("Tests dev menu shortcuts can be accessed as a developer", () => {
-      renderApp(getProps())
+    it("Tests dev menu shortcuts can be accessed as a developer", async () => {
+      vi.useFakeTimers()
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        renderApp(getProps())
 
-      getMockConnectionManager(true)
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      expect(openCacheModal).not.toThrow()
+        getMockConnectionManager(true)
+
+        await expect(openCacheModal()).resolves.toBeUndefined()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
@@ -4457,60 +4498,70 @@ describe("App", () => {
       })
     })
 
-    it("closes modals when the modal closure message has been received", () => {
+    it("closes modals when the modal closure message has been received", async () => {
+      vi.useFakeTimers()
       prepareHostCommunicationManager()
 
-      // We display the clear cache dialog as an example
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        // We display the clear cache dialog as an example
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      getMockConnectionManager(true)
+        getMockConnectionManager(true)
 
-      openCacheModal()
+        await openCacheModal()
 
-      fireWindowPostMessage({
-        type: "CLOSE_MODAL",
-      })
+        fireWindowPostMessage({
+          type: "CLOSE_MODAL",
+        })
 
-      expect(
-        screen.queryByText(
-          "Are you sure you want to clear the app's function caches?"
-        )
-      ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText(
+            "Are you sure you want to clear the app's function caches?"
+          )
+        ).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
-    it("does not prevent a modal from opening when closure message is set", () => {
+    it("does not prevent a modal from opening when closure message is set", async () => {
+      vi.useFakeTimers()
       prepareHostCommunicationManager()
 
-      // We display the clear cache dialog as an example
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        // We display the clear cache dialog as an example
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      getMockConnectionManager(true)
+        getMockConnectionManager(true)
 
-      openCacheModal()
+        await openCacheModal()
 
-      fireWindowPostMessage({
-        type: "CLOSE_MODAL",
-      })
+        fireWindowPostMessage({
+          type: "CLOSE_MODAL",
+        })
 
-      expect(
-        screen.queryByText(
-          "Are you sure you want to clear the app's function caches?"
-        )
-      ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText(
+            "Are you sure you want to clear the app's function caches?"
+          )
+        ).not.toBeInTheDocument()
 
-      openCacheModal()
+        await openCacheModal()
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it("changes scriptRunState and triggers stopScript when STOP_SCRIPT message has been received", () => {
@@ -5003,27 +5054,6 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
-    })
-
-    it("Deploy button should be hidden for cloud environment", () => {
-      prepareHostCommunicationManager()
-
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
-
-      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
-
-      fireWindowPostMessage({
-        type: "SET_MENU_ITEMS",
-        items: [{ label: "Host menu item", key: "host-item", type: "text" }],
-      })
-
-      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("shows toolbar in minimal mode when host menu items exist", () => {

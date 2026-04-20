@@ -47,7 +47,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude files, because they make it obvious which product they relate to.
     r"|(LICENSE|NOTICES|CODE_OF_CONDUCT\.md|README\.md|CONTRIBUTING\.md|SECURITY.md)$"
     # Exclude files, because they do not support comments
-    r"|\.(json|prettierrc|nvmrc|mdc|md)$"
+    r"|\.(json|nvmrc|mdc|md)$"
     # Exclude generated files, because they don't have any degree of creativity.
     r"|yarn\.lock$"
     # Exclude pytest config files, because they don't have any degree of creativity.
@@ -58,7 +58,7 @@ IGNORE_PATTERN = re.compile(
     # Exclude dev-tools configuration files, because they don't have any
     # degree of creativity.
     r"|^(\.dockerignore|\.editorconfig|\.gitattributes|\.gitignore|\.gitmodules)$"
-    r"|^frontend/(\.dockerignore|\.eslintrc.js|\.prettierignore)$"
+    r"|^frontend/(\.dockerignore|\.eslintrc.js)$"
     r"|^frontend/\.yarn"  # Exclude everything in the .yarn folder
     r"|^frontend/component-lib/\.yarn"
     r"|^frontend/component-v2-lib/\.yarn"  # Exclude everything in the .yarn folder
@@ -71,8 +71,9 @@ IGNORE_PATTERN = re.compile(
     r"|\.gitignore$"
     # Excluding test files, because adding headers may cause tests to fail.
     r"|/(fixtures|__snapshots__|test_data|data|test)/"
-    # Exclude vendored files.
+    # Exclude vendored files and bundled skill assets.
     r"|/vendor/|^vendor/|^frontend/component-lib/declarations/apache-arrow"
+    r"|^lib/streamlit/\.agents/"
     r"|proto/streamlit/proto/openmetrics_data_model\.proto"
     # Exclude patch files.
     r"|\.patch$",

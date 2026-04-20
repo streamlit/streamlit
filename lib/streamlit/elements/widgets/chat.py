@@ -40,7 +40,7 @@ from streamlit.elements.lib.layout_utils import (
     LayoutConfig,
     Width,
     WidthWithoutContent,
-    validate_height,
+    create_layout_config,
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
@@ -685,15 +685,25 @@ class ChatMixin:
             .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
 
         file_type : str, Sequence[str], or None
-            The allowed file extension(s) for uploaded files. This can be one
-            of the following types:
+            The allowed file types for uploaded files. This can be one of the
+            following values:
 
             - ``None`` (default): All file extensions are allowed.
-            - A string: A single file extension is allowed. For example, to
-              only accept CSV files, use ``"csv"``.
-            - A sequence of strings: Multiple file extensions are allowed. For
-              example, to only accept JPG/JPEG and PNG files, use
-              ``["jpg", "jpeg", "png"]``.
+            - A file extension: Only one file extension is allowed. For example,
+              to only accept CSV files, use ``"csv"`` or ``".csv"``.
+            - A MIME type: Only one MIME type is allowed. For example,
+              to accept JPEG images, use ``"image/jpeg"``.
+            - A MIME wildcard: All types within a MIME media type are allowed.
+              For example, to accept all images, use ``"image/*"``.
+            - A MIME media type: This is a shortcut that is equivalent to a
+              MIME wildcard. If you use ``"image"``, ``"audio"``, ``"video"``, or
+              ``"text"``, Streamlit will internally append ``/*`` to create
+              a MIME wildcard.
+            - A sequence of strings: Use a combination of the previously listed
+              strings to accept multiple file types.
+
+            For more information about MIME types, see
+            https://www.iana.org/assignments/media-types/media-types.xhtml.
 
             .. note::
                 This is a best-effort check, but doesn't provide a
@@ -749,9 +759,9 @@ class ChatMixin:
             - ``"content"`` (default): The widget uses the default single-line
               height and automatically expands based on the text content.
             - ``"stretch"``: The height of the widget stretches to fill the
-              available height of the parent container. Note that the parent
-              container must have a defined height for this to work properly.
-            - An integer specifying the minimum height in pixels. The widget
+              available height of the parent container. The parent container
+              must have a defined height for this to work properly.
+            - An integer specifying the minimum height in pixels: The widget
               has a fixed minimum height but still auto-expands based on text
               content. The minimum recommended height is 68 pixels, which fits
               a single line of text.
@@ -1028,9 +1038,9 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
-        validate_width(width)
-        validate_height(height, allow_content=True)
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width, height=height, allow_content_height=True
+        )
 
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:

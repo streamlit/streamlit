@@ -25,9 +25,8 @@ from streamlit.elements.lib.file_uploader_utils import (
 )
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -301,15 +300,25 @@ class FileUploaderMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         type : str, list of str, or None
-            The allowed file extension(s) for uploaded files. This can be one
-            of the following types:
+            The allowed file types for uploaded files. This can be one of the
+            following values:
 
             - ``None`` (default): All file extensions are allowed.
-            - A string: A single file extension is allowed. For example, to
-              only accept CSV files, use ``"csv"``.
-            - A sequence of strings: Multiple file extensions are allowed. For
-              example, to only accept JPG/JPEG and PNG files, use
-              ``["jpg", "jpeg", "png"]``.
+            - A file extension: Only one file extension is allowed. For example,
+              to only accept CSV files, use ``"csv"`` or ``".csv"``.
+            - A MIME type: Only one MIME type is allowed. For example,
+              to accept JPEG images, use ``"image/jpeg"``.
+            - A MIME wildcard: All types within a MIME media type are allowed.
+              For example, to accept all images, use ``"image/*"``.
+            - A MIME media type: This is a shortcut that is equivalent to a
+              MIME wildcard. If you use ``"image"``, ``"audio"``, ``"video"``, or
+              ``"text"``, Streamlit will internally append ``/*`` to create
+              a MIME wildcard.
+            - A sequence of strings: Use a combination of the previously listed
+              strings to accept multiple file types.
+
+            For more information about MIME types, see
+            https://www.iana.org/assignments/media-types/media-types.xhtml.
 
             .. note::
                 This is a best-effort check, but doesn't provide a
@@ -588,8 +597,7 @@ class FileUploaderMixin:
             value_type="file_uploader_state_value",
         )
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
             "file_uploader", file_uploader_proto, layout_config=layout_config

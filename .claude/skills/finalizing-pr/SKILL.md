@@ -113,11 +113,15 @@ Apply the `ai-review` label to trigger the AI code review:
 gh pr edit --add-label "ai-review"
 ```
 
-### 11. Fix CI issues and address PR review comments
+### 11. Upload intermediate files
+
+If relevant intermediate files exist (specs, plans, implementation notes in `work-tmp/` or untracked in `specs/`), run the `/sharing-pr-agent-artifacts` skill to push them to the wiki and comment on the PR with links.
+
+### 12. Fix CI issues and address PR review comments
 
 Run the `fixing-pr` subagent to automatically wait for CI, fix any failures, address PR review comments, validate changes, and push. Wait for completion before proceeding.
 
-### 12. Post agent metrics
+### 13. Post agent metrics
 
 Post the agent metrics to the PR body:
 
@@ -125,7 +129,7 @@ Post the agent metrics to the PR body:
 uv run python scripts/log_agent_metrics.py --post
 ```
 
-### 13. Trigger final AI review
+### 14. Trigger final AI review
 
 Apply the `ai-review` label to trigger the final AI code review:
 

@@ -6,9 +6,9 @@ applyTo: "**/*.ts, **/*.tsx"
 
 # TypeScript Development Guide
 
-- TypeScript: v5
+- TypeScript: v6
 - Linters: oxlint v1 + eslint v9
-- Formatter: prettier v3
+- Formatter: oxfmt v0.44
 - Framework: React v18
 - Styling: @emotion/styled v11
 - Build tool: vite v8
@@ -140,7 +140,7 @@ Run from the repo root (requires Node major version from `.nvmrc`):
 - `make frontend-lint`: Lint and check formatting of frontend files (oxlint + eslint).
 - `make frontend-knip`: Run Knip dependency analysis.
 - `make frontend-types`: Run the TypeScript type checker (tsc).
-- `make frontend-format`: Format frontend files (prettier).
+- `make frontend-format`: Format frontend files (oxfmt).
 - `make frontend-tests`: Run all frontend unit tests (vitest).
 
 ## TypeScript Test Guide

@@ -32,7 +32,7 @@ from typing import (
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import (
     check_widget_policies,
     maybe_raise_label_warnings,
@@ -949,7 +949,7 @@ class SliderMixin:
             max_value = max(prepared_value[0], max_value)
         elif len(prepared_value) == 2:
             start, end = prepared_value
-            if start > end:  # type: ignore[operator]
+            if start > end:  # type: ignore[operator] # ty: ignore[unsupported-operator]
                 # Swap start and end, since they seem reversed
                 start, end = end, start
                 prepared_value = start, end
@@ -1107,8 +1107,7 @@ class SliderMixin:
             slider_proto.value[:] = serialized_values
             slider_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
         return cast("SliderReturn", widget_state.value)

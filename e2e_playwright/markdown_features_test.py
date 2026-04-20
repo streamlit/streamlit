@@ -108,6 +108,7 @@ MARKDOWN_FEATURE_PLAYWRIGHT_LOCATORS: dict[str, Callable[[Locator], Locator]] = 
     "Colored Text": lambda locator: locator.locator("span"),
     "Colored Background": lambda locator: locator.locator("span"),
     "Badge": lambda locator: locator.locator("span"),
+    "Shimmer": lambda locator: locator.locator("span.stMarkdownShimmer"),
     "Latex": lambda locator: locator.locator("span.katex"),
     "Link": lambda locator: locator.locator("a"),
     "Blockquote": lambda locator: locator.locator("blockquote"),

@@ -151,9 +151,26 @@ class LocalSourcesWatcher:
         # However, determining all import paths for a given loaded module is
         # non-trivial, and so as a workaround we simply unload all watched
         # modules.
-        for wm in self._watched_modules.values():
-            if wm.module_name is not None and wm.module_name in sys.modules:
-                del sys.modules[wm.module_name]
+        #
+        # Also evict every sys.modules entry that is a child (name prefix) of an
+        # evicted module. Otherwise PEP 420 namespace packages that span watched
+        # paths and blacklisted paths (e.g. site-packages) leave orphaned children
+        # in sys.modules; re-import then skips binding them on the new parent.
+        modules_to_evict = {
+            wm.module_name
+            for wm in self._watched_modules.values()
+            if wm.module_name is not None and wm.module_name in sys.modules
+        }
+        if modules_to_evict:
+            prefixes = tuple(f"{name}." for name in modules_to_evict)
+            all_to_evict = modules_to_evict.copy()
+            for key in list(sys.modules.keys()):
+                if key.startswith(prefixes):
+                    all_to_evict.add(key)
+
+            for name in all_to_evict:
+                if name in sys.modules:
+                    del sys.modules[name]
 
         for cb in self._on_path_changed:
             cb(filepath)

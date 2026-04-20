@@ -253,3 +253,16 @@ with st.expander(
     st.write("Callback args expander content")
 
 st.write(f"Callback args result: {st.session_state.cb_args_result}")
+
+# ============================================================================
+# State Persistence Test — keyed expander should persist open/close across remount
+# ============================================================================
+
+persist_show = st.toggle(
+    "Show extra text above expander", key="persist_expander_toggle"
+)
+if persist_show:
+    st.write("Extra text inserted above expander")
+
+with st.expander("Persist expander", expanded=False, key="persist_expander"):
+    st.write("Persist expander content")

@@ -558,3 +558,9 @@ st.container(key="markdown_copy_with_help").markdown(
     help="This is a help tooltip!",
     width="content",
 )
+
+# Shimmer directive test
+with st.container(key="shimmer_elements"):
+    st.markdown(
+        "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
+    )

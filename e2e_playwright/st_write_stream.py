@@ -72,3 +72,16 @@ if button_group.button("Stream data"):
 
 if button_group.button("Stream async data"):
     st.session_state["written_content"] = stream_output.write_stream(async_generator)
+
+
+def stream_color_directives():
+    """Stream text with Streamlit color directives to test issue #14460."""
+    for word in "This is :red[red text] and :blue[blue text] here.".split():
+        yield word + " "
+        time.sleep(0.02)
+
+
+if button_group.button("Stream color directives"):
+    st.session_state["written_content"] = stream_output.write_stream(
+        stream_color_directives
+    )

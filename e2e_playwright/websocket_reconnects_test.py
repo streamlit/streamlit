@@ -42,7 +42,7 @@ def _get_session_event_counts(app: Page, app_base_url: str) -> dict[str, int]:
     """
     response = app.request.get(
         build_app_url(
-            app_base_url, path="/_stcore/metrics", query="families=session_events_total"
+            app_base_url, path="/_stcore/metrics", query="families=session_events"
         )
     )
     text = response.text()
@@ -168,7 +168,7 @@ def test_retain_captured_pictures_when_websocket_connection_drops_and_reconnects
 def test_session_event_metrics_increase_on_disconnect_and_reconnect(
     app: Page, app_base_url: str
 ):
-    """Test that session_events_total metrics increase on disconnect/reconnect.
+    """Test that session event counter samples increase on disconnect/reconnect.
 
     Due to React strict mode, components may mount multiple times, so we only
     verify that metrics increase rather than checking exact values.
@@ -201,7 +201,7 @@ def test_session_event_metrics_increase_on_disconnect_and_reconnect(
 def test_session_event_metrics_increase_after_multiple_disconnects(
     app: Page, app_base_url: str
 ):
-    """Test that session_events_total metrics accumulate over multiple disconnects.
+    """Test that session event counter samples accumulate over multiple disconnects.
 
     Due to React strict mode, components may mount multiple times, so we only
     verify that metrics increase rather than checking exact values.
