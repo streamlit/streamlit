@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Company Analytics Dashboard Template
+"""Company analytics dashboard template.
 
-A company leaderboard dashboard demonstrating:
+Demonstrates:
 - Interactive dataframe with sparkline columns
 - Segmented control for ranking (top spenders, gainers, shrinkers)
 - Multi-select pills for account type filtering
@@ -23,8 +22,8 @@ A company leaderboard dashboard demonstrating:
 - Growth score calculation
 - Dialog popup for company details
 
-This template uses synthetic data. Replace generate_company_data()
-with your actual data source (e.g., Snowflake queries, CRM APIs, etc.)
+This template uses synthetic data. Replace ``generate_company_data()`` with
+your actual data source (e.g., Snowflake queries, CRM APIs, etc.).
 """
 
 from datetime import date, timedelta
@@ -79,7 +78,7 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
 
     Replace this function with your actual data source.
     """
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
 
     end_date = date.today() - timedelta(days=1)
     start_date = end_date - timedelta(days=days)
@@ -89,13 +88,13 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
 
     for company in COMPANY_NAMES:
         # Assign static attributes
-        account_type = np.random.choice(ACCOUNT_TYPES, p=[0.3, 0.25, 0.2, 0.15, 0.1])
-        region = np.random.choice(REGIONS)
-        segment = np.random.choice(SEGMENTS)
+        account_type = rng.choice(ACCOUNT_TYPES, p=[0.3, 0.25, 0.2, 0.15, 0.1])
+        region = rng.choice(REGIONS)
+        segment = rng.choice(SEGMENTS)
 
         # Generate usage pattern
-        base_usage = np.random.randint(100, 10000)
-        growth = np.random.uniform(-0.005, 0.01)  # Some companies shrink
+        base_usage = rng.integers(100, 10000)
+        growth = rng.uniform(-0.005, 0.01)  # Some companies shrink
 
         for i, dt in enumerate(dates):
             # Base trend
@@ -106,7 +105,7 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
                 trend *= 0.3
 
             # Random noise
-            daily_credits = max(0, trend * np.random.uniform(0.7, 1.3))
+            daily_credits = max(0, trend * rng.uniform(0.7, 1.3))
 
             records.append(
                 {
@@ -126,6 +125,21 @@ def generate_company_data(days: int = 90) -> pd.DataFrame:
 def load_company_data() -> pd.DataFrame:
     """Load all company data."""
     return generate_company_data(days=90)
+
+
+def _calc_growth(trend: list[float]) -> float:
+    """Return second-half vs first-half delta (rough trend indicator)."""
+    if not trend or len(trend) < 2:
+        return 0
+    mid = len(trend) // 2
+    first_half = sum(trend[:mid]) if mid > 0 else 0
+    second_half = sum(trend[mid:])
+    return second_half - first_half
+
+
+def _to_list(val: object) -> list[object]:
+    """Wrap a scalar in a single-element list for MultiselectColumn display."""
+    return [val] if pd.notna(val) else []
 
 
 def aggregate_companies(
@@ -174,16 +188,7 @@ def aggregate_companies(
     sparklines.columns = ["company_name", "usage_trend"]
     agg = agg.merge(sparklines, on="company_name")
 
-    # Calculate growth score (second half vs first half)
-    def calc_growth(trend):
-        if not trend or len(trend) < 2:
-            return 0
-        mid = len(trend) // 2
-        first_half = sum(trend[:mid]) if mid > 0 else 0
-        second_half = sum(trend[mid:])
-        return second_half - first_half
-
-    agg["growth_score"] = agg["usage_trend"].apply(calc_growth)
+    agg["growth_score"] = agg["usage_trend"].apply(_calc_growth)
 
     # Sort
     if sort_by == "growth_asc":
@@ -196,7 +201,9 @@ def aggregate_companies(
     return agg
 
 
-def render_company_dialog(company_name: str, company_row: pd.Series, df: pd.DataFrame):
+def render_company_dialog(
+    company_name: str, company_row: pd.Series, df: pd.DataFrame
+) -> None:
     """Render company details inside a dialog."""
     company_data = df[df["company_name"] == company_name].sort_values("date")
 
@@ -311,11 +318,6 @@ leaderboard = aggregate_companies(
 if leaderboard.empty:
     st.warning("No company data found for the selected filters.")
     st.stop()
-
-
-def _to_list(val):
-    """Convert a single value to a list for MultiselectColumn display."""
-    return [val] if pd.notna(val) else []
 
 
 # Convert columns to lists for MultiselectColumn display (shows nice colored chips)

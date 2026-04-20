@@ -12,7 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Seattle Weather dashboard exploring the classic Altair case study dataset."""
+
 import altair as alt
+import pandas as pd
 import vega_datasets
 
 import streamlit as st
@@ -27,7 +30,7 @@ st.set_page_config(
 
 
 @st.cache_data
-def load_weather_data():
+def load_weather_data() -> pd.DataFrame:
     return vega_datasets.data("seattle_weather")
 
 
@@ -253,7 +256,7 @@ with cols[0].container(border=True, height="stretch"):
         .mark_bar()
         .encode(
             alt.X("month(date):O", title="month"),
-            alt.Y("count():Q", title="days").stack("normalize"),
+            alt.Y("count():Q", title="days", stack="normalize"),
             alt.Color("weather:N"),
         )
         .configure_legend(orient="bottom")

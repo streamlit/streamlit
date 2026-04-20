@@ -1,6 +1,7 @@
 # Stripe Theme for Streamlit
 # Polished, professional, modern with signature purple/indigo gradients
 [theme]
+base = "light"
 primaryColor = "#635bff"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f9fc"

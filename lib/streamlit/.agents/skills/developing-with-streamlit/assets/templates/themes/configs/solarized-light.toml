@@ -1,6 +1,7 @@
 # Solarized Light Theme for Streamlit
 # Precision colors designed for readability and reduced eye strain
 [theme]
+base = "light"
 primaryColor = "#268bd2"
 backgroundColor = "#fdf6e3"
 secondaryBackgroundColor = "#eee8d5"

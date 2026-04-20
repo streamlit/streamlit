@@ -12,20 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Compute/Resource Dashboard Template
+"""Compute/resource dashboard template.
 
-A resource consumption dashboard demonstrating:
+Demonstrates:
 - Multiple metric cards in a grid layout
-- @st.fragment for independent widget updates
+- ``@st.fragment`` for independent widget updates
 - Popover filters for each metric card
 - Chart/table view toggle
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
 - Percentage normalization toggle
 - Multiple breakdown dimensions
 
-This template uses synthetic data. Replace generate_*_data()
-with your actual data source (e.g., Snowflake queries, cloud APIs, etc.)
+This template uses synthetic data. Replace ``generate_*_data()`` with your
+actual data source (e.g., Snowflake queries, cloud APIs, etc.).
 """
 
 import hashlib
@@ -69,25 +68,23 @@ def generate_time_series(
 ) -> pd.DataFrame:
     """Generate synthetic time series data by category."""
     seed = int(hashlib.sha256(category_name.encode()).hexdigest(), 16) % 2**32
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
     records = []
 
     for category in categories:
         base = (
-            base_values.get(category, 1000)
-            if base_values
-            else np.random.randint(500, 5000)
+            base_values.get(category, 1000) if base_values else rng.integers(500, 5000)
         )
-        growth = np.random.uniform(0.001, 0.005)
+        growth = rng.uniform(0.001, 0.005)
 
         for i, dt in enumerate(dates):
             trend = base * (1 + growth) ** i
             if dt.dayofweek >= 5:
                 trend *= 0.4
 
-            daily = max(0, trend * np.random.uniform(0.8, 1.2))
+            daily = max(0, trend * rng.uniform(0.8, 1.2))
 
             records.append(
                 {
@@ -259,7 +256,7 @@ def create_bar_chart(
 # =============================================================================
 
 
-def render_page_header(title: str):
+def render_page_header(title: str) -> None:
     """Render page header with title and reset button."""
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"
@@ -271,14 +268,52 @@ def render_page_header(title: str):
 
 
 # =============================================================================
-# Metric Card Components (using @st.fragment)
+# Metric Card Component
 # =============================================================================
 
 
 @st.fragment
-def account_type_metric():
-    """Account type metric card with independent state."""
-    data = load_account_type_data()
+def dimension_metric(
+    *,
+    title: str,
+    data: pd.DataFrame,
+    dim_col: str,
+    options: list[str],
+    options_label: str,
+    default_selection: list[str],
+    default_chart: str = "Line",
+    key_prefix: str,
+) -> None:
+    """Metric card broken down by a single dimension, with independent state.
+
+    Each fragment instance filters and renders independently — clicking a
+    popover filter only reruns this card, not the whole page.
+
+    Parameters
+    ----------
+    title : str
+        Card header text.
+    data : pd.DataFrame
+        Source frame; must contain ``ds``, ``daily_credits``, ``credits_7d_ma``,
+        and ``dim_col``.
+    dim_col : str
+        Column name to split series on (e.g. ``"account_type"``).
+    options : list[str]
+        All possible values of ``dim_col``.
+    options_label : str
+        Label shown above the dimension selector pills.
+    default_selection : list[str]
+        Subset of ``options`` pre-selected when the card first renders.
+    default_chart : str
+        ``"Line"`` or ``"Bar"``.
+    key_prefix : str
+        Unique prefix used for every widget key inside the card.
+    """
+    chart_default = (
+        ":material/bar_chart: Bar"
+        if default_chart == "Bar"
+        else ":material/show_chart: Line"
+    )
 
     with st.container(border=True):
         with st.container(
@@ -286,132 +321,53 @@ def account_type_metric():
             horizontal_alignment="distribute",
             vertical_alignment="center",
         ):
-            st.markdown("**Credits by account type**")
+            st.markdown(f"**{title}**")
 
             view_mode = st.segmented_control(
                 "View",
                 options=[":material/show_chart:", ":material/table:"],
                 default=":material/show_chart:",
-                key="acct_view",
+                key=f"{key_prefix}_view",
                 label_visibility="collapsed",
             )
 
             with st.popover("Filters", type="tertiary"):
-                selected_types = st.pills(
-                    "Account types",
-                    options=ACCOUNT_TYPES,
-                    default=["Paying"],
+                selected = st.pills(
+                    options_label,
+                    options=options,
+                    default=default_selection,
                     selection_mode="multi",
-                    key="acct_types",
+                    key=f"{key_prefix}_select",
                 )
                 line_options = st.pills(
                     "Lines",
                     options=["Daily", "7-day MA"],
                     default=["7-day MA"],
                     selection_mode="multi",
-                    key="acct_lines",
+                    key=f"{key_prefix}_lines",
                 )
                 chart_type = st.segmented_control(
                     "Chart type",
                     options=[":material/show_chart: Line", ":material/bar_chart: Bar"],
-                    default=":material/show_chart: Line",
-                    key="acct_chart",
+                    default=chart_default,
+                    key=f"{key_prefix}_chart",
                 )
                 show_percent = st.toggle(
                     "Show %",
                     value=False,
-                    key="acct_pct",
+                    key=f"{key_prefix}_pct",
                     disabled="Line" in (chart_type or ""),
                 )
                 time_range = st.segmented_control(
                     "Time range",
                     options=TIME_RANGES,
                     default="All",
-                    key="acct_time",
+                    key=f"{key_prefix}_time",
                 )
 
-        # Filter data
-        selected_types = selected_types or ["Paying"]
+        selected = selected or default_selection
         line_options = line_options or ["7-day MA"]
-        filtered = data[data["account_type"].isin(selected_types)]
-        filtered = filter_by_time_range(filtered, "ds", time_range)
-
-        # Determine y column
-        y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
-
-        if "table" in (view_mode or ""):
-            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
-        elif "Bar" in (chart_type or ""):
-            st.altair_chart(
-                create_bar_chart(
-                    filtered, "ds", y_col, "account_type", CHART_HEIGHT, show_percent
-                ),
-            )
-        else:
-            st.altair_chart(
-                create_line_chart(filtered, "ds", y_col, "account_type", CHART_HEIGHT),
-            )
-
-
-@st.fragment
-def instance_type_metric():
-    """Instance type metric card with independent state."""
-    data = load_instance_type_data()
-
-    with st.container(border=True):
-        with st.container(
-            horizontal=True,
-            horizontal_alignment="distribute",
-            vertical_alignment="center",
-        ):
-            st.markdown("**Credits by instance type**")
-
-            view_mode = st.segmented_control(
-                "View",
-                options=[":material/show_chart:", ":material/table:"],
-                default=":material/show_chart:",
-                key="inst_view",
-                label_visibility="collapsed",
-            )
-
-            with st.popover("Filters", type="tertiary"):
-                selected_types = st.pills(
-                    "Instance types",
-                    options=INSTANCE_TYPES,
-                    default=INSTANCE_TYPES,
-                    selection_mode="multi",
-                    key="inst_types",
-                )
-                line_options = st.pills(
-                    "Lines",
-                    options=["Daily", "7-day MA"],
-                    default=["7-day MA"],
-                    selection_mode="multi",
-                    key="inst_lines",
-                )
-                chart_type = st.segmented_control(
-                    "Chart type",
-                    options=[":material/show_chart: Line", ":material/bar_chart: Bar"],
-                    default=":material/show_chart: Line",
-                    key="inst_chart",
-                )
-                show_percent = st.toggle(
-                    "Show %",
-                    value=False,
-                    key="inst_pct",
-                    disabled="Line" in (chart_type or ""),
-                )
-                time_range = st.segmented_control(
-                    "Time range",
-                    options=TIME_RANGES,
-                    default="All",
-                    key="inst_time",
-                )
-
-        # Filter data
-        selected_types = selected_types or INSTANCE_TYPES
-        line_options = line_options or ["7-day MA"]
-        filtered = data[data["instance_type"].isin(selected_types)]
+        filtered = data[data[dim_col].isin(selected)]
         filtered = filter_by_time_range(filtered, "ds", time_range)
 
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
@@ -421,89 +377,12 @@ def instance_type_metric():
         elif "Bar" in (chart_type or ""):
             st.altair_chart(
                 create_bar_chart(
-                    filtered, "ds", y_col, "instance_type", CHART_HEIGHT, show_percent
+                    filtered, "ds", y_col, dim_col, CHART_HEIGHT, show_percent
                 ),
             )
         else:
             st.altair_chart(
-                create_line_chart(filtered, "ds", y_col, "instance_type", CHART_HEIGHT),
-            )
-
-
-@st.fragment
-def region_metric():
-    """Region metric card with independent state."""
-    data = load_region_data()
-
-    with st.container(border=True):
-        with st.container(
-            horizontal=True,
-            horizontal_alignment="distribute",
-            vertical_alignment="center",
-        ):
-            st.markdown("**Credits by region**")
-
-            view_mode = st.segmented_control(
-                "View",
-                options=[":material/show_chart:", ":material/table:"],
-                default=":material/show_chart:",
-                key="region_view",
-                label_visibility="collapsed",
-            )
-
-            with st.popover("Filters", type="tertiary"):
-                selected_regions = st.pills(
-                    "Regions",
-                    options=REGIONS,
-                    default=REGIONS,
-                    selection_mode="multi",
-                    key="region_select",
-                )
-                line_options = st.pills(
-                    "Lines",
-                    options=["Daily", "7-day MA"],
-                    default=["7-day MA"],
-                    selection_mode="multi",
-                    key="region_lines",
-                )
-                chart_type = st.segmented_control(
-                    "Chart type",
-                    options=[":material/show_chart: Line", ":material/bar_chart: Bar"],
-                    default=":material/bar_chart: Bar",
-                    key="region_chart",
-                )
-                show_percent = st.toggle(
-                    "Show %",
-                    value=False,
-                    key="region_pct",
-                    disabled="Line" in (chart_type or ""),
-                )
-                time_range = st.segmented_control(
-                    "Time range",
-                    options=TIME_RANGES,
-                    default="All",
-                    key="region_time",
-                )
-
-        # Filter data
-        selected_regions = selected_regions or REGIONS
-        line_options = line_options or ["7-day MA"]
-        filtered = data[data["region"].isin(selected_regions)]
-        filtered = filter_by_time_range(filtered, "ds", time_range)
-
-        y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
-
-        if "table" in (view_mode or ""):
-            st.dataframe(filtered, height=CHART_HEIGHT, hide_index=True)
-        elif "Bar" in (chart_type or ""):
-            st.altair_chart(
-                create_bar_chart(
-                    filtered, "ds", y_col, "region", CHART_HEIGHT, show_percent
-                ),
-            )
-        else:
-            st.altair_chart(
-                create_line_chart(filtered, "ds", y_col, "region", CHART_HEIGHT),
+                create_line_chart(filtered, "ds", y_col, dim_col, CHART_HEIGHT),
             )
 
 
@@ -517,10 +396,37 @@ render_page_header("# :material/bolt: Compute Dashboard")
 col1, col2 = st.columns(2)
 
 with col1:
-    account_type_metric()
+    dimension_metric(
+        title="Credits by account type",
+        data=load_account_type_data(),
+        dim_col="account_type",
+        options=ACCOUNT_TYPES,
+        options_label="Account types",
+        default_selection=["Paying"],
+        default_chart="Line",
+        key_prefix="acct",
+    )
 
 with col2:
-    instance_type_metric()
+    dimension_metric(
+        title="Credits by instance type",
+        data=load_instance_type_data(),
+        dim_col="instance_type",
+        options=INSTANCE_TYPES,
+        options_label="Instance types",
+        default_selection=INSTANCE_TYPES,
+        default_chart="Line",
+        key_prefix="inst",
+    )
 
 # Row 2: One metric (full width for region breakdown)
-region_metric()
+dimension_metric(
+    title="Credits by region",
+    data=load_region_data(),
+    dim_col="region",
+    options=REGIONS,
+    options_label="Regions",
+    default_selection=REGIONS,
+    default_chart="Bar",
+    key_prefix="region",
+)

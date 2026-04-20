@@ -12,12 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Streamlit Element Explorer - Theme Demo
+"""Element Explorer for previewing Streamlit themes.
 
-A comprehensive single-page app showcasing all major Streamlit components
-with custom theming. Use this to preview how your theme looks across
-different element types.
+Renders all major Streamlit components on one page. Copy a config from
+``configs/`` into ``.streamlit/config.toml`` and run this app to preview
+how that theme looks across widgets, charts, layouts, and text.
 """
 
 import numpy as np
@@ -31,9 +30,9 @@ st.set_page_config(
 
 # Initialize sample data in session state
 if "chart_data" not in st.session_state:
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     st.session_state.chart_data = pd.DataFrame(
-        np.random.randn(20, 3), columns=["a", "b", "c"]
+        rng.standard_normal((20, 3)), columns=["a", "b", "c"]
     )
 
 chart_data = st.session_state.chart_data
@@ -153,7 +152,7 @@ elif section == "Data":
             "Name": ["Alice", "Bob", "Charlie", "Diana", "Eve"],
             "Department": ["Engineering", "Sales", "Marketing", "Engineering", "Sales"],
             "Salary": [95000, 78000, 82000, 105000, 71000],
-            "Start Date": pd.date_range("2022-01-15", periods=5, freq="3M"),
+            "Start Date": pd.date_range("2022-01-15", periods=5, freq="3MS"),
             "Active": [True, True, False, True, True],
         }
     )
@@ -343,8 +342,12 @@ elif section == "Status":
 
     # Exception
     st.subheader("Exception Display")
-    try:
+
+    def _demo_raise() -> None:
         raise ValueError("This is an example exception for demonstration")
+
+    try:
+        _demo_raise()
     except ValueError as e:
         st.exception(e)
 

@@ -12,17 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-Metrics Dashboard Template
+"""Metrics dashboard template.
 
-A comprehensive metrics dashboard demonstrating:
+Demonstrates:
 - Time series visualization with Altair (line, area, bar, point charts)
 - Metric cards with chart/table toggle and popover filters
 - Time range filtering (1M, 6M, 1Y, QTD, YTD, All)
 - Line options (Daily, 7-day MA)
 
-This template uses synthetic data. Replace the generate_*_data() functions
-with your own data sources (e.g., Snowflake queries, APIs, etc.)
+This template uses synthetic data. Replace the ``generate_*_data()`` functions
+with your own data sources (e.g., Snowflake queries, APIs, etc.).
 """
 
 import hashlib
@@ -70,7 +69,7 @@ def generate_metric_data(
     - Database query
     """
     seed = int(hashlib.sha256(metric_name.encode()).hexdigest(), 16) % 2**32
-    np.random.seed(seed)
+    rng = np.random.default_rng(seed)
 
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
     n_days = len(dates)
@@ -81,10 +80,10 @@ def generate_metric_data(
     # Add weekly seasonality (lower on weekends)
     day_of_week = dates.dayofweek
     seasonality = np.where(day_of_week >= 5, 0.7, 1.0)
-    trend = trend * seasonality
+    trend *= seasonality
 
     # Add noise
-    noise = np.random.normal(1, noise_factor, n_days)
+    noise = rng.normal(1, noise_factor, n_days)
     values = trend * noise
 
     # Calculate rolling averages
@@ -152,6 +151,30 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     return df[df[x_col] >= min_date]
 
 
+def _melt_chart_data(
+    df: pd.DataFrame, x_col: str, y_cols: list[str], labels: list[str]
+) -> pd.DataFrame:
+    """Melt wide data into long form and re-label the series column."""
+    melted = df.melt(
+        id_vars=[x_col],
+        value_vars=y_cols,
+        var_name="series",
+        value_name="value",
+    )
+    label_map = dict(zip(y_cols, labels, strict=True))
+    melted["series"] = melted["series"].map(label_map)
+    return melted
+
+
+def _chart_tooltip(x_col: str, x_title: str = "Date") -> list[alt.Tooltip]:
+    """Standard tooltip for melted chart data."""
+    return [
+        alt.Tooltip(f"{x_col}:T", title=x_title, format="%Y-%m-%d"),
+        alt.Tooltip("series:N", title="Series"),
+        alt.Tooltip("value:Q", title="Value", format=",.0f"),
+    ]
+
+
 def render_line_chart(
     df: pd.DataFrame,
     x_col: str,
@@ -160,19 +183,9 @@ def render_line_chart(
     height: int = CHART_HEIGHT,
 ) -> alt.Chart:
     """Render a multi-line chart."""
-    # Melt for Altair
-    melted = df.melt(
-        id_vars=[x_col],
-        value_vars=y_cols,
-        var_name="series",
-        value_name="value",
-    )
+    melted = _melt_chart_data(df, x_col, y_cols, labels)
 
-    # Map to labels
-    label_map = dict(zip(y_cols, labels))
-    melted["series"] = melted["series"].map(label_map)
-
-    chart = (
+    return (
         alt.Chart(melted)
         .mark_line()
         .encode(
@@ -184,16 +197,10 @@ def render_line_chart(
                 alt.value([5, 5]),
                 alt.value([0]),
             ),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip("series:N", title="Series"),
-                alt.Tooltip("value:Q", title="Value", format=",.0f"),
-            ],
+            tooltip=_chart_tooltip(x_col),
         )
         .properties(height=height)
     )
-
-    return chart
 
 
 def render_area_chart(
@@ -204,31 +211,19 @@ def render_area_chart(
     height: int = CHART_HEIGHT,
 ) -> alt.Chart:
     """Render a stacked area chart."""
-    melted = df.melt(
-        id_vars=[x_col],
-        value_vars=y_cols,
-        var_name="series",
-        value_name="value",
-    )
-    label_map = dict(zip(y_cols, labels))
-    melted["series"] = melted["series"].map(label_map)
+    melted = _melt_chart_data(df, x_col, y_cols, labels)
 
-    chart = (
+    return (
         alt.Chart(melted)
         .mark_area(opacity=0.6, line=True)
         .encode(
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip("series:N", title="Series"),
-                alt.Tooltip("value:Q", title="Value", format=",.0f"),
-            ],
+            tooltip=_chart_tooltip(x_col),
         )
         .properties(height=height)
     )
-    return chart
 
 
 def render_bar_chart(
@@ -243,19 +238,10 @@ def render_bar_chart(
     df[x_col] = pd.to_datetime(df[x_col])
     df["week"] = df[x_col].dt.to_period("W").dt.start_time
 
-    # Aggregate by week
     agg_df = df.groupby("week")[y_cols].mean().reset_index()
+    melted = _melt_chart_data(agg_df, "week", y_cols, labels)
 
-    melted = agg_df.melt(
-        id_vars=["week"],
-        value_vars=y_cols,
-        var_name="series",
-        value_name="value",
-    )
-    label_map = dict(zip(y_cols, labels))
-    melted["series"] = melted["series"].map(label_map)
-
-    chart = (
+    return (
         alt.Chart(melted)
         .mark_bar(opacity=0.8)
         .encode(
@@ -263,15 +249,10 @@ def render_bar_chart(
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
             xOffset="series:N",
-            tooltip=[
-                alt.Tooltip("week:T", title="Week", format="%Y-%m-%d"),
-                alt.Tooltip("series:N", title="Series"),
-                alt.Tooltip("value:Q", title="Value", format=",.0f"),
-            ],
+            tooltip=_chart_tooltip("week", x_title="Week"),
         )
         .properties(height=height)
     )
-    return chart
 
 
 def render_point_chart(
@@ -281,15 +262,8 @@ def render_point_chart(
     labels: list[str],
     height: int = CHART_HEIGHT,
 ) -> alt.Chart:
-    """Render a scatter/point chart with trend line."""
-    melted = df.melt(
-        id_vars=[x_col],
-        value_vars=y_cols,
-        var_name="series",
-        value_name="value",
-    )
-    label_map = dict(zip(y_cols, labels))
-    melted["series"] = melted["series"].map(label_map)
+    """Render a scatter/point chart with a dashed trend line for the 7-day MA."""
+    melted = _melt_chart_data(df, x_col, y_cols, labels)
 
     points = (
         alt.Chart(melted)
@@ -298,15 +272,10 @@ def render_point_chart(
             x=alt.X(f"{x_col}:T", title=None),
             y=alt.Y("value:Q", title=None, scale=alt.Scale(zero=False)),
             color=alt.Color("series:N", title=None, legend=alt.Legend(orient="bottom")),
-            tooltip=[
-                alt.Tooltip(f"{x_col}:T", title="Date", format="%Y-%m-%d"),
-                alt.Tooltip("series:N", title="Series"),
-                alt.Tooltip("value:Q", title="Value", format=",.0f"),
-            ],
+            tooltip=_chart_tooltip(x_col),
         )
     )
 
-    # Add trend line for 7-day MA only
     trend = (
         alt.Chart(melted[melted["series"] == "7-day MA"])
         .mark_line(strokeDash=[5, 5], strokeWidth=2)
@@ -330,14 +299,19 @@ def metric_card(
     df: pd.DataFrame,
     key_prefix: str,
     chart_type: str = "line",
-):
+) -> None:
     """Display a metric card with chart/table toggle and popover filters.
 
-    Args:
-        title: Card title
-        df: DataFrame with ds, daily_value, value_7d_ma columns
-        key_prefix: Unique prefix for widget keys
-        chart_type: One of "line", "area", "bar", "point"
+    Parameters
+    ----------
+    title : str
+        Card title.
+    df : pd.DataFrame
+        DataFrame with ``ds``, ``daily_value``, ``value_7d_ma`` columns.
+    key_prefix : str
+        Unique prefix for widget keys.
+    chart_type : str
+        One of ``"line"``, ``"area"``, ``"bar"``, ``"point"``.
     """
     chart_renderers = {
         "line": render_line_chart,
@@ -413,7 +387,7 @@ def metric_card(
 # =============================================================================
 
 
-def render_page_header(title: str):
+def render_page_header(title: str) -> None:
     """Render page header with title and reset button."""
     with st.container(
         horizontal=True, horizontal_alignment="distribute", vertical_alignment="center"

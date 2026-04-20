@@ -1,6 +1,7 @@
 # GitHub Theme for Streamlit
 # Clean, developer-friendly, functional with signature blue accents
 [theme]
+base = "light"
 primaryColor = "#0969da"
 backgroundColor = "#ffffff"
 secondaryBackgroundColor = "#f6f8fa"

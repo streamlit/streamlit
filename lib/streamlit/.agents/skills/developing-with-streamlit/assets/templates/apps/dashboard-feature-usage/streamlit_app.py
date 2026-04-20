@@ -12,10 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""
-API Usage Dashboard Template
+"""API usage dashboard template.
 
-A feature analytics dashboard demonstrating:
+Demonstrates:
 - Segmented control for category selection
 - Multiselect for endpoint filtering
 - Starter kits / presets for quick selection
@@ -23,8 +22,8 @@ A feature analytics dashboard demonstrating:
 - Metric cards with 28-day deltas
 - Rolling average options
 
-This template uses synthetic data. Replace generate_api_data()
-with your actual data source (e.g., Snowflake queries, APIs, etc.)
+This template uses synthetic data. Replace ``generate_api_data()`` with your
+actual data source (e.g., Snowflake queries, APIs, etc.).
 """
 
 from datetime import date, timedelta
@@ -100,15 +99,15 @@ def generate_api_data(
 
     Replace this function with your actual data source.
     """
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
 
     dates = pd.date_range(start=start_date, end=end_date, freq="D")
     records = []
 
     for endpoint in endpoints:
         # Each endpoint has different base traffic and growth
-        base = np.random.randint(1000, 50000)
-        growth = np.random.uniform(0.0005, 0.003)
+        base = rng.integers(1000, 50000)
+        growth = rng.uniform(0.0005, 0.003)
 
         for i, dt in enumerate(dates):
             # Base trend with growth
@@ -119,7 +118,7 @@ def generate_api_data(
                 trend *= 0.4
 
             # Random noise
-            value = trend * np.random.uniform(0.85, 1.15)
+            value = trend * rng.uniform(0.85, 1.15)
 
             records.append(
                 {
@@ -129,8 +128,7 @@ def generate_api_data(
                 }
             )
 
-    df = pd.DataFrame(records)
-    return df
+    return pd.DataFrame(records)
 
 
 @st.cache_data(ttl=3600)
@@ -162,7 +160,7 @@ def normalize_data(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize request counts to percentages (share of total per day)."""
     result = df.copy()
     daily_totals = result.groupby("date")["request_count"].transform("sum")
-    result["request_count"] = result["request_count"] / daily_totals
+    result["request_count"] /= daily_totals
     return result
 
 
@@ -229,15 +227,6 @@ filter_col, chart_col = st.columns([1, 2])
 with filter_col:
     # Metric selection
     with st.expander("Metric", expanded=True, icon=":material/analytics:"):
-        measure = st.selectbox(
-            "Choose a measure",
-            ["Request count", "Unique callers", "Error rate"],
-            index=0,
-            label_visibility="collapsed",
-            disabled=True,  # Only one option in this template
-            help="In production, connect to different metrics tables",
-        )
-
         rolling_label = st.segmented_control(
             "Time aggregation",
             list(ROLLING_OPTIONS.keys()),

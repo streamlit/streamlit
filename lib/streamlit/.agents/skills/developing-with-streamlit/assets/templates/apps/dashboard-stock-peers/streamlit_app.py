@@ -12,6 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+"""Stock peer analysis dashboard for comparing a set of tickers over time."""
+
+from collections.abc import Iterable
+
 import altair as alt
 import pandas as pd
 import yfinance as yf
@@ -135,13 +139,9 @@ STOCKS = [
 DEFAULT_STOCKS = ["AAPL", "MSFT", "GOOGL", "NVDA", "AMZN", "TSLA", "META"]
 
 
-def stocks_to_str(stocks):
-    return ",".join(stocks)
-
-
 if "tickers_input" not in st.session_state:
     st.session_state.tickers_input = st.query_params.get(
-        "stocks", stocks_to_str(DEFAULT_STOCKS)
+        "stocks", ",".join(DEFAULT_STOCKS)
     ).split(",")
 
 
@@ -182,7 +182,7 @@ tickers = [t.upper() for t in tickers]
 
 # Update query param when text input changes
 if tickers:
-    st.query_params["stocks"] = stocks_to_str(tickers)
+    st.query_params["stocks"] = ",".join(tickers)
 else:
     # Clear the param if input is empty
     st.query_params.pop("stocks", None)
@@ -198,8 +198,8 @@ right_cell = cols[1].container(
 
 
 @st.cache_data(show_spinner=False, ttl="6h")
-def load_data(tickers, period):
-    tickers_obj = yf.Tickers(tickers)
+def load_data(tickers: Iterable[str], period: str) -> pd.DataFrame:
+    tickers_obj = yf.Tickers(list(tickers))
     data = tickers_obj.history(period=period)
     if data is None:
         raise RuntimeError("YFinance returned no data.")
@@ -225,7 +225,7 @@ normalized = data.div(data.iloc[0])
 
 # Build list of (normalized_value, ticker) tuples for safe comparison
 # (using a dict with float keys could silently drop tickers with identical values).
-ticker_values = [(normalized[ticker].iat[-1], ticker) for ticker in tickers]
+ticker_values = [(normalized[ticker].iloc[-1], ticker) for ticker in tickers]
 max_norm_value = max(ticker_values)
 min_norm_value = min(ticker_values)
 
@@ -343,4 +343,4 @@ st.space("medium")
 ## Raw data
 """
 
-data
+st.dataframe(data)
