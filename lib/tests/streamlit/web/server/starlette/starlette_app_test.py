@@ -2149,6 +2149,9 @@ class TestAppSecrets:
             pytest.param(
                 {"outer": {"inner": [1, 2]}}, r"at 'outer\.inner'", id="nested_list"
             ),
+            pytest.param(
+                {1: "value"}, r"Dictionary keys.*must be strings", id="int_key"
+            ),
         ],
     )
     def test_validates_secrets_types_at_construction(
@@ -2157,6 +2160,21 @@ class TestAppSecrets:
         """Invalid secret types raise TypeError at construction."""
         with pytest.raises(TypeError, match=expected_match):
             App(simple_script, secrets=secrets)
+
+    @pytest.mark.parametrize(
+        "non_mapping",
+        [
+            pytest.param(["a", "b"], id="list"),
+            pytest.param("string", id="str"),
+            pytest.param(42, id="int"),
+        ],
+    )
+    def test_rejects_non_mapping_secrets(
+        self, simple_script: Path, non_mapping: Any
+    ) -> None:
+        """Non-mapping secrets types raise TypeError."""
+        with pytest.raises(TypeError, match=r"secrets must be a mapping"):
+            App(simple_script, secrets=non_mapping)
 
     @patch_config_options(
         {

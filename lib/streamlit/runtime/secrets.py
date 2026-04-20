@@ -58,6 +58,12 @@ def _validate_secrets_value(value: Any, path: str = "") -> None:
     """
     if isinstance(value, dict):
         for key, nested_value in value.items():
+            if not isinstance(key, str):
+                key_path = f"in '{path}'" if path else "at top level"
+                raise TypeError(
+                    f"Dictionary keys in secrets must be strings, "
+                    f"got {type(key).__name__!r} {key_path}."
+                )
             nested_path = f"{path}.{key}" if path else key
             _validate_secrets_value(nested_value, nested_path)
     elif type(value) not in _ALLOWED_SCALAR_TYPES:

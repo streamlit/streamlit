@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -352,9 +353,20 @@ class App:
 
         # Validate and store programmatic secrets (deep copy to prevent external mutation)
         if secrets is not None:
+            if not isinstance(secrets, MappingABC):
+                raise TypeError(
+                    f"secrets must be a mapping (dict), got {type(secrets).__name__!r}."
+                )
             for key, value in secrets.items():
+                if not isinstance(key, str):
+                    raise TypeError(
+                        f"Dictionary keys in secrets must be strings, "
+                        f"got {type(key).__name__!r} at top level."
+                    )
                 _validate_secrets_value(value, key)
-        self._programmatic_secrets = copy.deepcopy(secrets) if secrets else None
+        self._programmatic_secrets = (
+            copy.deepcopy(secrets) if secrets is not None else None
+        )
         self._secrets_applied: bool = False
 
         self._runtime: Runtime | None = None

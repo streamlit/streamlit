@@ -777,6 +777,20 @@ class TestValidateSecretsValue:
         with pytest.raises(TypeError, match="Unsupported type 'datetime'"):
             _validate_secrets_value(datetime.now(), "key")
 
+    def test_non_string_dict_key_raises_typeerror(self) -> None:
+        """Non-string dictionary keys raise TypeError."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=r"Dictionary keys.*must be strings.*int"):
+            _validate_secrets_value({1: "value"}, "")
+
+    def test_non_string_nested_dict_key_includes_path(self) -> None:
+        """Non-string nested dictionary keys include the path in the error message."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=r"in 'outer'"):
+            _validate_secrets_value({"outer": {2: "nested_value"}}, "")
+
 
 # --- Tests for Secrets.merge_programmatic_secrets ---
 
