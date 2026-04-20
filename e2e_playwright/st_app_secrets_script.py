@@ -20,6 +20,7 @@ This script displays secrets that were set programmatically via st.App.
 from __future__ import annotations
 
 import os
+from typing import cast
 
 import streamlit as st
 from streamlit.errors import StreamlitSecretNotFoundError
@@ -30,7 +31,7 @@ st.title("st.App Secrets Test")
 def _get_secret(key: str, default: str = "NOT SET") -> str:
     """Helper to safely get a secret, handling missing secrets file in bare mode."""
     try:
-        return st.secrets.get(key, default)
+        return cast("str", st.secrets.get(key, default))
     except StreamlitSecretNotFoundError:
         return default
 
@@ -42,8 +43,8 @@ def _get_nested_secret(
     try:
         section_data = st.secrets.get(section, {})
         if isinstance(section_data, dict):
-            return section_data.get(key, default)
-        return getattr(section_data, key, default)
+            return cast("str | int | float", section_data.get(key, default))
+        return cast("str | int | float", getattr(section_data, key, default))
     except StreamlitSecretNotFoundError:
         return default
 
