@@ -180,7 +180,7 @@ The toolbar follows existing Streamlit patterns:
 | Works on SiS, Cloud, etc?    | ✅ Yes - Uses standard clipboard API                                 |
 | No breaking API changes      | ✅ Yes - New optional parameter with `False` default                 |
 | No new dependencies          | ✅ Yes - Uses existing `useCopyToClipboard` hook                     |
-| Metrics collected            | TBD - Define telemetry for `copy_to_clipboard` param usage           |
+| Metrics collected            | ✅ Yes - Automatically tracked via `gather_metrics`                  |
 | Any security/legal impact?   | ✅ None - just clipboard write, no data exfiltration                 |
 | Any docs changes needed?     | ✅ Yes - Document `copy_to_clipboard` parameter                      |
 
