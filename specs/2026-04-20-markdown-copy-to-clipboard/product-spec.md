@@ -163,9 +163,6 @@ The toolbar follows existing Streamlit patterns:
 - Uses the same icon and animation as other copy buttons in Streamlit
 - Checkmark confirmation animation on successful copy
 - Semi-transparent background to avoid obscuring content
-- **Interaction with `help` tooltip:** When both `copy_to_clipboard=True` and `help="..."` are
-  set, both icons appear in the same toolbar area (copy icon + help icon), maintaining visual
-  consistency with how other elements handle multiple toolbar actions.
 
 ### Accessibility
 
