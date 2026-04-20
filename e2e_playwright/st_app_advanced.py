@@ -118,4 +118,15 @@ app = st.App(
     middleware=[Middleware(CustomHeaderMiddleware)],
     lifespan=lifespan,
     exception_handlers={CustomAPIError: custom_api_error_handler},  # type: ignore[dict-item]
+    secrets={
+        "api_key": "test-api-key-12345",
+        "database": {
+            "host": "localhost",
+            "port": 5432,
+        },
+        "auth": {
+            "client_id": "my-client-id",
+            "client_secret": "my-client-secret",
+        },
+    },
 )
