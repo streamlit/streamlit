@@ -31,8 +31,11 @@ Markdown text requires selecting and copying manually, which is cumbersome for:
 
 **Existing pattern:**
 
-Streamlit already has copy-to-clipboard functionality in `st.code`, which shows a copy button
-for code blocks. This proposal brings the same capability to `st.markdown`.
+Streamlit already has copy-to-clipboard functionality in `st.code`, which unconditionally
+shows a copy button for all code blocks. This proposal brings the same capability to
+`st.markdown` but makes it opt-in (default `False`) to avoid visual clutter on general prose
+content where copying is less common. The `st.code` always-on approach is appropriate for code
+blocks (which users frequently need to copy), while markdown content is more varied in purpose.
 
 ## Proposal
 
@@ -62,9 +65,15 @@ st.markdown(
 **`copy_to_clipboard=True`:**
 
 - A toolbar with a copy icon appears when hovering over the Markdown element
-- Clicking the copy icon copies the raw Markdown string (as passed to `body`) to the clipboard
+- Clicking the copy icon copies the cleaned/normalized Markdown string (after `clean_text()`
+  processing) to the clipboard. This is the same text that gets rendered, ensuring consistency
+  between what users see and what they copy. Note that `clean_text()` performs minimal
+  normalization (e.g., dedent for multi-line strings) rather than stripping content.
 - The icon briefly changes to a checkmark to confirm the copy succeeded
 - The toolbar follows the same visual pattern as other elements (appears at top-right on hover)
+- **Mobile/touch behavior:** On touch devices (where hover is not available), the copy button
+  appears on tap and remains visible for a few seconds, matching `st.code` behavior. This
+  ensures the feature is usable on mobile devices and tablets.
 
 ### Alternative Parameter Names Considered
 
@@ -134,7 +143,10 @@ st.markdown(template, copy_to_clipboard=True, width="content")
 
 ### Edge Cases
 
-- **Empty body**: Copy button still appears and copies empty string
+- **Empty body**: Copy button still appears and copies empty string. Rationale: This matches
+  `st.code` behavior and keeps the API predictable. If a developer sets `copy_to_clipboard=True`,
+  they explicitly want the button shown regardless of content length. Hiding the button
+  conditionally would introduce unexpected behavior when content is dynamically generated.
 - **HTML content (`unsafe_allow_html=True`)**: Copies the raw string including HTML tags,
   not the rendered output
 - **LaTeX expressions**: Copies the raw LaTeX syntax (e.g., `$E = mc^2$`)
@@ -151,6 +163,18 @@ The toolbar follows existing Streamlit patterns:
 - Uses the same icon and animation as other copy buttons in Streamlit
 - Checkmark confirmation animation on successful copy
 - Semi-transparent background to avoid obscuring content
+- **Interaction with `help` tooltip:** When both `copy_to_clipboard=True` and `help="..."` are
+  set, both icons appear in the same toolbar area (copy icon + help icon), maintaining visual
+  consistency with how other elements handle multiple toolbar actions.
+
+### Accessibility
+
+The copy button follows accessibility best practices:
+
+- Keyboard-focusable via Tab navigation with visible focus indicator
+- `aria-label="Copy to clipboard"` for screen reader users
+- Confirmation state uses `aria-live="polite"` for screen reader announcements
+- Animations respect `prefers-reduced-motion` user preference
 
 ## Out of Scope (Future Work)
 
@@ -163,11 +187,15 @@ The toolbar follows existing Streamlit patterns:
 
 ## Checklist
 
-| Item                       | Status                                                |
-| -------------------------- | ----------------------------------------------------- |
-| Works on SiS, Cloud, etc?  | ✅ Yes - Uses standard clipboard API                  |
-| No breaking API changes    | ✅ Yes - New optional parameter with `False` default  |
-| No new dependencies        | ✅ Yes - Uses existing `useCopyToClipboard` hook      |
-| Metrics collected          | ✅ Yes - Tracked via `gather_metrics`                 |
-| Any security/legal impact? | ✅ None - just clipboard write, no data exfiltration  |
-| Any docs changes needed?   | ✅ Yes - Document `copy_to_clipboard` parameter       |
+| Item                         | ✅ or comment                                                        |
+|------------------------------|----------------------------------------------------------------------|
+| Works on SiS, Cloud, etc?    | ✅ Yes - Uses standard clipboard API                                 |
+| No breaking API changes      | ✅ Yes - New optional parameter with `False` default                 |
+| No new dependencies          | ✅ Yes - Uses existing `useCopyToClipboard` hook                     |
+| Metrics collected            | TBD - Define telemetry for `copy_to_clipboard` param usage           |
+| Any security/legal impact?   | ✅ None - just clipboard write, no data exfiltration                 |
+| Any docs changes needed?     | ✅ Yes - Document `copy_to_clipboard` parameter                      |
+
+**Implementation notes:**
+- Requires adding `copy_to_clipboard` field to the `Markdown` proto message
+- Frontend uses existing `useCopyToClipboard` hook from `st.code` implementation
