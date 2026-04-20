@@ -459,8 +459,9 @@ class Secrets(Mapping[str, Any]):
                 if key in current_secrets:
                     self._maybe_delete_environment_variable(key, current_secrets[key])
 
-                # Shallow-merge: replace entire top-level key
-                current_secrets[key] = value
+                # Shallow-merge: replace entire top-level key (deep copy to prevent
+                # external mutation)
+                current_secrets[key] = deepcopy(value)
 
                 # Promote to os.environ if appropriate
                 self._maybe_set_environment_variable(key, value)
@@ -482,7 +483,8 @@ class Secrets(Mapping[str, Any]):
         is a string, int, or float.
         """
         value_type = type(v)
-        if value_type in {str, int, float} and os.environ.get(k) == v:
+        # Compare with str(v) since os.environ values are always strings
+        if value_type in {str, int, float} and os.environ.get(k) == str(v):
             del os.environ[k]
 
     def _maybe_install_file_watchers(self) -> None:

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -2113,12 +2114,19 @@ class TestAppSecrets:
 
     @pytest.fixture(autouse=True)
     def _reset_secrets(self) -> Iterator[None]:
-        """Reset secrets singleton before and after each test."""
+        """Reset secrets singleton and restore os.environ before and after each test."""
         from streamlit.runtime.secrets import secrets_singleton
+
+        # Save current environ to restore after test (secrets can promote to environ)
+        prev_environ = dict(os.environ)
 
         secrets_singleton._reset()
         yield
         secrets_singleton._reset()
+
+        # Restore original environ
+        os.environ.clear()
+        os.environ.update(prev_environ)
 
     def test_stores_secrets(self, simple_script: Path) -> None:
         """App stores the secrets parameter for later use."""

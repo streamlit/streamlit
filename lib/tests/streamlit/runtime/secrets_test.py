@@ -858,6 +858,19 @@ class TestMergeProgrammaticSecrets:
 
         assert os.environ["key"] == "new_value"
 
+    def test_merge_removes_environ_when_int_overridden_with_dict(self) -> None:
+        """When an int/float env var is overridden with dict/bool, it's removed."""
+        secrets = Secrets()
+        # Set up initial int secret that was promoted to environ
+        secrets._secrets = {"port": 5432}
+        os.environ["port"] = "5432"
+
+        # Override with a dict (which should NOT be promoted to environ)
+        secrets.merge_programmatic_secrets({"port": {"host": "localhost"}})
+
+        # The old int env var should be removed
+        assert "port" not in os.environ
+
     def test_merge_validates_types(self) -> None:
         """Merging invalid types raises TypeError."""
         secrets = Secrets()

@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import copy
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -349,11 +350,12 @@ class App:
         )
         self._debug = debug
 
-        # Validate and store programmatic secrets
+        # Validate and store programmatic secrets (deep copy to prevent external mutation)
         if secrets is not None:
             for key, value in secrets.items():
                 _validate_secrets_value(value, key)
-        self._programmatic_secrets = dict(secrets) if secrets else None
+        self._programmatic_secrets = copy.deepcopy(secrets) if secrets else None
+        self._secrets_applied: bool = False
 
         self._runtime: Runtime | None = None
         self._starlette_app: Starlette | None = None
@@ -508,10 +510,12 @@ class App:
         prepare_streamlit_environment(str(self._resolve_script_path()))
 
         # Merge programmatic secrets (after file-based secrets are loaded)
-        if self._programmatic_secrets:
+        # Only apply once to prevent re-entry issues with test harnesses or restarts
+        if self._programmatic_secrets and not self._secrets_applied:
             from streamlit.runtime.secrets import secrets_singleton
 
             secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+            self._secrets_applied = True
 
         _set_anyio_thread_limiter()
 
