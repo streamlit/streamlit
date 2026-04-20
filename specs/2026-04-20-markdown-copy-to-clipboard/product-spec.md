@@ -65,10 +65,10 @@ st.markdown(
 **`copy_to_clipboard=True`:**
 
 - A toolbar with a copy icon appears when hovering over the Markdown element
-- Clicking the copy icon copies the cleaned/normalized Markdown string (after `clean_text()`
-  processing) to the clipboard. This is the same text that gets rendered, ensuring consistency
-  between what users see and what they copy. Note that `clean_text()` performs minimal
-  normalization (e.g., dedent for multi-line strings) rather than stripping content.
+- Clicking the copy icon copies the cleaned/normalized Markdown source (after `clean_text()`
+  processing) to the clipboard. This is the raw markdown text before rendering, preserving
+  all markdown syntax, HTML tags, LaTeX expressions, and emoji shortcodes. Note that
+  `clean_text()` performs minimal normalization (e.g., dedent for multi-line strings).
 - The icon briefly changes to a checkmark to confirm the copy succeeded
 - The toolbar follows the same visual pattern as other elements (appears at top-right on hover)
 - **Mobile/touch behavior:** On touch devices (where hover is not available), the copy button
