@@ -20,9 +20,9 @@ cannot be adjusted without modifying code and rerunning the app. This creates fr
 **Related issues:**
 
 - [#5003](https://github.com/streamlit/streamlit/issues/5003): Deactivate responsiveness of
-  st.columns (46 upvotes) — users want more control over column layout behavior
+  st.columns — users want more control over column layout behavior
 - [#6592](https://github.com/streamlit/streamlit/issues/6592): Configurable column
-  responsiveness width threshold (19 upvotes) — requests for flexible column sizing
+  responsiveness width threshold — requests for flexible column sizing
 
 **Use cases:**
 
