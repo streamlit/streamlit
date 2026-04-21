@@ -87,6 +87,29 @@ class DataframeUtilTest(unittest.TestCase):
         col_type = result_table.schema.field("col").type
         assert col_type in {pa.string(), pa.large_string()}
 
+    def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
+        """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
+        table = pa.table(
+            {
+                "list_col": pa.array(
+                    [[1, 2], [3, 4, 5]], type=pa.large_list(pa.int64())
+                ),
+                "str_col": pa.array(["a", "b"], type=pa.large_string()),
+            }
+        )
+
+        result_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+
+        # large_list should be downcast to list
+        list_field = result_table.schema.field("list_col")
+        assert pa.types.is_list(list_field.type)
+        assert not pa.types.is_large_list(list_field.type)
+
+        # large_string should be preserved (Arrow JS supports it)
+        str_field = result_table.schema.field("str_col")
+        assert pa.types.is_large_string(str_field.type)
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )

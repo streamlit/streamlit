@@ -1046,7 +1046,7 @@ def convert_anything_to_arrow_bytes(
     if isinstance(data, pa.Table):
         return convert_arrow_table_to_arrow_bytes(data)
 
-    # Fast path: Polars DataFrame - use direct Arrow conversion (~250-400x faster)
+    # Fast path: Polars DataFrame - use direct Arrow conversion
     if is_polars_dataframe(data):
         try:
             return _convert_polars_to_arrow_bytes(data)
