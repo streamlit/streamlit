@@ -2715,6 +2715,28 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         assert chart_spec["encoding"]["y"]["sort"]["field"] == "C"
         assert chart_spec["encoding"]["y"]["sort"]["order"] == "ascending"
 
+    def test_bar_chart_horizontal_swaps_axis_labels(self):
+        """Test that x_label and y_label are swapped when horizontal=True."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+            }
+        )
+
+        st.bar_chart(
+            df, x="A", y="B", x_label="categories", y_label="values", horizontal=True
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # When horizontal=True, the x-axis shows values and the y-axis shows categories.
+        # So y_label ("values") should appear on the x-axis and x_label ("categories")
+        # should appear on the y-axis.
+        assert chart_spec["encoding"]["x"]["title"] == "values"
+        assert chart_spec["encoding"]["y"]["title"] == "categories"
+
     def test_bar_chart_sort_false_disables_default_sorting(self):
         """Test that sort=False disables default alphabetical sorting."""
         df = pd.DataFrame(
