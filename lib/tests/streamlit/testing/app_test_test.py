@@ -319,6 +319,7 @@ def test_navigation_resets_pages_manager_state():
     finally:
         PagesManager.uses_pages_directory = original_value
 
+
 def test_switch_page_case_insensitive(tmp_path):
     """Test that st.switch_page ignores case differences in the file path."""
 
