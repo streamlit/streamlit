@@ -25,39 +25,39 @@ from streamlit.watcher import util
 
 
 class UtilTest(unittest.TestCase):
-    def test_md5_calculation_succeeds_with_bytes_input(self):
+    def test_hash_calculation_succeeds_with_bytes_input(self):
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")):
-            md5 = util.calc_md5_with_blocking_retries("foo")
-            assert md5 == "5d41402abc4b2a76b9719d911017c592"
+            result = util.calc_hash_with_blocking_retries("foo")
+            assert result == "46fb7408d4f285228f4af516ea25851b"
 
     @patch("os.path.isdir", MagicMock(return_value=True))
     @patch("streamlit.watcher.util._stable_dir_identifier")
-    def test_md5_calculation_succeeds_with_dir_input(self, mock_stable_dir_identifier):
+    def test_hash_calculation_succeeds_with_dir_input(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
-        md5 = util.calc_md5_with_blocking_retries("foo")
-        assert md5 == "5d41402abc4b2a76b9719d911017c592"
+        result = util.calc_hash_with_blocking_retries("foo")
+        assert result == "46fb7408d4f285228f4af516ea25851b"
         mock_stable_dir_identifier.assert_called_once_with("foo", "*")
 
     @patch("os.path.isdir", MagicMock(return_value=True))
     @patch("streamlit.watcher.util._stable_dir_identifier")
-    def test_md5_calculation_can_pass_glob(self, mock_stable_dir_identifier):
+    def test_hash_calculation_can_pass_glob(self, mock_stable_dir_identifier):
         mock_stable_dir_identifier.return_value = "hello"
 
-        util.calc_md5_with_blocking_retries("foo", glob_pattern="*.py")
+        util.calc_hash_with_blocking_retries("foo", glob_pattern="*.py")
         mock_stable_dir_identifier.assert_called_once_with("foo", "*.py")
 
     @patch("os.path.exists", MagicMock(return_value=False))
-    def test_md5_calculation_allow_nonexistent(self):
-        md5 = util.calc_md5_with_blocking_retries("hello", allow_nonexistent=True)
-        assert md5 == "5d41402abc4b2a76b9719d911017c592"
+    def test_hash_calculation_allow_nonexistent(self):
+        result = util.calc_hash_with_blocking_retries("hello", allow_nonexistent=True)
+        assert result == "46fb7408d4f285228f4af516ea25851b"
 
-    def test_md5_calculation_opens_file_with_rb(self):
+    def test_hash_calculation_opens_file_with_rb(self):
         # This tests implementation :( . But since the issue this is addressing
         # could easily come back to bite us if a distracted coder tweaks the
         # implementation, I'm putting this here anyway.
         with patch("streamlit.watcher.util.open", mock_open(read_data=b"hello")) as m:
-            util.calc_md5_with_blocking_retries("foo")
+            util.calc_hash_with_blocking_retries("foo")
             m.assert_called_once_with("foo", "rb")
 
 
@@ -154,16 +154,16 @@ class RaceConditionTests(unittest.TestCase):
     @patch("streamlit.watcher.util._do_with_retries")
     @patch("streamlit.watcher.util.os.path.isdir")
     @patch("streamlit.watcher.util.os.path.exists")
-    def test_calc_md5_handles_deletion_race_condition(
+    def test_calc_hash_handles_deletion_race_condition(
         self,
         mock_exists: MagicMock,
         mock_isdir: MagicMock,
         mock_do_with_retries: MagicMock,
     ) -> None:
-        """Test that calc_md5_with_blocking_retries handles file deletion gracefully.
+        """Test that calc_hash_with_blocking_retries handles file deletion gracefully.
 
         Scenario: File exists when checked, but is deleted before read() completes.
-        With allow_nonexistent=True, should return MD5 of path string instead of raising.
+        With allow_nonexistent=True, should return hash of path string instead of raising.
         """
         # File exists initially, is not a directory
         mock_exists.return_value = True
@@ -171,16 +171,16 @@ class RaceConditionTests(unittest.TestCase):
         # But read fails because file was deleted (race condition)
         mock_do_with_retries.side_effect = StreamlitMaxRetriesError("File gone")
 
-        # With allow_nonexistent=True, should return MD5 of path (not raise)
-        result = util.calc_md5_with_blocking_retries(
+        # With allow_nonexistent=True, should return hash of path (not raise)
+        result = util.calc_hash_with_blocking_retries(
             "deleted_file.toml", allow_nonexistent=True
         )
-        # MD5 of "deleted_file.toml" encoded as UTF-8
-        expected_md5 = util.calc_md5(b"deleted_file.toml")
-        assert result == expected_md5
+        # Hash of "deleted_file.toml" encoded as UTF-8
+        expected_hash = util.calc_hash(b"deleted_file.toml")
+        assert result == expected_hash
 
         # Without allow_nonexistent, should raise
         with pytest.raises(StreamlitMaxRetriesError):
-            util.calc_md5_with_blocking_retries(
+            util.calc_hash_with_blocking_retries(
                 "deleted_file.toml", allow_nonexistent=False
             )

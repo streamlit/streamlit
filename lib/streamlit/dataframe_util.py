@@ -814,6 +814,53 @@ Offending object:
         ) from ex
 
 
+def _downcast_large_type(arrow_type: pa.DataType) -> pa.DataType:
+    """Recursively downcast a single Arrow type to its standard counterpart.
+
+    Handles ``large_string`` -> ``string``, ``large_binary`` -> ``binary``,
+    and ``large_list`` -> ``list`` (with recursive value-type downcasting).
+    Returns the type unchanged if no downcasting is needed.
+    """
+    import pyarrow as pa
+
+    large_type_map: dict[pa.DataType, pa.DataType] = {
+        pa.large_string(): pa.string(),
+        pa.large_binary(): pa.binary(),
+    }
+
+    if isinstance(arrow_type, pa.LargeListType):
+        return pa.list_(_downcast_large_type(arrow_type.value_type))
+    if arrow_type in large_type_map:
+        return large_type_map[arrow_type]
+    return arrow_type
+
+
+def _downcast_large_arrow_types(table: pa.Table) -> pa.Table:
+    """Downcast large Arrow types to their standard counterparts.
+
+    Pandas 3.x defaults to StringDtype backed by ``large_string`` in Arrow.
+    Third-party custom components that bundle older Arrow JS libraries cannot
+    decode ``LargeUtf8`` / ``LargeBinary`` / ``LargeList`` type codes, so we
+    convert them to the standard-width variants before serializing.
+    """
+    import pyarrow as pa
+
+    new_fields: list[pa.Field] = []
+    needs_cast = False
+    for field in table.schema:
+        downcast = _downcast_large_type(field.type)
+        if downcast != field.type:
+            new_fields.append(field.with_type(downcast))
+            needs_cast = True
+        else:
+            new_fields.append(field)
+
+    if not needs_cast:
+        return table
+
+    return table.cast(pa.schema(new_fields, metadata=table.schema.metadata))
+
+
 def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     """Serialize pyarrow.Table to Arrow IPC bytes.
 
@@ -850,13 +897,24 @@ def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
     return cast("bytes", sink.getvalue().to_pybytes())
 
 
-def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
+def convert_pandas_df_to_arrow_bytes(
+    df: DataFrame,
+    *,
+    downcast_large_types: bool = False,
+) -> bytes:
     """Serialize pandas.DataFrame to Arrow IPC bytes.
 
     Parameters
     ----------
     df : pandas.DataFrame
         A dataframe to convert.
+
+    downcast_large_types : bool
+        If ``True``, downcast ``large_string``, ``large_binary``, and
+        ``large_list`` Arrow types to their standard-width counterparts
+        before serializing. This is needed for consumers that bundle older
+        Arrow libraries which cannot decode the large type codes
+        (e.g. custom components v1).
 
     Returns
     -------
@@ -876,6 +934,10 @@ def convert_pandas_df_to_arrow_bytes(df: DataFrame) -> bytes:
         )
         df = fix_arrow_incompatible_column_types(df)
         table = pa.Table.from_pandas(df)
+
+    if downcast_large_types:
+        table = _downcast_large_arrow_types(table)
+
     return convert_arrow_table_to_arrow_bytes(table)
 
 
