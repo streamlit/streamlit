@@ -188,36 +188,6 @@ st.columns(3, resizable=False)                   # Explicit non-resizable (defau
 st.columns(1, resizable=True)                    # Single column, nothing to resize
 ```
 
-### Implementation Test Requirements
-
-The following test scenarios should be covered in the implementation PR:
-
-**Frontend unit tests (Vitest):**
-
-- Resize handle renders between adjacent columns when `resizable=True`
-- Resize handle does not render when `resizable=False`
-- Drag interaction updates column widths correctly
-- Double-click resets columns to original proportions
-- Minimum width (64px) constraint is enforced
-- Keyboard Arrow Left/Right adjusts widths in 10px increments
-- Cursor changes to `col-resize` on hover
-- ARIA attributes (`role="separator"`, `aria-valuenow`, etc.) are present
-
-**Backend unit tests (pytest):**
-
-- `resizable` parameter is accepted and passed to protobuf
-- Invalid `resizable` values raise appropriate errors
-- Default value is `False`
-
-**E2E tests (Playwright):**
-
-- Drag resize between columns adjusts widths visually
-- Responsive stacking hides resize handles below 640px threshold
-- Widths persist within session (no reset on rerun without config change)
-- Widths reset on page refresh
-- Touch drag works on touch-capable viewports
-- Nested columns resize independently
-
 ## Alternatives Considered
 
 ### Parameter type: `resizable: bool` vs `resize_mode: Literal[...]`
