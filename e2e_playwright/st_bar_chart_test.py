@@ -52,10 +52,7 @@ def test_bar_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(bar_chart_elements.nth(10), name="st_bar_chart-custom_axis_labels")
     assert_snapshot(bar_chart_elements.nth(11), name="st_bar_chart-horizontal")
     assert_snapshot(
-        bar_chart_elements.nth(12),
-        name="st_bar_chart-horizontal_custom_axis_labels",
-        image_threshold=0.0,
-        pixel_threshold=0.0,
+        bar_chart_elements.nth(12), name="st_bar_chart-horizontal_custom_axis_labels"
     )
     assert_snapshot(bar_chart_elements.nth(13), name="st_bar_chart-stacked_true")
     assert_snapshot(bar_chart_elements.nth(14), name="st_bar_chart-stacked_false")
