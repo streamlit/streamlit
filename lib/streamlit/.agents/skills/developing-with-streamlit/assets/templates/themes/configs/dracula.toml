@@ -13,8 +13,8 @@ showWidgetBorder = true
 showSidebarBorder = true
 baseRadius = "8px"
 buttonRadius = "8px"
-font = "FiraSans"
-codeFont = "JetBrainsMono"
+font = "'Fira Sans':https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
 codeFontSize = "0.875rem"
 codeTextColor = "#f8f8f2"
 baseFontSize = 14
@@ -37,34 +37,3 @@ backgroundColor = "#21222c"
 secondaryBackgroundColor = "#191a21"
 codeBackgroundColor = "#191a21"
 borderColor = "#44475a"
-
-# Google Fonts
-[[theme.fontFaces]]
-family = "FiraSans"
-url = "https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400&display=swap"
-weight = 400
-
-[[theme.fontFaces]]
-family = "FiraSans"
-url = "https://fonts.googleapis.com/css2?family=Fira+Sans:wght@500&display=swap"
-weight = 500
-
-[[theme.fontFaces]]
-family = "FiraSans"
-url = "https://fonts.googleapis.com/css2?family=Fira+Sans:wght@600&display=swap"
-weight = 600
-
-[[theme.fontFaces]]
-family = "FiraSans"
-url = "https://fonts.googleapis.com/css2?family=Fira+Sans:wght@700&display=swap"
-weight = 700
-
-[[theme.fontFaces]]
-family = "JetBrainsMono"
-url = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap"
-weight = 400
-
-[[theme.fontFaces]]
-family = "JetBrainsMono"
-url = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"
-weight = 500

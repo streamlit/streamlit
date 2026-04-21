@@ -331,7 +331,10 @@ for col in ["account_type", "region", "segment"]:
 
 # Companies dataframe
 with st.container(border=True):
-    timeframe_text = timeframe.lower() if timeframe != "All time" else "all time"
+    # Guard against None: segmented_control returns None when deselected.
+    timeframe_text = (
+        timeframe.lower() if timeframe and timeframe != "All time" else "all time"
+    )
     st.markdown(f"**Companies — {timeframe_text}**")
 
     # Selection dataframe with cell-click support

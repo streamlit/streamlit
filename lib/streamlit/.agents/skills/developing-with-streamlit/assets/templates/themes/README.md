@@ -56,25 +56,33 @@ primaryColor = "#1DB954"              # Buttons, links, highlights
 backgroundColor = "#121212"           # Main background
 secondaryBackgroundColor = "#181818"  # Sidebar, cards
 textColor = "#FFFFFF"                 # Main text color
-font = "Inter"                        # Body font
-codeFont = "FiraCode"                 # Code blocks
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'Fira Code':https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&display=swap"
 ```
 
-### 2. Custom fonts via Google Fonts
+### 2. Loading custom fonts
 
-Load custom fonts using `[[theme.fontFaces]]` with Google Fonts URLs:
+There are two ways to load fonts:
 
-```toml
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap"
-weight = 400
+- **Google Fonts (or any font stylesheet):** use the `font = "<family>:<stylesheet_url>"`
+  / `codeFont = "<family>:<stylesheet_url>"` syntax shown above. Streamlit parses the
+  `<family>:<url>` pair and injects the stylesheet as a `<link>` tag so every weight and
+  style declared in the stylesheet is available.
+- **Self-hosted font files:** use `[[theme.fontFaces]]` entries that point at direct
+  `.woff2` / `.woff` / `.otf` / `.ttf` font-file URLs (typically served from your app's
+  `static/` directory). Streamlit injects each entry as an `@font-face` block with
+  `src: url(...) format("woff2")`, so the URL must be a font file — **Google Fonts
+  stylesheet URLs will not work here**.
 
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap"
-weight = 700
-```
+  ```toml
+  [[theme.fontFaces]]
+  family = "CustomFont"
+  url = "app/static/CustomFont-Regular.woff2"
+  weight = 400
+
+  [theme]
+  font = "CustomFont"
+  ```
 
 ### Sidebar theming (optional)
 
@@ -87,8 +95,9 @@ borderColor = "#282828"
 
 ## Fonts used
 
-All themes use [Google Fonts](https://fonts.google.com/) loaded via URL in
-`[[theme.fontFaces]]` entries — no local font files required.
+All themes load [Google Fonts](https://fonts.google.com/) via the
+`font = "<family>:<stylesheet_url>"` / `codeFont = "<family>:<stylesheet_url>"`
+syntax — no local font files required.
 
 | Font | Used by |
 |------|---------|

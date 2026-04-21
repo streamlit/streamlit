@@ -13,8 +13,8 @@ showWidgetBorder = true
 showSidebarBorder = true
 baseRadius = "8px"
 buttonRadius = "8px"
-font = "Inter"
-codeFont = "SourceCodePro"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'Source Code Pro':https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400;500&display=swap"
 codeFontSize = "0.85rem"
 codeTextColor = "#425466"
 baseFontSize = 15
@@ -34,34 +34,3 @@ backgroundColor = "#f6f9fc"
 secondaryBackgroundColor = "#ebeef1"
 codeBackgroundColor = "#ebeef1"
 borderColor = "#e3e8ee"
-
-# Google Fonts
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap"
-weight = 400
-
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap"
-weight = 500
-
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap"
-weight = 600
-
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap"
-weight = 700
-
-[[theme.fontFaces]]
-family = "SourceCodePro"
-url = "https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@400&display=swap"
-weight = 400
-
-[[theme.fontFaces]]
-family = "SourceCodePro"
-url = "https://fonts.googleapis.com/css2?family=Source+Code+Pro:wght@500&display=swap"
-weight = 500

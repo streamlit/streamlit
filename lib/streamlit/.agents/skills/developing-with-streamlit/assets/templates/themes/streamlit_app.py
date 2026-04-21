@@ -53,6 +53,14 @@ section = st.segmented_control(
 
 st.divider()
 
+# Guard against deselection: segmented_control returns None when the active
+# segment is clicked a second time. Without this the page would render blank.
+if section is None:
+    st.info(
+        "Select a section above to explore its components.",
+        icon=":material/info:",
+    )
+
 # -----------------------------------------------------------------------------
 # WIDGETS SECTION
 # -----------------------------------------------------------------------------
@@ -282,7 +290,13 @@ elif section == "Layouts":
     st.subheader("Expander")
     with st.expander("Click to expand"):
         st.write("This content is hidden by default.")
-        st.image("https://placehold.co/400x200?text=Expanded+Content")
+        # Use a locally-generated placeholder so the template works offline
+        # without depending on third-party image hosts.
+        placeholder_rng = np.random.default_rng(0)
+        st.image(
+            placeholder_rng.integers(0, 256, size=(200, 400, 3), dtype=np.uint8),
+            caption="Placeholder image",
+        )
 
     # Popover
     st.subheader("Popover")

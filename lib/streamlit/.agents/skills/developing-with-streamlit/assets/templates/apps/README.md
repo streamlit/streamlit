@@ -32,8 +32,8 @@ These templates demonstrate common dashboard patterns with synthetic data. Repla
 # Navigate to a template directory
 cd assets/templates/apps/dashboard-metrics
 
-# Install dependencies with uv
-uv pip install -e .
+# Sync dependencies from pyproject.toml
+uv sync
 
 # Run the app
 uv run streamlit run streamlit_app.py
@@ -154,7 +154,7 @@ def load_metric_data() -> pd.DataFrame:
 
 ## Dependencies
 
-All templates require Python >=3.11 and use:
+All templates require Python >=3.10 and use:
 - `streamlit`
 - `altair>=5.5.0`
 - `pandas>=2.2.3`

@@ -13,8 +13,8 @@ showWidgetBorder = false
 showSidebarBorder = false
 baseRadius = "6px"
 buttonRadius = "6px"
-font = "Inter"
-codeFont = "JetBrainsMono"
+font = "Inter:https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+codeFont = "'JetBrains Mono':https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap"
 codeFontSize = "0.85rem"
 codeTextColor = "#e4e4e7"
 baseFontSize = 14
@@ -37,34 +37,3 @@ backgroundColor = "#09090b"
 secondaryBackgroundColor = "#18181b"
 codeBackgroundColor = "#18181b"
 borderColor = "#27272a"
-
-# Google Fonts
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@400&display=swap"
-weight = 400
-
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@500&display=swap"
-weight = 500
-
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@600&display=swap"
-weight = 600
-
-[[theme.fontFaces]]
-family = "Inter"
-url = "https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap"
-weight = 700
-
-[[theme.fontFaces]]
-family = "JetBrainsMono"
-url = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap"
-weight = 400
-
-[[theme.fontFaces]]
-family = "JetBrainsMono"
-url = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500&display=swap"
-weight = 500
