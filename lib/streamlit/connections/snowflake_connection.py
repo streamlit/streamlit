@@ -638,7 +638,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
 
         # We require qmark-style parameters everywhere for consistency across different
         # environments where SnowflakeConnections may be used.
-        snowflake.connector.paramstyle = "qmark"  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+        snowflake.connector.paramstyle = "qmark"
 
         # Otherwise, attempt to create a new connection from whatever credentials we
         # have available.
@@ -763,7 +763,7 @@ class SnowflakeCallersRightsConnection(SnowflakeConnection):
 
         # We require qmark-style parameters everywhere for consistency across different
         # environments where SnowflakeConnections may be used.
-        snowflake.connector.paramstyle = "qmark"  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+        snowflake.connector.paramstyle = "qmark"
 
         params = self._get_connection_params()
 
