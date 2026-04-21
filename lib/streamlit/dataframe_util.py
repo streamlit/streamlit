@@ -876,7 +876,10 @@ def _has_large_list_type(schema: pa.Schema) -> bool:
 
 
 def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
-    """Build a new schema with large_list types downcast to list."""
+    """Build a new schema with large_list types downcast to list.
+
+    Preserves field metadata and schema metadata.
+    """
     import pyarrow as pa
 
     def _downcast_type(arrow_type: pa.DataType) -> pa.DataType:
@@ -884,8 +887,8 @@ def _downcast_large_list_schema(schema: pa.Schema) -> pa.Schema:
             return pa.list_(_downcast_type(arrow_type.value_type))
         return arrow_type
 
-    new_fields = [pa.field(f.name, _downcast_type(f.type)) for f in schema]
-    return pa.schema(new_fields)
+    new_fields = [f.with_type(_downcast_type(f.type)) for f in schema]
+    return pa.schema(new_fields, metadata=schema.metadata)
 
 
 def convert_arrow_table_to_arrow_bytes(table: pa.Table) -> bytes:
