@@ -199,6 +199,8 @@ def build_logout_url(
     client_id: str,
     post_logout_redirect_uri: str,
     id_token: str | None = None,
+    logout_config: dict[str, Any] | None = None,
+    user_info: dict[str, Any] | None = None,
 ) -> str:
     """Build an OIDC logout URL with the required parameters.
 
@@ -212,6 +214,22 @@ def build_logout_url(
         The URI to redirect to after logout.
     id_token
         Optional ID token to include as id_token_hint for the logout request.
+    logout_config
+        Optional dict from ``[auth.logout_params]`` in secrets.toml that
+        overrides default OIDC parameter names. Supported keys:
+
+        - ``redirect_uri_name``: query-param name for the redirect URI
+          (default ``"post_logout_redirect_uri"``).
+        - ``include_id_token_hint``: whether to send the id token hint
+          (default ``True``).
+        - ``id_token_hint_name``: query-param name for the id token hint
+          (default ``"id_token_hint"``).
+        - ``additional_params``: dict of extra query params to include.
+          Values may contain ``{field}`` placeholders substituted from
+          *user_info*.
+    user_info
+        Optional dict of user information (from the auth cookie) used for
+        template substitution in ``additional_params``.
 
     Returns
     -------
@@ -220,19 +238,42 @@ def build_logout_url(
     """
     from urllib.parse import parse_qsl
 
-    logout_params: dict[str, str] = {
+    # Read overrides from logout_config or use OIDC defaults.
+    redirect_uri_name = "post_logout_redirect_uri"
+    include_id_token_hint = True
+    id_token_hint_name = "id_token_hint"  # noqa: S105
+    additional_params: dict[str, Any] = {}
+
+    if logout_config:
+        redirect_uri_name = logout_config.get("redirect_uri_name", redirect_uri_name)
+        include_id_token_hint = logout_config.get(
+            "include_id_token_hint", include_id_token_hint
+        )
+        id_token_hint_name = logout_config.get("id_token_hint_name", id_token_hint_name)
+        additional_params = logout_config.get("additional_params", {})
+
+    query_params: dict[str, str] = {
         "client_id": client_id,
-        "post_logout_redirect_uri": post_logout_redirect_uri,
+        redirect_uri_name: post_logout_redirect_uri,
     }
 
-    if id_token:
-        logout_params["id_token_hint"] = id_token
+    if id_token and include_id_token_hint:
+        query_params[id_token_hint_name] = id_token
+
+    # Process additional_params with {field} template substitution.
+    for key, value in additional_params.items():
+        resolved = str(value)
+        if isinstance(value, str) and user_info:
+            for field_name, field_value in user_info.items():
+                if isinstance(field_value, str):
+                    resolved = resolved.replace(f"{{{field_name}}}", field_value)
+        query_params[key] = resolved
 
     # Per OIDC spec, end_session_endpoint should be a clean URL without query params,
     # but we handle existing params defensively for non-standard providers.
     parsed = urlparse(end_session_endpoint)
     existing_params = dict(parse_qsl(parsed.query))
-    merged_params = {**existing_params, **logout_params}
+    merged_params = {**existing_params, **query_params}
     new_query = urlencode(merged_params)
     return parsed._replace(query=new_query).geturl()
 
@@ -293,6 +334,10 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
     if auth_section.get("client_kwargs"):
         default_provider_section["client_kwargs"] = cast(
             "AttrDict", auth_section.get("client_kwargs", AttrDict({}))
+        ).to_dict()
+    if auth_section.get("logout_params"):
+        default_provider_section["logout_params"] = cast(
+            "AttrDict", auth_section.get("logout_params", AttrDict({}))
         ).to_dict()
     if auth_section.get("expose_tokens"):
         default_provider_section["expose_tokens"] = auth_section.get("expose_tokens")

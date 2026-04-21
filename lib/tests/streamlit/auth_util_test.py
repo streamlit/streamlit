@@ -522,6 +522,28 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
 
         assert result == {}
 
+    def test_generates_section_with_logout_params(self):
+        """Test generating a default provider section with logout_params."""
+        auth_section = AttrDict(
+            {
+                "client_id": "test_client_id",
+                "logout_params": AttrDict(
+                    {
+                        "redirect_uri_name": "redirect_uri",
+                        "include_id_token_hint": False,
+                    }
+                ),
+            }
+        )
+
+        result = generate_default_provider_section(auth_section)
+
+        assert result["client_id"] == "test_client_id"
+        assert result["logout_params"] == {
+            "redirect_uri_name": "redirect_uri",
+            "include_id_token_hint": False,
+        }
+
 
 @pytest.mark.parametrize(
     ("get_section", "expected"),
@@ -670,6 +692,85 @@ def test_build_logout_url_preserves_existing_query() -> None:
     assert "client_id=test-client-id" in result
     assert "?existing=value" in result or "existing=value&" in result
     assert result.count("?") == 1
+
+
+def test_build_logout_url_custom_redirect_uri_name() -> None:
+    """Custom ``redirect_uri_name`` replaces ``post_logout_redirect_uri`` param."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://cognito.example.com/logout",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        logout_config={"redirect_uri_name": "redirect_uri"},
+    )
+    assert "redirect_uri=" in result
+    assert "post_logout_redirect_uri" not in result
+    assert "client_id=test-client-id" in result
+
+
+def test_build_logout_url_suppresses_id_token_hint() -> None:
+    """When ``include_id_token_hint`` is ``False``, ``id_token_hint`` is omitted."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://provider.com/logout",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        id_token="my-token",
+        logout_config={"include_id_token_hint": False},
+    )
+    assert "id_token_hint" not in result
+
+
+def test_build_logout_url_custom_id_token_hint_name() -> None:
+    """Custom ``id_token_hint_name`` changes the query parameter name."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://provider.com/logout",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        id_token="my-token",
+        logout_config={"id_token_hint_name": "token_hint"},
+    )
+    assert "token_hint=my-token" in result
+    assert "id_token_hint" not in result
+
+
+def test_build_logout_url_additional_params_with_template() -> None:
+    """``additional_params`` with ``{email}`` template are substituted from user_info."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://login.microsoft.com/logout",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        logout_config={"additional_params": {"logout_hint": "{email}"}},
+        user_info={"email": "user@example.com", "name": "Test User"},
+    )
+    assert "logout_hint=user%40example.com" in result
+
+
+def test_build_logout_url_additional_params_static() -> None:
+    """Static ``additional_params`` are included without user_info."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://provider.com/logout",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        logout_config={"additional_params": {"custom_key": "static_value"}},
+    )
+    assert "custom_key=static_value" in result
+
+
+def test_build_logout_url_cognito_scenario() -> None:
+    """Full Cognito scenario: custom redirect param name and no id_token_hint."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://cognito.example.com/logout",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+        id_token="some-token",
+        logout_config={
+            "redirect_uri_name": "redirect_uri",
+            "include_id_token_hint": False,
+        },
+    )
+    assert "redirect_uri=" in result
+    assert "post_logout_redirect_uri" not in result
+    assert "id_token_hint" not in result
+    assert "client_id=test-client-id" in result
 
 
 def test_auth_cache_get_dict() -> None:

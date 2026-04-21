@@ -422,6 +422,20 @@ def _get_provider_logout_url(request: Request) -> str | None:
 
         client, _ = _create_oauth_client(provider)
 
+        # Read logout_params from provider section or top-level auth section.
+        auth_section = get_secrets_auth_section()
+        logout_config: dict[str, Any] | None = None
+        if auth_section:
+            provider_section = auth_section.get(provider)
+            if provider_section and hasattr(provider_section, "get"):
+                lp = provider_section.get("logout_params")
+                if lp:
+                    logout_config = lp.to_dict() if hasattr(lp, "to_dict") else dict(lp)
+            if logout_config is None:
+                lp = auth_section.get("logout_params")
+                if lp:
+                    logout_config = lp.to_dict() if hasattr(lp, "to_dict") else dict(lp)
+
         # Load OIDC metadata - Authlib's Starlette client uses async methods
         # but load_server_metadata is synchronous in both implementations
         metadata = client.load_server_metadata()
@@ -457,6 +471,8 @@ def _get_provider_logout_url(request: Request) -> str | None:
             client_id=client.client_id,
             post_logout_redirect_uri=redirect_uri,
             id_token=id_token,
+            logout_config=logout_config,
+            user_info=user_info,
         )
 
     except Exception as e:
