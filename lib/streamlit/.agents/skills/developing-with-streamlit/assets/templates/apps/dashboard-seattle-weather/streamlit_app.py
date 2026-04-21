@@ -169,6 +169,7 @@ selected_years = st.pills(
 
 if not selected_years:
     st.warning("You must select at least 1 year.", icon=":material/warning:")
+    st.stop()
 
 df = full_df[full_df["date"].dt.year.isin(selected_years)]
 
