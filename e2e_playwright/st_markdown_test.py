@@ -659,3 +659,55 @@ def test_tooltip_with_complex_markdown_gh_13339(
     assert_snapshot(
         tooltip_content, name="st_markdown-complex_tooltip_with_markdown_formatting"
     )
+
+
+# Mermaid chart tests
+
+
+def test_mermaid_charts_render(app: Page):
+    """Test that mermaid charts are rendered correctly."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    expect(mermaid_charts).to_have_count(5)
+    # Negative assertion: only 1 error element should exist (from the invalid syntax block)
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_have_count(1)
+
+
+def test_mermaid_charts_contain_rendered_image(app: Page):
+    """Test that rendered mermaid charts contain rendered image content.
+
+    MermaidChart renders diagrams as <img> tags with blob URLs for security
+    sandboxing, rather than inline SVG elements.
+    """
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+
+    # Check that the first 4 valid diagrams contain img elements with blob URLs
+    for i in range(4):
+        img = mermaid_charts.nth(i).locator("img")
+        expect(img).to_be_visible()
+        # Verify the img has a blob URL src (security sandboxing)
+        expect(img).to_have_attribute("src", re.compile(r"^blob:"))
+
+
+def test_mermaid_invalid_syntax_shows_error(app: Page):
+    """Test that invalid mermaid syntax shows an error message."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    error = mermaid_container.get_by_test_id("stMermaidError")
+    expect(error).to_be_visible()
+    expect(error).to_contain_text("Mermaid diagram error")
+    # Negative assertion: error chart should not contain an img element
+    mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
+    # The error chart is the 5th one (index 4)
+    error_chart = mermaid_charts.nth(4)
+    expect(error_chart.locator("img")).to_have_count(0)
+
+
+def test_regular_code_block_not_mermaid(app: Page):
+    """Test that regular code blocks are not rendered as mermaid charts."""
+    mermaid_container = get_element_by_key(app, "mermaid_elements")
+    # Check that there's a syntax highlighter for Python code
+    code_block = mermaid_container.get_by_test_id("stCode")
+    expect(code_block).to_be_visible()
+    expect(code_block).to_contain_text("def hello")
