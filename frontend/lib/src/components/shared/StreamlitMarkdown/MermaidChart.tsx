@@ -290,6 +290,62 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       quadrantTitleFill: theme.colors.bodyText,
       quadrantInternalBorderStrokeFill: theme.colors.borderColor,
       quadrantExternalBorderStrokeFill: theme.colors.borderColor,
+      // State diagram
+      stateBkg: theme.colors.secondaryBg,
+      stateLabelColor: theme.colors.bodyText,
+      compositeBackground: theme.colors.bgColor,
+      altBackground: theme.colors.secondaryBg,
+      compositeTitleBackground: theme.colors.secondaryBg,
+      compositeBorder: theme.colors.borderColor,
+      innerEndBackground: theme.colors.bodyText,
+      transitionColor: theme.colors.fadedText60,
+      transitionLabelColor: theme.colors.bodyText,
+      specialStateColor: theme.colors.fadedText60,
+      // User Journey
+      fillType0: blend(markdownBgColors.bluebg, theme.colors.bgColor),
+      fillType1: blend(markdownBgColors.greenbg, theme.colors.bgColor),
+      fillType2: blend(markdownBgColors.orangebg, theme.colors.bgColor),
+      fillType3: blend(markdownBgColors.redbg, theme.colors.bgColor),
+      fillType4: blend(markdownBgColors.violetbg, theme.colors.bgColor),
+      fillType5: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
+      fillType6: blend(markdownBgColors.graybg, theme.colors.bgColor),
+      fillType7: theme.colors.secondaryBg,
+      // Gantt additional
+      taskBorderColor: theme.colors.borderColor,
+      taskBkgColor: blend(markdownBgColors.bluebg, theme.colors.bgColor),
+      activeTaskBorderColor: theme.colors.primary,
+      activeTaskBkgColor: blend(markdownBgColors.bluebg, theme.colors.bgColor),
+      // Architecture diagram
+      archEdgeColor: theme.colors.fadedText60,
+      archEdgeArrowColor: theme.colors.fadedText60,
+      archGroupBorderColor: theme.colors.borderColor,
+      // C4 diagram
+      personBorder: theme.colors.borderColor,
+      personBkg: theme.colors.secondaryBg,
+      // XY Chart
+      xyChart: {
+        backgroundColor: theme.colors.bgColor,
+        titleColor: theme.colors.bodyText,
+        xAxisTitleColor: theme.colors.bodyText,
+        xAxisLabelColor: theme.colors.bodyText,
+        xAxisTickColor: theme.colors.borderColor,
+        xAxisLineColor: theme.colors.borderColor,
+        yAxisTitleColor: theme.colors.bodyText,
+        yAxisLabelColor: theme.colors.bodyText,
+        yAxisTickColor: theme.colors.borderColor,
+        yAxisLineColor: theme.colors.borderColor,
+        plotColorPalette: [
+          theme.colors.blueTextColor,
+          theme.colors.greenTextColor,
+          theme.colors.orangeTextColor,
+          theme.colors.redTextColor,
+          theme.colors.violetTextColor,
+          theme.colors.yellowTextColor,
+        ].join(","),
+      },
+      // Additional base variables
+      arrowheadColor: theme.colors.fadedText60,
+      nodeTextColor: theme.colors.bodyText,
     },
   }
 }

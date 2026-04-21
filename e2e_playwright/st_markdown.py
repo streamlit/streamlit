@@ -599,6 +599,34 @@ timeline
 """
     )
 
+    # State diagram (tests state diagram theme variables)
+    st.markdown(
+        """
+```mermaid
+stateDiagram-v2
+    [*] --> Active
+    Active --> Inactive
+    Inactive --> Active
+    Inactive --> [*]
+```
+"""
+    )
+
+    # User journey (tests fillType theme variables)
+    st.markdown(
+        """
+```mermaid
+journey
+    title User Flow
+    section Login
+      Open app: 5: User
+      Enter credentials: 3: User
+    section Dashboard
+      View data: 4: User
+```
+"""
+    )
+
     # Invalid mermaid syntax (should show error)
     st.markdown(
         """
