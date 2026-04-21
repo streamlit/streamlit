@@ -1,7 +1,6 @@
 ---
 author: lukasmasuch
 created: 2026-04-21
-status: Draft
 ---
 
 # `type="step"` for `st.expander` and `st.status`
@@ -44,6 +43,7 @@ manual formatting, or custom components.
 - `st.status` repeated multiple times (no visual connection between steps)
 - Custom HTML/CSS via `st.markdown` (fragile, no interactivity)
 - Third-party components (additional dependencies, maintenance burden)
+- [Streamlit Extras: Steps](https://extras.streamlit.app/?extra=%F0%9F%AA%9C+Steps) (community package)
 
 **Inspiration from other libraries:**
 
@@ -79,26 +79,14 @@ Add a `type` parameter to `st.expander` and `st.status`:
 ```python
 # st.expander with type="step"
 with st.expander(
-    label: str,
-    expanded: bool = False,
-    *,
-    key: Key | None = None,
-    icon: str | None = None,
+    ...,
     type: Literal["default", "step"] = "default",  # NEW
-    width: WidthWithoutContent = "stretch",
-    on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
-    args: WidgetArgs | None = None,
-    kwargs: WidgetKwargs | None = None,
 ) -> ExpanderContainer: ...
 
 # st.status with type="step"
 with st.status(
-    label: str,
-    *,
-    expanded: bool = False,
-    state: Literal["running", "complete", "error"] = "running",
+    ...,
     type: Literal["default", "step"] = "default",  # NEW
-    width: WidthWithoutContent = "stretch",
 ) -> StatusContainer: ...
 ```
 
@@ -281,7 +269,7 @@ with st.container(height=400):
 ## Alternative API: Standalone `st.steps` Container
 
 An alternative approach would introduce a new `st.steps` container that explicitly groups
-steps together:
+steps together. See [#14816](https://github.com/streamlit/streamlit/pull/14816) for the full spec.
 
 ```python
 # Alternative: Dedicated st.steps container
@@ -323,15 +311,15 @@ with st.steps() as steps:
 | `type="compact"` | Related to [#13246](https://github.com/streamlit/streamlit/issues/13246); separate proposal |
 | Horizontal timeline layout | Validate vertical design first |
 | Step numbering | Can be added to label via markdown |
-| Standalone `st.steps` container | Could be added later if user feedback demands explicit grouping |
+| Standalone `st.steps` container | Could be added later if user feedback demands explicit grouping; see [#14816](https://github.com/streamlit/streamlit/pull/14816) for spec |
 
 ## Checklist
 
 | Item                       | ✅ or comment |
 |----------------------------|---------------|
-| Works on SiS, Cloud, etc?  | Yes — uses existing expander/status infrastructure |
-| No breaking API changes    | Yes — new optional parameters only |
-| No new dependencies        | Yes — reuses existing styled components |
-| Metrics collected          | Yes — existing `@gather_metrics` on expander/status |
-| Any security/legal impact? | None identified |
-| Any docs changes needed?   | Yes — update expander/status docs with type parameter |
+| Works on SiS, Cloud, etc?  | ✅ Uses existing expander/status infrastructure |
+| No breaking API changes    | ✅ New optional parameters only |
+| No new dependencies        | ✅ Reuses existing styled components |
+| Metrics collected          | ✅ Existing `@gather_metrics` on expander/status |
+| Any security/legal impact? | ✅ None identified |
+| Any docs changes needed?   | ✅ Update expander/status docs with type parameter |
