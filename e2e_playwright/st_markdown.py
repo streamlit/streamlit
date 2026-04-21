@@ -543,3 +543,77 @@ with st.container(key="shimmer_elements"):
     st.markdown(
         "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
     )
+
+# Mermaid diagram support tests
+st.header("Mermaid Charts")
+
+with st.container(key="mermaid_elements"):
+    # Flowchart
+    st.markdown(
+        """
+```mermaid
+graph TD
+    A[Start] --> B{Is it working?}
+    B -->|Yes| C[Great!]
+    B -->|No| D[Debug]
+    D --> B
+```
+"""
+    )
+
+    # Sequence diagram
+    st.markdown(
+        """
+```mermaid
+sequenceDiagram
+    participant User
+    participant App
+    User->>App: Click button
+    App-->>User: Update UI
+```
+"""
+    )
+
+    # Pie chart
+    st.markdown(
+        """
+```mermaid
+pie title Favorite Pets
+    "Dogs" : 386
+    "Cats" : 325
+    "Birds" : 89
+```
+"""
+    )
+
+    # Timeline
+    st.markdown(
+        """
+```mermaid
+timeline
+    title History
+    2022 : Event A
+    2023 : Event B
+    2024 : Event C
+```
+"""
+    )
+
+    # Invalid mermaid syntax (should show error)
+    st.markdown(
+        """
+```mermaid
+this is not valid mermaid syntax
+```
+"""
+    )
+
+    # Regular code block (should not be mermaid)
+    st.markdown(
+        """
+```python
+def hello():
+    print("Hello, World!")
+```
+"""
+    )
