@@ -1585,7 +1585,7 @@ def convert_pandas_df_to_data_format(
 
         return pl.from_pandas(_pandas_df_to_series(df))
     if data_format == DataFormat.XARRAY_DATASET:
-        import xarray as xr
+        import xarray as xr  # type: ignore[import-not-found, unused-ignore]
 
         return xr.Dataset.from_dataframe(df)
     if data_format == DataFormat.XARRAY_DATA_ARRAY:
