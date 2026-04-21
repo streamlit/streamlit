@@ -18,8 +18,8 @@ import {
   FC,
   memo,
   useCallback,
-  useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react"
@@ -180,12 +180,13 @@ const TextArea: FC<Props> = ({
 
   // Recalculate height once when width first becomes available (ResizeObserver is async).
   // We don't include width in dependencies above to avoid overriding manual user resizes.
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!isAutoHeight) return
     if (width > 0 && !hasInitializedWithWidthRef.current) {
       hasInitializedWithWidthRef.current = true
       updateScrollHeight()
     }
-  }, [width, updateScrollHeight])
+  }, [isAutoHeight, width, updateScrollHeight])
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)

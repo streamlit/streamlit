@@ -228,7 +228,7 @@ function ChatInput({
   const { updateScrollHeight } = autoExpand
 
   // Recalculate height once when width first becomes available (ResizeObserver is async).
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (width > 0 && !hasInitializedWithWidthRef.current) {
       hasInitializedWithWidthRef.current = true
       updateScrollHeight()
