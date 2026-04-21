@@ -109,7 +109,7 @@ test = [
   # Optional dependency for better performance:
   "uvloop>=0.15.2; sys_platform != 'win32'",
   # Optional dependency used for improved exception formatting:
-  "rich>=10.14.0",
+  "rich>=15.0.0",
   # Used by vega-lite / altair e2e tests:
   "vega_datasets",
   # Only for unit tests:
