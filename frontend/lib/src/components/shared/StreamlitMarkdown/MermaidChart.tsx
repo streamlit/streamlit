@@ -136,10 +136,23 @@ interface MermaidChartProps {
 
 /**
  * Generates mermaid theme configuration based on the Streamlit theme.
+ * Uses Mermaid's "base" theme which derives many colors automatically.
+ * We only override colors that need to match Streamlit's palette.
  */
 function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
   const markdownBgColors = getThemeBackgroundColors(theme)
   const isLightTheme = getLuminance(theme.colors.bgColor) > 0.5
+
+  // Streamlit color palette for charts (blended with background for better contrast)
+  const palette = {
+    blue: blend(markdownBgColors.bluebg, theme.colors.bgColor),
+    green: blend(markdownBgColors.greenbg, theme.colors.bgColor),
+    orange: blend(markdownBgColors.orangebg, theme.colors.bgColor),
+    red: blend(markdownBgColors.redbg, theme.colors.bgColor),
+    violet: blend(markdownBgColors.violetbg, theme.colors.bgColor),
+    yellow: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
+    gray: blend(markdownBgColors.graybg, theme.colors.bgColor),
+  }
 
   return {
     darkMode: !isLightTheme,
@@ -147,86 +160,44 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: convertRemToPx(theme.fontSizes.md),
     themeVariables: {
+      // Core theme variables - Mermaid derives many others from these
       darkMode: !isLightTheme,
-      primaryColor: blend(markdownBgColors.bluebg, theme.colors.bgColor),
+      primaryColor: palette.blue,
       primaryTextColor: theme.colors.bodyText,
       primaryBorderColor: theme.colors.borderColor,
-      secondaryColor: blend(markdownBgColors.greenbg, theme.colors.bgColor),
-      tertiaryColor: blend(markdownBgColors.orangebg, theme.colors.bgColor),
+      secondaryColor: palette.green,
+      tertiaryColor: palette.orange,
       background: theme.colors.bgColor,
       mainBkg: theme.colors.secondaryBg,
       fontFamily: theme.genericFonts.bodyFont,
       fontSize: `${convertRemToPx(theme.fontSizes.md)}px`,
       lineColor: theme.colors.fadedText60,
       textColor: theme.colors.bodyText,
-      errorBkgColor: blend(markdownBgColors.redbg, theme.colors.bgColor),
+
+      // Error styling
+      errorBkgColor: palette.red,
       errorTextColor: theme.colors.redTextColor,
-      // Flowchart
-      nodeBorder: theme.colors.borderColor,
-      clusterBkg: theme.colors.secondaryBg,
-      clusterBorder: theme.colors.borderColor,
-      defaultLinkColor: theme.colors.fadedText60,
-      titleColor: theme.colors.bodyText,
-      edgeLabelBackground: theme.colors.bgColor,
-      // Sequence diagram
-      actorBorder: theme.colors.borderColor,
-      actorBkg: theme.colors.secondaryBg,
-      actorTextColor: theme.colors.bodyText,
-      actorLineColor: theme.colors.fadedText60,
-      signalColor: theme.colors.bodyText,
-      signalTextColor: theme.colors.bodyText,
-      labelBoxBkgColor: theme.colors.secondaryBg,
-      labelBoxBorderColor: theme.colors.borderColor,
-      labelTextColor: theme.colors.bodyText,
-      loopTextColor: theme.colors.bodyText,
-      noteBorderColor: theme.colors.borderColor,
-      noteBkgColor: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
-      noteTextColor: theme.colors.bodyText,
-      activationBorderColor: theme.colors.borderColor,
-      activationBkgColor: theme.colors.secondaryBg,
-      sequenceNumberColor: theme.colors.bgColor,
-      // Class diagram
-      classText: theme.colors.bodyText,
-      // State diagram
-      labelColor: theme.colors.bodyText,
-      // Gantt
-      sectionBkgColor: theme.colors.secondaryBg,
-      altSectionBkgColor: theme.colors.bgColor,
-      sectionBkgColor2: theme.colors.secondaryBg,
-      gridColor: theme.colors.borderColor,
-      doneTaskBkgColor: blend(markdownBgColors.greenbg, theme.colors.bgColor),
+
+      // Sequence diagram notes (yellow background is distinctive)
+      noteBkgColor: palette.yellow,
+
+      // Gantt chart status colors
+      doneTaskBkgColor: palette.green,
       doneTaskBorderColor: theme.colors.greenTextColor,
+      critBkgColor: palette.red,
       critBorderColor: theme.colors.redTextColor,
-      critBkgColor: blend(markdownBgColors.redbg, theme.colors.bgColor),
       todayLineColor: theme.colors.primary,
-      taskTextColor: theme.colors.bodyText,
-      taskTextOutsideColor: theme.colors.bodyText,
-      taskTextLightColor: theme.colors.bodyText,
-      taskTextDarkColor: theme.colors.bodyText,
-      // Pie chart
-      pieStrokeColor: theme.colors.borderColor,
-      pieOuterStrokeColor: theme.colors.borderColor,
-      pieSectionTextColor: theme.colors.bodyText,
-      pieLegendTextColor: theme.colors.bodyText,
-      pieTitleTextColor: theme.colors.bodyText,
-      pie1: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      pie2: blend(markdownBgColors.greenbg, theme.colors.bgColor),
-      pie3: blend(markdownBgColors.orangebg, theme.colors.bgColor),
-      pie4: blend(markdownBgColors.redbg, theme.colors.bgColor),
-      pie5: blend(markdownBgColors.violetbg, theme.colors.bgColor),
-      pie6: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
-      pie7: blend(markdownBgColors.graybg, theme.colors.bgColor),
-      // ER diagram
-      attributeBackgroundColorOdd: theme.colors.secondaryBg,
-      attributeBackgroundColorEven: theme.colors.bgColor,
-      // Requirement diagram
-      requirementBackground: theme.colors.secondaryBg,
-      requirementBorderColor: theme.colors.borderColor,
-      requirementTextColor: theme.colors.bodyText,
-      relationColor: theme.colors.fadedText60,
-      relationLabelBackground: theme.colors.bgColor,
-      relationLabelColor: theme.colors.bodyText,
-      // Git graph
+
+      // Pie chart colors (need explicit palette for consistency)
+      pie1: palette.blue,
+      pie2: palette.green,
+      pie3: palette.orange,
+      pie4: palette.red,
+      pie5: palette.violet,
+      pie6: palette.yellow,
+      pie7: palette.gray,
+
+      // Git graph branch colors
       git0: theme.colors.blueTextColor,
       git1: theme.colors.greenTextColor,
       git2: theme.colors.orangeTextColor,
@@ -235,117 +206,39 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       git5: theme.colors.yellowTextColor,
       git6: theme.colors.grayTextColor,
       git7: theme.colors.primary,
-      gitBranchLabel0: theme.colors.bgColor,
-      gitBranchLabel1: theme.colors.bgColor,
-      gitBranchLabel2: theme.colors.bgColor,
-      gitBranchLabel3: theme.colors.bgColor,
-      gitBranchLabel4: theme.colors.bgColor,
-      gitBranchLabel5: theme.colors.bgColor,
-      gitBranchLabel6: theme.colors.bgColor,
-      gitBranchLabel7: theme.colors.bgColor,
-      gitInv0: theme.colors.bgColor,
-      gitInv1: theme.colors.bgColor,
-      gitInv2: theme.colors.bgColor,
-      gitInv3: theme.colors.bgColor,
-      gitInv4: theme.colors.bgColor,
-      gitInv5: theme.colors.bgColor,
-      gitInv6: theme.colors.bgColor,
-      gitInv7: theme.colors.bgColor,
-      commitLabelColor: theme.colors.bodyText,
-      commitLabelBackground: theme.colors.secondaryBg,
-      // Mindmap
-      mindmap1: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      mindmap2: blend(markdownBgColors.greenbg, theme.colors.bgColor),
-      mindmap3: blend(markdownBgColors.orangebg, theme.colors.bgColor),
-      mindmap4: blend(markdownBgColors.redbg, theme.colors.bgColor),
-      mindmap5: blend(markdownBgColors.violetbg, theme.colors.bgColor),
-      // Timeline
-      cScale0: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      cScale1: blend(markdownBgColors.greenbg, theme.colors.bgColor),
-      cScale2: blend(markdownBgColors.orangebg, theme.colors.bgColor),
-      cScale3: blend(markdownBgColors.redbg, theme.colors.bgColor),
-      cScale4: blend(markdownBgColors.violetbg, theme.colors.bgColor),
-      cScale5: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
-      cScale6: blend(markdownBgColors.graybg, theme.colors.bgColor),
-      cScaleLabel0: theme.colors.bodyText,
-      cScaleLabel1: theme.colors.bodyText,
-      cScaleLabel2: theme.colors.bodyText,
-      cScaleLabel3: theme.colors.bodyText,
-      cScaleLabel4: theme.colors.bodyText,
-      cScaleLabel5: theme.colors.bodyText,
-      cScaleLabel6: theme.colors.bodyText,
-      // Quadrant
-      quadrant1Fill: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      quadrant2Fill: blend(markdownBgColors.greenbg, theme.colors.bgColor),
-      quadrant3Fill: blend(markdownBgColors.orangebg, theme.colors.bgColor),
-      quadrant4Fill: blend(markdownBgColors.redbg, theme.colors.bgColor),
-      quadrant1TextFill: theme.colors.bodyText,
-      quadrant2TextFill: theme.colors.bodyText,
-      quadrant3TextFill: theme.colors.bodyText,
-      quadrant4TextFill: theme.colors.bodyText,
+
+      // Mindmap colors
+      mindmap1: palette.blue,
+      mindmap2: palette.green,
+      mindmap3: palette.orange,
+      mindmap4: palette.red,
+      mindmap5: palette.violet,
+
+      // Timeline/cScale colors
+      cScale0: palette.blue,
+      cScale1: palette.green,
+      cScale2: palette.orange,
+      cScale3: palette.red,
+      cScale4: palette.violet,
+      cScale5: palette.yellow,
+      cScale6: palette.gray,
+
+      // Quadrant chart fills
+      quadrant1Fill: palette.blue,
+      quadrant2Fill: palette.green,
+      quadrant3Fill: palette.orange,
+      quadrant4Fill: palette.red,
       quadrantPointFill: theme.colors.primary,
-      quadrantPointTextFill: theme.colors.bodyText,
-      quadrantXAxisTextFill: theme.colors.bodyText,
-      quadrantYAxisTextFill: theme.colors.bodyText,
-      quadrantTitleFill: theme.colors.bodyText,
-      quadrantInternalBorderStrokeFill: theme.colors.borderColor,
-      quadrantExternalBorderStrokeFill: theme.colors.borderColor,
-      // State diagram
-      stateBkg: theme.colors.secondaryBg,
-      stateLabelColor: theme.colors.bodyText,
-      compositeBackground: theme.colors.bgColor,
-      altBackground: theme.colors.secondaryBg,
-      compositeTitleBackground: theme.colors.secondaryBg,
-      compositeBorder: theme.colors.borderColor,
-      innerEndBackground: theme.colors.bodyText,
-      transitionColor: theme.colors.fadedText60,
-      transitionLabelColor: theme.colors.bodyText,
-      specialStateColor: theme.colors.fadedText60,
-      // User Journey
-      fillType0: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      fillType1: blend(markdownBgColors.greenbg, theme.colors.bgColor),
-      fillType2: blend(markdownBgColors.orangebg, theme.colors.bgColor),
-      fillType3: blend(markdownBgColors.redbg, theme.colors.bgColor),
-      fillType4: blend(markdownBgColors.violetbg, theme.colors.bgColor),
-      fillType5: blend(markdownBgColors.yellowbg, theme.colors.bgColor),
-      fillType6: blend(markdownBgColors.graybg, theme.colors.bgColor),
+
+      // User Journey section colors
+      fillType0: palette.blue,
+      fillType1: palette.green,
+      fillType2: palette.orange,
+      fillType3: palette.red,
+      fillType4: palette.violet,
+      fillType5: palette.yellow,
+      fillType6: palette.gray,
       fillType7: theme.colors.secondaryBg,
-      // Gantt additional
-      taskBorderColor: theme.colors.borderColor,
-      taskBkgColor: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      activeTaskBorderColor: theme.colors.primary,
-      activeTaskBkgColor: blend(markdownBgColors.bluebg, theme.colors.bgColor),
-      // Architecture diagram
-      archEdgeColor: theme.colors.fadedText60,
-      archEdgeArrowColor: theme.colors.fadedText60,
-      archGroupBorderColor: theme.colors.borderColor,
-      // C4 diagram
-      personBorder: theme.colors.borderColor,
-      personBkg: theme.colors.secondaryBg,
-      // XY Chart
-      xyChart: {
-        backgroundColor: theme.colors.bgColor,
-        titleColor: theme.colors.bodyText,
-        xAxisTitleColor: theme.colors.bodyText,
-        xAxisLabelColor: theme.colors.bodyText,
-        xAxisTickColor: theme.colors.borderColor,
-        xAxisLineColor: theme.colors.borderColor,
-        yAxisTitleColor: theme.colors.bodyText,
-        yAxisLabelColor: theme.colors.bodyText,
-        yAxisTickColor: theme.colors.borderColor,
-        yAxisLineColor: theme.colors.borderColor,
-        plotColorPalette: [
-          theme.colors.blueTextColor,
-          theme.colors.greenTextColor,
-          theme.colors.orangeTextColor,
-          theme.colors.redTextColor,
-          theme.colors.violetTextColor,
-          theme.colors.yellowTextColor,
-        ].join(","),
-      },
-      // Additional base variables
-      arrowheadColor: theme.colors.fadedText60,
-      nodeTextColor: theme.colors.bodyText,
     },
   }
 }
