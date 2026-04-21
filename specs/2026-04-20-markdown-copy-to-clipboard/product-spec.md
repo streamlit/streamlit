@@ -77,37 +77,16 @@ st.markdown(
 
 ### Alternative Parameter Names Considered
 
-Several alternative names were considered for this parameter:
+| Name                | Pros                                      | Cons                                              |
+| ------------------- | ----------------------------------------- | ------------------------------------------------- |
+| `copy_to_clipboard` | Descriptive, matches browser API naming   | Verbose (17 chars)                                |
+| `show_copy_button`  | Describes UI element directly             | Focuses on button, not action                     |
+| `allow_copy`        | Concise, permission-style naming          | Could imply allowing/blocking copy entirely       |
+| `copyable`          | Concise, reads naturally                  | Ambiguous: capability vs button visibility        |
+| `enable_copy`       | Concise, action-oriented                  | Could imply enabling/disabling copy behavior      |
+| `copy`              | Extremely concise                         | Too terse, ambiguous                              |
 
-**Option 1: `copy_to_clipboard`** (preferred)
-
-- Pros: Descriptive, clear about functionality, matches browser API naming (`navigator.clipboard`)
-- Cons: Verbose (17 characters)
-
-**Option 2: `show_copy_button`**
-
-- Pros: Describes the UI element directly, clear intent
-- Cons: Focuses on the button rather than the action; doesn't match existing patterns
-
-**Option 3: `copyable`**
-
-- Pros: Very concise (8 characters), reads naturally ("make this copyable")
-- Cons: Could be confused with whether content CAN be copied vs whether a button is shown;
-  ambiguous semantics
-
-**Option 4: `enable_copy`**
-
-- Pros: Concise, action-oriented
-- Cons: Could imply enabling/disabling copy behavior entirely (not just the button)
-
-**Option 5: `copy`**
-
-- Pros: Extremely concise (4 characters)
-- Cons: Too terse, ambiguous (copy what? where?), doesn't follow Streamlit naming patterns
-
-**Recommendation:** Use `copy_to_clipboard` for consistency with browser APIs and clarity.
-The verbosity is acceptable since this is a keyword-only optional parameter users won't
-type frequently.
+**Recommendation:** `copy_to_clipboard` for consistency with browser APIs and clarity.
 
 ### Examples
 
@@ -156,13 +135,7 @@ st.markdown(template, copy_to_clipboard=True, width="content")
 
 ### Visual Design
 
-The toolbar follows existing Streamlit patterns:
-
-- Positioned at top-right of the element
-- Appears on hover over the Markdown content area
-- Uses the same icon and animation as other copy buttons in Streamlit
-- Checkmark confirmation animation on successful copy
-- Semi-transparent background to avoid obscuring content
+Reuses the existing element toolbar component (same as `st.code`, `st.dataframe`, etc.).
 
 ## Out of Scope (Future Work)
 
