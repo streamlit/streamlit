@@ -432,6 +432,6 @@ app = st.App("main.py", on_script_error=multi_service_handler)
 | Works on SiS, Cloud, etc? | ✅ Yes - handler runs in script thread |
 | No breaking API changes | ✅ Yes |
 | No new dependencies | ✅ Yes |
-| Metrics collected | ⬜ Track whether `on_script_error` is used |
-| Any security/legal impact? | ⚠️ Handler could send data externally (user's choice) |
-| Any docs changes needed? | ⬜ New section in "Error Handling" docs |
+| Metrics collected | ⚠️ st.App parameters aren't tracked yet |
+| Any security/legal impact? | ✅ Handler could send data externally (user's choice) |
+| Any docs changes needed? | ✅ New section in "Error Handling" docs |
