@@ -85,7 +85,7 @@ with st.expander(
     key: Key | None = None,
     icon: str | None = None,
     type: Literal["default", "step"] = "default",  # NEW
-    width: Width = "stretch",
+    width: WidthWithoutContent = "stretch",
     on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
@@ -98,7 +98,7 @@ with st.status(
     expanded: bool = False,
     state: Literal["running", "complete", "error"] = "running",
     type: Literal["default", "step"] = "default",  # NEW
-    width: Width = "stretch",
+    width: WidthWithoutContent = "stretch",
 ) -> StatusContainer: ...
 ```
 
@@ -142,9 +142,11 @@ a vertical connector line, and content indented to the right:
 +------------------------------------------+
 ```
 
-**State-to-icon mapping and precedence:**
+**State-to-icon mapping and precedence (default state):**
 
-When determining which icon to display, the following precedence applies (highest first):
+When determining which icon to display in the default (non-hover/non-focus) state, the
+following precedence applies (highest first). Note: hover/focus behavior overrides this
+precedence to show the chevron affordance—see "Hover behavior" below.
 
 | Condition | Icon | Visual Style | Notes |
 |-----------|------|--------------|-------|
@@ -168,6 +170,12 @@ content area.
 
 - **Empty steps**: Steps with no content do not render a connector line, providing a
   natural visual termination for the last step in a sequence.
+- **Empty step between content-bearing steps**: When an empty step appears between two
+  steps that have content (e.g., Step 1 with content -> Step 2 empty -> Step 3 with
+  content), the timeline visually breaks into two disconnected segments. The connector
+  from Step 1 terminates at its boundary, and Step 3 starts fresh without an incoming
+  connector. This is consistent with the "empty steps hide connector" rule—the empty
+  Step 2 acts as a visual break point.
 - **Non-step elements between steps**: If a non-step element (e.g., `st.write()` or a
   default-type expander) is placed between two `type="step"` containers, the connector
   line from the previous step terminates at that step's content boundary. The next step
@@ -183,8 +191,12 @@ content area.
 **Accessibility:**
 
 - Collapsible step headers have `role="button"` and respond to `Enter`/`Space` keypresses
-- The header exposes `aria-expanded` to indicate current state
+- The header exposes `aria-expanded` to indicate expand/collapse state
 - Focus styles follow the standard Streamlit focus ring pattern
+- **Screen reader state communication**: The step's current state (running, complete,
+  error) is conveyed via an `aria-label` that combines the label and state, e.g.,
+  "Loading data — running" or "Data loaded — complete". This ensures non-sighted users
+  receive the same state information communicated visually through icons.
 
 ### Examples
 
