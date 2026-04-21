@@ -357,13 +357,8 @@ class App:
                 raise TypeError(
                     f"secrets must be a mapping (dict), got {type(secrets).__name__!r}."
                 )
-            for key, value in secrets.items():
-                if not isinstance(key, str):
-                    raise TypeError(
-                        f"Dictionary keys in secrets must be strings, "
-                        f"got {type(key).__name__!r} at top level."
-                    )
-                _validate_secrets_value(value, key)
+            # Validate all keys are strings and values have allowed types
+            _validate_secrets_value(dict(secrets))
         self._programmatic_secrets = (
             copy.deepcopy(secrets) if secrets is not None else None
         )

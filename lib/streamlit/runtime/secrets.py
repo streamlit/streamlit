@@ -455,15 +455,8 @@ class Secrets(Mapping[str, Any]):
         Top-level ``str``, ``int``, and ``float`` values are promoted to
         ``os.environ`` (as strings), matching the behavior of file-based secrets.
         """
-        for key, value in programmatic_secrets.items():
-            # Validate top-level keys are strings (defensive; App.__init__ already
-            # checks this, but direct callers might bypass that)
-            if not isinstance(key, str):
-                raise TypeError(
-                    f"Dictionary keys in secrets must be strings, "
-                    f"got {type(key).__name__!r} at top level."
-                )
-            _validate_secrets_value(value, key)
+        # Validate all keys are strings and values have allowed types
+        _validate_secrets_value(dict(programmatic_secrets))
 
         with self._lock:
             # Store programmatic secrets so they survive file-change reloads
