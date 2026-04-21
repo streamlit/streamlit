@@ -66,7 +66,7 @@ Add a dedicated `on_script_error` parameter alongside the existing `exception_ha
 st.App(
     script_path: str | Path,
     *,
-    on_script_error: Callable[[BaseException], bool | None] | None = None,  # NEW
+    on_script_error: Callable[[Exception], bool | None] | None = None,  # NEW
     exception_handlers: Mapping[Any, ExceptionHandler] | None = None,  # HTTP layer
     # ... other parameters
 )
@@ -80,7 +80,7 @@ import sentry_sdk
 
 sentry_sdk.init(dsn="...")
 
-def handle_script_error(exc: BaseException) -> None:
+def handle_script_error(exc: Exception) -> None:
     """Called for every uncaught exception in user script code.
 
     Returns None to preserve the default exception display behavior.
@@ -116,7 +116,7 @@ st.App(
     *,
     exception_handlers: (
         Mapping[Any, ExceptionHandler] |           # HTTP layer (existing)
-        Callable[[BaseException], bool | None] |   # Script layer (new)
+        Callable[[Exception], bool | None] |   # Script layer (new)
         None
     ) = None,
     # ... other parameters
@@ -156,8 +156,8 @@ st.App(
     *,
     exception_handlers: (
         Mapping[Any, ExceptionHandler] |
-        Callable[[BaseException], bool | None] |
-        tuple[Mapping[Any, ExceptionHandler], Callable[[BaseException], bool | None]] |
+        Callable[[Exception], bool | None] |
+        tuple[Mapping[Any, ExceptionHandler], Callable[[Exception], bool | None]] |
         None
     ) = None,
 )
@@ -212,7 +212,7 @@ st.App(
     lifespan: ... = None,
     routes: ... = None,
     middleware: ... = None,
-    on_script_error: Callable[[BaseException], bool | None] | None = None,  # Script exceptions
+    on_script_error: Callable[[Exception], bool | None] | None = None,  # Script exceptions
     exception_handlers: Mapping[Any, ExceptionHandler] | None = None,  # HTTP exceptions
     debug: bool = False,
 )
@@ -242,22 +242,19 @@ app = st.App(
 **Callback signature:**
 
 ```python
-def handler(exc: BaseException) -> bool | None:
+def handler(exc: Exception) -> bool | None:
     """
     Called when an uncaught exception occurs in user script code.
 
     Parameters
     ----------
-    exc : BaseException
+    exc : Exception
         The exception that was raised. Includes full traceback via
         exc.__traceback__.
 
         Note: The existing ``exec_func_with_error_handling`` catches
         ``Exception``, not ``BaseException``. This means ``KeyboardInterrupt``,
         ``SystemExit``, and ``GeneratorExit`` are NOT passed to this handler.
-        The type hint uses ``BaseException`` for forward compatibility if we
-        later widen the catch, but in practice only ``Exception`` subclasses
-        (including ``SyntaxError``) will trigger the handler.
 
     Returns
     -------
@@ -299,7 +296,7 @@ def handler(exc: BaseException) -> bool | None:
 | User code exceptions | Yes | Main use case |
 | `st.stop()` | No | Control flow, not an error |
 | `st.rerun()` | No | Control flow, not an error |
-| Compile/syntax errors | Yes | `SyntaxError` is an `Exception` subclass; caught in `exec_func_with_error_handling` |
+| Compile/syntax errors | No | Caught during compile phase before `exec_func_with_error_handling`; shows modal dialog in frontend |
 | Fragment exceptions | Yes | Errors in `@st.fragment` code |
 | Callback exceptions | Yes | Errors in widget callbacks |
 | `KeyboardInterrupt`, `SystemExit` | No | Not caught by `except Exception`; propagate normally |
@@ -348,7 +345,7 @@ import sentry_sdk
 
 sentry_sdk.init(dsn="...")
 
-def custom_error_handler(exc: BaseException) -> bool:
+def custom_error_handler(exc: Exception) -> bool:
     """Show friendly error message and report to Sentry."""
     sentry_sdk.capture_exception(exc)
 
@@ -371,7 +368,7 @@ import logging
 
 logger = logging.getLogger("myapp")
 
-def log_exception(exc: BaseException) -> None:
+def log_exception(exc: Exception) -> None:
     logger.error(
         "Uncaught exception in Streamlit app",
         exc_info=(type(exc), exc, exc.__traceback__),
@@ -413,7 +410,7 @@ import datadog
 sentry_sdk.init(dsn="...")
 datadog.initialize(api_key="...")
 
-def multi_service_handler(exc: BaseException) -> None:
+def multi_service_handler(exc: Exception) -> None:
     sentry_sdk.capture_exception(exc)
     datadog.statsd.increment("streamlit.errors", tags=[f"type:{type(exc).__name__}"])
 
