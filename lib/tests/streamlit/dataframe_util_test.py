@@ -1557,3 +1557,61 @@ def test_direct_polars_to_arrow_bytes_empty_dataframe() -> None:
     table = reader.read_all()
     assert table.num_rows == 0
     assert table.num_columns == 1
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_no_warning_when_within_limit() -> None:
+    """LazyFrame with fewer rows than limit should not show warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(30)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        mock_info.assert_not_called()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 30
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_exact_row_count_no_warning() -> None:
+    """LazyFrame with exactly max_unevaluated_rows should not show false positive warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(50)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        # No warning because the LazyFrame has exactly 50 rows, not more
+        mock_info.assert_not_called()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 50
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
+    """Polars fast path falls back to Pandas path when conversion fails."""
+    import polars as pl
+
+    df = pl.DataFrame({"x": [1, 2, 3]})
+
+    with patch.object(
+        dataframe_util,
+        "_convert_polars_to_arrow_bytes",
+        side_effect=RuntimeError("boom"),
+    ):
+        # Should still succeed via the Pandas fallback path
+        result = dataframe_util.convert_anything_to_arrow_bytes(df)
+
+    assert isinstance(result, bytes)
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3

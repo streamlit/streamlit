@@ -1070,13 +1070,16 @@ def convert_anything_to_arrow_bytes(
 
     # Fast path: Polars LazyFrame - must collect first with row limit
     if is_polars_lazyframe(data):
+        # Collect one extra row to detect truncation accurately
+        collected = data.limit(max_unevaluated_rows + 1).collect()
+        truncated = collected.height > max_unevaluated_rows
+        if truncated:
+            collected = collected.head(max_unevaluated_rows)
+            _show_data_information(
+                f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
+                "rows. Call `collect()` on the dataframe to show more."
+            )
         try:
-            collected = data.limit(max_unevaluated_rows).collect()
-            if collected.height == max_unevaluated_rows:
-                _show_data_information(
-                    f"⚠️ Showing only {string_util.simplify_number(max_unevaluated_rows)} "
-                    "rows. Call `collect()` on the dataframe to show more."
-                )
             return _convert_polars_to_arrow_bytes(collected)
         except Exception:
             _LOGGER.debug(
