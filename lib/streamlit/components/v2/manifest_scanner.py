@@ -246,57 +246,60 @@ def _find_package_pyproject_toml(dist: importlib.metadata.Distribution) -> Path 
     for finder in (
         _pyproject_via_read_text,
         _pyproject_via_dist_files,
-        lambda d: _pyproject_via_import_spec(d, package_name),
+        _pyproject_via_import_spec,
     ):
-        result = finder(dist)
+        result = finder(dist, package_name)
         if result is not None:
             return result
 
     return None
 
 
-def _pyproject_via_read_text(dist: importlib.metadata.Distribution) -> Path | None:
+def _pyproject_via_read_text(
+    dist: importlib.metadata.Distribution, package_name: str
+) -> Path | None:
     """Locate pyproject.toml using the distribution's read_text + nearby files.
 
     This works for many types of installations including some editable ones.
     """
-    package_name = _normalize_package_name(dist.name)
     try:
-        if hasattr(dist, "read_text"):
-            pyproject_content = dist.read_text("pyproject.toml")
-            if pyproject_content and dist.files:
-                # Found content, now find the actual file path
-                # Look for a reasonable file to get the directory
-                for file in dist.files:
-                    if "__init__.py" in str(file) or ".py" in str(file):
-                        try:
-                            file_path = Path(str(dist.locate_file(file)))
-                            # Check nearby directories for pyproject.toml
-                            current_dir = file_path.parent
-                            # Check current directory and parent
-                            for search_dir in [current_dir, current_dir.parent]:
-                                pyproject_path = search_dir / "pyproject.toml"
-                                if (
-                                    pyproject_path.exists()
-                                    and _validate_pyproject_for_package(
-                                        pyproject_path,
-                                        dist.name,
-                                        package_name,
-                                    )
-                                ):
-                                    return pyproject_path
-                            # Stop after first reasonable file
-                            break
-                        except Exception:  # noqa: S112
-                            continue
+        # Checks to ensure that the given object has the ability to read text, and that the TOML file exists.
+        if not hasattr(dist, "read_text") or not dist.read_text("pyproject.toml"):
+            return None
+        if not dist.files:
+            return None
+
+        # Once the dist is confirmed to have files, find the target directory to search for the TOML
+        # based on where the .py scripts are found.
+        anchor = next(
+            file
+            for file in dist.files
+            if "__init__.py" in str(file) or ".py" in str(file)
+        )
+        if anchor is None:
+            return None
+
+        anchor_dir = Path(str(dist.locate_file(anchor))).parent
+
+        # Now, search for the TOML file in both the current directory and the directory above it,
+        # validate, and if found, return the path to the pyproject.
+        for search_dir in [anchor_dir, anchor_dir.parent]:
+            pyproject_path = search_dir / "pyproject.toml"
+            if pyproject_path.exists() and _validate_pyproject_for_package(
+                pyproject_path,
+                dist.name,
+                package_name,
+            ):
+                return pyproject_path
     except Exception:
         return None
     return None
 
 
-def _pyproject_via_dist_files(dist: importlib.metadata.Distribution) -> Path | None:
+def _pyproject_via_dist_files(
+    dist: importlib.metadata.Distribution, package_name: str
+) -> Path | None:
     """Locate pyproject.toml by scanning the distribution's file list."""
-    package_name = _normalize_package_name(dist.name)
     files = getattr(dist, "files", None)
     if not files:
         return None
