@@ -82,11 +82,13 @@ with st.expander(
     label: str,
     expanded: bool = False,
     *,
-    type: Literal["default", "step"] = "default",  # NEW
+    key: Key | None = None,
     icon: str | None = None,
-    key: str | int | None = None,
-    on_change: ... = "ignore",
-    ...
+    type: Literal["default", "step"] = "default",  # NEW
+    width: Width = "stretch",
+    on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
 ) -> ExpanderContainer: ...
 
 # st.status with type="step"
@@ -96,7 +98,7 @@ with st.status(
     expanded: bool = False,
     state: Literal["running", "complete", "error"] = "running",
     type: Literal["default", "step"] = "default",  # NEW
-    ...
+    width: Width = "stretch",
 ) -> StatusContainer: ...
 ```
 
@@ -140,35 +142,37 @@ a vertical connector line, and content indented to the right:
 +------------------------------------------+
 ```
 
-**State-to-icon mapping (when `icon=None`):**
+**State-to-icon mapping and precedence:**
 
-| State       | Default Icon              | Visual Style |
-|-------------|---------------------------|--------------|
-| `"running"` | Animated spinner          | Faded appearance |
-| `"complete"`| `:material/check_circle:` | Faded appearance |
-| `"error"`   | `:material/error:`        | Error/destructive color |
-| `None`      | `:material/circle:`       | Faded appearance |
+When determining which icon to display, the following precedence applies (highest first):
 
-**Icon behavior:**
-
-| Source | Icon displayed |
-|--------|----------------|
-| `icon` parameter set | User-specified icon |
-| `state="running"` (status only) | Animated spinner |
-| `state="complete"` (status only) | `:material/check_circle:` |
-| `state="error"` (status only) | `:material/error:` |
-| No icon, no state | `:material/circle:` (neutral) |
+| Condition | Icon | Visual Style | Notes |
+|-----------|------|--------------|-------|
+| `icon` parameter set explicitly | User-specified icon | Normal | User icon always takes precedence |
+| `state="running"` (`st.status` only) | Animated spinner | Faded appearance | |
+| `state="complete"` (`st.status` only) | `:material/check_circle:` | Faded appearance | Faded to emphasize active/upcoming steps |
+| `state="error"` (`st.status` only) | `:material/error:` | Error/destructive color | |
+| No icon, no state (`st.expander`) | `:material/circle:` | Faded appearance | Neutral placeholder |
 
 **Hover behavior:**
 
 When the step has collapsible content and the user hovers, a chevron icon appears
-(replacing the state icon) to indicate expand/collapse affordance.
+(replacing the state icon) to indicate expand/collapse affordance. This replacement
+applies even when a user-specified icon is set—the chevron signals interactivity
+regardless of the icon source. Keyboard focus also reveals the chevron affordance.
 
 **Connector line:**
 
 The vertical connector line extends from below the icon to the bottom of the step's
-content area. Empty steps (no content) do not render a connector line, providing a
-natural visual termination for the last step in a sequence.
+content area.
+
+- **Empty steps**: Steps with no content do not render a connector line, providing a
+  natural visual termination for the last step in a sequence.
+- **Non-step elements between steps**: If a non-step element (e.g., `st.write()` or a
+  default-type expander) is placed between two `type="step"` containers, the connector
+  line from the previous step terminates at that step's content boundary. The next step
+  starts fresh without a connector to the previous. This is by design—adjacent steps
+  form a visual timeline, but interspersed elements break the chain.
 
 **Collapsibility:**
 
@@ -208,7 +212,7 @@ with st.expander(
 with st.expander(
     "Generating response",
     type="step",
-    icon="spinner",
+    icon=":material/progress_activity:",
 ):
     st.write("The weather in NYC is...")
 ```
@@ -311,8 +315,8 @@ with st.steps() as steps:
 
 ## Checklist
 
-| Item                       | Comment |
-|----------------------------|---------|
+| Item                       | ✅ or comment |
+|----------------------------|---------------|
 | Works on SiS, Cloud, etc?  | Yes — uses existing expander/status infrastructure |
 | No breaking API changes    | Yes — new optional parameters only |
 | No new dependencies        | Yes — reuses existing styled components |
