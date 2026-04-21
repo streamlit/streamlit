@@ -42,6 +42,49 @@ import { blend, convertRemToPx } from "~lib/theme/utils"
 
 const LOG = getLogger("MermaidChart")
 
+/**
+ * Mapping of mermaid diagram type keywords to human-readable names.
+ * Used to generate more descriptive alt text for accessibility.
+ */
+const DIAGRAM_TYPE_MAP: Record<string, string> = {
+  graph: "flowchart",
+  flowchart: "flowchart",
+  sequencediagram: "sequence diagram",
+  classDiagram: "class diagram",
+  stateDiagram: "state diagram",
+  erDiagram: "entity relationship diagram",
+  journey: "user journey diagram",
+  gantt: "Gantt chart",
+  pie: "pie chart",
+  quadrantChart: "quadrant chart",
+  requirementDiagram: "requirement diagram",
+  gitGraph: "Git graph",
+  mindmap: "mindmap",
+  timeline: "timeline",
+  zenuml: "ZenUML diagram",
+  sankey: "Sankey diagram",
+  packet: "packet diagram",
+  block: "block diagram",
+  architecture: "architecture diagram",
+  kanban: "Kanban board",
+} as const
+
+/**
+ * Extracts the diagram type from mermaid source to generate descriptive alt text.
+ * Parses the first line to identify the diagram type keyword.
+ */
+function getDiagramTypeFromSource(source: string): string {
+  const firstLine = source.trim().split("\n")[0].trim().toLowerCase()
+
+  for (const [keyword, label] of Object.entries(DIAGRAM_TYPE_MAP)) {
+    if (firstLine.startsWith(keyword.toLowerCase())) {
+      return label
+    }
+  }
+
+  return "diagram"
+}
+
 // Module-level tracking for mermaid initialization
 // Stores a fingerprint of the full theme config to detect any theme changes
 let lastThemeConfigKey: string | null = null
@@ -527,7 +570,11 @@ const MermaidChart = memo(function MermaidChart({
           data-testid="stMermaidChart"
         >
           {svgBlobUrl && (
-            <img ref={imgRef} src={svgBlobUrl} alt="Mermaid diagram" />
+            <img
+              ref={imgRef}
+              src={svgBlobUrl}
+              alt={`Mermaid ${getDiagramTypeFromSource(source)}`}
+            />
           )}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>

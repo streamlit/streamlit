@@ -22,8 +22,11 @@ from playwright.sync_api import Page, expect
 def test_mermaid_charts_render(app: Page):
     """Test that mermaid charts are rendered correctly."""
     # Check that mermaid charts are rendered
-    mermaid_charts = app.locator('[data-testid="stMermaidChart"]')
+    mermaid_charts = app.get_by_test_id("stMermaidChart")
     expect(mermaid_charts).to_have_count(5)
+    # Negative assertion: only 1 error element should exist (from the invalid syntax block)
+    error = app.get_by_test_id("stMermaidError")
+    expect(error).to_have_count(1)
 
 
 def test_mermaid_charts_contain_rendered_image(app: Page):
@@ -33,7 +36,7 @@ def test_mermaid_charts_contain_rendered_image(app: Page):
     sandboxing, rather than inline SVG elements.
     """
     # Get the first few mermaid charts (valid diagrams)
-    mermaid_charts = app.locator('[data-testid="stMermaidChart"]')
+    mermaid_charts = app.get_by_test_id("stMermaidChart")
 
     # Check that they contain img elements with blob URLs
     for i in range(4):  # First 4 are valid diagrams
@@ -46,14 +49,19 @@ def test_mermaid_charts_contain_rendered_image(app: Page):
 def test_mermaid_invalid_syntax_shows_error(app: Page):
     """Test that invalid mermaid syntax shows an error message."""
     # The 5th mermaid block has invalid syntax
-    error = app.locator('[data-testid="stMermaidError"]')
+    error = app.get_by_test_id("stMermaidError")
     expect(error).to_be_visible()
     expect(error).to_contain_text("Mermaid diagram error")
+    # Negative assertion: error chart should not contain an img element
+    mermaid_charts = app.get_by_test_id("stMermaidChart")
+    # The error chart is the 5th one (index 4)
+    error_chart = mermaid_charts.nth(4)
+    expect(error_chart.locator("img")).to_have_count(0)
 
 
 def test_regular_code_block_not_mermaid(app: Page):
     """Test that regular code blocks are not rendered as mermaid charts."""
     # Check that there's a syntax highlighter for Python code
-    code_block = app.locator('[data-testid="stCode"]')
+    code_block = app.get_by_test_id("stCode")
     expect(code_block).to_be_visible()
     expect(code_block).to_contain_text("def hello")
