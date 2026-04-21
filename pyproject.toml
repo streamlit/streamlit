@@ -90,7 +90,7 @@ dev = [
 test = [
   "streamlit",
   # Testing infrastructure dependencies:
-  "pytest>=8.3.5",
+  "pytest>=9.0.3",
   "pytest-cov",
   "hypothesis>=6.17.4",
   "parameterized",
