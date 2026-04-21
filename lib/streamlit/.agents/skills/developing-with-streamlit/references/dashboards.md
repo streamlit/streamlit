@@ -117,8 +117,8 @@ Ready-to-use dashboard templates are available in `assets/templates/apps/`:
 
 | Template | Features |
 |----------|----------|
-| `dashboard-metrics` | Metric cards with sparklines, date filtering, focus mode |
-| `dashboard-companies` | Company comparison, filterable data tables |
+| `dashboard-metrics` | Metric cards with chart/table toggle, time-series charts, date filtering, focus mode |
+| `dashboard-companies` | Company comparison with sparkline columns, filterable data tables |
 | `dashboard-compute` | `@st.fragment` for independent updates, popover filters |
 | `dashboard-feature-usage` | Feature adoption tracking, trend analysis |
 | `dashboard-seattle-weather` | Weather data visualization |
