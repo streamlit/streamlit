@@ -154,9 +154,9 @@ By default, layout containers like `st.tabs`, `st.expander`, and `st.popover` al
 
 `st.tabs` renders ALL tab content on every rerun, even hidden tabs. Two fixes:
 
-**Preferred (Streamlit 1.55+): Dynamic tabs with `on_change="ignore"`**
+**Preferred (Streamlit 1.55+): Dynamic tabs with `on_change="rerun"`**
 
-Keep the tabs UX. Setting `on_change="ignore"` makes tabs lazy — only the visible tab's content renders.
+Keep the tabs UX. Setting `on_change="rerun"` makes tabs dynamic — each tab's `.open` property returns `True` for the selected tab and `False` otherwise, so you can guard expensive work. (With the default `on_change="ignore"`, all tab content runs on every rerun and `.open` is `None` for every tab.)
 
 ```python
 # BAD: Heavy content loads even when tab not visible
@@ -165,11 +165,13 @@ with tab2:
     expensive_chart()  # Always computed!
 
 # GOOD: Dynamic tabs — only visible tab content renders
-tab1, tab2 = st.tabs(["Light", "Heavy"], on_change="ignore")
-with tab1:
-    light_overview()
-with tab2:
-    expensive_chart()  # Only computed when this tab is visible
+tab1, tab2 = st.tabs(["Light", "Heavy"], on_change="rerun")
+if tab1.open:
+    with tab1:
+        light_overview()
+if tab2.open:
+    with tab2:
+        expensive_chart()  # Only computed when this tab is visible
 ```
 
 **Alternative: Replace with `st.segmented_control` + conditional**
@@ -190,6 +192,8 @@ elif view == "Heavy":
 `st.expander` renders content even when collapsed. Two fixes:
 
 **Preferred (Streamlit 1.55+): Dynamic expander with `on_change="rerun"`**
+
+With `on_change="rerun"`, the `.open` property returns `True` when the expander is open and `False` when collapsed, so you can guard expensive work. (Without `on_change`, `.open` is `None` and all content runs regardless.)
 
 ```python
 # BAD: Expander content always loads
