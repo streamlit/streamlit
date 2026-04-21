@@ -668,7 +668,7 @@ def test_mermaid_charts_render(app: Page):
     """Test that mermaid charts are rendered correctly."""
     mermaid_container = get_element_by_key(app, "mermaid_elements")
     mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
-    expect(mermaid_charts).to_have_count(5)
+    expect(mermaid_charts).to_have_count(7)
     # Negative assertion: only 1 error element should exist (from the invalid syntax block)
     error = mermaid_container.get_by_test_id("stMermaidError")
     expect(error).to_have_count(1)
@@ -683,8 +683,8 @@ def test_mermaid_charts_contain_rendered_image(app: Page):
     mermaid_container = get_element_by_key(app, "mermaid_elements")
     mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
 
-    # Check that the first 4 valid diagrams contain img elements with blob URLs
-    for i in range(4):
+    # Check that the first 6 valid diagrams contain img elements with blob URLs
+    for i in range(6):
         img = mermaid_charts.nth(i).locator("img")
         expect(img).to_be_visible()
         # Verify the img has a blob URL src (security sandboxing)
@@ -699,8 +699,8 @@ def test_mermaid_invalid_syntax_shows_error(app: Page):
     expect(error).to_contain_text("Mermaid diagram error")
     # Negative assertion: error chart should not contain an img element
     mermaid_charts = mermaid_container.get_by_test_id("stMermaidChart")
-    # The error chart is the 5th one (index 4)
-    error_chart = mermaid_charts.nth(4)
+    # The error chart is the 7th one (index 6)
+    error_chart = mermaid_charts.nth(6)
     expect(error_chart.locator("img")).to_have_count(0)
 
 
