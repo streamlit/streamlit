@@ -174,8 +174,12 @@ const TextArea: FC<Props> = ({
   } = useTextInputAutoExpand({
     textareaRef,
     // Recalculate height when placeholder or displayed value changes.
-    // uiValue is used instead of value to ensure height updates during typing and after blur.
-    dependencies: [element.placeholder, uiValue],
+    // When isAutoHeight is true, use uiValue to ensure height updates during typing and after blur.
+    // When isAutoHeight is false, the effect only needs to run when value changes (less frequent).
+    dependencies: [
+      element.placeholder,
+      ...(isAutoHeight ? [uiValue] : [value]),
+    ],
   })
 
   // Recalculate height once when width first becomes available (ResizeObserver is async).

@@ -218,7 +218,7 @@ function ChatInput({
   }, [])
 
   // Track if we've done the initial height calculation with a valid width.
-  // This prevents recalculating on every window resize, which would override manual user resizes.
+  // This prevents unnecessary recalculations on every window resize.
   const hasInitializedWithWidthRef = useRef(false)
 
   const autoExpand = useTextInputAutoExpand({
