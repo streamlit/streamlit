@@ -87,15 +87,17 @@ st.vega_lite_chart(
     width="stretch",
 )
 
-st.write("Using a top-level `df` and keywords as a spec:")
+st.write("Using a top-level `df` and `spec` dict (another example):")
 
 st.vega_lite_chart(
     df,
-    mark="bar",
-    x_field="a",
-    x_type="ordinal",
-    y_field="b",
-    y_type="quantitative",
+    {
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "ordinal"},
+            "y": {"field": "b", "type": "quantitative"},
+        },
+    },
     width="stretch",
 )
 
