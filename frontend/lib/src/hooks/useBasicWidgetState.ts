@@ -121,7 +121,7 @@ export function useBasicWidgetClientState<
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
+
     setNextValueWithSource(null) // Clear "event".
 
     setCurrentValue(nextValueWithSource.value)

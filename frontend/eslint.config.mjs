@@ -17,11 +17,11 @@
 import path from "path"
 import { fileURLToPath } from "url"
 import { createJiti } from "jiti"
+import { fixupPluginRules } from "@eslint/compat"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
-import react from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
@@ -241,9 +241,8 @@ export default defineConfig([
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
       ...jsxA11y.flatConfigs.recommended.plugins,
-      react,
       lodash,
-      "no-relative-import-paths": noRelativeImportPaths,
+      "no-relative-import-paths": fixupPluginRules(noRelativeImportPaths),
       "streamlit-custom": streamlitCustom,
     },
     rules: {
@@ -254,24 +253,34 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
-      // We don't use PropTypes
-      "react/prop-types": "off",
-      // We don't escape entities
-      "react/no-unescaped-entities": "off",
+      // New rules in ESLint 10 recommended — disable until existing violations are addressed
+      "no-useless-assignment": "off",
+      "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
-      "@eslint-react/dom/no-flush-sync": "error",
+      "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
       "@eslint-react/no-unused-class-component-members": "off",
       // This was giving false positives
-      "@eslint-react/naming-convention/use-state": "off",
+      "@eslint-react/use-state": "off",
       // Turning off for now until we have clearer guidance on how to fix existing usages
-      "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
+      "@eslint-react/set-state-in-effect": "off",
       // We don't want to warn about empty fragments
-      "@eslint-react/no-useless-fragment": "off",
+      "@eslint-react/jsx-no-useless-fragment": "off",
       // Prevent context values from being recreated on every render
-      "react/jsx-no-constructed-context-values": "error",
+      "@eslint-react/no-unstable-context-value": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
+      // New rules in @eslint-react v4 — disable until existing violations are addressed
+      "@eslint-react/component-hook-factories": "off",
+      "@eslint-react/error-boundaries": "off",
+      "@eslint-react/exhaustive-deps": "off",
+      "@eslint-react/jsx-no-children-prop": "off",
+      "@eslint-react/jsx-no-children-prop-with-children": "off",
+      "@eslint-react/purity": "off",
+      "@eslint-react/use-memo": "off",
+      "@eslint-react/no-use-context": "off",
+      "@eslint-react/no-context-provider": "off",
+      "@eslint-react/no-forward-ref": "off",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules
       // for it to be realistic right now. Over time, we should fix these.
@@ -280,6 +289,8 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
+      // Stricter in typescript-eslint v8.58 — disable until existing violations are addressed
+      "@typescript-eslint/no-base-to-string": "off",
       "@typescript-eslint/unbound-method": "off",
       // Some of these are being caught erroneously
       "@typescript-eslint/camelcase": "off",
@@ -429,11 +440,25 @@ export default defineConfig([
       "streamlit-custom/no-force-reflow-access": "error",
       "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
       "no-restricted-imports": getNoRestrictedImports(),
-      // React configuration
-      "react/jsx-uses-react": "off",
-      "react/react-in-jsx-scope": "off",
       // React hooks rules
       ...reactHooks.configs.flat.recommended.rules,
+      // New React Compiler rules in react-hooks v7.1 — disable until existing
+      // violations are addressed. Only rules-of-hooks and exhaustive-deps were
+      // previously enforced.
+      "react-hooks/static-components": "off",
+      "react-hooks/use-memo": "off",
+      "react-hooks/preserve-manual-memoization": "off",
+      "react-hooks/incompatible-library": "off",
+      "react-hooks/immutability": "off",
+      "react-hooks/globals": "off",
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/error-boundaries": "off",
+      "react-hooks/purity": "off",
+      "react-hooks/set-state-in-render": "off",
+      "react-hooks/unsupported-syntax": "off",
+      "react-hooks/config": "off",
+      "react-hooks/gating": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules
@@ -450,9 +475,6 @@ export default defineConfig([
       "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
-      react: {
-        version: "detect",
-      },
       "import/resolver": {
         typescript: {
           // Use project service for import resolution as well

@@ -301,7 +301,7 @@ const CameraInput = ({
    * Add a file to the list of files.
    */
   const addFile = useCallback((file: UploadFileInfo): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+    /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
      * Using flushSync here because we need the state to be immediately updated
      * before any subsequent file upload operations occur. Without this, React
      * can defer the commit and our upload callbacks (progress, completion, or
