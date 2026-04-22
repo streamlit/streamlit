@@ -402,10 +402,10 @@ class _CacheFuncHasher:
         if obj is None:
             return b"0"
 
-        if obj is True:
+        if obj is True:  # pragma: no cover - bool subclasses int; caught above
             return b"1"
 
-        if obj is False:
+        if obj is False:  # pragma: no cover - bool subclasses int; caught above
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
