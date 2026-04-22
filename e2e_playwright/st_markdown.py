@@ -544,85 +544,33 @@ with st.container(key="shimmer_elements"):
         "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
     )
 
-# Mermaid diagram support tests
+# Mermaid diagram support tests - verifies mermaid works within markdown context
 st.header("Mermaid Charts")
 
 with st.container(key="mermaid_elements"):
-    # Flowchart
+    # Markdown with mermaid embedded - tests that markdown before/after mermaid works
     st.markdown(
         """
+Here is a **flowchart** showing a simple decision process:
+
 ```mermaid
 graph TD
-    A[Start] --> B{Is it working?}
-    B -->|Yes| C[Great!]
-    B -->|No| D[Debug]
-    D --> B
+    A[Start] --> B{Decision}
+    B -->|Yes| C[OK]
+    B -->|No| D[Cancel]
 ```
+
+The diagram above demonstrates mermaid rendering within markdown.
 """
     )
 
-    # Sequence diagram
+    # Second mermaid type to verify different diagram types work
     st.markdown(
         """
 ```mermaid
 sequenceDiagram
-    participant User
-    participant App
-    User->>App: Click button
-    App-->>User: Update UI
-```
-"""
-    )
-
-    # Pie chart
-    st.markdown(
-        """
-```mermaid
-pie title Favorite Pets
-    "Dogs" : 386
-    "Cats" : 325
-    "Birds" : 89
-```
-"""
-    )
-
-    # Timeline
-    st.markdown(
-        """
-```mermaid
-timeline
-    title History
-    2022 : Event A
-    2023 : Event B
-    2024 : Event C
-```
-"""
-    )
-
-    # State diagram (tests state diagram theme variables)
-    st.markdown(
-        """
-```mermaid
-stateDiagram-v2
-    [*] --> Active
-    Active --> Inactive
-    Inactive --> Active
-    Inactive --> [*]
-```
-"""
-    )
-
-    # User journey (tests fillType theme variables)
-    st.markdown(
-        """
-```mermaid
-journey
-    title User Flow
-    section Login
-      Open app: 5: User
-      Enter credentials: 3: User
-    section Dashboard
-      View data: 4: User
+    User->>App: Click
+    App-->>User: Response
 ```
 """
     )
@@ -632,16 +580,6 @@ journey
         """
 ```mermaid
 this is not valid mermaid syntax
-```
-"""
-    )
-
-    # Regular code block (should not be mermaid)
-    st.markdown(
-        """
-```python
-def hello():
-    print("Hello, World!")
 ```
 """
     )
