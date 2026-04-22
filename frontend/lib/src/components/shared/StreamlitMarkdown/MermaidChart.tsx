@@ -16,7 +16,6 @@
 
 import { memo, useCallback, useEffect, useId, useMemo, useState } from "react"
 
-import styled from "@emotion/styled"
 import {
   Check,
   ContentCopy,
@@ -31,6 +30,10 @@ import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import {
+  StyledMermaidContainer,
+  StyledMermaidErrorMessage,
+} from "~lib/components/shared/StreamlitMarkdown/styled-components"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
@@ -88,44 +91,6 @@ function getDiagramTypeFromSource(source: string): string {
 // Module-level tracking for mermaid initialization
 // Stores a fingerprint of the full theme config to detect any theme changes
 let lastThemeConfigKey: string | null = null
-
-const StyledMermaidContainer = styled.div<{
-  hasError: boolean
-  isFullScreen: boolean
-}>(({ theme, hasError, isFullScreen }) => ({
-  display: "flex",
-  flexDirection: "column",
-  alignItems: hasError ? "flex-start" : "center",
-  justifyContent: isFullScreen ? "center" : "flex-start",
-  minHeight: "2rem",
-  padding: theme.spacing.md,
-  height: isFullScreen ? "100%" : "auto",
-  width: "100%",
-  "& img": {
-    // In fullscreen mode: fill available space while maintaining aspect ratio
-    // In normal mode: use natural size up to constraints
-    width: isFullScreen ? "100%" : "auto",
-    maxWidth: "100%",
-    height: "auto",
-    // Limit height in normal mode to prevent diagrams from dominating the page
-    // Users can expand to fullscreen to see the full diagram
-    maxHeight: isFullScreen ? "100%" : "25rem",
-    objectFit: "contain",
-    borderRadius: theme.radii.default,
-  },
-}))
-
-const StyledErrorMessage = styled.div(({ theme }) => ({
-  color: theme.colors.redTextColor,
-  backgroundColor: theme.colors.redBackgroundColor,
-  padding: theme.spacing.sm,
-  borderRadius: theme.radii.default,
-  fontSize: theme.fontSizes.sm,
-  fontFamily: theme.genericFonts.codeFont,
-  whiteSpace: "pre-wrap",
-  wordBreak: "break-word",
-  width: "100%",
-}))
 
 interface MermaidChartProps {
   /**
@@ -485,9 +450,9 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={false}
           data-testid="stMermaidChart"
         >
-          <StyledErrorMessage data-testid="stMermaidError" role="alert">
+          <StyledMermaidErrorMessage data-testid="stMermaidError" role="alert">
             Mermaid diagram error: {error}
-          </StyledErrorMessage>
+          </StyledMermaidErrorMessage>
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     )
