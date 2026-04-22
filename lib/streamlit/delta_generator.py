@@ -72,6 +72,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.map import MapMixin
 from streamlit.elements.markdown import MarkdownMixin
 from streamlit.elements.media import MediaMixin
+from streamlit.elements.mermaid_chart import MermaidChartMixin
 from streamlit.elements.metric import MetricMixin
 from streamlit.elements.pdf import PdfMixin
 from streamlit.elements.plotly_chart import PlotlyMixin
@@ -204,6 +205,7 @@ class DeltaGenerator(
     MarkdownMixin,
     MapMixin,
     MediaMixin,
+    MermaidChartMixin,
     MetricMixin,
     MenuButtonMixin,
     MultiSelectMixin,

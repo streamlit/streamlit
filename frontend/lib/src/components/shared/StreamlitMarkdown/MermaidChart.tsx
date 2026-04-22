@@ -88,9 +88,12 @@ function getDiagramTypeFromSource(source: string): string {
   return "diagram"
 }
 
-// Module-level tracking for mermaid initialization
-// Stores a fingerprint of the full theme config to detect any theme changes
-let lastThemeConfigKey: string | null = null
+/**
+ * Symbol used to attach our theme tracking key to the mermaid module.
+ * This makes the relationship between mermaid's global state and our
+ * tracking explicit, rather than using a separate module-level variable.
+ */
+const THEME_CONFIG_KEY = Symbol.for("streamlit.mermaid.themeConfigKey")
 
 interface MermaidChartProps {
   /**
@@ -302,9 +305,14 @@ const MermaidChart = memo(function MermaidChart({
 
         if (isCancelled) return
 
-        // Re-initialize mermaid when theme config changes
+        // Re-initialize mermaid when theme config changes.
+        // We store our tracking key on the mermaid module itself since mermaid
+        // maintains global state and initialize() affects all future renders.
         const themeConfigKey = JSON.stringify(themeConfig)
-        if (lastThemeConfigKey !== themeConfigKey) {
+        const mermaidWithKey = mermaid as typeof mermaid & {
+          [THEME_CONFIG_KEY]?: string
+        }
+        if (mermaidWithKey[THEME_CONFIG_KEY] !== themeConfigKey) {
           mermaid.initialize({
             startOnLoad: false,
             securityLevel: "strict",
@@ -314,7 +322,7 @@ const MermaidChart = memo(function MermaidChart({
             htmlLabels: false,
             ...themeConfig,
           })
-          lastThemeConfigKey = themeConfigKey
+          mermaidWithKey[THEME_CONFIG_KEY] = themeConfigKey
         }
 
         // Generate a unique ID for this render (remove colons since mermaid uses it as a CSS selector)
