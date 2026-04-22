@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, useCallback, useEffect, useId, useRef, useState } from "react"
+import { memo, useCallback, useEffect, useId, useMemo, useState } from "react"
 
 import styled from "@emotion/styled"
 import {
@@ -132,6 +132,36 @@ interface MermaidChartProps {
    * The mermaid diagram source code
    */
   source: string
+}
+
+/**
+ * Prepares SVG for responsive rendering by ensuring viewBox exists
+ * and removing explicit dimensions to allow CSS control.
+ */
+function prepareResponsiveSvg(svg: string): string {
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(svg, "image/svg+xml")
+  const svgElement = doc.querySelector("svg")
+
+  if (!svgElement) {
+    return svg
+  }
+
+  // Get dimensions before removing (needed for fallback viewBox)
+  const width = svgElement.getAttribute("width") || "100"
+  const height = svgElement.getAttribute("height") || "100"
+
+  // Ensure viewBox exists for proper scaling
+  if (!svgElement.hasAttribute("viewBox")) {
+    svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
+  }
+
+  // Remove explicit dimensions to allow CSS to control sizing
+  svgElement.removeAttribute("width")
+  svgElement.removeAttribute("height")
+  svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet")
+
+  return new XMLSerializer().serializeToString(svgElement)
 }
 
 /**
@@ -276,7 +306,6 @@ const MermaidChart = memo(function MermaidChart({
 }: Readonly<MermaidChartProps>) {
   const theme = useEmotionTheme()
   const uniqueId = useId()
-  const imgRef = useRef<HTMLImageElement>(null)
   const [svgBlobUrl, setSvgBlobUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -291,9 +320,10 @@ const MermaidChart = memo(function MermaidChart({
 
   const { copyToClipboard, isCopied, label: copyLabel } = useCopyToClipboard()
 
+  const themeConfig = useMemo(() => getMermaidThemeConfig(theme), [theme])
+
   useEffect(() => {
     let isCancelled = false
-    // Track if blob URL was committed to state (so cleanup knows not to revoke it)
     let committedToState = false
 
     const renderMermaid = async (): Promise<void> => {
@@ -302,17 +332,13 @@ const MermaidChart = memo(function MermaidChart({
 
       let blobUrl: string | null = null
       try {
-        // Lazy load mermaid
         const mermaidModule = await import("mermaid")
         const mermaid = mermaidModule.default
 
         if (isCancelled) return
 
-        // Configure mermaid with theme-aware settings
-        const themeConfig = getMermaidThemeConfig(theme)
-        const themeConfigKey = JSON.stringify(themeConfig)
-
         // Re-initialize mermaid when theme config changes
+        const themeConfigKey = JSON.stringify(themeConfig)
         if (lastThemeConfigKey !== themeConfigKey) {
           mermaid.initialize({
             startOnLoad: false,
@@ -326,41 +352,15 @@ const MermaidChart = memo(function MermaidChart({
           lastThemeConfigKey = themeConfigKey
         }
 
-        // Generate a unique ID for this render
-        // Remove colons from the id since mermaid uses it as a CSS selector
+        // Generate a unique ID for this render (remove colons since mermaid uses it as a CSS selector)
         const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}`
-
-        // Render the diagram (bindFunctions not used since we render via <img>)
         const { svg } = await mermaid.render(diagramId, source)
 
         if (isCancelled) return
 
-        // Process SVG for responsive sizing
-        const parser = new DOMParser()
-        const doc = parser.parseFromString(svg, "image/svg+xml")
-        const svgElement = doc.querySelector("svg")
+        const finalSvg = prepareResponsiveSvg(svg)
 
-        let finalSvg = svg
-        if (svgElement) {
-          // Get dimensions before removing (needed for fallback viewBox)
-          const width = svgElement.getAttribute("width") || "100"
-          const height = svgElement.getAttribute("height") || "100"
-
-          // Ensure viewBox exists for proper scaling
-          if (!svgElement.hasAttribute("viewBox")) {
-            svgElement.setAttribute("viewBox", `0 0 ${width} ${height}`)
-          }
-
-          // Remove explicit dimensions to allow CSS to control sizing
-          svgElement.removeAttribute("width")
-          svgElement.removeAttribute("height")
-          svgElement.setAttribute("preserveAspectRatio", "xMidYMid meet")
-
-          finalSvg = new XMLSerializer().serializeToString(svgElement)
-        }
-
-        // Create blob URL for rendering via <img> tag
-        // This provides browser-enforced security sandboxing
+        // Create blob URL for rendering via <img> tag (browser-enforced security sandboxing)
         const blob = new Blob([finalSvg], {
           type: "image/svg+xml;charset=utf-8",
         })
@@ -371,11 +371,9 @@ const MermaidChart = memo(function MermaidChart({
           committedToState = true
           setIsLoading(false)
         } else {
-          // Cancelled after creating URL but before committing - clean up
           URL.revokeObjectURL(blobUrl)
         }
       } catch (err) {
-        // Clean up blob URL if render failed after creating it
         if (blobUrl && !committedToState) {
           URL.revokeObjectURL(blobUrl)
         }
@@ -392,9 +390,8 @@ const MermaidChart = memo(function MermaidChart({
 
     return () => {
       isCancelled = true
-      // Don't revoke here - let the svgBlobUrl cleanup effect handle committed URLs
     }
-  }, [source, theme, uniqueId])
+  }, [source, themeConfig, uniqueId])
 
   // Clean up blob URL when component unmounts or URL changes
   useEffect(() => {
@@ -416,24 +413,18 @@ const MermaidChart = memo(function MermaidChart({
    * Download the rendered diagram as a PNG image.
    */
   const handleDownloadPng = useCallback((): void => {
-    if (!imgRef.current || !svgBlobUrl) {
+    if (!svgBlobUrl) {
       return
     }
 
-    const imgElement = imgRef.current
-
-    // Get the rendered image dimensions
-    // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Required for PNG export dimensions
-    const imgRect = imgElement.getBoundingClientRect()
-    const width = imgRect.width
-    const height = imgRect.height
-
-    // Create an image from the blob URL and draw to canvas
     const img = new Image()
     img.onload = () => {
+      // Use natural dimensions from the SVG viewBox (avoids forced reflow)
+      const width = img.naturalWidth || 800
+      const height = img.naturalHeight || 600
+
       const canvas = document.createElement("canvas")
-      // Use 2x scale for better quality
-      const scale = 2
+      const scale = 2 // 2x scale for better quality
       canvas.width = width * scale
       canvas.height = height * scale
 
@@ -442,19 +433,14 @@ const MermaidChart = memo(function MermaidChart({
         return
       }
 
-      // Fill with background color
       ctx.fillStyle = theme.colors.bgColor
       ctx.fillRect(0, 0, canvas.width, canvas.height)
-
-      // Scale and draw the image
       ctx.scale(scale, scale)
       ctx.drawImage(img, 0, 0, width, height)
 
-      // Download the PNG
-      const pngUrl = canvas.toDataURL("image/png")
       const link = document.createElement("a")
       link.download = "mermaid-diagram.png"
-      link.href = pngUrl
+      link.href = canvas.toDataURL("image/png")
       link.click()
     }
     img.onerror = () => {
@@ -540,7 +526,6 @@ const MermaidChart = memo(function MermaidChart({
         >
           {svgBlobUrl && (
             <img
-              ref={imgRef}
               src={svgBlobUrl}
               alt={`Mermaid ${getDiagramTypeFromSource(source)}`}
             />
