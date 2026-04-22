@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { FC, memo, useCallback, useId, useRef, useState } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
 
@@ -155,15 +163,29 @@ const TextArea: FC<Props> = ({
 
   const theme = useEmotionTheme()
 
+  // Track if we've done the initial height calculation with a valid width.
+  // This prevents recalculating on every window resize, which would override manual user resizes.
+  const hasInitializedWithWidthRef = useRef(false)
+
   const {
     height: autoExpandHeight,
     maxHeight: autoExpandMaxHeight,
     updateScrollHeight,
   } = useTextInputAutoExpand({
     textareaRef,
-    // Recalculate height when placeholder or committed value changes
-    dependencies: [element.placeholder, value],
+    // Recalculate height when placeholder or displayed value changes.
+    // uiValue is used instead of value to ensure height updates during typing and after blur.
+    dependencies: [element.placeholder, uiValue],
   })
+
+  // Recalculate height once when width first becomes available (ResizeObserver is async).
+  // We don't include width in dependencies above to avoid overriding manual user resizes.
+  useEffect(() => {
+    if (width > 0 && !hasInitializedWithWidthRef.current) {
+      hasInitializedWithWidthRef.current = true
+      updateScrollHeight()
+    }
+  }, [width, updateScrollHeight])
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
