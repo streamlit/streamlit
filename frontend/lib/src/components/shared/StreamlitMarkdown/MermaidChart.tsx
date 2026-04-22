@@ -180,6 +180,7 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
 
       // Sequence diagram notes (yellow background is distinctive)
       noteBkgColor: palette.yellow,
+      noteTextColor: theme.colors.bodyText,
 
       // Gantt chart status colors
       doneTaskBkgColor: palette.green,
@@ -187,6 +188,14 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       critBkgColor: palette.red,
       critBorderColor: theme.colors.redTextColor,
       todayLineColor: theme.colors.primary,
+      gridColor: theme.colors.borderColor,
+      // Gantt task text colors for readability
+      taskTextColor: theme.colors.bodyText,
+      taskTextOutsideColor: theme.colors.bodyText,
+      taskTextLightColor: theme.colors.bodyText,
+      taskTextDarkColor: theme.colors.bodyText,
+      sectionBkgColor: theme.colors.secondaryBg,
+      altSectionBkgColor: theme.colors.bgColor,
 
       // Pie chart colors (need explicit palette for consistency)
       pie1: palette.blue,
@@ -196,6 +205,8 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       pie5: palette.violet,
       pie6: palette.yellow,
       pie7: palette.gray,
+      pieStrokeColor: theme.colors.borderColor,
+      pieOuterStrokeColor: theme.colors.borderColor,
 
       // Git graph branch colors
       git0: theme.colors.blueTextColor,
@@ -206,6 +217,15 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
       git5: theme.colors.yellowTextColor,
       git6: theme.colors.grayTextColor,
       git7: theme.colors.primary,
+      // White text on colored branch labels for readability
+      gitBranchLabel0: theme.colors.bgColor,
+      gitBranchLabel1: theme.colors.bgColor,
+      gitBranchLabel2: theme.colors.bgColor,
+      gitBranchLabel3: theme.colors.bgColor,
+      gitBranchLabel4: theme.colors.bgColor,
+      gitBranchLabel5: theme.colors.bgColor,
+      gitBranchLabel6: theme.colors.bgColor,
+      gitBranchLabel7: theme.colors.bgColor,
 
       // Mindmap colors
       mindmap1: palette.blue,
