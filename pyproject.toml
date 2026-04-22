@@ -36,6 +36,9 @@ dependencies = []
 required-version = ">=0.9.0"
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
+# Prevent building pyarrow from source - it always provides pre-built wheels,
+# and source builds require the Arrow C++ library which isn't available in CI.
+no-build-package = ["pyarrow"]
 # Explicit pandas version constraints by Python version:
 # - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
 # - Python 3.11+: use pandas 3.x
