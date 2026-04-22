@@ -439,7 +439,12 @@ def Column(
 
         data_df = pd.DataFrame(
             {
-                "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
+                "widgets": [
+                    "st.selectbox",
+                    "st.number_input",
+                    "st.text_area",
+                    "st.button",
+                ],
             }
         )
 
@@ -747,7 +752,12 @@ def TextColumn(
 
         data_df = pd.DataFrame(
             {
-                "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
+                "widgets": [
+                    "st.selectbox",
+                    "st.number_input",
+                    "st.text_area",
+                    "st.button",
+                ],
             }
         )
 
@@ -927,7 +937,7 @@ def LinkColumn(
                     help="The top trending Streamlit apps",
                     validate=r"^https://[a-z]+\.streamlit\.app$",
                     max_chars=100,
-                    display_text=r"https://(.*?)\.streamlit\.app"
+                    display_text=r"https://(.*?)\.streamlit\.app",
                 ),
                 "creator": st.column_config.LinkColumn(
                     "App Creator", display_text="Open profile"
@@ -1045,7 +1055,12 @@ def CheckboxColumn(
 
         data_df = pd.DataFrame(
             {
-                "widgets": ["st.selectbox", "st.number_input", "st.text_area", "st.button"],
+                "widgets": [
+                    "st.selectbox",
+                    "st.number_input",
+                    "st.text_area",
+                    "st.button",
+                ],
                 "favorite": [True, False, False, True],
             }
         )
@@ -1453,7 +1468,7 @@ def LineChartColumn(
                     help="The sales volume in the last 6 months",
                     y_min=0,
                     y_max=100,
-                 ),
+                ),
             },
             hide_index=True,
         )
@@ -1577,7 +1592,7 @@ def AreaChartColumn(
                     help="The sales volume in the last 6 months",
                     y_min=0,
                     y_max=100,
-                 ),
+                ),
             },
             hide_index=True,
         )
