@@ -536,3 +536,37 @@ export const StyledHelpIconWrapper = styled.span({
   verticalAlign: "middle",
   transform: "translateY(-0.1em)",
 })
+
+export const StyledMermaidContainer = styled.div<{
+  hasError: boolean
+  isFullScreen: boolean
+}>(({ theme, hasError, isFullScreen }) => ({
+  display: "flex",
+  flexDirection: "column",
+  alignItems: hasError ? "flex-start" : "center",
+  justifyContent: isFullScreen ? "center" : "flex-start",
+  minHeight: "2rem",
+  padding: theme.spacing.md,
+  height: isFullScreen ? "100%" : "auto",
+  width: "100%",
+  "& img": {
+    width: isFullScreen ? "100%" : "auto",
+    maxWidth: "100%",
+    height: "auto",
+    maxHeight: isFullScreen ? "100%" : "25rem",
+    objectFit: "contain",
+    borderRadius: theme.radii.default,
+  },
+}))
+
+export const StyledMermaidErrorMessage = styled.div(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  backgroundColor: theme.colors.redBackgroundColor,
+  padding: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  fontSize: theme.fontSizes.sm,
+  fontFamily: theme.genericFonts.codeFont,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+  width: "100%",
+}))
