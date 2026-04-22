@@ -258,19 +258,17 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert '"displayModeBar": false' in el.plotly_chart.config
         assert '"responsive": true' in el.plotly_chart.config
 
-    def test_show_deprecation_warning_for_kwargs(self):
+    def test_kwargs_raises_type_error(self):
+        """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
         import plotly.graph_objs as go
 
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
         data = [trace0]
 
-        st.plotly_chart(data, sharing="streamlit")
-        # Get the second to last element, which should be deprecation warning
-        el = self.get_delta_from_queue(-2).new_element
-        assert (
-            "have been deprecated and will be removed in a future release"
-            in el.alert.body
-        )
+        # Passing kwargs that were previously supported (like `sharing`) should now
+        # raise a TypeError since **kwargs support was removed.
+        with pytest.raises(TypeError):
+            st.plotly_chart(data, sharing="streamlit")  # type: ignore[call-overload]
 
 
 class PlotlyChartWidthTest(DeltaGeneratorTestCase):
