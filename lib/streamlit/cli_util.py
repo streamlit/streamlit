@@ -77,6 +77,29 @@ def open_browser(url: str) -> None:
         The URL. Must include the protocol.
 
     """
+    # If the user has configured a specific browser command, use it directly
+    # via subprocess rather than webbrowser.get(), which only accepts
+    # registered browser type names and not arbitrary executable paths.
+    from streamlit import config
+
+    browser_command = config.get_option("browser.command")
+    if browser_command:
+        import subprocess
+        import sys
+
+        if sys.platform == "win32":
+            subprocess.Popen(
+                [browser_command, url],
+                shell=True,
+            )
+        else:
+            subprocess.Popen(
+                [browser_command, url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        return
+
     # Treat Windows separately because:
     # 1. /dev/null doesn't exist.
     # 2. subprocess.Popen(['start', url]) doesn't actually pop up the

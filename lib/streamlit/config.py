@@ -1120,6 +1120,24 @@ _create_option(
 )
 
 
+_create_option(
+    "browser.command",
+    description="""
+        The browser executable to use when opening URLs. This should be
+        a command name on your PATH or a full path to the browser binary.
+        Examples:
+        - macOS: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        - Linux: "google-chrome" or "firefox"
+        - Windows: "chrome"
+        - WSL: "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
+
+        If not set, Streamlit will use the default browser for the OS.
+    """,
+    default_val="",
+    type_=str,
+)
+
+
 @_create_option("browser.serverPort", type_=int)
 def _browser_server_port() -> int:
     """Port where users should point their browsers in order to connect to the
