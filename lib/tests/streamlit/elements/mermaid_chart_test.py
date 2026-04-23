@@ -14,6 +14,8 @@
 
 """Mermaid chart unit tests."""
 
+from __future__ import annotations
+
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -21,14 +23,14 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 class MermaidChartTest(DeltaGeneratorTestCase):
     """Test ability to render mermaid charts."""
 
-    def test_mermaid_chart(self):
+    def test_mermaid_chart(self) -> None:
         """Test that mermaid_chart wraps content in a mermaid code block."""
         st.mermaid_chart("graph TD\n    A --> B")
 
-        c = self.get_delta_from_queue().new_element.markdown
-        assert c.body == "```mermaid\ngraph TD\n    A --> B\n```"
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == "```mermaid\ngraph TD\n    A --> B\n```"
 
-    def test_mermaid_chart_multiline(self):
+    def test_mermaid_chart_multiline(self) -> None:
         """Test mermaid_chart with multiline diagram definition."""
         diagram = """
 graph LR
@@ -38,5 +40,12 @@ graph LR
 """
         st.mermaid_chart(diagram)
 
-        c = self.get_delta_from_queue().new_element.markdown
-        assert c.body == f"```mermaid\n{diagram}\n```"
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == f"```mermaid\n{diagram}\n```"
+
+    def test_mermaid_chart_empty_body(self) -> None:
+        """Test mermaid_chart with empty body still wraps in code block."""
+        st.mermaid_chart("")
+
+        element = self.get_delta_from_queue().new_element.markdown
+        assert element.body == "```mermaid\n\n```"
