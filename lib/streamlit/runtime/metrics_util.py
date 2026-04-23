@@ -276,8 +276,9 @@ def _detect_installed_skills(app_dir: str | None) -> list[str]:
     """Detect Streamlit-shipped agent skills in well-known locations.
 
     Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
-    tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is
-    ``claude`` or ``agents``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
+    tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is one
+    of ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, or
+    ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
     Never raises: filesystem errors are swallowed and produce an empty list.
 
     The result is cached per ``app_dir`` for the lifetime of the process.
