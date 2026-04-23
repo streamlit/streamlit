@@ -798,14 +798,7 @@ def _clear_skills_cache() -> Iterator[None]:
     metrics_util._detect_installed_skills_cached.cache_clear()
 
 
-@pytest.mark.parametrize(
-    ("location", "root_kind"),
-    [
-        ("home", "home"),
-        ("app", "app"),
-        ("repo", "repo"),
-    ],
-)
+@pytest.mark.parametrize("location", ["home", "app", "repo"])
 @pytest.mark.parametrize(
     ("harness", "project_dir", "home_dir"),
     [
@@ -826,7 +819,6 @@ def test_detect_installed_skills_emits_expected_token(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     location: str,
-    root_kind: str,
     harness: str,
     project_dir: str,
     home_dir: str,
@@ -841,18 +833,13 @@ def test_detect_installed_skills_emits_expected_token(
     _init_git_repo(repo)
 
     roots = {"home": home, "app": app, "repo": repo}
-    harness_dir = home_dir if root_kind == "home" else project_dir
-    _make_skill_dir(roots[root_kind], harness_dir, skill)
+    harness_dir = home_dir if location == "home" else project_dir
+    _make_skill_dir(roots[location], harness_dir, skill)
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
-    expected_token = f"{location}:{harness}:{skill}"
-    if location == root_kind:
-        assert expected_token in tokens
-    else:
-        # Sanity: a skill planted under one root must not be reported under another.
-        assert expected_token not in tokens
+    assert f"{location}:{harness}:{skill}" in tokens
 
 
 def test_detect_installed_skills_empty_when_absent(
