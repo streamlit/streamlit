@@ -64,6 +64,12 @@ The current `UploadedFileManager` protocol is **incomplete** for custom backends
 | `get_upload_urls()` | ✅ Yes (optional) | Return upload URLs |
 | `add_file()` | ❌ **No** | Store uploaded file |
 | `remove_file()` | ❌ **No** | Delete single file |
+| `stats_families` | ✅ Yes* | StatsProvider property |
+| `get_stats()` | ✅ Yes* | StatsProvider method |
+
+*The protocol extends `StatsProvider` (`uploaded_file_manager.py:92`), which requires
+`stats_families` property and `get_stats()` method. Custom implementations must satisfy
+these requirements (can return empty stats if not tracking metrics).
 
 The HTTP upload route (`starlette_routes.py:702`) calls `upload_mgr.add_file()` directly,
 which only exists on `MemoryUploadedFileManager`, not the protocol.
@@ -92,15 +98,27 @@ So while URL routing works, the payload format is incompatible with S3 pre-signe
 **Verdict:** Recommend Option 1 for initial release (simpler, no frontend changes).
 Option 2 can be added later for performance-critical use cases.
 
-### ✅ Media File Storage — Fully Extensible
+### ⚠️ Media File Storage — Requires Route Wiring Changes
 
-The `MediaFileStorage` protocol is clean and complete:
+The `MediaFileStorage` protocol includes:
 
 - `load_and_get_id()` — Store media and return ID
 - `get_url()` — Generate URL for serving
 - `delete_file()` — Optional cleanup
 
-**Verdict:** Ready for custom backends.
+**However**, the current Starlette `/media` route wiring is **not** protocol-based end-to-end:
+`create_media_routes()` in `starlette_app.py` casts `runtime.media_file_mgr._storage` to
+`MemoryMediaFileStorage` and calls `get_file(file_id)`, which is **not** part of the
+`MediaFileStorage` protocol.
+
+**Required implementation choice:**
+
+1. **Protocol-only route setup (recommended):** Update media route creation to use
+   `get_url()` for serving (redirect to the URL) instead of direct in-process retrieval.
+2. **Extend the protocol:** Add `get_file()` to `MediaFileStorage` so non-memory backends
+   can participate in the current serving flow.
+
+**Verdict:** Requires route wiring changes before custom backends work end-to-end.
 
 ### ❌ Session Storage — NOT Extensible
 
@@ -170,9 +188,27 @@ class UploadedFileManager(Protocol):
     def remove_file(self, session_id: str, file_id: str) -> None:
         """Remove a single file. Called by the HTTP delete route."""
         ...
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        """Return stat family names (from StatsProvider)."""
+        ...
+
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> Mapping[str, Sequence[Stat]]:
+        """Return stats for the requested families (from StatsProvider)."""
+        ...
 ```
 
-This makes the HTTP route (`starlette_routes.py`) work with any implementation.
+**Note:** The `StatsProvider` requirements expose internal concerns to custom
+implementations. A future implementation may decouple stats from the protocol (e.g.,
+via a wrapper or adapter), but for now custom implementations must satisfy these
+methods (can return empty sequences if not tracking metrics).
+
+This makes the HTTP route (`starlette_routes.py`) work with any implementation,
+**provided** the route wiring is also updated to depend on the protocol instead of
+`MemoryUploadedFileManager` (see Implementation Changes below).
 
 ### Existing Protocols (No Changes Needed)
 
@@ -221,6 +257,24 @@ def _create_runtime(self) -> Runtime:
     )
 ```
 
+**Starlette server route wiring** — Consume runtime storage via protocols, not memory-only
+implementations:
+
+- Update `create_upload_routes()` and `create_media_routes()` to accept `UploadedFileManager`
+  / `MediaFileStorage` (or narrower route-specific protocols), rather than concrete in-memory
+  classes such as `MemoryUploadedFileManager` and `MemoryMediaFileStorage`.
+- Remove route-layer hard-casts from `runtime.uploaded_file_mgr` / `runtime.media_file_mgr`
+  to memory implementations and eliminate the corresponding `# type: ignore` usage.
+- For media serving: Either redirect to `get_url()` or add `get_file()` to the protocol
+  (see Feasibility Analysis above).
+- Ensure helper functions such as `create_upload_routes(...)` and any local route wiring
+  variables are annotated against protocol types so custom backends work end-to-end once
+  injected through `st.App`.
+
+This route-layer update is required in addition to changing `st.App._create_runtime`;
+otherwise, custom backends can be constructed in `RuntimeConfig` but still fail at the
+web server boundary where the routes are currently wired for in-memory implementations.
+
 ### Public Exports
 
 Export the protocols from a new `streamlit.storage` submodule:
@@ -231,8 +285,12 @@ from streamlit.storage import (
     CacheStorage,
     CacheStorageManager,
     CacheStorageContext,
+    CacheStorageKeyNotFoundError,  # Required for get() contract
+    CacheStorageError,              # Base exception class
+    InvalidCacheStorageContextError,
     # Media storage
     MediaFileStorage,
+    MediaFileStorageError,
     MediaFileKind,
     # Upload storage
     UploadedFileManager,
@@ -249,7 +307,10 @@ from streamlit.storage import (
 ```python
 import redis
 import streamlit as st
-from streamlit.storage import CacheStorage, CacheStorageManager, CacheStorageContext
+from streamlit.storage import (
+    CacheStorage, CacheStorageManager, CacheStorageContext,
+    CacheStorageKeyNotFoundError,
+)
 
 class RedisCacheStorage(CacheStorage):
     def __init__(self, client: redis.Redis, prefix: str, ttl: int | None):
@@ -257,8 +318,12 @@ class RedisCacheStorage(CacheStorage):
         self._prefix = prefix
         self._ttl = ttl
 
-    def get(self, key: str) -> bytes | None:
-        return self._client.get(f"{self._prefix}:{key}")
+    def get(self, key: str) -> bytes:
+        """Get cached value. Raises CacheStorageKeyNotFoundError on miss."""
+        value = self._client.get(f"{self._prefix}:{key}")
+        if value is None:
+            raise CacheStorageKeyNotFoundError(key)
+        return value
 
     def set(self, key: str, value: bytes) -> None:
         self._client.set(f"{self._prefix}:{key}", value, ex=self._ttl)
@@ -295,19 +360,42 @@ app = st.App(
 
 ```python
 import uuid
+from collections.abc import Mapping, Sequence
 import boto3
 import streamlit as st
+from streamlit.runtime.stats import Stat
 from streamlit.storage import (
     UploadedFileManager, UploadedFileRec, UploadFileUrlInfo, DeletedFile
 )
 
 class S3UploadedFileManager(UploadedFileManager):
-    """Upload files to S3 instead of memory."""
+    """Upload files to S3 instead of memory.
+
+    Note: Files are still fully buffered in memory when read via get_files().
+    This backend avoids persisting uploads in the Streamlit server's heap
+    across requests, but large files will still consume memory when accessed
+    by the user script via st.file_uploader.
+    """
 
     def __init__(self, bucket: str, prefix: str = "uploads"):
         self._s3 = boto3.client("s3")
         self._bucket = bucket
         self._prefix = prefix
+
+    # --- StatsProvider interface (required by protocol) ---
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        """No custom stats for this backend."""
+        return []
+
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> Mapping[str, Sequence[Stat]]:
+        """Return empty stats."""
+        return {}
+
+    # --- UploadedFileManager interface ---
 
     def add_file(self, session_id: str, file: UploadedFileRec) -> None:
         """Store file in S3 (called by HTTP upload route)."""
@@ -374,10 +462,13 @@ app = st.App(
 #### Disk-Based File Upload (Addresses #10828)
 
 ```python
+import re
 import uuid
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 import streamlit as st
+from streamlit.runtime.stats import Stat
 from streamlit.storage import (
     UploadedFileManager, UploadedFileRec, UploadFileUrlInfo
 )
@@ -389,24 +480,49 @@ class DiskUploadedFileManager(UploadedFileManager):
         self._base = Path(base_path)
         self._base.mkdir(parents=True, exist_ok=True)
 
+    def _sanitize_id(self, id_str: str) -> str:
+        """Sanitize session_id/file_id to prevent path traversal attacks."""
+        # Only allow alphanumeric, hyphens, underscores
+        sanitized = re.sub(r'[^a-zA-Z0-9_-]', '_', id_str)
+        # Prevent empty strings
+        return sanitized or "unknown"
+
     def _session_dir(self, session_id: str) -> Path:
-        path = self._base / session_id
+        safe_session_id = self._sanitize_id(session_id)
+        path = self._base / safe_session_id
         path.mkdir(exist_ok=True)
         return path
 
+    # --- StatsProvider interface (required by protocol) ---
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        """No custom stats for this backend."""
+        return []
+
+    def get_stats(
+        self, family_names: Sequence[str] | None = None
+    ) -> Mapping[str, Sequence[Stat]]:
+        """Return empty stats."""
+        return {}
+
+    # --- UploadedFileManager interface ---
+
     def add_file(self, session_id: str, file: UploadedFileRec) -> None:
         session_dir = self._session_dir(session_id)
+        safe_file_id = self._sanitize_id(file.file_id)
         # Write file data
-        (session_dir / file.file_id).write_bytes(file.data)
+        (session_dir / safe_file_id).write_bytes(file.data)
         # Write metadata
-        (session_dir / f"{file.file_id}.meta").write_text(
+        (session_dir / f"{safe_file_id}.meta").write_text(
             json.dumps({"name": file.name, "type": file.type})
         )
 
     def remove_file(self, session_id: str, file_id: str) -> None:
         session_dir = self._session_dir(session_id)
-        (session_dir / file_id).unlink(missing_ok=True)
-        (session_dir / f"{file_id}.meta").unlink(missing_ok=True)
+        safe_file_id = self._sanitize_id(file_id)
+        (session_dir / safe_file_id).unlink(missing_ok=True)
+        (session_dir / f"{safe_file_id}.meta").unlink(missing_ok=True)
 
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
@@ -414,8 +530,9 @@ class DiskUploadedFileManager(UploadedFileManager):
         session_dir = self._session_dir(session_id)
         files = []
         for file_id in file_ids:
-            file_path = session_dir / file_id
-            meta_path = session_dir / f"{file_id}.meta"
+            safe_file_id = self._sanitize_id(file_id)
+            file_path = session_dir / safe_file_id
+            meta_path = session_dir / f"{safe_file_id}.meta"
             if file_path.exists() and meta_path.exists():
                 meta = json.loads(meta_path.read_text())
                 files.append(UploadedFileRec(
@@ -428,7 +545,8 @@ class DiskUploadedFileManager(UploadedFileManager):
 
     def remove_session_files(self, session_id: str) -> None:
         import shutil
-        session_dir = self._base / session_id
+        safe_session_id = self._sanitize_id(session_id)
+        session_dir = self._base / safe_session_id
         if session_dir.exists():
             shutil.rmtree(session_dir)
 
@@ -555,5 +673,8 @@ Keep storage configuration separate from `st.App`, perhaps via `RuntimeConfig` d
 - **Config.toml storage selection:** Simpler UX for common backends, but requires
   shipping official implementations first.
 - **Automatic serialization:** Users must handle serialization in their implementations.
-- **Async storage protocols:** Current protocols are sync; async versions may be added
-  later if needed for performance.
+- **Async storage protocols:** Current protocols are synchronous. The Starlette upload
+  routes are async, so a synchronous `add_file()` that performs a network call (e.g., S3
+  PUT) will block the event loop. The implementation should use `asyncio.to_thread()` when
+  invoking synchronous custom storage from async routes, or document this as a known
+  limitation. Adding async protocol variants is deferred to a future iteration.
