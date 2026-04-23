@@ -252,8 +252,9 @@ _SKILL_MARKER_FILENAME: Final = "SKILL.md"
 # (harness, project_dir, home_dirs) - each entry's project_dir is checked under
 # the app and repo roots; home_dirs are checked under ~.
 _HARNESSES: Final = (
+    ("agents", ".agents/skills", (".agents/skills",)),
     ("claude", ".claude/skills", (".claude/skills",)),
-    ("codex", ".agents/skills", (".codex/skills",)),
+    ("codex", ".codex/skills", (".codex/skills",)),
     ("cortex", ".cortex/skills", (".snowflake/cortex/skills",)),
     ("cursor", ".cursor/skills", (".cursor/skills",)),
     ("gemini", ".gemini/skills", (".gemini/skills",)),
@@ -277,8 +278,8 @@ def _detect_installed_skills(app_dir: str | None) -> list[str]:
 
     Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
     tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is one
-    of ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, or
-    ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
+    of ``agents``, ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``,
+    or ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
     Never raises: filesystem errors are swallowed and produce an empty list.
 
     The result is cached per ``app_dir`` for the lifetime of the process.

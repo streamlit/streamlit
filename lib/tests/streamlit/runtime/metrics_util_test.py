@@ -809,8 +809,9 @@ def _clear_skills_cache() -> Iterator[None]:
 @pytest.mark.parametrize(
     ("harness", "project_dir", "home_dir"),
     [
+        ("agents", ".agents/skills", ".agents/skills"),
         ("claude", ".claude/skills", ".claude/skills"),
-        ("codex", ".agents/skills", ".codex/skills"),
+        ("codex", ".codex/skills", ".codex/skills"),
         ("cortex", ".cortex/skills", ".snowflake/cortex/skills"),
         ("cursor", ".cursor/skills", ".cursor/skills"),
         ("gemini", ".gemini/skills", ".gemini/skills"),
@@ -911,7 +912,7 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
-    assert tokens == ["repo:codex:finding-streamlit-skills"]
+    assert tokens == ["repo:agents:finding-streamlit-skills"]
 
 
 def test_detect_installed_skills_returns_sorted_deduped_tokens(
@@ -932,7 +933,7 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
-        "app:codex:finding-streamlit-skills",
+        "app:agents:finding-streamlit-skills",
         "home:cursor:developing-with-streamlit",
         "repo:claude:developing-with-streamlit",
     ]

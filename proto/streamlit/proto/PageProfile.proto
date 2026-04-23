@@ -37,8 +37,8 @@ message PageProfile {
   // "<location>:<harness>:<skill>" tokens. Locations are "home" (user home),
   // "app" (directory of the main script), and "repo" (nearest ancestor
   // containing a ``.git`` directory, if different from ``app``). Harnesses
-  // are "claude", "codex", "cortex", "cursor", "gemini", and "opencode"
-  // (each uses its own skills directory convention). Skills are
+  // are "agents", "claude", "codex", "cortex", "cursor", "gemini", and
+  // "opencode" (each uses its own skills directory convention). Skills are
   // "developing-with-streamlit" and "finding-streamlit-skills".
   // Empty when no bundled skills are installed.
   repeated string installed_skills = 13;
