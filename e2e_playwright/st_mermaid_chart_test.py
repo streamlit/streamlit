@@ -107,3 +107,46 @@ def test_themed_pie_chart(themed_app: Page, assert_snapshot: ImageCompareFunctio
     pie_chart = container.get_by_test_id("stMermaidChart").nth(4)
     expect(pie_chart.locator("img")).to_be_visible()
     assert_snapshot(pie_chart, name="st_mermaid_chart-pie_chart_themed")
+
+
+def test_toolbar_copy_source(app: Page):
+    """Test that copy source toolbar action works."""
+    container = get_element_by_key(app, "mermaid_charts")
+    mermaid_chart = container.get_by_test_id("stMermaidChart").first
+    expect(mermaid_chart.locator("img")).to_be_visible()
+
+    # Toolbar should be hidden initially
+    copy_button = mermaid_chart.get_by_role("button", name="Copy source")
+    expect(copy_button).not_to_be_visible()
+
+    # Hover to show toolbar
+    mermaid_chart.hover()
+    expect(copy_button).to_be_visible()
+
+    # Click copy button
+    copy_button.click()
+
+    # Button label should change to indicate success
+    expect(mermaid_chart.get_by_role("button", name="Copied!")).to_be_visible()
+
+
+def test_toolbar_download_png(app: Page):
+    """Test that download PNG toolbar action is available."""
+    container = get_element_by_key(app, "mermaid_charts")
+    mermaid_chart = container.get_by_test_id("stMermaidChart").first
+    expect(mermaid_chart.locator("img")).to_be_visible()
+
+    # Toolbar should be hidden initially
+    download_button = mermaid_chart.get_by_role("button", name="Download as PNG")
+    expect(download_button).not_to_be_visible()
+
+    # Hover to show toolbar
+    mermaid_chart.hover()
+    expect(download_button).to_be_visible()
+
+    # Click should trigger download (we verify the button is clickable)
+    with app.expect_download() as download_info:
+        download_button.click()
+
+    download = download_info.value
+    assert download.suggested_filename == "mermaid-diagram.png"
