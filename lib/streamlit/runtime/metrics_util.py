@@ -259,22 +259,17 @@ _HARNESSES: Final = (
     ("gemini", ".gemini/skills", (".gemini/skills",)),
     ("opencode", ".opencode/skills", (".config/opencode/skills",)),
 )
-# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
-# to avoid scanning the entire filesystem on pathological layouts.
-_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
 
 
 def _find_git_root(start: str) -> str | None:
-    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``."""
-    current = os.path.abspath(start)
-    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
-        if os.path.exists(os.path.join(current, ".git")):
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            return None
-        current = parent
-    return None
+    """Return the working tree of the nearest git repo containing ``start``, or ``None``."""
+    try:
+        from git import Repo
+
+        working_tree_dir = Repo(start, search_parent_directories=True).working_tree_dir
+    except Exception:
+        return None
+    return str(working_tree_dir) if working_tree_dir is not None else None
 
 
 def _detect_installed_skills(app_dir: str | None) -> list[str]:

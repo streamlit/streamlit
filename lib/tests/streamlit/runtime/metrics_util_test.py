@@ -783,6 +783,13 @@ def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
     return marker
 
 
+def _init_git_repo(path: Path) -> None:
+    """Initialize ``path`` as a real git repo so GitPython recognizes it."""
+    from git import Repo
+
+    Repo.init(str(path))
+
+
 @pytest.fixture(autouse=True)
 def _clear_skills_cache() -> Iterator[None]:
     """Reset the skill-detection cache around each test in this module section."""
@@ -816,6 +823,7 @@ def _clear_skills_cache() -> Iterator[None]:
 )
 def test_detect_installed_skills_emits_expected_token(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
     location: str,
     root_kind: str,
     harness: str,
@@ -829,16 +837,14 @@ def test_detect_installed_skills_emits_expected_token(
     repo = tmp_path / "repo"
     home.mkdir()
     app.mkdir(parents=True)
-    (repo / ".git").mkdir()
+    _init_git_repo(repo)
 
     roots = {"home": home, "app": app, "repo": repo}
     harness_dir = home_dir if root_kind == "home" else project_dir
     _make_skill_dir(roots[root_kind], harness_dir, skill)
 
-    with patch(
-        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
-    ):
-        tokens = metrics_util._detect_installed_skills(str(app))
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
 
     expected_token = f"{location}:{harness}:{skill}"
     if location == root_kind:
@@ -848,84 +854,82 @@ def test_detect_installed_skills_emits_expected_token(
         assert expected_token not in tokens
 
 
-def test_detect_installed_skills_empty_when_absent(tmp_path: Path) -> None:
+def test_detect_installed_skills_empty_when_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Returns an empty list when no skills markers exist anywhere."""
     home = tmp_path / "home"
     app = tmp_path / "app"
     home.mkdir()
     app.mkdir()
 
-    with patch(
-        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
-    ):
-        assert metrics_util._detect_installed_skills(str(app)) == []
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_skills(str(app)) == []
 
 
-def test_detect_installed_skills_ignores_unrelated_skill_names(tmp_path: Path) -> None:
+def test_detect_installed_skills_ignores_unrelated_skill_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Skills with names outside ``_STREAMLIT_SKILL_NAMES`` must not trigger detection."""
     home = tmp_path / "home"
     home.mkdir()
     _make_skill_dir(home, ".claude/skills", "some-other-skill")
 
-    with patch(
-        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
-    ):
-        assert (
-            metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
-        )
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
 
 
-def test_detect_installed_skills_skips_repo_when_same_as_app(tmp_path: Path) -> None:
+def test_detect_installed_skills_skips_repo_when_same_as_app(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """When the app lives directly at the git root, ``repo`` tokens are deduped against ``app``."""
     home = tmp_path / "home"
     app_and_repo = tmp_path / "proj"
     home.mkdir()
     app_and_repo.mkdir()
-    (app_and_repo / ".git").mkdir()
+    _init_git_repo(app_and_repo)
     _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
 
-    with patch(
-        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
-    ):
-        tokens = metrics_util._detect_installed_skills(str(app_and_repo))
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app_and_repo))
 
     assert tokens == ["app:claude:developing-with-streamlit"]
 
 
-def test_detect_installed_skills_walks_up_to_repo_root(tmp_path: Path) -> None:
+def test_detect_installed_skills_walks_up_to_repo_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Skills planted at the git-root ancestor show up under ``repo:``, not ``app:``."""
     home = tmp_path / "home"
     repo = tmp_path / "proj"
     app = repo / "nested" / "app"
     home.mkdir()
     app.mkdir(parents=True)
-    (repo / ".git").mkdir()
+    _init_git_repo(repo)
     _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
 
-    with patch(
-        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
-    ):
-        tokens = metrics_util._detect_installed_skills(str(app))
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == ["repo:codex:finding-streamlit-skills"]
 
 
-def test_detect_installed_skills_returns_sorted_deduped_tokens(tmp_path: Path) -> None:
+def test_detect_installed_skills_returns_sorted_deduped_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Multiple hits across locations are returned sorted and without duplicates."""
     home = tmp_path / "home"
     repo = tmp_path / "proj"
     app = repo / "app"
     home.mkdir()
     app.mkdir(parents=True)
-    (repo / ".git").mkdir()
+    _init_git_repo(repo)
     _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
     _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
 
-    with patch(
-        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
-    ):
-        tokens = metrics_util._detect_installed_skills(str(app))
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
         "app:codex:finding-streamlit-skills",
