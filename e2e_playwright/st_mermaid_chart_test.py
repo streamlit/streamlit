@@ -112,37 +112,43 @@ def test_themed_pie_chart(themed_app: Page, assert_snapshot: ImageCompareFunctio
 def test_toolbar_copy_source(app: Page):
     """Test that copy source toolbar action works."""
     container = get_element_by_key(app, "mermaid_charts")
-    mermaid_chart = container.get_by_test_id("stMermaidChart").first
+    # Get the fullscreen frame which contains both the toolbar and the chart
+    fullscreen_frame = container.get_by_test_id("stFullScreenFrame").first
+    toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
+    mermaid_chart = fullscreen_frame.get_by_test_id("stMermaidChart")
     expect(mermaid_chart.locator("img")).to_be_visible()
 
-    # Toolbar should be hidden initially
-    copy_button = mermaid_chart.get_by_role("button", name="Copy to clipboard")
-    expect(copy_button).not_to_be_visible()
+    # Toolbar should be hidden initially (opacity 0)
+    expect(toolbar).not_to_have_css("opacity", "1")
 
     # Hover to show toolbar
-    mermaid_chart.hover()
-    expect(copy_button).to_be_visible()
+    fullscreen_frame.hover()
+    expect(toolbar).to_have_css("opacity", "1")
 
     # Click copy button
+    copy_button = toolbar.get_by_role("button", name="Copy to clipboard")
     copy_button.click()
 
     # Button label should change to indicate success
-    expect(mermaid_chart.get_by_role("button", name="Copied")).to_be_visible()
+    expect(toolbar.get_by_role("button", name="Copied")).to_be_visible()
 
 
 def test_toolbar_download_png(app: Page):
     """Test that download PNG toolbar action is available."""
     container = get_element_by_key(app, "mermaid_charts")
-    mermaid_chart = container.get_by_test_id("stMermaidChart").first
+    # Get the fullscreen frame which contains both the toolbar and the chart
+    fullscreen_frame = container.get_by_test_id("stFullScreenFrame").first
+    toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
+    mermaid_chart = fullscreen_frame.get_by_test_id("stMermaidChart")
     expect(mermaid_chart.locator("img")).to_be_visible()
 
-    # Toolbar should be hidden initially
-    download_button = mermaid_chart.get_by_role("button", name="Download as PNG")
-    expect(download_button).not_to_be_visible()
+    # Toolbar should be hidden initially (opacity 0)
+    expect(toolbar).not_to_have_css("opacity", "1")
 
     # Hover to show toolbar
-    mermaid_chart.hover()
-    expect(download_button).to_be_visible()
+    fullscreen_frame.hover()
+    expect(toolbar).to_have_css("opacity", "1")
 
-    # Verify the button can be clicked (download verification is flaky in CI)
+    # Verify the download button is visible and can be clicked
+    download_button = toolbar.get_by_role("button", name="Download as PNG")
     download_button.click()
