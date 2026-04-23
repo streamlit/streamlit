@@ -3811,7 +3811,7 @@ __metadata:
     typesync: "npm:^0.14.3"
     ua-parser-js: "npm:^1.0.41"
     util: "npm:^0.12.5"
-    uuid: "npm:^13.0.0"
+    uuid: "npm:^14.0.0"
     vite: "npm:^8.0.7"
     vite-bundle-analyzer: "npm:^1.3.7"
     vite-plugin-svgr: "npm:^5.2.0"
@@ -3827,7 +3827,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/component-v2-lib@workspace:component-v2-lib"
   dependencies:
-    typescript: "npm:^6.0.2"
+    typescript: "npm:^6.0.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.7"
     vite-plugin-dts: "npm:^4.5.4"
@@ -3972,7 +3972,7 @@ __metadata:
     unified: "npm:^11.0.5"
     unist-util-visit: "npm:^5.1.0"
     urlpattern-polyfill: "npm:^10.1.0"
-    uuid: "npm:^13.0.0"
+    uuid: "npm:^14.0.0"
     vega: "npm:^6.2.0"
     vega-embed: "npm:^7.1.0"
     vega-interpreter: "npm:^2.2.1"
@@ -4005,7 +4005,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/typescript-config@workspace:typescript-config"
   dependencies:
-    typescript: "npm:^6.0.2"
+    typescript: "npm:^6.0.3"
   languageName: unknown
   linkType: soft
 
@@ -9908,7 +9908,7 @@ __metadata:
     "@typescript-eslint/utils": "npm:^8.57.2"
     "@vitest/coverage-v8": "npm:^4.1.3"
     eslint: "npm:^9.39.2"
-    typescript: "npm:^6.0.2"
+    typescript: "npm:^6.0.3"
     typesync: "npm:^0.14.3"
     vitest: "npm:^4.1.3"
   peerDependencies:
@@ -17722,7 +17722,7 @@ __metadata:
     hoist-non-react-statics: "npm:^3.3.2"
     react: "npm:^18.2.0"
     react-dom: "npm:^18.2.0"
-    typescript: "npm:^6.0.2"
+    typescript: "npm:^6.0.3"
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.7"
     vite-plugin-dts: "npm:^4.5.4"
@@ -17765,7 +17765,7 @@ __metadata:
     knip: "npm:^6.3.1"
     oxfmt: "npm:^0.45.0"
     oxlint: "npm:^1.60.0"
-    typescript: "npm:^6.0.2"
+    typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.57.2"
     vitest: "npm:^4.1.3"
   languageName: unknown
@@ -18750,13 +18750,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^6.0.2":
-  version: 6.0.2
-  resolution: "typescript@npm:6.0.2"
+"typescript@npm:^6.0.3":
+  version: 6.0.3
+  resolution: "typescript@npm:6.0.3"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/4b860b0bf87cc0fee0f66d8ef2640b5a8a8a8c74d1129adb82e389e5f97124383823c47946bef8a73ede371461143a3aa8544399d2133c7b2e4f07e81860af7f
+  checksum: 10c0/4a25ff5045b984370f48f196b3a0120779b1b343d40b9a68d114ea5e5fff099809b2bb777576991a63a5cd59cf7bffd96ff6fe10afcefbcb8bd6fb96ad4b6606
   languageName: node
   linkType: hard
 
@@ -18770,13 +18770,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@npm%3A^6.0.2#optional!builtin<compat/typescript>":
-  version: 6.0.2
-  resolution: "typescript@patch:typescript@npm%3A6.0.2#optional!builtin<compat/typescript>::version=6.0.2&hash=5786d5"
+"typescript@patch:typescript@npm%3A^6.0.3#optional!builtin<compat/typescript>":
+  version: 6.0.3
+  resolution: "typescript@patch:typescript@npm%3A6.0.3#optional!builtin<compat/typescript>::version=6.0.3&hash=5786d5"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 10c0/49f0b84fc6ca55653e77752b8a61beabc09ee3dae5d965c31596225aa6ef213c5727b1d2e895b900416dc603854ba0872ac4a812c2a4ed6793a601f9c675de02
+  checksum: 10c0/2f25c74e65663c248fa1ade2b8459d9ce5372ff9dad07067310f132966ebec1d93f6c42f0baf77a6b6a7a91460463f708e6887013aaade22111037457c6b25df
   languageName: node
   linkType: hard
 
@@ -19222,12 +19222,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"uuid@npm:*, uuid@npm:^13.0.0":
-  version: 13.0.0
-  resolution: "uuid@npm:13.0.0"
+"uuid@npm:*, uuid@npm:^14.0.0":
+  version: 14.0.0
+  resolution: "uuid@npm:14.0.0"
   bin:
     uuid: dist-node/bin/uuid
-  checksum: 10c0/950e4c18d57fef6c69675344f5700a08af21e26b9eff2bf2180427564297368c538ea11ac9fb2e6528b17fc3966a9fd2c5049361b0b63c7d654f3c550c9b3d67
+  checksum: 10c0/a57ae7794c45005c1a9208989196c5baf79a7679c30f43c1bee9033a2c4d113a2cea216fa6fcc9663b08b0d55635df1a7c6eb7e7f3d21c3e50688c698fa39a50
   languageName: node
   linkType: hard
 
