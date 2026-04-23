@@ -3,13 +3,13 @@ author: lukasmasuch
 created: 2026-04-23
 ---
 
-# Live update mode for `st.text_input` and `st.text_area`
+# Live update mode for `st.text_input`
 
 ## Summary
 
-Add a parameter to `st.text_input` and `st.text_area` that triggers reruns while the user is
-typing, enabling real-time feedback use cases like live search, instant validation, and
-character-by-character filtering.
+Add a parameter to `st.text_input` that triggers reruns while the user is typing, enabling
+real-time feedback use cases like live search, instant validation, and character-by-character
+filtering.
 
 ## Problem
 
@@ -139,20 +139,6 @@ def text_input(
 ) -> str | None:
 ```
 
-The same `debounce` parameter applies to `st.text_area` with identical behavior:
-
-```python
-def text_area(
-    self,
-    label: str,
-    value: str | SupportsStr | None = "",
-    ...,
-    *,
-    debounce: int | None = None,  # New parameter (milliseconds)
-    ...,
-) -> str | None:
-```
-
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
 | `debounce` | `int \| None` | `None` | Debounce delay in milliseconds. When set, the widget triggers a rerun after the user stops typing for the specified duration. When `None` (default), reruns occur only on blur or Enter. |
@@ -200,22 +186,7 @@ else:
     st.write("Start typing to search...")
 ```
 
-**Example 2: Live Markdown preview**
-
-```python
-import streamlit as st
-
-col1, col2 = st.columns(2)
-
-with col1:
-    md_input = st.text_area("Markdown input", debounce=200, height=300)
-
-with col2:
-    st.markdown("### Preview")
-    st.markdown(md_input or "*Start typing...*")
-```
-
-**Example 3: Instant validation**
+**Example 2: Instant validation**
 
 ```python
 import streamlit as st
@@ -261,14 +232,11 @@ if email:
    debounce timer fires, the debounce should fire immediately on blur. This ensures a rerun always
    occurs when the user leaves the field, providing consistent behavior with the non-debounced case.
 
-8. **`st.text_area` Enter key behavior**: In `st.text_input`, pressing Enter triggers a rerun
-   immediately (without waiting for blur or debounce). In `st.text_area`, Enter inserts a newline
-   and does not trigger a rerun. When `debounce` is set on a `text_area`, Enter continues to
-   insert a newline and the debounce timer handles reruns - this preserves the existing semantic
-   difference between the two widgets.
-
 ## Out of Scope (Future Work)
 
+- **`st.text_area` support**: Extend the `debounce` parameter to `st.text_area` with identical
+  behavior. Note: Enter key inserts a newline in text_area (unlike text_input where it submits),
+  so debounce would be the primary rerun trigger while typing.
 - **Throttle mode**: Rate-limiting (e.g., "at most once per 500ms while typing") as opposed to
   debounce (waiting for pause). Could add `throttle` parameter if needed.
 - **Cancel/abort pattern**: Mechanism to cancel in-flight computations when new input arrives.
@@ -285,4 +253,4 @@ if email:
 | No new dependencies          | ✅ |
 | Metrics collected            | ✅ existing text_input metrics apply |
 | Any security/legal impact?   | None |
-| Any docs changes needed?     | ✅ update text_input and text_area docstrings |
+| Any docs changes needed?     | ✅ update text_input docstring |
