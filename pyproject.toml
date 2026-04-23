@@ -356,8 +356,6 @@ files = [
 exclude = [
   # The compilation error test file breaks mypy because of the syntax error.
   "^e2e_playwright/compilation_error_dialog\\.py$",
-  # Template apps have duplicate module names (each is `streamlit_app`).
-  "^lib/streamlit/\\.agents/",
 ]
 
 # Strict mode settings:
@@ -418,6 +416,8 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
+  # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
+  "yfinance.*",
   # SQLAlchemy is optional and its stubs are only installed with integration extras
   "sqlalchemy.*",
   # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10
@@ -438,7 +438,6 @@ include = ["lib/streamlit", "e2e_playwright", "scripts"]
 exclude = [
   "e2e_playwright/compilation_error_dialog.py",
   "lib/streamlit/vendor/**",
-  "lib/streamlit/.agents/**",
 ]
 
 [tool.ty.rules]

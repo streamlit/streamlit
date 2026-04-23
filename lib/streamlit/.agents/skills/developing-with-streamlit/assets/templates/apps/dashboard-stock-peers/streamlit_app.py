@@ -209,7 +209,8 @@ def load_data(tickers: Iterable[str], period: str) -> pd.DataFrame:
     data = tickers_obj.history(period=period)
     if data is None:
         raise RuntimeError("YFinance returned no data.")
-    return data["Close"]
+    close_prices: pd.DataFrame = data["Close"]
+    return close_prices
 
 
 # Load the data
@@ -219,6 +220,7 @@ except yf.exceptions.YFRateLimitError:
     st.warning("YFinance is rate-limiting us :(\nTry again later.")
     load_data.clear()  # Remove the bad cache entry.
     st.stop()
+    raise  # Unreachable — st.stop() halts execution, but helps type checker.
 
 empty_columns = data.columns[data.isna().all()].tolist()
 

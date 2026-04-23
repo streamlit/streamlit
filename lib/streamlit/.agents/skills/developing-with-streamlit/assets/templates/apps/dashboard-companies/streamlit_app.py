@@ -139,7 +139,7 @@ def _calc_growth(trend: list[float]) -> float:
 
 def _to_list(val: object) -> list[object]:
     """Wrap a scalar in a single-element list for MultiselectColumn display."""
-    return [val] if pd.notna(val) else []
+    return [val] if pd.notna(val) else []  # type: ignore[call-overload]  # ty: ignore[no-matching-overload]
 
 
 def aggregate_companies(
@@ -183,10 +183,10 @@ def aggregate_companies(
     # `include_groups=False` silences a pandas 2.2+ FutureWarning about
     # groupby keys being included in the applied function's input frame.
     sparklines = (
-        result.groupby("company_name")
+        result.groupby("company_name")  # ty: ignore[no-matching-overload]
         .apply(
             lambda x: x.sort_values("date")["daily_credits"].tolist(),
-            include_groups=False,
+            include_groups=False,  # type: ignore[call-overload]
         )
         .reset_index()
     )
@@ -294,7 +294,7 @@ with st.container(border=True):
         options=list(timeframe_options.keys()),
         default="Last 28 days",
     )
-    days_filter = timeframe_options.get(timeframe)
+    days_filter = timeframe_options.get(timeframe or "Last 28 days")
 
     # Account types
     account_types = st.pills(
@@ -400,8 +400,8 @@ with st.container(border=True):
     )
 
 # Company drill-down via dialog when Company column cell is clicked
-if selection.selection.cells:
-    cell = selection.selection.cells[0]  # tuple: (row_index, column_name)
+if selection.selection.cells:  # type: ignore[attr-defined]
+    cell = selection.selection.cells[0]  # type: ignore[attr-defined]  # tuple: (row_index, column_name)
     row_idx, col_name = cell
     # Check if the clicked cell is in the company_name column
     if col_name == "company_name":
@@ -409,7 +409,7 @@ if selection.selection.cells:
         company_row = leaderboard.iloc[row_idx]
 
         @st.dialog(f"{selected_company}", width="large")
-        def show_company_dialog():
+        def show_company_dialog() -> None:
             render_company_dialog(
                 selected_company,
                 company_row=company_row,

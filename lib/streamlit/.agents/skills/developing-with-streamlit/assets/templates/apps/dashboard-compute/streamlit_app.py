@@ -184,7 +184,8 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     else:
         return df
 
-    return df[df[x_col] >= min_date]
+    filtered: pd.DataFrame = df[df[x_col] >= min_date]
+    return filtered
 
 
 def create_line_chart(
@@ -198,7 +199,7 @@ def create_line_chart(
     """Create a line chart."""
     y_format = ".1%" if show_percent else ",.0f"
 
-    return (
+    chart: alt.Chart = (
         alt.Chart(df)
         .mark_line()
         .encode(
@@ -216,6 +217,7 @@ def create_line_chart(
         .properties(height=height)
         .interactive()
     )
+    return chart
 
 
 def create_bar_chart(
@@ -229,7 +231,7 @@ def create_bar_chart(
     """Create a stacked bar chart."""
     y_format = ".1%" if show_percent else ",.0f"
 
-    return (
+    chart: alt.Chart = (
         alt.Chart(df)
         .mark_bar()
         .encode(
@@ -249,6 +251,7 @@ def create_bar_chart(
         )
         .properties(height=height)
     )
+    return chart
 
 
 # =============================================================================
@@ -368,7 +371,7 @@ def dimension_metric(
         selected = selected or default_selection
         line_options = line_options or ["7-day MA"]
         filtered = data[data[dim_col].isin(selected)]
-        filtered = filter_by_time_range(filtered, "ds", time_range)
+        filtered = filter_by_time_range(filtered, "ds", time_range or "All")
 
         y_col = "credits_7d_ma" if "7-day MA" in line_options else "daily_credits"
 

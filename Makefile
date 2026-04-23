@@ -684,12 +684,16 @@ check:
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
-			PY_MYPY_FILES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
-			if [ -n "$$(echo "$$PY_MYPY_FILES" | tr -d ' ')" ]; then \
-				uv run mypy $$PY_MYPY_FILES && \
+			PY_MYPY_NON_TEMPLATE=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			PY_MYPY_TEMPLATES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			if [ -n "$$(echo "$$PY_MYPY_NON_TEMPLATE" | tr -d ' ')" ]; then \
+				uv run mypy $$PY_MYPY_NON_TEMPLATE && \
 				echo "" || PY_EXIT=1; \
-			else \
-				echo "(only template files changed; skipped — templates share module names)" && \
+			fi; \
+			if [ $$PY_EXIT -eq 0 ] && [ -n "$$(echo "$$PY_MYPY_TEMPLATES" | tr -d ' ')" ]; then \
+				for tpl in $$PY_MYPY_TEMPLATES; do \
+					MYPYPATH=lib uv run mypy "$$tpl" || PY_EXIT=1; \
+				done; \
 				echo ""; \
 			fi; \
 		fi; \

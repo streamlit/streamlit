@@ -148,7 +148,8 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     else:
         return df
 
-    return df[df[x_col] >= min_date]
+    filtered: pd.DataFrame = df[df[x_col] >= min_date]
+    return filtered
 
 
 def _melt_chart_data(
@@ -185,7 +186,7 @@ def render_line_chart(
     """Render a multi-line chart."""
     melted = _melt_chart_data(df, x_col, y_cols, labels)
 
-    return (
+    chart: alt.Chart = (
         alt.Chart(melted)
         .mark_line()
         .encode(
@@ -201,6 +202,7 @@ def render_line_chart(
         )
         .properties(height=height)
     )
+    return chart
 
 
 def render_area_chart(
@@ -213,7 +215,7 @@ def render_area_chart(
     """Render a stacked area chart."""
     melted = _melt_chart_data(df, x_col, y_cols, labels)
 
-    return (
+    chart: alt.Chart = (
         alt.Chart(melted)
         .mark_area(opacity=0.6, line=True)
         .encode(
@@ -224,6 +226,7 @@ def render_area_chart(
         )
         .properties(height=height)
     )
+    return chart
 
 
 def render_bar_chart(
@@ -241,7 +244,7 @@ def render_bar_chart(
     agg_df = df.groupby("week")[y_cols].mean().reset_index()
     melted = _melt_chart_data(agg_df, "week", y_cols, labels)
 
-    return (
+    chart: alt.Chart = (
         alt.Chart(melted)
         .mark_bar(opacity=0.8)
         .encode(
@@ -253,6 +256,7 @@ def render_bar_chart(
         )
         .properties(height=height)
     )
+    return chart
 
 
 def render_point_chart(
@@ -286,7 +290,8 @@ def render_point_chart(
         )
     )
 
-    return (points + trend).properties(height=height)
+    chart: alt.Chart = (points + trend).properties(height=height)
+    return chart
 
 
 # =============================================================================
@@ -355,7 +360,7 @@ def metric_card(
 
         # Apply filters
         line_options = line_options or ["7-day MA"]
-        filtered_df = filter_by_time_range(df, "ds", time_range)
+        filtered_df = filter_by_time_range(df, "ds", time_range or "All")
 
         # Determine which columns to show
         y_cols = []
