@@ -735,6 +735,7 @@ class ConfigTest(unittest.TestCase):
 
         config_options = sorted(
             [
+                "browser.command",
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",

@@ -1131,7 +1131,8 @@ _create_option(
         - Windows: "chrome"
         - WSL: "/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe"
 
-        If not set, Streamlit will use the default browser for the OS.
+        If this is an empty string (default), Streamlit uses the default
+        browser for the OS.
     """,
     default_val="",
     type_=str,

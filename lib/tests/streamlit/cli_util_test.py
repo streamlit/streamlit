@@ -30,48 +30,75 @@ class CliUtilTest(unittest.TestCase):
     )
     def test_open_browser(self, os_type, webbrowser_expect, popen_expect):
         """Test web browser opening scenarios."""
-        with patch.object(env_util, "IS_WINDOWS", os_type == "Windows"), \
-             patch.object(env_util, "IS_DARWIN", os_type == "Darwin"), \
-             patch.object(env_util, "IS_LINUX_OR_BSD", os_type == "Linux"):
-            with patch("streamlit.env_util.is_executable_in_path", return_value=True):
-                with patch("webbrowser.open") as webbrowser_open:
-                    with patch("subprocess.Popen") as subprocess_popen:
-                        open_browser("http://some-url")
-                        assert webbrowser_expect == webbrowser_open.called
-                        assert popen_expect == subprocess_popen.called
+        with (
+            patch.object(env_util, "IS_WINDOWS", os_type == "Windows"),
+            patch.object(env_util, "IS_DARWIN", os_type == "Darwin"),
+            patch.object(env_util, "IS_LINUX_OR_BSD", os_type == "Linux"),
+            patch_config_options({"browser.command": ""}),
+            patch("streamlit.env_util.is_executable_in_path", return_value=True),
+            patch("webbrowser.open") as webbrowser_open,
+            patch("subprocess.Popen") as subprocess_popen,
+        ):
+            open_browser("http://some-url")
+            assert webbrowser_expect == webbrowser_open.called
+            assert popen_expect == subprocess_popen.called
 
     def test_open_browser_linux_no_xdg(self):
-        """Test opening the browser on Linux with no xdg installed"""
-        with patch.object(env_util, "IS_LINUX_OR_BSD", True), \
-             patch.object(env_util, "IS_WINDOWS", False), \
-             patch.object(env_util, "IS_DARWIN", False):
-            with patch("streamlit.env_util.is_executable_in_path", return_value=False):
-                with patch("webbrowser.open") as webbrowser_open:
-                    with patch("subprocess.Popen") as subprocess_popen:
-                        open_browser("http://some-url")
-                        assert webbrowser_open.called
-                        assert not subprocess_popen.called
+        """Test opening the browser on Linux with no xdg installed."""
+        with (
+            patch.object(env_util, "IS_LINUX_OR_BSD", True),
+            patch.object(env_util, "IS_WINDOWS", False),
+            patch.object(env_util, "IS_DARWIN", False),
+            patch_config_options({"browser.command": ""}),
+            patch("streamlit.env_util.is_executable_in_path", return_value=False),
+            patch("webbrowser.open") as webbrowser_open,
+            patch("subprocess.Popen") as subprocess_popen,
+        ):
+            open_browser("http://some-url")
+            assert webbrowser_open.called
+            assert not subprocess_popen.called
 
     def test_open_browser_with_browser_command(self):
         """When browser.command is set, open_browser launches subprocess directly."""
-        with patch_config_options({"browser.command": "/usr/bin/firefox"}):
-            with patch("subprocess.Popen") as subprocess_popen:
-                open_browser("http://some-url")
+        with (
+            patch_config_options({"browser.command": "/usr/bin/firefox"}),
+            patch("subprocess.Popen") as subprocess_popen,
+        ):
+            open_browser("http://some-url")
 
-                subprocess_popen.assert_called_once()
-                args = subprocess_popen.call_args[0][0]
-                assert args == ["/usr/bin/firefox", "http://some-url"]
+            subprocess_popen.assert_called_once()
+            args = subprocess_popen.call_args[0][0]
+            assert args == ["/usr/bin/firefox", "http://some-url"]
+
+    def test_open_browser_with_browser_command_on_windows(self):
+        """browser.command overrides the Windows webbrowser fallback."""
+        with (
+            patch.object(env_util, "IS_WINDOWS", True),
+            patch.object(env_util, "IS_DARWIN", False),
+            patch.object(env_util, "IS_LINUX_OR_BSD", False),
+            patch_config_options({"browser.command": "chrome"}),
+            patch("webbrowser.open") as webbrowser_open,
+            patch("subprocess.Popen") as subprocess_popen,
+        ):
+            open_browser("http://some-url")
+
+            assert not webbrowser_open.called
+            subprocess_popen.assert_called_once()
+            args = subprocess_popen.call_args[0][0]
+            assert args == ["chrome", "http://some-url"]
 
     def test_open_browser_command_not_set_uses_default(self):
         """When browser.command is empty, the OS default mechanism is used."""
-        with patch.object(env_util, "IS_LINUX_OR_BSD", True), \
-             patch.object(env_util, "IS_WINDOWS", False), \
-             patch.object(env_util, "IS_DARWIN", False):
-            with patch_config_options({"browser.command": ""}):
-                with patch("streamlit.env_util.is_executable_in_path", return_value=True):
-                    with patch("subprocess.Popen") as subprocess_popen:
-                        open_browser("http://some-url")
+        with (
+            patch.object(env_util, "IS_LINUX_OR_BSD", True),
+            patch.object(env_util, "IS_WINDOWS", False),
+            patch.object(env_util, "IS_DARWIN", False),
+            patch_config_options({"browser.command": ""}),
+            patch("streamlit.env_util.is_executable_in_path", return_value=True),
+            patch("subprocess.Popen") as subprocess_popen,
+        ):
+            open_browser("http://some-url")
 
-                        subprocess_popen.assert_called_once()
-                        args = subprocess_popen.call_args[0][0]
-                        assert args[0] == "xdg-open"
+            subprocess_popen.assert_called_once()
+            args = subprocess_popen.call_args[0][0]
+            assert args[0] == "xdg-open"
