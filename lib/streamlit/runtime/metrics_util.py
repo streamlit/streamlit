@@ -244,6 +244,92 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
+# Streamlit-shipped agent skills we look for on the user's system. These
+# match the directory names under ``streamlit/.agents/skills/`` that users
+# may copy or symlink into an agent harness's skills directory.
+_STREAMLIT_SKILL_NAMES: Final = (
+    "developing-with-streamlit",
+    "finding-streamlit-skills",
+)
+_SKILL_MARKER_FILENAME: Final = "SKILL.md"
+# Agent-harness skill directory conventions we detect. Each entry is
+# (token, project_dir, home_dirs). ``project_dir`` is checked under ``app``
+# and ``repo``; each path in ``home_dirs`` is checked under ``~``. Most
+# harnesses share a single project/home shape; a few are asymmetric
+# (Codex's ``.agents/skills`` project vs ``.codex/skills`` home; Cortex
+# Code's ``.cortex/skills`` project vs ``.snowflake/cortex/skills`` home;
+# OpenCode's ``.config/opencode`` under home). Cortex Code also reads
+# ``~/.claude/skills`` per its docs, but those installs already show up
+# under the ``claude`` token so we don't double-count.
+_HARNESSES: Final = (
+    ("claude", ".claude/skills", (".claude/skills",)),
+    ("codex", ".agents/skills", (".codex/skills",)),
+    ("cortex", ".cortex/skills", (".snowflake/cortex/skills",)),
+    ("cursor", ".cursor/skills", (".cursor/skills",)),
+    ("gemini", ".gemini/skills", (".gemini/skills",)),
+    ("opencode", ".opencode/skills", (".config/opencode/skills",)),
+)
+# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
+# to avoid scanning the entire filesystem on pathological layouts.
+_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
+
+
+def _find_git_root(start: str) -> str | None:
+    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``."""
+    current = os.path.abspath(start)
+    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+    return None
+
+
+def _detect_installed_skills(app_dir: str | None) -> list[str]:
+    """Detect Streamlit-shipped agent skills in well-known locations.
+
+    Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
+    tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is
+    ``claude`` or ``agents``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
+    Never raises: filesystem errors are swallowed and produce an empty list.
+
+    The result is cached per ``app_dir`` for the lifetime of the process.
+    """
+    return list(_detect_installed_skills_cached(app_dir))
+
+
+@lru_cache(maxsize=1)
+def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        app = os.path.abspath(app_dir) if app_dir else os.getcwd()
+        repo = _find_git_root(app)
+
+        roots: dict[str, str] = {"home": home, "app": app}
+        # Only include ``repo`` when it's distinct from ``app`` to avoid
+        # double-counting the common case where the app script lives at the
+        # repo root.
+        if repo is not None and os.path.abspath(repo) != app:
+            roots["repo"] = repo
+
+        tokens: set[str] = set()
+        for location, root in roots.items():
+            for harness, project_dir, home_dirs in _HARNESSES:
+                harness_dirs = home_dirs if location == "home" else (project_dir,)
+                for harness_dir in harness_dirs:
+                    for skill in _STREAMLIT_SKILL_NAMES:
+                        marker = os.path.join(
+                            root, harness_dir, skill, _SKILL_MARKER_FILENAME
+                        )
+                        if os.path.isfile(marker):
+                            tokens.add(f"{location}:{harness}:{skill}")
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed Streamlit skills", exc_info=ex)
+        return ()
+
 
 def _get_machine_id_v3() -> str:
     """Get the machine ID.
@@ -653,7 +739,12 @@ def create_page_profile_message(
     if uncaught_exception:
         page_profile.uncaught_exception = uncaught_exception
 
+    app_dir: str | None = None
     if ctx := get_script_run_ctx():
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
+        if ctx.main_script_path:
+            app_dir = os.path.dirname(ctx.main_script_path)
+
+    page_profile.installed_skills.extend(_detect_installed_skills(app_dir))
 
     return msg

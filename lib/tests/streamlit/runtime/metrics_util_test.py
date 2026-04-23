@@ -42,7 +42,8 @@ from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
+    from pathlib import Path
 
 MAC = "mac"
 UUID = "uuid"
@@ -771,3 +772,179 @@ def test_create_page_profile_message_sets_uncaught_exception() -> None:
         [], 0, 0, uncaught_exception=exc_text
     )
     assert msg.page_profile.uncaught_exception == exc_text
+
+
+def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
+    """Create a ``<skill_name>/SKILL.md`` marker under ``base/harness_dir``."""
+    skill_dir = base / harness_dir / skill_name
+    skill_dir.mkdir(parents=True)
+    marker = skill_dir / "SKILL.md"
+    marker.write_text(f"---\nname: {skill_name}\n---\n")
+    return marker
+
+
+@pytest.fixture(autouse=True)
+def _clear_skills_cache() -> Iterator[None]:
+    """Reset the skill-detection cache around each test in this module section."""
+    metrics_util._detect_installed_skills_cached.cache_clear()
+    yield
+    metrics_util._detect_installed_skills_cached.cache_clear()
+
+
+@pytest.mark.parametrize(
+    ("location", "root_kind"),
+    [
+        ("home", "home"),
+        ("app", "app"),
+        ("repo", "repo"),
+    ],
+)
+@pytest.mark.parametrize(
+    ("harness", "project_dir", "home_dir"),
+    [
+        ("claude", ".claude/skills", ".claude/skills"),
+        ("codex", ".agents/skills", ".codex/skills"),
+        ("cortex", ".cortex/skills", ".snowflake/cortex/skills"),
+        ("cursor", ".cursor/skills", ".cursor/skills"),
+        ("gemini", ".gemini/skills", ".gemini/skills"),
+        ("opencode", ".opencode/skills", ".config/opencode/skills"),
+    ],
+)
+@pytest.mark.parametrize(
+    "skill",
+    ["developing-with-streamlit", "finding-streamlit-skills"],
+)
+def test_detect_installed_skills_emits_expected_token(
+    tmp_path: Path,
+    location: str,
+    root_kind: str,
+    harness: str,
+    project_dir: str,
+    home_dir: str,
+    skill: str,
+) -> None:
+    """Each ``location:harness:skill`` combination is detected and emitted as a token."""
+    home = tmp_path / "home"
+    app = tmp_path / "repo" / "app"
+    repo = tmp_path / "repo"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+
+    roots = {"home": home, "app": app, "repo": repo}
+    harness_dir = home_dir if root_kind == "home" else project_dir
+    _make_skill_dir(roots[root_kind], harness_dir, skill)
+
+    with patch(
+        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
+    ):
+        tokens = metrics_util._detect_installed_skills(str(app))
+
+    expected_token = f"{location}:{harness}:{skill}"
+    if location == root_kind:
+        assert expected_token in tokens
+    else:
+        # Sanity: a skill planted under one root must not be reported under another.
+        assert expected_token not in tokens
+
+
+def test_detect_installed_skills_empty_when_absent(tmp_path: Path) -> None:
+    """Returns an empty list when no skills markers exist anywhere."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    with patch(
+        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
+    ):
+        assert metrics_util._detect_installed_skills(str(app)) == []
+
+
+def test_detect_installed_skills_ignores_unrelated_skill_names(tmp_path: Path) -> None:
+    """Skills with names outside ``_STREAMLIT_SKILL_NAMES`` must not trigger detection."""
+    home = tmp_path / "home"
+    home.mkdir()
+    _make_skill_dir(home, ".claude/skills", "some-other-skill")
+
+    with patch(
+        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
+    ):
+        assert (
+            metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
+        )
+
+
+def test_detect_installed_skills_skips_repo_when_same_as_app(tmp_path: Path) -> None:
+    """When the app lives directly at the git root, ``repo`` tokens are deduped against ``app``."""
+    home = tmp_path / "home"
+    app_and_repo = tmp_path / "proj"
+    home.mkdir()
+    app_and_repo.mkdir()
+    (app_and_repo / ".git").mkdir()
+    _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
+
+    with patch(
+        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
+    ):
+        tokens = metrics_util._detect_installed_skills(str(app_and_repo))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
+
+
+def test_detect_installed_skills_walks_up_to_repo_root(tmp_path: Path) -> None:
+    """Skills planted at the git-root ancestor show up under ``repo:``, not ``app:``."""
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "nested" / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
+
+    with patch(
+        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
+    ):
+        tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["repo:codex:finding-streamlit-skills"]
+
+
+def test_detect_installed_skills_returns_sorted_deduped_tokens(tmp_path: Path) -> None:
+    """Multiple hits across locations are returned sorted and without duplicates."""
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
+    _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
+
+    with patch(
+        "streamlit.runtime.metrics_util.os.path.expanduser", return_value=str(home)
+    ):
+        tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == [
+        "app:codex:finding-streamlit-skills",
+        "home:cursor:developing-with-streamlit",
+        "repo:claude:developing-with-streamlit",
+    ]
+
+
+@pytest.mark.parametrize(
+    "detected",
+    [[], ["home:claude:developing-with-streamlit"]],
+)
+def test_create_page_profile_message_sets_installed_skills(
+    detected: list[str],
+) -> None:
+    """``installed_skills`` is populated from the detection helper."""
+    with patch(
+        "streamlit.runtime.metrics_util._detect_installed_skills",
+        return_value=detected,
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+    assert list(msg.page_profile.installed_skills) == detected
