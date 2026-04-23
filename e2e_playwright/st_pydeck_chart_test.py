@@ -20,28 +20,12 @@ from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     select_selectbox_option,
 )
+from e2e_playwright.shared.pydeck_utils import wait_for_chart_canvas
 from e2e_playwright.shared.toolbar_utils import (
     assert_fullscreen_toolbar_button_interactions,
 )
 
 PIXEL_THRESHOLD = 0.1
-
-
-def wait_for_chart_canvas(chart: Locator) -> None:
-    """Wait for a pydeck chart's canvas to be visible before snapshotting.
-
-    Try mapbox canvas first, fall back to deckgl-overlay canvas.
-    """
-    chart.scroll_into_view_if_needed()
-    # Try mapbox canvas first (used by most map styles)
-    mapbox_canvas = chart.locator(".mapboxgl-canvas")
-    deckgl_canvas = chart.locator("canvas")
-    # Wait for either canvas type to be visible
-    try:
-        expect(mapbox_canvas.or_(deckgl_canvas)).to_be_visible(timeout=15000)
-    except AssertionError:
-        # If no canvas found, wait a bit for the chart to stabilize
-        chart.page.wait_for_timeout(2000)
 
 
 def test_check_top_level_class(app: Page):
