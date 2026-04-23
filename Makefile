@@ -207,6 +207,15 @@ python-types:
 	uv run ty check
 	# Run mypy type checker (reads config from pyproject.toml):
 	uv run mypy
+	# Template apps under lib/streamlit/.agents/ are skipped by the bare mypy
+	# run above (no __init__.py chain + dot-prefix directory). Run mypy per-
+	# template with MYPYPATH=lib so each file is checked against the real
+	# streamlit package. Per-file (not batched) because templates share the
+	# module name `streamlit_app`.
+	@for tpl in lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/*/streamlit_app.py; do \
+		echo "# mypy: $$tpl" && \
+		MYPYPATH=lib uv run mypy "$$tpl" || exit 1; \
+	done
 
 .PHONY: frontend-init
 # Install all frontend dependencies.
