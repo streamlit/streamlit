@@ -1,9 +1,5 @@
 # Professional Financial Dashboard Theme (Dark)
 # Conservative, trustworthy palette with clear data visualization
-#
-# Usage: In config.toml, add:
-#   [theme]
-#   base = "./.streamlit/financial-dashboard-theme.toml"
 
 [theme]
 base = "dark"

@@ -246,7 +246,7 @@ borderColor = "#E4E4E7"
 grayColor = "#71717A"
 ```
 
-**Brand accent:** Neutral base with one brand color (e.g., Stripe's purple)
+**Brand accent:** Neutral base with one brand color (e.g., a signature indigo)
 ```toml
 primaryColor = "#635bff"           # Brand purple
 backgroundColor = "#ffffff"

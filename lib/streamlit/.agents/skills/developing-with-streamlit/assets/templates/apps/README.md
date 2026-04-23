@@ -102,7 +102,8 @@ def filter_by_time_range(df: pd.DataFrame, x_col: str, time_range: str) -> pd.Da
     else:
         return df
 
-    return df[df[x_col] >= min_date]
+    filtered: pd.DataFrame = df[df[x_col] >= min_date]
+    return filtered
 ```
 
 ### Popover Filters
