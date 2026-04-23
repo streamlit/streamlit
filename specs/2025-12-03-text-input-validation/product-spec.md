@@ -1,7 +1,6 @@
 ---
-author: "@lukasmasuch"
+author: lukasmasuch
 created: 2025-12-03
-status: Draft
 ---
 
 # Client-side and server-side input validation for `st.text_input`
@@ -294,10 +293,11 @@ This validation pattern can be extended to other input widgets:
 
 ## Checklist
 
-- [x] Will this work on all deployment platforms (e.g. [Streamlit Community Cloud](https://streamlit.io/cloud), [Streamlit in Snowflake](https://www.snowflake.com/en/product/features/streamlit-in-snowflake/), [Hugging Face Spaces](https://huggingface.co/spaces))?
-- [x] No breaking API changes?
-- [x] No new dependencies?
-- [x] Metrics collected?
-- [x] Any security or legal implications?
-- [x] Anything to keep in mind for docs?
-- [x] Any other risks?
+| Item                         | ✅ or comment          |
+|------------------------------|------------------------|
+| Works on SiS, Cloud, etc?    | ✅                      |
+| No breaking API changes      | ✅                      |
+| No new dependencies          | ✅                      |
+| Metrics collected            | ✅                      |
+| Any security/legal impact?   | Client-side regex validation can be bypassed; document that security-sensitive validation should use server-side callables |
+| Any docs changes needed?     | Yes, document the new `validate` parameter for `st.text_input` |
