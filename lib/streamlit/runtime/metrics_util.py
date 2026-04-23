@@ -244,23 +244,13 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
-# Streamlit-shipped agent skills we look for on the user's system. These
-# match the directory names under ``streamlit/.agents/skills/`` that users
-# may copy or symlink into an agent harness's skills directory.
 _STREAMLIT_SKILL_NAMES: Final = (
     "developing-with-streamlit",
     "finding-streamlit-skills",
 )
 _SKILL_MARKER_FILENAME: Final = "SKILL.md"
-# Agent-harness skill directory conventions we detect. Each entry is
-# (token, project_dir, home_dirs). ``project_dir`` is checked under ``app``
-# and ``repo``; each path in ``home_dirs`` is checked under ``~``. Most
-# harnesses share a single project/home shape; a few are asymmetric
-# (Codex's ``.agents/skills`` project vs ``.codex/skills`` home; Cortex
-# Code's ``.cortex/skills`` project vs ``.snowflake/cortex/skills`` home;
-# OpenCode's ``.config/opencode`` under home). Cortex Code also reads
-# ``~/.claude/skills`` per its docs, but those installs already show up
-# under the ``claude`` token so we don't double-count.
+# (harness, project_dir, home_dirs) - each entry's project_dir is checked under
+# the app and repo roots; home_dirs are checked under ~.
 _HARNESSES: Final = (
     ("claude", ".claude/skills", (".claude/skills",)),
     ("codex", ".agents/skills", (".codex/skills",)),
