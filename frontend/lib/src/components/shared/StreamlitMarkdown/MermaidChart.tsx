@@ -384,11 +384,18 @@ const MermaidChart = memo(function MermaidChart({
 
   /**
    * Download the rendered diagram as a PNG image.
+   * Captures svgBlobUrl locally to prevent race conditions if the component
+   * re-renders and the blob URL cleanup effect revokes the URL during image loading.
    */
   const handleDownloadPng = useCallback((): void => {
     if (!svgBlobUrl) {
       return
     }
+
+    // Capture the blob URL in a local variable to prevent race conditions.
+    // If a re-render triggers the cleanup effect while the image is loading,
+    // the old URL could be revoked before onload fires.
+    const capturedBlobUrl = svgBlobUrl
 
     const img = new Image()
     img.onload = () => {
@@ -419,7 +426,7 @@ const MermaidChart = memo(function MermaidChart({
     img.onerror = () => {
       LOG.error("Failed to load SVG for PNG export")
     }
-    img.src = svgBlobUrl
+    img.src = capturedBlobUrl
   }, [svgBlobUrl, theme.colors.bgColor])
 
   if (isLoading) {
