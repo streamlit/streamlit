@@ -35,78 +35,43 @@ def test_mermaid_charts_render(app: Page):
         expect(img).to_have_attribute("src", re.compile(r"^blob:"))
 
 
-def test_flowchart_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test flowchart rendering with snapshot."""
+def test_chart_snapshots(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test all mermaid chart types rendering with snapshots."""
     container = get_element_by_key(app, "mermaid_charts")
-    flowchart = container.get_by_test_id("stMermaidChart").nth(0)
-    expect(flowchart.locator("img")).to_be_visible()
-    assert_snapshot(flowchart, name="st_mermaid_chart-flowchart")
+    mermaid_charts = container.get_by_test_id("stMermaidChart")
+
+    chart_names = [
+        "flowchart",
+        "sequence_diagram",
+        "class_diagram",
+        "state_diagram",
+        "pie_chart",
+        "gantt_chart",
+    ]
+
+    for i, name in enumerate(chart_names):
+        chart = mermaid_charts.nth(i)
+        expect(chart.locator("img")).to_be_visible()
+        assert_snapshot(chart, name=f"st_mermaid_chart-{name}")
 
 
-def test_sequence_diagram_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test sequence diagram rendering with snapshot."""
-    container = get_element_by_key(app, "mermaid_charts")
-    sequence_diagram = container.get_by_test_id("stMermaidChart").nth(1)
-    expect(sequence_diagram.locator("img")).to_be_visible()
-    assert_snapshot(sequence_diagram, name="st_mermaid_chart-sequence_diagram")
-
-
-def test_class_diagram_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test class diagram rendering with snapshot."""
-    container = get_element_by_key(app, "mermaid_charts")
-    class_diagram = container.get_by_test_id("stMermaidChart").nth(2)
-    expect(class_diagram.locator("img")).to_be_visible()
-    assert_snapshot(class_diagram, name="st_mermaid_chart-class_diagram")
-
-
-def test_state_diagram_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test state diagram rendering with snapshot."""
-    container = get_element_by_key(app, "mermaid_charts")
-    state_diagram = container.get_by_test_id("stMermaidChart").nth(3)
-    expect(state_diagram.locator("img")).to_be_visible()
-    assert_snapshot(state_diagram, name="st_mermaid_chart-state_diagram")
-
-
-def test_pie_chart_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test pie chart rendering with snapshot."""
-    container = get_element_by_key(app, "mermaid_charts")
-    pie_chart = container.get_by_test_id("stMermaidChart").nth(4)
-    expect(pie_chart.locator("img")).to_be_visible()
-    assert_snapshot(pie_chart, name="st_mermaid_chart-pie_chart")
-
-
-def test_gantt_chart_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test gantt chart rendering with snapshot."""
-    container = get_element_by_key(app, "mermaid_charts")
-    gantt_chart = container.get_by_test_id("stMermaidChart").nth(5)
-    expect(gantt_chart.locator("img")).to_be_visible()
-    assert_snapshot(gantt_chart, name="st_mermaid_chart-gantt_chart")
-
-
-def test_themed_flowchart(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test flowchart rendering in light and dark theme."""
-    container = get_element_by_key(themed_app, "mermaid_charts")
-    flowchart = container.get_by_test_id("stMermaidChart").nth(0)
-    expect(flowchart.locator("img")).to_be_visible()
-    assert_snapshot(flowchart, name="st_mermaid_chart-flowchart_themed")
-
-
-def test_themed_sequence_diagram(
+def test_themed_chart_snapshots(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test sequence diagram rendering in light and dark theme."""
+    """Test mermaid chart rendering in light and dark theme."""
     container = get_element_by_key(themed_app, "mermaid_charts")
-    sequence_diagram = container.get_by_test_id("stMermaidChart").nth(1)
-    expect(sequence_diagram.locator("img")).to_be_visible()
-    assert_snapshot(sequence_diagram, name="st_mermaid_chart-sequence_diagram_themed")
+    mermaid_charts = container.get_by_test_id("stMermaidChart")
 
+    themed_charts = [
+        (0, "flowchart"),
+        (1, "sequence_diagram"),
+        (4, "pie_chart"),
+    ]
 
-def test_themed_pie_chart(themed_app: Page, assert_snapshot: ImageCompareFunction):
-    """Test pie chart rendering in light and dark theme."""
-    container = get_element_by_key(themed_app, "mermaid_charts")
-    pie_chart = container.get_by_test_id("stMermaidChart").nth(4)
-    expect(pie_chart.locator("img")).to_be_visible()
-    assert_snapshot(pie_chart, name="st_mermaid_chart-pie_chart_themed")
+    for idx, name in themed_charts:
+        chart = mermaid_charts.nth(idx)
+        expect(chart.locator("img")).to_be_visible()
+        assert_snapshot(chart, name=f"st_mermaid_chart-{name}_themed")
 
 
 def test_toolbar_copy_source(app: Page):
