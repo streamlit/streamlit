@@ -139,6 +139,20 @@ def text_input(
 ) -> str | None:
 ```
 
+The same `debounce` parameter applies to `st.text_area` with identical behavior:
+
+```python
+def text_area(
+    self,
+    label: str,
+    value: str | SupportsStr | None = "",
+    ...,
+    *,
+    debounce: int | None = None,  # New parameter (milliseconds)
+    ...,
+) -> str | None:
+```
+
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
 | `debounce` | `int \| None` | `None` | Debounce delay in milliseconds. When set, the widget triggers a rerun after the user stops typing for the specified duration. When `None` (default), reruns occur only on blur or Enter. |
@@ -148,8 +162,9 @@ def text_input(
 | `debounce` value | Behavior |
 | ---------------- | -------- |
 | `None` (default) | Rerun on blur or Enter (current behavior) |
-| `0` | Rerun on every keystroke (no debounce) |
+| `0` | Rerun on every keystroke (no debounce). **Warning:** Use sparingly - can cause excessive reruns with expensive app logic. |
 | `> 0` | Rerun after N milliseconds of typing inactivity |
+| `< 0` | Raises `StreamlitAPIException` - negative values are invalid |
 
 ### Implementation Notes
 
@@ -160,7 +175,9 @@ def text_input(
 
 **Recommended defaults:**
 - `debounce=300` is a good starting point for most live search use cases
-- `debounce=0` should be used sparingly (high rerun frequency)
+- `debounce=0` should be used sparingly - triggers a rerun on every keystroke which can
+  overload the server for apps with expensive computations (ML inference, large data loads).
+  Consider a minimum of 100-200ms for most use cases.
 
 ### Examples
 
@@ -216,18 +233,39 @@ if email:
 ### Edge Cases
 
 1. **Interaction with `on_change`**: When both `debounce` and `on_change` are set, the callback
-   fires after each debounced rerun (same as current `on_change` behavior after blur).
+   fires after each debounced rerun. **Important:** Unlike the current blur-only behavior where
+   `on_change` fires at most once per complete interaction, with `debounce` the callback may fire
+   multiple times during a single typing session. Users should be aware of this frequency increase
+   when adding `debounce` to widgets that already have `on_change` callbacks performing write
+   operations (e.g., saving to database, calling APIs).
 
-2. **Interaction with `st.form`**: Inside forms, `debounce` is ignored since form widgets don't
+2. **Interaction with `on_change="ignore"`**: If the proposed `on_change="ignore"` mode (from
+   `specs/2026-04-14-on-change-modes/`) is combined with `debounce`, the `debounce` parameter
+   takes precedence and triggers reruns as specified. The `on_change="ignore"` mode only prevents
+   the default blur/Enter rerun behavior, but `debounce` explicitly enables timer-based reruns.
+
+3. **Interaction with `st.form`**: Inside forms, `debounce` is ignored since form widgets don't
    trigger reruns until submission. A warning could be logged.
 
-3. **Interaction with `max_chars`**: Both features work together. The debounce timer only triggers
-   when the input is valid (within max_chars).
+4. **Interaction with `max_chars`**: Both features work independently. `max_chars` is enforced
+   by the browser via the HTML `maxlength` attribute, so users cannot type beyond the limit.
+   The debounce fires normally within the character limit - no special client-side validation
+   is needed to gate the debounce.
 
-4. **Password inputs**: `debounce` works with `type="password"` - no special handling needed.
+5. **Password inputs**: `debounce` works with `type="password"` - no special handling needed.
 
-5. **Very fast typing**: The debounce timer resets on each keystroke, so only the final value
+6. **Very fast typing**: The debounce timer resets on each keystroke, so only the final value
    (after the user pauses) triggers a rerun.
+
+7. **Blur while debounce is pending**: If the user stops typing and blurs the field before the
+   debounce timer fires, the debounce should fire immediately on blur. This ensures a rerun always
+   occurs when the user leaves the field, providing consistent behavior with the non-debounced case.
+
+8. **`st.text_area` Enter key behavior**: In `st.text_input`, pressing Enter triggers a rerun
+   immediately (without waiting for blur or debounce). In `st.text_area`, Enter inserts a newline
+   and does not trigger a rerun. When `debounce` is set on a `text_area`, Enter continues to
+   insert a newline and the debounce timer handles reruns - this preserves the existing semantic
+   difference between the two widgets.
 
 ## Out of Scope (Future Work)
 
@@ -240,11 +278,11 @@ if email:
 
 ## Checklist
 
-| Item                         | Status |
-| ---------------------------- | ------ |
-| Works on SiS, Cloud, etc?    | ✅ Yes - frontend-only debounce logic |
-| No breaking API changes      | ✅ Yes - new optional parameter with None default |
-| No new dependencies          | ✅ Yes |
-| Metrics collected            | ✅ Yes - existing text_input metrics apply |
-| Any security/legal impact?   | ✅ No |
-| Any docs changes needed?     | ✅ Yes - update text_input and text_area docstrings |
+| Item                         | ✅ or comment |
+| ---------------------------- | ------------- |
+| Works on SiS, Cloud, etc?    | ✅ frontend-only debounce logic |
+| No breaking API changes      | ✅ new optional parameter with None default |
+| No new dependencies          | ✅ |
+| Metrics collected            | ✅ existing text_input metrics apply |
+| Any security/legal impact?   | None |
+| Any docs changes needed?     | ✅ update text_input and text_area docstrings |
