@@ -32,7 +32,7 @@ prefer Chart.js for its simplicity, performance, and familiar JSON-based configu
 | Library size    | ~60KB gzipped              | ~1MB+ gzipped              | ~400KB gzipped             |
 | Configuration   | JSON config dict           | Python Figure object       | Altair Chart object        |
 | Animation       | Built-in, smooth           | Limited                    | Limited                    |
-| Chart types     | 9 core types               | 40+ types                  | Grammar-based (unlimited)  |
+| Chart types     | 8 core types               | 40+ types                  | Grammar-based (unlimited)  |
 | Python library  | None required              | `plotly` required          | `altair` required          |
 | Selection API   | None (future work)         | Points, box, lasso         | Named parameters           |
 
@@ -45,8 +45,9 @@ st.chartjs_chart(
     spec: dict[str, Any],
     *,
     width: Width = "stretch",
-    height: Height = "content",
+    height: Height = 400,
     theme: Literal["streamlit"] | None = "streamlit",
+    key: Key | None = None,
 ) -> DeltaGenerator
 ```
 
@@ -54,10 +55,11 @@ st.chartjs_chart(
 
 | Parameter | Type                                              | Default       | Description                                                                                                  |
 | --------- | ------------------------------------------------- | ------------- | ------------------------------------------------------------------------------------------------------------ |
-| `spec`    | `dict[str, Any]`                                  | required      | Chart.js configuration object containing `type`, `data`, and `options`. See Chart.js documentation.          |
+| `spec`    | `dict[str, Any]`                                  | required      | Chart.js configuration object containing `type` and `data` (required), and optionally `options`. Only JSON-serializable values are supported (JavaScript callbacks are not). See Chart.js documentation. |
 | `width`   | `"stretch" \| "content" \| int`                   | `"stretch"`   | Element width. `"stretch"`: full container. `"content"`: fit content. `int`: fixed pixels.                   |
-| `height`  | `"content" \| "stretch" \| int`                   | `"content"`   | Element height. `"content"`: fit content. `"stretch"`: fill container. `int`: fixed pixels.                  |
+| `height`  | `"content" \| "stretch" \| int`                   | `400`         | Element height. `int`: fixed pixels. `"stretch"`: fill container. `"content"`: delegates to Chart.js aspect ratio logic (width / 2 by default). |
 | `theme`   | `Literal["streamlit"] \| None`                    | `"streamlit"` | Theme for the chart. `"streamlit"`: use Streamlit theme colors. `None`: use Chart.js defaults.               |
+| `key`     | `Key \| None`                                     | `None`        | Unique key for element identification. Useful for testing and required if interactivity is added later.      |
 
 ### Return Value
 
@@ -88,7 +90,7 @@ spec = {
 }
 ```
 
-Supported chart types (from Chart.js 4.x):
+Supported chart types (Chart.js 4.4.x):
 
 - `bar` — Vertical or horizontal bar charts
 - `line` — Line charts with optional area fill
@@ -108,11 +110,14 @@ When `theme="streamlit"`, the chart inherits Streamlit's theme colors:
 - **Background**: Transparent to match Streamlit containers
 - **Grid lines**: Styled to match Streamlit's visual language
 
+**Note on `chartCategoricalColors`:** This is a **new config key** introduced alongside `st.chartjs_chart`. It provides a categorical color palette for multi-dataset charts. If not specified, a default palette derived from `primaryColor` is used. This config key may also be used by future charting elements.
+
 Theme colors can be customized via `.streamlit/config.toml`:
 
 ```toml
 [theme]
 primaryColor = "#FF4B4B"
+# New config key (introduced with st.chartjs_chart)
 chartCategoricalColors = ["#FF4B4B", "#1C83E1", "#00C4B4", "#FA8C16", "#9254DE"]
 ```
 
@@ -214,11 +219,18 @@ st.chartjs_chart(spec)
 
 ### Edge Cases
 
-- **Invalid spec**: Raises `StreamlitAPIException` with Chart.js error message
-- **Unknown chart type**: Raises `StreamlitAPIException` listing valid types
-- **Empty data**: Displays empty chart with axes (consistent with Chart.js behavior)
-- **Missing labels**: Chart.js uses indices as labels
-- **Very large datasets**: Consider using `options.plugins.decimation` for performance
+**Python-side validation (raises `StreamlitAPIException`):**
+- **Unknown chart type**: Python validates `type` against a hardcoded allowlist (`bar`, `line`, `pie`, `doughnut`, `radar`, `polarArea`, `bubble`, `scatter`). Invalid types raise `StreamlitAPIException` before sending to frontend.
+- **Missing required keys**: If `spec` is missing `type` or `data`, raises `StreamlitAPIException`.
+
+**Frontend error display (inline error in UI):**
+- **Invalid spec structure**: Malformed dataset configurations or invalid Chart.js options are caught in the frontend and displayed as an inline error message. These cannot be surfaced as Python exceptions since Chart.js runs entirely in the browser.
+- **JavaScript callback values**: If the spec contains function/callback values (e.g., `onClick`, `onHover`, tooltip callbacks), they are stripped/ignored since only JSON-serializable values can be transmitted to the frontend.
+
+**Normal behavior:**
+- **Empty data**: Displays an empty chart (with axes when applicable, consistent with Chart.js behavior for the specific chart type).
+- **Missing labels**: Chart.js uses indices as labels.
+- **Very large datasets**: Consider using `options.plugins.decimation` for performance.
 
 ## Selections: Analysis
 
@@ -353,7 +365,8 @@ to `st.line_chart` vs `st.altair_chart`.
 | -------------------------- | ---------------------------------------------------------------------------- |
 | Works on SiS, Cloud, etc?  | ✅ Client-side JS only                                                       |
 | No breaking API changes    | ✅ New command                                                               |
-| No new dependencies        | ✅ Chart.js bundled in frontend, no Python dep required                      |
+| No new Python dependencies | ✅ No Python package required                                                |
+| New frontend dependency    | ⚠️ Chart.js (~60KB gzipped) bundled in frontend, MIT licensed               |
 | Metrics collected          | ✅ `chartjs_chart` metric                                                    |
 | Any security/legal impact? | ⚠️ Chart.js is MIT licensed, must be bundled properly                       |
 | Any docs changes needed?   | ✅ New API reference page, consider gallery examples                         |
