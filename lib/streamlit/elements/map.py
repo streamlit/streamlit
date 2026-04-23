@@ -55,7 +55,8 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-_DEFAULT_COLOR: Final = (200, 30, 0, 160)
+_DEFAULT_COLOR_STR = config.get_option("theme.primaryColor") or "#c81e0028"
+    _DEFAULT_COLOR = to_int_color_tuple(_DEFAULT_COLOR_STR)
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
