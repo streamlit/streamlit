@@ -138,7 +138,7 @@ When **editing an existing app**, use templates as reference for best practices:
 - Apply consistent patterns from templates to improve the existing code
 
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
-- Copy one config file (dracula, nord, stripe, solarized-light, spotify, github, minimal) to the app's `.streamlit/config.toml`
+- Copy one config file (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) to the app's `.streamlit/config.toml`
 - Themes include custom fonts via Google Fonts
 - See `assets/templates/themes/README.md` for the theme list
 
