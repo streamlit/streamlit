@@ -79,7 +79,7 @@ Selection of `make` commands for development (run in the repo root):
   - `work-tmp/debug/latest/` is a symlink to the most recent debug session (e.g. `work-tmp/debug/latest/backend.log`). If multiple sessions are running simultaneously, this symlink can move—prefer using the session directory printed by `make debug`.
   - Log files are cleared at the start of each session and persist after exit for post-mortem analysis.
   - Browser `console.log()` output appears in the session’s `frontend.log`.
-  - See [.claude/skills/debugging-streamlit/SKILL.md](.claude/skills/debugging-streamlit/SKILL.md) for the full debugging guide.
+  - See [`.claude/skills/debugging-streamlit/SKILL.md`](../.claude/skills/debugging-streamlit/SKILL.md) for the full debugging guide.
 
 ### Development Tips
 
