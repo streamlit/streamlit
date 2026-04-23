@@ -28,7 +28,7 @@ def test_validate_int_bounds_default_value_name() -> None:
 def test_validate_float_bounds_default_value_name() -> None:
     """Test validate_float_bounds uses 'value' when value_name is None."""
     with pytest.raises(JSNumberBoundsException, match="value"):
-        JSNumber.validate_float_bounds(JSNumber.MAX_VALUE + 1e300, value_name=None)
+        JSNumber.validate_float_bounds(JSNumber.MAX_VALUE * 2, value_name=None)
 
 
 def test_validate_float_bounds_non_numeric_type() -> None:

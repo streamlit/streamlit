@@ -149,4 +149,4 @@ class UploadedFileManager(StatsProvider, Protocol):
             A list of UploadFileUrlInfo instances, each instance contains information
             about uploaded file URLs.
         """
-        raise NotImplementedError  # pragma: no cover - abstract
+        raise NotImplementedError  # pragma: no cover - optional default

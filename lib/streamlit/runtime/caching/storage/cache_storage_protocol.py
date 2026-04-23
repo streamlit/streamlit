@@ -204,7 +204,7 @@ class CacheStorageManager(Protocol):
         This is a responsibility of the concrete implementation to ensure
         thread safety guarantees.
         """
-        raise NotImplementedError  # pragma: no cover - abstract
+        raise NotImplementedError  # pragma: no cover - optional default
 
     def check_context(self, context: CacheStorageContext) -> None:
         """Checks if the context is valid for the storage manager.
