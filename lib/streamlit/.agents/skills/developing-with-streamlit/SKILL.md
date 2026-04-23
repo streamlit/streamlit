@@ -140,7 +140,7 @@ When **editing an existing app**, use templates as reference for best practices:
 When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
 - Copy one config file (dracula, nord, stripe, solarized-light, spotify, github, minimal) to the app's `.streamlit/config.toml`
 - Themes include custom fonts via Google Fonts
-- See `assets/templates/themes/README.md` for previews and setup
+- See `assets/templates/themes/README.md` for the theme list
 
 For **performance optimization**, read:
 1. `references/performance.md`
