@@ -372,13 +372,15 @@ def _get_arg_metadata(arg: object) -> str | None:
 
 @lru_cache(maxsize=256)
 def _get_arg_keywords_cached(func: Callable[..., Any]) -> tuple[str, ...]:
-    """Cached helper that returns argument names as an immutable tuple.
+    """Return POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameter names as an immutable tuple.
+
+    Results are cached by function identity. Callers must pass ``func.__func__``
+    for bound methods — this function operates on unbound callables only.
 
     On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
     accessed. This can fail with NameError when annotations reference types
     imported under TYPE_CHECKING. Since we only need parameter names (not
-    annotations), we use ``annotation_format=Format.STRING`` to avoid
-    evaluation.
+    annotations), we use ``annotation_format=Format.STRING`` to avoid evaluation.
 
     See: https://github.com/streamlit/streamlit/issues/14324
     """
