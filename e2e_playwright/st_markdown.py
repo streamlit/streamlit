@@ -48,6 +48,7 @@ st.markdown(":rainbow-background[[Link](http://example.com) within rainbow backg
 st.markdown(
     ":green-background[LaTeX math within green background: $ax^2 + bx + c = 0$]"
 )
+st.container(key="inline_hex_color").markdown("GitHub color badge: `#0969DA`")
 
 
 # Headers in markdown tests (originally from the typography-test suite).

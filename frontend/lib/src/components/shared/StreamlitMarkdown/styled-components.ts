@@ -532,17 +532,20 @@ export const StyledPreWrapper = styled.div(({ theme }) => ({
   marginBottom: theme.spacing.lg,
 }))
 
-export const StyledHexColorDot = styled.span<{ color: string }>({
-  display: "inline-block",
-  width: "0.65em",
-  height: "0.65em",
-  borderRadius: "50%",
-  marginRight: "0.25em",
-  verticalAlign: "middle",
-  border: "1px solid rgba(0,0,0,0.1)",
-}, ({ color }) => ({
-  backgroundColor: color,
-}))
+export const StyledHexColorDot = styled.span<{ color: string }>(
+  ({ theme }) => ({
+    display: "inline-block",
+    width: "0.65em",
+    height: "0.65em",
+    borderRadius: "50%",
+    marginRight: "0.25em",
+    verticalAlign: "middle",
+    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  }),
+  ({ color }) => ({
+    backgroundColor: color,
+  })
+)
 
 export const StyledHelpIconWrapper = styled.span({
   display: "inline-block",

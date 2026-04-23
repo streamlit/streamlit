@@ -668,11 +668,11 @@ export function isValidCssColor(color: string): boolean {
   }
 }
 
-const HEX_COLOR_RE = /^#([0-9A-Fa-f]{3,4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{6}$/
 
 /**
- * Tests whether a string is a valid hex color: 3, 4, 6, or 8 digits
- * (e.g. `#0969DA`, `#F00`, `#F00F`, `#0969DA80`).
+ * Tests whether a string is a valid GitHub-style hex color: 6 digits
+ * (e.g. `#0969DA`).
  */
 export function isHexColor(value: string): boolean {
   return HEX_COLOR_RE.test(value)

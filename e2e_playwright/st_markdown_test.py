@@ -98,6 +98,20 @@ def test_displays_individual_markdowns(app: Page):
     expect(markdown_elements.nth(4).locator("a")).to_have_attribute("href", "href")
 
 
+def test_inline_hex_color_badge_renders_in_themed_app(themed_app: Page):
+    """Test that inline GitHub-style hex colors render a badge in both themes."""
+    markdown_element = get_element_by_key(themed_app, "inline_hex_color").get_by_test_id(
+        "stMarkdown"
+    )
+    code_element = markdown_element.locator("code")
+    dot = code_element.get_by_test_id("stHexColorDot")
+
+    expect(markdown_element).to_be_visible()
+    expect(code_element).to_have_text("#0969DA")
+    expect(dot).to_be_visible()
+    expect(dot).to_have_css("background-color", "rgb(9, 105, 218)")
+
+
 # Headers in markdown tests
 
 
