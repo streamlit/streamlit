@@ -41,9 +41,11 @@ class LoggerTest(unittest.TestCase):
             logging.INFO,
             logging.DEBUG,
         ]
+        managed_logger = logger.get_logger("test_set_log_level")
         for k in data:
             logger.set_log_level(k)
-            assert k == logging.getLogger("streamlit").getEffectiveLevel()
+            assert k == logger._global_log_level
+            assert k == managed_logger.getEffectiveLevel()
 
     def test_set_log_level_error(self):
         """Test streamlit.logger.set_log_level."""
@@ -78,9 +80,9 @@ class LoggerTest(unittest.TestCase):
             else:
                 assert LOGGER.handlers[0].formatter._fmt == logger.DEFAULT_LOG_MESSAGE
 
-    def test_init_tornado_logs(self):
-        """Test streamlit.logger.init_tornado_logs."""
-        logger.init_tornado_logs()
-        loggers = [x for x in logger._loggers if "tornado." in x]
-        truth = ["tornado.access", "tornado.application", "tornado.general"]
+    def test_init_uvicorn_logs(self):
+        """Test streamlit.logger.init_uvicorn_logs."""
+        logger.init_uvicorn_logs()
+        loggers = [x for x in logger._loggers if "uvicorn" in x]
+        truth = ["uvicorn", "uvicorn.access", "uvicorn.error"]
         assert sorted(truth) == sorted(loggers)

@@ -309,6 +309,8 @@ selection = st.dataframe(
     key="programmatic_row_selection_df",
 )
 st.write("Programmatic row selection:", str(selection))
+# Attribute access verifies AttributeDictionary is returned (regression test for #14454).
+st.write("Programmatic row selection rows:", str(selection.selection.rows))  # type: ignore[attr-defined]
 
 
 def set_programmatic_selection():

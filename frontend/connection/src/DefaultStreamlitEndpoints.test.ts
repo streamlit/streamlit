@@ -196,7 +196,7 @@ describe("DefaultStreamlitEndpoints", () => {
       sendClientError: vi.fn(),
     })
 
-    it("builds URL correctly for files being uploaded to the tornado server", () => {
+    it("builds URL correctly for files being uploaded to the server", () => {
       const url = endpoints.buildFileUploadURL("/_stcore/upload_file/file_1")
       expect(url).toBe(
         "http://streamlit.mock:80/mock/base/path/_stcore/upload_file/file_1"

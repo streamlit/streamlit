@@ -498,6 +498,54 @@ describe("createTheme", () => {
       lightTheme.emotion.colors.secondaryBg
     )
   })
+
+  const modernThemeColors = [
+    "oklch(0.21 0.01 260)",
+    "oklab(0.5 0.1 -0.1)",
+    "lab(50 40 -20)",
+    "lch(50 30 270)",
+    "rgb(34 139 34)",
+    "hsl(145 63% 49%)",
+    "hwb(120 0% 0%)",
+  ]
+
+  const acceptedColors = new Set(modernThemeColors)
+
+  it.each(modernThemeColors)(
+    "keeps accepted modern theme color syntax '%s'",
+    color => {
+      class MockOption {
+        style = {
+          storedColor: "",
+          get color(): string {
+            return this.storedColor
+          },
+          set color(value: string) {
+            this.storedColor = acceptedColors.has(value) ? value : ""
+          },
+        }
+      }
+
+      vi.stubGlobal("Option", MockOption as unknown as typeof Option)
+
+      try {
+        const customTheme = createTheme(
+          CUSTOM_THEME_NAME,
+          new CustomThemeConfig({
+            backgroundColor: color,
+            primaryColor: color,
+          })
+        )
+
+        expect(customTheme.emotion.colors.bgColor).toBe(color)
+        expect(customTheme.emotion.colors.primary).toBe(color)
+        expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
+        expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
+      } finally {
+        vi.unstubAllGlobals()
+      }
+    }
+  )
 })
 
 describe("getSystemTheme", () => {

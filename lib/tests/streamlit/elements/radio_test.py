@@ -14,6 +14,7 @@
 
 """radio unit tests."""
 
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -622,6 +623,57 @@ def test_dynamic_format_func_preserves_value() -> None:
     # Verify it didn't reset to the default "A"
     assert at.radio[0].value != "A"
     assert "Selected: B" in at.text[0].value
+
+
+def test_custom_objects_with_eq_format_func_survives_rerun() -> None:
+    """Regression for #14814: selection must not reset when using format_func.
+
+    ``validate_and_sync_value_with_options`` must receive ``format_func`` so
+    validation compares stable formatted labels, not ``str()`` of instances
+    (which embed object id and changes across reruns).
+    """
+
+    def script():
+        import streamlit as st
+
+        class MyOption:
+            def __init__(self, label: str, value: int) -> None:
+                self.label = label
+                self.value = value
+
+            def __eq__(self, other: object) -> bool:
+                if not isinstance(other, MyOption):
+                    return False
+                return self.value == other.value
+
+            def __hash__(self) -> int:
+                return hash(self.value)
+
+        options = [
+            MyOption("Option A", 1),
+            MyOption("Option B", 2),
+            MyOption("Option C", 3),
+        ]
+        selected = st.radio(
+            "Pick",
+            options=options,
+            format_func=lambda x: x.label,
+            key="bug_radio",
+        )
+        st.text(f"gh14814 value: {selected.value}")
+        st.button("Rerun")
+
+    at = AppTest.from_function(script).run()
+    assert at.radio[0].value.value == 1
+    assert "gh14814 value: 1" in at.text[0].value
+
+    at = at.radio[0].set_value(SimpleNamespace(label="Option B")).run()
+    assert at.radio[0].value.value == 2
+    assert "gh14814 value: 2" in at.text[0].value
+
+    at = at.button[0].click().run()
+    assert at.radio[0].value.value == 2
+    assert "gh14814 value: 2" in at.text[0].value
 
 
 def test_custom_objects_without_eq() -> None:

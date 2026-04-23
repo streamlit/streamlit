@@ -28,7 +28,7 @@ New features should include:
    - New elements: add to `frontend/lib/src/components/core/Block/ElementNodeRenderer.tsx`
 
 5. **Vitest tests** in `*.test.tsx`
-   - Run: `cd frontend && yarn vitest lib/src/components/elements/NewElement/NewElement.test.tsx`
+   - Run: `cd frontend && yarn test lib/src/components/elements/NewElement/NewElement.test.tsx`
 
 6. **E2E Playwright tests** in `e2e_playwright/`
    - Run: `make run-e2e-test e2e_playwright/name_of_the_test.py`

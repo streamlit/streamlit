@@ -62,6 +62,8 @@ jobs:
     concurrency:
       group: ${{ github.workflow }}-ai-fix-flaky-tests
       cancel-in-progress: true
+    outputs:
+      develop_sha: ${{ steps.get-sha.outputs.sha }}
 
     defaults:
       run:
@@ -75,6 +77,10 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
           submodules: "recursive"
+
+      - name: Capture develop SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -172,7 +178,7 @@ jobs:
       - name: Checkout Streamlit code
         uses: actions/checkout@v6
         with:
-          ref: develop
+          ref: ${{ needs.ai-fix-flaky-tests.outputs.develop_sha }}
           fetch-depth: 0
           persist-credentials: true
 
@@ -224,13 +230,13 @@ jobs:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add -A
-          git commit -m "[test] AI-assisted flaky E2E test fixes"
+          git commit -m "[chore] AI-assisted flaky E2E test fixes"
           git push origin "$BRANCH_NAME"
 
       - name: Create PR
         id: create_pr
         if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
           MODEL_NAME: ${{ env.MODEL }}
@@ -242,7 +248,7 @@ jobs:
             const model = process.env.MODEL_NAME;
             const changesSummary = process.env.CHANGES_SUMMARY;
 
-            const title = `[test] AI-assisted flaky E2E test fixes`;
+            const title = `[chore] AI-assisted flaky E2E test fixes`;
             const body = `## Summary
 
             Automated PR to fix flaky E2E tests identified from recent CI runs.
@@ -270,7 +276,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: pr.number,
-              labels: ['change:test', 'impact:internal'],
+              labels: ['change:other', 'impact:internal'],
             });
 
       - name: Write step summary

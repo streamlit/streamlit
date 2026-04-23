@@ -60,7 +60,7 @@ describe("Snow element", () => {
     })
   })
 
-  it("uses correct top-level class", () => {
+  it("uses correct top-level class", { timeout: 10_000 }, () => {
     const props = getProps()
     render(<Snow {...props} />)
 

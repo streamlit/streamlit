@@ -73,6 +73,8 @@ This repository includes skills and subagents in `.claude/` usable with Claude C
 | `writing-spec` | When designing new API commands, widgets, or significant changes that need team review before implementation |
 | `finalizing-pr` | When changes are ready to merge — runs quality checks, simplifies code, and creates/updates the PR |
 | `generating-changelog` | When preparing release notes between two git tags |
+| `improving-frontend-coverage` | When you want to systematically improve frontend test coverage with high-value test cases |
+| `improving-python-coverage` | When you want to systematically improve Python test coverage with high-value test cases |
 
 ### Subagents
 
@@ -83,6 +85,7 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 | `reviewing-local-changes` | When you want a code review of the current branch's changes |
 | `simplifying-local-changes` | When you want to simplify and refine code for clarity and maintainability |
 | `fixing-pr` | When a PR needs CI fixes, review feedback handling, and validation before merge |
+| `qa-testing-feature` | After implementing a feature to perform comprehensive QA testing before finalizing a PR |
 
 ## Style Guide
 

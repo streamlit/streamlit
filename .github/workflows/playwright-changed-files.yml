@@ -6,7 +6,6 @@ on:
     paths-ignore:
       # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
-      - "agent-knowledge/**"
       - "wiki/**"
 
   workflow_call:
