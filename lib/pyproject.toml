@@ -161,11 +161,6 @@ streamlit = [
     ".agents/**/*.md",
     ".agents/skills/**/assets/templates/**/*.py",
     ".agents/skills/**/assets/templates/**/*.toml",
-    # Forward-looking: future templates may ship config/env fixture files
-    # (e.g. snowflake.yml, .env.example). Currently match zero files.
-    ".agents/skills/**/assets/templates/**/*.yml",
-    ".agents/skills/**/assets/templates/**/*.example",
-    ".agents/skills/**/assets/templates/**/.gitignore",
     "hello/**/*.py",
 ]
 
