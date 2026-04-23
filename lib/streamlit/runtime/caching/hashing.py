@@ -21,7 +21,6 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
@@ -352,7 +351,7 @@ class _CacheFuncHasher:
         runs.
         """
 
-        h = hashlib.new("md5", usedforsecurity=False)
+        h = util.create_fast_hasher()
 
         if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
             obj, "unittest.mock.MagicMock"

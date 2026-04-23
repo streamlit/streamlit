@@ -217,10 +217,23 @@ function ChatInput({
     }
   }, [])
 
+  // Track if we've done the initial height calculation with a valid width.
+  // This prevents unnecessary recalculations on every window resize.
+  const hasInitializedWithWidthRef = useRef(false)
+
   const autoExpand = useTextInputAutoExpand({
     textareaRef: chatInputRef,
     dependencies: [placeholder, isStacked],
   })
+  const { updateScrollHeight } = autoExpand
+
+  // Recalculate height once when width first becomes available (ResizeObserver is async).
+  useLayoutEffect(() => {
+    if (width > 0 && !hasInitializedWithWidthRef.current) {
+      hasInitializedWithWidthRef.current = true
+      updateScrollHeight()
+    }
+  }, [width, updateScrollHeight])
 
   // Cache font string and available width for text measurement
   // These values only change on mount or resize, not on every keystroke
@@ -680,7 +693,7 @@ function ChatInput({
     }
 
     setValue(targetValue)
-    autoExpand.updateScrollHeight()
+    updateScrollHeight()
 
     // Clear recording error when user starts typing
     if (recordingError) {
