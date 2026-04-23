@@ -297,8 +297,11 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         roots: dict[str, str] = {"home": home, "app": app}
         # Only include ``repo`` when it's distinct from ``app`` to avoid
         # double-counting the common case where the app script lives at the
-        # repo root.
-        if repo is not None and os.path.abspath(repo) != app:
+        # repo root. ``normcase`` handles case-insensitive filesystems (Windows,
+        # default macOS).
+        if repo is not None and os.path.normcase(
+            os.path.abspath(repo)
+        ) != os.path.normcase(app):
             roots["repo"] = repo
 
         tokens: set[str] = set()
