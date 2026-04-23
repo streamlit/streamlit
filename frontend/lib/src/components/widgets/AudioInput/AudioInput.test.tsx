@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,11 @@ import type {
   RecordingState,
   WaveformController,
   WaveformControllerEvents,
-} from "~lib/components/audio"
+} from "~lib/components/audio/core/types"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { FormClearHelper } from "src/components/widgets/Form"
+import { FormClearHelper } from "src/components/widgets/Form/FormClearHelper"
 
 import AudioInput, { Props } from "./AudioInput"
 
@@ -35,7 +35,7 @@ const useWaveformControllerMock = vi.fn()
 const uploadFilesMock = vi.fn()
 const FormClearHelperMock = vi.fn()
 
-vi.mock("~lib/components/audio", () => ({
+vi.mock("~lib/components/audio/core/useWaveformController", () => ({
   useWaveformController: (...args: unknown[]) =>
     useWaveformControllerMock(...args),
 }))
@@ -44,7 +44,7 @@ vi.mock("~lib/util/uploadFiles", () => ({
   uploadFiles: (...args: unknown[]) => uploadFilesMock(...args),
 }))
 
-vi.mock("~lib/components/widgets/Form", () => ({
+vi.mock("~lib/components/widgets/Form/FormClearHelper", () => ({
   FormClearHelper: vi.fn().mockImplementation(function (
     this: FormClearHelper,
     ...args: unknown[]

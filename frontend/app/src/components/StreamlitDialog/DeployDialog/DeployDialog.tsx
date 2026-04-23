@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode, useCallback } from "react"
+import { ReactElement, ReactNode, useCallback } from "react"
 
 import { StyledAction, StyledBody } from "baseui/card"
 
@@ -22,11 +22,9 @@ import StreamlitLogo from "@streamlit/app/src/assets/svg/logo.svg"
 import Rocket from "@streamlit/app/src/assets/svg/rocket.svg"
 import Snowflake from "@streamlit/app/src/assets/svg/snowflake.svg"
 import { DialogType } from "@streamlit/app/src/components/StreamlitDialog/constants"
-import {
-  DetachedHead,
-  ModuleIsNotAdded,
-  NoRepositoryDetected,
-} from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs"
+import DetachedHead from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/DetachedHead"
+import ModuleIsNotAdded from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/ModuleIsNotAdded"
+import NoRepositoryDetected from "@streamlit/app/src/components/StreamlitDialog/DeployErrorDialogs/NoRepositoryDetected"
 import { PlainEventHandler } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
 import {

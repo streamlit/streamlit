@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
 
 import { StyledMenuList, StyledMenuListItem } from "./styled-components"
 
@@ -184,7 +184,7 @@ function FormattingMenu({
   children,
 }: FormattingMenuProps): ReactElement {
   const theme = useEmotionTheme()
-  const { colors, fontSizes, radii, fontWeights } = theme
+  const { colors, fontSizes, fontWeights } = theme
 
   const formats = COLUMN_KIND_FORMAT_MAPPING[columnKind] || []
 
@@ -229,31 +229,27 @@ function FormattingMenu({
           props: {
             "data-testid": "stDataFrameColumnFormattingMenu",
           },
-          style: {
-            borderTopLeftRadius: radii.default,
-            borderTopRightRadius: radii.default,
-            borderBottomLeftRadius: radii.default,
-            borderBottomRightRadius: radii.default,
+          style: () => ({
+            ...getPopoverContainerStyle(theme),
             paddingTop: "0 !important",
             paddingBottom: "0 !important",
             paddingLeft: "0 !important",
             paddingRight: "0 !important",
             backgroundColor: "transparent",
-            border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-          },
+          }),
         },
         Inner: {
-          style: {
-            backgroundColor: hasLightBackgroundColor(theme)
-              ? colors.bgColor
-              : colors.secondaryBg,
-            color: colors.bodyText,
-            fontSize: fontSizes.sm,
-            fontWeight: fontWeights.normal,
-            paddingTop: "0 !important",
-            paddingBottom: "0 !important",
-            paddingLeft: "0 !important",
-            paddingRight: "0 !important",
+          style: () => {
+            return {
+              backgroundColor: colors.bgColor,
+              color: colors.bodyText,
+              fontSize: fontSizes.sm,
+              fontWeight: fontWeights.normal,
+              paddingTop: "0 !important",
+              paddingBottom: "0 !important",
+              paddingLeft: "0 !important",
+              paddingRight: "0 !important",
+            }
           },
         },
       }}

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ def _get_module_name(caller_frame: FrameType) -> str:
     # Get the caller's module name. `__name__` gives us the module's
     # fully-qualified name, which includes its package.
     module = inspect.getmodule(caller_frame)
-    if module is None:
+    if module is None:  # pragma: no cover - defensive
         raise RuntimeError("module is None. This should never happen.")
     module_name = module.__name__
 
@@ -101,11 +101,11 @@ def declare_component(
 
     # Get our stack frame.
     current_frame: FrameType | None = inspect.currentframe()
-    if current_frame is None:
+    if current_frame is None:  # pragma: no cover - defensive
         raise RuntimeError("current_frame is None. This should never happen.")
     # Get the stack frame of our calling function.
     caller_frame = current_frame.f_back
-    if caller_frame is None:
+    if caller_frame is None:  # pragma: no cover - defensive
         raise RuntimeError("caller_frame is None. This should never happen.")
 
     module_name = _get_module_name(caller_frame)
@@ -120,7 +120,7 @@ def declare_component(
     if not url and (
         component_base_path := config.get_option("server.customComponentBaseUrlPath")
     ):
-        url = f"{component_base_path}/{component_name}/"
+        url = f"{component_base_path}/{component_name}/"  # ty: ignore[possibly-unresolved-reference]
 
     # Create our component object, and register it.
     component = CustomComponent(

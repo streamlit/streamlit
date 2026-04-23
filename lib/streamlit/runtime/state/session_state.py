@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 from __future__ import annotations
 
 import json
-import pickle
-from collections.abc import Iterator, KeysView, Mapping, MutableMapping
+import pickle  # noqa: S403
+from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -30,6 +30,7 @@ from typing import (
 from streamlit import config, util
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException, UnserializableSessionStateError
+from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
@@ -45,8 +46,19 @@ from streamlit.runtime.state.common import (
     is_keyed_element_id,
 )
 from streamlit.runtime.state.presentation import apply_presenter
-from streamlit.runtime.state.query_params import QueryParams
-from streamlit.runtime.stats import CacheStat, CacheStatsProvider, group_stats
+from streamlit.runtime.state.query_params import (
+    QueryParams,
+    is_empty_url_value,
+    parse_url_param,
+)
+from streamlit.runtime.stats import (
+    CACHE_MEMORY_FAMILY,
+    CacheStat,
+    StatsProvider,
+    group_cache_stats,
+)
+
+_LOGGER: Final = get_logger(__name__)
 
 if TYPE_CHECKING:
     from streamlit.runtime.session_manager import SessionManager
@@ -56,6 +68,45 @@ STREAMLIT_INTERNAL_KEY_PREFIX: Final = "$$STREAMLIT_INTERNAL_KEY"
 SCRIPT_RUN_WITHOUT_ERRORS_KEY: Final = (
     f"{STREAMLIT_INTERNAL_KEY_PREFIX}_SCRIPT_RUN_WITHOUT_ERRORS"
 )
+
+
+def _sanitize_url_array(
+    parsed: list[str],
+    *,
+    valid_options: list[str] | None,
+    max_length: int | None,
+    allow_duplicates: bool = False,
+) -> list[str] | None:
+    """Sanitize a URL-parsed string array by filtering invalid values,
+    optionally removing duplicates, and enforcing a maximum length.
+
+    Returns the sanitized list if any changes were made, or None if the
+    input required no sanitization.
+    """
+    result = parsed
+
+    # Remove values not in the valid options list.
+    if valid_options is not None:
+        result = [v for v in result if v in valid_options]
+
+    # Deduplicate while preserving order. Skipped when allow_duplicates is
+    # True (e.g., select_slider range mode where ?color=red&color=red is a
+    # valid zero-width range).
+    if not allow_duplicates:
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for v in result:
+            if v not in seen:
+                seen.add(v)
+                deduped.append(v)
+        if len(deduped) < len(result):
+            result = deduped
+
+    # Truncate to max_length (e.g. multiselect max_selections).
+    if max_length is not None and max_length > 0 and len(result) > max_length:
+        result = result[:max_length]
+
+    return result if result != parsed else None
 
 
 @dataclass(frozen=True)
@@ -125,6 +176,9 @@ class WStates(MutableMapping[str, Any]):
             value = cast("Any", value).data
         elif value_field_name == "json_value":
             value = json.loads(cast("str", value))
+        elif value_field_name == "string_trigger_value":
+            # StringTriggerValue is a message with data in a `data` field
+            value = cast("Any", value).data
 
         deserialized = metadata.deserializer(value)
 
@@ -157,13 +211,13 @@ class WStates(MutableMapping[str, Any]):
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
 
-    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override]
+    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override] # ty: ignore[invalid-method-override]
         return {(k, self[k]) for k in self}
 
-    def values(self) -> set[Any]:  # type: ignore[override]
+    def values(self) -> set[Any]:  # type: ignore[override] # ty: ignore[invalid-method-override]
         return {self[wid] for wid in self}
 
-    def update(self, other: WStates) -> None:  # type: ignore[override]
+    def update(self, other: WStates) -> None:  # type: ignore[override] # ty: ignore[invalid-method-override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """
@@ -248,12 +302,11 @@ class WStates(MutableMapping[str, Any]):
 
     def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
-        states = [
-            self.get_serialized(widget_id)
+        return [
+            s
             for widget_id in self.states
-            if self.get_serialized(widget_id)
+            if (s := self.get_serialized(widget_id)) is not None
         ]
-        return cast("list[WidgetStateProto]", states)
 
     def call_callback(self, widget_id: str) -> None:
         """Call the given widget's callback and return the callback's
@@ -374,6 +427,12 @@ class SessionState:
     # widget state at one point.
     query_params: QueryParams = field(default_factory=QueryParams)
 
+    # Widget IDs that have registered with bind="query-params". This is a
+    # durable bound-intent snapshot that survives MPA page-transition
+    # sequencing where bindings and current-run metadata may already be gone by
+    # stale-widget cleanup time.
+    _query_param_bound_widget_ids: set[str] = field(default_factory=set)
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -399,6 +458,7 @@ class SessionState:
         self._new_session_state.clear()
         self._new_widget_state.clear()
         self._key_id_mapper.clear()
+        self._query_param_bound_widget_ids.clear()
 
     @property
     def filtered_state(self) -> dict[str, Any]:
@@ -484,7 +544,7 @@ class SessionState:
 
         At least one of the arguments must have a value.
         """
-        if user_key is None and widget_id is None:
+        if user_key is None and widget_id is None:  # pragma: no cover - defensive
             raise ValueError(
                 "user_key and widget_id cannot both be None. This should never happen."
             )
@@ -682,6 +742,17 @@ class SessionState:
         ``"event"`` field that maps to the corresponding callback name in
         ``metadata.callbacks``.
 
+        Parameters
+        ----------
+        wid : str
+            The widget ID.
+        metadata : WidgetMetadata[Any]
+            Metadata for the widget, including registered callbacks.
+        args : WidgetArgs
+            Positional arguments forwarded to the callback.
+        kwargs : dict[str, Any]
+            Keyword arguments forwarded to the callback.
+
         Examples
         --------
         A component with a "submit" callback:
@@ -695,17 +766,6 @@ class SessionState:
         Or a list of event payloads to be processed in order:
 
         >>> [{"event": "edit", ...}, {"event": "submit", ...}]
-
-        Parameters
-        ----------
-        wid : str
-            The widget ID.
-        metadata : WidgetMetadata[Any]
-            Metadata for the widget, including registered callbacks.
-        args : WidgetArgs
-            Positional arguments forwarded to the callback.
-        kwargs : dict[str, Any]
-            Keyword arguments forwarded to the callback.
         """
         widget_proto_state = self._new_widget_state.get_serialized(wid)
         if not widget_proto_state:
@@ -843,13 +903,36 @@ class SessionState:
         if ctx is None:
             return
 
+        # Before any cleanup, capture the current value for bound stale widgets.
+        # The most recent value may live in _new_widget_state (e.g. from
+        # set_widgets_from_proto after a user interaction) rather than _old_state
+        # (which holds the value from the previous compaction).  We must read it
+        # through the full lookup chain before _new_widget_state is cleaned.
+        wid_key_map = self._key_id_mapper.id_key_mapping
+        bound_preserved: dict[str, Any] = {}
+        for key in self._old_state:
+            if (
+                is_element_id(key)
+                and key in self._query_param_bound_widget_ids
+                and key in wid_key_map
+                and _is_stale_widget(
+                    self._new_widget_state.widget_metadata.get(key),
+                    active_widget_ids,
+                    ctx.fragment_ids_this_run,
+                )
+            ):
+                user_key = wid_key_map[key]
+                try:
+                    bound_preserved[user_key] = self._getitem(key, user_key)
+                except KeyError:
+                    bound_preserved[user_key] = self._old_state[key]
+
         self._new_widget_state.remove_stale_widgets(
             active_widget_ids,
             ctx.fragment_ids_this_run,
         )
 
-        # Remove entries from _old_state corresponding to
-        # widgets not in widget_ids.
+        # Remove entries from _old_state corresponding to stale widgets.
         self._old_state = {
             k: v
             for k, v in self._old_state.items()
@@ -862,6 +945,25 @@ class SessionState:
                 )
             )
         }
+
+        # Re-add preserved query-param-bound values under user keys.
+        self._old_state.update(bound_preserved)
+
+        # Remove query param bindings and URL params for stale widgets.
+        # For fragment runs, preserve widgets outside the running fragment(s).
+        # Note: For MPA page transitions, query param filtering is performed
+        # via populate_from_query_string() in script_runner.py before this cleanup,
+        # so bindings for non-active pages are already filtered by script hash.
+        self.query_params.remove_stale_bindings(
+            active_widget_ids,
+            ctx.fragment_ids_this_run,
+            self._new_widget_state.widget_metadata,
+        )
+
+        # Keep only bound-intent entries that still have a key mapping.
+        # This prevents unbounded growth across long sessions with many stale
+        # widget IDs while preserving currently mapped keyed widgets.
+        self._query_param_bound_widget_ids.intersection_update(wid_key_map.keys())
 
     def _get_widget_metadata(self, widget_id: str) -> WidgetMetadata[Any] | None:
         """Return the metadata for a widget id from the current widget state."""
@@ -905,9 +1007,25 @@ class SessionState:
             # If the widget has a user_key, update its user_key:widget_id mapping
             self._set_key_widget_mapping(widget_id, user_key)
 
-        if widget_id not in self and (user_key is None or user_key not in self):
+        # Handle query param binding
+        url_value_seeded = False
+        if metadata.bind == "query-params" and user_key is not None:
+            self._query_param_bound_widget_ids.add(widget_id)
+            url_value_seeded = self._handle_query_param_binding(
+                metadata, user_key, widget_id
+            )
+        elif metadata.bind is None and user_key is not None:
+            # Widget stopped using bind — clean up any stale binding
+            self._query_param_bound_widget_ids.discard(widget_id)
+            self.query_params.unbind_and_clear_param(widget_id)
+
+        if (
+            widget_id not in self
+            and (user_key is None or user_key not in self)
+            and not url_value_seeded
+        ):
             # This is the first time the widget is registered, so we save its
-            # value in widget state.
+            # value in widget state (unless we already seeded from URL).
             deserializer = metadata.deserializer
             initial_widget_value = deepcopy(deserializer(None))
             self._new_widget_state.set_from_value(widget_id, initial_widget_value)
@@ -918,13 +1036,208 @@ class SessionState:
         widget_value = cast("T", self[widget_id])
         widget_value = deepcopy(widget_value)
 
+        # Sync bound widget value ↔ URL after value resolution.
+        #
+        # Non-default restore: write param when it was lost (page nav / remount).
+        # The user_key-in-_old_state guard ensures this only fires for values
+        # that were explicitly preserved under a user key by _remove_stale_widgets.
+        # Compacted programmatic sets (st.session_state["k"] = v) are stored
+        # under widget IDs only, so the guard correctly excludes them.
+        #
+        # Default collapsing: remove stale params the frontend already cleared.
+        # The backend's _query_params is not refreshed on same-page reruns, so
+        # it can hold entries the frontend already deleted.  Cleaning them here
+        # prevents _send_query_param_msg from re-broadcasting stale params.
+        restored_bound_value = False
+        if metadata.bind == "query-params" and user_key is not None:
+            default_value = metadata.deserializer(None)
+            if (
+                widget_value != default_value
+                and user_key in self._old_state
+                and not self.query_params.has_param(user_key)
+                and user_key not in self._new_session_state
+            ):
+                serialized = metadata.serializer(widget_value)
+                self.query_params.set_corrected_value(
+                    user_key, serialized, metadata.value_type
+                )
+                restored_bound_value = True
+            elif widget_value == default_value:
+                self.query_params.discard_param_no_forward_msg(user_key)
+
         # widget_value_changed indicates to the caller that the widget's
         # current value is different from what is in the frontend.
-        widget_value_changed = user_key is not None and self.is_new_state_value(
-            user_key
-        )
+        # Also true when a preserved bound value was restored to the URL —
+        # the frontend is rendering the widget for the first time on this page
+        # and needs to be told to use the backend's resolved value instead of
+        # the widget's default.
+        widget_value_changed = (
+            user_key is not None and self.is_new_state_value(user_key)
+        ) or restored_bound_value
 
         return RegisterWidgetResult(widget_value, widget_value_changed)
+
+    def _handle_query_param_binding(
+        self, metadata: WidgetMetadata[T], user_key: str, widget_id: str
+    ) -> bool:
+        """Handle query param binding for a widget.
+
+        Registers the binding, then attempts to seed the widget's value from URL
+        based on priority rules:
+
+        - On initial load, URL wins (enables shareable URLs)
+        - On subsequent reruns, session_state values win
+        - User interaction (frontend value) always wins
+
+        Returns True if the widget's value was seeded from URL, False otherwise.
+        """
+        # Register the widget binding
+        ctx = get_script_run_ctx()
+        script_hash = ctx.active_script_hash if ctx is not None else ""
+        self.query_params.bind_widget(
+            param_key=user_key,
+            widget_id=widget_id,
+            value_type=metadata.value_type,
+            script_hash=script_hash,
+        )
+
+        # Check priority rules - skip seeding if user/code has already set a value
+        if widget_id in self._new_widget_state:  # User interacted with widget
+            return False
+        is_initial_load = widget_id not in self._old_state
+        if not is_initial_load and user_key in self._new_session_state:
+            return False  # Code set value after first run
+
+        url_value = self.query_params.get_initial_value(user_key)
+        if url_value is None:
+            return False
+
+        return self._seed_widget_from_url(metadata, user_key, widget_id, url_value)
+
+    def _seed_widget_from_url(
+        self,
+        metadata: WidgetMetadata[T],
+        user_key: str,
+        widget_id: str,
+        url_value: str | list[str],
+    ) -> bool:
+        """Parse URL value, seed widget state, and auto-correct URL if needed.
+
+        This method:
+        1. Checks if the URL value is empty and handles based on clearable
+        2. Parses the raw URL string using the widget's value_type
+        3. Deserializes to the widget's native value format
+        4. Handles invalid values (clears URL param, returns False)
+        5. Stores valid values in both widget state and session state
+        6. Auto-corrects the URL if the value was clamped/filtered
+
+        Returns True if seeding succeeded, False if the URL value was invalid.
+        """
+        # Check if URL value is empty (e.g., ?foo= with no value)
+        if is_empty_url_value(url_value) and not metadata.clearable:
+            # Widget doesn't allow empty state - clear the invalid param
+            self._clear_url_param(user_key)
+            return False
+
+        try:
+            parsed_value = parse_url_param(url_value, metadata.value_type)
+            deserialized_value = metadata.deserializer(parsed_value)
+            default_value = metadata.deserializer(None)
+
+            # If the deserialized value equals the default, clear the param.
+            # Default values should not be kept in the URL — this matches the
+            # frontend's shouldClearUrlParam behavior. This handles:
+            # 1. Valid input that equals the default (e.g., ?dark_mode=FALSE)
+            # 2. Invalid input that the deserializer rejected and fell back to default
+            # 3. Valid input that normalized to match the default (e.g., "000000" -> "#000000")
+            if deserialized_value == default_value:
+                self._clear_url_param(user_key)
+                return False
+
+            # Handle case where all URL values were invalid (filtered to empty list).
+            # For array types, parsed_value is always a list. If it had values that
+            # were all filtered by the deserializer (e.g., invalid options), clear URL.
+            if (
+                isinstance(deserialized_value, list)
+                and len(deserialized_value) == 0
+                and parsed_value  # Non-empty list means URL had values
+            ):
+                self._clear_url_param(user_key)
+                return False
+
+            # For string_value selection widgets (radio, selectbox), validate
+            # that the parsed URL value is a known option. The deserializer
+            # passes unknown options through as-is (needed for dynamic option
+            # changes and accept_new_options), so we check here instead.
+            # Widgets opt in by passing formatted_options to register_widget.
+            if (
+                metadata.formatted_options is not None
+                and metadata.value_type == "string_value"
+                and isinstance(parsed_value, str)
+                and parsed_value not in metadata.formatted_options
+            ):
+                self._clear_url_param(user_key)
+                return False
+
+            # For string_array_value widgets (e.g. multiselect, select_slider),
+            # sanitize the parsed URL values: filter invalid options, optionally
+            # deduplicate, and enforce max length.
+            if metadata.value_type == "string_array_value" and isinstance(
+                parsed_value, list
+            ):
+                sanitized = _sanitize_url_array(
+                    parsed_value,
+                    valid_options=metadata.formatted_options,
+                    max_length=metadata.max_array_length,
+                    allow_duplicates=metadata.allow_url_duplicates,
+                )
+                if sanitized is not None:
+                    if not sanitized:
+                        self._clear_url_param(user_key)
+                        return False
+                    deserialized_value = metadata.deserializer(sanitized)
+                    if deserialized_value == default_value:
+                        self._clear_url_param(user_key)
+                        return False
+
+            # Store the value in widget and session state
+            self._new_widget_state.set_from_value(widget_id, deserialized_value)
+            self._new_session_state[user_key] = deserialized_value
+
+            # Auto-correct URL if value was clamped/filtered
+            self._auto_correct_url_if_needed(
+                metadata, user_key, parsed_value, deserialized_value
+            )
+            return True
+
+        except (ValueError, TypeError, IndexError) as e:
+            _LOGGER.debug(
+                "Invalid URL value for bound widget '%s', clearing param: %s",
+                user_key,
+                e,
+            )
+            self._clear_url_param(user_key)
+            return False
+
+    def _clear_url_param(self, user_key: str) -> None:
+        """Clear an invalid URL parameter and notify frontend."""
+        self.query_params.remove_param(user_key)
+
+    def _auto_correct_url_if_needed(
+        self,
+        metadata: WidgetMetadata[T],
+        user_key: str,
+        parsed_value: Any,
+        deserialized_value: Any,
+    ) -> None:
+        """Auto-correct URL if the value was clamped or filtered."""
+        serialized_value = metadata.serializer(deserialized_value)
+        if serialized_value == parsed_value:
+            return  # No correction needed
+
+        self.query_params.set_corrected_value(
+            user_key, serialized_value, metadata.value_type
+        )
 
     def __contains__(self, key: str) -> bool:
         try:
@@ -934,12 +1247,17 @@ class SessionState:
         else:
             return True
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         # Lazy-load vendored package to prevent import of numpy
         from streamlit.vendor.pympler.asizeof import asizeof
 
         stat = CacheStat("st_session_state", "", asizeof(self))
-        return [stat]
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: [stat]}
 
     def _check_serializable(self) -> None:
         """Verify that everything added to session state can be serialized.
@@ -992,12 +1310,25 @@ def _is_stale_widget(
 
 
 @dataclass
-class SessionStateStatProvider(CacheStatsProvider):
+class SessionStateStatProvider(StatsProvider):
     _session_mgr: SessionManager
 
-    def get_stats(self) -> list[CacheStat]:
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
+
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         stats: list[CacheStat] = []
         for session_info in self._session_mgr.list_active_sessions():
             session_state = session_info.session.session_state
-            stats.extend(session_state.get_stats())
-        return group_stats(stats)
+            session_stats = session_state.get_stats()
+            for family_stats in session_stats.values():
+                stats.extend(family_stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,18 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback, useContext } from "react"
 
-import { getLogger } from "loglevel"
-
-import { Exception as ExceptionProto } from "@streamlit/protobuf"
+import { Config, Exception as ExceptionProto } from "@streamlit/protobuf"
 import { isLocalhost } from "@streamlit/utils"
 
+import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { StyledCode } from "~lib/components/elements/CodeBlock/styled-components"
-import AlertContainer, { Kind } from "~lib/components/shared/AlertContainer"
+import AlertContainer, {
+  Kind,
+} from "~lib/components/shared/AlertContainer/AlertContainer"
 import { StyledStackTrace } from "~lib/components/shared/ErrorElement/styled-components"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { notNullOrUndefined } from "~lib/util/utils"
 
@@ -38,8 +39,6 @@ import {
   StyledStackTraceRow,
   StyledStackTraceTitle,
 } from "./styled-components"
-
-export const LOG = getLogger("ExceptionElement")
 
 export interface ExceptionElementProps {
   element: ExceptionProto
@@ -119,6 +118,14 @@ function StackTrace({ stackTrace }: Readonly<StackTraceProps>): ReactElement {
 function ExceptionElement({
   element,
 }: Readonly<ExceptionElementProps>): ReactElement {
+  const { showErrorLinks = Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO } =
+    useContext(LibConfigContext)
+
+  const shouldShowLinks =
+    showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE ||
+    (showErrorLinks === Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO &&
+      isLocalhost())
+
   const formattedExceptionShort = `${element.type}: ${element.message}`
   const formattedExceptionFull = `${formattedExceptionShort}\n\n${element.stackTrace?.join(
     "\n"
@@ -151,7 +158,7 @@ function ExceptionElement({
           {element.stackTrace && element.stackTrace.length > 0 ? (
             <StackTrace stackTrace={element.stackTrace} />
           ) : null}
-          {isLocalhost() && (
+          {shouldShowLinks && (
             <StyledExceptionLinks>
               <StyledExceptionCopyButton onClick={handleCopy}>
                 Copy

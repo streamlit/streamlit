@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 import { Mic } from "@emotion-icons/material-outlined"
@@ -25,8 +25,11 @@ import {
   StopCircle,
 } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon, { DynamicIcon } from "~lib/components/shared/Icon"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import Icon from "~lib/components/shared/Icon/Icon"
 
 import {
   StyledActionButtonContainerDiv,
@@ -93,7 +96,7 @@ interface AudioInputResetButtonProps {
   onClick(): void
 }
 
-export const AudioInputStopRecordingButton: React.FC<
+const AudioInputStopRecordingButton: React.FC<
   AudioInputStopRecordingButtonProps
 > = ({ disabled, stopRecording }) => (
   <StyledActionButtonStopRecordingDiv>
@@ -106,9 +109,11 @@ export const AudioInputStopRecordingButton: React.FC<
   </StyledActionButtonStopRecordingDiv>
 )
 
-export const AudioInputPlayPauseButton: React.FC<
-  AudioInputPlayPauseButtonProps
-> = ({ disabled, isPlaying, onClickPlayPause }) => {
+const AudioInputPlayPauseButton: React.FC<AudioInputPlayPauseButtonProps> = ({
+  disabled,
+  isPlaying,
+  onClickPlayPause,
+}) => {
   return (
     <StyledActionButtonPlayPauseDiv>
       {isPlaying ? (
@@ -130,7 +135,7 @@ export const AudioInputPlayPauseButton: React.FC<
   )
 }
 
-export const AudioInputStartRecordingButton: React.FC<
+const AudioInputStartRecordingButton: React.FC<
   AudioInputStartRecordingButtonProps
 > = ({ disabled, startRecording }) => (
   <StyledActionButtonStartRecordingDiv>
@@ -143,7 +148,7 @@ export const AudioInputStartRecordingButton: React.FC<
   </StyledActionButtonStartRecordingDiv>
 )
 
-export const AudioInputResetButton: React.FC<AudioInputResetButtonProps> = ({
+const AudioInputResetButton: React.FC<AudioInputResetButtonProps> = ({
   onClick,
 }) => (
   <StyledActionButtonPlayPauseDiv>

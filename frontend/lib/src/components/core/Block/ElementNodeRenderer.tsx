@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,10 @@
  * limitations under the License.
  */
 
-import React, { lazy, ReactElement, Suspense, useContext } from "react"
-
-import classNames from "classnames"
+import { lazy, ReactElement, useContext } from "react"
 
 import {
   Alert as AlertProto,
-  Arrow as ArrowProto,
   AudioInput as AudioInputProto,
   Audio as AudioProto,
   BidiComponent as BidiComponentProto,
@@ -32,21 +29,24 @@ import {
   Code as CodeProto,
   ColorPicker as ColorPickerProto,
   ComponentInstance as ComponentInstanceProto,
+  Dataframe as DataframeProto,
   DateInput as DateInputProto,
   DateTimeInput as DateTimeInputProto,
   DeckGlJsonChart as DeckGlJsonChartProto,
-  DocString as DocStringProto,
   DownloadButton as DownloadButtonProto,
   Exception as ExceptionProto,
+  Feedback as FeedbackProto,
   FileUploader as FileUploaderProto,
   GraphVizChart as GraphVizChartProto,
   Heading as HeadingProto,
+  Help as HelpProto,
   Html as HtmlProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
   Json as JsonProto,
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
+  MenuButton as MenuButtonProto,
   Metric as MetricProto,
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
@@ -58,6 +58,7 @@ import {
   Skeleton as SkeletonProto,
   Slider as SliderProto,
   Spinner as SpinnerProto,
+  Table as TableProto,
   TextArea as TextAreaProto,
   TextInput as TextInputProto,
   Text as TextProto,
@@ -68,99 +69,146 @@ import {
 
 import { ElementNode } from "~lib/AppNode"
 // Load (non-lazy) elements.
-import Maybe from "~lib/components/core/Maybe"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
+import Maybe from "~lib/components/core/Maybe/Maybe"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import { ViewStateContext } from "~lib/components/core/ViewStateContext"
-import AlertElement, {
-  getAlertElementKind,
-} from "~lib/components/elements/AlertElement"
-import DocString from "~lib/components/elements/DocString"
-import ExceptionElement from "~lib/components/elements/ExceptionElement"
-import Markdown from "~lib/components/elements/Markdown"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import TextElement from "~lib/components/elements/TextElement"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
+import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { getAlertElementKind } from "~lib/components/elements/AlertElement/utils"
+import ExceptionElement from "~lib/components/elements/ExceptionElement/ExceptionElement"
+import Help from "~lib/components/elements/Help/Help"
+import Markdown from "~lib/components/elements/Markdown/Markdown"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
-import { getElementId } from "~lib/util/utils"
+import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
+import { ElementContainer } from "./ElementContainer"
+import {
+  ElementContainerConfig,
+  MinStretchWidth,
+} from "./ElementContainerConfig"
 import { StyledSpace } from "./styled-components"
-import { StyledElementContainerLayoutWrapper } from "./StyledElementContainerLayoutWrapper"
 import {
   BaseBlockProps,
-  convertKeyToClassName,
-  getKeyFromId,
   isComponentStale,
   shouldComponentBeEnabled,
 } from "./utils"
 
 // Lazy-load elements.
-const ArrowTable = lazy(() => import("~lib/components/elements/ArrowTable"))
+const Table = lazy(() => import("~lib/components/elements/Table/Table"))
 const ArrowVegaLiteChart = lazy(
-  () => import("~lib/components/elements/ArrowVegaLiteChart")
+  () =>
+    import("~lib/components/elements/ArrowVegaLiteChart/ArrowVegaLiteChart")
 )
-const Audio = lazy(() => import("~lib/components/elements/Audio"))
-const Balloons = lazy(() => import("~lib/components/elements/Balloons"))
+const Audio = lazy(() => import("~lib/components/elements/Audio/Audio"))
+const Balloons = lazy(
+  () => import("~lib/components/elements/Balloons/Balloons")
+)
 const DeckGlJsonChart = lazy(
-  () => import("~lib/components/elements/DeckGlJsonChart")
+  () => import("~lib/components/elements/DeckGlJsonChart/DeckGlJsonChart")
 )
 const GraphVizChart = lazy(
-  () => import("~lib/components/elements/GraphVizChart")
+  () => import("~lib/components/elements/GraphVizChart/GraphVizChart")
 )
-const Html = lazy(() => import("~lib/components/elements/Html"))
-const IFrame = lazy(() => import("~lib/components/elements/IFrame"))
-const ImageList = lazy(() => import("~lib/components/elements/ImageList"))
-const Json = lazy(() => import("~lib/components/elements/Json"))
-const LinkButton = lazy(() => import("~lib/components/elements/LinkButton"))
-const Metric = lazy(() => import("~lib/components/elements/Metric"))
-const PageLink = lazy(() => import("~lib/components/elements/PageLink"))
-const PlotlyChart = lazy(() => import("~lib/components/elements/PlotlyChart"))
-const Progress = lazy(() => import("~lib/components/elements/Progress"))
-const Snow = lazy(() => import("~lib/components/elements/Snow"))
-const Spinner = lazy(() => import("~lib/components/elements/Spinner"))
+const Html = lazy(() => import("~lib/components/elements/Html/Html"))
+const IFrame = lazy(() => import("~lib/components/elements/IFrame/IFrame"))
+const ImageList = lazy(
+  () => import("~lib/components/elements/ImageList/ImageList")
+)
+const Json = lazy(() => import("~lib/components/elements/Json/Json"))
+const LinkButton = lazy(
+  () => import("~lib/components/elements/LinkButton/LinkButton")
+)
+const Metric = lazy(() => import("~lib/components/elements/Metric/Metric"))
+const PageLink = lazy(
+  () => import("~lib/components/elements/PageLink/PageLink")
+)
+const PlotlyChart = lazy(
+  () => import("~lib/components/elements/PlotlyChart/PlotlyChart")
+)
+const Progress = lazy(
+  () => import("~lib/components/elements/Progress/Progress")
+)
+const Snow = lazy(() => import("~lib/components/elements/Snow/Snow"))
+const Spinner = lazy(() => import("~lib/components/elements/Spinner/Spinner"))
 const StreamlitSyntaxHighlighter = lazy(
   () => import("~lib/components/elements/CodeBlock/StreamlitSyntaxHighlighter")
 )
-const Toast = lazy(() => import("~lib/components/elements/Toast"))
-const Video = lazy(() => import("~lib/components/elements/Video"))
+const Toast = lazy(() => import("~lib/components/elements/Toast/Toast"))
+const Video = lazy(() => import("~lib/components/elements/Video/Video"))
 
 // Lazy-load widgets.
-const AudioInput = lazy(() => import("~lib/components/widgets/AudioInput"))
-const ArrowDataFrame = lazy(() => import("~lib/components/widgets/DataFrame"))
-const Button = lazy(() => import("~lib/components/widgets/Button"))
-const ButtonGroup = lazy(() => import("~lib/components/widgets/ButtonGroup"))
-const ComponentInstance = lazy(() =>
-  import("~lib/components/widgets/CustomComponent").then(module => ({
-    default: module.ComponentInstance,
-  }))
+const AudioInput = lazy(
+  () => import("~lib/components/widgets/AudioInput/AudioInput")
 )
-const CameraInput = lazy(() => import("~lib/components/widgets/CameraInput"))
-const ChatInput = lazy(() => import("~lib/components/widgets/ChatInput"))
-const Checkbox = lazy(() => import("~lib/components/widgets/Checkbox"))
-const ColorPicker = lazy(() => import("~lib/components/widgets/ColorPicker"))
-const DateInput = lazy(() => import("~lib/components/widgets/DateInput"))
+const ArrowDataFrame = lazy(
+  () => import("~lib/components/widgets/DataFrame/DataFrame")
+)
+const Button = lazy(() => import("~lib/components/widgets/Button/Button"))
+const ButtonGroup = lazy(
+  () => import("~lib/components/widgets/ButtonGroup/ButtonGroup")
+)
+const ComponentInstance = lazy(
+  () => import("~lib/components/widgets/CustomComponent/ComponentInstance")
+)
+const CameraInput = lazy(
+  () => import("~lib/components/widgets/CameraInput/CameraInput")
+)
+const ChatInput = lazy(
+  () => import("~lib/components/widgets/ChatInput/ChatInput")
+)
+const Checkbox = lazy(
+  () => import("~lib/components/widgets/Checkbox/Checkbox")
+)
+const ColorPicker = lazy(
+  () => import("~lib/components/widgets/ColorPicker/ColorPicker")
+)
+const DateInput = lazy(
+  () => import("~lib/components/widgets/DateInput/DateInput")
+)
 const DateTimeInput = lazy(
-  () => import("~lib/components/widgets/DateTimeInput")
+  () => import("~lib/components/widgets/DateTimeInput/DateTimeInput")
 )
 const DownloadButton = lazy(
-  () => import("~lib/components/widgets/DownloadButton")
+  () => import("~lib/components/widgets/DownloadButton/DownloadButton")
 )
-const FileUploader = lazy(() => import("~lib/components/widgets/FileUploader"))
+const Feedback = lazy(
+  () => import("~lib/components/widgets/Feedback/Feedback")
+)
+const FileUploader = lazy(
+  () => import("~lib/components/widgets/FileUploader/FileUploader")
+)
 const FormSubmitContent = lazy(() =>
-  import("~lib/components/widgets/Form").then(module => ({
+  import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
     default: module.FormSubmitContent,
   }))
 )
-const Multiselect = lazy(() => import("~lib/components/widgets/Multiselect"))
-const NumberInput = lazy(() => import("~lib/components/widgets/NumberInput"))
-const Radio = lazy(() => import("~lib/components/widgets/Radio"))
-const Selectbox = lazy(() => import("~lib/components/widgets/Selectbox"))
-const Slider = lazy(() => import("~lib/components/widgets/Slider"))
-const TextArea = lazy(() => import("~lib/components/widgets/TextArea"))
-const TextInput = lazy(() => import("~lib/components/widgets/TextInput"))
-const TimeInput = lazy(() => import("~lib/components/widgets/TimeInput"))
+const Multiselect = lazy(
+  () => import("~lib/components/widgets/Multiselect/Multiselect")
+)
+const MenuButton = lazy(
+  () => import("~lib/components/widgets/MenuButton/MenuButton")
+)
+const NumberInput = lazy(
+  () => import("~lib/components/widgets/NumberInput/NumberInput")
+)
+const Radio = lazy(() => import("~lib/components/widgets/Radio/Radio"))
+const Selectbox = lazy(
+  () => import("~lib/components/widgets/Selectbox/Selectbox")
+)
+const Slider = lazy(() => import("~lib/components/widgets/Slider/Slider"))
+const TextArea = lazy(
+  () => import("~lib/components/widgets/TextArea/TextArea")
+)
+const TextInput = lazy(
+  () => import("~lib/components/widgets/TextInput/TextInput")
+)
+const TimeInput = lazy(
+  () => import("~lib/components/widgets/TimeInput/TimeInput")
+)
 
 const BidiComponent = lazy(
-  () => import("~lib/components/widgets/BidiComponent")
+  () => import("~lib/components/widgets/BidiComponent/BidiComponent")
 )
 
 export interface ElementNodeRendererProps extends BaseBlockProps {
@@ -179,7 +227,8 @@ function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
 const RawElementNodeRenderer = (
   props: RawElementNodeRendererProps
 ): ReactElement => {
-  const { node } = props
+  const { node, isStale } = props
+  const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
 
   if (!node) {
     throw new Error("ElementNode not found.")
@@ -203,247 +252,483 @@ const RawElementNodeRenderer = (
     case "alert": {
       const alertProto = node.element.alert as AlertProto
       return (
-        <AlertElement
-          icon={alertProto.icon}
-          body={alertProto.body}
-          kind={getAlertElementKind(alertProto.format)}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <AlertElement
+            icon={alertProto.icon}
+            body={alertProto.body}
+            title={alertProto.title}
+            kind={getAlertElementKind(alertProto.format)}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
     }
 
-    case "arrowTable": {
-      const arrowProto = node.element.arrowTable as ArrowProto
+    case "table": {
+      const tableProto = node.element.table as TableProto
       return (
-        <ArrowTable
-          element={arrowProto}
-          data={node.quiverElement}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <Table
+            element={tableProto}
+            data={node.quiverElement}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "audio":
       return (
-        <Audio
-          element={node.element.audio as AudioProto}
-          endpoints={props.endpoints}
-          {...elementProps}
-          elementMgr={props.widgetMgr}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <Audio
+            element={node.element.audio as AudioProto}
+            endpoints={props.endpoints}
+            {...elementProps}
+            elementMgr={props.widgetMgr}
+          />
+        </ElementContainer>
       )
 
     case "balloons":
       // Specifically use node.scriptRunId vs. scriptRunId from context
       // See issue #10961: https://github.com/streamlit/streamlit/issues/10961
       return hideIfStale(
-        props.isStale,
-        <Balloons scriptRunId={node.scriptRunId} />
+        isStale,
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Balloons scriptRunId={node.scriptRunId} />
+        </ElementContainer>
       )
 
     case "code": {
       const codeProto = node.element.code as CodeProto
       return (
-        <StreamlitSyntaxHighlighter
-          language={codeProto.language}
-          showLineNumbers={codeProto.showLineNumbers}
-          wrapLines={codeProto.wrapLines}
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
         >
-          {codeProto.codeText}
-        </StreamlitSyntaxHighlighter>
+          <StreamlitSyntaxHighlighter
+            language={codeProto.language}
+            showLineNumbers={codeProto.showLineNumbers}
+            wrapLines={codeProto.wrapLines}
+          >
+            {codeProto.codeText}
+          </StreamlitSyntaxHighlighter>
+        </ElementContainer>
       )
     }
 
-    case "deckGlJsonChart":
+    case "deckGlJsonChart": {
+      const deckGlProto = node.element.deckGlJsonChart as DeckGlJsonChartProto
       return (
-        <DeckGlJsonChart
-          element={node.element.deckGlJsonChart as DeckGlJsonChartProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          isStale={isStale}
+        >
+          <DeckGlJsonChart
+            element={deckGlProto}
+            // DeckGL chart can be used as a widget (when selections are activated) or
+            // an element. We only want to set the key in case of it being used as a widget
+            // since otherwise it might break some apps that show the same charts multiple times.
+            // So we only compute an element ID if it's a widget, otherwise its an empty string.
+            key={deckGlProto.id || undefined}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
+    }
 
-    case "docString":
+    case "helpInfo":
       return (
-        <DocString
-          element={node.element.docString as DocStringProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <Help
+            element={node.element.helpInfo as HelpProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
     case "empty":
-      return <div className="stEmpty" data-testid="stEmpty" />
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <div className="stEmpty" data-testid="stEmpty" />
+        </ElementContainer>
+      )
 
     case "exception":
       return (
-        <ExceptionElement
-          element={node.element.exception as ExceptionProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <ExceptionElement
+            element={node.element.exception as ExceptionProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
     case "graphvizChart":
       return (
-        <GraphVizChart
-          element={node.element.graphvizChart as GraphVizChartProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          isStale={isStale}
+        >
+          <GraphVizChart
+            element={node.element.graphvizChart as GraphVizChartProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
     case "heading":
       return (
-        <Heading
-          element={node.element.heading as HeadingProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Heading
+            element={node.element.heading as HeadingProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
     case "iframe":
       return (
-        <IFrame
-          element={node.element.iframe as IFrameProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_OVERFLOW_VISIBLE}
+          isStale={isStale}
+        >
+          <IFrame
+            element={node.element.iframe as IFrameProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
-    case "imgs":
+    case "imgs": {
+      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component.
+      // This also covers st.pyplot() which is a special case of st.image.
+      //
+      // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
+      // Use "100%" when using stretch or when no width config is set to ensure container has dimensions for width calculation (#12678).
+      //
+      // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
+      // This is consistent with how useLayoutStyles handles missing config for other elements.
+      const isUsingStretch =
+        !node.element.widthConfig || node.element.widthConfig.useStretch
+
+      const config = isUsingStretch
+        ? ElementContainerConfig.FULL_WIDTH
+        : new ElementContainerConfig({
+            styleOverrides: { width: "auto" },
+          })
+
       return (
-        <ImageList
-          element={node.element.imgs as ImageListProto}
-          endpoints={props.endpoints}
-          {...elementProps}
-        />
+        <ElementContainer node={node} config={config} isStale={isStale}>
+          <ImageList
+            element={node.element.imgs as ImageListProto}
+            endpoints={props.endpoints}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
+    }
 
     case "json":
       return (
-        <Json element={node.element.json as JsonProto} {...elementProps} />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <Json element={node.element.json as JsonProto} {...elementProps} />
+        </ElementContainer>
       )
 
-    case "markdown":
-      return (
-        <Markdown
-          element={node.element.markdown as MarkdownProto}
-          {...elementProps}
-        />
-      )
+    case "markdown": {
+      // Markdown "auto" width behavior:
+      // When markdown has no explicit width config, apply container-aware sizing:
+      // - In horizontal layouts: content width (fit-content)
+      // - In vertical layouts: stretch (100%)
+      const config = node.element.widthConfig
+        ? ElementContainerConfig.DEFAULT
+        : isInHorizontalLayout
+          ? new ElementContainerConfig({
+              styleOverrides: { width: "fit-content" },
+            })
+          : ElementContainerConfig.FULL_WIDTH
 
-    case "metric":
       return (
-        <Metric
-          element={node.element.metric as MetricProto}
-          {...elementProps}
-        />
+        <ElementContainer node={node} config={config} isStale={isStale}>
+          <Markdown
+            element={node.element.markdown as MarkdownProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
+    }
+
+    case "metric": {
+      const metricProto = node.element.metric as MetricProto
+      const hasChart =
+        metricProto.chartData && metricProto.chartData.length > 0
+      return (
+        <ElementContainer
+          node={node}
+          config={
+            hasChart
+              ? ElementContainerConfig.LARGE_ELEMENT
+              : ElementContainerConfig.DEFAULT
+          }
+          isStale={isStale}
+        >
+          <Metric element={metricProto} {...elementProps} />
+        </ElementContainer>
+      )
+    }
 
     case "html":
       return (
-        <Html element={node.element.html as HtmlProto} {...elementProps} />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Html element={node.element.html as HtmlProto} {...elementProps} />
+        </ElementContainer>
       )
 
     case "pageLink": {
       const pageLinkProto = node.element.pageLink as PageLinkProto
       const isDisabled = widgetProps.disabled || pageLinkProto.disabled
       return (
-        <PageLink
-          element={pageLinkProto}
-          disabled={isDisabled}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <PageLink
+            element={pageLinkProto}
+            disabled={isDisabled}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "progress":
       return (
-        <Progress
-          element={node.element.progress as ProgressProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <Progress
+            element={node.element.progress as ProgressProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
-    case "skeleton": {
-      return <Skeleton element={node.element.skeleton as SkeletonProto} />
-    }
+    case "skeleton":
+      // Without this style, the skeleton width relies on the flex container that
+      // wraps the page contents having align-items: stretch. There was a regression
+      // where this default was changed. It is more robust to ensure that the skeleton
+      // has this width.
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
+          <Skeleton element={node.element.skeleton as SkeletonProto} />
+        </ElementContainer>
+      )
 
     case "snow":
       // Specifically use node.scriptRunId vs. scriptRunId from context
       // See issue #10961: https://github.com/streamlit/streamlit/issues/10961
       return hideIfStale(
-        props.isStale,
-        <Snow scriptRunId={node.scriptRunId} />
+        isStale,
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Snow scriptRunId={node.scriptRunId} />
+        </ElementContainer>
       )
 
     case "space":
-      return <StyledSpace className="stSpace" data-testid="stSpace" />
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <StyledSpace className="stSpace" data-testid="stSpace" />
+        </ElementContainer>
+      )
 
     case "spinner":
       return (
-        <Spinner
-          element={node.element.spinner as SpinnerProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Spinner
+            element={node.element.spinner as SpinnerProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
     case "text":
       return (
-        <TextElement
-          element={node.element.text as TextProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <TextElement
+            element={node.element.text as TextProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
 
     case "video":
       return (
-        <Video
-          element={node.element.video as VideoProto}
-          endpoints={props.endpoints}
-          {...elementProps}
-          elementMgr={props.widgetMgr}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <Video
+            element={node.element.video as VideoProto}
+            endpoints={props.endpoints}
+            {...elementProps}
+            elementMgr={props.widgetMgr}
+          />
+        </ElementContainer>
       )
 
     // Events:
     case "toast": {
       const toastProto = node.element.toast as ToastProto
       return (
-        <Toast
-          // React key needed so toasts triggered on re-run
-          key={node.scriptRunId}
-          element={toastProto}
-          {...elementProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Toast
+            // React key needed so toasts triggered on re-run
+            key={node.scriptRunId}
+            element={toastProto}
+            {...elementProps}
+          />
+        </ElementContainer>
       )
     }
 
     // Widgets:
-    case "arrowDataFrame": {
-      const arrowProto = node.element.arrowDataFrame as ArrowProto
-      widgetProps.disabled = widgetProps.disabled || arrowProto.disabled
+    case "dataframe": {
+      const dataframeProto = node.element.dataframe as DataframeProto
+      widgetProps.disabled = widgetProps.disabled || dataframeProto.disabled
+
+      // Resizable dataframes measure parent container width for the resize feature.
+      // Parent needs defined width (not fit-content) for measurement to work.
+      // Only needed in root where resize is enabled; disabled in nested containers.
+      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      const config = needsFullWidth
+        ? new ElementContainerConfig({
+            minStretchWidth: MinStretchWidth.LARGE,
+            styleOverrides: { overflow: "visible", width: "100%" },
+          })
+        : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+
       return (
-        <ArrowDataFrame
-          // Arrow dataframe can be used as a widget (data_editor) or
-          // an element (dataframe). We only want to set the key in case of
-          // it being used as a widget. For the non-widget usage, the id will
-          // be undefined.
-          key={arrowProto.id || undefined}
-          element={arrowProto}
-          data={node.quiverElement}
-          {...widgetProps}
-        />
+        <ElementContainer node={node} config={config} isStale={isStale}>
+          <ArrowDataFrame
+            // Arrow dataframe can be used as a widget (data_editor) or
+            // an element (dataframe). We only want to set the key in case of
+            // it being used as a widget. For the non-widget usage, the id will
+            // be undefined.
+            key={dataframeProto.id || undefined}
+            element={dataframeProto}
+            data={node.quiverElement}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
-    case "arrowVegaLiteChart": {
+    case "vegaLiteChart": {
       const vegaLiteElement = node.vegaLiteChartElement
+
+      // VegaLite charts with embedded dataframes need a defined parent width
+      // (not fit-content) for proper measurement and rendering due to the resize feature.
+      // Resize is disabled in nested containers, so this is only necessary in the root container.
+      const needsFullWidth = node.element.widthConfig?.useContent && isInRoot
+      // TODO (lawilby): See if we can remove this once the new width style is implemented for all of the vega charts.
+      const needsFlex = isInHorizontalLayout && !node.element.widthConfig
+      const config =
+        needsFullWidth || needsFlex
+          ? new ElementContainerConfig({
+              minStretchWidth: MinStretchWidth.LARGE,
+              styleOverrides: {
+                overflow: "visible",
+                ...(needsFullWidth && { width: "100%" }),
+                ...(needsFlex && { flex: "1 1 14rem" }),
+              },
+            })
+          : ElementContainerConfig.LARGE_OVERFLOW_VISIBLE
+
       return (
-        <ArrowVegaLiteChart
-          element={vegaLiteElement}
-          // Vega-lite chart can be used as a widget (when selections are activated) or
-          // an element. We only want to set the key in case of it being used as a widget
-          // since otherwise it might break some apps that show the same charts multiple times.
-          // So we only compute an element ID if it's a widget, otherwise its an empty string.
-          key={vegaLiteElement.id || undefined}
-          {...widgetProps}
-        />
+        <ElementContainer node={node} config={config} isStale={isStale}>
+          <ArrowVegaLiteChart
+            element={vegaLiteElement}
+            // Vega-lite chart can be used as a widget (when selections are activated) or
+            // an element. We only want to set the key in case of it being used as a widget
+            // since otherwise it might break some apps that show the same charts multiple times.
+            // So we only compute an element ID if it's a widget, otherwise its an empty string.
+            key={vegaLiteElement.id || undefined}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -452,33 +737,55 @@ const RawElementNodeRenderer = (
       widgetProps.disabled = widgetProps.disabled || audioInputProto.disabled
 
       return (
-        <AudioInput
-          key={audioInputProto.id}
-          uploadClient={props.uploadClient}
-          element={audioInputProto}
-          {...widgetProps}
-        ></AudioInput>
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <AudioInput
+            key={audioInputProto.id}
+            uploadClient={props.uploadClient}
+            element={audioInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "button": {
       const buttonProto = node.element.button as ButtonProto
       widgetProps.disabled = widgetProps.disabled || buttonProto.disabled
-      if (buttonProto.isFormSubmitter) {
-        return <FormSubmitContent element={buttonProto} {...widgetProps} />
-      }
-      return <Button element={buttonProto} {...widgetProps} />
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          {buttonProto.isFormSubmitter ? (
+            <FormSubmitContent element={buttonProto} {...widgetProps} />
+          ) : (
+            <Button element={buttonProto} {...widgetProps} />
+          )}
+        </ElementContainer>
+      )
     }
 
     case "buttonGroup": {
       const buttonGroupProto = node.element.buttonGroup as ButtonGroupProto
       widgetProps.disabled = widgetProps.disabled || buttonGroupProto.disabled
+
       return (
-        <ButtonGroup
-          key={buttonGroupProto.id}
-          element={buttonGroupProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <ButtonGroup
+            key={buttonGroupProto.id}
+            element={buttonGroupProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -488,12 +795,38 @@ const RawElementNodeRenderer = (
       widgetProps.disabled =
         widgetProps.disabled || downloadButtonProto.disabled
       return (
-        <DownloadButton
-          endpoints={props.endpoints}
-          key={downloadButtonProto.id}
-          element={downloadButtonProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <DownloadButton
+            endpoints={props.endpoints}
+            key={downloadButtonProto.id}
+            element={downloadButtonProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "feedback": {
+      const feedbackProto = node.element.feedback as FeedbackProto
+      widgetProps.disabled = widgetProps.disabled || feedbackProto.disabled
+
+      // Feedback uses borderless button group style, should shrink to content size
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FIT_CONTENT_ELEMENT}
+          isStale={isStale}
+        >
+          <Feedback
+            key={feedbackProto.id}
+            element={feedbackProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -501,25 +834,56 @@ const RawElementNodeRenderer = (
       const cameraInputProto = node.element.cameraInput as CameraInputProto
       widgetProps.disabled = widgetProps.disabled || cameraInputProto.disabled
       return (
-        <CameraInput
-          key={cameraInputProto.id}
-          element={cameraInputProto}
-          uploadClient={props.uploadClient}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <CameraInput
+            key={cameraInputProto.id}
+            element={cameraInputProto}
+            uploadClient={props.uploadClient}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "chatInput": {
       const chatInputProto = node.element.chatInput as ChatInputProto
       widgetProps.disabled = widgetProps.disabled || chatInputProto.disabled
+
+      // Height configuration for chat input (same pattern as textArea):
+      // - stretch: fills parent (100% height), flex allows grow/shrink with 8rem min
+      // - pixel: container allows expansion, inner component handles height
+      // - content (default): auto-expand with text
+      const heightConfig = node.element.heightConfig
+      const chatInputConfig = new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.MEDIUM,
+        styleOverrides: heightConfig?.useStretch
+          ? { height: "100%", flex: "1 1 8rem" }
+          : heightConfig?.pixelHeight
+            ? {
+                height: "auto",
+                overflow: "visible",
+                ...(isInHorizontalLayout ? {} : { flex: "" }),
+              }
+            : undefined,
+      })
+
       return (
-        <ChatInput
-          key={chatInputProto.id}
-          element={chatInputProto}
-          uploadClient={props.uploadClient}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={chatInputConfig}
+          isStale={isStale}
+        >
+          <ChatInput
+            key={chatInputProto.id}
+            element={chatInputProto}
+            uploadClient={props.uploadClient}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -527,11 +891,17 @@ const RawElementNodeRenderer = (
       const checkboxProto = node.element.checkbox as CheckboxProto
       widgetProps.disabled = widgetProps.disabled || checkboxProto.disabled
       return (
-        <Checkbox
-          key={checkboxProto.id}
-          element={checkboxProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <Checkbox
+            key={checkboxProto.id}
+            element={checkboxProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -539,30 +909,50 @@ const RawElementNodeRenderer = (
       const colorPickerProto = node.element.colorPicker as ColorPickerProto
       widgetProps.disabled = widgetProps.disabled || colorPickerProto.disabled
       return (
-        <ColorPicker
-          key={colorPickerProto.id}
-          element={colorPickerProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <ColorPicker
+            key={colorPickerProto.id}
+            element={colorPickerProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
     case "componentInstance":
+      // Because of how width is handled for custom components, we need the
+      // element wrapper to be full width.
       return (
-        <ComponentInstance
-          element={node.element.componentInstance as ComponentInstanceProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
+          <ComponentInstance
+            element={node.element.componentInstance as ComponentInstanceProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
 
     case "dateInput": {
       const dateInputProto = node.element.dateInput as DateInputProto
       widgetProps.disabled = widgetProps.disabled || dateInputProto.disabled
       return (
-        <DateInput
-          key={dateInputProto.id}
-          element={dateInputProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <DateInput
+            key={dateInputProto.id}
+            element={dateInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -570,29 +960,67 @@ const RawElementNodeRenderer = (
       const fileUploaderProto = node.element.fileUploader as FileUploaderProto
       widgetProps.disabled = widgetProps.disabled || fileUploaderProto.disabled
       return (
-        <FileUploader
-          key={fileUploaderProto.id}
-          element={fileUploaderProto}
-          uploadClient={props.uploadClient}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <FileUploader
+            key={fileUploaderProto.id}
+            element={fileUploaderProto}
+            uploadClient={props.uploadClient}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "linkButton": {
       const linkButtonProto = node.element.linkButton as LinkButtonProto
-      return <LinkButton element={linkButtonProto} {...elementProps} />
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <LinkButton
+            element={linkButtonProto}
+            widgetMgr={props.widgetMgr}
+            fragmentId={node.fragmentId}
+          />
+        </ElementContainer>
+      )
     }
 
     case "multiselect": {
       const multiSelectProto = node.element.multiselect as MultiSelectProto
       widgetProps.disabled = widgetProps.disabled || multiSelectProto.disabled
       return (
-        <Multiselect
-          key={multiSelectProto.id}
-          element={multiSelectProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <Multiselect
+            key={multiSelectProto.id}
+            element={multiSelectProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "menuButton": {
+      const menuButtonProto = node.element.menuButton as MenuButtonProto
+      widgetProps.disabled = widgetProps.disabled || menuButtonProto.disabled
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <MenuButton element={menuButtonProto} {...widgetProps} />
+        </ElementContainer>
       )
     }
 
@@ -600,22 +1028,34 @@ const RawElementNodeRenderer = (
       const numberInputProto = node.element.numberInput as NumberInputProto
       widgetProps.disabled = widgetProps.disabled || numberInputProto.disabled
       return (
-        <NumberInput
-          key={numberInputProto.id}
-          element={numberInputProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <NumberInput
+            key={numberInputProto.id}
+            element={numberInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "plotlyChart": {
       const plotlyProto = node.element.plotlyChart as PlotlyChartProto
       return (
-        <PlotlyChart
-          key={plotlyProto.id}
-          element={plotlyProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.LARGE_ELEMENT}
+          isStale={isStale}
+        >
+          <PlotlyChart
+            key={plotlyProto.id}
+            element={plotlyProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -623,7 +1063,13 @@ const RawElementNodeRenderer = (
       const radioProto = node.element.radio as RadioProto
       widgetProps.disabled = widgetProps.disabled || radioProto.disabled
       return (
-        <Radio key={radioProto.id} element={radioProto} {...widgetProps} />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <Radio key={radioProto.id} element={radioProto} {...widgetProps} />
+        </ElementContainer>
       )
     }
 
@@ -631,11 +1077,17 @@ const RawElementNodeRenderer = (
       const selectboxProto = node.element.selectbox as SelectboxProto
       widgetProps.disabled = widgetProps.disabled || selectboxProto.disabled
       return (
-        <Selectbox
-          key={selectboxProto.id}
-          element={selectboxProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <Selectbox
+            key={selectboxProto.id}
+            element={selectboxProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -643,20 +1095,46 @@ const RawElementNodeRenderer = (
       const sliderProto = node.element.slider as SliderProto
       widgetProps.disabled = widgetProps.disabled || sliderProto.disabled
       return (
-        <Slider key={sliderProto.id} element={sliderProto} {...widgetProps} />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <Slider
+            key={sliderProto.id}
+            element={sliderProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
     case "textArea": {
       const textAreaProto = node.element.textArea as TextAreaProto
       widgetProps.disabled = widgetProps.disabled || textAreaProto.disabled
+
+      // The st.text_area element has a legacy implementation where the height
+      // is measuring only the input box so the pixel height must be set in the element
+      // and the container must be allowed to expand. Additionally, we don't want the
+      // flex with height to be set on the element container.
+      const useStretchHeight = node.element.heightConfig?.useStretch
+      const config = new ElementContainerConfig({
+        minStretchWidth: MinStretchWidth.MEDIUM,
+        styleOverrides: useStretchHeight
+          ? { height: "100%", flex: "1 1 8rem" }
+          : // Content height text area in vertical layout cannot have flex.
+            { height: "auto", ...(isInHorizontalLayout ? {} : { flex: "" }) },
+      })
+
       return (
-        <TextArea
-          key={textAreaProto.id}
-          element={textAreaProto}
-          outerElement={node.element}
-          {...widgetProps}
-        />
+        <ElementContainer node={node} config={config} isStale={isStale}>
+          <TextArea
+            key={textAreaProto.id}
+            element={textAreaProto}
+            outerElement={node.element}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -664,11 +1142,17 @@ const RawElementNodeRenderer = (
       const textInputProto = node.element.textInput as TextInputProto
       widgetProps.disabled = widgetProps.disabled || textInputProto.disabled
       return (
-        <TextInput
-          key={textInputProto.id}
-          element={textInputProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <TextInput
+            key={textInputProto.id}
+            element={textInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -678,11 +1162,17 @@ const RawElementNodeRenderer = (
       widgetProps.disabled =
         widgetProps.disabled || dateTimeInputProto.disabled
       return (
-        <DateTimeInput
-          key={dateTimeInputProto.id}
-          element={dateTimeInputProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <DateTimeInput
+            key={dateTimeInputProto.id}
+            element={dateTimeInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -690,11 +1180,17 @@ const RawElementNodeRenderer = (
       const timeInputProto = node.element.timeInput as TimeInputProto
       widgetProps.disabled = widgetProps.disabled || timeInputProto.disabled
       return (
-        <TimeInput
-          key={timeInputProto.id}
-          element={timeInputProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.MEDIUM_ELEMENT}
+          isStale={isStale}
+        >
+          <TimeInput
+            key={timeInputProto.id}
+            element={timeInputProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
 
@@ -703,11 +1199,17 @@ const RawElementNodeRenderer = (
         .bidiComponent as BidiComponentProto
 
       return (
-        <BidiComponent
-          key={bidiComponentProto.id}
-          element={bidiComponentProto}
-          {...widgetProps}
-        />
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <BidiComponent
+            key={bidiComponentProto.id}
+            element={bidiComponentProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
       )
     }
     default:
@@ -715,12 +1217,10 @@ const RawElementNodeRenderer = (
   }
 }
 
-// Render ElementNodes (i.e. leaf nodes) wrapped in error catchers and all sorts of other //
-// utilities.
+// Render ElementNodes (i.e. leaf nodes) wrapped in Maybe for conditional rendering.
 const ElementNodeRenderer = (
   props: ElementNodeRendererProps
 ): ReactElement => {
-  const { isFullScreen } = useContext(ViewStateContext)
   const { scriptRunState, scriptRunId, fragmentIdsThisRun } =
     useContext(ScriptRunContext)
   const { node } = props
@@ -736,44 +1236,12 @@ const ElementNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  // Get the user key - if it was specified - and use it as CSS class name:
-  const elementId = getElementId(node.element)
-  const userKey = getKeyFromId(elementId)
-
   // TODO: It would be great if we could return an empty fragment if isHidden is true, to keep the
   // DOM clean. But this would require the keys passed to ElementNodeRenderer at Block.tsx to be a
   // stable hash of some sort.
-
   return (
     <Maybe enable={enable}>
-      <StyledElementContainerLayoutWrapper
-        className={classNames(
-          "stElementContainer",
-          "element-container",
-          convertKeyToClassName(userKey)
-        )}
-        data-testid="stElementContainer"
-        data-stale={isStale}
-        // Applying stale opacity in fullscreen mode
-        // causes the fullscreen overlay to be transparent.
-        isStale={isStale && !isFullScreen}
-        elementType={elementType}
-        node={node}
-      >
-        <ErrorBoundary>
-          <Suspense
-            fallback={
-              <Skeleton
-                element={SkeletonProto.create({
-                  style: SkeletonProto.SkeletonStyle.ELEMENT,
-                })}
-              />
-            }
-          >
-            <RawElementNodeRenderer {...props} isStale={isStale} />
-          </Suspense>
-        </ErrorBoundary>
-      </StyledElementContainerLayoutWrapper>
+      <RawElementNodeRenderer {...props} isStale={isStale} />
     </Maybe>
   )
 }

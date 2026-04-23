@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,38 @@ import styled from "@emotion/styled"
 
 import { StyledCodeBlock } from "~lib/components/elements/CodeBlock/styled-components"
 
-export const StyledAlertContent = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: theme.spacing.sm,
-  width: "100%",
+export const StyledAlertContent = styled.div<{ $hasTitle?: boolean }>(
+  ({ theme, $hasTitle }) => ({
+    display: "flex",
+    // Vertical layout when there's a title, horizontal when there's not
+    flexDirection: $hasTitle ? "column" : "row",
+    gap: $hasTitle ? theme.spacing.twoXS : theme.spacing.sm,
+    width: "100%",
 
-  [`${StyledCodeBlock} code`]: {
-    paddingRight: theme.spacing.lg,
-  },
+    [`${StyledCodeBlock} code`]: {
+      paddingRight: theme.spacing.lg,
+    },
+  })
+)
+
+export const StyledAlertHeader = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-start",
+  gap: theme.spacing.sm,
 }))
 
 export const StyledAlertIcon = styled.div(({ theme }) => ({
   position: "relative",
   top: theme.spacing.threeXS,
+  flexShrink: 0,
 }))
+
+export const StyledAlertTitle = styled.strong(({ theme }) => ({
+  "& p": {
+    fontWeight: theme.fontWeights.bold,
+  },
+}))
+
+export const StyledAlertBody = styled.div({
+  width: "100%",
+})

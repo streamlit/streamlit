@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration"
-import FontSources from "@streamlit/app/src/components/FontSources"
+import FontFaceDeclaration from "@streamlit/app/src/components/FontFaceDeclaration/FontFaceDeclaration"
+import FontSources from "@streamlit/app/src/components/FontSources/FontSources"
 import {
   PortalProvider,
   RootStyleProvider,
@@ -27,7 +25,7 @@ import {
 import AppWithScreencast from "./App"
 import { useThemeManager } from "./util/useThemeManager"
 
-export interface ThemedAppProps {
+interface ThemedAppProps {
   streamlitExecutionStartedAt: number
 }
 

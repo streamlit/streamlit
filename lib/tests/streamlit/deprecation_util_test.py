@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from unittest.mock import Mock, patch
 from parameterized import parameterized
 
 from streamlit.deprecation_util import (
+    _shown_warnings,
     deprecate_func_name,
     deprecate_obj_name,
     show_deprecation_warning,
@@ -141,7 +142,9 @@ class DeprecationUtilTest(unittest.TestCase):
             "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
             "`st.beta_multiply` will be removed after 1980-01-01."
         )
-        mock_show_warning.assert_called_once_with(expected_warning)
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=False
+        )
 
     @patch("streamlit.deprecation_util.show_deprecation_warning")
     def test_deprecate_func_name_with_override(self, mock_show_warning: Mock):
@@ -158,7 +161,72 @@ class DeprecationUtilTest(unittest.TestCase):
             "Please replace `st.beta_multiply` with `st.mul`.\n\n"
             "`st.beta_multiply` will be removed after 1980-01-01."
         )
-        mock_show_warning.assert_called_once_with(expected_warning)
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=False
+        )
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name_no_st_prefix(self, mock_show_warning: Mock):
+        """Test deprecate_func_name with include_st_prefix=False."""
+
+        def multiply(a, b):
+            return a * b
+
+        beta_multiply = deprecate_func_name(
+            multiply, "beta_multiply", "1980-01-01", include_st_prefix=False
+        )
+
+        assert beta_multiply(3, 2) == 6
+
+        expected_warning = (
+            "Please replace `beta_multiply` with `multiply`.\n\n"
+            "`beta_multiply` will be removed after 1980-01-01."
+        )
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=False
+        )
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name_show_in_browser_false(self, mock_show_warning: Mock):
+        """Test deprecate_func_name with show_in_browser=False."""
+
+        def multiply(a, b):
+            return a * b
+
+        beta_multiply = deprecate_func_name(
+            multiply, "beta_multiply", "1980-01-01", show_in_browser=False
+        )
+
+        assert beta_multiply(3, 2) == 6
+
+        expected_warning = (
+            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
+            "`st.beta_multiply` will be removed after 1980-01-01."
+        )
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=False, show_once=False
+        )
+
+    @patch("streamlit.deprecation_util.show_deprecation_warning")
+    def test_deprecate_func_name_show_once_true(self, mock_show_warning: Mock):
+        """Test deprecate_func_name with show_once=True."""
+
+        def multiply(a, b):
+            return a * b
+
+        beta_multiply = deprecate_func_name(
+            multiply, "beta_multiply", "1980-01-01", show_once=True
+        )
+
+        assert beta_multiply(3, 2) == 6
+
+        expected_warning = (
+            "Please replace `st.beta_multiply` with `st.multiply`.\n\n"
+            "`st.beta_multiply` will be removed after 1980-01-01."
+        )
+        mock_show_warning.assert_called_once_with(
+            expected_warning, show_in_browser=True, show_once=True
+        )
 
     @patch("streamlit.deprecation_util.show_deprecation_warning")
     def test_deprecate_obj_name(self, mock_show_warning: Mock):
@@ -209,3 +277,58 @@ class DeprecationUtilTest(unittest.TestCase):
 
         # We only show the warning a single time for a given object.
         mock_show_warning.assert_called_once_with(expected_warning)
+
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_show_once(
+        self, mock_warning: Mock, mock_logger: Mock
+    ):
+        """Test that show_once=True only shows the warning once per unique message."""
+        # Clear any previously shown warnings from other tests
+        _shown_warnings.clear()
+
+        message = "This feature is deprecated (show_once test)."
+
+        with patch_config_options({"client.showErrorDetails": "full"}):
+            # First call should show the warning
+            show_deprecation_warning(message, show_once=True)
+            assert mock_logger.warning.call_count == 1
+            assert mock_warning.call_count == 1
+
+            # Second call with same message should NOT show the warning
+            show_deprecation_warning(message, show_once=True)
+            assert mock_logger.warning.call_count == 1  # Still 1
+            assert mock_warning.call_count == 1  # Still 1
+
+            # Third call with same message should still NOT show the warning
+            show_deprecation_warning(message, show_once=True)
+            assert mock_logger.warning.call_count == 1  # Still 1
+            assert mock_warning.call_count == 1  # Still 1
+
+            # Different message should show a new warning
+            different_message = "A different deprecation warning."
+            show_deprecation_warning(different_message, show_once=True)
+            assert mock_logger.warning.call_count == 2
+            assert mock_warning.call_count == 2
+
+    @patch("streamlit.deprecation_util._LOGGER")
+    @patch("streamlit.warning")
+    def test_show_deprecation_warning_without_show_once(
+        self, mock_warning: Mock, mock_logger: Mock
+    ):
+        """Test that show_once=False (default) shows the warning every time."""
+        message = "This feature is deprecated (multiple times)."
+
+        with patch_config_options({"client.showErrorDetails": "full"}):
+            # Each call should show the warning
+            show_deprecation_warning(message)
+            assert mock_logger.warning.call_count == 1
+            assert mock_warning.call_count == 1
+
+            show_deprecation_warning(message)
+            assert mock_logger.warning.call_count == 2
+            assert mock_warning.call_count == 2
+
+            show_deprecation_warning(message)
+            assert mock_logger.warning.call_count == 3
+            assert mock_warning.call_count == 3

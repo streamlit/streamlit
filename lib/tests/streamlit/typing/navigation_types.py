@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Literal
 
 from typing_extensions import assert_type
 
@@ -72,3 +72,15 @@ if TYPE_CHECKING:
     assert_type(
         navigation(["page1.py"], position="hidden", expanded=False), StreamlitPage
     )
+    # Test expanded with integer values
+    assert_type(navigation(["page1.py"], expanded=5), StreamlitPage)
+    assert_type(navigation(["page1.py"], expanded=0), StreamlitPage)
+
+    # Test Page with visibility parameter
+    visible_page = Page("page.py", visibility="visible")
+    hidden_page = Page("page.py", visibility="hidden")
+    assert_type(visible_page, StreamlitPage)
+    assert_type(hidden_page, StreamlitPage)
+
+    # Test visibility property returns correct Literal type
+    assert_type(visible_page.visibility, Literal["visible", "hidden"])

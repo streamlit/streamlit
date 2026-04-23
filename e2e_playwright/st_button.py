@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -134,3 +134,15 @@ else:
     st.write("Clicked initial button:", clicked)
 
 st.button("Button with spinner icon", icon="spinner")
+
+st.button(
+    "Icon Right",
+    icon=":material/thumb_up:",
+    icon_position="right",
+    key="icon_right_material",
+)
+
+# Test for markdown syntax characters in labels (issue #7359)
+# These should display the literal characters, not be parsed as markdown
+st.button("+", key="markdown_plus_label")
+st.button("1. Something", key="markdown_numbered_label")

@@ -1,0 +1,511 @@
+# AI Test Coverage workflow runs both frontend and Python coverage improvement skills in parallel
+name: AI Test Coverage
+
+on:
+  schedule:
+    # Run weekly on Wednesdays at 14:30 UTC (6:30 AM PST / 7:30 AM PDT)
+    - cron: "30 14 * * Wed"
+  workflow_dispatch:
+    inputs:
+      model:
+        description: "Model to use for coverage improvement"
+        required: false
+        type: string
+        default: "claude-4.6-opus-high-thinking"
+      dry_run:
+        description: "Run without creating PR"
+        type: boolean
+        required: false
+        default: false
+
+env:
+  MODEL: ${{ inputs.model || 'claude-4.6-opus-high-thinking' }}
+
+jobs:
+  check-secrets:
+    runs-on: ubuntu-latest
+    if: github.repository == 'streamlit/streamlit'
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+  # Frontend coverage improvement job
+  ai-frontend-coverage:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    concurrency:
+      group: ${{ github.workflow }}-ai-frontend-coverage
+      cancel-in-progress: true
+    outputs:
+      develop_sha: ${{ steps.get-sha.outputs.sha }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Capture develop SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: AI frontend coverage improvement
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to improve frontend test coverage.
+
+          ## Context
+          - Repository: ${REPO_NAME}
+          - Main branch: develop
+
+          The repository is checked out at develop with full git history.
+          The dev environment is set up - you can run make commands.
+
+          ## Task
+          Run the /improving-frontend-coverage skill to systematically increase frontend test coverage
+          by approximately 0.2%.
+
+          Implement all test improvements directly. Do not ask for confirmation.
+
+          After completing the improvements, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No frontend coverage improvements needed.' to work-tmp/changes.md
+          "
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Create patch
+        id: create-patch
+        run: |
+          mkdir -p work-tmp
+          if [ ! -f work-tmp/changes.md ]; then
+            echo "No frontend coverage improvements needed." > work-tmp/changes.md
+          fi
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git add -A
+            git diff --cached --binary > work-tmp/frontend-coverage.patch
+            echo "Patch created:"
+            git diff --cached --stat
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes found"
+            touch work-tmp/frontend-coverage.patch
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: frontend-coverage-output
+          path: |
+            work-tmp/frontend-coverage.patch
+            work-tmp/changes.md
+          retention-days: 1
+
+  # Python coverage improvement job
+  ai-python-coverage:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    concurrency:
+      group: ${{ github.workflow }}-ai-python-coverage
+      cancel-in-progress: true
+    outputs:
+      develop_sha: ${{ steps.get-sha.outputs.sha }}
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: develop
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Capture develop SHA
+        id: get-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: AI Python coverage improvement
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to improve Python test coverage.
+
+          ## Context
+          - Repository: ${REPO_NAME}
+          - Main branch: develop
+
+          The repository is checked out at develop with full git history.
+          The dev environment is set up - you can run make commands.
+
+          ## Task
+          Run the /improving-python-coverage skill to systematically increase Python test coverage
+          by approximately 0.2%.
+
+          Implement all test improvements directly. Do not ask for confirmation.
+
+          After completing the improvements, write a summary to 'work-tmp/changes.md' listing all
+          modifications made (create the work-tmp directory if it doesn't exist). If no changes were needed, write 'No Python coverage improvements needed.' to work-tmp/changes.md
+          "
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text
+
+      - name: Create patch
+        id: create-patch
+        run: |
+          mkdir -p work-tmp
+          if [ ! -f work-tmp/changes.md ]; then
+            echo "No Python coverage improvements needed." > work-tmp/changes.md
+          fi
+
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git add -A
+            git diff --cached --binary > work-tmp/python-coverage.patch
+            echo "Patch created:"
+            git diff --cached --stat
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes found"
+            touch work-tmp/python-coverage.patch
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: python-coverage-output
+          path: |
+            work-tmp/python-coverage.patch
+            work-tmp/changes.md
+          retention-days: 1
+
+  # Create PR for frontend coverage improvements
+  create-frontend-pr:
+    needs: [check-secrets, ai-frontend-coverage]
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-frontend-coverage.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.ai-frontend-coverage.outputs.develop_sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v8
+        with:
+          name: frontend-coverage-output
+          path: work-tmp
+
+      - name: Apply patch and check for changes
+        id: apply-patch
+        run: |
+          if [ -f work-tmp/changes.md ]; then
+            echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+            cat work-tmp/changes.md >> $GITHUB_OUTPUT
+            echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+          else
+            echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
+          fi
+
+          if [ -s work-tmp/frontend-coverage.patch ]; then
+            echo "Applying patch..."
+            git apply work-tmp/frontend-coverage.patch
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git status --porcelain
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes to apply"
+          fi
+
+      - name: Configure Git
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create & switch to new branch
+        id: create-branch
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          BRANCH_NAME="ai-frontend-coverage-$(date +%Y-%m-%d)-${{ github.run_number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Commit and push changes
+        if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          git add -A
+          git commit -m "[chore] AI-assisted frontend test coverage improvements"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v9
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          MODEL_NAME: ${{ env.MODEL }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const model = process.env.MODEL_NAME;
+            const changesSummary = process.env.CHANGES_SUMMARY;
+
+            const title = `[chore] AI-assisted frontend test coverage improvements`;
+            const body = `## Summary
+
+            Automated PR to improve frontend unit test coverage by ~0.2%.
+
+            This PR was created by the \`ai-test-coverage\` workflow using \`${model}\`.
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated test coverage improvement by \`${model}\`.*`.replace(/^ +/gm, '');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base: 'develop',
+              body,
+            });
+            core.setOutput('pr_url', pr.html_url);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['change:other', 'impact:internal'],
+            });
+
+      - name: Write step summary
+        env:
+          CHANGES_FOUND: ${{ steps.apply-patch.outputs.changes_found }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## AI Frontend Coverage Improvement Summary";
+            echo "- Model: $MODEL";
+            echo "- Changes found: ${CHANGES_FOUND}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${CHANGES_FOUND}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No improvements needed, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # Create PR for Python coverage improvements
+  create-python-pr:
+    needs: [check-secrets, ai-python-coverage]
+    if: always() && needs.check-secrets.outputs.has_key == 'true' && needs.ai-python-coverage.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.ai-python-coverage.outputs.develop_sha }}
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Download artifacts
+        id: download
+        uses: actions/download-artifact@v8
+        with:
+          name: python-coverage-output
+          path: work-tmp
+
+      - name: Apply patch and check for changes
+        id: apply-patch
+        run: |
+          if [ -f work-tmp/changes.md ]; then
+            echo "changes_summary<<CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+            cat work-tmp/changes.md >> $GITHUB_OUTPUT
+            echo "CHANGES_SUMMARY_HEREDOC_DELIMITER" >> $GITHUB_OUTPUT
+          else
+            echo "changes_summary=No summary available." >> $GITHUB_OUTPUT
+          fi
+
+          if [ -s work-tmp/python-coverage.patch ]; then
+            echo "Applying patch..."
+            git apply work-tmp/python-coverage.patch
+            echo "changes_found=true" >> $GITHUB_OUTPUT
+            git status --porcelain
+          else
+            echo "changes_found=false" >> $GITHUB_OUTPUT
+            echo "No changes to apply"
+          fi
+
+      - name: Configure Git
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          git config user.name "Streamlit Bot"
+          git config user.email "core+streamlitbot-github@streamlit.io"
+
+      - name: Create & switch to new branch
+        id: create-branch
+        if: steps.apply-patch.outputs.changes_found == 'true'
+        run: |
+          BRANCH_NAME="ai-python-coverage-$(date +%Y-%m-%d)-${{ github.run_number }}"
+          echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+          git checkout -b "$BRANCH_NAME"
+
+      - name: Commit and push changes
+        if: steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+        run: |
+          git add -A
+          git commit -m "[chore] AI-assisted Python test coverage improvements"
+          git push origin "$BRANCH_NAME"
+
+      - name: Create PR
+        id: create_pr
+        if: ${{ steps.apply-patch.outputs.changes_found == 'true' && inputs.dry_run != true }}
+        uses: actions/github-script@v9
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
+          MODEL_NAME: ${{ env.MODEL }}
+          CHANGES_SUMMARY: ${{ steps.apply-patch.outputs.changes_summary }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const head = process.env.BRANCH_NAME;
+            const model = process.env.MODEL_NAME;
+            const changesSummary = process.env.CHANGES_SUMMARY;
+
+            const title = `[chore] AI-assisted Python test coverage improvements`;
+            const body = `## Summary
+
+            Automated PR to improve Python unit test coverage by ~0.2%.
+
+            This PR was created by the \`ai-test-coverage\` workflow using \`${model}\`.
+
+            ## Changes
+
+            ${changesSummary}
+
+            ---
+            *This is an automated test coverage improvement by \`${model}\`.*`.replace(/^ +/gm, '');
+
+            const { data: pr } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title,
+              head,
+              base: 'develop',
+              body,
+            });
+            core.setOutput('pr_url', pr.html_url);
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: ['change:other', 'impact:internal'],
+            });
+
+      - name: Write step summary
+        env:
+          CHANGES_FOUND: ${{ steps.apply-patch.outputs.changes_found }}
+          PR_URL: ${{ steps.create_pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          {
+            echo "## AI Python Coverage Improvement Summary";
+            echo "- Model: $MODEL";
+            echo "- Changes found: ${CHANGES_FOUND}";
+            if [ "${DRY_RUN}" = "true" ]; then
+              echo "- Dry run: true (no PR created)";
+            elif [ "${CHANGES_FOUND}" = "true" ]; then
+              echo "- PR: ${PR_URL:-n/a}";
+            else
+              echo "- No improvements needed, no PR created";
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,7 +28,7 @@ from streamlit.components.v2.bidi_component.serialization import (
     serialize_mixed_data,
 )
 from streamlit.components.v2.bidi_component.state import (
-    BidiComponentResult,
+    ComponentResult,
     unwrap_component_state,
 )
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -50,7 +50,6 @@ from streamlit.errors import (
     BidiComponentInvalidCallbackNameError,
     BidiComponentInvalidDefaultKeyError,
     BidiComponentInvalidIdError,
-    BidiComponentMissingContentError,
     BidiComponentUnserializableDataError,
 )
 from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
@@ -59,7 +58,7 @@ from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from streamlit.components.v2.types import (
@@ -148,7 +147,7 @@ class BidiComponentMixin:
         """
 
         canonical = self._canonicalize_json_for_identity(payload)
-        return calc_md5(canonical)
+        return calc_hash(canonical)
 
     def _build_bidi_identity_kwargs(
         self,
@@ -159,15 +158,16 @@ class BidiComponentMixin:
         height: Height,
         proto: BidiComponentProto,
         data: BidiComponentData = None,
+        default: BidiComponentDefaults = None,
     ) -> dict[str, Any]:
         """Build deterministic identity kwargs for ID computation.
 
         Construct a stable mapping of identity-relevant properties for
         ``compute_and_register_element_id``. This includes structural
-        properties (name, style isolation, layout) and an explicit, typed
-        handling of the ``BidiComponent`` ``oneof data`` field to ensure
-        unkeyed components change identity when their serialized payload
-        changes.
+        properties (name, style isolation, layout), default state values, and
+        an explicit, typed handling of the ``BidiComponent`` ``oneof data``
+        field to ensure unkeyed components change identity when their
+        serialized payload or defaults change.
 
         Parameters
         ----------
@@ -183,9 +183,17 @@ class BidiComponentMixin:
             The populated component protobuf. Its ``data`` oneof determines
             which serialized payload (JSON, Arrow, bytes, or Mixed) contributes
             to identity.
-        data : BidiComponentData
+        data : BidiComponentData, optional
             The raw data passed to the component. Used to optimize identity
             calculation for JSON payloads by avoiding a parse/serialize cycle.
+            When omitted, the helper falls back to canonicalizing the JSON
+            content stored on the protobuf.
+        default : BidiComponentDefaults, optional
+            The default state mapping for the component instance. Defaults are
+            included in the identity for unkeyed components so that changing
+            default values produces a new backend identity. When a user key is
+            provided with ``key_as_main_identity=True``, these defaults are
+            ignored by :func:`compute_and_register_element_id`.
 
         Returns
         -------
@@ -204,6 +212,7 @@ class BidiComponentMixin:
             "isolate_styles": isolate_styles,
             "width": width,
             "height": height,
+            "default": default,
         }
 
         data_field = proto.WhichOneof("data")
@@ -221,7 +230,7 @@ class BidiComponentMixin:
             if data is not None:
                 try:
                     canonical = json.dumps(data, sort_keys=True)
-                    canonical_digest = calc_md5(canonical)
+                    canonical_digest = calc_hash(canonical)
                 except (TypeError, ValueError):
                     # Fallback to existing logic if direct dump fails
                     pass
@@ -233,12 +242,12 @@ class BidiComponentMixin:
         elif data_field == "arrow_data":
             # Hash large payloads instead of shoving raw bytes through the ID
             # hasher for performance.
-            identity["arrow_data"] = calc_md5(proto.arrow_data.data)
+            identity["arrow_data"] = calc_hash(proto.arrow_data.data)
         elif data_field == "bytes":
             # Same story for arbitrary bytes payloads: content-address the data
             # so identity changes track real mutations without re-hashing the
             # whole blob every run.
-            identity["bytes"] = calc_md5(proto.bytes)
+            identity["bytes"] = calc_hash(proto.bytes)
         elif data_field == "mixed":
             mixed: MixedDataProto = proto.mixed
             # Add the JSON content of the MixedData to the identity.
@@ -247,7 +256,7 @@ class BidiComponentMixin:
             )
             # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
             # Unlike other data types where we include actual bytes, here we only include
-            # the blob keys. This is sufficient because keys are MD5 hashes of the blob
+            # the blob keys. This is sufficient because keys are content hashes of the blob
             # content (content-addressed), so identical content produces identical keys.
             identity["mixed_arrow_blobs"] = ",".join(sorted(mixed.arrow_blobs.keys()))
         else:
@@ -268,7 +277,7 @@ class BidiComponentMixin:
         width: Width = "stretch",
         height: Height = "content",
         **kwargs: WidgetCallback | None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         """Add a bidirectional component instance to the app.
 
         This method uses a component that has already been registered with the
@@ -308,7 +317,7 @@ class BidiComponentMixin:
 
         Returns
         -------
-        BidiComponentResult
+        ComponentResult
             A dictionary-like object that holds the component's state and
             trigger values.
 
@@ -328,7 +337,7 @@ class BidiComponentMixin:
 
         if ctx is None:
             # Create an empty state with the default value and return it
-            return BidiComponentResult({}, {})
+            return ComponentResult({}, {})
 
         # Get the component definition from the registry
         from streamlit.runtime import Runtime
@@ -338,13 +347,6 @@ class BidiComponentMixin:
 
         if component_def is None:
             raise ValueError(f"Component '{component_name}' is not registered")
-
-        # Validate that the component has the required content
-        has_js = bool(component_def.js_content or component_def.js_url)
-        has_html = bool(component_def.html_content)
-
-        if not has_js and not has_html:
-            raise BidiComponentMissingContentError(component_name)
 
         # ------------------------------------------------------------------
         # 1. Parse user-supplied callbacks
@@ -434,6 +436,7 @@ class BidiComponentMixin:
             height=height,
             proto=bidi_component_proto,
             data=data,
+            default=default,
         )
         # Compute a unique ID for this component instance now that the proto is
         # populated.
@@ -477,7 +480,7 @@ class BidiComponentMixin:
             deserializer=serde.deserialize,
             serializer=serde.serialize,
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_value",
             presenter=presenter,
         )
@@ -492,7 +495,7 @@ class BidiComponentMixin:
             deserializer=deserialize_trigger_list,  # always returns list or None
             serializer=lambda v: json.dumps(v),  # send dict as JSON
             ctx=ctx,
-            callbacks=callbacks_by_event if callbacks_by_event else None,
+            callbacks=callbacks_by_event or None,
             value_type="json_trigger_value",
         )
 
@@ -526,7 +529,7 @@ class BidiComponentMixin:
 
         state_vals = unwrap_component_state(component_state.value)
 
-        return BidiComponentResult(state_vals, trigger_vals)
+        return ComponentResult(state_vals, trigger_vals)
 
     @property
     def dg(self) -> DeltaGenerator:

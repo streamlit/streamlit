@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -27,11 +26,11 @@ from typing import (
 
 from google.protobuf.message import Message
 
-from streamlit import config
+from streamlit import config, util
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
@@ -59,24 +58,24 @@ SAFE_VALUES: TypeAlias = Union[
     time,
     datetime,
     timedelta,
-    None,
     "ellipsis",
     Message,
     PROTO_SCALAR_VALUE,
+    None,
 ]
 
 
 def get_label_visibility_proto_value(
     label_visibility_string: LabelVisibility,
-) -> LabelVisibilityMessage.LabelVisibilityOptions.ValueType:
-    """Returns one of LabelVisibilityMessage enum constants.py based on string value."""
+) -> LabelVisibilityProto.LabelVisibilityOptions.ValueType:
+    """Returns one of LabelVisibilityProto enum constants based on string value."""
 
     if label_visibility_string == "visible":
-        return LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+        return LabelVisibilityProto.LabelVisibilityOptions.VISIBLE
     if label_visibility_string == "hidden":
-        return LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
+        return LabelVisibilityProto.LabelVisibilityOptions.HIDDEN
     if label_visibility_string == "collapsed":
-        return LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED
+        return LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED
 
     raise ValueError(f"Unknown label visibility value: {label_visibility_string}")
 
@@ -166,7 +165,7 @@ def _compute_element_id(
     use it to be distinct. The element ID includes an easily identified prefix, and the
     user_key as a suffix, to make it easy to identify it and know if a key maps to it.
     """
-    h = hashlib.new("md5", usedforsecurity=False)
+    h = util.create_fast_hasher()
     h.update(element_type.encode("utf-8"))
     if user_key:
         # Adding this to the hash isn't necessary for uniqueness since the

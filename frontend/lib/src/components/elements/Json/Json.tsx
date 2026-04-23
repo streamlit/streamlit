@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,19 @@
 import { memo, ReactElement, useCallback } from "react"
 
 import JSON5 from "json5"
-import ReactJson, { OnCopyProps } from "react-json-view"
 
 import { Json as JsonProto } from "@streamlit/protobuf"
 
-import ErrorElement from "~lib/components/shared/ErrorElement"
+import ErrorElement from "~lib/components/shared/ErrorElement/ErrorElement"
 import { useCopyToClipboard } from "~lib/hooks/useCopyToClipboard"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { ensureError } from "~lib/util/ErrorHandling"
+import ReactJson, { type OnCopyProps } from "~lib/util/reactJsonViewCompat"
 
+import JsonPathTooltip from "./JsonPathTooltip"
 import { StyledJsonWrapper } from "./styled-components"
+import { useJsonTooltip } from "./useJsonTooltip"
 
 export interface JsonProps {
   element: JsonProto
@@ -38,6 +40,7 @@ export interface JsonProps {
  */
 function Json({ element }: Readonly<JsonProps>): ReactElement {
   const theme = useEmotionTheme()
+  const { tooltip, handleSelect, clearTooltip } = useJsonTooltip()
 
   const { copyToClipboard } = useCopyToClipboard()
 
@@ -55,8 +58,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
     const error = ensureError(e)
     try {
       bodyObject = JSON5.parse(element.body)
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (json5Error) {
+    } catch {
       // If content fails to parse as Json, rebuild the error message
       // to show where the problem occurred.
       const pos = parseInt(error.message.replace(/[^0-9]/g, ""), 10)
@@ -79,6 +81,9 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
         name={false}
         theme={jsonTheme}
         enableClipboard={handleCopy}
+        onSelect={handleSelect}
+        // @ts-expect-error showComma prop exists at runtime but is missing from type definitions
+        showComma={false}
         style={{
           fontFamily: theme.genericFonts.codeFont,
           fontSize: theme.fontSizes.codeFontSize,
@@ -87,6 +92,14 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
           whiteSpace: "pre-wrap", // preserve whitespace
         }}
       />
+      {tooltip && (
+        <JsonPathTooltip
+          top={tooltip.y}
+          left={tooltip.x}
+          path={tooltip.path}
+          clearTooltip={clearTooltip}
+        />
+      )}
     </StyledJsonWrapper>
   )
 }

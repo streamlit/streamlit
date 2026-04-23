@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,13 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   ReactNode,
   useCallback,
+  useEffect,
+  useRef,
   useState,
 } from "react"
 
@@ -30,7 +32,8 @@ import {
 } from "baseui/tooltip"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import { StyledTooltipContentWrapper } from "./styled-components"
 import { useTooltipMeasurementSideEffect } from "./useTooltipMeasurementSideEffect"
@@ -130,33 +133,75 @@ function Tooltip({
     null
   )
   const [isOpen, setIsOpen] = useState(false)
+  const closeRef = useRef<(() => void) | null>(null)
 
   const handleOpen = useCallback(() => {
     setIsOpen(true)
   }, [])
   const handleClose = useCallback(() => {
     setIsOpen(false)
+    closeRef.current = null
   }, [])
+
+  useEffect(() => {
+    return () => {
+      closeRef.current = null
+    }
+  }, [])
+
+  const handleKeyDownCapture = useCallback(
+    (event: React.KeyboardEvent<HTMLElement>) => {
+      if (event.key !== "Escape" || !isOpen) {
+        return
+      }
+
+      // BaseWeb tooltips don't consistently dismiss on Escape across trigger
+      // types. Close the tooltip without blurring the trigger to avoid
+      // disrupting keyboard navigation.
+      //
+      // Only close if the active element is inside this tooltip's wrapper to
+      // avoid unintended dismissal for unrelated controls.
+      const wrapper = event.currentTarget
+      const activeElement = wrapper.ownerDocument?.activeElement
+
+      if (
+        activeElement instanceof HTMLElement &&
+        wrapper.contains(activeElement)
+      ) {
+        closeRef.current?.()
+        event.preventDefault()
+        event.stopPropagation()
+      }
+    },
+    [isOpen]
+  )
 
   useTooltipMeasurementSideEffect(tooltipElement, isOpen)
 
   const tooltipOverrides = generateDefaultTooltipOverrides(theme, overrides)
+  const TooltipTargetTag = inline ? "span" : "div"
+
+  const renderContent = useCallback(
+    ({ close }: { close: () => void }) => {
+      closeRef.current = close
+      return (
+        <StyledTooltipContentWrapper
+          className={error ? "stTooltipErrorContent" : "stTooltipContent"}
+          data-testid={error ? "stTooltipErrorContent" : "stTooltipContent"}
+          ref={setTooltipElement}
+        >
+          {content}
+        </StyledTooltipContentWrapper>
+      )
+    },
+    [content, error, setTooltipElement]
+  )
 
   return (
     <StatefulTooltip
       onOpen={handleOpen}
       onClose={handleClose}
-      content={
-        content ? (
-          <StyledTooltipContentWrapper
-            className={error ? "stTooltipErrorContent" : "stTooltipContent"}
-            data-testid={error ? "stTooltipErrorContent" : "stTooltipContent"}
-            ref={setTooltipElement}
-          >
-            {content}
-          </StyledTooltipContentWrapper>
-        ) : null
-      }
+      content={content ? renderContent : null}
       placement={PLACEMENT[placement]}
       accessibilityType={ACCESSIBILITY_TYPE.tooltip}
       showArrow={false}
@@ -165,7 +210,7 @@ function Tooltip({
       overrides={tooltipOverrides}
     >
       {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <div
+      <TooltipTargetTag
         style={{
           display: "flex",
           flexDirection: "row",
@@ -173,6 +218,7 @@ function Tooltip({
           width: containerWidth ? "100%" : "auto",
           ...style,
         }}
+        onKeyDownCapture={handleKeyDownCapture}
         data-testid={
           error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
         }
@@ -181,7 +227,7 @@ function Tooltip({
         }
       >
         {children}
-      </div>
+      </TooltipTargetTag>
     </StatefulTooltip>
   )
 }

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.runtime.state.common import WidgetArgs, WidgetCallback, WidgetKwargs
+from streamlit.runtime.state.common import (
+    BindOption,
+    WidgetArgs,
+    WidgetCallback,
+    WidgetKwargs,
+)
 from streamlit.runtime.state.query_params_proxy import QueryParamsProxy
 from streamlit.runtime.state.safe_session_state import SafeSessionState
 from streamlit.runtime.state.session_state import (
@@ -28,6 +33,7 @@ from streamlit.runtime.state.widgets import register_widget
 
 __all__ = [
     "SCRIPT_RUN_WITHOUT_ERRORS_KEY",
+    "BindOption",
     "QueryParamsProxy",
     "SafeSessionState",
     "SessionState",

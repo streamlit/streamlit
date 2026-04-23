@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   createRef,
   forwardRef,
   memo,
@@ -33,23 +33,24 @@ import {
 } from "baseui/slider"
 import { pick } from "lodash-es"
 import moment from "moment"
-import { sprintf } from "sprintf-js"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import {
+  arrayComparator,
+  useExecuteWhenChanged,
+} from "~lib/hooks/useExecuteWhenChanged"
+import { formatMoment, MomentKind } from "~lib/util/formatMoment"
+import { formatNumber } from "~lib/util/formatNumber"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -105,12 +106,64 @@ export interface Props {
   fragmentId?: string
 }
 
+/**
+ * Check if this is a select_slider (options-based) rather than a numeric slider.
+ */
+function isSelectSlider(element: SliderProto): boolean {
+  return element.type === SliderProto.Type.SELECT_SLIDER
+}
+
+/**
+ * Convert string values (formatted options) to indices for select_slider.
+ * Returns the indices in the options array that correspond to the string values.
+ */
+function stringValuesToIndices(
+  stringValues: string[],
+  options: string[],
+  defaultIndices: number[]
+): number[] {
+  return stringValues.map((str, i) => {
+    const index = options.indexOf(str)
+    // If not found, fall back to default index for this position
+    return index >= 0 ? index : (defaultIndices[i] ?? 0)
+  })
+}
+
+/**
+ * Convert indices to string values (formatted options) for select_slider.
+ */
+function indicesToStringValues(
+  indices: number[],
+  options: string[]
+): string[] {
+  return indices.map(i => options[i] ?? "")
+}
+
 function Slider({
   disabled,
   element,
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: isSelectSlider(element)
+          ? ("string_array_value" as const)
+          : ("double_array_value" as const),
+        clearable: false,
+        urlFormat: "repeated" as const,
+        // select_slider stores indices internally but uses formatted option
+        // strings in URLs, so provide the default in URL-compatible format.
+        urlDefault: isSelectSlider(element)
+          ? indicesToStringValues(element.default, element.options)
+          : undefined,
+        // Date/time/datetime sliders format microsecond timestamps as ISO
+        // strings in URLs (e.g., ?date=2024-06-15 instead of raw micros).
+        dateType: isDateTimeType(element) ? getMomentKind(element) : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     number[],
     SliderProto
@@ -122,6 +175,8 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
@@ -160,6 +215,28 @@ function Slider({
   useEffect(() => {
     setUiValue(value)
   }, [value])
+
+  // For select_slider: when options change, recompute indices from WidgetStateManager.
+  // This handles the case where the selected string value exists in both old and new
+  // options but at different indices - the UI needs to update to show the correct position.
+  useExecuteWhenChanged(
+    () => {
+      if (!isSelectSlider(element)) return
+
+      // Get current string values from widget manager and convert to new indices
+      const stringValues = widgetMgr.getStringArrayValue(element)
+      if (stringValues === undefined) return
+
+      const newIndices = stringValuesToIndices(
+        stringValues,
+        element.options,
+        element.default
+      )
+      setUiValue(newIndices)
+    },
+    [element.options],
+    (prev, curr) => arrayComparator(prev[0], curr[0])
+  )
 
   const handleFinalChange = useCallback(
     ({ value: valueArg }: { value: number[] }): void => {
@@ -327,12 +404,7 @@ function Slider({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <UISlider
@@ -377,6 +449,20 @@ function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: SliderProto
 ): number[] | undefined {
+  if (isSelectSlider(element)) {
+    // For select_slider, get string values and convert to indices
+    const stringValues = widgetMgr.getStringArrayValue(element)
+    // No value stored yet - normal case during initial render
+    if (stringValues === undefined) {
+      return undefined
+    }
+    return stringValuesToIndices(
+      stringValues,
+      element.options,
+      element.default
+    )
+  }
+  // For regular slider, get numeric values directly
   return widgetMgr.getDoubleArrayValue(element)
 }
 
@@ -385,6 +471,16 @@ function getDefaultStateFromProto(element: SliderProto): number[] {
 }
 
 function getCurrStateFromProto(element: SliderProto): number[] {
+  if (isSelectSlider(element)) {
+    // For select_slider, read string values from rawValue and convert to indices
+    const rawValues = element.rawValue
+    if (rawValues && rawValues.length > 0) {
+      return stringValuesToIndices(rawValues, element.options, element.default)
+    }
+    // Fall back to default indices
+    return element.default
+  }
+  // For regular slider, use numeric value directly
   return element.value
 }
 
@@ -392,14 +488,26 @@ function updateWidgetMgrState(
   element: SliderProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<number[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
-  widgetMgr.setDoubleArrayValue(
-    element,
-    vws.value,
-    { fromUi: vws.fromUi },
-    fragmentId
-  )
+  if (isSelectSlider(element)) {
+    // For select_slider, convert indices to string values
+    const stringValues = indicesToStringValues(vws.value, element.options)
+    widgetMgr.setStringArrayValue(
+      element,
+      stringValues,
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  } else {
+    // For regular slider, use numeric values directly
+    widgetMgr.setDoubleArrayValue(
+      element,
+      vws.value,
+      { fromUi: vws.fromUi },
+      fragmentId
+    )
+  }
 }
 
 function isDateTimeType(element: SliderProto): boolean {
@@ -411,22 +519,35 @@ function isDateTimeType(element: SliderProto): boolean {
   )
 }
 
+function getMomentKind(element: SliderProto): MomentKind {
+  const { dataType } = element
+  if (dataType === SliderProto.DataType.DATE) {
+    return "date"
+  }
+  if (dataType === SliderProto.DataType.TIME) {
+    return "time"
+  }
+  return "datetime"
+}
+
 function formatValue(value: number, element: SliderProto): string {
   const { format, options } = element
+
+  if (options.length > 0) {
+    // select slider does not support format strings, so we just return the option string.
+    return options[value] ?? ""
+  }
+
   if (isDateTimeType(element)) {
     // Python datetime uses microseconds, but JS & Moment uses milliseconds
     // The timestamp is always set to the UTC timezone, even so, the actual timezone
     // for this timestamp in the backend could be different.
     // However, the frontend component does not need to know about the actual timezone.
-
-    return moment.utc(value / 1000).format(format)
+    const momentDate = moment.utc(value / 1000)
+    return formatMoment(momentDate, format, getMomentKind(element))
   }
 
-  if (options.length > 0) {
-    return sprintf(format, options[value])
-  }
-
-  return sprintf(format, value)
+  return formatNumber(value, format)
 }
 
 /**

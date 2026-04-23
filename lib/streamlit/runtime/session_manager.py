@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,20 +16,45 @@ from __future__ import annotations
 
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol, cast
+from typing import TYPE_CHECKING, Protocol, cast, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterable, Mapping
 
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
 class SessionClientDisconnectedError(Exception):
     """Raised by operations on a disconnected SessionClient."""
+
+
+@runtime_checkable
+class ClientContext(Protocol):
+    """Context for the client WebSocket connection.
+
+    Provides a consistent interface for accessing headers, cookies, and client
+    info from the initial WebSocket handshake.
+    """
+
+    @property
+    def headers(self) -> Iterable[tuple[str, str]]:
+        """All headers as (name, value) tuples. Headers may be repeated."""
+        ...
+
+    @property
+    def cookies(self) -> Mapping[str, str]:
+        """Cookies as a name-to-value mapping."""
+        ...
+
+    @property
+    def remote_ip(self) -> str | None:
+        """The remote IP address of the client, or None if unavailable."""
+        ...
 
 
 class SessionClient(Protocol):
@@ -42,7 +67,15 @@ class SessionClient(Protocol):
         If the SessionClient has been disconnected, it should raise a
         SessionClientDisconnectedError.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
+
+    @property
+    def client_context(self) -> ClientContext | None:
+        """The client's connection context (headers, cookies, IP).
+
+        Returns None if request context information is not available.
+        """
+        return None  # pragma: no cover - abstract
 
 
 @dataclass
@@ -113,7 +146,7 @@ class SessionStorage(Protocol):
             generally happen if there is an error with the underlying storage backend
             (e.g. if we lose our connection to it).
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def save(self, session_info: SessionInfo) -> None:
@@ -129,7 +162,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while saving the given session.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def delete(self, session_id: str) -> None:
@@ -152,10 +185,10 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while attempting to delete the session.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
-    def list(self) -> list[SessionInfo]:
+    def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
         """List all sessions tracked by this SessionStorage.
 
         Returns
@@ -167,7 +200,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while attempting to list sessions.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
 
 class SessionManager(Protocol):
@@ -231,14 +264,14 @@ class SessionManager(Protocol):
         message_enqueued_callback
             A callback invoked after a message is enqueued to be sent to a web client.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def connect_session(
         self,
         client: SessionClient,
         script_data: ScriptData,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -276,7 +309,7 @@ class SessionManager(Protocol):
         str
             The session's unique string ID.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def close_session(self, session_id: str) -> None:
@@ -290,7 +323,7 @@ class SessionManager(Protocol):
         session_id
             The session's unique ID.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def get_session_info(self, session_id: str) -> SessionInfo | None:
@@ -306,7 +339,7 @@ class SessionManager(Protocol):
         -------
         SessionInfo or None
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def list_sessions(self) -> list[SessionInfo]:
@@ -316,7 +349,7 @@ class SessionManager(Protocol):
         -------
         List[SessionInfo]
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def num_sessions(self) -> int:
         """Return the number of sessions tracked by this SessionManager.

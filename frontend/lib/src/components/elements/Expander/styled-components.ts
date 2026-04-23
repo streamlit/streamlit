@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,8 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
-import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme"
-
-export interface StyledExpandableContainerProps {
-  empty: boolean
-  disabled: boolean
-}
+import { STALE_STYLES, STALE_TRANSITION_PARAMS } from "~lib/theme/consts"
 
 export const StyledExpandableContainer = styled.div({
   width: "100%",
@@ -86,7 +80,7 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      boxShadow: theme.shadows.focusRing,
     },
     fontSize: "inherit",
     paddingLeft: theme.spacing.md,
@@ -121,7 +115,18 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
   })
 )
 
-export const StyledDetailsPanel = styled.div(({ theme }) => ({
-  padding: theme.spacing.lg,
-  borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-}))
+// Explicit interface needed because inert is not in @types/react for this project.
+interface StyledDetailsPanelProps {
+  /**
+   * The inert attribute makes the element non-interactive and excludes
+   * it from browser find-in-page (Cmd+F) searches when collapsed.
+   */
+  inert?: "" | undefined
+}
+
+export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
+  ({ theme }) => ({
+    padding: theme.spacing.lg,
+    borderTop: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  })
+)

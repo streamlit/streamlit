@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,15 +32,13 @@ import { DateTimeInput as DateTimeInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useIntlLocale } from "~lib/components/widgets/DateInput/useIntlLocale"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useScrollbarGutterSize } from "~lib/hooks/useScrollbarGutterSize"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -72,7 +70,37 @@ function DateTimeInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const scrollbarGutterSize = useScrollbarGutterSize()
+  const { innerHeight: windowHeight } = useWindowDimensionsContext()
   const datepickerRef = useRef<DatepickerClass<Date> | null>(null)
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+      }
+    : undefined
+
+  const getInitialCommittedDate = (): Date | null => {
+    // Keep this in sync with useBasicWidgetState initialization.
+    const initialValue =
+      getStateFromWidgetMgr(widgetMgr, element) ??
+      (element.setValue
+        ? getCurrStateFromProto(element)
+        : getDefaultStateFromProto(element))
+    return stringToDate(initialValue)
+  }
+
+  // pendingDate is the temporary value while the user is selecting
+  const [pendingDate, setPendingDate] = useState<Date | null>(
+    getInitialCommittedDate
+  )
+
+  // Store the previous committedDate to detect changes from the widget manager
+  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
+    getInitialCommittedDate
+  )
 
   const [value, setValueWithSource] = useBasicWidgetState<
     string | null,
@@ -85,6 +113,11 @@ function DateTimeInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: useCallback(() => {
+      setPendingDate(stringToDate(getDefaultStateFromProto(element)))
+    }, [element]),
   })
 
   const { locale } = useContext(LibConfigContext)
@@ -97,14 +130,6 @@ function DateTimeInput({
 
   // committedDate is the value from the widget manager
   const committedDate = useMemo(() => stringToDate(value), [value])
-
-  // pendingDate is the temporary value while the user is selecting
-  const [pendingDate, setPendingDate] = useState<Date | null>(committedDate)
-
-  // Store the previous committedDate to detect changes from the widget manager
-  const [prevCommittedDate, setPrevCommittedDate] = useState<Date | null>(
-    committedDate
-  )
 
   // Sync pendingDate when committedDate changes (e.g., from external widget state updates)
   if (committedDate !== prevCommittedDate) {
@@ -204,6 +229,8 @@ function DateTimeInput({
     disabled,
     clearable,
     error,
+    scrollbarGutterSize,
+    windowHeight,
   })
 
   return (
@@ -216,12 +243,7 @@ function DateTimeInput({
         )}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
       <UIDatePicker

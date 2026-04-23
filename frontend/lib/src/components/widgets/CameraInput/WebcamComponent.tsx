@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   useCallback,
@@ -26,7 +26,7 @@ import React, {
 import { Video } from "@emotion-icons/open-iconic"
 import Webcam from "react-webcam"
 
-import Icon from "~lib/components/shared/Icon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
@@ -64,7 +64,7 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-export const AskForCameraPermission = ({
+const AskForCameraPermission = ({
   width,
 }: AskForCameraPermissionProps): ReactElement => {
   return (

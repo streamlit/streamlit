@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ def adjust_years(input_date: date, years: int) -> date:
         if input_date.month == 2 and input_date.day == 29:
             return input_date.replace(year=input_date.year + years, month=2, day=28)
 
-        raise StreamlitAPIException(
+        raise StreamlitAPIException(  # pragma: no cover - defensive
             f"Date {input_date} does not exist in the target year {input_date.year + years}. "
             "This should never happen. Please report this bug."
         ) from err

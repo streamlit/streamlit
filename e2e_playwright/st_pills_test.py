@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,12 @@ import re
 
 from playwright.sync_api import Locator, Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -26,13 +31,14 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_text,
     get_button_group,
     get_element_by_key,
 )
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile("stBaseButton-pills(Active)?")).filter(
+    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
         has_text=text
     )
 
@@ -125,9 +131,7 @@ def test_pills_are_disabled_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_pill).not_to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect_markdown(app, "pills-disabled: None")
     assert_snapshot(pills, name="st_pills-disabled")
 
@@ -141,9 +145,7 @@ def test_pills_are_disabled_and_selected_and_take_screenshot(
     selected_pill = get_pill_button(pills, "Air")
     selected_pill.click(force=True)
     wait_for_app_run(app)
-    expect(selected_pill).not_to_have_css(
-        "color", re.compile("rgb\\(\\d+, \\d+, \\d+\\)")
-    )
+    expect(selected_pill).not_to_have_css("color", re.compile(r"rgb\(\d+, \d+, \d+\)"))
     expect_markdown(app, "pills-disabled-selected: Water")
     assert_snapshot(pills, name="st_pills-disabled-selected")
 
@@ -258,7 +260,19 @@ def test_pills_width_examples(app: Page, assert_snapshot: ImageCompareFunction):
 
 
 def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the pills can be updated dynamically while keeping the state."""
+    """Test that the pills can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Options can be changed dynamically when a key is provided
+    2. Selection resets to default when selected value is removed from options
+    3. Selection is preserved when the selected value exists in new options
+
+    Note: When using dynamic options with a key, the selection is preserved only
+    if the formatted value (after applying format_func) exists in the new options.
+
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, default=apple
+    Updated options: [mango, papaya, grape, apple] with format_func=capitalize, default=papaya
+    """
     dynamic_pills = get_element_by_key(app, "dynamic_pills_with_key")
     expect(dynamic_pills).to_be_visible()
 
@@ -270,20 +284,23 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_pills, "initial help")
 
-    # Click a selection and submit
-    get_pill_button(dynamic_pills, "banana").click()
+    # --- Test 1: Selection RESETS when value is removed from options ---
+    # Select "banana" (only exists in initial options, NOT in updated)
+    get_pill_button(dynamic_pills, "Banana").click()
     wait_for_app_run(app)
-
     expect_prefixed_markdown(app, "Initial pills value:", "banana")
 
-    # Click the toggle to update the pills props
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
     click_toggle(app, "Update pills props")
 
-    # new pills is visible:
+    # Updated pills is visible
     expect(dynamic_pills).to_contain_text("Updated dynamic pills")
 
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated pills value:", "banana")
+    # Selection should RESET to "papaya" (default) since "banana" is not in updated options
+    expect_prefixed_markdown(app, "Updated pills value:", "papaya")
+    # Negative assertion: ensure "banana" is NOT selected after toggle (regression check)
+    expect(dynamic_pills).not_to_contain_text("Banana")
 
     dynamic_pills.scroll_into_view_if_needed()
     assert_snapshot(dynamic_pills, name="st_pills-dynamic_updated")
@@ -291,7 +308,292 @@ def test_dynamic_pills_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_pills, "updated help")
 
-    # Click a different value
-    get_pill_button(dynamic_pills, "orange").click()
+    # --- Test 2: Selection PRESERVED when value exists in both option sets ---
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "Mango")
+    # Neither is the default. This ensures we're testing true preservation.
+    get_pill_button(dynamic_pills, "Mango").click()
     wait_for_app_run(app)
-    expect_prefixed_markdown(app, "Updated pills value:", "orange")
+    expect_prefixed_markdown(app, "Updated pills value:", "mango")
+
+    # Toggle back to initial options - "mango" exists in initial too
+    click_toggle(app, "Update pills props")
+    expect(dynamic_pills).to_contain_text("Initial dynamic pills")
+
+    # Selection should be PRESERVED since "mango" is in both option sets
+    # If this was reset, it would show "apple" (initial default), not "mango"
+    expect_prefixed_markdown(app, "Initial pills value:", "mango")
+
+
+# --- Query parameter binding tests ---
+
+
+def test_pills_query_param_seeding_single(page: Page, app_base_url: str):
+    """Test that single-select pills value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills": "dog"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills: dog")
+    expect(page).to_have_url(re.compile(r"\?bound_pills=dog"))
+    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
+    expect(page).not_to_have_url(re.compile(r"bound_pills_fmt="))
+
+
+def test_pills_query_param_seeding_multi(page: Page, app_base_url: str):
+    """Test that multi-select pills values can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_multi": ["Red", "Blue"]}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(
+        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
+    )
+
+
+def test_pills_query_param_updates_url_single(app: Page):
+    """Test that selecting, deselecting, and switching pills updates the URL."""
+    bound_group = get_element_by_key(app, "bound_pills")
+    get_pill_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills: cat")
+    expect(app).to_have_url(re.compile(r"\?bound_pills=cat"))
+
+    # Switch selection: clicking a different pill replaces the URL value
+    get_pill_button(bound_group, "dog").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills: dog")
+    expect(app).to_have_url(re.compile(r"\?bound_pills=dog"))
+    expect(app).not_to_have_url(re.compile(r"bound_pills=cat"))
+
+    # Deselect (toggle off) clears URL param
+    get_pill_button(bound_group, "dog").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills: None")
+    expect(app).not_to_have_url(re.compile(r"bound_pills="))
+
+
+def test_pills_query_param_updates_url_multi(app: Page):
+    """Test that selecting multiple pills updates the URL."""
+    bound_group = get_element_by_key(app, "bound_pills_multi")
+    get_pill_button(bound_group, "Red").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills_multi: ['Red']")
+    expect(app).to_have_url(re.compile(r"\?bound_pills_multi=Red"))
+
+    get_pill_button(bound_group, "Blue").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_pills_multi: ['Red', 'Blue']")
+    expect(app).to_have_url(re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue"))
+
+
+def test_pills_query_param_default_override(page: Page, app_base_url: str):
+    """Test default override: URL overrides default, invalid reverts, revert clears."""
+    # Invalid URL reverts to default ("Red"), not to None
+    page.goto(build_app_url(app_base_url, query={"bound_pills_default": "Invalid"}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_default: Red")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
+
+    # Valid URL overrides default
+    page.goto(build_app_url(app_base_url, query={"bound_pills_default": "Blue"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_default: Blue")
+    expect(page).to_have_url(re.compile(r"bound_pills_default=Blue"))
+
+    # Revert to default by selecting "Red" clears URL param
+    bound_group = get_element_by_key(page, "bound_pills_default")
+    get_pill_button(bound_group, "Red").click()
+    wait_for_app_run(page)
+
+    expect_text(page, "bound_pills_default: Red")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_default="))
+
+
+def test_pills_query_param_single_edge_cases(page: Page, app_base_url: str):
+    """Test single-select edge cases: invalid, empty, and multiple URL values."""
+    # Invalid URL value reverts to default (None when no default)
+    page.goto(build_app_url(app_base_url, query={"bound_pills": "Invalid"}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills: None")
+    expect(page).not_to_have_url(re.compile(r"bound_pills="))
+
+    # Empty URL param clears to None (clearable widget)
+    page.goto(build_app_url(app_base_url, query={"bound_pills": ""}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills: None")
+    expect(page).not_to_have_url(re.compile(r"bound_pills="))
+
+    # Multiple URL values truncated to first for single-select
+    page.goto(build_app_url(app_base_url, query={"bound_pills": ["cat", "dog"]}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills: cat")
+    expect(page).to_have_url(re.compile(r"\?bound_pills=cat"))
+    expect(page).not_to_have_url(re.compile(r"bound_pills=dog"))
+
+
+def test_pills_query_param_format_func(page: Page, app_base_url: str):
+    """Test that formatted option strings work in URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_fmt": "DOG"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_fmt: dog")
+    expect(page).to_have_url(re.compile(r"bound_pills_fmt=DOG"))
+
+
+def test_pills_query_param_multi_default_override(page: Page, app_base_url: str):
+    """Test multiselect pills: URL overrides default, reverting clears param."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi_default": ["Yellow", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_multi_default: ['Yellow', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
+
+    # Revert to default ["Red", "Green"] by deselecting Yellow, Blue
+    # then selecting Red, Green
+    bound_group = get_element_by_key(page, "bound_pills_multi_default")
+    get_pill_button(bound_group, "Yellow").click()
+    wait_for_app_run(page)
+    get_pill_button(bound_group, "Blue").click()
+    wait_for_app_run(page)
+    get_pill_button(bound_group, "Red").click()
+    wait_for_app_run(page)
+    get_pill_button(bound_group, "Green").click()
+    wait_for_app_run(page)
+
+    expect_text(page, "bound_pills_multi_default: ['Red', 'Green']")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_multi_default="))
+
+
+def test_pills_query_param_multi_edge_cases(page: Page, app_base_url: str):
+    """Test multi-select edge cases: invalid filtering, empty, and duplicates."""
+    # Partial invalid values are filtered out, keeping valid ones
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi": ["Red", "Invalid", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(
+        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
+    )
+    expect(page).not_to_have_url(re.compile(r"Invalid"))
+
+    # All-invalid URL values clear to empty list and remove param
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi": ["Invalid1", "Invalid2"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_multi: []")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_multi="))
+
+    # Empty URL param on multi-select with no default clears the URL
+    page.goto(build_app_url(app_base_url, query={"bound_pills_multi": ""}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_multi: []")
+    expect(page).not_to_have_url(re.compile(r"bound_pills_multi="))
+
+    # Duplicate URL values are deduplicated
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_pills_multi": ["Red", "Blue", "Red"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_pills_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(
+        re.compile(r"bound_pills_multi=Red&bound_pills_multi=Blue")
+    )
+    expect(page).not_to_have_url(
+        re.compile(
+            r"bound_pills_multi=Red&bound_pills_multi=Blue&bound_pills_multi=Red"
+        )
+    )
+
+
+def test_pills_query_param_multi_empty_overrides_nonempty_default(
+    page: Page, app_base_url: str
+):
+    """Test that empty URL param overrides a non-empty default to [] and persists."""
+    page.goto(build_app_url(app_base_url, query={"bound_pills_multi_default": ""}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_pills_multi_default: []")
+    expect(page).to_have_url(re.compile(r"bound_pills_multi_default="))
+
+
+def test_required_pills_behavior(app: Page):
+    """Test required parameter behavior: deselection prevention, selection changes, and not-required baseline.
+
+    Tests three scenarios in one aggregated test to reduce browser loads:
+    1. required=True with default: prevents deselection but allows selection changes
+    2. required=True without default: allows initial selection, then prevents deselection
+    3. required=False (baseline): allows deselection
+    """
+    # --- Scenario 1: required=True with default ---
+    required_pills = get_element_by_key(app, "pills_required_with_default")
+
+    # Initial state: "Option A" is selected (from default)
+    expect_text(app, "required_with_default: Option A")
+
+    # Click on the selected option to try to deselect it - should be prevented
+    get_pill_button(required_pills, "Option A").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_with_default: Option A")
+
+    # Click on a different option - changing selection should work
+    get_pill_button(required_pills, "Option B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_with_default: Option B")
+
+    # Try to deselect "Option B" by clicking it again - should be prevented
+    get_pill_button(required_pills, "Option B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_with_default: Option B")
+
+    # --- Scenario 2: required=True without default ---
+    required_pills_no_default = get_element_by_key(
+        app, "pills_required_without_default"
+    )
+
+    # Initial state: no selection (None)
+    expect_text(app, "required_without_default: None")
+
+    # Click to select an option
+    get_pill_button(required_pills_no_default, "Option X").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_without_default: Option X")
+
+    # Try to deselect by clicking again - should be prevented
+    get_pill_button(required_pills_no_default, "Option X").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_without_default: Option X")
+
+    # --- Scenario 3: required=False allows deselection ---
+    not_required_pills = get_element_by_key(app, "pills_not_required")
+
+    # Initial state: "Choice 1" is selected (from default)
+    expect_text(app, "not_required: Choice 1")
+
+    # Click on the selected option to deselect it
+    get_pill_button(not_required_pills, "Choice 1").click()
+    wait_for_app_run(app)
+
+    # Value should be None - deselection is allowed
+    expect_text(app, "not_required: None")

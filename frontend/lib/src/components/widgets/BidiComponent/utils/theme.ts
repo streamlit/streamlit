@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import {
   StreamlitThemeCssProperties,
 } from "@streamlit/component-v2-lib"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * Converts an object to CSS custom properties
@@ -42,7 +42,29 @@ export const objectToCssCustomProperties = (
       return
     }
 
-    result[propertyName] = String(value)
+    if (value === undefined || value === null) {
+      // Use CSS-wide keyword `unset` so that any property consuming this
+      // variable reverts to its initial/inherited value instead of getting the
+      // literal strings "undefined" or "null".
+      result[propertyName] = "unset"
+      return
+    }
+
+    if (Array.isArray(value)) {
+      result[propertyName] = value.join(",")
+      return
+    }
+
+    if (typeof value === "number" || typeof value === "string") {
+      result[propertyName] = String(value)
+      return
+    }
+
+    // Fallback for unexpected value types; use `unset` rather than relying on
+    // Object's default stringification ('[object Object]').
+    // This is a defensive fallback to avoid unexpected behavior. We don't
+    // expect this to be reached in practice.
+    result[propertyName] = "unset"
   })
 
   return result as StreamlitThemeCssProperties
@@ -58,6 +80,24 @@ export const objectToCssCustomProperties = (
 export const extractComponentsV2Theme = (
   theme: EmotionTheme
 ): StreamlitTheme => {
+  const headingFontSizes = [
+    theme.fontSizes.h1FontSize,
+    theme.fontSizes.h2FontSize,
+    theme.fontSizes.h3FontSize,
+    theme.fontSizes.h4FontSize,
+    theme.fontSizes.h5FontSize,
+    theme.fontSizes.h6FontSize,
+  ]
+
+  const headingFontWeights = [
+    theme.fontWeights.h1FontWeight,
+    theme.fontWeights.h2FontWeight,
+    theme.fontWeights.h3FontWeight,
+    theme.fontWeights.h4FontWeight,
+    theme.fontWeights.h5FontWeight,
+    theme.fontWeights.h6FontWeight,
+  ]
+
   return {
     primaryColor: theme.colors.primary,
     backgroundColor: theme.colors.bgColor,
@@ -76,22 +116,20 @@ export const extractComponentsV2Theme = (
     baseFontWeight: theme.fontWeights.normal,
     codeFontWeight: theme.fontWeights.code,
     codeFontSize: theme.fontSizes.codeFontSize,
-    headingFontSizes: [
-      theme.fontSizes.h1FontSize,
-      theme.fontSizes.h2FontSize,
-      theme.fontSizes.h3FontSize,
-      theme.fontSizes.h4FontSize,
-      theme.fontSizes.h5FontSize,
-      theme.fontSizes.h6FontSize,
-    ],
-    headingFontWeights: [
-      theme.fontWeights.h1FontWeight,
-      theme.fontWeights.h2FontWeight,
-      theme.fontWeights.h3FontWeight,
-      theme.fontWeights.h4FontWeight,
-      theme.fontWeights.h5FontWeight,
-      theme.fontWeights.h6FontWeight,
-    ],
+    headingFontSizes,
+    headingFontSize1: headingFontSizes[0],
+    headingFontSize2: headingFontSizes[1],
+    headingFontSize3: headingFontSizes[2],
+    headingFontSize4: headingFontSizes[3],
+    headingFontSize5: headingFontSizes[4],
+    headingFontSize6: headingFontSizes[5],
+    headingFontWeights,
+    headingFontWeight1: headingFontWeights[0],
+    headingFontWeight2: headingFontWeights[1],
+    headingFontWeight3: headingFontWeights[2],
+    headingFontWeight4: headingFontWeights[3],
+    headingFontWeight5: headingFontWeights[4],
+    headingFontWeight6: headingFontWeights[5],
     borderColor: theme.colors.borderColor,
     dataframeBorderColor: theme.colors.dataframeBorderColor,
     dataframeHeaderBackgroundColor:
@@ -100,12 +138,21 @@ export const extractComponentsV2Theme = (
     font: theme.genericFonts.bodyFont,
     chartCategoricalColors: theme.colors.chartCategoricalColors,
     chartSequentialColors: theme.colors.chartSequentialColors,
+    chartDivergingColors: theme.colors.chartDivergingColors,
 
     headingColor: theme.colors.headingColor,
     borderColorLight: theme.colors.borderColorLight,
     codeTextColor: theme.colors.codeTextColor,
 
-    widgetBorderColor: theme.colors.widgetBorderColor,
+    /**
+     * Computed effective border color for widget elements.
+     *
+     * This value is derived from theme configuration:
+     * - When showWidgetBorder=false: undefined from theme (fallback to
+     *   transparent here)
+     * - When showWidgetBorder=true: uses theme's borderColor
+     */
+    widgetBorderColor: theme.colors.widgetBorderColor || "transparent",
 
     redColor: theme.colors.redColor,
     orangeColor: theme.colors.orangeColor,
@@ -129,5 +176,8 @@ export const extractComponentsV2Theme = (
     greenTextColor: theme.colors.greenTextColor,
     violetTextColor: theme.colors.violetTextColor,
     grayTextColor: theme.colors.grayTextColor,
+
+    metricValueFontSize: theme.fontSizes.metricValueFontSize,
+    metricValueFontWeight: theme.fontWeights.metricValueFontWeight,
   }
 }

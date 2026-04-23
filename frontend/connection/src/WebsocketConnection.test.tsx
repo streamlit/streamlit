@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,19 @@
  * limitations under the License.
  */
 
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
+
 import { zip } from "lodash-es"
+import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg } from "@streamlit/protobuf"
@@ -23,6 +35,7 @@ import { ConnectionState } from "./ConnectionState"
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
   MAX_RETRIES_BEFORE_CLIENT_ERROR,
+  PING_MINIMUM_RETRY_PERIOD_MS,
 } from "./constants"
 import { doInitPings } from "./DoInitPings"
 import { mockEndpoints } from "./testUtils"
@@ -215,7 +228,23 @@ describe("doInitPings", () => {
     vi.clearAllTimers()
     vi.useRealTimers()
     globalThis.fetch = originalFetch
-    window.__streamlit = undefined
+    globalThis.__mockStreamlitConfig = {}
+  })
+
+  it("uses fast-path to connect immediately when enableBypass is true", () => {
+    const fetchMock = createFetchMock()
+    globalThis.fetch = fetchMock
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Bypass should transition directly to CONNECTING and attempt to
+    // create the websocket without waiting for SERVER_PING_SUCCEEDED.
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    ws.disconnect()
   })
 
   it("calls the /_stcore/health endpoint when pinging server", async () => {
@@ -239,8 +268,9 @@ describe("doInitPings", () => {
     )
   })
 
-  it("makes the host config call using window.__streamlit.HOST_CONFIG_BASE_URL if set", async () => {
-    window.__streamlit = { HOST_CONFIG_BASE_URL: "https://example.com:1234" }
+  it("makes the host config call using StreamlitConfig.HOST_CONFIG_BASE_URL if set", async () => {
+    globalThis.__mockStreamlitConfig.HOST_CONFIG_BASE_URL =
+      "https://example.com:1234"
     globalThis.fetch = vi
       .fn()
       .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
@@ -986,6 +1016,22 @@ describe("WebsocketConnection", () => {
     expect(client.websocket).toBe(undefined)
   })
 
+  it("reconnect closes connection and transitions to PINGING_SERVER when connected", () => {
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.CONNECTED
+    client.reconnect()
+    // @ts-expect-error
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
+  it("reconnect does nothing if not connected", () => {
+    // @ts-expect-error - accessing private property for testing
+    client.state = ConnectionState.PINGING_SERVER
+    client.reconnect()
+    // @ts-expect-error
+    expect(client.state).toBe(ConnectionState.PINGING_SERVER)
+  })
+
   it("increments message cache run count", () => {
     const incrementRunCountSpy = vi.spyOn(
       // @ts-expect-error
@@ -1029,8 +1075,13 @@ describe("WebsocketConnection", () => {
 
     const msg = BackMsg.create(TEST_BACK_MSG)
     const buffer = BackMsg.encode(msg).finish()
+    const encodedMessage = new Uint8Array(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.byteLength
+    )
 
-    expect(sendSpy).toHaveBeenCalledWith(buffer)
+    expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
   })
 
   describe("getBaseUriParts", () => {
@@ -1054,8 +1105,7 @@ describe("WebsocketConnection auth token handling", () => {
 
   let websocketSpy: (url: string, protocols?: string | string[]) => void
   let originalWebSocket: typeof WebSocket
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let pingServerSpy: any
+  let pingServerSpy: MockInstance
 
   class MockWebSocket {
     public url: string
@@ -1105,8 +1155,13 @@ describe("WebsocketConnection auth token handling", () => {
     // Prevent the internal ping loop from scheduling timers or websockets
     // for these auth-only tests.
     pingServerSpy = vi
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .spyOn(WebsocketConnection.prototype as any, "pingServer")
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
       .mockResolvedValue(undefined)
   })
 
@@ -1194,5 +1249,267 @@ describe("WebsocketConnection auth token handling", () => {
       ["streamlit", "iAmAnAuthToken", "lastSessionId"]
     )
     expect(resetHostAuthToken).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe("WebsocketConnection FSM fast-path behavior", () => {
+  let originalFetch: typeof globalThis.fetch
+
+  beforeEach(() => {
+    vi.useFakeTimers()
+    originalFetch = globalThis.fetch
+  })
+
+  afterEach(() => {
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    globalThis.fetch = originalFetch
+    globalThis.__mockStreamlitConfig = {}
+  })
+
+  it("uses default path (PINGING_SERVER) when enableBypass is false", () => {
+    globalThis.fetch = createFetchMock()
+
+    const args = createMockArgs({ enableBypass: false })
+    const ws = new WebsocketConnection(args)
+
+    // Should transition to PINGING_SERVER, not CONNECTING
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.PINGING_SERVER, undefined)
+
+    ws.disconnect()
+  })
+
+  it("runs background pings and calls onHostConfigResp in fast-path mode", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Bypass: should be in CONNECTING immediately
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    // Flush the microtask queue to allow the fetch promises to resolve
+    await vi.advanceTimersByTimeAsync(0)
+
+    // onHostConfigResp should have been called by background pings
+    expect(args.onHostConfigResp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowedOrigins: expect.any(Array),
+      })
+    )
+
+    ws.disconnect()
+  })
+
+  it("does not transition to PINGING_SERVER in fast-path mode", () => {
+    globalThis.fetch = createFetchMock()
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+
+    // Should NOT have called with PINGING_SERVER
+    const hasPingingState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.PINGING_SERVER
+    )
+    expect(hasPingingState).toBe(false)
+
+    ws.disconnect()
+  })
+
+  it("keeps retrying background pings on failure without disconnecting", async () => {
+    // Simulate persistent network failure for pings
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Network error"))
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Should start in CONNECTING
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    // Allow background pings to fail and retry multiple times
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Allow time for several retries
+    for (let i = 0; i < MAX_RETRIES_BEFORE_CLIENT_ERROR + 2; i++) {
+      await vi.advanceTimersByTimeAsync(PING_MINIMUM_RETRY_PERIOD_MS + 100)
+    }
+
+    // onRetry should have been called multiple times (background pings keep retrying)
+    expect(args.onRetry).toHaveBeenCalled()
+
+    // Should still be in CONNECTING (not disconnected)
+    // Background pings retry indefinitely, they don't cause FATAL_ERROR
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const hasDisconnectedState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.DISCONNECTED_FOREVER
+    )
+    expect(hasDisconnectedState).toBe(false)
+
+    ws.disconnect()
+  })
+
+  it("calls onRetry when background pings fail and retry", async () => {
+    // First call fails, subsequent calls succeed
+    globalThis.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("Network error"))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Allow initial failure and retry
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(PING_MINIMUM_RETRY_PERIOD_MS + 100)
+
+    // onRetry should have been called
+    expect(args.onRetry).toHaveBeenCalled()
+
+    ws.disconnect()
+  })
+
+  it("successfully retrieves full config when background pings succeed", async () => {
+    // Both endpoints succeed
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HEALTH_RESPONSE))
+      .mockResolvedValueOnce(createSuccessResponse(MOCK_HOST_CONFIG_RESPONSE))
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Allow background pings to complete
+    await vi.advanceTimersByTimeAsync(0)
+
+    // onHostConfigResp should be called with config from endpoint
+    expect(args.onHostConfigResp).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowedOrigins: expect.any(Array),
+      })
+    )
+
+    // Should stay connected since pings succeeded
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const hasDisconnectedState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.DISCONNECTED_FOREVER
+    )
+    expect(hasDisconnectedState).toBe(false)
+
+    ws.disconnect()
+  })
+
+  it("handles background ping cancellation gracefully on disconnect", async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockImplementation(
+        () =>
+          new Promise(resolve =>
+            setTimeout(
+              () => resolve(createSuccessResponse(MOCK_HEALTH_RESPONSE)),
+              1000
+            )
+          )
+      )
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Start background pings
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Disconnect before pings complete
+    ws.disconnect()
+
+    // Should transition to DISCONNECTED_FOREVER
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
+  })
+
+  it("does not orphan ping request when bypass transitions to PINGING_SERVER", async () => {
+    // This test verifies the race condition fix where:
+    // 1. Bypass mode starts background pings (stores ping request)
+    // 2. We manually transition to PINGING_SERVER (simulating WS failure)
+    // 3. New pingServer() is called (starts new ping request)
+    // 4. Background ping's finally block runs but should NOT clear new ping request
+    // 5. disconnect() should successfully cancel the active request
+
+    // Mock fetch to return pending promises (never resolve)
+    // This simulates slow pings that get cancelled
+    const backgroundPingPromise = new Promise(() => {
+      /* never resolves */
+    })
+    const foregroundPingPromise = new Promise(() => {
+      /* never resolves */
+    })
+
+    globalThis.fetch = vi
+      .fn()
+      // First two calls are for background ping (health + host-config)
+      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      // Next two calls are for foreground ping after transition
+      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+
+    const args = createMockArgs({ enableBypass: true })
+    const ws = new WebsocketConnection(args)
+
+    // Should start in CONNECTING (bypass mode)
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.CONNECTING, undefined)
+
+    // Allow background pings to start
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Manually trigger transition to PINGING_SERVER (simulating WS connection failure)
+    // This will start a new ping request via pingServer()
+    // @ts-expect-error - Accessing private method for testing
+    ws.stepFsm("CONNECTION_ERROR", "Simulated connection failure")
+
+    // Allow new ping to start
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Should have transitioned to PINGING_SERVER
+    const stateChangeCalls = (
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).mock.calls
+    const hasPingingState = stateChangeCalls.some(
+      call => call[0] === ConnectionState.PINGING_SERVER
+    )
+    expect(hasPingingState).toBe(true)
+
+    // Now disconnect - this should successfully cancel the active ping request
+    // If the race condition existed, the background ping's finally would have
+    // cleared this.pingRequest, making it undefined and unable to cancel
+    ws.disconnect()
+
+    // Verify we transitioned to DISCONNECTED_FOREVER (no errors thrown)
+    expect(
+      args.onConnectionStateChange as ReturnType<typeof vi.fn>
+    ).toHaveBeenCalledWith(ConnectionState.DISCONNECTED_FOREVER, undefined)
+
+    // The test passing without errors verifies the fix works correctly
   })
 })

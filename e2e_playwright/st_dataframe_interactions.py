@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ st.dataframe(
         "Column D": st.column_config.Column(width="small"),
         "Column E": st.column_config.Column(width="small"),
     },
-    use_container_width=False,
+    width="content",
 )
 
 
@@ -59,9 +59,7 @@ if st.button("Create some elements to unmount component"):
         st.write("Another element")
 
 
-st.data_editor(
-    random_df, num_rows="dynamic", key="data_editor", use_container_width=False
-)
+st.data_editor(random_df, num_rows="dynamic", key="data_editor", width="content")
 
 
 cell_overlay_test_df = pd.DataFrame(

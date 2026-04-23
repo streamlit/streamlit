@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ def test_displays_a_pyplot_figures(
 
     # pyplot graph assertion
     expect(themed_app.get_by_test_id("stImage").last.locator("img")).to_have_attribute(
-        "src", re.compile("localhost*")
+        "src", re.compile(r".*/media/.*")
     )
 
     pyplot_elements = themed_app.get_by_test_id("stImage").locator("img")

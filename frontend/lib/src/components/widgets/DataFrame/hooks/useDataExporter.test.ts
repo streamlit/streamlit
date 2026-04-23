@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,7 @@ const mockClose = vi.fn()
 
 // The native-file-system-adapter is not available in tests, so we need to mock it.
 vi.mock("native-file-system-adapter", () => ({
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  showSaveFilePicker: vi.fn().mockImplementation((_object: any) => {
+  showSaveFilePicker: vi.fn().mockImplementation((_object: unknown) => {
     return {
       createWritable: vi.fn().mockImplementation(() => {
         return {

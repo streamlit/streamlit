@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,9 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+
+import re
+
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -26,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     reset_focus,
 )
 
-NUM_DATE_INPUTS = 18
+NUM_DATE_INPUTS = 22
 
 
 def test_date_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -255,8 +263,11 @@ def test_single_date_calendar_picker_rendering(
 ):
     """Test that the single value calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Single date").locator("input").click()
+    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    # Wait for the calendar popup to be fully visible before taking screenshot
+    expect(calendar).to_be_visible()
     assert_snapshot(
-        themed_app.locator('[data-baseweb="calendar"]').first,
+        calendar,
         name="st_date_input-single_date_calendar",
     )
 
@@ -266,8 +277,11 @@ def test_range_date_calendar_picker_rendering(
 ):
     """Test that the range calendar picker renders correctly via screenshots matching."""
     get_date_input(themed_app, "Range, two dates").locator("input").click()
+    calendar = themed_app.locator('[data-baseweb="calendar"]').first
+    # Wait for the calendar popup to be fully visible before taking screenshot
+    expect(calendar).to_be_visible()
     assert_snapshot(
-        themed_app.locator('[data-baseweb="calendar"]').first,
+        calendar,
         name="st_date_input-range_two_dates_calendar",
     )
 
@@ -466,7 +480,7 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # new date input is visible:
     expect(dynamic_date_input).to_contain_text("Updated dynamic date input")
 
-    # Ensure the previously entered value remains visible
+    # Ensure the previously entered value remains visible (value is within new bounds)
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-02")
 
     dynamic_date_input.scroll_into_view_if_needed()
@@ -482,6 +496,24 @@ def test_dynamic_date_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     wait_for_app_run(app)
 
     expect_prefixed_markdown(app, "Updated date input value:", "2020-01-03")
+
+    # Test dynamic min/max behavior when bounds change:
+    # Toggle back to initial bounds (2010-2030)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Initial date input value:", "2020-01-03")
+
+    # Set value to 2028/01/01 which is valid in initial bounds (2010-2030)
+    input_field.type("2028/01/01")
+    input_field.press("Enter")
+    input_field.press("Escape")
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial date input value:", "2028-01-01")
+
+    # Toggle to updated bounds (2020-2025) - value 2028 is outside, should reset to default (2023-09-10)
+    click_toggle(app, "Update date input props")
+    expect_prefixed_markdown(app, "Updated date input value:", "2023-09-10")
+    # Anti-regression: ensure the old out-of-bounds value is not retained
+    expect(app.get_by_text("2028-01-01")).not_to_be_visible()
 
 
 def test_quick_select_feature_visibility(app: Page):
@@ -503,3 +535,89 @@ def test_quick_select_feature_visibility(app: Page):
 
     # Quick select should not be visible for single date inputs
     expect(quick_select).not_to_be_visible()
+
+
+# --- Query param binding tests ---
+
+
+def test_date_input_query_param_default_cleared_from_url(page: Page, app_base_url: str):
+    """Test that reverting a bound date_input to its default clears the URL param.
+
+    Exercises the frontend shouldClearUrlParam / toStringPrimitive(Date) path
+    that compares the current string array value against the Date[] default.
+    """
+    # Seed bound_date (default=2025-01-15) with a non-default value
+    page.goto(build_app_url(app_base_url, query={"bound_date": "2025-06-20"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound date:", "2025-06-20")
+    expect(page).to_have_url(re.compile(r"bound_date=2025-06-20"))
+
+    # Change the date back to the default via the UI
+    date_input = get_element_by_key(page, "bound_date")
+    date_input_field = date_input.locator("input")
+    date_input_field.clear()
+    date_input_field.fill("2025/01/15")
+    date_input_field.press("Enter")
+    date_input_field.press("Escape")
+    wait_for_app_run(page)
+
+    # Default value should be removed from the URL
+    expect_prefixed_markdown(page, "Bound date:", "2025-01-15")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_date="))
+
+
+def test_date_input_query_param_seeding(page: Page, app_base_url: str):
+    """Test that date input value can be seeded from URL query params using ISO format."""
+    page.goto(build_app_url(app_base_url, query={"bound_date": "2025-06-20"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound date:", "2025-06-20")
+    expect(page).to_have_url(re.compile(r"bound_date=2025-06-20"))
+
+
+def test_date_input_query_param_clearable_empty(page: Page, app_base_url: str):
+    """Test that a clearable date input (value=None) can be seeded as empty from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_clearable_date": ""}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound clearable date:", "None")
+
+
+def test_date_input_query_param_invalid_reverts_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that an invalid URL value reverts to the default."""
+    page.goto(build_app_url(app_base_url, query={"bound_date": "not-a-date"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound date:", "2025-01-15")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_date="))
+
+
+def test_date_input_query_param_range_seeding(page: Page, app_base_url: str):
+    """Test that a date range can be seeded from repeated URL query params."""
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_range": ["2025-04-01", "2025-04-10"]},
+        )
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(
+        page,
+        "Bound range:",
+        "(datetime.date(2025, 4, 1), datetime.date(2025, 4, 10))",
+    )
+    expect(page).to_have_url(re.compile(r"bound_range=2025-04-01"))
+    expect(page).to_have_url(re.compile(r"bound_range=2025-04-10"))
+
+
+def test_date_input_query_param_out_of_range_resets(page: Page, app_base_url: str):
+    """Test that out-of-bounds dates revert to default."""
+    page.goto(build_app_url(app_base_url, query={"bound_minmax_date": "2024-01-01"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound minmax:", "2025-06-15")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_minmax_date="))

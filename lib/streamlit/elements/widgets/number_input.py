@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -22,9 +22,8 @@ from typing import TYPE_CHECKING, Literal, TypeAlias, TypeVar, cast, overload
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.js_number import JSNumber, JSNumberBoundsException
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -48,6 +47,7 @@ from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
 from streamlit.runtime.state import (
+    BindOption,
     WidgetArgs,
     WidgetCallback,
     WidgetKwargs,
@@ -69,6 +69,8 @@ FloatOrNone = TypeVar("FloatOrNone", float, None)
 class NumberInputSerde:
     value: Number | None
     data_type: int
+    min_value: Number
+    max_value: Number
 
     def serialize(self, v: Number | None) -> Number | None:
         return v
@@ -76,8 +78,16 @@ class NumberInputSerde:
     def deserialize(self, ui_value: Number | None) -> Number | None:
         val: Number | None = ui_value if ui_value is not None else self.value
 
-        if val is not None and self.data_type == NumberInputProto.INT:
-            val = int(val)
+        if val is not None:
+            if self.data_type == NumberInputProto.INT:
+                val = int(val)
+            # Reset to default if outside [min_value, max_value]. This
+            # rejects out-of-range values seeded from URL query params;
+            # a no-op for frontend values since the UI enforces bounds.
+            # Returning the default triggers _seed_widget_from_url's
+            # "deserialized == default" check, which clears the URL param.
+            if val < self.min_value or val > self.max_value:
+                return self.value
 
         return val
 
@@ -107,6 +117,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int | IntOrNone: ...
 
     # If "max_value: int" is given and all other numerical inputs are
@@ -133,6 +144,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int | IntOrNone: ...
 
     # If "value=int" is given and all other numerical inputs are "int"s
@@ -157,6 +169,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int: ...
 
     # If "step=int" is given and all other numerical inputs are "int"s
@@ -183,6 +196,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> int | IntOrNone: ...
 
     # If all numerical inputs are floats (with value optionally being "min")
@@ -209,6 +223,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> float | FloatOrNone: ...
 
     @gather_metrics("number_input")
@@ -231,6 +246,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> Number | None:
         r"""Display a numeric input widget.
 
@@ -250,9 +266,9 @@ class NumberInputMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -298,10 +314,20 @@ class NumberInputMixin:
             For example, ``format="%0.1f"`` adjusts the displayed decimal
             precision to only show one digit after the decimal.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -366,14 +392,33 @@ class NumberInputMixin:
               the parent container, the width of the widget matches the width
               of the parent container.
 
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. If ``value`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
+
         Returns
         -------
         int or float or None
             The current value of the numeric input widget or ``None`` if the widget
             is empty. The return type will match the data type of the value parameter.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> number = st.number_input("Insert a number")
@@ -415,6 +460,7 @@ class NumberInputMixin:
             label_visibility=label_visibility,
             icon=icon,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -437,6 +483,7 @@ class NumberInputMixin:
         label_visibility: LabelVisibility = "visible",
         icon: str | None = None,
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> Number | None:
         key = to_key(key)
@@ -452,9 +499,7 @@ class NumberInputMixin:
         element_id = compute_and_register_element_id(
             "number_input",
             user_key=key,
-            # Ensure stable ID when key is provided; explicitly whitelist parameters
-            # that might invalidate the current widget state.
-            key_as_main_identity={"min_value", "max_value", "step"},
+            key_as_main_identity=True,
             dg=self.dg,
             label=label,
             min_value=min_value,
@@ -514,7 +559,7 @@ class NumberInputMixin:
         number_format = ("%d" if int_value else "%0.2f") if format is None else format
 
         # Warn user if they format an int type as a float or vice versa.
-        if number_format in ["%d", "%u", "%i"] and float_value:
+        if number_format in {"%d", "%u", "%i"} and float_value:
             import streamlit as st
 
             st.warning(
@@ -618,7 +663,19 @@ class NumberInputMixin:
         if icon is not None:
             number_input_proto.icon = validate_icon_or_emoji(icon)
 
-        serde = NumberInputSerde(value, data_type)
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            number_input_proto.query_param_key = str(key)
+
+        # min_value and max_value are guaranteed to be Number (not None) after
+        # the JSNumber defaults above. The casts are needed for ty (which doesn't
+        # narrow the type), but mypy sees them as redundant.
+        serde = NumberInputSerde(
+            value,
+            data_type,
+            cast("Number", min_value),  # type: ignore[redundant-cast]
+            cast("Number", max_value),  # type: ignore[redundant-cast]
+        )
         widget_state = register_widget(
             number_input_proto.id,
             on_change_handler=on_change,
@@ -628,37 +685,50 @@ class NumberInputMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="double_value",
+            bind=bind,
+            # Clearable when value=None: the widget can be in an empty state,
+            # so ?key= (empty URL param) should clear the widget to None.
+            clearable=(value is None),
         )
 
-        if widget_state.value_changed:
-            if widget_state.value is not None:
-                # Min/Max bounds checks when the value is updated.
-                if (
-                    number_input_proto.has_min
-                    and widget_state.value < number_input_proto.min
-                ):
-                    raise StreamlitValueBelowMinError(
-                        value=widget_state.value, min_value=number_input_proto.min
-                    )
+        # Validate the current value against the new min/max bounds.
+        # If the value is no longer valid (outside bounds), reset to default.
+        # This handles the case where min_value/max_value change dynamically
+        # and the previously entered value is no longer within bounds.
+        # Note: This is NOT redundant with the serde bounds check — the
+        # serde only runs on serialized values (URL seeding, frontend
+        # submissions), while this catches already-deserialized values
+        # carried over from a previous rerun with different bounds.
+        # Both paths reset to the widget's default value for consistency.
+        current_value = widget_state.value
+        value_needs_reset = False
 
-                if (
-                    number_input_proto.has_max
-                    and widget_state.value > number_input_proto.max
-                ):
-                    raise StreamlitValueAboveMaxError(
-                        value=widget_state.value, max_value=number_input_proto.max
-                    )
+        # Check if the current value is outside the new bounds.
+        if current_value is not None and (
+            (number_input_proto.has_min and current_value < number_input_proto.min)
+            or (number_input_proto.has_max and current_value > number_input_proto.max)
+        ):
+            # Value is outside new bounds - reset to default.
+            value_needs_reset = True
+            current_value = value
 
-                number_input_proto.value = widget_state.value
+            # Update session_state so subsequent accesses in this run
+            # return the corrected value. Use reset_state_value to avoid
+            # the "cannot be modified after widget instantiated" error.
+            if key is not None:
+                get_session_state().reset_state_value(key, current_value)
+
+        if value_needs_reset or widget_state.value_changed:
+            if current_value is not None:
+                number_input_proto.value = current_value
             number_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
             "number_input", number_input_proto, layout_config=layout_config
         )
-        return widget_state.value
+        return current_value
 
     @property
     def dg(self) -> DeltaGenerator:

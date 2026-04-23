@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -244,7 +244,7 @@ def normalize_path_join(*args: str) -> str:
     str
         The normalized path of the joined path.
     """
-    return os.path.normpath(os.path.join(*args))  # ty: ignore[no-matching-overload]
+    return os.path.normpath(os.path.join(*args))
 
 
 def get_main_script_directory(main_script: str) -> str:

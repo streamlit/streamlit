@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ def setup_formatter(logger: logging.Logger) -> None:
     if hasattr(logger, "streamlit_console_handler"):
         logger.removeHandler(cast("logging.Handler", logger.streamlit_console_handler))
 
-    logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined]
+    logger.streamlit_console_handler = logging.StreamHandler()  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
     # Import here to avoid circular imports
     from streamlit import config
@@ -77,10 +77,10 @@ def setup_formatter(logger: logging.Logger) -> None:
         message_format = DEFAULT_LOG_MESSAGE
     formatter = logging.Formatter(fmt=message_format)
     formatter.default_msec_format = "%s.%03d"
-    logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined]
+    logger.streamlit_console_handler.setFormatter(formatter)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
     # Register the new console logger.
-    logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined]
+    logger.addHandler(logger.streamlit_console_handler)  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
 
 
 def update_formatter() -> None:
@@ -88,16 +88,23 @@ def update_formatter() -> None:
         setup_formatter(log)
 
 
-def init_tornado_logs() -> None:
-    """Set Tornado log levels.
+def init_uvicorn_logs() -> None:
+    """Set Uvicorn and related server log levels.
 
-    This function does not import any Tornado code, so it's safe to call even
-    when Server is not running.
+    This function sets up loggers for Uvicorn, websockets, and related components
+    so they respect Streamlit's logger.level config option.
+    It does not import any server code, so it's safe to call even when the server
+    is not running.
     """
-    # http://www.tornadoweb.org/en/stable/log.html
-    for log in ("access", "application", "general"):
+    for log in (
+        "uvicorn",
+        "uvicorn.access",
+        "uvicorn.asgi",
+        "uvicorn.error",
+        "websockets",
+    ):
         # get_logger will set the log level for the logger with the given name.
-        get_logger(f"tornado.{log}")
+        get_logger(log)
 
 
 def get_logger(name: str) -> logging.Logger:

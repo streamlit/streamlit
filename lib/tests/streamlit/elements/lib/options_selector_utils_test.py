@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 import enum
 import unittest
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -29,8 +30,15 @@ from streamlit.elements.lib.options_selector_utils import (
     index_,
     maybe_coerce_enum,
     maybe_coerce_enum_sequence,
+    validate_and_sync_multiselect_value_with_options,
+    validate_and_sync_range_value_with_options,
+    validate_and_sync_value_with_options,
+    validate_select_widget_filter_mode,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.runtime.state.common import RegisterWidgetResult
 from tests.testutil import patch_config_options
 
@@ -92,6 +100,54 @@ class TestTransformOptions:
             assert f"{option}" in formatted_options
 
         assert default_indices == [2]
+
+
+class TestValidateSelectWidgetFilterMode:
+    @pytest.mark.parametrize(
+        ("mode", "command", "expected"),
+        [
+            (
+                "fuzzy",
+                "st.selectbox",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY,
+            ),
+            (
+                "contains",
+                "st.selectbox",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+            ),
+            (
+                "prefix",
+                "st.multiselect",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_PREFIX,
+            ),
+            (
+                None,
+                "st.multiselect",
+                ProtoSelectWidgetFilterMode.FILTER_MODE_NONE,
+            ),
+        ],
+    )
+    def test_validates_known_modes(
+        self, mode: str | None, command: str, expected: int
+    ) -> None:
+        """Test that known filter modes map to the expected protobuf values."""
+        assert (
+            validate_select_widget_filter_mode(
+                mode,
+                accept_new_options=False,
+                command=command,
+            )
+            == expected
+        )
+
+    def test_rejects_unhashable_values_with_value_error(self):
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
+            validate_select_widget_filter_mode(
+                cast("Any", []),
+                accept_new_options=False,
+                command="st.selectbox",
+            )
 
 
 class TestIndexMethod(unittest.TestCase):
@@ -449,3 +505,461 @@ class TestCreateMappings:
         # Check both results are empty
         assert formatted_options == []
         assert mapping == {}
+
+
+class TestValidateAndSyncValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_value_with_options utility function."""
+
+    @parameterized.expand(
+        [
+            (
+                "value_in_options",
+                "banana",
+                ["apple", "banana", "cherry"],
+                0,
+                "banana",
+                False,
+            ),
+            ("none_value", None, ["apple", "banana"], 0, None, False),
+            (
+                "value_not_in_options_resets_to_default",
+                "mango",
+                ["apple", "banana", "cherry"],
+                0,
+                "apple",
+                True,
+            ),
+            (
+                "value_not_in_options_custom_default_index",
+                "mango",
+                ["apple", "banana", "cherry"],
+                2,
+                "cherry",
+                True,
+            ),
+            (
+                "value_not_in_options_none_default_index",
+                "mango",
+                ["apple", "banana"],
+                None,
+                None,
+                True,
+            ),
+            ("value_not_in_empty_options", "apple", [], 0, None, True),
+            ("numeric_value_in_options", 2, [1, 2, 3], 0, 2, False),
+            ("numeric_value_not_in_options", 5, [1, 2, 3], 1, 2, True),
+            ("float_value_in_options", 0.2, [0.1, 0.2, 0.3], 0, 0.2, False),
+        ]
+    )
+    def test_validate_and_sync_value_with_options(
+        self,
+        _name: str,
+        current_value,
+        options: list,
+        default_index: int | None,
+        expected_value,
+        expected_needs_reset: bool,
+    ):
+        """Test validate_and_sync_value_with_options with various inputs."""
+        value, needs_reset = validate_and_sync_value_with_options(
+            current_value, options, default_index, None
+        )
+        assert value == expected_value
+        assert needs_reset is expected_needs_reset
+
+    def test_custom_objects_without_eq_using_format_func(self):
+        """Test that custom objects without __eq__ work with format_func validation."""
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_value = deepcopy(original_options[1])
+
+        # Without the fix, this would reset because deepcopy creates new instances
+        # and == falls back to identity comparison for objects without __eq__
+        value, needs_reset = validate_and_sync_value_with_options(
+            deepcopied_value,
+            original_options,
+            0,
+            None,
+            format_func=format_func,
+        )
+
+        # Value should be valid since format_func output matches
+        assert value is deepcopied_value
+        assert needs_reset is False
+
+
+class TestValidateAndSyncRangeValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_range_value_with_options utility function."""
+
+    @parameterized.expand(
+        [
+            (
+                "both_values_in_options",
+                ("banana", "cherry"),
+                ["apple", "banana", "cherry"],
+                [0],
+                ("banana", "cherry"),
+                False,
+            ),
+            (
+                "first_value_not_in_options",
+                ("mango", "cherry"),
+                ["apple", "banana", "cherry"],
+                [0],
+                ("apple", "cherry"),
+                True,
+            ),
+            (
+                "second_value_not_in_options",
+                ("apple", "mango"),
+                ["apple", "banana", "cherry"],
+                [0],
+                ("apple", "cherry"),
+                True,
+            ),
+            (
+                "both_values_not_in_options",
+                ("mango", "papaya"),
+                ["apple", "banana", "cherry"],
+                [0],
+                ("apple", "cherry"),
+                True,
+            ),
+            (
+                "numeric_range_in_options",
+                (2, 4),
+                [1, 2, 3, 4, 5],
+                [0],
+                (2, 4),
+                False,
+            ),
+            (
+                "numeric_range_first_invalid",
+                (10, 4),
+                [1, 2, 3, 4, 5],
+                [0],
+                (1, 5),
+                True,
+            ),
+            (
+                "two_default_indices",
+                ("mango", "papaya"),
+                ["apple", "banana", "cherry"],
+                [1, 2],
+                ("banana", "cherry"),
+                True,
+            ),
+        ]
+    )
+    def test_validate_and_sync_range_value_with_options(
+        self,
+        _name: str,
+        current_value: tuple,
+        options: list,
+        default_indices: list[int],
+        expected_value: tuple,
+        expected_needs_reset: bool,
+    ) -> None:
+        """Test validate_and_sync_range_value_with_options with various inputs."""
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            current_value, options, default_indices, None
+        )
+        assert value == expected_value
+        assert needs_reset is expected_needs_reset
+        # Negative assertion: if reset expected, value should differ from input
+        if expected_needs_reset:
+            assert value != current_value
+
+    def test_empty_options_returns_current_value(self) -> None:
+        """Test that empty options returns the current value unchanged."""
+        current_value = ("a", "b")
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            current_value, [], [0], None
+        )
+        assert value == current_value
+        assert needs_reset is False
+
+    def test_single_default_index_uses_last_option_as_end(self) -> None:
+        """Test that a single default index uses the last option as the end value."""
+        current_value = ("invalid", "also_invalid")
+        options = ["a", "b", "c", "d", "e"]
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            current_value,
+            options,
+            [2],
+            None,  # Only start index provided
+        )
+        # Should use index 2 for start and last index (4) for end
+        assert value == ("c", "e")
+        assert needs_reset is True
+
+    def test_custom_format_func(self) -> None:
+        """Test validation with a custom format function."""
+        current_value = (1, 3)
+        options = [1, 2, 3, 4, 5]
+
+        # Custom format_func that formats numbers with prefix
+        def format_func(x: Any) -> str:
+            return f"num_{x}"
+
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            current_value, options, [0], None, format_func=format_func
+        )
+        assert value == (1, 3)
+        assert needs_reset is False
+
+    def test_custom_objects_without_eq_using_format_func(self) -> None:
+        """Test that custom objects without __eq__ work with format_func validation."""
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_start = deepcopy(original_options[0])
+        deepcopied_end = deepcopy(original_options[2])
+
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            (deepcopied_start, deepcopied_end),
+            original_options,
+            [0],
+            None,
+            format_func=format_func,
+        )
+
+        # Value should be valid since format_func output matches
+        assert value == (deepcopied_start, deepcopied_end)
+        assert needs_reset is False
+
+    def test_format_func_failure_resets_to_default(self) -> None:
+        """Test that format_func failure on a value causes reset to default."""
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value  # Will fail on strings
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+
+        # Mix of valid object and invalid string
+        value, needs_reset = validate_and_sync_range_value_with_options(
+            ("invalid_string", original_options[1]),
+            original_options,
+            [0],
+            None,
+            format_func=format_func,
+        )
+
+        # Should reset to default because first value is invalid
+        assert value == (original_options[0], original_options[2])
+        assert needs_reset is True
+
+
+class TestValidateAndSyncMultiselectValueWithOptions(unittest.TestCase):
+    """Test class for validate_and_sync_multiselect_value_with_options utility function."""
+
+    @parameterized.expand(
+        [
+            (
+                "all_values_in_options",
+                ["apple", "banana"],
+                ["apple", "banana", "cherry"],
+                ["apple", "banana"],
+                False,
+            ),
+            (
+                "empty_values",
+                [],
+                ["apple", "banana"],
+                [],
+                False,
+            ),
+            (
+                "some_values_not_in_options",
+                ["apple", "mango", "banana"],
+                ["apple", "banana", "cherry"],
+                ["apple", "banana"],
+                True,
+            ),
+            (
+                "all_values_not_in_options",
+                ["mango", "papaya"],
+                ["apple", "banana", "cherry"],
+                [],
+                True,
+            ),
+            (
+                "numeric_values_all_in_options",
+                [1, 3],
+                [1, 2, 3, 4],
+                [1, 3],
+                False,
+            ),
+            (
+                "numeric_values_some_not_in_options",
+                [1, 5, 3],
+                [1, 2, 3, 4],
+                [1, 3],
+                True,
+            ),
+        ]
+    )
+    def test_validate_and_sync_multiselect_value_with_options(
+        self,
+        _name: str,
+        current_values: list,
+        options: list,
+        expected_values: list,
+        expected_needs_reset: bool,
+    ):
+        """Test validate_and_sync_multiselect_value_with_options with various inputs."""
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            current_values, options, None
+        )
+        assert values == expected_values
+        assert needs_reset is expected_needs_reset
+
+
+class TestValidateMultiselectWithCustomObjects(unittest.TestCase):
+    """Test class for validating multiselect with custom class objects.
+
+    This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+    where custom objects without __eq__ would fail validation after deepcopy.
+    """
+
+    def test_custom_objects_without_eq_using_format_func(self):
+        """Test that custom objects without __eq__ work with format_func validation."""
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        # Create options and their deepcopied equivalents (simulating what happens
+        # after register_widget deepcopies the values)
+        from copy import deepcopy
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_values = [
+            deepcopy(original_options[0]),
+            deepcopy(original_options[1]),
+        ]
+
+        # Without the fix, this would fail because deepcopy creates new instances
+        # and == falls back to identity comparison for objects without __eq__
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            deepcopied_values,
+            original_options,
+            None,
+            format_func=lambda x: x.value,  # Compare by .value attribute
+        )
+
+        # All values should be valid since they have matching format_func output
+        assert len(values) == 2
+        assert needs_reset is False
+
+    def test_custom_objects_partial_match_with_format_func(self):
+        """Test that only matching custom objects are kept."""
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        from copy import deepcopy
+
+        original_options = [MyOption("a"), MyOption("b")]  # "c" is removed
+        # Simulate values that include one that's no longer in options
+        deepcopied_values = [
+            deepcopy(MyOption("a")),
+            deepcopy(MyOption("c")),  # This one should be filtered out
+        ]
+
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            deepcopied_values,
+            original_options,
+            None,
+            format_func=lambda x: x.value,
+        )
+
+        # Only "a" should remain, "c" should be filtered out
+        assert len(values) == 1
+        assert values[0].value == "a"
+        assert needs_reset is True
+
+    def test_default_format_func_with_custom_str(self):
+        """Test that custom objects with __str__ work with default format_func."""
+
+        class MyOption:
+            def __init__(self, value: str):
+                self.value = value
+
+            def __str__(self):
+                return self.value
+
+        from copy import deepcopy
+
+        original_options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        deepcopied_values = [deepcopy(original_options[0])]
+
+        # Using default str format_func
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            deepcopied_values,
+            original_options,
+            None,
+            # format_func defaults to str
+        )
+
+        assert len(values) == 1
+        assert needs_reset is False
+
+    def test_format_func_failure_filters_out_value(self):
+        """Test that values are filtered out when format_func fails on them.
+
+        This handles the edge case where options changed and the deserializer
+        returned a raw string (because the formatted option no longer exists),
+        but the format_func can't handle strings (e.g., lambda x: x.attribute).
+        """
+
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        # format_func that only works on MyOption objects, not strings
+        def format_func(x):
+            return x.value
+
+        original_options = [MyOption("b"), MyOption("c")]
+
+        # Simulate a string value that came from an old session where
+        # the option no longer exists (deserializer returns raw string)
+        current_values = ["old_value", MyOption("b")]
+
+        # The string should be filtered out (format_func fails on it)
+        # but MyOption("b") should remain valid
+        values, needs_reset = validate_and_sync_multiselect_value_with_options(
+            current_values,
+            original_options,
+            None,
+            format_func=format_func,
+        )
+
+        # Only MyOption("b") should remain
+        assert len(values) == 1
+        assert values[0].value == "b"
+        assert needs_reset is True

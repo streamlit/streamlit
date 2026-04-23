@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -131,7 +131,9 @@ class StatusContainer(DeltaGenerator):
             The new state of the status container. This mainly changes the
             icon. If None, the state is not changed.
         """
-        if self._current_proto is None or self._delta_path is None:
+        if (
+            self._current_proto is None or self._delta_path is None
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 "StatusContainer is not correctly initialized. This should never happen."
             )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
  * @param isActive Whether the nav text should show as active.
  * @returns The color of the text in the sidebar nav.
  */
-export const getNavTextColor = (
+const getNavTextColor = (
   theme: EmotionTheme,
   isActive: boolean,
   disabled: boolean = false,
@@ -66,7 +66,7 @@ export const StyledSidebarNavItems = styled.ul(({ theme }) => {
   }
 })
 
-export interface StyledSidebarNavLinkContainerProps {
+interface StyledSidebarNavLinkContainerProps {
   disabled: boolean
 }
 
@@ -77,7 +77,7 @@ export const StyledSidebarNavLinkContainer =
     cursor: disabled ? "not-allowed" : "pointer",
   }))
 
-export interface StyledSidebarNavIconProps {
+interface StyledSidebarNavIconProps {
   isActive: boolean
 }
 
@@ -101,7 +101,7 @@ export const StyledSidebarNavLinkListItem = styled.li(({ theme }) => ({
   marginBottom: theme.spacing.threeXS,
 }))
 
-export interface StyledSidebarNavLinkProps {
+interface StyledSidebarNavLinkProps {
   isActive: boolean
   disabled: boolean
   isTopNav?: boolean
@@ -121,7 +121,7 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       flexDirection: "row",
       alignItems: "center",
       gap: theme.spacing.sm,
-      borderRadius: theme.radii.default,
+      borderRadius: theme.radii.md2,
       paddingLeft: theme.spacing.sm,
       paddingRight: theme.spacing.sm,
 
@@ -307,7 +307,8 @@ export const StyledTopNavLinkContainer = styled.div(({ theme }) => ({
 
 // This is specifically for use in TopNavSection's popover menu
 export const StyledTopNavSidebarNavLinkContainer = styled.div(({ theme }) => ({
-  margin: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  // Match dropdown item margins (xs from edge)
+  margin: `${theme.spacing.none} ${theme.spacing.xs}`,
 }))
 
 export const StyledNavSectionText = styled.span(() => ({
@@ -318,13 +319,31 @@ export const StyledSectionName = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.sm,
   marginTop: theme.spacing.sm,
   marginBottom: theme.spacing.sm,
+  lineHeight: theme.lineHeights.menuItem,
 }))
 
 export const StyledPopoverContent = styled.div(({ theme }) => ({
-  padding: `${theme.spacing.twoXS} 0`,
+  // Match dropdown vertical padding (twoXS top/bottom)
+  padding: `${theme.spacing.twoXS} ${theme.spacing.none}`,
   fontSize: theme.fontSizes.sm,
 }))
 
 export const StyledIconContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.twoXS,
 }))
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+// Visually hidden but accessible to screen readers
+// Uses standard CSS visually-hidden pattern (hardcoded values required)
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */

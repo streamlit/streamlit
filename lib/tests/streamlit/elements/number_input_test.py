@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,14 +21,15 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.widgets.number_input import NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
-    StreamlitValueBelowMinError,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.proto.NumberInput_pb2 import NumberInput
 from streamlit.proto.WidgetStates_pb2 import WidgetState
 from streamlit.testing.v1.app_test import AppTest
@@ -69,8 +70,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.number_input
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0.0
         assert c.HasField("default")
@@ -338,9 +338,9 @@ class NumberInputTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -458,26 +458,33 @@ class NumberInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueAboveMaxError):
             st.number_input("My Label", value=value, max_value=max_value)
 
-    def test_should_raise_exception_when_session_state_value_out_of_range(self):
-        """Test out of range interactions by using st.session_state to set number input widget values beyond min/max."""
-        with pytest.raises(StreamlitValueAboveMaxError):
-            st.session_state.number_input = 10
-            st.number_input(
-                "number_input", min_value=1, max_value=5, key="number_input"
-            )
+    def test_session_state_value_out_of_range_resets_to_default(self):
+        """Test that out of range session_state values reset to default.
 
-        with pytest.raises(StreamlitValueBelowMinError):
-            st.session_state.number_input_1 = 10
-            st.number_input(
-                "number_input_1", min_value=15, max_value=20, key="number_input_1"
-            )
+        When session_state is set to a value outside min/max bounds, the widget
+        should reset to its default value (similar to dynamic options in selectbox).
+        This supports dynamic min/max value changes.
+        """
+        # Value above max - should reset to default (min_value since value="min")
+        st.session_state.number_input = 10
+        result = st.number_input(
+            "number_input", min_value=1, max_value=5, key="number_input"
+        )
+        assert result == 1  # Reset to min_value (default when value="min")
+
+        # Value below min - should reset to default
+        st.session_state.number_input_1 = 10
+        result = st.number_input(
+            "number_input_1", min_value=15, max_value=20, key="number_input_1"
+        )
+        assert result == 15  # Reset to min_value (default when value="min")
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when this widget is used inside a cached function."""
         st.cache_data(lambda: st.number_input("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -487,7 +494,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with certain params
             st.number_input(
                 label="Label 1",
                 key="number_input_key",
@@ -509,7 +516,7 @@ class NumberInputTest(DeltaGeneratorTestCase):
             c1 = self.get_delta_from_queue().new_element.number_input
             id1 = c1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params but same key - ID should be stable
             st.number_input(
                 label="Label 2",
                 key="number_input_key",
@@ -524,49 +531,14 @@ class NumberInputTest(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format="%d",
                 icon="💵",
-                # Keep whitelisted the same to ensure ID stability
-                min_value=0,
-                max_value=10,
-                step=1,
+                # Also change min_value, max_value, step - ID should still be stable
+                min_value=1,
+                max_value=20,
+                step=2,
             )
             c2 = self.get_delta_from_queue().new_element.number_input
             id2 = c2.id
             assert id1 == id2
-
-    @parameterized.expand(
-        [
-            ("min_value", 0, 1),
-            ("max_value", 10, 11),
-            ("step", 1, 2),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs(
-        self, kwarg_name: str, value1: object, value2: object
-    ):
-        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
-        with patch(
-            "streamlit.elements.lib.utils._register_element_id",
-            return_value=MagicMock(),
-        ):
-            base_kwargs = {
-                "label": "Label",
-                "key": "number_input_key",
-                # keep other whitelisted values stable to avoid type/format interactions
-                "min_value": 0,
-                "max_value": 10,
-                "step": 1,
-            }
-            base_kwargs[kwarg_name] = value1
-
-            st.number_input(**base_kwargs)
-            c1 = self.get_delta_from_queue().new_element.number_input
-            id1 = c1.id
-
-            base_kwargs[kwarg_name] = value2
-            st.number_input(**base_kwargs)
-            c2 = self.get_delta_from_queue().new_element.number_input
-            id2 = c2.id
-            assert id1 != id2
 
 
 def test_number_input_interaction():
@@ -610,3 +582,234 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.number_input[0].value is None
+
+
+def test_dynamic_min_value_resets_value_when_below_new_min():
+    """Test that value resets to default when dynamically changing min_value makes current value invalid."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value=50 makes the previous value of 25 invalid
+            value = st.number_input(
+                "number", min_value=50, max_value=100, key="number", value=75
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0, max_value=100, key="number", value=50
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 50
+
+    # Set value to 25 (valid with min_value=0)
+    at = at.number_input[0].set_value(25).run()
+    assert at.number_input[0].value == 25
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=50, so 25 is invalid and should reset to default (75)
+    assert at.number_input[0].value == 75
+
+
+def test_dynamic_max_value_resets_value_when_above_new_max():
+    """Test that value resets to default when dynamically changing max_value makes current value invalid."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New max_value=50 makes the previous value of 75 invalid
+            value = st.number_input(
+                "number", min_value=0, max_value=50, key="number", value=25
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0, max_value=100, key="number", value=50
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 50
+
+    # Set value to 75 (valid with max_value=100)
+    at = at.number_input[0].set_value(75).run()
+    assert at.number_input[0].value == 75
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now max_value=50, so 75 is invalid and should reset to default (25)
+    assert at.number_input[0].value == 25
+
+
+def test_dynamic_bounds_preserves_valid_value():
+    """Test that value is preserved when it remains valid after bound changes."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # Changing bounds but 50 is still valid (between 25-75)
+            value = st.number_input(
+                "number", min_value=25, max_value=75, key="number", value=50
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0, max_value=100, key="number", value=50
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 50
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # 50 is still valid (between 25 and 75), so it should be preserved
+    assert at.number_input[0].value == 50
+
+
+def test_dynamic_bounds_with_float_values():
+    """Test dynamic min/max value changes with float values."""
+
+    def script():
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value=5.0 makes the previous value of 2.5 invalid
+            value = st.number_input(
+                "number", min_value=5.0, max_value=10.0, key="number", value=7.5
+            )
+        else:
+            value = st.number_input(
+                "number", min_value=0.0, max_value=10.0, key="number", value=5.0
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.number_input[0].value == 5.0
+
+    # Set value to 2.5 (valid with min_value=0.0)
+    at = at.number_input[0].set_value(2.5).run()
+    assert at.number_input[0].value == 2.5
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=5.0, so 2.5 is invalid and should reset to default (7.5)
+    assert at.number_input[0].value == 7.5
+
+
+class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for number_input bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.number_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.number_input("the label", bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.number_input("the label", key="my_key", value=0)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+        assert c.default == 0
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.number_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_int_value(self):
+        """Test that bind works with integer values."""
+        st.number_input("the label", value=42, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+        assert c.data_type == NumberInput.INT
+
+    def test_bind_query_params_with_float_value(self):
+        """Test that bind works with float values."""
+        st.number_input("the label", value=3.14, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+        assert c.data_type == NumberInput.FLOAT
+
+    def test_bind_query_params_with_min_max(self):
+        """Test that bind works with min/max constraints."""
+        st.number_input(
+            "the label",
+            min_value=0,
+            max_value=100,
+            value=50,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+        assert c.has_min
+        assert c.min == 0
+        assert c.has_max
+        assert c.max == 100
+
+
+@pytest.mark.parametrize(
+    ("ui_value", "expected"),
+    [
+        (150, 50),  # Above max -> reset to default
+        (-50, 50),  # Below min -> reset to default
+        (50, 50),  # In range -> unchanged
+        (0, 0),  # At min -> unchanged
+        (100, 100),  # At max -> unchanged
+        (None, 50),  # None -> returns default value
+    ],
+)
+def test_serde_resets_out_of_range_to_default(ui_value, expected):
+    """Test that NumberInputSerde.deserialize resets out-of-range values to default."""
+    serde = NumberInputSerde(
+        value=50, data_type=NumberInput.INT, min_value=0, max_value=100
+    )
+    assert serde.deserialize(ui_value) == expected

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ def create_dataframe_msg(df: Data, id: int = 1) -> ForwardMsg:
     """Create a mock legacy_data_frame ForwardMsg."""
     msg = ForwardMsg()
     msg.metadata.delta_path[:] = make_delta_path(RootContainer.SIDEBAR, (), id)
-    arrow.marshall(msg.delta.new_element.arrow_data_frame, df)
+    arrow.marshall(msg.delta.new_element.dataframe.arrow_data, df)
     return msg
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   memo,
   ReactElement,
   ReactNode,
@@ -25,8 +25,8 @@ import React, {
 
 import { FormsContext } from "~lib/components/core/FormsContext"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import AlertElement from "~lib/components/elements/AlertElement"
-import { Kind } from "~lib/components/shared/AlertContainer"
+import AlertElement from "~lib/components/elements/AlertElement/AlertElement"
+import { Kind } from "~lib/components/shared/AlertContainer/AlertContainer"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -46,7 +46,7 @@ export interface Props {
   overflow?: React.CSSProperties["overflow"]
 }
 
-export const MISSING_SUBMIT_BUTTON_WARNING =
+const MISSING_SUBMIT_BUTTON_WARNING =
   "**Missing Submit Button**" +
   "\n\nThis form has no submit button, which means that user interactions will " +
   "never be sent to your Streamlit app." +

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,8 +35,15 @@ WidthWithoutContent: TypeAlias = int | Literal["stretch"]
 Width: TypeAlias = int | Literal["stretch", "content"]
 HeightWithoutContent: TypeAlias = int | Literal["stretch"]
 Height: TypeAlias = int | Literal["stretch", "content"]
-SpaceSize: TypeAlias = int | Literal["stretch", "small", "medium", "large"]
-Gap: TypeAlias = Literal["small", "medium", "large"]
+SpaceSize: TypeAlias = (
+    int
+    | Literal[
+        "stretch", "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
+    ]
+)
+Gap: TypeAlias = Literal[
+    "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge"
+]
 HorizontalAlignment: TypeAlias = Literal["left", "center", "right", "distribute"]
 VerticalAlignment: TypeAlias = Literal["top", "center", "bottom", "distribute"]
 TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
@@ -45,20 +52,107 @@ TextAlignment: TypeAlias = Literal["left", "center", "right", "justify"]
 # If changing these, also check streamlit/frontend/lib/src/theme/primitives/sizes.ts
 # to ensure sizes are kept in sync.
 SIZE_TO_REM_MAPPING = {
+    "xxsmall": 0.25,  # Aligns with gap "xxsmall" (4px)
+    "xsmall": 0.5,  # Aligns with gap "xsmall" (8px)
     "small": 0.75,  # Height of widget label minus gap
     "medium": 2.5,  # Height of button/input field
     "large": 4.25,  # Height of large widget without label
+    "xlarge": 6,  # Aligns with gap "xlarge" (96px)
+    "xxlarge": 8,  # Aligns with gap "xxlarge" (128px)
 }
 
 
 @dataclass
 class LayoutConfig:
+    """Pure data container bundling dimension and alignment config for ``_enqueue()``.
+
+    Each field maps to a proto config (``WidthConfig``, ``HeightConfig``,
+    ``TextAlignmentConfig``) that the frontend uses to size and align the
+    element within its container.
+
+    Prefer ``create_layout_config()`` for validated construction from
+    user-supplied values.  Direct construction is appropriate for internal use
+    with known-valid literals (e.g. hardcoded ``"content"`` or ``"stretch"``).
+
+    See ``lib/streamlit/elements/plotly_chart.py`` for a reference example.
+    """
+
     width: Width | SpaceSize | None = None
     height: Height | SpaceSize | None = None
     text_alignment: TextAlignment | None = None
 
 
-def validate_width(width: Width, allow_content: bool = False) -> None:
+_UNSET: Width | Height = cast("Width", object())
+
+
+def create_layout_config(
+    *,
+    width: Width | None = _UNSET,
+    height: Height | None = _UNSET,
+    text_alignment: TextAlignment | None = None,
+    allow_content_width: bool = False,
+    allow_content_height: bool = False,
+    allow_stretch_height: bool = True,
+    additional_allowed_height: list[str] | None = None,
+) -> LayoutConfig:
+    """Validate inputs and construct a ``LayoutConfig`` in one step.
+
+    Consolidates the common validate-then-construct pattern into a single call
+    so that callers cannot accidentally skip validation.
+
+    When ``width`` or ``height`` is omitted, no validation runs and the
+    resulting ``LayoutConfig`` field is ``None``.  When the caller
+    *explicitly* passes a value — including ``None`` — the corresponding
+    validator runs (and will reject ``None`` as invalid).
+
+    Parameters
+    ----------
+    width : Width | None
+        Desired width.  Validated via ``validate_width`` when provided.
+        Omit (or leave as default) to skip width validation entirely.
+    height : Height | None
+        Desired height.  Validated via ``validate_height`` when provided.
+        Omit (or leave as default) to skip height validation entirely.
+    text_alignment : TextAlignment | None
+        Text alignment.  Validated via ``validate_text_alignment`` when not
+        ``None``.
+    allow_content_width : bool
+        Passed as ``allow_content`` to ``validate_width``.
+    allow_content_height : bool
+        Passed as ``allow_content`` to ``validate_height``.
+    allow_stretch_height : bool
+        Passed as ``allow_stretch`` to ``validate_height``.
+    additional_allowed_height : list[str] | None
+        Passed as ``additional_allowed`` to ``validate_height``.
+
+    Returns
+    -------
+    LayoutConfig
+        A validated ``LayoutConfig`` instance.
+    """
+    actual_width: Width | None = None
+    if width is not _UNSET:
+        validate_width(width, allow_content=allow_content_width)
+        actual_width = width
+
+    actual_height: Height | None = None
+    if height is not _UNSET:
+        validate_height(
+            height,
+            allow_content=allow_content_height,
+            allow_stretch=allow_stretch_height,
+            additional_allowed=additional_allowed_height,
+        )
+        actual_height = height
+
+    if text_alignment is not None:
+        validate_text_alignment(text_alignment)
+    return LayoutConfig(
+        width=actual_width, height=actual_height, text_alignment=text_alignment
+    )
+
+
+def validate_width(width: Width | None, allow_content: bool = False) -> None:
     """Validate the width parameter.
 
     Parameters
@@ -88,7 +182,7 @@ def validate_width(width: Width, allow_content: bool = False) -> None:
 
 
 def validate_height(
-    height: Height | Literal["auto"],
+    height: Height | Literal["auto"] | None,
     allow_content: bool = False,
     allow_stretch: bool = True,
     additional_allowed: list[str] | None = None,
@@ -147,7 +241,16 @@ def validate_space_size(size: SpaceSize) -> None:
         raise StreamlitInvalidSizeError(size)
 
     if isinstance(size, str):
-        valid_strings = ["stretch", "small", "medium", "large"]
+        valid_strings = [
+            "stretch",
+            "xxsmall",
+            "xsmall",
+            "small",
+            "medium",
+            "large",
+            "xlarge",
+            "xxlarge",
+        ]
         if size not in valid_strings:
             raise StreamlitInvalidSizeError(size)
     elif isinstance(size, int) and size <= 0:
@@ -183,9 +286,13 @@ def get_height_config(height: Height | SpaceSize) -> HeightConfig:
 def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
     """Convert a gap string or None to a GapSize proto value."""
     gap_mapping = {
+        "xxsmall": GapSize.XXSMALL,
+        "xsmall": GapSize.XSMALL,
         "small": GapSize.SMALL,
         "medium": GapSize.MEDIUM,
         "large": GapSize.LARGE,
+        "xlarge": GapSize.XLARGE,
+        "xxlarge": GapSize.XXLARGE,
     }
 
     if isinstance(gap, str):
@@ -249,7 +356,7 @@ def get_justify(
     justify = map_to_flex_terminology[alignment]
     if justify not in valid_justify:
         return Block.FlexContainer.Justify.JUSTIFY_UNDEFINED
-    if justify in ["start", "end", "center"]:
+    if justify in {"start", "end", "center"}:
         return cast(
             "Block.FlexContainer.Justify.ValueType",
             getattr(Block.FlexContainer.Justify, f"JUSTIFY_{justify.upper()}"),

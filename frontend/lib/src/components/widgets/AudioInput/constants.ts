@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,5 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-export const WAVEFORM_PADDING = 4
-export const BAR_WIDTH = 4
-export const BAR_GAP = 4
-export const BAR_RADIUS = 8
-export const CURSOR_WIDTH = 0
 
 export const STARTING_TIME_STRING = "00:00"

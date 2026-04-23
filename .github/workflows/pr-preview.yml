@@ -9,7 +9,6 @@ on:
     paths-ignore:
       # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
-      - "agent-knowledge/**"
       - "wiki/**"
 
 # Avoid duplicate workflows on same branch
@@ -37,7 +36,7 @@ jobs:
       - if: ${{ env.AWS_ACCESS_KEY_ID != '' }}
         name: Create or update comment (Building)
         id: initial-comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.CORE_PREVIEWS_S3_KEY_ID }}
         with:
@@ -113,24 +112,22 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Build Frontend & Analyze
         env:
           ANALYZE_BUNDLE: "true"
         run: |
           make frontend
       - name: Upload Bundle Stats JSON
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bundle_analysis_json
           path: frontend/app/bundle-analysis.json
       - name: Upload Bundle Stats HTML
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: bundle_analysis_html
           path: frontend/app/bundle-analysis.html
@@ -160,12 +157,13 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+      - name: Fix apt mirrors
+        if: ${{ runner.os == 'Linux' }}
+        uses: ./.github/actions/apt_mirror_fix
       - name: Create Wheel File
         timeout-minutes: 120
         run: |
@@ -179,7 +177,7 @@ jobs:
             exit 1
           fi
       - name: Store Whl File
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: whl_file
           path: lib/dist/*.whl
@@ -202,8 +200,7 @@ jobs:
         # To create a consistent location for the release/demo whl file, we need a
         # stagnent version number (streamlit-11.11.11)
         run: |
-          source venv/bin/activate
-          # Install awscli via pip/uv:
+          # Install awscli via uv:
           uv pip install awscli==1.37.6
 
           cd lib/dist
@@ -226,7 +223,7 @@ jobs:
           echo "s3-url=${S3_URL}" >> $GITHUB_OUTPUT
       - if: steps.exports.outputs.enable-setup == 'true' && success() && github.repository == 'streamlit/streamlit' && github.event_name == 'pull_request'
         name: Set S3 URL as Github Status
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           S3_URL: ${{ steps.exports.outputs.s3-url }}
         with:
@@ -261,7 +258,7 @@ jobs:
     steps:
       - name: Compare wheel sizes
         id: compare-sizes
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const threshold = parseFloat(process.env.SIZE_CHANGE_THRESHOLD);
@@ -352,7 +349,7 @@ jobs:
 
       - name: Add PR comment for significant size change
         if: success() && fromJSON(steps.compare-sizes.outputs.result).is_significant
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const result = JSON.parse(process.env.COMPARE_RESULT);
@@ -431,14 +428,14 @@ jobs:
 
     steps:
       - name: Download current bundle analysis
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           name: bundle_analysis_json
           path: current_bundle
 
       - name: Get latest develop run ID
         id: get-latest-run
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -458,7 +455,7 @@ jobs:
             core.setOutput('run_id', runs.workflow_runs[0].id);
 
       - name: Download develop bundle analysis
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         continue-on-error: true
         with:
           repository: streamlit/streamlit
@@ -468,7 +465,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Compare bundle sizes and comment
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require('fs');
@@ -669,7 +666,7 @@ jobs:
           echo "package-built=true" >> $GITHUB_OUTPUT
 
       - name: Store npm package
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: component-v2-lib-package
           path: frontend/component-v2-lib/*.tgz
@@ -740,7 +737,7 @@ jobs:
           fetch-depth: 1
 
       - name: Update comment (Ready)
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             // Find the existing comment

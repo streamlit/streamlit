@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -134,13 +134,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
     @gather_metrics("query_params.clear")
     def clear(self) -> None:
-        """
-        Clear all query parameters from the URL of the app.
-
-        Returns
-        -------
-        None
-        """
+        """Clear all query parameters from the URL of the app."""
         with get_session_state().query_params() as qp:
             qp.clear()
 
@@ -201,8 +195,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         params: dict
             A dictionary used to replace the current query parameters.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.query_params.from_dict({"foo": "bar", "baz": [1, "two"]})

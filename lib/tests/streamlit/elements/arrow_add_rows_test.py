@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -215,4 +215,5 @@ class DeltaGeneratorAddRowsTest(DeltaGeneratorTestCase):
         mock_show_deprecation_warning.assert_called_once()
         args = mock_show_deprecation_warning.call_args
         assert "`add_rows` is deprecated" in args[0][0]
-        assert not args[1]["show_in_browser"]
+        assert args[1]["show_in_browser"]
+        assert args[1]["show_once"]

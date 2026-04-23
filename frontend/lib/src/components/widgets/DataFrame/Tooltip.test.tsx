@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
 
@@ -30,16 +28,19 @@ describe("Dataframe Tooltip", () => {
     clearTooltip: vi.fn(),
   }
 
-  it("renders the tooltip with provided content", () => {
+  it("renders the tooltip with provided content", async () => {
     render(<Tooltip {...defaultProps} />)
 
-    const tooltipContent = screen.getByText("This is a tooltip.")
-    expect(tooltipContent).toBeInTheDocument()
-    // Uses markdown to render the content:
-    expect(tooltipContent).toHaveStyle("font-weight: 600")
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      const tooltipContent = screen.getByText("This is a tooltip.")
+      expect(tooltipContent).toBeInTheDocument()
+      // Uses markdown to render the content:
+      expect(tooltipContent).toHaveStyle("font-weight: 600")
+    })
   })
 
-  it("renders the tooltip at the correct position", () => {
+  it("renders the tooltip at the correct position", async () => {
     const customPositionProps: TooltipProps = {
       top: 200,
       left: 300,
@@ -49,13 +50,16 @@ describe("Dataframe Tooltip", () => {
 
     render(<Tooltip {...customPositionProps} />)
 
-    const tooltipContent = screen.getByText("Positioned tooltip.")
-    expect(tooltipContent).toBeInTheDocument()
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      const tooltipContent = screen.getByText("Positioned tooltip.")
+      expect(tooltipContent).toBeInTheDocument()
 
-    const invisibleDiv = screen.getByTestId("stDataFrameTooltipTarget")
+      const invisibleDiv = screen.getByTestId("stDataFrameTooltipTarget")
 
-    expect(invisibleDiv).toHaveStyle("position: fixed")
-    expect(invisibleDiv).toHaveStyle("top: 200px")
-    expect(invisibleDiv).toHaveStyle("left: 300px")
+      expect(invisibleDiv).toHaveStyle("position: fixed")
+      expect(invisibleDiv).toHaveStyle("top: 200px")
+      expect(invisibleDiv).toHaveStyle("left: 300px")
+    })
   })
 })

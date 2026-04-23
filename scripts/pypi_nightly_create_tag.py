@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,11 +35,6 @@ def get_latest_streamlit_version() -> Version:
 
     NB: this involves a network call, so it could raise an error
     or take a long time.
-
-    Parameters
-    ----------
-    timeout : float or None
-        The request timeout.
 
     Returns
     -------

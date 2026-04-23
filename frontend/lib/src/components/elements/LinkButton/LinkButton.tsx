@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
-  memo,
-  MouseEvent,
-  ReactElement,
-  useCallback,
-  useRef,
-} from "react"
+import { memo, MouseEvent, ReactElement, useCallback, useRef } from "react"
 
 import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
@@ -28,20 +22,24 @@ import { Box } from "~lib/components/shared/Base/styled-components"
 import {
   BaseButtonKind,
   BaseButtonSize,
-  BaseButtonTooltip,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import BaseLinkButton from "./BaseLinkButton"
 
 export interface Props {
   element: LinkButtonProto
+  widgetMgr: WidgetStateManager
+  fragmentId?: string
 }
 
 function LinkButton(props: Readonly<Props>): ReactElement {
-  const { element } = props
-  const shortcut = element.shortcut ? element.shortcut : undefined
+  const { element, widgetMgr, fragmentId } = props
+  const shortcut = element.shortcut || undefined
 
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
@@ -65,9 +63,14 @@ function LinkButton(props: Readonly<Props>): ReactElement {
       if (element.disabled) {
         // Prevent the link from being followed if the button is disabled.
         event.preventDefault()
+        return
+      }
+
+      if (!element.ignoreRerun && element.id) {
+        void widgetMgr.setTriggerValue(element, { fromUi: true }, fragmentId)
       }
     },
-    [element.disabled]
+    [element, fragmentId, widgetMgr]
   )
 
   useRegisterShortcut({
@@ -98,6 +101,7 @@ function LinkButton(props: Readonly<Props>): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
           />

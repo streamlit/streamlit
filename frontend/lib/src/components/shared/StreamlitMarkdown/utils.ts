@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ export type FailedPlugin = typeof LOAD_FAILED
 export type PluginState<T> = T | FailedPlugin | null
 
 /** Keys for the plugin cache */
-export type PluginKey = "katex" | "raw" | "emoji"
+type PluginKey = "katex" | "raw" | "emoji"
 
 /** Union type for all supported plugin types */
 type AnyPlugin = KatexPlugin | RawPlugin | EmojiPlugin
@@ -64,7 +64,7 @@ type RemarkTransformer = (
 ) => MdastRoot | undefined | void
 
 /** A remark plugin factory that returns a transformer when called with options */
-type RemarkPluginFactory<Options = unknown> = (
+export type RemarkPluginFactory<Options = unknown> = (
   options?: Options
 ) => RemarkTransformer
 
@@ -74,7 +74,7 @@ type RemarkPluginFactory<Options = unknown> = (
  * Note: `load` and `onBeforeLoad` should be stable references (e.g., module-level
  * functions or wrapped in useCallback) to avoid unnecessary effect re-runs.
  */
-export interface PluginLoaderConfig {
+interface PluginLoaderConfig {
   key: PluginKey
   needed: boolean
   load: () => Promise<Record<string, unknown>>

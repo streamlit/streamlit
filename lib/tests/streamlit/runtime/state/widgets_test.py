@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -344,6 +344,8 @@ EXCLUDED_KWARGS_FOR_ELEMENT_ID_COMPUTATION = {
     "on_submit",
     # Key should be provided via `user_key` instead.
     "key",
+    # bind controls URL syncing, not widget identity
+    "bind",
 }
 
 
@@ -405,7 +407,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         "in element ID calculation."
 
         # Some elements cannot be used in a form
-        if element_name not in ["button", "chat_input", "download_button"]:
+        if element_name not in {"button", "chat_input", "download_button"}:
             # For all other check that form_id is set:
             assert call_kwargs.get("form_id") == "", (
                 "form_id is expected to be included in element ID calculation."
@@ -500,21 +502,6 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
         [
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_and_register_element_id, because st.feedback does
-                # not take a label and its arguments are different.
-                lambda key,
-                options,
-                disabled=False,
-                default=[],
-                click_mode=0,
-                style="",
-                label="",
-                help="",  # noqa: A006
-                width="content": st.feedback("stars", disabled=disabled),
-                "button_group",
-            ),
-            (
-                # define a lambda that matches the signature of what button_group is
                 # passing to compute_and_register_element_id, because st.pills does
                 # not take a label and its arguments are different.
                 lambda label,
@@ -530,8 +517,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
             ),
             (
                 # define a lambda that matches the signature of what button_group is
-                # passing to compute_and_register_element_id, because st.feedback does
-                # not take a label and its arguments are different.
+                # passing to compute_and_register_element_id.
                 lambda label,
                 options,
                 disabled=False,
@@ -644,6 +630,97 @@ class RegisterWidgetsTest(DeltaGeneratorTestCase):
                 callbacks={"change": lambda: None},
                 value_type="bool_value",
             )
+
+    def test_bind_query_params_requires_key(self):
+        """Test that bind='query-params' raises if widget has no key."""
+        # Element ID format for widgets without user key is "$$ID-<hash>-None"
+        with pytest.raises(
+            errors.StreamlitAPIException, match="must have a unique 'key' parameter"
+        ):
+            register_widget(
+                element_id="$$ID-some_hash-None",  # No user key (ends with -None)
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x,
+                serializer=lambda x: x,
+                value_type="string_value",
+                bind="query-params",
+            )
+
+    def test_bind_query_params_with_key_succeeds(self):
+        """Test that bind='query-params' works when widget has a key and clearable.
+
+        Note: With ctx=None, the function returns early with a fallback result.
+        The important thing is that it doesn't raise the validation error.
+        """
+        # Widget with user key and clearable should not raise the validation error
+        # (it will return early due to ctx=None, but that's expected)
+        result = register_widget(
+            element_id="$$ID-some_hash-my_widget_key",  # Has user key
+            ctx=None,
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind="query-params",
+            clearable=True,
+        )
+        # Should return a fallback result without raising
+        assert result is not None
+
+    def test_bind_query_params_requires_clearable(self):
+        """Test that bind='query-params' raises if clearable is not set."""
+        with pytest.raises(ValueError, match="clearable must be explicitly set"):
+            register_widget(
+                element_id="$$ID-some_hash-my_widget_key",  # Has user key
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x if x is not None else "default",
+                serializer=lambda x: x,
+                value_type="string_value",
+                bind="query-params",
+                # clearable intentionally not provided
+            )
+
+    def test_bind_invalid_value_raises(self) -> None:
+        """Test that invalid bind values raise StreamlitInvalidBindValueError."""
+        with pytest.raises(
+            errors.StreamlitInvalidBindValueError, match="Invalid `bind` value"
+        ):
+            register_widget(
+                element_id="$$ID-some_hash-my_widget_key",
+                ctx=None,
+                on_change_handler=None,
+                args=None,
+                kwargs=None,
+                deserializer=lambda x: x if x is not None else "default",
+                serializer=lambda x: x,
+                value_type="string_value",
+                bind="not-a-valid-binding",
+                clearable=True,
+            )
+
+    def test_bind_none_does_not_require_key(self):
+        """Test that bind=None (default) doesn't require a key."""
+        # Should not raise even without a user key
+        result = register_widget(
+            element_id="$$ID-some_hash-None",  # No user key
+            ctx=None,
+            on_change_handler=None,
+            args=None,
+            kwargs=None,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+        assert result is not None
 
 
 @patch("streamlit.runtime.Runtime.exists", new=MagicMock(return_value=True))

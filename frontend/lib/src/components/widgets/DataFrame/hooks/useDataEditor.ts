@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +35,49 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import EditingState from "./EditingState"
 
 /**
- * Create return type for useDataLoader hook based on the DataEditorProps.
+ * Create return type for useDataEditor hook based on the DataEditorProps.
  */
 type DataEditorReturn = Pick<
   DataEditorProps,
   "onCellEdited" | "onPaste" | "onRowAppended" | "onDelete" | "validateCell"
 >
+
+/**
+ * Parameters for the useDataEditor hook.
+ */
+interface UseDataEditorParams {
+  /** The columns of the table. */
+  columns: BaseColumn[]
+  /**
+   * All columns including hidden ones.
+   * Used to initialize cells for all columns when a row is added.
+   */
+  allColumns: BaseColumn[]
+  /** Whether rows can be added (DYNAMIC or ADD_ONLY modes). */
+  canAddRows: boolean
+  /** Whether rows can be deleted (DYNAMIC or DELETE_ONLY modes). */
+  canDeleteRows: boolean
+  /** The editing state of the data editor. */
+  editingState: MutableRefObject<EditingState>
+  /** Function to get a specific cell. */
+  getCellContent: ([col, row]: readonly [number, number]) => GridCell
+  /**
+   * Function to map a row ID of the current state to the original row ID.
+   * This mainly changed by sorting of columns.
+   */
+  getOriginalIndex: (index: number) => number
+  /** Callback that allows to trigger a UI refresh of a selection of cells. */
+  refreshCells: (cells: { cell: [number, number] }[]) => void
+  /** Callback to sync the number of rows from editing state with the component state. */
+  updateNumRows: () => void
+  /**
+   * Callback that needs to be called on all edits. This will also trigger a rerun
+   * and send widget state to the backend.
+   */
+  syncEditState: () => void
+  /** Callback to clear the current selection. */
+  clearSelection: () => void
+}
 
 const LOG = getLogger("useDataEditor")
 
@@ -48,34 +85,21 @@ const LOG = getLogger("useDataEditor")
  * Custom hook to handle all aspects related to data editing. This includes editing cells,
  * pasting from clipboard, and appending & deleting rows.
  *
- * @param columns - The columns of the table.
- * @param fixedNumRows - Whether the number of rows is fixed. This means that rows cannot be added or deleted.
- * @param editingState - The editing state of the data editor.
- * @param getCellContent - Function to get a specific cell.
- * @param getOriginalIndex - Function to map a row ID of the current state to the original row ID.
- *                           This mainly changed by sorting of columns.
- * @param updateNumRows - Callback to sync the number of rows from editing state with the component state.
- * @param refreshCells - Callback that allows to trigger a UI refresh of a selection of cells.
- * @param syncEditState - Callback that needs to be called on all edits. This will also trigger a rerun
- *                     and send widget state to the backend.
- *
  * @returns Glide-data-grid compatible functions for editing capabilities.
  */
-function useDataEditor(
-  columns: BaseColumn[],
-  fixedNumRows: boolean,
-  editingState: MutableRefObject<EditingState>,
-  getCellContent: ([col, row]: readonly [number, number]) => GridCell,
-  getOriginalIndex: (index: number) => number,
-  refreshCells: (
-    cells: {
-      cell: [number, number]
-    }[]
-  ) => void,
-  updateNumRows: () => void,
-  syncEditState: () => void,
-  clearSelection: () => void
-): DataEditorReturn {
+function useDataEditor({
+  columns,
+  allColumns,
+  canAddRows,
+  canDeleteRows,
+  editingState,
+  getCellContent,
+  getOriginalIndex,
+  refreshCells,
+  updateNumRows,
+  syncEditState,
+  clearSelection,
+}: UseDataEditorParams): DataEditorReturn {
   const onCellEdited = useCallback(
     (
       [col, row]: readonly [number, number],
@@ -125,33 +149,36 @@ function useDataEditor(
    * Appends a new empty row to the end of the table.
    */
   const appendEmptyRow = useCallback(() => {
-    if (fixedNumRows) {
+    if (!canAddRows) {
       // Appending rows is not supported
       return
     }
 
     const newRow: Map<number, GridCell> = new Map()
-    columns.forEach(column => {
+    // We use allColumns (including hidden columns) to ensure that
+    // cells are created for all columns. This prevents issues when
+    // a hidden column is later made visible (see issue #13915).
+    allColumns.forEach(column => {
       // For the default value, we trust the developer to make a valid choice,
       // so we do not validate the value here.
       newRow.set(column.indexNumber, column.getCell(column.defaultValue))
     })
     editingState.current.addRow(newRow)
     updateNumRows()
-  }, [columns, editingState, fixedNumRows, updateNumRows])
+  }, [allColumns, editingState, canAddRows, updateNumRows])
 
   /**
    * Callback used by glide-data-grid when the user adds a new row in the table UI.
    */
   const onRowAppended = useCallback(() => {
-    if (fixedNumRows) {
+    if (!canAddRows) {
       // Appending rows is not supported
       return
     }
 
     appendEmptyRow()
     syncEditState()
-  }, [appendEmptyRow, syncEditState, fixedNumRows])
+  }, [appendEmptyRow, syncEditState, canAddRows])
 
   /**
    * Callback used by glide-data-grid when the user deletes a row or cell value in the table UI.
@@ -160,7 +187,7 @@ function useDataEditor(
     (selection: GridSelection): GridSelection | boolean => {
       if (selection.rows.length > 0) {
         // User has selected one or more rows
-        if (fixedNumRows) {
+        if (!canDeleteRows) {
           // Deleting rows is not supported
           return true
         }
@@ -216,7 +243,7 @@ function useDataEditor(
     [
       columns,
       editingState,
-      fixedNumRows,
+      canDeleteRows,
       refreshCells,
       getOriginalIndex,
       syncEditState,
@@ -238,8 +265,8 @@ function useDataEditor(
       for (let row = 0; row < values.length; row++) {
         const rowData = values[row]
         if (row + targetRow >= editingState.current.getNumRows()) {
-          if (fixedNumRows) {
-            // Only add new rows if editing mode is dynamic, otherwise break here
+          if (!canAddRows) {
+            // Only add new rows if adding rows is allowed, otherwise break here
             break
           }
           // Adding rows during paste would not work currently. However, we already disallow
@@ -298,7 +325,7 @@ function useDataEditor(
     [
       columns,
       editingState,
-      fixedNumRows,
+      canAddRows,
       getOriginalIndex,
       getCellContent,
       appendEmptyRow,

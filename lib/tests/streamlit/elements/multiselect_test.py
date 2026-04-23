@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,10 +30,16 @@ from streamlit.elements.widgets.multiselect import (
 )
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
+    StreamlitValueError,
 )
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -54,12 +60,12 @@ class Multiselectbox(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.multiselect
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default[:] == []
         assert not c.disabled
         assert not c.accept_new_options
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -220,6 +226,35 @@ class Multiselectbox(DeltaGeneratorTestCase):
         # Placeholder logic is now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
 
+    def test_filter_mode(self):
+        """Test that it can set a non-default filter mode."""
+        st.multiselect("the label", ("m", "f"), filter_mode="contains")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
+
+    def test_filter_mode_none(self):
+        """Test that None filter mode is serialized using the frontend marker."""
+        st.multiselect("the label", ("m", "f"), filter_mode=None)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
+
+    def test_invalid_filter_mode(self):
+        """Test that unsupported filter modes raise an exception."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
+            st.multiselect("the label", ("m", "f"), filter_mode="invalid")
+
+    def test_filter_mode_none_with_accept_new_options_raises_exception(self):
+        """Test that filter_mode=None is incompatible with accept_new_options=True."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be None when `accept_new_options=True`",
+        ):
+            st.multiselect(
+                "the label", ("m", "f"), filter_mode=None, accept_new_options=True
+            )
+
     @parameterized.expand(
         [
             (["Tea", "Vodka", None], StreamlitAPIException),
@@ -273,9 +308,9 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -352,7 +387,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.multiselect("the label", ["Coffee", "Tea", "Water"]))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -375,9 +410,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 placeholder="placeholder 1",
-                # Whitelisted kwargs:
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                filter_mode="fuzzy",
+                # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
             )
@@ -397,9 +433,10 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 placeholder="placeholder 2",
+                format_func=lambda x: x.upper(),
+                options=["a", "b", "cd", "e"],
+                filter_mode="prefix",
                 # Whitelisted kwargs:
-                format_func=lambda x: x.capitalize(),
-                options=["a", "b", "cd"],
                 accept_new_options=True,
                 max_selections=3,
             )
@@ -409,10 +446,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["a", "b", "c"]),
             ("max_selections", 2, 3),
             ("accept_new_options", True, False),
-            ("format_func", lambda x: x.lower(), lambda x: x.upper()),
         ]
     )
     def test_whitelisted_stable_key_kwargs(
@@ -429,7 +464,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "options": ["a", "b"],
                 "default": ["a"],
                 "max_selections": 2,
-                "accept_new_options": True,
+                "accept_new_options": False,
+                "filter_mode": "fuzzy",
                 "format_func": lambda x: x.lower(),
             }
 
@@ -450,6 +486,28 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "the label", ["a", "b", "c", "d"], ["a", "b", "c"], max_selections=2
             )
 
+    def test_max_selections_zero_includes_action(self) -> None:
+        """Raise StreamlitInvalidMaxError with a suggested action when max_selections is 0."""
+        with pytest.raises(
+            StreamlitInvalidMaxError,
+            match=r"To disable `st\.multiselect`, use `disabled=True`",
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=0)
+
+    @parameterized.expand(
+        [
+            (-1,),
+            (-100,),
+        ]
+    )
+    def test_max_selections_negative_no_action(self, max_selections: int) -> None:
+        """Raise StreamlitInvalidMaxError without an action for negative max_selections."""
+        with pytest.raises(
+            StreamlitInvalidMaxError,
+            match=r"must be a positive integer\.$",
+        ):
+            st.multiselect("the label", ["a", "b", "c"], max_selections=max_selections)
+
     @parameterized.expand(
         [
             (
@@ -461,17 +519,6 @@ class Multiselectbox(DeltaGeneratorTestCase):
                     "you manipulated the widget's state through `st.session_state`. "
                     "Note that the latter can happen before the line indicated in the traceback. "
                     "Please select at most 1 option."
-                ),
-            ),
-            (
-                1,
-                0,
-                (
-                    "Multiselect has 1 option selected but `max_selections` is set to 0. "
-                    "This happened because you either gave too many options to `default` or "
-                    "you manipulated the widget's state through `st.session_state`. "
-                    "Note that the latter can happen before the line indicated in the traceback. "
-                    "Please select at most 0 options."
                 ),
             ),
             (
@@ -570,7 +617,10 @@ def test_multiselect_enum_coercion():
             C = 3
 
         selected_list = st.multiselect("my_enum", EnumA, default=[EnumA.A, EnumA.C])
-        st.text(id(selected_list[0].__class__))
+        if selected_list:
+            st.text(id(selected_list[0].__class__))
+        else:
+            st.text("empty")
         st.text(id(EnumA))
         st.text(all(selected in EnumA for selected in selected_list))
 
@@ -630,10 +680,13 @@ class TestMultiSelectSerde:
             options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
         )
 
+        # "A" is not in options but format_func succeeds, so it returns formatted value
+        # "Option C" is in options, so it also returns formatted value
         res = serde.serialize(["A", "Option C"])
-        assert res == ["A", "Format: Option C"]
+        assert res == ["Format: A", "Format: Option C"]
 
     def test_deserialize(self):
         options = ["Option A", "Option B", "Option C"]
@@ -695,3 +748,217 @@ class TestMultiSelectSerde:
 
         res = serde.deserialize(["First", "Third"])
         assert res == [complex_options[0], complex_options[2]]
+
+    def test_serialize_deepcopied_custom_objects(self):
+        """Test that serialize works with deepcopied custom objects without __eq__.
+
+        This tests the fix for https://github.com/streamlit/streamlit/issues/13646
+        where custom objects without __eq__ would fail serialization after deepcopy
+        because the old implementation used options.index() which relies on ==.
+        """
+        from copy import deepcopy
+
+        # Custom class without __eq__ implementation
+        class MyOption:  # noqa: B903
+            def __init__(self, value: str):
+                self.value = value
+
+        def format_func(x):
+            return x.value
+
+        options = [MyOption("a"), MyOption("b"), MyOption("c")]
+        formatted_options, formatted_option_to_option_index = create_mappings(
+            options, format_func
+        )
+        serde = MultiSelectSerde(
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=format_func,
+        )
+
+        # Simulate deepcopied values (what happens after register_widget)
+        deepcopied_values = [deepcopy(options[0]), deepcopy(options[1])]
+
+        # This should work correctly using format_func comparison
+        res = serde.serialize(deepcopied_values)
+        assert res == ["a", "b"]
+
+
+def test_multiselect_preserves_selection_when_options_expand():
+    """Test that valid selections are preserved when options are expanded."""
+
+    def script():
+        import streamlit as st
+
+        if "run" not in st.session_state:
+            st.session_state.run = 1
+
+        if st.session_state.run == 1:
+            value = st.multiselect(
+                "test", key="ms", options=["a", "b", "c"], default=["a", "b"]
+            )
+        else:
+            value = st.multiselect(
+                "test", key="ms", options=["a", "b", "c", "d", "e"], default=["c"]
+            )
+
+        st.text(str(value))
+
+    at = AppTest.from_function(script).run()
+    assert at.multiselect[0].value == ["a", "b"]
+
+    at.session_state.run = 2
+    at.run()
+    assert at.multiselect[0].value == ["a", "b"]
+    assert at.text[0].value == "['a', 'b']"
+
+
+def test_multiselect_filters_invalid_selections():
+    """Test that invalid selections are filtered when options shrink."""
+
+    def script():
+        import streamlit as st
+
+        if "run" not in st.session_state:
+            st.session_state.run = 1
+
+        if st.session_state.run == 1:
+            value = st.multiselect(
+                "test", key="ms", options=["a", "b", "c", "d"], default=["a"]
+            )
+        else:
+            value = st.multiselect("test", key="ms", options=["a", "b"], default=["a"])
+
+        st.text(str(value))
+
+    at = AppTest.from_function(script).run()
+    at.multiselect[0].set_value(["a", "c", "d"]).run()
+    assert at.multiselect[0].value == ["a", "c", "d"]
+
+    at.session_state.run = 2
+    at.run()
+    assert at.multiselect[0].value == ["a"]
+    assert at.text[0].value == "['a']"
+
+
+def test_multiselect_resets_when_all_selections_removed():
+    """Test that selection resets to empty when all selections are removed from options."""
+
+    def script():
+        import streamlit as st
+
+        if "run" not in st.session_state:
+            st.session_state.run = 1
+
+        if st.session_state.run == 1:
+            value = st.multiselect(
+                "test", key="ms", options=["a", "b", "c"], default=["a"]
+            )
+        else:
+            value = st.multiselect("test", key="ms", options=["x", "y", "z"])
+
+        st.text(str(value))
+
+    at = AppTest.from_function(script).run()
+    at.multiselect[0].set_value(["b", "c"]).run()
+    assert at.multiselect[0].value == ["b", "c"]
+
+    at.session_state.run = 2
+    at.run()
+    assert at.multiselect[0].value == []
+    assert at.text[0].value == "[]"
+
+
+def test_multiselect_session_state_updated_when_key_provided():
+    """Test that session state is updated when a key is provided and options change."""
+
+    def script():
+        import streamlit as st
+
+        if "run" not in st.session_state:
+            st.session_state.run = 1
+
+        if st.session_state.run == 1:
+            value = st.multiselect(
+                "test", key="ms", options=["a", "b", "c", "d"], default=["a"]
+            )
+        else:
+            # Options shrink, "c" and "d" are no longer valid
+            value = st.multiselect("test", key="ms", options=["a", "b"], default=["a"])
+
+        # Output the widget return value
+        st.text(f"widget_value={value}")
+        # Output session state value to verify it's updated
+        st.text(f"session_state_value={st.session_state.ms}")
+
+    at = AppTest.from_function(script).run()
+    # Select values including some that will become invalid
+    at.multiselect[0].set_value(["a", "c", "d"]).run()
+    assert at.multiselect[0].value == ["a", "c", "d"]
+    assert at.text[0].value == "widget_value=['a', 'c', 'd']"
+    assert at.text[1].value == "session_state_value=['a', 'c', 'd']"
+
+    # Change to run 2 where options shrink
+    at.session_state.run = 2
+    at.run()
+    # Both widget value and session state should be filtered to only valid options
+    assert at.multiselect[0].value == ["a"]
+    assert at.text[0].value == "widget_value=['a']"
+    assert at.text[1].value == "session_state_value=['a']"
+
+
+class MultiSelectBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for multiselect bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.multiselect("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.multiselect("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.multiselect("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.multiselect("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.multiselect(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_accept_new_options(self):
+        """Test that bind works with accept_new_options."""
+        st.multiselect(
+            "the label",
+            ["a", "b"],
+            key="my_key",
+            bind="query-params",
+            accept_new_options=True,
+        )
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.query_param_key == "my_key"
+        assert c.accept_new_options is True

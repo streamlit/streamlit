@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { vi } from "vitest"
@@ -24,6 +22,7 @@ import { LinkButton as LinkButtonProto } from "@streamlit/protobuf"
 
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import LinkButton, { Props } from "./LinkButton"
 
@@ -38,14 +37,23 @@ vi.mock("~lib/hooks/useRegisterShortcut", () => ({
 const getProps = (
   elementProps: Partial<LinkButtonProto> = {},
   widgetProps: Partial<Props> = {}
-): Props => ({
-  element: LinkButtonProto.create({
-    label: "Label",
-    url: "https://streamlit.io",
-    ...elementProps,
-  }),
-  ...widgetProps,
-})
+): Props => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+  vi.spyOn(widgetMgr, "setTriggerValue")
+
+  return {
+    element: LinkButtonProto.create({
+      label: "Label",
+      url: "https://streamlit.io",
+      ...elementProps,
+    }),
+    widgetMgr,
+    ...widgetProps,
+  }
+}
 
 describe("LinkButton widget", () => {
   beforeEach(() => {
@@ -130,6 +138,50 @@ describe("LinkButton widget", () => {
     expect(clickSpy).toHaveBeenCalled()
 
     clickSpy.mockRestore()
+  })
+
+  it("does not trigger rerun by default", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ id: "link-id", ignoreRerun: true })
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ["without fragmentId", undefined],
+    ["with fragmentId", "myFragmentId"],
+  ])("triggers rerun %s", async (_, fragmentId) => {
+    const user = userEvent.setup()
+    const props = getProps(
+      { id: "link-id", ignoreRerun: false },
+      { fragmentId }
+    )
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).toHaveBeenCalledWith(
+      props.element,
+      { fromUi: true },
+      fragmentId
+    )
+  })
+
+  it("does not trigger rerun when disabled", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      id: "link-id",
+      ignoreRerun: false,
+      disabled: true,
+    })
+    render(<LinkButton {...props} />)
+
+    await user.click(screen.getByRole("link"))
+
+    expect(props.widgetMgr.setTriggerValue).not.toHaveBeenCalled()
   })
 
   describe("wrapped BaseLinkButton", () => {

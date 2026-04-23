@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,7 +67,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
@@ -77,7 +77,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         self.util_mock.path_modification_time = lambda *args: 102.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         self._run_executor_tasks()
         callback.assert_called_once()
@@ -89,7 +89,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
@@ -99,7 +99,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         # Same mtime!
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         # This is the test:
         self._run_executor_tasks()
@@ -112,7 +112,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 0.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "11"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "11"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/folder/", callback
@@ -122,7 +122,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         # Same mtime!
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "22"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "22"
 
         # This is the test:
         self._run_executor_tasks()
@@ -130,12 +130,12 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         watcher.close()
 
-    def test_callback_not_called_if_same_md5(self):
-        """Test that we ignore files with same md5."""
+    def test_callback_not_called_if_same_hash(self):
+        """Test that we ignore files with same content hash."""
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
@@ -145,7 +145,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         self.util_mock.path_modification_time = lambda *args: 102.0
-        # Same MD5
+        # Same hash
 
         # This is the test:
         self._run_executor_tasks()
@@ -153,9 +153,9 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         watcher.close()
 
-    def test_kwargs_plumbed_to_calc_md5(self):
+    def test_kwargs_plumbed_to_calc_hash(self):
         """Test that we pass the glob_pattern and allow_nonexistent kwargs to
-        calc_md5_with_blocking_retries.
+        calc_hash_with_blocking_retries.
 
         `PollingPathWatcher`s can be created with optional kwargs allowing
         the caller to specify what types of files to watch (when watching a
@@ -166,7 +166,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/dir",
@@ -177,15 +177,15 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         self._run_executor_tasks()
         callback.assert_not_called()
-        _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.util_mock.calc_hash_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
 
         self.util_mock.path_modification_time = lambda *args: 102.0
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(return_value="2")
 
         self._run_executor_tasks()
         callback.assert_called_once()
-        _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.util_mock.calc_hash_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
 
         watcher.close()
@@ -198,8 +198,8 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         def modify_mock_file():
             self.util_mock.path_modification_time = lambda *args: mod_count[0]
-            self.util_mock.calc_md5_with_blocking_retries = (
-                lambda _, **kwargs: f"{mod_count[0]}"
+            self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: (
+                f"{mod_count[0]}"
             )
 
             mod_count[0] += 1.0
@@ -243,3 +243,66 @@ class PollingPathWatcherTest(unittest.TestCase):
         # should not have increased.
         assert callback1.call_count == 1
         assert callback2.call_count == 2
+
+    def test_detects_file_creation_and_modification_with_allow_nonexistent(
+        self,
+    ) -> None:
+        """Test watching a nonexistent file detects both creation and modification.
+
+        This tests the scenario where:
+        1. config.toml doesn't exist at startup
+        2. User creates config.toml → callback triggered
+        3. User modifies config.toml → callback triggered again
+
+        This ensures the polling watcher properly handles allow_nonexistent=True
+        for file paths (not just directories).
+        """
+        callback = mock.Mock()
+
+        # Initially file doesn't exist: modification_time=0.0, hash based on path
+        self.util_mock.path_modification_time = mock.Mock(return_value=0.0)
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(
+            return_value="nonexistent_hash"
+        )
+
+        watcher = polling_path_watcher.PollingPathWatcher(
+            "/app/.streamlit/config.toml",
+            callback,
+            allow_nonexistent=True,
+        )
+
+        # Verify allow_nonexistent was passed to initial calculations
+        _, kwargs = self.util_mock.path_modification_time.call_args
+        assert kwargs == {}  # path_modification_time uses positional arg
+        args = self.util_mock.path_modification_time.call_args[0]
+        assert args[1] is True  # allow_nonexistent
+
+        _, kwargs = self.util_mock.calc_hash_with_blocking_retries.call_args
+        assert kwargs["allow_nonexistent"] is True
+
+        self._run_executor_tasks()
+        callback.assert_not_called()
+
+        # Step 1: Simulate file being created
+        self.util_mock.path_modification_time = mock.Mock(return_value=101.0)
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(
+            return_value="initial_content_hash"
+        )
+
+        self._run_executor_tasks()
+
+        # Callback SHOULD be triggered (file was created)
+        assert callback.call_count == 1
+
+        # Step 2: Simulate file being modified
+        self.util_mock.path_modification_time = mock.Mock(return_value=102.0)
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(
+            return_value="modified_content_hash"
+        )
+
+        self._run_executor_tasks()
+
+        # Callback SHOULD be triggered again (file was modified)
+        assert callback.call_count == 2
+
+        watcher.close()

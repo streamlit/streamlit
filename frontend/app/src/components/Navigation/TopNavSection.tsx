@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { useState } from "react"
+import { Fragment, useState } from "react"
 
 import {
   KeyboardArrowDown,
@@ -23,10 +23,17 @@ import {
 import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
 
 import { StreamlitEndpoints } from "@streamlit/connection"
-import { hasLightBackgroundColor, Icon, useEmotionTheme } from "@streamlit/lib"
+import {
+  convertRemToPx,
+  getPopoverContainerStyle,
+  Icon,
+  StreamlitMarkdown,
+  useEmotionTheme,
+} from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledIconContainer,
   StyledNavSection,
@@ -35,8 +42,7 @@ import {
   StyledSectionName,
   StyledTopNavSidebarNavLinkContainer,
 } from "./styled-components"
-
-import { SidebarNavLink } from "./index"
+import { getExternalPageUrl, isExternalPage } from "./utils"
 
 interface TopNavSectionProps {
   handlePageChange: (pageScriptHash: string) => void
@@ -61,7 +67,6 @@ const TopNavSection = ({
 }: TopNavSectionProps): React.ReactElement | null => {
   const [open, setOpen] = useState(false)
   const theme = useEmotionTheme()
-  const lightBackground = hasLightBackgroundColor(theme)
   const showSections = sections.length > 1
 
   if (
@@ -82,26 +87,39 @@ const TopNavSection = ({
             const sectionName = section[0].sectionHeader
 
             return section.map((item, index) => {
-              const handleClick = (e: React.MouseEvent): boolean => {
+              const isExternal = isExternalPage(item)
+              const handleClick = (e: React.MouseEvent): void => {
+                // External links are handled by the browser (target="_blank")
+                if (isExternal) {
+                  setOpen(false)
+                  return
+                }
                 e.preventDefault()
                 if (item.pageScriptHash) {
                   handlePageChange(item.pageScriptHash)
                 }
                 setOpen(false)
-                return false
               }
 
               // Convert potentially null pageName to string safely
               const pageName = String(item.pageName || "")
 
               return (
-                <React.Fragment key={`${item.pageScriptHash}-${pageName}`}>
+                <Fragment key={`${item.pageScriptHash}-${pageName}`}>
                   {index === 0 && showSections && (
-                    <StyledSectionName>{sectionName}</StyledSectionName>
+                    <StyledSectionName>
+                      <StreamlitMarkdown
+                        source={sectionName || ""}
+                        allowHTML={false}
+                        isLabel
+                        disableLinks
+                        truncate
+                        inheritFont
+                      />
+                    </StyledSectionName>
                   )}
                   <StyledTopNavSidebarNavLinkContainer>
                     <SidebarNavLink
-                      {...item}
                       icon={item.icon || null}
                       isTopNav={true}
                       isInDropdown={true}
@@ -112,11 +130,13 @@ const TopNavSection = ({
                         item
                       )}
                       widgetsDisabled={widgetsDisabled}
+                      isExternal={isExternal}
+                      externalUrl={getExternalPageUrl(item)}
                     >
                       {pageName}
                     </SidebarNavLink>
                   </StyledTopNavSidebarNavLinkContainer>
-                </React.Fragment>
+                </Fragment>
               )
             })
           })}
@@ -128,10 +148,12 @@ const TopNavSection = ({
       onEsc={() => setOpen(false)}
       // Consistently render the content for smoother opening/closing
       renderAll={true}
+      popoverMargin={convertRemToPx(theme.spacing.twoXS)}
       overrides={{
         Body: {
           style: () => ({
-            marginTop: theme.spacing.sm,
+            ...getPopoverContainerStyle(theme),
+
             marginRight: theme.spacing.lg,
             marginBottom: theme.spacing.lg,
 
@@ -139,30 +161,6 @@ const TopNavSection = ({
             minWidth: "8rem",
             overflow: "auto",
             maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-
-            borderTopLeftRadius: theme.radii.xl,
-            borderTopRightRadius: theme.radii.xl,
-            borderBottomRightRadius: theme.radii.xl,
-            borderBottomLeftRadius: theme.radii.xl,
-
-            borderLeftWidth: theme.sizes.borderWidth,
-            borderRightWidth: theme.sizes.borderWidth,
-            borderTopWidth: theme.sizes.borderWidth,
-            borderBottomWidth: theme.sizes.borderWidth,
-
-            borderLeftStyle: "solid",
-            borderRightStyle: "solid",
-            borderTopStyle: "solid",
-            borderBottomStyle: "solid",
-
-            borderLeftColor: theme.colors.borderColor,
-            borderRightColor: theme.colors.borderColor,
-            borderTopColor: theme.colors.borderColor,
-            borderBottomColor: theme.colors.borderColor,
-
-            boxShadow: lightBackground
-              ? "0px 4px 16px rgba(0, 0, 0, 0.16)"
-              : "0px 4px 16px rgba(0, 0, 0, 0.7)",
 
             [`@media (max-width: ${theme.breakpoints.sm})`]: {
               maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
@@ -178,7 +176,16 @@ const TopNavSection = ({
           isOpen={open}
           data-testid="stTopNavSection"
         >
-          <StyledNavSectionText>{title}</StyledNavSectionText>
+          <StyledNavSectionText>
+            <StreamlitMarkdown
+              source={title}
+              allowHTML={false}
+              isLabel
+              disableLinks
+              truncate
+              inheritFont
+            />
+          </StyledNavSectionText>
           {!hideChevron && (
             <StyledIconContainer>
               <Icon

@@ -40,7 +40,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "component-lib/yarn.lock"
+          cache-dependency-path: "frontend/yarn.lock"
 
       - name: Run update-browserslist-db in frontend
         id: run-update
@@ -72,15 +72,17 @@ jobs:
 
       - name: Add changes to the branch
         if: steps.check-lock.outputs.lock_changed == 'true'
+        env:
+          BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         run: |
           git add frontend/yarn.lock
           git commit -m "[chore] Update Browserslist DB"
-          git push origin "${{ steps.create-branch.outputs.branch_name }}"
+          git push origin "$BRANCH_NAME"
 
       - name: Create PR to merge changes into develop
         id: create_pr
         if: ${{ steps.check-lock.outputs.lock_changed == 'true' && inputs.dry_run != true }}
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           BRANCH_NAME: ${{ steps.create-branch.outputs.branch_name }}
         with:
@@ -106,7 +108,7 @@ jobs:
 
             core.setOutput('pr_url', pr.html_url);
 
-            const labels = ['change:chore', 'impact:internal'];
+            const labels = ['change:chore', 'impact:internal', 'autofix'];
             await github.rest.issues.addLabels({
               owner: context.repo.owner,
               repo: context.repo.repo,

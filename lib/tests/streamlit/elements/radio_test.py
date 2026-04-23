@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 """radio unit tests."""
 
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -23,8 +24,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -45,8 +46,7 @@ class RadioTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0
         assert not c.disabled
@@ -145,8 +145,7 @@ class RadioTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.radio
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert c.default == 0
         assert c.options == []
@@ -202,9 +201,9 @@ class RadioTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -251,7 +250,7 @@ class RadioTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.radio("the label", ["option 1", "option 2"]))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -340,7 +339,6 @@ class RadioTest(DeltaGeneratorTestCase):
                 label_visibility="visible",
                 horizontal=False,
                 captions=["c1", "c2"],
-                # Whitelisted kwargs:
                 options=["a", "b"],
                 format_func=lambda x: x.capitalize(),
             )
@@ -361,41 +359,28 @@ class RadioTest(DeltaGeneratorTestCase):
                 label_visibility="hidden",
                 horizontal=True,
                 captions=["c1x", "c2x"],
-                # Whitelisted kwargs:
-                options=["a", "b"],
-                format_func=lambda x: x.capitalize(),
+                options=["a", "b", "c"],
+                format_func=lambda x: x.upper(),
             )
             c2 = self.get_delta_from_queue().new_element.radio
             id2 = c2.id
             assert id1 == id2
 
-    @parameterized.expand(
-        [
-            (
-                "options",
-                {"options": ["a", "b"], "format_func": str},
-                {"options": ["a", "b", "c"], "format_func": str},
-            ),
-            (
-                "format_func",
-                {"options": ["a", "b"], "format_func": str},
-                {"options": ["a", "b"], "format_func": str.upper},
-            ),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs(
-        self, _name: str, first_kwargs: dict, second_kwargs: dict
-    ) -> None:
-        """Test that the widget ID changes when a whitelisted kwarg changes even when the key is provided."""
+    def test_unstable_id_without_key(self) -> None:
+        """Test that the widget ID changes when options change without a key.
+
+        This verifies that without a stable key, changing options results in
+        a new widget ID since the identity is computed from the options.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            st.radio(label="Label 1", key="radio_key2", **first_kwargs)
+            st.radio(label="Label 1", options=["a", "b"], format_func=str)
             c1 = self.get_delta_from_queue().new_element.radio
             id1 = c1.id
 
-            st.radio(label="Label 2", key="radio_key2", **second_kwargs)
+            st.radio(label="Label 1", options=["a", "b", "c"], format_func=str)
             c2 = self.get_delta_from_queue().new_element.radio
             id2 = c2.id
             assert id1 != id2
@@ -425,7 +410,13 @@ def test_radio_interaction():
 
 
 def test_radio_enum_coercion():
-    """Test E2E Enum Coercion on a radio."""
+    """Test E2E Enum Coercion on a radio.
+
+    When enum classes are redefined between runs (common in Streamlit scripts),
+    the widget should return a valid enum value from the current class when
+    coercion is enabled. When coercion is "off", the value from session state
+    (which may be from an old class) is returned as-is.
+    """
 
     def script():
         from enum import Enum
@@ -453,11 +444,13 @@ def test_radio_enum_coercion():
 
     with patch_config_options({"runner.enumCoercion": "nameOnly"}):
         test_enum()
+    # With coercion="off", the value from session state (old class) is returned as-is,
+    # so class IDs will differ - expect assertion to fail.
     with (
         patch_config_options({"runner.enumCoercion": "off"}),
         pytest.raises(AssertionError),
     ):
-        test_enum()  # expect a failure with the config value off.
+        test_enum()
 
 
 def test_None_session_state_value_retained():
@@ -473,3 +466,319 @@ def test_None_session_state_value_retained():
     at = AppTest.from_function(script).run()
     at = at.button[0].click().run()
     assert at.radio[0].value is None
+
+
+def test_dynamic_options_with_key_retains_value() -> None:
+    """Test that changing options with a key retains the selected value if still valid."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        # First run: options are ["A", "B", "C"]
+        # Second run: options are ["A", "B", "D"] (C removed, D added)
+        if counter == 0:
+            options = ["A", "B", "C"]
+        else:
+            options = ["A", "B", "D"]
+
+        selected = st.radio("Select", options, key="dynamic_radio")
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "A" is selected (index 0)
+    assert at.radio[0].value == "A"
+
+    # Select "B"
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change options from ["A", "B", "C"] to ["A", "B", "D"]
+    # "B" should remain selected since it's still in the new options
+    at = at.button[0].click().run()
+    assert at.radio[0].value == "B"
+    assert "Selected: B" in at.text[0].value
+
+
+def test_dynamic_options_with_key_resets_invalid_value() -> None:
+    """Test that changing options resets value to default if selected value is removed."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        # First run: options are ["A", "B", "C"]
+        # Second run: options are ["D", "E", "F"] (all changed)
+        if counter == 0:
+            options = ["A", "B", "C"]
+        else:
+            options = ["D", "E", "F"]
+
+        selected = st.radio("Select", options, key="dynamic_radio")
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "A" is selected (index 0)
+    assert at.radio[0].value == "A"
+
+    # Select "B"
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change options from ["A", "B", "C"] to ["D", "E", "F"]
+    # "B" is no longer valid, so should reset to default (index 0 = "D")
+    at = at.button[0].click().run()
+    assert at.radio[0].value == "D"
+    assert "Selected: D" in at.text[0].value
+
+
+def test_dynamic_options_with_key_and_none_index() -> None:
+    """Test dynamic options with index=None (no default selection)."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        if counter == 0:
+            options = ["A", "B", "C"]
+        else:
+            options = ["D", "E", "F"]
+
+        selected = st.radio("Select", options, index=None, key="dynamic_radio")
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially no selection
+    assert at.radio[0].value is None
+
+    # Select "B"
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change options from ["A", "B", "C"] to ["D", "E", "F"]
+    # "B" is no longer valid and index=None, so should reset to None
+    at = at.button[0].click().run()
+    assert at.radio[0].value is None
+    assert "Selected: None" in at.text[0].value
+
+
+def test_dynamic_format_func_preserves_value() -> None:
+    """Test that changing format_func preserves value if underlying option still exists."""
+
+    def script():
+        import streamlit as st
+
+        if "counter" not in st.session_state:
+            st.session_state["counter"] = 0
+
+        counter = st.session_state["counter"]
+
+        # First run: format_func=str.upper -> displays "A", "B", "C"
+        # Second run: format_func=str.lower -> displays "a", "b", "c"
+        # The formatted display changes, but underlying options remain the same.
+        if counter == 0:
+            format_func = str.upper
+        else:
+            format_func = str.lower
+
+        options = ["A", "B", "C"]
+        selected = st.radio(
+            "Select", options, format_func=format_func, key="dynamic_radio"
+        )
+        st.text(f"Selected: {selected}")
+        st.button("Next", on_click=lambda: st.session_state.__setitem__("counter", 1))
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "A" is selected (index 0), displayed as "A"
+    assert at.radio[0].value == "A"
+
+    # Select "B" (displayed as "B")
+    at = at.radio[0].set_value("B").run()
+    assert at.radio[0].value == "B"
+
+    # Click button to change format_func from upper to lower
+    # The value "B" should be preserved because the underlying option "B"
+    # still exists in the options list, even though its display changes to "b".
+    at = at.button[0].click().run()
+    assert at.radio[0].value == "B"
+    # Verify it didn't reset to the default "A"
+    assert at.radio[0].value != "A"
+    assert "Selected: B" in at.text[0].value
+
+
+def test_custom_objects_with_eq_format_func_survives_rerun() -> None:
+    """Regression for #14814: selection must not reset when using format_func.
+
+    ``validate_and_sync_value_with_options`` must receive ``format_func`` so
+    validation compares stable formatted labels, not ``str()`` of instances
+    (which embed object id and changes across reruns).
+    """
+
+    def script():
+        import streamlit as st
+
+        class MyOption:
+            def __init__(self, label: str, value: int) -> None:
+                self.label = label
+                self.value = value
+
+            def __eq__(self, other: object) -> bool:
+                if not isinstance(other, MyOption):
+                    return False
+                return self.value == other.value
+
+            def __hash__(self) -> int:
+                return hash(self.value)
+
+        options = [
+            MyOption("Option A", 1),
+            MyOption("Option B", 2),
+            MyOption("Option C", 3),
+        ]
+        selected = st.radio(
+            "Pick",
+            options=options,
+            format_func=lambda x: x.label,
+            key="bug_radio",
+        )
+        st.text(f"gh14814 value: {selected.value}")
+        st.button("Rerun")
+
+    at = AppTest.from_function(script).run()
+    assert at.radio[0].value.value == 1
+    assert "gh14814 value: 1" in at.text[0].value
+
+    at = at.radio[0].set_value(SimpleNamespace(label="Option B")).run()
+    assert at.radio[0].value.value == 2
+    assert "gh14814 value: 2" in at.text[0].value
+
+    at = at.button[0].click().run()
+    assert at.radio[0].value.value == 2
+    assert "gh14814 value: 2" in at.text[0].value
+
+
+def test_custom_objects_without_eq() -> None:
+    """Test that custom class objects without __eq__ work with format_func.
+
+    This tests the fix for issue #13646 where custom objects without __eq__
+    would have their selections cleared after script reruns because the
+    serialization used == comparison after deepcopy created new instances.
+    """
+
+    def script():
+        import streamlit as st
+
+        # Custom class without __eq__ implementation - uses identity comparison
+        # Must be defined inside script() because AppTest.from_function() runs in isolation
+        class CustomOption:  # noqa: B903
+            def __init__(self, value: str, label: str):
+                self.value = value
+                self.label = label
+
+        # Create new option instances on each run (simulating the behavior
+        # that triggers the bug - each rerun creates new object instances)
+        options = [
+            CustomOption("opt_a", "Option A"),
+            CustomOption("opt_b", "Option B"),
+            CustomOption("opt_c", "Option C"),
+        ]
+
+        selected = st.radio(
+            "Select",
+            options,
+            format_func=lambda x: x.label,
+            key="custom_radio",
+        )
+        st.text(f"Selected: {selected.value if selected else None}")
+        st.button("Rerun")
+
+    at = AppTest.from_function(script).run()
+
+    # Initially "opt_a" is selected (index 0) - value is the CustomOption object
+    assert at.radio[0].value.value == "opt_a"
+    assert "Selected: opt_a" in at.text[0].value
+
+    # Click button to trigger a rerun - this creates new CustomOption instances
+    # Without the fix, the selection would be cleared because the deepcopied
+    # value wouldn't match any option (identity comparison using == fails for
+    # objects without __eq__, so it falls back to `is` comparison which fails)
+    at = at.button[0].click().run()
+
+    # After rerun, the selection should still be the first option
+    # The fix uses format_func comparison instead of == comparison
+    assert at.radio[0].value.value == "opt_a"
+    # Verify it didn't reset to None or become invalid
+    assert at.radio[0].value is not None
+    assert "Selected: opt_a" in at.text[0].value
+
+
+class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for radio bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.radio("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.radio("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.radio("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.radio("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.radio(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_index_none(self):
+        """Test that bind works with index=None (clearable)."""
+        st.radio(
+            "the label", ["a", "b", "c"], index=None, key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")

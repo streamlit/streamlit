@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,5 +25,5 @@ def test_components_v1_was_imported_successfully(app: Page):
     div = iframe.locator("div")
     expect(div).to_have_text("This import and usage worked!")
 
-    expect_markdown(app, "<bound method IframeMixin._iframe of DeltaGenerator()>")
-    expect_markdown(app, re.compile("<function declare_component at .*>"))
+    expect_markdown(app, re.compile(r"<function IframeMixin._iframe at .*>"))
+    expect_markdown(app, re.compile(r"<function declare_component at .*>"))

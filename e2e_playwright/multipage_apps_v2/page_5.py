@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,3 +28,6 @@ st.checkbox("Checkbox 1", on_change=handle_change)
 st.checkbox("Checkbox 2")
 
 st.write("test_value: ", st.session_state.test_value)
+
+# Display query params for test verification (unique label to avoid collision with main page)
+st.write("Page 5 Query Params:", str(st.query_params))

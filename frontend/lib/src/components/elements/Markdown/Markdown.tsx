@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,10 @@ import { memo, ReactElement } from "react"
 
 import { Markdown as MarkdownProto } from "@streamlit/protobuf"
 
-import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import {
-  InlineTooltipIcon,
-  StyledLabelHelpWrapper,
-} from "~lib/components/shared/TooltipIcon"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { StyledLabelHelpWrapper } from "~lib/components/shared/TooltipIcon/styled-components"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 export interface MarkdownProps {
   element: MarkdownProto
@@ -39,8 +37,9 @@ const SINGLE_BADGE_REGEX = /^:\w+-badge\[((?:\\.|[^\]\\])*)\]$/
  * Functional element representing Markdown formatted text.
  */
 function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
-  const { allowHtml, body, elementType, help, isCaption } = element
+  const { allowHtml, body, elementType, help, unterminatedParsing } = element
 
+  const isCaption = elementType === MarkdownProto.Type.CAPTION
   const isLatex = elementType === MarkdownProto.Type.LATEX
 
   // Determine if the markdown is a single badge only
@@ -57,6 +56,7 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={body}
           allowHTML={allowHtml}
+          unterminatedParsing={unterminatedParsing}
         />
       </BaseButtonTooltip>
     )
@@ -69,14 +69,17 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={body}
           allowHTML={allowHtml}
+          unterminatedParsing={unterminatedParsing}
         />
         <InlineTooltipIcon content={help} isLatex={isLatex} />
       </StyledLabelHelpWrapper>
     )
   } else {
     // For other markdown, render with inline help icon
-    // Append help directive to markdown source so it renders inline
-    const source = help ? `${body} :help[${help}]` : body
+    // Use :help[] as a marker where the help icon should appear.
+    // The actual help text is passed via helpText prop to avoid limitations
+    // with special characters in text directive labels.
+    const source = help ? `${body} :help[]` : body
 
     content = (
       <StyledLabelHelpWrapper isLatex={isLatex}>
@@ -84,6 +87,8 @@ function Markdown({ element }: Readonly<MarkdownProps>): ReactElement {
           isCaption={isCaption}
           source={source}
           allowHTML={allowHtml}
+          helpText={help}
+          unterminatedParsing={unterminatedParsing}
         />
       </StyledLabelHelpWrapper>
     )

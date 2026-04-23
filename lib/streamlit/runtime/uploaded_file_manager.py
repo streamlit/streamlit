@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from abc import abstractmethod
 from typing import TYPE_CHECKING, NamedTuple, Protocol
 
 from streamlit import util
-from streamlit.runtime.stats import CacheStatsProvider
+from streamlit.runtime.stats import StatsProvider
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -89,7 +89,7 @@ class UploadedFile(io.BytesIO):
         return util.repr_(self)
 
 
-class UploadedFileManager(CacheStatsProvider, Protocol):
+class UploadedFileManager(StatsProvider, Protocol):
     """UploadedFileManager protocol, that should be implemented by the concrete
     uploaded file managers.
 
@@ -123,12 +123,12 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
             A list of URL UploadedFileRec instances, each instance contains information
             about uploaded file.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def remove_session_files(self, session_id: str) -> None:
         """Remove all files associated with a given session."""
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
@@ -149,4 +149,4 @@ class UploadedFileManager(CacheStatsProvider, Protocol):
             A list of UploadFileUrlInfo instances, each instance contains information
             about uploaded file URLs.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - optional default

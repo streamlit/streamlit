@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,7 @@ import asyncio
 import gc
 import threading
 import unittest
-from asyncio import AbstractEventLoop
 from typing import TYPE_CHECKING, Any, cast
-from unittest import IsolatedAsyncioTestCase
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,8 +30,8 @@ from streamlit.proto.BackMsg_pb2 import BackMsg
 from streamlit.proto.ClientState_pb2 import ClientState
 from streamlit.proto.Common_pb2 import FileURLs, FileURLsRequest, FileURLsResponse
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-from streamlit.proto.NewSession_pb2 import FontFace, FontSource
-from streamlit.runtime import Runtime, app_session
+from streamlit.proto.NewSession_pb2 import Config, FontFace, FontSource
+from streamlit.runtime import Runtime, app_session, caching
 from streamlit.runtime.app_session import AppSession, AppSessionState
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -70,7 +68,7 @@ def del_path(monkeypatch):
 
 
 def _create_test_session(
-    event_loop: AbstractEventLoop | None = None,
+    event_loop: asyncio.AbstractEventLoop | None = None,
     session_id_override: str | None = None,
 ) -> AppSession:
     """Create an AppSession instance with some default mocked data."""
@@ -129,21 +127,33 @@ class AppSessionTest(unittest.TestCase):
     )
     def test_shutdown(self, patched_disconnect):
         """Test that AppSession.shutdown behaves sanely."""
-        session = _create_test_session()
+        with (
+            patch.object(
+                caching, "clear_session_data_cache"
+            ) as mock_clear_session_data,
+            patch.object(
+                caching, "clear_session_resource_cache"
+            ) as mock_clear_session_resource,
+        ):
+            session = _create_test_session()
 
-        mock_file_mgr = MagicMock(spec=UploadedFileManager)
-        session._uploaded_file_mgr = mock_file_mgr
+            mock_file_mgr = MagicMock(spec=UploadedFileManager)
+            session._uploaded_file_mgr = mock_file_mgr
 
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
-        patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
+            patched_disconnect.assert_called_once_with(session._on_secrets_file_changed)
 
-        # A 2nd shutdown call should have no effect.
-        session.shutdown()
-        assert session._state == AppSessionState.SHUTDOWN_REQUESTED
+            # A 2nd shutdown call should have no effect.
+            session.shutdown()
+            assert session._state == AppSessionState.SHUTDOWN_REQUESTED
 
-        mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_file_mgr.remove_session_files.assert_called_once_with(session.id)
+            mock_clear_session_data.assert_called_once_with(session.id)
+            mock_clear_session_resource.assert_called_once_with(session.id)
 
     def test_shutdown_with_running_scriptrunner(self):
         """If we have a running ScriptRunner, shutting down should stop it."""
@@ -695,6 +705,17 @@ class AppSessionTest(unittest.TestCase):
         assert session._client_state.query_string == "shutdown_query"
         assert session._client_state.page_script_hash == "shutdown_hash"
 
+    def test_clear_session_caches(self) -> None:
+        """Tests clear_session_caches."""
+
+        test_session = _create_test_session()
+
+        with patch.object(app_session, "caching") as mock_caching:
+            test_session.clear_session_caches()
+
+        mock_caching.clear_session_data_cache.assert_called_with(test_session.id)
+        mock_caching.clear_session_resource_cache.assert_called_with(test_session.id)
+
 
 def _mock_get_options_for_section(
     overrides: dict[str, Any] | None = None,
@@ -795,12 +816,12 @@ def _mock_get_options_for_section(
             {
                 "family": "Inter",
                 "url": "https://raw.githubusercontent.com/rsms/inter/refs/heads/master/docs/font-files/Inter-Regular.woff2",
-                "weight": 400,
+                "weight_range": "400",
             },
             {
                 "family": "Monaspace Argon",
-                "url": "https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
-                "weight": 400,
+                "url": "https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
+                "weight_range": "400",
             },
         ],
         "headingFont": "Inter Bold",
@@ -835,6 +856,18 @@ def _mock_get_options_for_section(
             "#09ab3b",
             "#158237",
             "#177233",
+        ],
+        "chartDivergingColors": [
+            "#7d353b",
+            "#bd4043",
+            "#ff4b4b",
+            "#ff8c8c",
+            "#ffc7c7",
+            "#a6dcff",
+            "#60b4ff",
+            "#1c83e1",
+            "#0054a3",
+            "#004280",
         ],
         "redColor": "#7d353b",
         "orangeColor": "#d95a00",
@@ -908,7 +941,7 @@ def _mock_get_options_for_section(
     return get_options_for_section
 
 
-class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
+class AppSessionScriptEventTest(unittest.IsolatedAsyncioTestCase):
     """Tests for AppSession's ScriptRunner event handling."""
 
     @patch(
@@ -1146,8 +1179,9 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             side_effect=lambda msg: forward_msg_queue_events.append(msg)
         )
         mock_queue.clear = MagicMock(
-            side_effect=lambda retain_lifecycle_msgs,
-            fragment_ids_this_run: forward_msg_queue_events.append(CLEAR_QUEUE)
+            side_effect=lambda retain_lifecycle_msgs, fragment_ids_this_run: (
+                forward_msg_queue_events.append(CLEAR_QUEUE)
+            )
         )
 
         session._browser_queue = mock_queue
@@ -1242,6 +1276,20 @@ class AppSessionScriptEventTest(IsolatedAsyncioTestCase):
             handle_app_heartbeat_request.assert_called_once()
             handle_backmsg_exception.assert_not_called()
             patched_logger.warning.assert_not_called()
+
+    async def test_app_heartbeat_sends_ack(self) -> None:
+        """Test that _handle_app_heartbeat_request sends a heartbeat_ack ForwardMsg."""
+        session = _create_test_session(asyncio.get_running_loop())
+        with patch.object(session, "_enqueue_forward_msg") as enqueue_mock:
+            session._handle_app_heartbeat_request()
+
+            # Verify that a ForwardMsg with heartbeat_ack was enqueued
+            enqueue_mock.assert_called_once()
+            msg = enqueue_mock.call_args[0][0]
+            assert isinstance(msg, ForwardMsg)
+            assert msg.heartbeat_ack is True
+            # Verify it's not some other message type
+            assert msg.WhichOneof("type") == "heartbeat_ack"
 
     async def test_event_handler_raises_error_if_page_hash_none_on_script_started(
         self,
@@ -1359,6 +1407,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1424,6 +1473,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1489,6 +1539,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
                     "dataframeHeaderBackgroundColor": None,
                     "chartCategoricalColors": None,
                     "chartSequentialColors": None,
+                    "chartDivergingColors": None,
                     "redColor": None,
                     "orangeColor": None,
                     "yellowColor": None,
@@ -1604,6 +1655,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.heading_font_weights
         assert not new_session_msg.custom_theme.chart_categorical_colors
         assert not new_session_msg.custom_theme.chart_sequential_colors
+        assert not new_session_msg.custom_theme.chart_diverging_colors
 
         app_session._populate_theme_msg(
             new_session_msg.custom_theme.sidebar,
@@ -1651,6 +1703,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
         assert not new_session_msg.custom_theme.sidebar.heading_font_weights
         assert not new_session_msg.custom_theme.sidebar.chart_categorical_colors
         assert not new_session_msg.custom_theme.sidebar.chart_sequential_colors
+        assert not new_session_msg.custom_theme.sidebar.chart_diverging_colors
 
     @patch("streamlit.runtime.app_session.config")
     def test_can_specify_all_options(self, patched_config):
@@ -1752,6 +1805,18 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             "#158237",
             "#177233",
         ]
+        assert list(new_session_msg.custom_theme.chart_diverging_colors) == [
+            "#7d353b",
+            "#bd4043",
+            "#ff4b4b",
+            "#ff8c8c",
+            "#ffc7c7",
+            "#a6dcff",
+            "#60b4ff",
+            "#1c83e1",
+            "#0054a3",
+            "#004280",
+        ]
         assert list(new_session_msg.custom_theme.font_faces) == [
             FontFace(
                 family="Inter Bold",
@@ -1764,7 +1829,7 @@ class PopulateCustomThemeMsgTest(unittest.TestCase):
             ),
             FontFace(
                 family="Monaspace Argon",
-                url="https://raw.githubusercontent.com/githubnext/monaspace/refs/heads/main/fonts/webfonts/MonaspaceArgon-Regular.woff2",
+                url="https://raw.githubusercontent.com/githubnext/monaspace/052b3c4eb409e7f026edf5f0609de4ff54db7e23/fonts/Web%20Fonts/Static%20Web%20Fonts/Monaspace%20Argon/MonaspaceArgon-Regular.woff2",
                 weight_range="400",
             ),
         ]
@@ -2368,3 +2433,44 @@ class DeferredFileRequestTest(unittest.TestCase):
             mock_create_task.assert_called_once()
             # The argument to create_task should be a coroutine
             assert asyncio.iscoroutine(mock_create_task.call_args[0][0])
+
+
+class GetShowErrorLinksTest(unittest.TestCase):
+    @patch_config_options({"client.showErrorLinks": "auto"})
+    def test_auto(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_AUTO
+
+    @patch_config_options({"client.showErrorLinks": "true"})
+    def test_true(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": "false"})
+    def test_false(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": True})
+    def test_bool_true(self):
+        """Test that boolean True is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_TRUE
+
+    @patch_config_options({"client.showErrorLinks": False})
+    def test_bool_false(self):
+        """Test that boolean False is handled correctly."""
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        assert _get_show_error_links() == Config.ShowErrorLinks.SHOW_ERROR_LINKS_FALSE
+
+    @patch_config_options({"client.showErrorLinks": "invalid"})
+    def test_invalid_raises(self):
+        from streamlit.runtime.app_session import _get_show_error_links
+
+        with pytest.raises(ValueError, match="auto, true, false"):
+            _get_show_error_links()

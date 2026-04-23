@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,49 +16,43 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, Literal, cast
-from urllib.parse import urljoin
+import os
+from typing import TYPE_CHECKING, Final, cast
 
 from streamlit import config, net_util, url_util
 from streamlit.runtime.secrets import secrets_singleton
-from streamlit.type_util import is_version_less_than
 
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    from tornado.web import RequestHandler
-
 # The port used for internal development.
 DEVELOPMENT_PORT: Final = 3000
+VITE_PORT_ENV_VAR: Final = "VITE_PORT"
+PORT_ENV_VAR: Final = "PORT"
 
 AUTH_COOKIE_NAME: Final = "_streamlit_user"
+TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
 
 
 def allowlisted_origins() -> set[str]:
     return {origin.strip() for origin in config.get_option("server.corsAllowedOrigins")}
 
 
-def is_tornado_version_less_than(v: str) -> bool:
-    """Return True if the current Tornado version is less than the input version.
+def allow_all_cross_origin_requests() -> bool:
+    """True if cross-origin requests from any origin are allowed.
 
-    Parameters
-    ----------
-    v : str
-        Version string, e.g. "0.25.0"
-
-    Returns
-    -------
-    bool
-
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
+    We allow ALL cross-origin requests when CORS protection has been disabled
+    with server.enableCORS=False or when in dev mode (where the Vite dev server
+    and backend use different ports, counting as two origins).
     """
-    import tornado
+    return not config.get_option("server.enableCORS") or config.get_option(
+        "global.developmentMode"
+    )
 
-    return is_version_less_than(tornado.version, v)
+
+def is_allowed_origin(origin: str) -> bool:
+    """Check if origin is in the allowlisted origins."""
+    return origin in allowlisted_origins()
 
 
 def is_url_from_allowed_origins(url: str) -> bool:
@@ -81,7 +75,7 @@ def is_url_from_allowed_origins(url: str) -> bool:
         url_util.get_hostname(origin) for origin in allowlisted_origins()
     ]
 
-    allowed_domains: list[str | None | Callable[[], str | None]] = [
+    allowed_domains: list[str | Callable[[], str | None] | None] = [
         # Check localhost first.
         "localhost",
         "0.0.0.0",  # noqa: S104
@@ -96,9 +90,10 @@ def is_url_from_allowed_origins(url: str) -> bool:
     ]
 
     for allowed_domain in allowed_domains:
-        allowed_domain_str = (
-            allowed_domain() if callable(allowed_domain) else allowed_domain
-        )
+        if isinstance(allowed_domain, str) or allowed_domain is None:
+            allowed_domain_str = allowed_domain
+        else:
+            allowed_domain_str = allowed_domain()
 
         if allowed_domain_str is None:
             continue
@@ -136,19 +131,26 @@ def _get_server_address_if_manually_set() -> str | None:
     return None
 
 
-def make_url_path_regex(
-    *path: str,
-    trailing_slash: Literal["optional", "required", "prohibited"] = "optional",
-) -> str:
-    """Get a regex of the form ^/foo/bar/baz/?$ for a path (foo, bar, baz)."""
-    filtered_paths = [x.strip("/") for x in path if x]  # Filter out falsely components.
-    path_format = r"^/%s$"
-    if trailing_slash == "optional":
-        path_format = r"^/%s/?$"
-    elif trailing_slash == "required":
-        path_format = r"^/%s/$"
+def get_display_address(address: str) -> str:
+    """Get a display-friendly address for URLs shown to users.
 
-    return path_format % "/".join(filtered_paths)
+    Wildcard addresses like "0.0.0.0" (all IPv4) or "::" (all interfaces)
+    are not valid browser addresses on all platforms. This translates
+    them to "localhost" for display purposes.
+
+    Parameters
+    ----------
+    address
+        The server address (IP or hostname).
+
+    Returns
+    -------
+    str
+        Address suitable for display. Wildcards become "localhost".
+    """
+    if address in {"0.0.0.0", "::"}:  # noqa: S104
+        return "localhost"
+    return address
 
 
 def get_url(host_ip: str) -> str:
@@ -185,12 +187,18 @@ def _get_browser_address_bar_port() -> int:
 
     """
     if config.get_option("global.developmentMode"):
+        for env_var in (VITE_PORT_ENV_VAR, PORT_ENV_VAR):
+            port_str = os.environ.get(env_var)
+            if not port_str:
+                continue
+
+            try:
+                port = int(port_str)
+            except ValueError:
+                continue
+
+            if 1 <= port <= 65535:
+                return port
+
         return DEVELOPMENT_PORT
     return int(config.get_option("browser.serverPort"))
-
-
-def emit_endpoint_deprecation_notice(handler: RequestHandler, new_path: str) -> None:
-    """Emits the warning about deprecation of HTTP endpoint in the HTTP header."""
-    handler.set_header("Deprecation", True)
-    new_url = urljoin(f"{handler.request.protocol}://{handler.request.host}", new_path)
-    handler.set_header("Link", f'<{new_url}>; rel="alternate"')

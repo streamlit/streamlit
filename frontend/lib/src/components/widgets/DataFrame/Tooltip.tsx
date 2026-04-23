@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback, useState } from "react"
+import { memo, ReactElement, useCallback, useState } from "react"
 
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export interface TooltipProps {
   // The top position of the tooltip.

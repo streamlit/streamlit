@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ from __future__ import annotations
 import os
 import sys
 import time
+import unittest
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
-from tornado.testing import AsyncTestCase
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
@@ -64,17 +64,6 @@ text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
 
-# Workaround for https://github.com/pytest-dev/pytest/issues/12263:
-# Newer pytest version require this method to exist, but its not implemented
-# in older Tornado versions for AsyncTestCase.
-# Adding this to the test harmless and not affecting the ScriptRunnerTest below.
-def runTest(*args, **kwargs):
-    pass
-
-
-AsyncTestCase.runTest = runTest
-
-
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     """
     Returns
@@ -94,7 +83,7 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
-class ScriptRunnerTest(AsyncTestCase):
+class ScriptRunnerTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
@@ -460,7 +449,7 @@ class ScriptRunnerTest(AsyncTestCase):
         w2_id = scriptrunner.get_widget_id("text_area", "text_area")
         _create_widget(w2_id, states).string_value = "matey!"
         w3_id = scriptrunner.get_widget_id("radio", "radio")
-        _create_widget(w3_id, states).int_value = 2
+        _create_widget(w3_id, states).string_value = "2"
         w4_id = scriptrunner.get_widget_id("button", "button")
         _create_widget(w4_id, states).trigger_value = True
 
@@ -545,7 +534,7 @@ class ScriptRunnerTest(AsyncTestCase):
         w2_id = scriptrunner.get_widget_id("text_area", "text_area")
         _create_widget(w2_id, states).string_value = "matey!"
         w3_id = scriptrunner.get_widget_id("radio", "radio")
-        _create_widget(w3_id, states).int_value = 2
+        _create_widget(w3_id, states).string_value = "2"
         w4_id = scriptrunner.get_widget_id("button", "button")
         _create_widget(w4_id, states).trigger_value = True
 
@@ -733,7 +722,7 @@ class ScriptRunnerTest(AsyncTestCase):
             w2_id = scriptrunner.get_widget_id("text_area", "text_area")
             _create_widget(w2_id, states).string_value = "matey!"
             w3_id = scriptrunner.get_widget_id("radio", "radio")
-            _create_widget(w3_id, states).int_value = 2
+            _create_widget(w3_id, states).string_value = "2"
             w4_id = scriptrunner.get_widget_id("button", "button")
             _create_widget(w4_id, states).trigger_value = True
 
@@ -976,7 +965,7 @@ class ScriptRunnerTest(AsyncTestCase):
         scriptrunner.join()
         self._assert_no_exceptions(scriptrunner)
 
-        # Build several runners. Each will set a different int value for
+        # Build several runners. Each will set a different string value for
         # its radio button.
         runners = []
         for ii in range(3):
@@ -984,7 +973,7 @@ class ScriptRunnerTest(AsyncTestCase):
             runners.append(runner)
 
             states = WidgetStates()
-            _create_widget(radio_widget_id, states).int_value = ii
+            _create_widget(radio_widget_id, states).string_value = str(ii)
             runner.request_rerun(RerunData(widget_states=states))
 
         # Start the runners and wait a beat.
@@ -1045,7 +1034,7 @@ class ScriptRunnerTest(AsyncTestCase):
         shutdown_data = scriptrunner.event_data[-1]
         assert (
             shutdown_data["client_state"].page_script_hash
-            == "f0b2ab81496648a6f2af976dfd35f4a8"
+            == "74c2683ab3d8427292ef911e1e05a630"
         )
 
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:
@@ -1137,7 +1126,7 @@ class TestScriptRunner(ScriptRunner):
         )
 
         # Accumulates uncaught exceptions thrown by our run thread.
-        self.script_thread_exceptions: list[BaseException] = []
+        self.script_thread_exceptions: list[Exception] = []
 
         # Accumulates all ScriptRunnerEvents emitted by us.
         self.events: list[ScriptRunnerEvent] = []
@@ -1165,7 +1154,7 @@ class TestScriptRunner(ScriptRunner):
     def _run_script_thread(self) -> None:
         try:
             super()._run_script_thread()
-        except BaseException as e:
+        except Exception as e:
             self.script_thread_exceptions.append(e)
 
     def _run_script(self, rerun_data: RerunData) -> None:

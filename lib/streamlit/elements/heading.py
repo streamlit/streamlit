@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import TYPE_CHECKING, Literal, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Heading_pb2 import Heading as HeadingProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -131,8 +131,11 @@ class HeadingMixin:
            height: 600px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -237,8 +240,11 @@ class HeadingMixin:
            height: 500px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -332,8 +338,11 @@ class HeadingMixin:
            height: 220px
 
         """
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue(
             "heading",
@@ -367,7 +376,7 @@ class HeadingMixin:
             "rainbow",
         ]
         if divider in valid_colors:
-            return cast("str", divider)
+            return cast("str", divider)  # ty: ignore[redundant-cast]
         raise StreamlitAPIException(
             f"Divider parameter has invalid value: `{divider}`. Please choose from: {', '.join(valid_colors)}."
         )

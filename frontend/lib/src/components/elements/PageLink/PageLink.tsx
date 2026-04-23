@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useContext } from "react"
+import { memo, ReactElement, useContext } from "react"
 
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { NavigationContext } from "~lib/components/core/NavigationContext"
-import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
@@ -90,6 +91,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
     }
   }
 
+  const iconPosition = mapProtoIconPosition(element.iconPosition)
   const href = buildHref(element)
 
   return (
@@ -109,7 +111,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
             rel="noreferrer"
             onClick={handleClick}
           >
-            {element.icon && (
+            {element.icon && iconPosition === "left" && (
               <DynamicIcon
                 size="lg"
                 color={disabled ? colors.fadedText40 : colors.bodyText}
@@ -126,6 +128,13 @@ function PageLink(props: Readonly<Props>): ReactElement {
                 disableLinks
               />
             </StyledNavLinkText>
+            {element.icon && iconPosition === "right" && (
+              <DynamicIcon
+                size="lg"
+                color={disabled ? colors.fadedText40 : colors.bodyText}
+                iconValue={element.icon}
+              />
+            )}
           </StyledNavLink>
         </StyledNavLinkContainer>
       </BaseButtonTooltip>

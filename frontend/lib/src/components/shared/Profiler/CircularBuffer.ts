@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,10 @@ export class CircularBuffer<T> {
    * @param {number} size - The size of the buffer.
    */
   constructor(size: number) {
-    this._buffer = new Array(size)
+    // Using sparse array intentionally - dense arrays would iterate over all
+    // entries in filter/map even before being written to.
+    // oxlint-disable-next-line unicorn/no-new-array
+    this._buffer = new Array<T>(size)
     this._size = size
     this._index = 0
     this._wrappedCount = 0

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -77,12 +77,14 @@ const NUMBER_COLUMN_TEMPLATE: Partial<BaseColumnProps> = {
 
 function getNumberColumn(
   arrowType: ArrowType,
-  params?: NumberColumnParams
+  params?: NumberColumnParams,
+  baseProps?: Partial<BaseColumnProps>
 ): ReturnType<typeof NumberColumn> {
   return NumberColumn({
     ...NUMBER_COLUMN_TEMPLATE,
     arrowType,
     columnTypeOptions: params,
+    ...baseProps,
   } as BaseColumnProps)
 }
 
@@ -114,6 +116,17 @@ describe("NumberColumn", () => {
     const mockCell = mockColumn.getCell("1.123")
     expect(mockCell.contentAlign).toEqual("right")
   })
+
+  it.each(["left", "center", "right"] as const)(
+    "respects custom contentAlignment: %s",
+    alignment => {
+      const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE, undefined, {
+        contentAlignment: alignment,
+      })
+      const mockCell = mockColumn.getCell("1.123")
+      expect(mockCell.contentAlign).toEqual(alignment)
+    }
+  )
 
   it.each([
     [true, 1],
@@ -164,10 +177,8 @@ describe("NumberColumn", () => {
 
     const mockCell = mockColumn.getCell("104")
     expect(mockCell.kind).toEqual(GridCellKind.Number)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((mockCell as any).fixedDecimals).toEqual(0)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect((mockCell as any).allowNegative).toEqual(false)
+    expect((mockCell as NumberCell).fixedDecimals).toEqual(0)
+    expect((mockCell as NumberCell).allowNegative).toEqual(false)
   })
 
   it.each([
@@ -259,8 +270,7 @@ describe("NumberColumn", () => {
     ["--123"],
     ["2,,2"],
     ["12345678987654321"],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ])("%p results in error cell", (input: any) => {
+  ])("%p results in error cell", (input: unknown) => {
     const mockColumn = getNumberColumn(MOCK_FLOAT_ARROW_TYPE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
@@ -312,6 +322,13 @@ describe("NumberColumn", () => {
     [-1234.567, "engineering", "-1.235E3"],
     [1200000, "bytes", "1.2MB"],
     [1234, "bytes", "1.2KB"],
+    // Thousand separator formats
+    [1000, "%,.0f", "1,000"],
+    [25000.25, "$%,.2f", "$25,000.25"],
+    [9876543210, "%,.0f", "9,876,543,210"],
+    [1234567.89, "%'_,.2f", "1_234_567.89"],
+    [1234567, "%_d", "1_234_567"],
+    [1234567.89, "%_.2f", "1_234_567.89"],
   ])(
     "formats %p with sprintf format %p to %p",
     (input: number, format: string, displayValue: string) => {
@@ -326,16 +343,12 @@ describe("NumberColumn", () => {
 
   it.each([
     [10, "%d %d"],
-    [1234567.89, "%'_,.2f"],
     [1234.5678, "%+.2E"],
     [0.000123456, "%+.2E"],
     [-0.000123456, "%+.2E"],
     [255, "%#x"],
     [4096, "%#X"],
     [42, "% d"],
-    [1000, "%,.0f"],
-    [25000.25, "$%,.2f"],
-    [9876543210, "%,.0f"],
   ])(
     "cannot format %p using the sprintf format %p",
     (input: number, format: string) => {

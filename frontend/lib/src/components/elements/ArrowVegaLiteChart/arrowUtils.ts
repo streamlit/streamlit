@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 import {
   DataFrameCellType,
+  DataType,
   getTimezone,
   isDatetimeType,
   isDateType,
@@ -77,10 +78,12 @@ export interface WrappedNamedDataset {
   data: Quiver
 }
 
+/** A single row of data for VegaLite visualization, mapping field names to cell values. */
+type VegaLiteDataRow = Record<string, DataType>
+
 export function getInlineData(
   quiverData: Quiver | null
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): { [field: string]: any }[] | null {
+): VegaLiteDataRow[] | null {
   if (!quiverData || quiverData.dimensions.numDataRows === 0) {
     return null
   }
@@ -90,15 +93,13 @@ export function getInlineData(
 
 export function getDataArrays(
   datasets: WrappedNamedDataset[]
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): { [dataset: string]: any[] } | null {
+): Record<string, VegaLiteDataRow[]> | null {
   const datasetMapping = getDataSets(datasets)
   if (isNullOrUndefined(datasetMapping)) {
     return null
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const datasetArrays: { [dataset: string]: any[] } = {}
+  const datasetArrays: Record<string, VegaLiteDataRow[]> = {}
 
   for (const [name, dataset] of Object.entries(datasetMapping)) {
     datasetArrays[name] = getDataArray(dataset)
@@ -133,13 +134,12 @@ export function getDataSets(
  *
  * @param {Quiver} quiverData - The Quiver data object to extract data from.
  * @param {number} [startIndex=0] - The starting index for data extraction.
- * @returns {Array.<{ [field: string]: any }>} An array of data objects for visualization.
+ * @returns {VegaLiteDataRow[]} An array of data objects for visualization.
  */
 export function getDataArray(
   quiverData: Quiver,
   startIndex = 0
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): { [field: string]: any }[] {
+): VegaLiteDataRow[] {
   if (quiverData.dimensions.numDataRows === 0) {
     return []
   }
@@ -152,15 +152,13 @@ export function getDataArray(
   // If the dataframe is multi-index, the remaining index columns will be ignored.
   const firstIndexColumnType = quiverData.columnTypes[0] ?? undefined
   const hasSupportedIndex =
-    firstIndexColumnType &&
-    firstIndexColumnType.type === DataFrameCellType.INDEX &&
+    firstIndexColumnType?.type === DataFrameCellType.INDEX &&
     (isNumericType(firstIndexColumnType) ||
       isDatetimeType(firstIndexColumnType) ||
       isDateType(firstIndexColumnType))
 
   for (let rowIndex = startIndex; rowIndex < numDataRows; rowIndex++) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const row: { [field: string]: any } = {}
+    const row: VegaLiteDataRow = {}
 
     if (hasSupportedIndex) {
       const { content: indexValue } = quiverData.getCell(rowIndex, 0)

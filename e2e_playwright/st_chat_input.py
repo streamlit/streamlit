@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,13 +31,14 @@ if key is None or key == "inline":
 
 if key is None or key == "disabled_with_file":
     col1, _ = st.columns(2)
-    disabled_value = col1.chat_input(
+    # Note: This input is disabled, so it will always return None.
+    # Tests only verify the disabled UI state.
+    col1.chat_input(
         "Chat input (in column, disabled)",
         accept_file=True,
         disabled=True,
         key="disabled_with_file",
     )
-    st.write("disabled_with_file - value:", disabled_value)
 
 if key is None or key == "callback":
     if st.button("Set Value"):
@@ -77,14 +78,22 @@ if key is None or key == "multiple_files":
     st.write("multiple_files - value:", multiple_files_value)
 
 if key is None or key == "width_300":
-    width_300_value = st.container().chat_input(
-        "Chat input (width=300px)", width=300, key="width_300"
-    )
+    st.container().chat_input("Chat input (width=300px)", width=300, key="width_300")
 
 if key is None or key == "width_stretch":
-    width_stretch_value = st.container().chat_input(
+    st.container().chat_input(
         "Chat input (width='stretch')", width="stretch", key="width_stretch"
     )
+
+if key is None or key == "height_200":
+    st.container().chat_input("Chat input (height=200px)", height=200, key="height_200")
+
+if key is None or key == "height_stretch":
+    # Use a container with defined height so stretch can fill it
+    with st.container(height=300, key="height_stretch_container"):
+        st.chat_input(
+            "Chat input (height='stretch')", height="stretch", key="height_stretch"
+        )
 
 if key is None or key == "bottom_max_chars":
     bottom_value = st.chat_input(
@@ -104,13 +113,14 @@ if key is None or key == "directory":
     st.write("directory - value:", directory_value)
 
 if key is None or key == "directory_disabled":
-    directory_disabled_value = st.container().chat_input(
+    # Note: This input is disabled, so it will always return None.
+    # Tests only verify the disabled UI state.
+    st.container().chat_input(
         "Chat input (directory upload disabled)",
         accept_file="directory",
         disabled=True,
         key="directory_disabled",
     )
-    st.write("directory_disabled - value:", directory_disabled_value)
 
 if key is None or key == "dynamic":
     st.markdown("Dynamic chat input:")
@@ -185,21 +195,14 @@ if key is None or key == "audio_only":
             st.audio(audio_only_value.audio)
 
 if key is None or key == "audio_disabled":
-    audio_disabled_value = st.container().chat_input(
+    # Note: This input is disabled, so audio_disabled_value will always be None.
+    # The st.write output is intentionally omitted since tests only verify the disabled UI state.
+    st.container().chat_input(
         "Chat input (audio disabled)",
         accept_audio=True,
         disabled=True,
         key="audio_disabled",
     )
-
-    if audio_disabled_value:
-        st.write(f"audio_disabled - text: {audio_disabled_value.text}")
-        st.write(
-            f"audio_disabled - audio: {audio_disabled_value.audio.name if audio_disabled_value.audio else None}"
-        )
-
-        if audio_disabled_value.audio:
-            st.audio(audio_disabled_value.audio)
 
 if key is None or key == "audio_column":
     st.subheader("Audio in Columns")

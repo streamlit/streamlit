@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { Arrow, Arrow as ArrowProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe,
+  Dataframe as DataframeProto,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 
@@ -51,18 +53,12 @@ export const ReadOnlyGrid = ({
   return (
     <DataFrame
       element={
-        new ArrowProto({
-          // Use container width is deprecated, the
-          // more relevant attribute is the width config below:
-          useContainerWidth: true,
+        new DataframeProto({
           // Enforces read-only mode:
-          editingMode: Arrow.EditingMode.READ_ONLY,
+          editingMode: Dataframe.EditingMode.READ_ONLY,
           disabled: true,
           // Data is provided via the data property below:
-          data: undefined,
-          styler: null,
-          width: undefined,
-          height: height ?? null,
+          arrowData: null,
           id: "",
           columns: "",
           formId: "",

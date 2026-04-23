@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +18,10 @@ from random import random
 import streamlit as st
 from streamlit import runtime
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
-CAT_IMAGE = TEST_ASSETS_DIR / "cat.jpg"
+STATIC_DIR = Path(__file__).parent / "static"
+CAT_IMAGE = STATIC_DIR / "test-cat.jpg"
 
 st.download_button(
     "Download button label",
@@ -186,3 +186,11 @@ else:
         key="dynamic_download_button_with_key",
     )
     st.write("Clicked initial button:", clicked)
+
+st.download_button(
+    "Emoji Right",
+    data="Hello world!",
+    icon="⬇️",
+    icon_position="right",
+    key="download_emoji_right",
+)

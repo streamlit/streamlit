@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 from collections.abc import Callable, Iterable
 from copy import deepcopy
 from typing import (
@@ -50,12 +51,12 @@ from streamlit.elements.balloons import BalloonsMixin
 from streamlit.elements.bokeh_chart import BokehMixin
 from streamlit.elements.code import CodeMixin
 from streamlit.elements.deck_gl_json_chart import PydeckMixin
-from streamlit.elements.doc_string import HelpMixin
 from streamlit.elements.empty import EmptyMixin
 from streamlit.elements.exception import ExceptionMixin
 from streamlit.elements.form import FormMixin
 from streamlit.elements.graphviz_chart import GraphvizMixin
 from streamlit.elements.heading import HeadingMixin
+from streamlit.elements.help import HelpMixin
 from streamlit.elements.html import HtmlMixin
 from streamlit.elements.iframe import IframeMixin
 from streamlit.elements.image import ImageMixin
@@ -79,6 +80,7 @@ from streamlit.elements.pyplot import PyplotMixin
 from streamlit.elements.snow import SnowMixin
 from streamlit.elements.space import SpaceMixin
 from streamlit.elements.spinner import SpinnerMixin
+from streamlit.elements.table import TableMixin
 from streamlit.elements.text import TextMixin
 from streamlit.elements.toast import ToastMixin
 from streamlit.elements.vega_charts import VegaChartsMixin
@@ -90,7 +92,9 @@ from streamlit.elements.widgets.chat import ChatMixin
 from streamlit.elements.widgets.checkbox import CheckboxMixin
 from streamlit.elements.widgets.color_picker import ColorPickerMixin
 from streamlit.elements.widgets.data_editor import DataEditorMixin
+from streamlit.elements.widgets.feedback import FeedbackMixin
 from streamlit.elements.widgets.file_uploader import FileUploaderMixin
+from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
 from streamlit.elements.widgets.radio import RadioMixin
@@ -100,8 +104,9 @@ from streamlit.elements.widgets.slider import SliderMixin
 from streamlit.elements.widgets.text_widgets import TextWidgetsMixin
 from streamlit.elements.widgets.time_widgets import TimeWidgetsMixin
 from streamlit.elements.write import WriteMixin
-from streamlit.errors import StreamlitAPIException
-from streamlit.proto import Block_pb2, ForwardMsg_pb2
+from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.proto import Block_pb2
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
@@ -115,6 +120,7 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
     from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.elements.lib.layout_utils import LayoutConfig
+    from streamlit.proto.Element_pb2 import Element as ElementProto
 
 MAX_DELTA_BYTES: Final[int] = 14 * 1024 * 1024  # 14MB
 
@@ -123,6 +129,7 @@ Value = TypeVar("Value")
 # Type aliases for Ancestor Block Types
 BlockType: TypeAlias = str
 AncestorBlockTypes: TypeAlias = Iterable[BlockType]
+ForwardMsgCreator: TypeAlias = Callable[[], ForwardMsg]
 
 
 _use_warning_has_been_displayed: bool = False
@@ -185,6 +192,7 @@ class DeltaGenerator(
     ColorPickerMixin,
     EmptyMixin,
     ExceptionMixin,
+    FeedbackMixin,
     FileUploaderMixin,
     FormMixin,
     GraphvizMixin,
@@ -198,6 +206,7 @@ class DeltaGenerator(
     MapMixin,
     MediaMixin,
     MetricMixin,
+    MenuButtonMixin,
     MultiSelectMixin,
     NumberInputMixin,
     PdfMixin,
@@ -212,6 +221,7 @@ class DeltaGenerator(
     SnowMixin,
     SpaceMixin,
     SpinnerMixin,
+    TableMixin,
     JsonMixin,
     TextMixin,
     TextWidgetsMixin,
@@ -428,8 +438,15 @@ class DeltaGenerator(
         return self._provided_cursor is None
 
     @property
-    def id(self) -> str:
+    def _id(self) -> str:
         return str(id(self))
+
+    def _get_transient_cursor(self) -> cursor.Cursor:
+        cursor = self._active_dg._cursor
+        if cursor is None:
+            raise NoSessionContext("Cursor is not set")
+
+        return cursor.get_transient_cursor()
 
     def _get_delta_path_str(self) -> str:
         """Returns the element's delta path as a string like "[0, 2, 3, 1]".
@@ -486,7 +503,7 @@ class DeltaGenerator(
         _maybe_print_fragment_callback_warning()
 
         # Copy the marshalled proto into the overall msg proto
-        msg = ForwardMsg_pb2.ForwardMsg()
+        msg = ForwardMsg()
         msg_el_proto = getattr(msg.delta.new_element, delta_type)
         msg_el_proto.CopyFrom(element_proto)
 
@@ -542,9 +559,9 @@ class DeltaGenerator(
         caching.save_element_message(
             delta_type,
             element_proto,
-            invoked_dg_id=self.id,
-            used_dg_id=dg.id,
-            returned_dg_id=output_dg.id,
+            invoked_dg_id=self._id,
+            used_dg_id=dg._id,
+            returned_dg_id=output_dg._id,
             layout_config=layout_config,
         )
 
@@ -567,7 +584,7 @@ class DeltaGenerator(
         if dg._root_container is None or dg._cursor is None:
             return dg
 
-        msg = ForwardMsg_pb2.ForwardMsg()
+        msg = ForwardMsg()
         msg.metadata.delta_path[:] = dg._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
 
@@ -603,12 +620,74 @@ class DeltaGenerator(
 
         caching.save_block_message(
             block_proto,
-            invoked_dg_id=self.id,
-            used_dg_id=dg.id,
-            returned_dg_id=block_dg.id,
+            invoked_dg_id=self._id,
+            used_dg_id=dg._id,
+            returned_dg_id=block_dg._id,
         )
 
         return block_dg
+
+    def _transient(
+        self,
+        element_proto: ElementProto,
+        layout_config: LayoutConfig | None = None,
+    ) -> tuple[ForwardMsgCreator, ForwardMsgCreator]:
+        """Provides the factory functions for creating and clearing transient elements.
+        It preserves the delta path, transient index, and the set of transient elements.
+
+        Returns a tuple of two functions:
+        - create_transient_element: Creates the new transient element.
+        - clear_transient_element: Clears the transient element.
+        """
+        transient_cursor = self._get_transient_cursor()
+        delta_path = transient_cursor.delta_path
+        transient_index = transient_cursor.transient_index
+        transient_elements = transient_cursor.transient_elements
+
+        if layout_config:
+            if layout_config.height is not None:
+                element_proto.height_config.CopyFrom(
+                    get_height_config(layout_config.height)
+                )
+            if layout_config.width is not None:
+                element_proto.width_config.CopyFrom(
+                    get_width_config(layout_config.width)
+                )
+
+        # Revalidate the use of the lock here in the event
+        # better support threading/multiprocessing in Streamlit
+        transient_lock = threading.Lock()
+
+        def create_transient_element() -> ForwardMsg:
+            with transient_lock:
+                transient_elements[transient_index] = element_proto
+
+                create_msg = ForwardMsg()
+                create_msg.metadata.delta_path[:] = delta_path
+                create_msg.metadata.cacheable = False
+                # Make sure the transient message is set as it will
+                # not be set if there are no transient elements
+                create_msg.delta.new_transient.SetInParent()
+                for e in transient_elements:
+                    create_msg.delta.new_transient.elements.add().CopyFrom(e)
+
+            return create_msg
+
+        def clear_transient_element() -> ForwardMsg:
+            with transient_lock:
+                if transient_index in transient_elements:
+                    del transient_elements[transient_index]
+
+                clear_msg = ForwardMsg()
+                clear_msg.metadata.delta_path[:] = delta_path
+                clear_msg.metadata.cacheable = False
+                clear_msg.delta.new_transient.SetInParent()
+                for e in transient_elements:
+                    clear_msg.delta.new_transient.elements.add().CopyFrom(e)
+
+            return clear_msg
+
+        return create_transient_element, clear_transient_element
 
 
 def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:

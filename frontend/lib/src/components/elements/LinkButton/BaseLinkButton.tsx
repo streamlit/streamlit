@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { forwardRef, memo, ReactElement } from "react"
+import { forwardRef, memo, ReactElement } from "react"
 
 import {
   BaseButtonKind,
@@ -63,6 +63,5 @@ const BaseLinkButton = forwardRef<
 })
 
 BaseLinkButton.displayName = "BaseLinkButton"
-export type BaseButtonProps = BaseLinkButtonPropsT
-export { BaseButtonKind, BaseButtonSize }
+
 export default memo(BaseLinkButton)

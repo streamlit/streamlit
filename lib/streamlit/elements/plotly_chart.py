@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,8 +59,8 @@ from streamlit.util import AttributeDictionary
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
-    import matplotlib as mpl
     import plotly.graph_objs as go
+    from matplotlib.figure import Figure as MatplotlibFigure
     from plotly.basedatatypes import BaseFigure
 
     from streamlit.delta_generator import DeltaGenerator
@@ -80,7 +80,7 @@ FigureOrData: TypeAlias = Union[
     # align with the docstring.
     dict[str, _AtomicFigureOrData],
     "BaseFigure",
-    "mpl.figure.Figure",
+    "MatplotlibFigure",
 ]
 
 SelectionMode: TypeAlias = Literal["lasso", "points", "box"]
@@ -390,7 +390,7 @@ class PlotlyMixin:
             "box",
             "lasso",
         ),
-        **kwargs: Any,
+        config: dict[str, Any] | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -409,7 +409,7 @@ class PlotlyMixin:
             "box",
             "lasso",
         ),
-        **kwargs: Any,
+        config: dict[str, Any] | None = None,
     ) -> PlotlyState: ...
 
     @gather_metrics("plotly_chart")
@@ -429,16 +429,13 @@ class PlotlyMixin:
             "lasso",
         ),
         config: dict[str, Any] | None = None,
-        **kwargs: Any,
     ) -> DeltaGenerator | PlotlyState:
         """Display an interactive Plotly chart.
 
         `Plotly <https://plot.ly/python>`_ is a charting library for Python.
-        The arguments to this function closely follow the ones for Plotly's
-        ``plot()`` function.
 
-        To show Plotly charts in Streamlit, call ``st.plotly_chart`` wherever
-        you would call Plotly's ``py.plot`` or ``py.iplot``.
+        To show Plotly charts in Streamlit, pass a Plotly ``Figure`` or
+        ``Data`` object to ``st.plotly_chart``.
 
         .. Important::
             You must install ``plotly>=4.0.0`` to use this command. Your app's
@@ -520,14 +517,19 @@ class PlotlyMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore" or "rerun" or callable
             How the figure should respond to user selection events. This
@@ -566,18 +568,6 @@ class PlotlyMixin:
             Plotly's ``show()`` function. For more information about Plotly
             configuration options, see Plotly's documentation on `Configuration
             in Python <https://plotly.com/python/configuration-options/>`_.
-
-        **kwargs
-            Additional arguments accepted by Plotly's ``plot()`` function.
-
-            This supports ``config``, a dictionary of Plotly configuration
-            options. For more information about Plotly configuration options,
-            see Plotly's documentation on `Configuration in Python
-            <https://plotly.com/python/configuration-options/>`_.
-
-            .. deprecated::
-               ``**kwargs`` are deprecated and will be removed in a future
-               release. Use ``config`` instead.
 
         Returns
         -------
@@ -669,22 +659,14 @@ class PlotlyMixin:
         # for their main parameter. I don't like the name, but it's best to
         # keep it in sync with what Plotly calls it.
 
-        if kwargs:
-            show_deprecation_warning(
-                "Variable keyword arguments for `st.plotly_chart` have been "
-                "deprecated and will be removed in a future release. Use the "
-                "`config` argument instead to specify Plotly configuration "
-                "options."
-            )
-
-        if theme not in ["streamlit", None]:
+        if theme not in {"streamlit", None}:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
                 "theme=”streamlit” or theme=None to fallback to the default "
                 "library theme."
             )
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."

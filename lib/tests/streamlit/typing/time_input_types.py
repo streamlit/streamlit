@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -58,3 +58,13 @@ if TYPE_CHECKING:
     assert_type(time_input("label", kwargs={"k": "v"}), time)
     assert_type(time_input("label", width="stretch"), time)
     assert_type(time_input("label", width=100), time)
+
+    # Test with bind parameter
+    assert_type(
+        time_input("label", time(12, 0), key="my_key", bind="query-params"), time
+    )
+    assert_type(
+        time_input("label", value=None, key="my_key", bind="query-params"),
+        time | None,
+    )
+    assert_type(time_input("label", time(12, 0), key="my_key", bind=None), time)

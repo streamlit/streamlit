@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import unittest
 import pytest
 
 from streamlit.elements.lib.column_types import (
+    AudioColumn,
     BarChartColumn,
     CheckboxColumn,
     Column,
@@ -34,6 +35,7 @@ from streamlit.elements.lib.column_types import (
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    VideoColumn,
     _validate_chart_color,
 )
 from streamlit.elements.lib.dicttools import remove_none_values
@@ -470,6 +472,40 @@ class ColumnTypesTest(unittest.TestCase):
             "type_config": {"type": "image"},
         }, "Should have all the properties defined."
 
+    def test_audio_column(self):
+        """Test AudioColumn creation."""
+
+        assert remove_none_values(AudioColumn()) == {
+            "type_config": {"type": "audio"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            AudioColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "audio"},
+        }, "Should have all the properties defined."
+
+    def test_video_column(self):
+        """Test VideoColumn creation."""
+
+        assert remove_none_values(VideoColumn()) == {
+            "type_config": {"type": "video"}
+        }, "Should only have the type defined and nothing else."
+
+        assert remove_none_values(
+            VideoColumn("Col1", width="small", help="Help text", pinned=True)
+        ) == {
+            "label": "Col1",
+            "width": "small",
+            "help": "Help text",
+            "pinned": True,
+            "type_config": {"type": "video"},
+        }, "Should have all the properties defined."
+
     def test_json_column(self):
         """Test JsonColumn creation."""
 
@@ -621,3 +657,37 @@ def test__validate_chart_color_invalid(color: str) -> None:
     """Validate that unsupported names and non CSS-like strings raise StreamlitValueError."""
     with pytest.raises(StreamlitValueError):
         _validate_chart_color(color)
+
+
+@pytest.mark.parametrize(
+    "alignment",
+    ["left", "center", "right"],
+)
+def test_column_alignment(alignment: str) -> None:
+    """Test that alignment parameter is correctly set on columns that support it."""
+    # Test generic Column
+    result = Column(alignment=alignment)
+    assert result["alignment"] == alignment
+
+    # Test typed columns that support alignment
+    assert TextColumn(alignment=alignment)["alignment"] == alignment
+    assert NumberColumn(alignment=alignment)["alignment"] == alignment
+    assert CheckboxColumn(alignment=alignment)["alignment"] == alignment
+    assert DateColumn(alignment=alignment)["alignment"] == alignment
+    assert TimeColumn(alignment=alignment)["alignment"] == alignment
+    assert DatetimeColumn(alignment=alignment)["alignment"] == alignment
+    assert LinkColumn(alignment=alignment)["alignment"] == alignment
+    assert ImageColumn(alignment=alignment)["alignment"] == alignment
+    assert AudioColumn(alignment=alignment)["alignment"] == alignment
+    assert VideoColumn(alignment=alignment)["alignment"] == alignment
+    assert JsonColumn(alignment=alignment)["alignment"] == alignment
+
+
+def test_column_alignment_none_by_default() -> None:
+    """Test that alignment is None by default and not included in output."""
+    # When alignment is None (default), it should not appear in the result
+    result = remove_none_values(Column())
+    assert "alignment" not in result
+
+    result = remove_none_values(TextColumn())
+    assert "alignment" not in result

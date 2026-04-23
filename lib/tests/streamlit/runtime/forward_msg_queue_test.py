@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ ADD_BLOCK_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0
 
 DF_DELTA_MSG = ForwardMsg()
 arrow.marshall(
-    DF_DELTA_MSG.delta.new_element.arrow_data_frame,
+    DF_DELTA_MSG.delta.new_element.dataframe.arrow_data,
     {"col1": [0, 1, 2], "col2": [10, 11, 12]},
 )
 DF_DELTA_MSG.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (), 0)

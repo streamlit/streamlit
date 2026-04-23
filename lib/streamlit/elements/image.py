@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,13 +33,14 @@ from streamlit.elements.lib.image_utils import (
     ImageOrImageList,
     marshall_images,
 )
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Width
 
 UseColumnWith: TypeAlias = Literal["auto", "always", "never"] | bool | None
 
@@ -59,6 +60,7 @@ class ImageMixin:
         output_format: ImageFormatOrAuto = "auto",
         *,
         use_container_width: bool | None = None,
+        link: str | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -67,7 +69,9 @@ class ImageMixin:
         image : numpy.ndarray, BytesIO, str, Path, or list of these
             The image to display. This can be one of the following:
 
-            - A URL (string) for a hosted image.
+            - A URL (string) for a hosted image. Also supports
+              ``/app/static/<asset>`` URLs for files served via
+              `static file serving <https://docs.streamlit.io/develop/concepts/configuration/serving-static-files>`_.
             - A path to a local image file. The path can be a ``str``
               or ``Path`` object. Paths can be absolute or relative to the
               working directory (where you execute ``streamlit run``).
@@ -151,8 +155,16 @@ class ImageMixin:
                 ``width="stretch"``. For ``use_container_width=False``, use
                 ``width="content"``.
 
-        Example
-        -------
+        link : str or None
+            The URL to open when a user clicks on the image. This can be an
+            external URL like ``"https://streamlit.io"`` or a relative path
+            like ``"/my_page"``. If ``link`` is ``None`` (default), the
+            image will not include a hyperlink.
+
+            This parameter is only supported when displaying a single image.
+
+        Examples
+        --------
         >>> import streamlit as st
         >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
 
@@ -199,8 +211,7 @@ class ImageMixin:
             else:
                 width = "content"
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         image_list_proto = ImageListProto()
         marshall_images(
@@ -213,6 +224,16 @@ class ImageMixin:
             channels,
             output_format,
         )
+
+        if link:
+            # Validate that link is only used with a single image
+            if len(image_list_proto.imgs) > 1:
+                raise StreamlitAPIException(
+                    "The `link` parameter is only supported when displaying a single image. "
+                    f"You passed {len(image_list_proto.imgs)} images."
+                )
+            image_list_proto.link = link
+
         return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 
     @property

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+import type { AxiosProgressEvent } from "axios"
 
 import { IAppPage } from "@streamlit/protobuf"
 
@@ -120,8 +122,7 @@ export interface StreamlitEndpoints {
     fileUploadUrl: string,
     file: File,
     sessionId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    onUploadProgress?: (progressEvent: any) => void,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
     signal?: AbortSignal
   ): Promise<void>
 

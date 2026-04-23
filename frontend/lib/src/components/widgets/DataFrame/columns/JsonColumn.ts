@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,8 +52,7 @@ function JsonColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/code_blocks:",
     sortMode: "default",
     isEditable: false, // Json columns are read-only.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    getCell(data?: any): GridCell {
+    getCell(data?: unknown): GridCell {
       try {
         const displayValue = notNullOrUndefined(data)
           ? removeLineBreaks(toJsonString(data))

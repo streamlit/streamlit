@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,9 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "BlockProto";
-
-import "streamlit/proto/WidthConfig.proto";
-import "streamlit/proto/HeightConfig.proto";
 import "streamlit/proto/GapSize.proto";
+import "streamlit/proto/HeightConfig.proto";
+import "streamlit/proto/WidthConfig.proto";
 
 message Block {
   oneof type {
@@ -42,12 +39,12 @@ message Block {
   optional string id = 12;
   optional streamlit.HeightConfig height_config = 14;
   optional streamlit.WidthConfig width_config = 15;
+  optional bool autoscroll = 16;
 
   message Vertical {
     bool border = 1;
-    // DEPRECATED: We use height_config on the top-level which is shared.
-    // with other Block types.
-    uint32 height = 2 [deprecated = true];
+
+    reserved 2;
   }
 
   message Horizontal {
@@ -89,9 +86,6 @@ message Block {
   message Column {
     double weight = 1;
 
-    // Deprecated. Use gap_size
-    string gap = 2 [deprecated = true];
-
     enum VerticalAlignment {
       TOP = 0;
       CENTER = 1;
@@ -101,12 +95,17 @@ message Block {
     bool show_border = 4;
 
     optional streamlit.GapConfig gap_config = 5;
+
+    reserved 2;
   }
 
   message Expandable {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
+    // ID for dynamic expanders. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    optional string id = 4;
   }
 
   message Dialog {
@@ -123,6 +122,9 @@ message Block {
 
     // If id is set, dismissal of the dialog will trigger a rerun.
     string id = 5;
+
+    // Optional icon shown next to the dialog title.
+    string icon = 6;
   }
 
   message Form {
@@ -134,6 +136,11 @@ message Block {
 
   message TabContainer {
     int32 default_tab_index = 1;
+    // Widget ID for dynamic tabs. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    // When absent, tabs may still have a block-level id for CSS key
+    // styling but should not trigger reruns on tab change.
+    optional string id = 2;
   }
 
   message Tab {
@@ -142,14 +149,20 @@ message Block {
 
   message Popover {
     string label = 1;
-    // DEPRECATED: We use widthConfig on the top-level which is shared.
-    bool use_container_width = 2 [deprecated = true];
     string help = 3;
     bool disabled = 4;
     string icon = 5;
     string type = 6;
-  }
+    // Initial open state (used with on_change).
+    optional bool open = 7;
+    // Widget ID for dynamic popovers. Only set when on_change="rerun",
+    // signaling the frontend to treat this as a stateful widget.
+    // When absent, the popover may still have a block-level id for CSS
+    // key styling but should not trigger reruns on toggle.
+    optional string id = 8;
 
+    reserved 2;
+  }
 
   message ChatMessage {
     enum AvatarType {
@@ -163,5 +176,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 14
+  // Next ID: 17
 }

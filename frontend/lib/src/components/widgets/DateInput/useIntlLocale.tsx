@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +16,13 @@
 
 import { useMemo } from "react"
 
-import type { Locale } from "date-fns"
+import type { Day, Locale } from "date-fns"
 import { enUS } from "date-fns/locale/en-US"
 
-/**
- * 1 = Monday, 7 = Sunday
- * @see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale/getWeekInfo
- */
-type IntlDayInteger = 1 | 2 | 3 | 4 | 5 | 6 | 7
-
 type IntlWeekInfo = {
-  firstDay: IntlDayInteger
-  weekend: IntlDayInteger[]
-  minimalDays: IntlDayInteger
+  firstDay: number
+  weekend: number[]
+  minimalDays?: number
 }
 
 /**
@@ -40,15 +34,15 @@ type IntlWeekInfo = {
  * @param {Intl.Locale} intlLocale - The locale for which to retrieve week
  * information.
  */
+/** Extended Intl.Locale with weekInfo support (not yet in all TS lib versions). */
+type IntlLocaleWithWeekInfo = Intl.Locale & {
+  getWeekInfo?: () => IntlWeekInfo
+  weekInfo?: IntlWeekInfo
+}
+
 const getWeekInfo = (intlLocale: Intl.Locale): IntlWeekInfo | null => {
-  return (
-    // Casting is necessary here since the types are not yet up-to-date
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (intlLocale as any)?.getWeekInfo?.() ??
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (intlLocale as any)?.weekInfo ??
-    null
-  )
+  const locale = intlLocale as IntlLocaleWithWeekInfo
+  return locale?.getWeekInfo?.() ?? locale?.weekInfo ?? null
 }
 
 /**
@@ -66,8 +60,7 @@ export const useIntlLocale = (locale: string): Locale => {
   const weekInfo = useMemo(() => {
     try {
       return getWeekInfo(new Intl.Locale(locale))
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    } catch (e) {
+    } catch {
       return getWeekInfo(new Intl.Locale("en-US"))
     }
   }, [locale])
@@ -81,7 +74,10 @@ export const useIntlLocale = (locale: string): Locale => {
    * Intl API starts with Monday on 1, but BaseWeb starts with Sunday on 0
    * @see https://date-fns.org/v2.30.0/docs/Locale
    */
-  const firstDay = weekInfo.firstDay === 7 ? 0 : weekInfo.firstDay
+  const normalizedFirstDay =
+    weekInfo.firstDay >= 1 && weekInfo.firstDay <= 7 ? weekInfo.firstDay : 7
+  const firstDay: Day =
+    normalizedFirstDay === 7 ? 0 : (normalizedFirstDay as Day)
 
   return {
     ...enUS,

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,25 +28,24 @@ import {
   LOG,
 } from "./StaticConnection"
 
+// vi.mock must be at top level (hoisted by Vitest)
+vi.mock(import("./utils"), async importOriginal => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    localStorageAvailable: vi.fn().mockReturnValue(true),
+  }
+})
+
 describe("StaticConnection", () => {
   let logErrorSpy: MockInstance
-
-  beforeAll(() => {
-    vi.mock(import("./utils"), async importOriginal => {
-      const actual = await importOriginal()
-      return {
-        ...actual,
-        localStorageAvailable: vi.fn().mockReturnValue(true),
-      }
-    })
-  })
 
   beforeEach(() => {
     logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})
   })
 
   afterEach(() => {
-    vi.clearAllMocks()
+    vi.restoreAllMocks()
   })
 
   describe("getStaticConfig", () => {

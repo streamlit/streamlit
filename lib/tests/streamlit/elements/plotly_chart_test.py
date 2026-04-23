@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,11 +36,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
 
-        # Check that deprecated properties are empty
-        assert el.plotly_chart.figure.spec == ""
-        assert el.plotly_chart.figure.config == ""
-        assert not el.plotly_chart.HasField("url")
-
     @parameterized.expand(
         [
             ("streamlit", "streamlit"),
@@ -77,7 +72,6 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.plotly_chart(data)
 
         el = self.get_delta_from_queue().new_element
-        assert not el.plotly_chart.HasField("url")
         assert el.plotly_chart.spec != ""
         assert el.plotly_chart.config != ""
 
@@ -88,7 +82,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
         data = [trace0]
 
-        @st.cache_data
+        @st.cache_data(show_spinner=False)
         def cache_element():
             st.plotly_chart(data)
 
@@ -210,7 +204,7 @@ class PyDeckTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.plotly_chart(data, on_select="rerun"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -264,19 +258,17 @@ class PyDeckTest(DeltaGeneratorTestCase):
         assert '"displayModeBar": false' in el.plotly_chart.config
         assert '"responsive": true' in el.plotly_chart.config
 
-    def test_show_deprecation_warning_for_kwargs(self):
+    def test_kwargs_raises_type_error(self):
+        """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
         import plotly.graph_objs as go
 
         trace0 = go.Scatter(x=[1, 2, 3, 4], y=[10, 15, 13, 17])
         data = [trace0]
 
-        st.plotly_chart(data, sharing="streamlit")
-        # Get the second to last element, which should be deprecation warning
-        el = self.get_delta_from_queue(-2).new_element
-        assert (
-            "have been deprecated and will be removed in a future release"
-            in el.alert.body
-        )
+        # Passing kwargs that were previously supported (like `sharing`) should now
+        # raise a TypeError since **kwargs support was removed.
+        with pytest.raises(TypeError):
+            st.plotly_chart(data, sharing="streamlit")  # type: ignore[call-overload]
 
 
 class PlotlyChartWidthTest(DeltaGeneratorTestCase):

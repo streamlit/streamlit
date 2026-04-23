@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from __future__ import annotations
 import math
 from typing import TYPE_CHECKING, TypeAlias, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Progress_pb2 import Progress as ProgressProto
 from streamlit.string_util import clean_text
@@ -37,18 +37,18 @@ def _check_float_between(value: float, low: float = 0.0, high: float = 1.0) -> b
     Checks given value is 'between' the bounds of [low, high],
     considering close values around bounds are acceptable input.
 
+    Parameters
+    ----------
+    value : float
+    low : float
+    high : float
+
     Notes
     -----
     This check is required for handling values that are slightly above or below the
     acceptable range, for example -0.0000000000021, 1.0000000000000013.
     These values are little off the conventional 0.0 <= x <= 1.0 condition
     due to floating point operations, but should still be considered acceptable input.
-
-    Parameters
-    ----------
-    value : float
-    low : float
-    high : float
 
     """
     return (
@@ -111,9 +111,9 @@ class ProgressMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -131,8 +131,8 @@ class ProgressMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         Here is an example of a progress bar increasing over time and disappearing when it reaches completion:
 
         >>> import streamlit as st
@@ -161,8 +161,7 @@ class ProgressMixin:
         if text is not None:
             progress_proto.text = text
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         return self.dg._enqueue("progress", progress_proto, layout_config=layout_config)
 

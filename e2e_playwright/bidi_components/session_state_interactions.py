@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 
 
 import streamlit as st
-from streamlit.components.v2.bidi_component import BidiComponentResult
+from streamlit.components.v2.bidi_component import ComponentResult
 
 interactive_text_input_definition = st.components.v2.component(
     "interactive_text_input",
@@ -46,9 +46,7 @@ interactive_text_input_definition = st.components.v2.component(
 )
 
 
-def interactive_text_input(
-    label: str, initial_value: str, key: str
-) -> BidiComponentResult:
+def interactive_text_input(label: str, initial_value: str, key: str) -> ComponentResult:
     component_state = st.session_state.get(key, {})
     data = {
         "label": label,

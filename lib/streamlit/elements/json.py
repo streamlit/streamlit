@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,22 +19,22 @@ import types
 from collections import ChainMap, UserDict
 from typing import TYPE_CHECKING, Any, cast
 
-from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
-    WidthWithoutContent,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Json_pb2 import Json as JsonProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.type_util import (
+    dump_pydantic_sequence,
     is_custom_dict,
     is_list_like,
     is_namedtuple,
     is_pydantic_model,
+    is_sequence_of_pydantic_models,
 )
+from streamlit.user_info import UserInfoProxy
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import WidthWithoutContent
 
 
 def _ensure_serialization(o: object) -> str | list[Any]:
@@ -85,8 +85,8 @@ class JsonMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.json(
@@ -109,7 +109,10 @@ class JsonMixin:
         """
 
         if is_custom_dict(body):
+            is_user = isinstance(body, UserInfoProxy)
             body = body.to_dict()  # ty: ignore[unresolved-attribute]
+            if is_user and "tokens" in body:
+                body["tokens"] = dict.fromkeys(body["tokens"], "***")
 
         if is_namedtuple(body):
             body = body._asdict()  # ty: ignore[unresolved-attribute]
@@ -120,7 +123,14 @@ class JsonMixin:
             body = dict(body)  # type: ignore
 
         if is_list_like(body):
-            body = list(body)  # ty: ignore[invalid-argument-type]
+            if is_sequence_of_pydantic_models(body):
+                try:
+                    body = dump_pydantic_sequence(body)
+                except AttributeError:
+                    # Fallback to list(body) if it contains non-Pydantic models:
+                    body = list(body)  # ty: ignore[invalid-argument-type]
+            else:
+                body = list(body)  # ty: ignore[invalid-argument-type]
 
         if not isinstance(body, str):
             try:
@@ -147,8 +157,7 @@ class JsonMixin:
                 ", must be bool or int."
             )
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         return self.dg._enqueue("json", json_proto, layout_config=layout_config)
 

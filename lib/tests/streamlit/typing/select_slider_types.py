@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,3 +59,12 @@ if TYPE_CHECKING:
     # tuple[object, object] since value: Sequence[int] is a subtype of object.
     # Technically this return type isn't wrong (tuple[object, object] is a subtype
     # of object), it's just not as specific as we'd like.
+
+    # Check bind parameter
+    assert_type(select_slider("foo", [1, 2, 3], bind="query-params"), int)
+    assert_type(select_slider("foo", ["a", "b", "c"], bind="query-params"), str)
+    assert_type(select_slider("foo", [1, 2, 3], bind=None), int)
+    assert_type(
+        select_slider("foo", [1, 2, 3], value=(1, 3), bind="query-params"),
+        tuple[int, int],
+    )

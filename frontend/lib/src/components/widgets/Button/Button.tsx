@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useCallback } from "react"
+import { memo, ReactElement, useCallback } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -22,9 +22,10 @@ import { Box } from "~lib/components/shared/Base/styled-components"
 import BaseButton, {
   BaseButtonKind,
   BaseButtonSize,
-  BaseButtonTooltip,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
+import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
 import { useRegisterShortcut } from "~lib/hooks/useRegisterShortcut"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -77,6 +78,7 @@ function Button(props: Props): ReactElement {
         >
           <DynamicButtonLabel
             icon={element.icon}
+            iconPosition={mapProtoIconPosition(element.iconPosition)}
             label={element.label}
             shortcut={shortcut}
           />

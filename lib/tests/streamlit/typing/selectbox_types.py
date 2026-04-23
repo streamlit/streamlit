@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -67,4 +67,17 @@ if TYPE_CHECKING:
             accept_new_options=accept_new_options,
         ),
         Alfred | str | None,
+    )
+    assert_type(selectbox("foo", ["foo", "bar"], filter_mode="contains"), str)
+    assert_type(selectbox("foo", ["foo", "bar"], filter_mode=None), str)
+    assert_type(
+        selectbox("foo", ["foo", "bar"], index=None, filter_mode=None), str | None
+    )
+
+    # Check bind parameter
+    assert_type(selectbox("foo", ["a", "b"], bind="query-params"), str)
+    assert_type(selectbox("foo", [1, 2, 3], bind="query-params"), int)
+    assert_type(selectbox("foo", ["a", "b"], bind=None), str)
+    assert_type(
+        selectbox("foo", ["a", "b"], index=None, bind="query-params"), str | None
     )

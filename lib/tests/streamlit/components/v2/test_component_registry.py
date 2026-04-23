@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -319,15 +319,15 @@ def temp_test_files() -> dict:
 
     # Create test files
     js_path = os.path.join(temp_dir.name, "index.js")
-    with open(js_path, "w") as f:
+    with open(js_path, "w", encoding="utf-8") as f:
         f.write("console.log('test');")
 
     html_path = os.path.join(temp_dir.name, "index.html")
-    with open(html_path, "w") as f:
+    with open(html_path, "w", encoding="utf-8") as f:
         f.write("<div>Test</div>")
 
     css_path = os.path.join(temp_dir.name, "styles.css")
-    with open(css_path, "w") as f:
+    with open(css_path, "w", encoding="utf-8") as f:
         f.write("div { color: blue; }")
 
     yield {
@@ -348,7 +348,7 @@ def temp_manager_setup() -> dict:
 
     # Create test files
     js_path = os.path.join(temp_dir.name, "index.js")
-    with open(js_path, "w") as f:
+    with open(js_path, "w", encoding="utf-8") as f:
         f.write("console.log('test');")
 
     yield {
@@ -465,6 +465,46 @@ def test_public_api_path_object_rejection() -> None:
 
     with pytest.raises(StreamlitAPIException):
         component("test", css=["invalid", "list"])  # List instead of string/Path
+
+
+def test_component_mount_ignores_isolate_styles_kwarg() -> None:
+    """Verify mount-time isolate_styles is ignored (and does not raise).
+
+    Without the mount-time kwarg being stripped, the mount callable would end
+    up calling ``st._bidi_component(..., isolate_styles=<from component()>, **kwargs)``
+    where ``kwargs`` also contains ``isolate_styles``. That would raise a
+    ``TypeError`` about multiple values for the same keyword argument before
+    `_bidi_component` runs.
+    """
+    import streamlit as st
+
+    on_clicked_change = MagicMock(name="on_clicked_change")
+
+    with (
+        patch.object(
+            st.components.v2, "_register_component", return_value="test_component"
+        ),
+        patch.object(
+            st, "_bidi_component", return_value=MagicMock()
+        ) as mock_bidi_component,
+    ):
+        mount = component(
+            "test_component",
+            js="console.log('test');",
+            isolate_styles=False,
+        )
+
+        mount(
+            key="k",
+            isolate_styles=True,  # legacy-style kwarg should be dropped silently
+            on_clicked_change=on_clicked_change,
+        )
+
+    args, kwargs = mock_bidi_component.call_args
+    assert args[0] == "test_component"
+    assert kwargs["isolate_styles"] is False
+    assert kwargs["key"] == "k"
+    assert kwargs["on_clicked_change"] is on_clicked_change
 
 
 def test_register_from_manifest_basic(temp_manager_setup) -> None:
@@ -719,7 +759,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Create test file
         test_file = os.path.join(temp_dir, "test-pattern.js")
-        with open(test_file, "w") as f:
+        with open(test_file, "w", encoding="utf-8") as f:
             f.write("console.log('test');")
 
         # Test successful resolution
@@ -733,7 +773,7 @@ def test_resolve_glob_pattern_direct() -> None:
 
         # Test multiple matches
         duplicate_file = os.path.join(temp_dir, "test-duplicate.js")
-        with open(duplicate_file, "w") as f:
+        with open(duplicate_file, "w", encoding="utf-8") as f:
             f.write("console.log('duplicate');")
 
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
@@ -748,7 +788,7 @@ def test_resolve_glob_pattern_direct() -> None:
         # Test absolute path protection
         with pytest.raises(StreamlitComponentRegistryError) as exc_info:
             ComponentPathUtils.resolve_glob_pattern("/absolute/path.js", package_root)
-        assert "Absolute paths are not allowed" in str(exc_info.value)
+        assert "Unsafe paths are not allowed" in str(exc_info.value)
 
 
 @pytest.fixture

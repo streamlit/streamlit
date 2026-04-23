@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,18 @@
  * limitations under the License.
  */
 
-import React, { FC } from "react"
-
-import { PickingInfo } from "@deck.gl/core"
-import { act, screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
-import JSON5 from "json5"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
-import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import {
-  render,
-  renderHook,
-} from "~lib/components/shared/ElementFullscreen/testUtils"
-import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { mockTheme } from "~lib/mocks/mockTheme"
+import { render } from "~lib/components/shared/ElementFullscreen/testUtils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { DeckGlJsonChart } from "./DeckGlJsonChart"
 import type { DeckGLProps } from "./types"
-import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
+
+const mockLayerId = "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f"
 
 const mockInitialViewState = {
   bearing: -27.36,
@@ -46,9 +38,13 @@ const mockInitialViewState = {
   zoom: 6,
 }
 
-vi.mock("~lib/theme", async () => ({
-  ...(await vi.importActual("~lib/theme")),
-  hasLightBackgroundColor: vi.fn(() => false),
+const mockHasLightBackgroundColor = vi.fn(() => false)
+
+vi.mock("~lib/theme/getColors", async () => ({
+  ...(await vi.importActual<typeof import("~lib/theme/getColors")>(
+    "~lib/theme/getColors"
+  )),
+  hasLightBackgroundColor: () => mockHasLightBackgroundColor(),
 }))
 
 const getProps = (
@@ -93,320 +89,137 @@ const getProps = (
   }
 }
 
-const getUseDeckGlProps = (
-  elementProps: Partial<DeckGlJsonChartProto> = {},
-  initialViewStateProps: Record<string, unknown> = {}
-): UseDeckGlProps => {
-  return {
-    ...getProps(elementProps, initialViewStateProps),
-    isLightTheme: false,
-    theme: mockTheme.emotion,
-  }
-}
-
-describe("#useDeckGl", () => {
-  it("should merge client and server changes in viewState", () => {
-    const initialProps = getUseDeckGlProps()
-
-    const {
-      result: { current },
-      rerender,
-    } = renderHook(props => useDeckGl(props), {
-      initialProps,
-    })
-
-    expect(current.viewState).toEqual(mockInitialViewState)
-
-    rerender({
-      ...initialProps,
-      element: getUseDeckGlProps({}, { zoom: 8 }).element,
-    })
-
-    // should match original mockInitialViewState
-    expect(current.viewState).toEqual({ ...mockInitialViewState, zoom: 6 })
+describe("DeckGlJsonChart", () => {
+  it("should render with correct test id and className", () => {
+    const props = getProps()
+    render(<DeckGlJsonChart {...props} />)
+    const element = screen.getByTestId("stDeckGlJsonChart")
+    expect(element).toBeVisible()
+    expect(element).toHaveClass("stDeckGlJsonChart")
   })
 
-  describe("createTooltip", () => {
-    it("should return null if info is null", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(),
+  it.each([
+    {
+      description: "no active selection",
+      setupSelection: false,
+      disabled: false,
+    },
+    {
+      description: "disabled state with selection",
+      setupSelection: true,
+      disabled: true,
+    },
+  ])(
+    "should not render clear selection button when $description",
+    ({ setupSelection, disabled }) => {
+      const props = getProps({
+        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
       })
 
-      expect(current.createTooltip(null)).toBe(null)
-    })
-
-    it("should return null if info.object is undefined", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps(),
-      })
-
-      expect(current.createTooltip({} as PickingInfo)).toBe(null)
-    })
-
-    it("should return null if element.tooltip is undefined", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps({ tooltip: undefined }),
-      })
-
-      expect(current.createTooltip({ object: {} } as PickingInfo)).toBe(null)
-    })
-
-    it("should interpolate the html with the correct object", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps({
-          tooltip: JSON.stringify({
-            html: "<b>Elevation Value:</b> {elevationValue}",
+      if (setupSelection) {
+        props.widgetMgr.setStringValue(
+          props.element,
+          JSON.stringify({
+            selection: {
+              indices: { [mockLayerId]: [0] },
+              objects: { [mockLayerId]: [{}] },
+            },
           }),
-        }),
-      })
-
-      const result = current.createTooltip({
-        object: { elevationValue: 10 },
-      } as PickingInfo)
-
-      if (result === null || typeof result !== "object") {
-        throw new Error("Expected result to be an object")
-      }
-
-      expect(result.html).toBe("<b>Elevation Value:</b> 10")
-    })
-
-    it("should interpolate the html from object with a properties field", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps({
-          tooltip: JSON.stringify({
-            html: "<b>Elevation Value:</b> {elevationValue}",
-          }),
-        }),
-      })
-
-      const result = current.createTooltip({
-        object: { properties: { elevationValue: 10 } },
-      } as PickingInfo)
-
-      if (result === null || typeof result !== "object") {
-        throw new Error("Expected result to be an object")
-      }
-
-      expect(result.html).toBe("<b>Elevation Value:</b> 10")
-    })
-
-    it("should return the tooltip unchanged when object does have an expected schema", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps({
-          tooltip: JSON.stringify({
-            html: "<b>Elevation Value:</b> {elevationValue}",
-          }),
-        }),
-      })
-
-      const result = current.createTooltip({
-        object: { unexpectedSchema: { elevationValue: 10 } },
-      } as PickingInfo)
-
-      if (result === null || typeof result !== "object") {
-        throw new Error("Expected result to be an object")
-      }
-
-      expect(result.html).toBe("<b>Elevation Value:</b> {elevationValue}")
-    })
-
-    it("should interpolate the html with the an empty string", () => {
-      const {
-        result: { current },
-      } = renderHook(props => useDeckGl(props), {
-        initialProps: getUseDeckGlProps({ tooltip: "" }),
-      })
-
-      const result = current.createTooltip({
-        object: { elevationValue: 10 },
-      } as PickingInfo)
-
-      expect(result).toBe(null)
-    })
-  })
-
-  describe("deck", () => {
-    const newJson = {
-      initialViewState: mockInitialViewState,
-      mapStyle: "mapbox://styles/mapbox/light-v9",
-    }
-
-    const mockJsonParse = vi.fn().mockReturnValue(newJson)
-
-    beforeEach(() => {
-      JSON5.parse = mockJsonParse
-    })
-
-    afterEach(() => {
-      mockJsonParse.mockClear()
-    })
-
-    const testCases: {
-      description: string
-      newProps: Partial<UseDeckGlProps>
-    }[] = [
-      {
-        description: "should call JSON5.parse when the json is different",
-        newProps: getUseDeckGlProps(undefined, { zoom: 19 }),
-      },
-      {
-        description: "should call JSON5.parse when theme state changes",
-        newProps: { isLightTheme: true },
-      },
-    ]
-
-    it.each(testCases)("$description", ({ newProps }) => {
-      const initialProps = getUseDeckGlProps()
-      const { rerender } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-
-      expect(JSON5.parse).toHaveBeenCalledTimes(1)
-
-      rerender({ ...initialProps, ...newProps })
-
-      expect(JSON5.parse).toHaveBeenCalledTimes(2)
-    })
-
-    it("should call JSON5.parse when isFullScreen changes", async () => {
-      const user = userEvent.setup()
-      const MyComponent: FC<UseDeckGlProps> = props => {
-        useDeckGl(props)
-        const { expand } = useRequiredContext(ElementFullscreenContext)
-
-        return (
-          <button type="button" onClick={expand}>
-            Expand
-          </button>
+          { fromUi: true },
+          props.fragmentId
         )
       }
 
-      render(<MyComponent {...getUseDeckGlProps()} />)
+      render(<DeckGlJsonChart {...props} disabled={disabled} />)
 
-      expect(JSON5.parse).toHaveBeenCalledTimes(1)
+      expect(
+        screen.queryByLabelText("Clear selection")
+      ).not.toBeInTheDocument()
+    }
+  )
 
-      await user.click(screen.getByText("Expand"))
+  it("should render clear selection button when there is an active selection and not disabled", async () => {
+    const props = getProps({
+      selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+      id: "test-element-id",
+    })
 
-      expect(JSON5.parse).toHaveBeenCalledTimes(2)
+    // Set up an active selection
+    props.widgetMgr.setStringValue(
+      props.element,
+      JSON.stringify({
+        selection: {
+          indices: { [mockLayerId]: [0] },
+          objects: { [mockLayerId]: [{ testProp: "value" }] },
+        },
+      }),
+      { fromUi: true },
+      props.fragmentId
+    )
+
+    render(<DeckGlJsonChart {...props} />)
+
+    const chart = screen.getByTestId("stDeckGlJsonChart")
+    await userEvent.hover(chart)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Clear selection")).toBeVisible()
     })
   })
 
-  describe("selectionMode", () => {
-    it("should be undefined when allSelectionModes is empty", () => {
-      const initialProps = getUseDeckGlProps({ selectionMode: [] })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.selectionMode).toBeUndefined()
+  it("should render clear selection button for multi-object selection mode", async () => {
+    const props = getProps({
+      selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
+      id: "test-element-id",
     })
 
-    it("should be defined when allSelectionModes has single object select", () => {
-      const initialProps = getUseDeckGlProps({
-        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
-      })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.selectionMode).toBe(
-        DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT
-      )
-    })
+    // Set up an active multi-selection
+    props.widgetMgr.setStringValue(
+      props.element,
+      JSON.stringify({
+        selection: {
+          indices: { [mockLayerId]: [0, 2, 4] },
+          objects: { [mockLayerId]: [{}, {}, {}] },
+        },
+      }),
+      { fromUi: true },
+      props.fragmentId
+    )
 
-    it("should be defined when allSelectionModes has multi object select", () => {
-      const initialProps = getUseDeckGlProps({
-        selectionMode: [DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT],
-      })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.selectionMode).toBe(
-        DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT
-      )
-    })
+    render(<DeckGlJsonChart {...props} />)
 
-    it("should return the first selection mode given, if multiple are given", () => {
-      const initialProps = getUseDeckGlProps({
-        selectionMode: [
-          DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT,
-          DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT,
-        ],
-      })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.selectionMode).toBe(
-        DeckGlJsonChartProto.SelectionMode.MULTI_OBJECT
-      )
+    const chart = screen.getByTestId("stDeckGlJsonChart")
+    await userEvent.hover(chart)
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("Clear selection")).toBeVisible()
     })
   })
 
-  describe("isSelectionModeActivated", () => {
-    it("should activate selection mode when selectionMode is defined", () => {
-      const initialProps = getUseDeckGlProps({
-        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
+  describe("fullscreen mode", () => {
+    it("should render expand button by default", async () => {
+      const props = getProps()
+      render(<DeckGlJsonChart {...props} />)
+      const chart = screen.getByTestId("stDeckGlJsonChart")
+      await userEvent.hover(chart)
+
+      await waitFor(() => {
+        expect(screen.getByLabelText("Fullscreen")).toBeVisible()
       })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.isSelectionModeActivated).toBe(true)
     })
 
-    it("should not activate selection mode when selectionMode is undefined", () => {
-      const initialProps = getUseDeckGlProps({ selectionMode: [] })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.isSelectionModeActivated).toBe(false)
-    })
-  })
+    it("should not render fullscreen button when disableFullscreenMode is true", async () => {
+      const props = getProps()
+      render(<DeckGlJsonChart {...props} disableFullscreenMode />)
+      const chart = screen.getByTestId("stDeckGlJsonChart")
+      await userEvent.hover(chart)
 
-  describe("hasActiveSelection", () => {
-    it("should be false when selection is empty", () => {
-      const initialProps = getUseDeckGlProps({
-        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
-      })
-      const { result } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-      expect(result.current.hasActiveSelection).toBe(false)
-    })
-
-    it("should be true when selection is not empty", () => {
-      const initialProps = getUseDeckGlProps({
-        selectionMode: [DeckGlJsonChartProto.SelectionMode.SINGLE_OBJECT],
-      })
-      const { result, rerender } = renderHook(props => useDeckGl(props), {
-        initialProps,
-      })
-
-      act(() => {
-        result.current.setSelection({
-          fromUi: true,
-          value: {
-            selection: {
-              indices: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [0] },
-              objects: { "0533490f-fcf9-4dc0-8c94-ae4fbd42eb6f": [{}] },
-            },
-          },
-        })
-      })
-
-      rerender(initialProps)
-
-      expect(result.current.hasActiveSelection).toBe(true)
+      // We use a hardcoded timeout here because we're testing a negative assertion
+      // (that something does NOT appear). Unlike positive assertions where we can
+      // wait for an element to appear, there's no reliable way to "wait for something
+      // to not appear" - we need to give sufficient time for it to potentially render.
+      await new Promise(resolve => setTimeout(resolve, 100))
+      expect(screen.queryByLabelText("Fullscreen")).not.toBeInTheDocument()
     })
   })
 })

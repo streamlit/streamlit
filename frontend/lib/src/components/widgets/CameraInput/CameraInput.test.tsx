@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { forwardRef, useImperativeHandle } from "react"
 
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -25,7 +25,7 @@ import {
   FileUploaderState as FileUploaderStateProto,
   FileURLs as FileURLsProto,
   IFileURLs,
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
@@ -36,7 +36,21 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import CameraInput, { Props } from "./CameraInput"
 import { WebcamPermission } from "./WebcamComponent"
 
-vi.mock("react-webcam")
+vi.mock("react-webcam", () => {
+  const MockWebcam = forwardRef((_props, ref) => {
+    useImperativeHandle(ref, () => {
+      return {
+        getScreenshot: () => "data:image/jpeg;base64,mocked-photo",
+      }
+    })
+
+    return <div data-testid="mockReactWebcam" />
+  })
+
+  return {
+    default: MockWebcam,
+  }
+})
 const fetchMocker = createFetchMock(vi)
 
 const buildFileUploaderStateProto = (
@@ -142,7 +156,7 @@ describe("CameraInput widget", () => {
     it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+          value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
         },
       })
       render(<CameraInput {...props} />)
@@ -154,7 +168,7 @@ describe("CameraInput widget", () => {
     it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
       const props = getProps({
         labelVisibility: {
-          value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+          value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
         },
       })
       render(<CameraInput {...props} />)
@@ -310,6 +324,27 @@ describe("CameraInput widget", () => {
       })
       // Button should be enabled when webcam permission is granted
       expect(takePhotoButton).not.toBeDisabled()
+    })
+
+    it("coalesces overlapping captures into a single upload flow", async () => {
+      const props = getProps({}, { testOverride: WebcamPermission.SUCCESS })
+      fetchMocker.mockResponse("")
+
+      render(<CameraInput {...props} />)
+
+      const takePhotoButton = screen.getByRole("button", {
+        name: "Take Photo",
+      })
+
+      await act(async () => {
+        // Trigger two captures in one turn before React applies UI transition.
+        takePhotoButton.click()
+        takePhotoButton.click()
+        await vi.runAllTimersAsync()
+      })
+
+      expect(props.uploadClient.fetchFileURLs).toHaveBeenCalledTimes(1)
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     })
   })
 

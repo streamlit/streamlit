@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -26,22 +26,15 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.widgets.button_group import (
-    _FACES_ICONS,
-    _SELECTED_STAR_ICON,
-    _STAR_ICON,
-    _THUMB_ICONS,
     ButtonGroupMixin,
-    ButtonGroupSerde,
-    SelectionMode,
-    _MultiSelectSerde,
-    _SingleSelectSerde,
-    get_mapped_options,
+    _MultiSelectButtonGroupSerde,
+    _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
-from streamlit.testing.v1.util import patch_config_options
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -49,273 +42,198 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-class TestGetMappedOptions:
-    def test_thumbs(self):
-        options, options_indices = get_mapped_options("thumbs")
-
-        assert len(options) == 2
-        assert len(options_indices) == 2
-
-        for index, option in enumerate(options):
-            assert option.content_icon == _THUMB_ICONS[index]
-
-        # ensure order of thumbs
-        assert "down" in options[1].content_icon
-        assert options_indices[0] == 1
-        assert "up" in options[0].content_icon
-        assert options_indices[1] == 0
-
-    def test_faces(self):
-        options, options_indices = get_mapped_options("faces")
-
-        assert len(options) == 5
-        assert len(options_indices) == 5
-
-        for index, option in enumerate(options):
-            assert option.content_icon == _FACES_ICONS[index]
-            assert option.selected_content_icon == ""
-            assert options_indices[index] == index
-
-        # ensure order of faces
-        assert "sad" in options[0].content_icon
-        assert "very_satisfied" in options[4].content_icon
-
-    def test_stars(self):
-        options, options_indices = get_mapped_options("stars")
-
-        assert len(options) == 5
-        assert len(options_indices) == 5
-
-        for index, option in enumerate(options):
-            assert option.content_icon == _STAR_ICON
-            assert option.selected_content_icon == _SELECTED_STAR_ICON
-            assert options_indices[index] == index
+def _failing_format_func(_: object) -> str:
+    """Always raise; used to exercise serde ``format_func`` error paths."""
+    raise RuntimeError("format failed")
 
 
-class TestSingleSelectSerde:
-    def test_serialize(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
-        res = serde.serialize(6)
-        assert res == [1]
+class TestButtonGroupSerde:
+    """Tests for the _SingleSelectButtonGroupSerde and _MultiSelectButtonGroupSerde classes."""
 
-    def test_serialize_raise_option_does_not_exist(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
+    def test_single_select_serialize(self):
+        """Test single-select serialization returns formatted string in list."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.serialize("banana")
+        assert res == ["Banana"]
 
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize(8)
+    def test_single_select_serialize_none(self):
+        """Test single-select serialization of None returns empty list."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.serialize(None)
+        assert res == []
 
-    def test_deserialize(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
-        res = serde.deserialize([1])
-        assert res == 6
+    def test_single_select_deserialize(self):
+        """Test single-select deserialization returns original option."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Banana"])
+        assert res == "banana"
 
-    def test_deserialize_with_default_value(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices, default_value=[2])
+    def test_single_select_deserialize_with_default(self):
+        """Test single-select deserialization with default value."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=2,  # cherry
+            format_func=lambda x: x.capitalize(),
+        )
         res = serde.deserialize(None)
-        assert res == 7
+        assert res == "cherry"
 
-    def test_deserialize_raise_indexerror(self):
-        option_indices = [5, 6, 7]
-        serde = _SingleSelectSerde[int](option_indices)
+    def test_single_select_deserialize_explicit_deselection(self):
+        """Test single-select explicit deselection (empty list) returns None, not default.
 
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
+        When the frontend sends an empty list [], it means the user explicitly
+        deselected (clicked the selected button to toggle it off). This should
+        return None, not the default value.
+        """
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_index=2,  # cherry is default
+            format_func=lambda x: x.capitalize(),
+        )
+        # Empty list = explicit deselection, should return None (not default)
+        res = serde.deserialize([])
+        assert res is None
 
+    def test_single_select_deserialize_unknown_value(self):
+        """Test single-select deserialization of unknown value returns string as-is."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _SingleSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Unknown"])
+        assert res == "Unknown"
 
-class TestMultiSelectSerde:
-    def test_serialize(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.serialize([5, 7])
-        assert res == [0, 2]
+    def test_multi_select_serialize(self):
+        """Test multi-select serialization returns list of formatted strings."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.serialize(["apple", "cherry"])
+        assert res == ["Apple", "Cherry"]
 
-    def test_serialize_empty_list(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+    def test_multi_select_serialize_empty(self):
+        """Test multi-select serialization of empty list returns empty list."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
         res = serde.serialize([])
         assert res == []
 
-    def test_serialize_raise_option_does_not_exist(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
+    def test_multi_select_deserialize(self):
+        """Test multi-select deserialization returns list of original options."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
+        )
+        res = serde.deserialize(["Apple", "Cherry"])
+        assert res == ["apple", "cherry"]
 
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize([5, 8])
-
-    def test_deserialize(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.deserialize([0, 2])
-        assert res == [5, 7]
-
-    def test_deserialize_empty_list(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-        res = serde.deserialize([])
-        assert res == []
-
-    def test_deserialize_with_default_value(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices, default_value=[0, 2])
+    def test_multi_select_deserialize_with_default(self):
+        """Test multi-select deserialization with default values."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            default_option_indices=[0, 2],  # apple, cherry
+            format_func=lambda x: x.capitalize(),
+        )
         res = serde.deserialize(None)
-        assert res == [5, 7]
+        assert res == ["apple", "cherry"]
 
-    def test_deserialize_raise_indexerror(self):
-        option_indices = [5, 6, 7]
-        serde = _MultiSelectSerde[int](option_indices)
-
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
-
-
-class TestSingleOrMultiSelectSerde:
-    @parameterized.expand([("single",), ("multi",)])
-    def test_serialize(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-        res = serde.serialize(6)
-        assert res == [1]
-
-    @parameterized.expand([("single",), ("multi",)])
-    def test_serialize_raise_option_does_not_exist(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-
-        with pytest.raises(StreamlitAPIException):
-            serde.serialize(8)
-
-    @parameterized.expand([("single", 6), ("multi", [6])])
-    def test_deserialize(
-        self, selection_mode: SelectionMode, expected: int | list[int]
-    ):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-        res = serde.deserialize([1])
-        assert res == expected
-
-    @parameterized.expand([("single", 7), ("multi", [7])])
-    def test_deserialize_with_default_value(
-        self, selection_mode: SelectionMode, expected: list[int] | int
-    ):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [2], selection_mode)
-        res = serde.deserialize(None)
-        assert res == expected
-
-    @parameterized.expand([("single",), ("multi",)])
-    def test_deserialize_raise_indexerror(self, selection_mode: SelectionMode):
-        option_indices = [5, 6, 7]
-        serde = ButtonGroupSerde[int](option_indices, [], selection_mode)
-
-        with pytest.raises(IndexError):
-            serde.deserialize([3])
-
-
-class TestFeedbackCommand(DeltaGeneratorTestCase):
-    """Tests that are specific for the feedback command."""
-
-    @parameterized.expand(
-        [
-            ("thumbs", list(_THUMB_ICONS)),
-            ("faces", list(_FACES_ICONS)),
-            ("stars", list([_STAR_ICON] * 5)),
-        ]
-    )
-    def test_call_feedback_with_all_options(
-        self, option: Literal["thumbs", "faces", "stars"], expected_icons: list[str]
-    ):
-        st.feedback(option)
-
-        delta = self.get_delta_from_queue().new_element.button_group
-        assert delta.default == []
-        assert [option.content_icon for option in delta.options] == expected_icons
-
-    def test_invalid_option_literal(self):
-        with pytest.raises(StreamlitAPIException) as e:
-            st.feedback("foo")
-        assert str(e.value) == (
-            "The options argument to st.feedback must be one of "
-            "['thumbs', 'faces', 'stars']. The argument passed was 'foo'."
+    def test_multi_select_deserialize_unknown_value(self):
+        """Test multi-select deserialization with unknown value includes it as-is."""
+        options = ["apple", "banana", "cherry"]
+        formatted_options = ["Apple", "Banana", "Cherry"]
+        formatted_option_to_option_index = {
+            f: i for i, f in enumerate(formatted_options)
+        }
+        serde = _MultiSelectButtonGroupSerde[str](
+            options,
+            formatted_options=formatted_options,
+            formatted_option_to_option_index=formatted_option_to_option_index,
+            format_func=lambda x: x.capitalize(),
         )
-
-    @parameterized.expand([(0,), (1,)])
-    def test_widget_state_changed_via_session_state(self, session_state_index: int):
-        st.session_state.feedback_command_key = session_state_index
-        val = st.feedback("thumbs", key="feedback_command_key")
-        assert val == session_state_index
-
-    def test_feedback_converts_small_width_to_content(self):
-        """Test that st.feedback converts small pixel widths to content width.
-
-        The threshold is calculated dynamically based on theme.baseFontSize,
-        so this tests with default 16px base font size.
-        """
-        # With default 16px base font: thumbs threshold ~55px (3.125rem x 16 x 1.1)
-        st.feedback("thumbs", width=30, key="thumbs_small")
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
-        )
-        assert el.width_config.use_content is True
-
-        # With default 16px base font: faces threshold ~141px (8rem x 16 x 1.1)
-        st.feedback("faces", width=100, key="faces_small")
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.USE_CONTENT.value
-        )
-        assert el.width_config.use_content is True
-
-    def test_feedback_preserves_adequate_pixel_widths(self):
-        """Test that st.feedback preserves pixel widths above the threshold."""
-        # Large widths well above any threshold should be preserved
-        st.feedback("thumbs", width=100, key="thumbs_adequate")
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.PIXEL_WIDTH.value
-        )
-        assert el.width_config.pixel_width == 100
-
-        st.feedback("stars", width=200, key="stars_adequate")
-        el = self.get_delta_from_queue().new_element
-        assert (
-            el.width_config.WhichOneof("width_spec")
-            == WidthConfigFields.PIXEL_WIDTH.value
-        )
-        assert el.width_config.pixel_width == 200
-
-    def test_feedback_threshold_adapts_to_base_font_size(self):
-        """Test that the conversion threshold adapts to theme.baseFontSize."""
-
-        # Test with 20px base font size (larger than default 16px)
-        # Threshold calculation: 3.125rem x 20 x 1.1 = 68.75px (thumbs)
-        # So width=65 should convert to "content" at 20px, but preserves at 16px
-        with patch_config_options({"theme.baseFontSize": 20}):
-            st.feedback("thumbs", width=65, key="thumbs_20px_font")
-            el = self.get_delta_from_queue().new_element
-            # At 20px base font, 65px is below threshold, converts to content
-            assert (
-                el.width_config.WhichOneof("width_spec")
-                == WidthConfigFields.USE_CONTENT.value
-            )
-            assert el.width_config.use_content is True
-
-        # At 16px base font, same 65px width is above threshold, preserved
-        with patch_config_options({"theme.baseFontSize": 16}):
-            st.feedback("thumbs", width=65, key="thumbs_16px_font")
-            el = self.get_delta_from_queue().new_element
-            assert (
-                el.width_config.WhichOneof("width_spec")
-                == WidthConfigFields.PIXEL_WIDTH.value
-            )
-            assert el.width_config.pixel_width == 65
+        res = serde.deserialize(["Apple", "Unknown"])
+        assert res == ["apple", "Unknown"]
 
 
 def get_command_matrix(
@@ -367,15 +285,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
     @parameterized.expand(
         [
             (
-                st.feedback,
-                ("thumbs",),
-                None,
-                [":material/thumb_up:", ":material/thumb_down:"],
-                "content_icon",
-                ButtonGroupProto.Style.BORDERLESS,
-                False,
-            ),
-            (
                 st.pills,
                 ("label", ["a", "b", "c"]),
                 {"help": "Test help param"},
@@ -419,42 +328,26 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert delta.click_mode == ButtonGroupProto.ClickMode.SINGLE_SELECT
         assert delta.disabled is False
         assert delta.form_id == ""
-        assert (
-            delta.selection_visualization
-            == ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-        )
         assert delta.style == style
 
         if test_label:
             assert delta.label == command_args[0]
         assert (
             delta.label_visibility.value
-            is LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            is LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
 
-    @parameterized.expand(
-        get_command_matrix([("string_key",), (0,), (None,)], with_st_feedback=True)
-    )
+    @parameterized.expand(get_command_matrix([("string_key",), (0,), (None,)]))
     def test_key_types(self, command: Callable[..., None], key: str | int | None):
         """Test that the key argument can be passed as expected."""
 
-        # use options that is compatible with all commands including st.feedback
-        command("thumbs", key=key)
+        command(["a", "b", "c"], key=key)
 
         delta = self.get_delta_from_queue().new_element.button_group
         assert delta.id.endswith(f"-{key}")
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",)),
-            (
-                st.feedback,
-                ("thumbs",),
-                {"default": 1},
-                1,
-            ),
-            (st.feedback, ("stars",), {"default": 2}, 2),
-            (st.feedback, ("faces",), {"default": 3}, 3),
             (st.pills, ("label", ["a", "b", "c"])),
             (st.pills, ("label", ["a", "b", "c"]), {"default": "b"}, "b"),
             (
@@ -495,7 +388,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",)),
             (st.pills, ("label", ["a", "b", "c"])),
         ]
     )
@@ -731,7 +623,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",)),
             (st.pills, ("label", ["a", "b", "c"])),
         ]
     )
@@ -799,25 +690,21 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             assert proto_option.content_icon == ""
             assert proto_option.content == option
 
-    @parameterized.expand(get_command_matrix([], with_st_feedback=True))
+    @parameterized.expand(get_command_matrix([]))
     def test_outside_form(self, command: Callable[..., None]):
         """Test that form id is marshalled correctly outside of a form."""
-        # pass an option that is valid for st.feedback and also the other button_group
-        # commands
-        command("thumbs")
+        command(["a", "b", "c"])
 
         proto = self.get_delta_from_queue().new_element.button_group
         assert proto.form_id == ""
 
-    @parameterized.expand(get_command_matrix([], with_st_feedback=True))
+    @parameterized.expand(get_command_matrix([]))
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
     def test_inside_form(self, command: Callable[..., None]):
         """Test that form id is marshalled correctly inside of a form."""
 
         with st.form("form"):
-            # pass an option that is valid for st.feedback and also the other button_group
-            # commands
-            command("thumbs")
+            command(["a", "b", "c"])
 
         # 2 elements will be created: form block, widget
         assert len(self.get_all_deltas_from_queue()) == 2
@@ -842,25 +729,6 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
         assert proto.default == []
         assert [option.content for option in proto.options] == ["bar", "baz"]
-
-    def test_inside_column_feedback(self):
-        """Test that st.feedback works correctly inside of a column."""
-
-        col1, _ = st.columns(2)
-
-        with col1:
-            st.feedback("thumbs")
-        all_deltas = self.get_all_deltas_from_queue()
-
-        # 4 elements will be created: 1 horizontal block, 2 columns, 1 widget
-        assert len(all_deltas) == 4
-        proto = self.get_delta_from_queue().new_element.button_group
-
-        assert proto.default == []
-        assert [option.content_icon for option in proto.options] == [
-            ":material/thumb_up:",
-            ":material/thumb_down:",
-        ]
 
     @parameterized.expand(get_command_matrix([]))
     def test_default_string(self, command: Callable[..., None]):
@@ -974,13 +842,12 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             )
         assert (
             str(exception.value) == "The style argument must be one of "
-            "['borderless', 'pills', 'segmented_control']. "
+            "['pills', 'segmented_control']. "
             "The argument passed was 'foo'."
         )
 
     @parameterized.expand(
         [
-            (st.feedback, ("thumbs",), "feedback"),
             (st.pills, ("label", ["a", "b", "c"]), "pills"),
             (st.segmented_control, ("label", ["a", "b", "c"]), "segmented_control"),
         ]
@@ -997,12 +864,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
         assert element_name in str(exception.value)
 
     def test_stable_id_with_key_segmented_control(self):
-        """Test that the widget ID is stable for segmented_control when a stable key is provided."""
+        """Test that the widget ID is stable for segmented_control when a stable key is provided.
+
+        With key_as_main_identity={"click_mode"}, the ID only changes when selection_mode changes.
+        Options, format_func, and other params can change without affecting the ID.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with certain params
             st.segmented_control(
                 label="Label 1",
                 key="segmented_control_key",
@@ -1014,7 +885,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 default="a",
-                # Whitelisted args:
+                # These can change without affecting ID (only click_mode matters):
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -1022,7 +893,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params but same key and selection_mode
             st.segmented_control(
                 label="Label 2",
                 key="segmented_control_key",
@@ -1034,7 +905,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 default="b",
-                # Whitelisted args:
+                # These can change without affecting ID:
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -1045,16 +916,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["x", "y"]),
+            # Only selection_mode (click_mode) changes should cause ID changes
+            # options and format_func are not in key_as_main_identity for pills/segmented_control
             ("selection_mode", "single", "multi"),
-            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
         ]
     )
     def test_whitelisted_stable_key_kwargs_segmented_control(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes for segmented_control when a whitelisted kwarg changes even when the key
-        is provided.
+        """Test that the widget ID changes for segmented_control when selection_mode changes
+        even when the key is provided. Options and format_func changes do NOT cause ID changes.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -1080,79 +951,50 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             id2 = proto2.id
             assert id1 != id2
 
-    def test_stable_id_with_key_feedback(self):
-        """Test that the widget ID is stable for feedback when a stable key is provided."""
+    def test_options_change_does_not_change_id_segmented_control(self):
+        """Test that changing options does NOT change the widget ID when a key is provided.
+
+        This is the key behavior for dynamic options support - options can change
+        without resetting the widget state.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
-            st.feedback(
-                key="feedback_key",
-                disabled=False,
-                width="content",
-                on_change=lambda: None,
-                args=("arg1", "arg2"),
-                kwargs={"kwarg1": "kwarg1"},
-                default=0,
-                # Whitelisted args:
-                options="thumbs",
+            # First render with options ["a", "b"]
+            st.segmented_control(
+                label="Label",
+                key="segmented_control_options_key",
+                options=["a", "b"],
+                selection_mode="single",
             )
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Second render with different non-whitelisted params but same key
-            st.feedback(
-                key="feedback_key",
-                disabled=True,
-                width="stretch",
-                on_change=lambda: None,
-                args=("arg_1", "arg_2"),
-                kwargs={"kwarg_1": "kwarg_1"},
-                default=1,
-                # Whitelisted args:
-                options="thumbs",
+            # Second render with different options ["x", "y", "z"]
+            st.segmented_control(
+                label="Label",
+                key="segmented_control_options_key",
+                options=["x", "y", "z"],
+                selection_mode="single",
             )
             proto2 = self.get_delta_from_queue().new_element.button_group
             id2 = proto2.id
+
+            # IDs should be the SAME because options is not in key_as_main_identity
             assert id1 == id2
 
-    @parameterized.expand(
-        [
-            ("options", "thumbs", "faces"),
-        ]
-    )
-    def test_whitelisted_stable_key_kwargs_feedback(
-        self, _kwarg_name: str, value1: object, value2: object
-    ):
-        """Test that the widget ID changes for feedback when a whitelisted kwarg
-        changes even when the key is provided."""
-        with patch(
-            "streamlit.elements.lib.utils._register_element_id",
-            return_value=MagicMock(),
-        ):
-            base_kwargs: dict[str, object] = {
-                "key": "feedback_key_1",
-            }
-
-            # Apply first value for the whitelisted kwarg
-            st.feedback(value1, **base_kwargs)  # type: ignore[arg-type]
-            proto1 = self.get_delta_from_queue().new_element.button_group
-            id1 = proto1.id
-
-            # Apply second value for the whitelisted kwarg
-            st.feedback(value2, **base_kwargs)  # type: ignore[arg-type]
-            proto2 = self.get_delta_from_queue().new_element.button_group
-            id2 = proto2.id
-            assert id1 != id2
-
     def test_stable_id_with_key_pills(self):
-        """Test that the widget ID is stable for pills when a stable key is provided."""
+        """Test that the widget ID is stable for pills when a stable key is provided.
+
+        With key_as_main_identity={"click_mode"}, the ID only changes when selection_mode changes.
+        Options, format_func, and other params can change without affecting the ID.
+        """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
             return_value=MagicMock(),
         ):
-            # First render with certain params (keep whitelisted kwargs stable)
+            # First render with certain params
             st.pills(
                 label="Label 1",
                 key="pills_key",
@@ -1164,7 +1006,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg1": "kwarg1"},
                 label_visibility="visible",
                 default="a",
-                # Whitelisted args:
+                # These can change without affecting ID (only click_mode matters):
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -1172,7 +1014,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             proto1 = self.get_delta_from_queue().new_element.button_group
             id1 = proto1.id
 
-            # Second render with different non-whitelisted params but same key
+            # Second render with different params but same key and selection_mode
             st.pills(
                 label="Label 2",
                 key="pills_key",
@@ -1184,7 +1026,7 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
                 kwargs={"kwarg_1": "kwarg_1"},
                 label_visibility="hidden",
                 default="b",
-                # Whitelisted args:
+                # These can change without affecting ID:
                 options=["a", "b", "c"],
                 selection_mode="single",
                 format_func=lambda x: x.capitalize(),
@@ -1195,16 +1037,16 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("options", ["a", "b"], ["x", "y"]),
+            # Only selection_mode (click_mode) changes should cause ID changes
+            # options and format_func are not in key_as_main_identity for pills/segmented_control
             ("selection_mode", "single", "multi"),
-            ("format_func", lambda x: x.capitalize(), lambda x: x.lower()),
         ]
     )
     def test_whitelisted_stable_key_kwargs_pills(
         self, kwarg_name: str, value1: object, value2: object
     ):
-        """Test that the widget ID changes for pills when a whitelisted kwarg changes even when the key
-        is provided.
+        """Test that the widget ID changes for pills when selection_mode changes even when
+        the key is provided. Options and format_func changes do NOT cause ID changes.
         """
         with patch(
             "streamlit.elements.lib.utils._register_element_id",
@@ -1229,3 +1071,364 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
             proto2 = self.get_delta_from_queue().new_element.button_group
             id2 = proto2.id
             assert id1 != id2
+
+    def test_options_change_does_not_change_id_pills(self):
+        """Test that changing options does NOT change the widget ID when a key is provided.
+
+        This is the key behavior for dynamic options support - options can change
+        without resetting the widget state.
+        """
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            # First render with options ["a", "b"]
+            st.pills(
+                label="Label",
+                key="pills_options_key",
+                options=["a", "b"],
+                selection_mode="single",
+            )
+            proto1 = self.get_delta_from_queue().new_element.button_group
+            id1 = proto1.id
+
+            # Second render with different options ["x", "y", "z"]
+            st.pills(
+                label="Label",
+                key="pills_options_key",
+                options=["x", "y", "z"],
+                selection_mode="single",
+            )
+            proto2 = self.get_delta_from_queue().new_element.button_group
+            id2 = proto2.id
+
+            # IDs should be the SAME because options is not in key_as_main_identity
+            assert id1 == id2
+
+
+class TestButtonGroupAppTest:
+    """AppTest tests for st.pills and st.segmented_control."""
+
+    def test_pills_with_format_func(self):
+        """Test st.pills with format_func works correctly in AppTest.
+
+        This is a regression test for the format_func issue where
+        the testing framework would fail on subsequent runs.
+        """
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "single pills",
+                options=["a", "b", "c"],
+                format_func=lambda x: x.upper(),
+                key="sp",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be None for single-select
+        assert at.button_group("sp").value is None
+
+        # Select a value and run again
+        at.button_group("sp").select("a").run()
+        assert at.button_group("sp").value == "a"
+        assert not at.exception
+
+        # Select a different value - this would fail before the fix
+        at.button_group("sp").select("b").run()
+        assert at.button_group("sp").value == "b"
+        assert not at.exception
+
+    def test_pills_multi_select_with_format_func(self):
+        """Test st.pills multi-select with format_func works correctly in AppTest."""
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "multi pills",
+                options=[1, 2, 3],
+                selection_mode="multi",
+                format_func=lambda x: f"Num: {x}",
+                key="mp",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be empty list for multi-select
+        assert at.button_group("mp").value == []
+
+        # Select multiple values
+        at.button_group("mp").select(1).select(2).run()
+        assert at.button_group("mp").value == [1, 2]
+        assert not at.exception
+
+        # Unselect a value
+        at.button_group("mp").unselect(1).run()
+        assert at.button_group("mp").value == [2]
+        assert not at.exception
+
+    def test_segmented_control_with_format_func(self):
+        """Test st.segmented_control with format_func works correctly in AppTest."""
+
+        def script():
+            import streamlit as st
+
+            st.segmented_control(
+                "segmented",
+                options=["x", "y", "z"],
+                format_func=lambda x: x.upper(),
+                key="sc",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be None
+        assert at.button_group("sc").value is None
+
+        # Select a value
+        at.button_group("sc").select("x").run()
+        assert at.button_group("sc").value == "x"
+        assert not at.exception
+
+        # Select a different value - this would fail before the fix
+        at.button_group("sc").select("y").run()
+        assert at.button_group("sc").value == "y"
+        assert not at.exception
+
+
+class PillsBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for st.pills bind='query-params' functionality."""
+
+    def test_bind_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.pills("label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.pills("label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind, query_param_key is not set."""
+        st.pills("label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.pills("label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.pills(
+            "label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_multi_mode(self):
+        """Test that bind works with selection_mode='multi'."""
+        st.pills(
+            "label",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+
+class SegmentedControlBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for st.segmented_control bind='query-params' functionality."""
+
+    def test_bind_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.segmented_control(
+            "label", ["a", "b", "c"], key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.segmented_control("label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind, query_param_key is not set."""
+        st.segmented_control("label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == ""
+
+    def test_bind_multi_mode(self):
+        """Test that bind works with selection_mode='multi'."""
+        st.segmented_control(
+            "label",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+
+class RequiredParameterTest(DeltaGeneratorTestCase):
+    """Tests for the required parameter on st.pills and st.segmented_control."""
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_default_is_false(self, command: Callable[..., Any]):
+        """Test that required defaults to False."""
+        command("label", ["a", "b", "c"])
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+    @parameterized.expand(
+        [
+            (st.pills, True),
+            (st.pills, False),
+            (st.segmented_control, True),
+            (st.segmented_control, False),
+        ]
+    )
+    def test_required_sets_proto_field(
+        self, command: Callable[..., Any], required: bool
+    ):
+        """Test that the required argument sets the proto field correctly."""
+        command("label", ["a", "b", "c"], required=required)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is required
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_default(self, command: Callable[..., Any]):
+        """Test that required works with a default value."""
+        command("label", ["a", "b", "c"], default="b", required=True)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is True
+        assert c.default == [1]
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_multi_select_raises_exception(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=True with selection_mode='multi' raises an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be used with.*selection_mode='multi'",
+        ):
+            command("label", ["a", "b", "c"], selection_mode="multi", required=True)
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_false_with_multi_select_allowed(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=False with selection_mode='multi' is allowed."""
+        command("label", ["a", "b", "c"], selection_mode="multi", required=False)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+
+def test_single_serde_serialize_empty_options_with_value() -> None:
+    """Return empty list when options are empty but value is not None.
+
+    Covers the early exit in ``_SingleSelectButtonGroupSerde.serialize`` when
+    there are no options to map to formatted wire strings.
+    """
+    serde = _SingleSelectButtonGroupSerde[str](
+        [],
+        formatted_options=[],
+        formatted_option_to_option_index={},
+    )
+    assert serde.serialize("anything") == []
+
+
+def test_single_serde_serialize_format_func_exception() -> None:
+    """Fall back to ``str(v)`` when ``format_func`` raises for an unmatched value."""
+    serde = _SingleSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["a", "b"],
+        formatted_option_to_option_index={"a": 0, "b": 1},
+        format_func=_failing_format_func,
+    )
+    assert serde.serialize("unknown") == ["unknown"]
+
+
+def test_single_serde_serialize_value_matched_by_format_func() -> None:
+    """Return ``[format_func(v)]`` when ``v`` is not matched by equality.
+
+    After direct option comparison fails, a successful ``format_func`` result
+    is sent as the single wire string.
+    """
+    serde = _SingleSelectButtonGroupSerde[int](
+        [1, 2],
+        formatted_options=["one", "two"],
+        formatted_option_to_option_index={"one": 0, "two": 1},
+        format_func=lambda x: f"num:{x}",
+    )
+    assert serde.serialize(99) == ["num:99"]
+
+
+def test_multi_serde_serialize_none_returns_empty_list() -> None:
+    """Serialize ``None`` for multi-select returns an empty list."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+    )
+    assert serde.serialize(None) == []
+
+
+def test_multi_serde_serialize_format_func_exception() -> None:
+    """Append ``str(v)`` when ``format_func`` raises for an unmatched value."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=_failing_format_func,
+    )
+    assert serde.serialize(["a", "not-in-options"]) == ["A", "not-in-options"]
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        (["ghost"], ["LABEL:ghost"]),
+        (["a", 42], ["A", "LABEL:42"]),
+    ],
+)
+def test_multi_serde_serialize_value_matched_by_format_func(
+    values: list[Any], expected: list[str]
+) -> None:
+    """Append ``format_func(v)`` when ``v`` is not matched by equality."""
+    serde = _MultiSelectButtonGroupSerde[str | int](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=lambda x: f"LABEL:{x}",
+    )
+    assert serde.serialize(values) == expected

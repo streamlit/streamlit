@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,8 +28,7 @@ describe("WindowDimensionsProvider", () => {
   it("should provide the width and height of the window and take into account the theme padding", () => {
     vi.spyOn(window, "getComputedStyle").mockReturnValue({
       fontSize: "16px",
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    } as any)
+    } as CSSStyleDeclaration)
 
     const MyComponent: FC = () => {
       const dimensions = useWindowDimensionsContext()

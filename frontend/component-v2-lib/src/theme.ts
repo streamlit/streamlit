@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,7 +52,23 @@ export interface StreamlitTheme {
   codeFontWeight: number
   codeFontSize: string
   headingFontSizes: string[]
+  // Individual heading font sizes and weights for levels 1–6. These provide
+  // direct access to specific heading levels and are derived from the same
+  // source as the headingFontSizes / headingFontWeights arrays. Both forms are
+  // maintained for backward compatibility and convenience.
+  headingFontSize1: string
+  headingFontSize2: string
+  headingFontSize3: string
+  headingFontSize4: string
+  headingFontSize5: string
+  headingFontSize6: string
   headingFontWeights: number[]
+  headingFontWeight1: number
+  headingFontWeight2: number
+  headingFontWeight3: number
+  headingFontWeight4: number
+  headingFontWeight5: number
+  headingFontWeight6: number
   borderColor: string
   dataframeBorderColor: string
   dataframeHeaderBackgroundColor: string
@@ -60,12 +76,13 @@ export interface StreamlitTheme {
   font: string
   chartCategoricalColors: string[]
   chartSequentialColors: string[]
+  chartDivergingColors: string[]
 
   // Computed
   headingColor: string
   borderColorLight: string
   codeTextColor: string
-  widgetBorderColor?: string
+  widgetBorderColor: string
 
   // Color palette
   redColor: string
@@ -91,6 +108,10 @@ export interface StreamlitTheme {
   greenTextColor: string
   violetTextColor: string
   grayTextColor: string
+
+  // Metric value styling
+  metricValueFontSize: string
+  metricValueFontWeight: number
 }
 
 /**

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,8 +49,9 @@ describe("useVegaLiteSelections", () => {
 
     const debouncedMock = debounce as Mock
     // By default, the mocked debounce simply calls its callback immediately.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    debouncedMock.mockImplementation((_delay: number, fn: any) => fn)
+    debouncedMock.mockImplementation(
+      (_delay: number, fn: (...args: unknown[]) => void) => fn
+    )
   })
 
   afterEach(() => {

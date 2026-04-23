@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -42,15 +42,23 @@ class SpaceMixin:
 
         Parameters
         ----------
-        size : "small", "medium", "large", "stretch", or int
+        size : "xxsmall", "xsmall", "small", "medium", "large", "xlarge", "xxlarge", "stretch", or int
             The size of the space. This can be one of the following values:
 
+            - ``"xxsmall"``: 0.25rem, matching the ``"xxsmall"`` gap in
+              ``st.container`` and ``st.columns``.
+            - ``"xsmall"``: 0.5rem, matching the ``"xsmall"`` gap in
+              ``st.container`` and ``st.columns``.
             - ``"small"`` (default): 0.75rem, which is the height of a widget
               label. This is useful for aligning buttons with labeled widgets.
             - ``"medium"``: 2.5rem, which is the height of a button or
               (unlabeled) input field.
             - ``"large"``: 4.25rem, which is the height of a labeled input
-              field or unlabeled media widget, like `st.file_uploader`.
+              field or unlabeled media widget, like ``st.file_uploader``.
+            - ``"xlarge"``: 6rem, matching the ``"xlarge"`` gap in
+              ``st.container`` and ``st.columns``.
+            - ``"xxlarge"``: 8rem, matching the ``"xxlarge"`` gap in
+              ``st.container`` and ``st.columns``.
             - ``"stretch"``: Expands to fill remaining space in the container.
             - An integer: Fixed size in pixels.
 

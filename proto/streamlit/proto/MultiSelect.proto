@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,8 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "MultiSelectProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
+import "streamlit/proto/SelectWidgetFilterMode.proto";
 
 message MultiSelect {
   string id = 1;
@@ -29,17 +27,21 @@ message MultiSelect {
   string help = 5;
   string form_id = 6;
 
-  repeated int32 value = 7 [deprecated = true];
   // after we introduced accept_new_options, we send the option as a string
   // instead of an index to keep it simple.
   repeated string raw_values = 14;
 
   bool set_value = 8;
   bool disabled = 9;
-  LabelVisibilityMessage label_visibility = 10;
+  LabelVisibility label_visibility = 10;
   int32 max_selections = 11;
   string placeholder = 12;
   optional bool accept_new_options = 13;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
+  streamlit.SelectWidgetFilterMode filter_mode = 16;
 
-  // Next: 15
+  // Next: 17
+
+  reserved 7;
 }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { screen } from "@testing-library/react"
 
@@ -59,11 +57,15 @@ describe("StreamlitErrorCodeBlock", () => {
   it("should render copy button when children is a non-empty string", () => {
     const props = getStreamlitCodeBlockProps()
     render(<StreamlitErrorCodeBlock {...props} />)
+    const codeBlock = screen.getByTestId("stErrorCodeBlock")
 
-    // Copy button exists in DOM but is hidden by default (scale(0))
-    // and only becomes visible on hover
-    const copyButton = screen.getByTestId("stCodeCopyButton")
-    expect(copyButton).toBeInTheDocument()
+    expect(codeBlock).toHaveAttribute("tabindex", "0")
+    expect(
+      screen.getByTestId("stBaseButton-elementToolbar")
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: /copy to clipboard/i })
+    ).not.toBeInTheDocument()
   })
 
   it.each([
@@ -74,7 +76,12 @@ describe("StreamlitErrorCodeBlock", () => {
     const props = getStreamlitCodeBlockProps({ children: value })
     render(<StreamlitErrorCodeBlock {...props} />)
 
-    const copyButton = screen.queryByTestId("stCodeCopyButton")
+    expect(screen.getByTestId("stErrorCodeBlock")).not.toHaveAttribute(
+      "tabindex"
+    )
+    const copyButton = screen.queryByRole("button", {
+      name: /copy to clipboard/i,
+    })
     expect(copyButton).not.toBeInTheDocument()
   })
 

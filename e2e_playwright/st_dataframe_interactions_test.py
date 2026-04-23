@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -432,7 +432,7 @@ def test_csv_download_button(
     # button uses under-the-hood does not work. So we monkey-patch it to throw an error
     # and trigger our alternative download logic.
     if browser_name == "chromium":
-        if browser_type_launch_args.get("headless", False):
+        if browser_type_launch_args.get("headless"):
             click_enter_on_file_picker = True
         else:
             app.evaluate(
@@ -485,8 +485,10 @@ def test_csv_download_button_in_iframe_with_new_tab_host_config(
     # enforceDownloadInNewTab config
     with page.expect_event(
         "response",
-        lambda response: response.url.endswith("_stcore/host-config")
-        and response.json()["enforceDownloadInNewTab"] is True,
+        lambda response: (
+            response.url.endswith("_stcore/host-config")
+            and response.json()["enforceDownloadInNewTab"] is True
+        ),
         timeout=10000,
     ):
         frame_locator: FrameLocator = iframed_app.open_app(None)

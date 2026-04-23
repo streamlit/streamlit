@@ -19,6 +19,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"
 
     ignore:
       - dependency-name: "baseui"
@@ -53,6 +54,9 @@ updates:
       - dependency-name: "react-window"
         # This requires us to update baseui, since that has a dependency on react-window v1.
         versions: [">=2.0.0"]
+      - dependency-name: "@types/node"
+        # Our types should match the version of node we're using as defined in `.nvmrc`
+        versions: [">=25.0.0"]
 
     groups:
       deck-gl:
@@ -92,9 +96,10 @@ updates:
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
 
-  # Keep python dependencies up to date
-  - package-ecosystem: "pip"
-    directory: "/lib"
+  # Keep python dependencies up to date (via uv)
+  # Root pyproject.toml contains dev/test dependency groups
+  - package-ecosystem: "uv"
+    directory: "/"
     schedule:
       interval: "daily"
     # Allow a limited number of update PRs at a time
@@ -110,6 +115,7 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"
 
     ignore:
       - dependency-name: "langchain"
@@ -118,6 +124,23 @@ updates:
         versions: [">=0.3.21"]
       - dependency-name: "langchain-community"
         versions: [">=0.3.14"]
+
+  # Keep streamlit package runtime dependencies up to date
+  # lib/pyproject.toml contains the published package's dependencies
+  - package-ecosystem: "uv"
+    directory: "/lib"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 3
+
+    cooldown:
+      default-days: 5
+
+    labels:
+      - "change:chore"
+      - "impact:users"
+      - "autofix"
+      - "never-stale"
 
   # Maintain dependencies in GitHub Actions workflows
   - package-ecosystem: "github-actions"
@@ -129,3 +152,21 @@ updates:
       - "change:chore"
       - "impact:internal"
       - "autofix"
+      - "never-stale"
+
+  # Keep pre-commit hooks up to date
+  - package-ecosystem: "pre-commit"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+    labels:
+      - "change:chore"
+      - "impact:internal"
+      - "autofix"
+      - "never-stale"
+
+    ignore:
+      - dependency-name: "https://github.com/astral-sh/ruff-pre-commit"
+        # ruff version is synced with pyproject.toml via sync-ruff-version hook
+        # to ensure consistent formatting across local development and CI

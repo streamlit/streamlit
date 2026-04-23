@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,12 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    rerun_app,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -29,7 +34,7 @@ from e2e_playwright.shared.app_utils import (
     select_radio_option,
 )
 
-NUM_RADIO_ELEMENTS = 18
+NUM_RADIO_ELEMENTS = 22
 
 
 def test_radio_widget_rendering(
@@ -125,6 +130,21 @@ def test_radio_has_correct_default_values(app: Page):
     expect_markdown(app, "value 12: male")
     expect_markdown(app, "radio changed: False")
     expect_markdown(app, "value 13: None")
+    expect_markdown(app, "value 15: 1")
+
+
+def test_radio_custom_class_format_func_persists_after_rerun(app: Page):
+    """Regression #14814: non-default radio with format_func must survive rerun."""
+    select_radio_option(
+        app,
+        option="Option B",
+        label="radio 15 (custom class format_func, gh-14814)",
+    )
+    wait_for_app_run(app)
+    expect_markdown(app, "value 15: 2")
+
+    rerun_app(app)
+    expect_markdown(app, "value 15: 2")
 
 
 def test_set_value_correctly_when_click(app: Page):
@@ -189,6 +209,7 @@ def test_set_value_correctly_when_click(app: Page):
     expect_markdown(app, "value 12: male")
     expect_markdown(app, "radio changed: False")
     expect_markdown(app, "value 13: male")
+    expect_markdown(app, "value 15: 1")
 
 
 def test_calls_callback_on_change(app: Page):
@@ -205,6 +226,7 @@ def test_calls_callback_on_change(app: Page):
     expect_markdown(app, "value 1: male")
     expect_markdown(app, "value 12: female")
     expect_markdown(app, "radio changed: False")
+    expect_markdown(app, "value 15: 1")
 
 
 def test_check_top_level_class(app: Page):
@@ -218,7 +240,20 @@ def test_custom_css_class_via_key(app: Page):
 
 
 def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the radio can be updated dynamically while keeping the state."""
+    """Test that the radio can be updated dynamically while keeping the state.
+
+    This tests that:
+    1. Options can be changed dynamically when a key is provided
+    2. Format function can be changed dynamically
+    3. Selection resets to default when selected value is removed from options
+    4. Selection is preserved when the selected value exists in new options
+
+    Note: When using dynamic options with a key, the selection is preserved only
+    if the formatted value (after applying format_func) exists in the new options.
+
+    Initial options: [apple, banana, mango, orange] with format_func=capitalize, index=0 (default: apple)
+    Updated options: [mango, papaya, grape, apple] with format_func=capitalize, index=1 (default: papaya)
+    """
     dynamic_radio = get_element_by_key(app, "dynamic_radio_with_key")
     expect(dynamic_radio).to_be_visible()
 
@@ -230,18 +265,22 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_radio, "initial help")
 
-    # Change selection before updating props to verify state persistence
+    # --- Test 1: Selection RESETS when value is removed from options ---
+    # Select "banana" (only exists in initial options, NOT in updated)
     select_radio_option(app, option="Banana", label="Initial dynamic radio")
     expect_prefixed_markdown(app, "Initial radio value:", "banana")
 
-    # Click the toggle to update the radio props
+    # Toggle to update props - options change from [apple, banana, mango, orange]
+    # to [mango, papaya, grape, apple]. "banana" is NOT in updated options.
     click_toggle(app, "Update radio props")
 
-    # new radio is visible:
+    # Updated radio is visible
     expect(dynamic_radio).to_contain_text("Updated dynamic radio")
 
-    # Ensure the previously selected value remains visible
-    expect_prefixed_markdown(app, "Updated radio value:", "banana")
+    # Selection should RESET to "papaya" (default at index=1) since "banana" is not in updated options
+    expect_prefixed_markdown(app, "Updated radio value:", "papaya")
+    # Negative assertion: ensure "banana" is NOT selected after toggle (regression check)
+    expect(dynamic_radio).not_to_contain_text("Banana")
 
     dynamic_radio.scroll_into_view_if_needed()
     assert_snapshot(dynamic_radio, name="st_radio-dynamic_updated")
@@ -249,6 +288,107 @@ def test_dynamic_radio_props(app: Page, assert_snapshot: ImageCompareFunction):
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_radio, "updated help")
 
-    # Select a different option again:
-    select_radio_option(app, option="Orange", label="Updated dynamic radio")
-    expect_prefixed_markdown(app, "Updated radio value:", "orange")
+    # --- Test 2: Selection PRESERVED when value exists in both option sets ---
+    # Select "mango" - it exists in BOTH option sets at different indices:
+    # Initial: index 2 (displayed "Mango"), Updated: index 0 (displayed "Mango")
+    # Neither is the default. This ensures we're testing true preservation.
+    select_radio_option(app, option="Mango", label="Updated dynamic radio")
+    expect_prefixed_markdown(app, "Updated radio value:", "mango")
+
+    # Toggle back to initial options - "mango" exists in initial too
+    click_toggle(app, "Update radio props")
+    expect(dynamic_radio).to_contain_text("Initial dynamic radio")
+
+    # Selection should be PRESERVED since "mango" is in both option sets
+    # If this was reset, it would show "apple" (initial default), not "mango"
+    expect_prefixed_markdown(app, "Initial radio value:", "mango")
+
+
+# --- Query param binding tests ---
+
+
+def test_radio_query_param_seeding(page: Page, app_port: int):
+    """Test that radio value can be seeded from URL query params."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=dog")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio value:", "dog")
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_fmt="))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
+
+
+def test_radio_query_param_updates_url(app: Page):
+    """Test that changing a bound radio updates the URL."""
+    select_radio_option(app, option="dog", label="Bound radio")
+    wait_for_app_run(app)
+
+    expect(app).to_have_url(re.compile(r"[?&]bound_radio=dog"))
+    expect_prefixed_markdown(app, "bound radio value:", "dog")
+
+
+def test_radio_query_param_default_override(page: Page, app_port: int):
+    """Test radio with query param: seed then revert to default clears param."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=bird")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio value:", "bird")
+
+    # Change back to default ("cat", index 0)
+    select_radio_option(page, option="cat", label="Bound radio")
+    wait_for_app_run(page)
+
+    # Query param should be removed since value is back to default
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+    expect_prefixed_markdown(page, "bound radio value:", "cat")
+
+
+def test_radio_query_param_invalid_value(page: Page, app_port: int):
+    """Test that invalid URL values are cleared and widget uses default."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=invalid_option")
+    wait_for_app_loaded(page)
+
+    # Widget should show default value ("cat"), invalid param should be cleared
+    expect_prefixed_markdown(page, "bound radio value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))
+    # Guard against cross-widget pollution
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_fmt="))
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
+
+
+def test_radio_query_param_format_func(page: Page, app_port: int):
+    """Test that formatted option string works in URL."""
+    # The format_func is str.upper, so options in URL are "CAT" and "DOG"
+    page.goto(f"http://localhost:{app_port}/?bound_radio_fmt=DOG")
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "bound radio fmt value:", "dog")
+
+
+def test_radio_query_param_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value clears a clearable radio to None."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio_clear=")
+    wait_for_app_loaded(page)
+
+    # Clearable radio should accept the empty value and show None
+    expect_prefixed_markdown(page, "bound radio clear value:", "None")
+
+
+def test_radio_query_param_clearable_invalid_value(page: Page, app_port: int):
+    """Test that invalid value on clearable radio resets to None default."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio_clear=invalid")
+    wait_for_app_loaded(page)
+
+    # Invalid value should reset to default (None for clearable widget)
+    expect_prefixed_markdown(page, "bound radio clear value:", "None")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio_clear="))
+
+
+def test_radio_query_param_non_clearable_empty_value(page: Page, app_port: int):
+    """Test that empty URL value is rejected for non-clearable radio."""
+    page.goto(f"http://localhost:{app_port}/?bound_radio=")
+    wait_for_app_loaded(page)
+
+    # Non-clearable radio should reject empty value, show default "cat"
+    expect_prefixed_markdown(page, "bound radio value:", "cat")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_radio="))

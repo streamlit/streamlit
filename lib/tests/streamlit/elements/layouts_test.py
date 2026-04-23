@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from typing import Literal
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from parameterized import parameterized
@@ -24,11 +24,14 @@ from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
     StreamlitInvalidColumnGapError,
+    StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
+from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -407,6 +410,202 @@ class ExpanderTest(DeltaGeneratorTestCase):
             st.expander("label", icon=icon)
         assert "is not a valid Material icon" in str(e.value)
 
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None when on_change is not set."""
+        expander = st.expander("label")
+        assert expander.open is None
+
+    def test_open_returns_none_when_expanded_true(self):
+        """Test that .open returns None even with expanded=True (no state tracking)."""
+        expander = st.expander("label", expanded=True)
+        assert expander.open is None
+
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.expander("label", on_change="invalid")
+
+    def test_on_change_rerun_sets_open_false(self):
+        """Test that on_change='rerun' with expanded=False sets .open to False."""
+        expander = st.expander("label", on_change="rerun")
+        assert expander.open is False
+
+    def test_on_change_rerun_sets_open_true(self):
+        """Test that on_change='rerun' with expanded=True sets .open to True."""
+        expander = st.expander("label", expanded=True, on_change="rerun")
+        assert expander.open is True
+
+    def test_on_change_rerun_without_key_sets_block_id(self):
+        """Test that on_change='rerun' without key still sets block-level id."""
+        st.expander("label", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+        assert "my_exp" in expander_block.add_block.id
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id in the expandable proto."""
+        st.expander("label", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.expandable.id != ""
+
+    def test_on_change_ignore_does_not_set_block_id(self):
+        """Test that on_change='ignore' does not set the block id."""
+        st.expander("label", on_change="ignore")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id == ""
+
+    def test_on_change_ignore_does_not_set_id(self):
+        """Test that on_change='ignore' does not set id."""
+        st.expander("label", on_change="ignore")
+        expander_block = self.get_delta_from_queue()
+        assert not expander_block.add_block.expandable.HasField("id")
+
+    def test_passive_key_sets_block_id(self):
+        """Test that key with on_change='ignore' sets block-level id for stable identity."""
+        st.expander("label", key="my_expander")
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+        assert "my_expander" in expander_block.add_block.id
+        assert not expander_block.add_block.expandable.HasField("id")
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key makes state accessible."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        assert "my_exp" in st.session_state
+        assert st.session_state.my_exp is False
+
+    def test_on_change_rerun_expanded_true_session_state(self):
+        """Test that expanded=True is reflected in session_state."""
+        st.expander("label", key="my_exp", expanded=True, on_change="rerun")
+        assert st.session_state.my_exp is True
+
+    def test_on_change_rerun_expanded_state_uses_widget_value(self):
+        """Test that the expanded proto state comes from widget registration."""
+        expander = st.expander("label", expanded=False, on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        # Widget state should match the initial expanded value
+        assert not expander_block.add_block.expandable.expanded
+        assert expander.open is False
+
+    def test_on_change_callback_without_key_works(self):
+        """Test that a callback works without an explicit key."""
+        expander = st.expander("label", on_change=lambda: None)
+        assert expander.open is False
+
+    def test_on_change_callback_with_key_sets_open(self):
+        """Test that a callback with key enables state tracking."""
+        expander = st.expander(
+            "label", key="cb_exp", on_change=lambda: None, expanded=True
+        )
+        assert expander.open is True
+        assert st.session_state.cb_exp is True
+
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callback with key sets the block-level id."""
+        st.expander("label", key="cb_exp2", on_change=lambda: None)
+        expander_block = self.get_delta_from_queue()
+        assert expander_block.add_block.id != ""
+        assert "cb_exp2" in expander_block.add_block.id
+
+    def _get_expander_widget_state(self) -> WidgetState:
+        """Find the expander's WidgetState by matching its element id."""
+        expander_block = self.get_delta_from_queue()
+        element_id = expander_block.add_block.expandable.id
+
+        widget_states = self.script_run_ctx.session_state.get_widget_states()
+        for ws in widget_states:
+            if ws.id == element_id:
+                return ws
+        raise AssertionError(f"No widget state found for element id '{element_id}'")
+
+    def test_on_change_callback_fires_on_state_change(self):
+        """Test that the callback fires when the expander state changes."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.expander("label", key="cb_fire", on_change=on_change)
+
+        # Simulate a frontend state change (user toggles expander)
+        current_ws = self._get_expander_widget_state()
+        new_widget_state = WidgetState()
+        new_widget_state.CopyFrom(current_ws)
+        new_widget_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_widget_state])
+        )
+
+        assert len(callback_calls) == 1
+
+    def test_on_change_callback_receives_args_kwargs(self):
+        """Test that the callback receives provided args and kwargs."""
+        received_args: list[str] = []
+        received_kwargs: dict[str, str] = {}
+
+        def on_change(*args: str, **kwargs: str) -> None:
+            received_args.extend(args)
+            received_kwargs.update(kwargs)
+
+        st.expander(
+            "label",
+            key="cb_args",
+            on_change=on_change,
+            args=("arg1", "arg2"),
+            kwargs={"key1": "value1"},
+        )
+
+        # Simulate a frontend state change
+        current_ws = self._get_expander_widget_state()
+        new_widget_state = WidgetState()
+        new_widget_state.CopyFrom(current_ws)
+        new_widget_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_widget_state])
+        )
+
+        assert received_args == ["arg1", "arg2"]
+        assert received_kwargs == {"key1": "value1"}
+
+    def test_on_change_callback_no_fire_on_initial_render(self):
+        """Test that the callback does not fire on the initial render."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.expander("label", key="cb_no_fire", on_change=on_change)
+        assert len(callback_calls) == 0
+
+    def test_backwards_compat_rerun_still_works(self):
+        """Test that on_change='rerun' still works after callback support."""
+        expander = st.expander("label", on_change="rerun")
+        assert expander.open is False
+
+    def test_backwards_compat_ignore_still_works(self):
+        """Test that on_change='ignore' still works after callback support."""
+        expander = st.expander("label", on_change="ignore")
+        assert expander.open is None
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.expander("label", on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.expander("label", on_change="rerun")
+
 
 class ContainerTest(DeltaGeneratorTestCase):
     def test_border_parameter(self):
@@ -620,8 +819,6 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_horizontal_alignment(self, horizontal_alignment) -> None:
         """Test that st.container raises on invalid horizontal_alignment."""
-        import streamlit as st
-
         with pytest.raises(StreamlitInvalidHorizontalAlignmentError):
             st.container(horizontal=True, horizontal_alignment=horizontal_alignment)
 
@@ -633,10 +830,39 @@ class ContainerTest(DeltaGeneratorTestCase):
     )
     def test_container_invalid_vertical_alignment(self, vertical_alignment) -> None:
         """Test that st.container raises on invalid vertical_alignment."""
-        import streamlit as st
-
         with pytest.raises(StreamlitInvalidVerticalAlignmentError):
             st.container(horizontal=True, vertical_alignment=vertical_alignment)
+
+    @parameterized.expand(
+        [
+            ("true_with_height", True, 300, True),
+            ("false_with_height", False, 300, False),
+        ],
+    )
+    def test_autoscroll_sets_proto_field(
+        self,
+        _name: str,
+        autoscroll: bool,
+        height: int,
+        expected_value: bool,
+    ) -> None:
+        """Test that explicit autoscroll values set the proto field."""
+        st.container(height=height, autoscroll=autoscroll)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.HasField("autoscroll")
+        assert container_block.add_block.autoscroll is expected_value
+
+    def test_autoscroll_none_does_not_set_field(self) -> None:
+        """Test that autoscroll=None (default) does not set the proto field."""
+        st.container(height=300)
+        container_block = self.get_delta_from_queue()
+        assert not container_block.add_block.HasField("autoscroll")
+
+    def test_autoscroll_without_height(self) -> None:
+        """Test that autoscroll can be set without a fixed height."""
+        st.container(autoscroll=True)
+        container_block = self.get_delta_from_queue()
+        assert container_block.add_block.autoscroll is True
 
 
 class PopoverContainerTest(DeltaGeneratorTestCase):
@@ -782,6 +1008,234 @@ class PopoverContainerTest(DeltaGeneratorTestCase):
         """Test that invalid width values raise an error"""
         with pytest.raises(StreamlitAPIException):
             st.popover("label", width=invalid_width)
+
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None when on_change is not set."""
+        popover = st.popover("label")
+        assert popover.open is None
+
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", on_change="invalid")
+
+    def test_on_change_rerun_sets_open_false(self):
+        """Test that on_change='rerun' with open=False sets .open to False."""
+        popover = st.popover("label", on_change="rerun")
+        assert popover.open is False
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id on the popover proto."""
+        st.popover("label", on_change="rerun")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.popover.id != ""
+
+    def test_on_change_ignore_does_not_set_id(self):
+        """Test that on_change='ignore' does not set id."""
+        st.popover("label", on_change="ignore")
+        popover_block = self.get_delta_from_queue()
+        assert not popover_block.add_block.popover.HasField("id")
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key stores the open state."""
+        st.popover("label", key="my_pop", on_change="rerun")
+        assert "my_pop" in st.session_state
+        assert st.session_state.my_pop is False
+
+    def test_on_change_ignore_with_key_open_remains_none(self):
+        """Test that on_change='ignore' with a key keeps .open as None,
+        does not register widget state, but sets block-level id."""
+        popover = st.popover("label", key="my_pop", on_change="ignore")
+        assert popover.open is None
+        assert "my_pop" not in st.session_state
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id != ""
+        assert "my_pop" in popover_block.add_block.id
+        assert not popover_block.add_block.popover.HasField("id")
+
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
+        st.popover("label", key="my_pop", on_change="rerun")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id != ""
+        assert "my_pop" in popover_block.add_block.id
+
+    def test_on_change_rerun_without_key_sets_block_id(self):
+        """Test that on_change='rerun' without key still sets block-level id."""
+        st.popover("label", on_change="rerun")
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id != ""
+
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callable on_change with key sets the block-level id."""
+        st.popover("label", key="cb_pop2", on_change=lambda: None)
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.id != ""
+        assert "cb_pop2" in popover_block.add_block.id
+
+    def test_callback_enables_state_tracking(self):
+        """Test that passing a callable on_change enables state tracking."""
+        popover = st.popover("label", on_change=lambda: None)
+        # Callback implies stateful: .open should be a bool, not None
+        assert popover.open is False
+
+    def test_callback_sets_proto_id(self):
+        """Test that callable on_change sets the popover proto id."""
+        st.popover("label", on_change=lambda: None)
+        popover_block = self.get_delta_from_queue()
+        assert popover_block.add_block.popover.id != ""
+
+    def test_callback_registered_in_widget_metadata(self):
+        """Test that the callback is stored in widget metadata."""
+
+        st.popover("label", on_change=lambda: None)
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        session_state = ctx.session_state._state
+        widget_id = session_state.get_widget_states()[0].id
+        metadata = session_state._new_widget_state.widget_metadata.get(widget_id)
+        assert metadata is not None
+        assert metadata.callback is not None
+
+    def test_callback_fires_on_state_change(self):
+        """Test that callback fires when popover state changes."""
+
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.popover("label", key="cb_pop", on_change=on_change)
+
+        # Simulate opening the popover (False -> True)
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        new_state = WidgetState()
+        new_state.CopyFrom(current_states[0])
+        new_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_state])
+        )
+
+        assert len(callback_calls) == 1
+
+    def test_callback_fires_on_open_and_close(self):
+        """Test that callback fires on both open and close transitions."""
+
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.popover("label", key="cb_pop_both", on_change=on_change)
+
+        # Open the popover (False -> True) — callback fires
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        open_state = WidgetState()
+        open_state.CopyFrom(current_states[0])
+        open_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[open_state])
+        )
+        assert len(callback_calls) == 1
+
+        # Close the popover (True -> False) — callback fires again
+        close_state = WidgetState()
+        close_state.CopyFrom(open_state)
+        close_state.bool_value = False
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[close_state])
+        )
+        assert len(callback_calls) == 2
+
+    def test_callback_does_not_fire_on_initial_render(self):
+        """Test that callback does not fire during the initial render."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.popover("label", on_change=on_change)
+        assert len(callback_calls) == 0
+
+    def test_callback_receives_args(self):
+        """Test that callback receives positional args."""
+
+        received_args: list[str] = []
+
+        def on_change(arg1: str, arg2: str) -> None:
+            received_args.extend([arg1, arg2])
+
+        st.popover("label", key="args_pop", on_change=on_change, args=("a", "b"))
+
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        new_state = WidgetState()
+        new_state.CopyFrom(current_states[0])
+        new_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_state])
+        )
+
+        assert received_args == ["a", "b"]
+
+    def test_callback_receives_kwargs(self):
+        """Test that callback receives keyword args."""
+
+        received_kwargs: dict[str, str] = {}
+
+        def on_change(prefix: str = "") -> None:
+            received_kwargs["prefix"] = prefix
+
+        st.popover(
+            "label",
+            key="kwargs_pop",
+            on_change=on_change,
+            kwargs={"prefix": "hello"},
+        )
+
+        current_states = self.script_run_ctx.session_state.get_widget_states()
+        new_state = WidgetState()
+        new_state.CopyFrom(current_states[0])
+        new_state.bool_value = True
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_state])
+        )
+
+        assert received_kwargs == {"prefix": "hello"}
+
+    def test_callback_with_key_accessible_via_session_state(self):
+        """Test that callback with key makes state accessible."""
+        st.popover("label", key="my_cb_pop", on_change=lambda: None)
+        assert "my_cb_pop" in st.session_state
+        assert st.session_state.my_cb_pop is False
+
+    def test_callback_without_key_works(self):
+        """Test that callback works even without a user-provided key."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        popover = st.popover("label", on_change=on_change)
+        # Should still be stateful (widget registered with element_id)
+        assert popover.open is False
+
+    def test_invalid_on_change_with_callback_type_raises(self):
+        """Test that non-string, non-callable on_change raises."""
+        with pytest.raises(StreamlitAPIException):
+            st.popover("label", on_change=123)  # type: ignore[arg-type]
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.popover("label", on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.popover("label", on_change="rerun")
 
 
 class StatusContainerTest(DeltaGeneratorTestCase):
@@ -998,6 +1452,261 @@ class TabsTest(DeltaGeneratorTestCase):
 
         assert tab_container_block.add_block.tab_container.default_tab_index == 1
 
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None on all tabs when on_change is not set."""
+        tabs = st.tabs(["A", "B", "C"])
+        for tab in tabs:
+            assert tab.open is None
+
+    def test_open_returns_none_with_default_tab(self):
+        """Test that .open returns None even with a default tab (no state tracking)."""
+        tabs = st.tabs(["A", "B", "C"], default="B")
+        for tab in tabs:
+            assert tab.open is None
+
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], on_change="invalid")
+
+    def test_on_change_rerun_sets_open_on_tabs(self):
+        """Test that on_change='rerun' sets .open correctly on each tab."""
+        tabs = st.tabs(["A", "B", "C"], on_change="rerun")
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+        assert tabs[2].open is False
+
+    def test_on_change_rerun_with_default_sets_open(self):
+        """Test that on_change='rerun' with default sets the right tab as open."""
+        tabs = st.tabs(["A", "B", "C"], default="B", on_change="rerun")
+        assert tabs[0].open is False
+        assert tabs[1].open is True
+        assert tabs[2].open is False
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id on the tab container proto."""
+        st.tabs(["A", "B"], on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.tab_container.id != ""
+
+    def test_on_change_none_does_not_set_id(self):
+        """Test that on_change=None does not set id."""
+        st.tabs(["A", "B"])
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert not tab_container_block.add_block.tab_container.HasField("id")
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key stores the active tab label."""
+        st.tabs(["A", "B", "C"], key="my_tabs", on_change="rerun")
+        assert "my_tabs" in st.session_state
+        assert st.session_state.my_tabs == "A"
+
+    def test_on_change_rerun_with_default_session_state(self):
+        """Test that default tab is reflected in session_state."""
+        st.tabs(["A", "B", "C"], key="my_tabs", default="C", on_change="rerun")
+        assert st.session_state.my_tabs == "C"
+
+    def test_on_change_rerun_with_default_sets_correct_tab_index(self):
+        """Test that default + on_change='rerun' sets the correct tab index in proto."""
+        st.tabs(["A", "B", "C"], default="C", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.tab_container.default_tab_index == 2
+
+    def test_on_change_rerun_falls_back_when_label_not_in_tabs(self):
+        """Test that a stale session state label falls back to the default tab."""
+        # Pre-populate session state with a label that won't be in the new tab list
+        st.session_state["my_tabs"] = "OldTab"
+        tabs = st.tabs(["X", "Y", "Z"], key="my_tabs", on_change="rerun")
+        # Should fall back to first tab since "OldTab" is not in ["X", "Y", "Z"]
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_on_change_ignore_with_key_open_remains_none(self):
+        """Test that on_change='ignore' with key leaves .open as None and no widget state."""
+        tabs = st.tabs(["A", "B", "C"], key="my_tabs", on_change="ignore")
+        for tab in tabs:
+            assert tab.open is None
+        assert "my_tabs" not in st.session_state
+
+    def test_passive_key_sets_block_id(self):
+        """Test that key with on_change='ignore' sets block-level id for stable identity."""
+        st.tabs(["A", "B"], key="my_tabs", on_change="ignore")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id != ""
+        assert "my_tabs" in tab_container_block.add_block.id
+        assert not tab_container_block.add_block.tab_container.HasField("id")
+
+    def test_passive_key_without_key_does_not_set_block_id(self):
+        """Test that tabs without key does not set block-level id."""
+        st.tabs(["A", "B"])
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id == ""
+
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
+        st.tabs(["A", "B"], key="my_tabs", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id != ""
+        assert "my_tabs" in tab_container_block.add_block.id
+
+    def test_on_change_rerun_without_key_sets_block_id(self):
+        """Test that on_change='rerun' without key still sets block-level id."""
+        st.tabs(["A", "B"], on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id != ""
+
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callable on_change with key sets the block-level id."""
+        st.tabs(["A", "B"], key="cb_tabs2", on_change=lambda: None)
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.id != ""
+        assert "cb_tabs2" in tab_container_block.add_block.id
+
+    def test_on_change_callback_sets_id(self) -> None:
+        """Test that a callable on_change sets id on the tab container proto."""
+
+        def on_change() -> None:
+            pass
+
+        st.tabs(["A", "B"], key="cb_tabs", on_change=on_change)
+        all_deltas = self.get_all_deltas_from_queue()
+        tab_container_block = all_deltas[0]
+        assert tab_container_block.add_block.tab_container.id != ""
+
+    def test_on_change_callback_sets_open_on_tabs(self) -> None:
+        """Test that a callable on_change sets .open correctly on each tab."""
+
+        def on_change() -> None:
+            pass
+
+        tabs = st.tabs(["A", "B", "C"], key="cb_tabs", on_change=on_change)
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+        assert tabs[2].open is False
+
+    def test_on_change_callback_with_default_tab(self) -> None:
+        """Test that a callable on_change with default sets correct tab open."""
+
+        def on_change() -> None:
+            pass
+
+        tabs = st.tabs(["A", "B", "C"], key="cb_tabs", default="B", on_change=on_change)
+        assert tabs[0].open is False
+        assert tabs[1].open is True
+        assert tabs[2].open is False
+
+    def _get_tabs_widget_state(self) -> WidgetState:
+        """Get the single tabs WidgetState from session state."""
+        widget_states = self.script_run_ctx.session_state.get_widget_states()
+        assert len(widget_states) == 1, (
+            f"Expected exactly 1 widget state, got {len(widget_states)}"
+        )
+        return widget_states[0]
+
+    def test_on_change_callback_fires_on_state_change(self) -> None:
+        """Test that callback function is invoked when active tab switches."""
+        callback_calls: list[str] = []
+
+        def on_tab_change() -> None:
+            callback_calls.append("called")
+
+        st.tabs(["A", "B"], key="cb_tabs", on_change=on_tab_change)
+
+        # Simulate tab switch from frontend
+        current_ws = self._get_tabs_widget_state()
+        new_ws = WidgetState()
+        new_ws.CopyFrom(current_ws)
+        new_ws.string_value = "B"
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_ws])
+        )
+        assert len(callback_calls) == 1
+
+    def test_on_change_callback_no_fire_on_initial_render(self) -> None:
+        """Test that callback does not fire on initial render."""
+        callback_calls: list[str] = []
+
+        def on_tab_change() -> None:
+            callback_calls.append("called")
+
+        st.tabs(["A", "B"], key="cb_tabs", on_change=on_tab_change)
+        assert len(callback_calls) == 0
+
+    def test_on_change_callback_receives_args_kwargs(self) -> None:
+        """Test that callback receives provided args and kwargs."""
+        received_args: list[object] = []
+        received_kwargs: dict[str, object] = {}
+
+        def on_change(*args: object, **kwargs: object) -> None:
+            received_args.extend(args)
+            received_kwargs.update(kwargs)
+
+        st.tabs(
+            ["A", "B"],
+            key="cb_tabs",
+            on_change=on_change,
+            args=("arg1", "arg2"),
+            kwargs={"key1": "value1"},
+        )
+
+        current_ws = self._get_tabs_widget_state()
+        new_ws = WidgetState()
+        new_ws.CopyFrom(current_ws)
+        new_ws.string_value = "B"
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_ws])
+        )
+
+        assert received_args == ["arg1", "arg2"]
+        assert received_kwargs == {"key1": "value1"}
+
+    def test_on_change_callback_accessible_via_session_state(self) -> None:
+        """Test that active tab label is accessible via session_state with callback."""
+
+        def on_change() -> None:
+            pass
+
+        st.tabs(["A", "B", "C"], key="cb_tabs", on_change=on_change)
+        assert "cb_tabs" in st.session_state
+        assert st.session_state.cb_tabs == "A"
+
+    def test_invalid_on_change_with_callback_type_still_raises(self) -> None:
+        """Test that non-string, non-callable on_change raises an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], on_change=123)  # type: ignore[arg-type]
+
+    def test_backwards_compat_rerun_still_works(self) -> None:
+        """Test that on_change='rerun' still works after callback support."""
+        tabs = st.tabs(["A", "B"], on_change="rerun")
+        assert tabs[0].open is True
+        assert tabs[1].open is False
+
+    def test_on_change_none_raises(self) -> None:
+        """Test that on_change=None raises an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.tabs(["A", "B"], on_change=None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.tabs(["A", "B"], on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.tabs(["A", "B"], on_change="rerun")
+
 
 class DialogTest(DeltaGeneratorTestCase):
     """Run unit tests for the non-public delta-generator dialog and also the dialog
@@ -1012,7 +1721,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.title == DialogTest.title
@@ -1037,6 +1745,31 @@ class DialogTest(DeltaGeneratorTestCase):
             pass
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.width == expected_width
+
+    def test_dialog_sets_icon(self):
+        """Test that the dialog icon is propagated."""
+        dialog = st._main._dialog(DialogTest.title, icon="🎈")
+        with dialog:
+            # No content so that 'get_delta_from_queue' returns the dialog.
+            pass
+
+        dialog_block = self.get_delta_from_queue()
+        assert dialog_block.add_block.dialog.icon == "🎈"
+
+    def test_dialog_decorator_sets_icon(self):
+        """Test that the dialog decorator propagates the icon."""
+
+        @st.dialog("With icon", icon="✅")
+        def test_dialog():
+            st.write("content")
+
+        test_dialog()
+        deltas = self.get_all_deltas_from_queue()
+        assert any(
+            delta.add_block.dialog.icon == "✅"
+            for delta in deltas
+            if delta.HasField("add_block") and delta.add_block.HasField("dialog")
+        )
 
     def test_dialog_deltagenerator_opens_and_closes(self):
         """Test that dialog opens and closes"""
@@ -1181,7 +1914,6 @@ class DialogTest(DeltaGeneratorTestCase):
 
         with dialog:
             """No content so that 'get_delta_from_queue' returns the dialog."""
-            pass
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.title == DialogTest.title

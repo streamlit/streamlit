@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -176,7 +176,7 @@ class TestCLIRegressions:
         process.stdin.flush()  # type: ignore
         process.communicate()
 
-        with open(CREDENTIALS_FILE_PATH) as f:
+        with open(CREDENTIALS_FILE_PATH, encoding="utf-8") as f:
             assert "regressiontest@streamlit.io" in f.read(), (
                 "Email address was not found in the credentials file"
             )
@@ -201,7 +201,7 @@ class TestCLIRegressions:
         )
 
         assert ":8501" in out_one, f"Incorrect port. See output:\n{out_one}"
-        assert "Port 8501 is already in use" in out_two, (
+        assert "Port 8501 is not available" in out_two, (
             f"Incorrect conflict. See output:\n{out_one}"
         )
 
@@ -213,7 +213,7 @@ class TestCLIRegressions:
         assert ":9999" in out, f"Incorrect port. See output:\n{out}"
 
     def test_config_toml_defined_port(self) -> None:
-        with open(CONFIG_FILE_PATH, "w") as file:
+        with open(CONFIG_FILE_PATH, "w", encoding="utf-8") as file:
             file.write("[server]\n  port=8888")
 
         out = self.run_single_proc(

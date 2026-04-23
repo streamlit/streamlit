@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,12 @@ import re
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_form_button,
@@ -27,9 +32,10 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     get_expander,
     get_slider,
+    reset_hovering,
 )
 
-NUM_SELECT_SLIDERS = 16
+NUM_SELECT_SLIDERS = 20
 
 
 def test_select_slider_rendering(
@@ -166,46 +172,65 @@ def test_select_slider_works_with_fragments(app: Page):
 
 
 @pytest.mark.skip_browser("firefox")  # Firefox runs into sub-pixel flakiness
-def test_dynamic_select_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that the select slider can be updated dynamically while keeping the state."""
+def test_dynamic_select_slider_props_and_options(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the select slider can be updated dynamically while keeping the state.
+
+    Also tests dynamic options: "green" exists in both option sets at different indices:
+    - Initial: index 3 (out of 5: red, orange, yellow, green, blue)
+    - Updated: index 0 (out of 3: green, blue, purple)
+    When selecting "green" and toggling, the value should be preserved but thumb position changes.
+    """
     dynamic_select_slider = get_element_by_key(app, "dynamic_select_slider_with_key")
     expect(dynamic_select_slider).to_be_visible()
 
     expect(dynamic_select_slider).to_contain_text("Initial dynamic select slider")
     expect_prefixed_markdown(app, "Initial select slider value:", "orange")
 
+    reset_hovering(app)
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_initial")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select_slider, "initial help")
 
-    # Click in the middle of the slider
+    # Move to "green" (index 3 in initial options: red, orange, yellow, green, blue)
+    # This tests that shared options are preserved when toggling.
+    # Clicking the slider track moves to center (~index 2 = "yellow"), then ArrowRight to "green"
     dynamic_select_slider.click()
+    # Wait for the click to register and focus to be set before sending key
     wait_for_app_run(app)
+    dynamic_select_slider.press("ArrowRight")  # yellow -> green
+    wait_for_app_run(app)
+    expect_prefixed_markdown(app, "Initial select slider value:", "green")
 
-    expect_prefixed_markdown(app, "Initial select slider value:", "yellow")
-
-    # Click the toggle to update the select slider props
+    # Click the toggle to update the select slider props AND options
+    # Options change from [red, orange, yellow, green, blue] to [green, blue, purple]
+    # "green" exists in both but at different positions (index 3 -> index 0)
     click_toggle(app, "Update select slider props")
 
-    # new select slider is visible:
+    # New select slider is visible:
     expect(dynamic_select_slider).to_contain_text("Updated dynamic select slider")
 
-    # Ensure the previously entered value remains visible
-    expect_prefixed_markdown(app, "Updated select slider value:", "yellow")
+    # "green" should be preserved because it exists in the new options
+    # The slider thumb should have moved to the left (index 0 in new options)
+    expect_prefixed_markdown(app, "Updated select slider value:", "green")
 
     dynamic_select_slider.scroll_into_view_if_needed()
+    reset_hovering(app)
     assert_snapshot(dynamic_select_slider, name="st_select_slider-dynamic_updated")
 
     # Check that the help tooltip is correct:
     expect_help_tooltip(app, dynamic_select_slider, "updated help")
 
-    # Click in the middle and move slider once to right
+    # Move slider to test it still works after options change.
+    # Click moves to center (~"blue" at index 1), then ArrowRight moves to "purple" (index 2)
     dynamic_select_slider.click()
+    # Wait for the click to register and focus to be set before sending key
+    wait_for_app_run(app)
     dynamic_select_slider.press("ArrowRight")
     wait_for_app_run(app)
-
-    expect_prefixed_markdown(app, "Updated select slider value:", "green")
+    expect_prefixed_markdown(app, "Updated select slider value:", "purple")
 
 
 def test_no_rerun_on_drag(app: Page):
@@ -243,3 +268,164 @@ def test_select_slider_tick_bar_visibility(
     slider.hover()
     expect(slider.get_by_test_id("stSliderTickBar")).to_be_visible()
     assert_snapshot(slider, name="st_select_slider-tick_bar_visibility")
+
+
+def test_select_slider_range_dynamic_options_resets_on_invalid(app: Page):
+    """Test that range slider resets entirely when either value becomes invalid after options change."""
+    range_slider = get_element_by_key(app, "dynamic_range_select_slider")
+    expect(range_slider).to_be_visible()
+
+    # Initially default range is ("alpha", "echo")
+    # Options are ["alpha", "bravo", "charlie", "delta", "echo"]
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('alpha', 'echo')")
+
+    # Toggle to enable alternative options ["charlie", "delta", "echo"]
+    # "alpha" is NOT in new options -> entire range resets to new default ("charlie", "echo")
+    click_toggle(app, "Enable alternative range options")
+    expect_prefixed_markdown(app, "Dynamic range selection:", "('charlie', 'echo')")
+    # Negative assertion: "alpha" should not be preserved (it's not in new options)
+    markdown_element = app.get_by_test_id("stMarkdown").filter(
+        has_text=re.compile(r"Dynamic range selection:")
+    )
+    expect(markdown_element).not_to_contain_text("'alpha'")
+
+
+# --- Query Param Binding Tests ---
+
+
+def test_select_slider_query_param_seeding(page: Page, app_base_url: str):
+    """Test that select_slider value can be seeded from URL query params."""
+    page.goto(build_app_url(app_base_url, query={"bound_color": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "blue")
+    expect(page).to_have_url(re.compile(r"bound_color=blue"))
+
+
+def test_select_slider_query_param_seeding_range(page: Page, app_base_url: str):
+    """Test that select_slider range can be seeded via repeated URL params."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["red", "violet"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('red', 'violet')")
+    expect(page).to_have_url(
+        re.compile(r"bound_color_range=red&bound_color_range=violet")
+    )
+
+
+def test_select_slider_query_param_invalid_value_resets(page: Page, app_base_url: str):
+    """Test that invalid URL option reverts to default."""
+    # bound_color has default "green"
+    page.goto(build_app_url(app_base_url, query={"bound_color": "invalid"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
+def test_select_slider_query_param_range_partial_invalid(page: Page, app_base_url: str):
+    """Test range with one invalid value auto-corrects to fallback."""
+    # bound_color_range has default ("orange", "indigo")
+    # "red" is valid, "invalid" falls back to the default for that position
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["red", "invalid"]})
+    )
+    wait_for_app_loaded(page)
+
+    # The invalid position falls back to its default index (position 1 → "indigo")
+    expect_prefixed_markdown(page, "Bound color range:", "('red', 'indigo')")
+
+
+def test_select_slider_query_param_format_func(page: Page, app_base_url: str):
+    """Test that format_func options work in URL."""
+    # bound_formatted uses format_func=str.upper, so URL options are uppercase
+    page.goto(build_app_url(app_base_url, query={"bound_formatted": "LG"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound formatted:", "lg")
+    expect(page).to_have_url(re.compile(r"bound_formatted=LG"))
+
+
+def test_select_slider_query_param_updates_url(app: Page):
+    """Test that interacting with a bound select_slider updates the URL."""
+    slider = get_element_by_key(app, "bound_color")
+    slider.hover()
+    app.mouse.down()
+
+    # Move slider to the right to change from default ("green")
+    app.keyboard.press("ArrowRight")
+    wait_for_app_run(app)
+
+    expect_prefixed_markdown(app, "Bound color:", "blue")
+    expect(app).to_have_url(re.compile(r"[?&]bound_color=blue"))
+
+
+def test_select_slider_query_param_default_override(page: Page, app_base_url: str):
+    """Test that URL overrides default, and reverting to default clears the URL param."""
+    # bound_color has default "green"; seed with "blue" (one step right)
+    page.goto(build_app_url(app_base_url, query={"bound_color": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "blue")
+    expect(page).to_have_url(re.compile(r"bound_color=blue"))
+
+    # Click center of 7-option slider to snap to middle option ("green" = default)
+    slider = get_element_by_key(page, "bound_color")
+    slider.click()
+    wait_for_app_run(page)
+
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))
+
+
+def test_select_slider_query_param_zero_width_range(page: Page, app_base_url: str):
+    """Test that zero-width range (duplicate values) works correctly."""
+    page.goto(
+        build_app_url(app_base_url, query={"bound_color_range": ["blue", "blue"]})
+    )
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('blue', 'blue')")
+    expect(page).to_have_url(
+        re.compile(r"bound_color_range=blue&bound_color_range=blue")
+    )
+
+
+def test_select_slider_query_param_single_value_on_range_resets(
+    page: Page, app_base_url: str
+):
+    """Test that a single URL value for a range select_slider resets to default."""
+    # bound_color_range is a range slider with default=("orange", "indigo")
+    page.goto(build_app_url(app_base_url, query={"bound_color_range": "blue"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound color range:", "('orange', 'indigo')")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color_range="))
+
+
+def test_select_slider_query_param_both_invalid_range(page: Page, app_base_url: str):
+    """Test that range with both values invalid resets to default."""
+    # bound_color_range default is ("orange", "indigo")
+    page.goto(
+        build_app_url(
+            app_base_url, query={"bound_color_range": ["invalid1", "invalid2"]}
+        )
+    )
+    wait_for_app_loaded(page)
+
+    # Both values invalid -> falls back to default for both positions
+    expect_prefixed_markdown(page, "Bound color range:", "('orange', 'indigo')")
+    # Default value should not remain in URL
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color_range="))
+
+
+def test_select_slider_query_param_empty_value_rejected(page: Page, app_base_url: str):
+    """Test that empty URL param is rejected for non-clearable select_slider."""
+    page.goto(build_app_url(app_base_url, query={"bound_color": ""}))
+    wait_for_app_loaded(page)
+
+    # Should use default ("green")
+    expect_prefixed_markdown(page, "Bound color:", "green")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_color="))

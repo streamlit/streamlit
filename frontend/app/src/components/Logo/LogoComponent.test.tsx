@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,24 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
 
 import { render, renderWithContexts } from "@streamlit/lib/testing"
 import { Logo as LogoProto } from "@streamlit/protobuf"
 
 import LogoComponent from "./LogoComponent"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 const mockEndpoints = {
   setStaticConfigUrl: vi.fn(),
@@ -150,7 +160,7 @@ describe("LogoComponent", () => {
     expect(logoLink).toHaveAttribute("href", "https://example.com")
   })
 
-  it("renders logo without link when no link provided", () => {
+  it("renders logo without link when no link provided and single-page app", () => {
     const logoWithoutLink = LogoProto.create({
       image: "https://example.com/logo.png",
       size: "medium",
@@ -167,6 +177,148 @@ describe("LogoComponent", () => {
 
     expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
     screen.getByTestId("stHeaderLogo")
+  })
+
+  describe("multi-page app home navigation", () => {
+    const logoWithoutLink = LogoProto.create({
+      image: "https://example.com/logo.png",
+      size: "medium",
+    })
+
+    const multiPageAppPages = [
+      { pageName: "Home", pageScriptHash: "home_hash", isDefault: true },
+      { pageName: "Page 2", pageScriptHash: "page2_hash", isDefault: false },
+    ]
+
+    it("renders clickable button when no link provided in multi-page app", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+          },
+        }
+      )
+
+      const logoButton = screen.getByTestId("stLogoLink")
+      expect(logoButton.tagName).toBe("BUTTON")
+      expect(logoButton).toHaveAttribute("aria-label", "Navigate to home page")
+    })
+
+    it("calls onPageChange with home page hash when clicked", async () => {
+      const user = userEvent.setup()
+      const mockOnPageChange = vi.fn()
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+            onPageChange: mockOnPageChange,
+          },
+        }
+      )
+
+      const logoButton = screen.getByTestId("stLogoLink")
+      await user.click(logoButton)
+
+      expect(mockOnPageChange).toHaveBeenCalledWith("home_hash")
+    })
+
+    it("renders non-clickable logo when already on home page", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+            currentPageScriptHash: "home_hash", // Already on home page
+          },
+        }
+      )
+
+      // Should not render a clickable button when already on home page
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      // Logo should still be rendered
+      screen.getByTestId("stHeaderLogo")
+    })
+
+    it("uses external link when link is provided, even in multi-page app", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: sampleLogo, // Has link: "https://example.com"
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: multiPageAppPages,
+          },
+        }
+      )
+
+      const logoLink = screen.getByTestId("stLogoLink")
+      expect(logoLink.tagName).toBe("A")
+      expect(logoLink).toHaveAttribute("href", "https://example.com")
+      expect(logoLink).toHaveAttribute("target", "_blank")
+    })
+
+    it("renders non-clickable logo when single-page app with no link", () => {
+      const singlePageAppPages = [
+        { pageName: "Home", pageScriptHash: "home_hash", isDefault: true },
+      ]
+
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: singlePageAppPages,
+          },
+        }
+      )
+
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      screen.getByTestId("stHeaderLogo")
+    })
+
+    it("renders non-clickable logo when no pages are available", () => {
+      renderWithContexts(
+        <LogoComponent
+          {...getProps({
+            appLogo: logoWithoutLink,
+            dataTestId: "stHeaderLogo",
+          })}
+        />,
+        {
+          navigationContext: {
+            appPages: [],
+          },
+        }
+      )
+
+      expect(screen.queryByTestId("stLogoLink")).not.toBeInTheDocument()
+      screen.getByTestId("stHeaderLogo")
+    })
   })
 
   it("applies correct size classes", () => {
@@ -205,17 +357,103 @@ describe("LogoComponent", () => {
     expect(logo).toHaveStyle("height: 2rem")
   })
 
+  describe("icon and emoji logos", () => {
+    it("renders DynamicIcon when imageType is ICON", () => {
+      const iconLogo = LogoProto.create({
+        image: ":material/home:",
+        imageType: LogoProto.ImageType.ICON,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: iconLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      // Should render a div container (StyledIconLogo) instead of img (StyledLogo)
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("DIV")
+    })
+
+    it("renders DynamicIcon when imageType is EMOJI", () => {
+      const emojiLogo = LogoProto.create({
+        image: "🏠",
+        imageType: LogoProto.ImageType.EMOJI,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: emojiLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      // Should render a div container (StyledIconLogo) instead of img (StyledLogo)
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("DIV")
+    })
+
+    it("renders img when imageType is IMAGE (default)", () => {
+      const imageLogo = LogoProto.create({
+        image: "https://example.com/logo.png",
+        imageType: LogoProto.ImageType.IMAGE,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: imageLogo,
+            dataTestId: "stLogo",
+          })}
+        />
+      )
+
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("IMG")
+    })
+
+    it("uses icon_image_type when collapsed and iconImage exists", () => {
+      const mixedLogo = LogoProto.create({
+        image: "https://example.com/logo.png",
+        imageType: LogoProto.ImageType.IMAGE,
+        iconImage: ":material/menu:",
+        iconImageType: LogoProto.ImageType.ICON,
+        size: "medium",
+      })
+
+      render(
+        <LogoComponent
+          {...getProps({
+            appLogo: mixedLogo,
+            dataTestId: "stLogo",
+            collapsed: true,
+          })}
+        />
+      )
+
+      // When collapsed, should use iconImage which is an icon
+      const logo = screen.getByTestId("stLogo")
+      expect(logo.tagName).toBe("DIV")
+    })
+  })
+
   describe("crossOrigin attribute", () => {
     afterEach(() => {
-      // Clean up window.__streamlit after each test
-      if (window.__streamlit) {
-        delete window.__streamlit.BACKEND_BASE_URL
-      }
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("sets crossOrigin for relative URLs when BACKEND_BASE_URL is set", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      // Setup StreamlitConfig.BACKEND_BASE_URL
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       const logoWithRelativeUrl = LogoProto.create({
         image: "/media/logo.png",
@@ -265,8 +503,8 @@ describe("LogoComponent", () => {
     })
 
     it("sets crossOrigin attribute for backend URLs when configured", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       const logoWithBackendUrl = LogoProto.create({
         image: "http://localhost:8501/media/logo.png",
@@ -315,8 +553,8 @@ describe("LogoComponent", () => {
     })
 
     it("does not set crossOrigin attribute for external URLs", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       renderWithContexts(
         <LogoComponent
@@ -345,10 +583,9 @@ describe("LogoComponent", () => {
     ])(
       "does not set crossOrigin attribute when resourceCrossOriginMode is undefined ($description)",
       ({ backendBaseUrl }) => {
-        // Setup window.__streamlit.BACKEND_BASE_URL if specified
+        // Setup StreamlitConfig.BACKEND_BASE_URL if specified
         if (backendBaseUrl) {
-          window.__streamlit = window.__streamlit || {}
-          window.__streamlit.BACKEND_BASE_URL = backendBaseUrl
+          globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = backendBaseUrl
         }
 
         const logoWithRelativeUrl = LogoProto.create({
@@ -374,8 +611,8 @@ describe("LogoComponent", () => {
     )
 
     it("works with use-credentials mode", () => {
-      window.__streamlit = window.__streamlit || {}
-      window.__streamlit.BACKEND_BASE_URL = "http://localhost:8501"
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "http://localhost:8501"
 
       const logoWithRelativeUrl = LogoProto.create({
         image: "/media/logo.png",

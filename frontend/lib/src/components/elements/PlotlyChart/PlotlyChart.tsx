@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   FC,
   memo,
   ReactElement,
@@ -24,20 +24,27 @@ import React, {
   useState,
 } from "react"
 
-import Plot, { Figure as PlotlyFigureType } from "react-plotly.js"
-
 import { PlotlyChart as PlotlyChartProto } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import { FormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
+import useTimeout from "~lib/hooks/useTimeout"
+import Plot, {
+  type Figure as PlotlyFigureType,
+} from "~lib/util/reactPlotlyCompat"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { StyledPlotlyChartContainer } from "./styled-components"
-import { applyTheming, handleSelection, sendEmptySelection } from "./utils"
+import {
+  applyTheming,
+  handleClickEvent,
+  handleSelection,
+  sendEmptySelection,
+} from "./utils"
 
 // Minimum width for Plotly charts
 const MIN_WIDTH = 150
@@ -68,7 +75,7 @@ const FULLSCREEN_COLLAPSE_ICON = {
   path: "M160 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v64H32c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32V64zM32 320c-17.7 0-32 14.3-32 32s14.3 32 32 32H96v64c0 17.7 14.3 32 32 32s32-14.3 32-32V352c0-17.7-14.3-32-32-32H32zM352 64c0-17.7-14.3-32-32-32s-32 14.3-32 32v96c0 17.7 14.3 32 32 32h96c17.7 0 32-14.3 32-32s-14.3-32-32-32H352V64zM320 320c-17.7 0-32 14.3-32 32v96c0 17.7 14.3 32 32 32s32-14.3 32-32V384h64c17.7 0 32-14.3 32-32s-14.3-32-32-32H320z",
 }
 
-export interface PlotlyChartProps {
+interface PlotlyChartProps {
   element: PlotlyChartProto
   widgetMgr: WidgetStateManager
   disabled: boolean
@@ -117,7 +124,10 @@ export function PlotlyChart({
     // If there was already a state with a figure using the same id,
     // use that to recover the state. This happens in some situations
     // where a component un-mounts and mounts again.
-    const initialFigureState = widgetMgr.getElementState(element.id, "figure")
+    const initialFigureState = widgetMgr.getElementState<PlotlyFigureType>(
+      element.id,
+      "figure"
+    )
     if (initialFigureState) {
       return initialFigureState
     }
@@ -339,10 +349,49 @@ export function PlotlyChart({
     (event: Readonly<Plotly.PlotSelectionEvent>): void => {
       handleSelection(event, widgetMgr, element, fragmentId)
     },
-    // We are using element.id here instead of element since we don't
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [element.id, widgetMgr, fragmentId]
+  )
+
+  /**
+   * Callback to handle click events on hierarchical charts (treemap, sunburst).
+   */
+  const handleClickCallback = useCallback(
+    (event: Readonly<Plotly.PlotMouseEvent>): void => {
+      handleClickEvent(event, widgetMgr, element, fragmentId)
+    },
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [element.id, widgetMgr, fragmentId]
+  )
+
+  const { restart: restartResetSelectionTimeout } = useTimeout(
+    () => {
+      // Reset the selection info within the plotly figure
+      setPlotlyFigure((prevFigure: PlotlyFigureType) => {
+        return {
+          ...prevFigure,
+          data: prevFigure.data.map((trace: Plotly.Data) => {
+            return {
+              ...trace,
+              // Set to null to clear the selection an empty
+              // array here would still show everything as opaque
+              selectedpoints: null,
+            } as Plotly.Data
+          }),
+          layout: {
+            ...prevFigure.layout,
+            // selections is not part of the plotly typing:
+            selections: [],
+          } as PlotlyFigureType["layout"],
+        }
+      })
+    },
+    RESET_SELECTION_TIMEOUT_MS,
+    { autoStart: false }
   )
 
   /**
@@ -358,33 +407,13 @@ export function PlotlyChart({
         // the onUpdate callback seems to overwrite the selection state
         // that we set here. The timeout will make sure that this is executed
         // after the onUpdate callback.
-        setTimeout(() => {
-          // Reset the selection info within the plotly figure
-          setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-            return {
-              ...prevFigure,
-              data: prevFigure.data.map((trace: Plotly.Data) => {
-                return {
-                  ...trace,
-                  // Set to null to clear the selection an empty
-                  // array here would still show everything as opaque
-                  selectedpoints: null,
-                } as Plotly.Data
-              }),
-              layout: {
-                ...prevFigure.layout,
-                // selections is not part of the plotly typing:
-                selections: [],
-              } as PlotlyFigureType["layout"],
-            }
-          })
-        }, RESET_SELECTION_TIMEOUT_MS)
+        restartResetSelectionTimeout()
       }
     },
-    // We are using element.id here instead of element since we don't
-    // shallow reference equality will not work correctly for element.
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-    [element.id, widgetMgr, fragmentId]
+    // Using element.id instead of element: the proto object gets a new reference
+    // on each render, but element.id only changes when the element actually changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- element intentionally omitted; use stable id.
+    [element.id, widgetMgr, fragmentId, restartResetSelectionTimeout]
   )
 
   // This is required for the form clearing functionality:
@@ -470,6 +499,9 @@ export function PlotlyChart({
           overflow: "hidden",
         }}
         onSelected={isSelectionActivated ? handleSelectionCallback : () => {}}
+        // Handle click events for hierarchical charts (treemap, sunburst)
+        // that don't emit plotly_selected but do emit plotly_click
+        onClick={isPointsSelectionActivated ? handleClickCallback : undefined}
         // Double click is needed to make it easier to the user to
         // reset the selection. The default handling can be a bit annoying
         // sometimes.

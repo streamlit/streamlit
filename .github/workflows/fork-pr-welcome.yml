@@ -1,0 +1,39 @@
+# This workflow automatically comments on pull requests from forks
+# to welcome contributors and provide guidance on the review process.
+
+name: Fork PR Welcome Comment
+
+on:
+  pull_request_target:
+    types:
+      - opened
+
+jobs:
+  fork-pr-welcome-comment:
+    # Only run for PRs from forks (external contributors)
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Add fork PR welcome comment
+        run: gh pr comment "$PR_URL" --body "$PR_COMMENT_BODY"
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_COMMENT_BODY: |
+            Thanks for contributing to Streamlit! 🎈
+
+            Please make sure you have read our [Contributing Guide](https://github.com/streamlit/streamlit/blob/develop/CONTRIBUTING.md). You can find additional information about Streamlit development in the [wiki](https://github.com/streamlit/streamlit/tree/develop/wiki).
+
+            **The review process:**
+
+            1. **Initial triage**: A maintainer will apply labels, approve CI to run, and trigger AI-assisted reviews. Your PR may be flagged with `status:needs-product-approval` if the feature requires product team sign-off.
+
+            2. **Code review**: A core maintainer will start reviewing your PR once:
+               - It is marked as 'ready for review', not 'draft'
+               - It has `status:product-approved` (or doesn't need it)
+               - All CI checks pass
+               - All AI review comments are addressed
+
+            We're receiving many contributions and have limited review bandwidth — please expect some delay. We appreciate your patience! 🙏

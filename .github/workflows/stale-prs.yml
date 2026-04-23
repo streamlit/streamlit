@@ -1,0 +1,78 @@
+name: Stale PRs
+
+on:
+  schedule:
+    # Run job at 10.30pm PST or 11.30pm PDT
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Run in dry-run mode (no labels/comments/closures)
+        required: true
+        default: false
+        type: boolean
+
+# Avoid overlapping stale processing runs globally in this repository.
+concurrency:
+  group: stale-prs-global
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  stale-prs:
+    if: github.repository == 'streamlit/streamlit'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Process stale pull requests
+        id: stale
+        # v10.2.0 - https://github.com/actions/stale/tree/v10.2.0
+        uses: actions/stale@b5d41d4e1d5dceea10e7104786b73624c18a190f
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+          # We only want this to apply to PRs. Issues are not to be marked as stale.
+          days-before-issue-stale: -1
+          days-before-issue-close: -1
+          days-before-pr-stale: 14
+          days-before-pr-close: 7
+
+          # Exemptions from stale processing.
+          exempt-draft-pr: true
+          exempt-pr-labels: never-stale,change:spec
+
+          # Mark PRs as stale after inactivity and remove the stale label on updates.
+          stale-pr-label: stale
+          remove-pr-stale-when-updated: true
+
+          stale-pr-message: >
+            This pull request has had no activity for 14 days, so it has been marked as stale.
+            If you still want to continue this work, please leave a comment or push a commit
+            within 7 days. A maintainer can also apply the `never-stale` label to opt out.
+          close-pr-message: >
+            This pull request was closed after being marked stale for 7 days with no further
+            activity. If you want to continue, comment here and a maintainer can help reopen.
+
+          # Toggle dry-run behavior when dispatching this workflow.
+          debug-only: ${{ inputs.dry_run }}
+
+          # Tune this above current open PR count to evaluate broad candidate set.
+          operations-per-run: 200
+
+      - name: Print results
+        env:
+          DRY_RUN: ${{ inputs.dry_run }}
+          STALED_JSON: ${{ steps.stale.outputs['staled-issues-prs'] || '[]' }}
+          CLOSED_JSON: ${{ steps.stale.outputs['closed-issues-prs'] || '[]' }}
+        run: |
+          STALED_COUNT="$(jq 'length' <<<"$STALED_JSON")"
+          CLOSED_COUNT="$(jq 'length' <<<"$CLOSED_JSON")"
+          if [ "$DRY_RUN" = "true" ]; then
+            echo "Dry run: would mark stale: ${STALED_COUNT}"
+            echo "Dry run: would close: ${CLOSED_COUNT}"
+          else
+            echo "Marked stale: ${STALED_COUNT}"
+            echo "Closed: ${CLOSED_COUNT}"
+          fi

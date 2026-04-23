@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen } from "@testing-library/react"
 
 import { render } from "~lib/test_util"
@@ -23,7 +21,10 @@ import { render } from "~lib/test_util"
 import {
   DynamicIcon,
   DynamicIconProps,
+  extractLeadingMaterialIcon,
   getFilledStarIconSrc,
+  isMaterialIcon,
+  isMenuStyleIconLabel,
 } from "./DynamicIcon"
 
 const getProps = (
@@ -77,5 +78,73 @@ describe("Dynamic icon", () => {
 
     expect(testId).toBeInTheDocument()
     expect(srcAttr).toEqual(getFilledStarIconSrc())
+  })
+})
+
+describe("isMaterialIcon", () => {
+  it.each([
+    [":material/edit:", true],
+    [":material/delete:", true],
+    [":material/settings_suggest:", true],
+    [":material/:", false],
+    ["material/edit", false],
+    [":emoji/smile:", false],
+    ["plain text", false],
+    ["", false],
+  ])("isMaterialIcon(%s) returns %s", (input, expected) => {
+    expect(isMaterialIcon(input)).toBe(expected)
+  })
+})
+
+describe("extractLeadingMaterialIcon", () => {
+  it.each([
+    [":material/edit: Edit item", ":material/edit:", "Edit item"],
+    [":material/delete:", ":material/delete:", ""],
+    [":material/settings:   Settings", ":material/settings:", "Settings"],
+    [
+      ":material/settings_suggest: Advanced",
+      ":material/settings_suggest:",
+      "Advanced",
+    ],
+    ["No icon here", null, "No icon here"],
+    ["Item :material/edit:", null, "Item :material/edit:"],
+    ["🗑️ Delete", null, "🗑️ Delete"],
+    ["", null, ""],
+  ])(
+    'extractLeadingMaterialIcon("%s") returns icon=%s, text="%s"',
+    (input, expectedIcon, expectedText) => {
+      const result = extractLeadingMaterialIcon(input)
+      expect(result.icon).toBe(expectedIcon)
+      expect(result.text).toBe(expectedText)
+    }
+  )
+})
+
+describe("isMenuStyleIconLabel", () => {
+  it.each([
+    // Menu-style icons without separate icon prop should return true
+    [undefined, ":material/menu:", true],
+    [undefined, ":material/more_vert:", true],
+    [undefined, ":material/more_horiz:", true],
+    [undefined, " :material/menu: ", true],
+
+    // When icon prop is set, should return false (not icon-only)
+    [":material/edit:", ":material/menu:", false],
+    ["some-icon", ":material/more_vert:", false],
+
+    // Non-menu-style icons should return false
+    [undefined, ":material/edit:", false],
+    [undefined, ":material/settings:", false],
+
+    // Labels with text (not icon-only) should return false
+    [undefined, ":material/menu: Menu", false],
+    [undefined, "Menu", false],
+
+    // Edge cases
+    [undefined, undefined, false],
+    [undefined, "", false],
+    ["", ":material/menu:", true],
+  ])("isMenuStyleIconLabel(%s, %s) returns %s", (icon, label, expected) => {
+    expect(isMenuStyleIconLabel(icon, label)).toBe(expected)
   })
 })

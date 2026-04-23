@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import React, { Fragment, ReactElement, useContext } from "react"
+import { Fragment, ReactElement, useContext } from "react"
 
 import { Components } from "react-markdown"
 
 import { Heading as HeadingProto } from "@streamlit/protobuf"
 
 import IsDialogContext from "~lib/components/core/IsDialogContext"
+import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 
 import {
   HeadingWithActionElements,
@@ -72,6 +73,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
   const { element } = props
   const { tag, anchor, body, help, hideAnchor, divider } = element
   const isInDialog = useContext(IsDialogContext)
+  const flexContext = useContext(FlexContext)
   // st.header can contain new lines which are just interpreted as new
   // markdown to be rendered as such.
   const [heading, ...rest] = body.split("\n")
@@ -81,6 +83,7 @@ function Heading(props: HeadingProtoProps): ReactElement {
       <StyledStreamlitMarkdown
         isCaption={Boolean(false)}
         isInDialog={isInDialog}
+        isInHorizontalLayout={flexContext?.isInHorizontalLayout}
         data-testid="stMarkdownContainer"
       >
         <HeadingWithActionElements

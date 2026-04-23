@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import react from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
 import importPlugin from "eslint-plugin-import"
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
@@ -74,6 +73,12 @@ export const getNoRestrictedImports = (
       importNames: ["CancelToken"],
       message: "Please use the `AbortController` API instead of `CancelToken`",
     },
+    {
+      name: "react",
+      importNames: ["default"],
+      message:
+        "Please use named imports for React (e.g., import { useState } from 'react';)",
+    },
   ]
 
   const basePaths = isTestFile
@@ -94,6 +99,110 @@ export const getNoRestrictedImports = (
   ]
 }
 
+const restrictedGlobals = [
+  {
+    name: "localStorage",
+    message:
+      "Please use window.localStorage instead since localStorage is not " +
+      "supported in some browsers (e.g. Android WebView).",
+  },
+  {
+    name: "innerWidth",
+    message: "Please use the `useWindowDimensionsContext` hook instead.",
+  },
+  {
+    name: "innerHeight",
+    message: "Please use the `useWindowDimensionsContext` hook instead.",
+  },
+]
+
+const useTimeoutRestrictedGlobals = [
+  {
+    name: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of direct `setTimeout` in non-test source files.",
+  },
+]
+
+const useTimeoutRestrictedProperties = [
+  {
+    object: "window",
+    property: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of `window.setTimeout` in non-test source files.",
+  },
+  {
+    object: "globalThis",
+    property: "setTimeout",
+    message:
+      "Please use the `useTimeout` hook or another shared timeout helper instead of `globalThis.setTimeout` in non-test source files.",
+  },
+]
+
+/**
+ * Helper to create the no-restricted-globals rule config.
+ *
+ * @param {Object} options
+ * @param {boolean} [options.includeUseTimeout] - Whether to add setTimeout restrictions.
+ */
+export const getNoRestrictedGlobals = ({ includeUseTimeout = false } = {}) => {
+  return [
+    "error",
+    ...restrictedGlobals,
+    ...(includeUseTimeout ? useTimeoutRestrictedGlobals : []),
+  ]
+}
+
+/**
+ * Helper to create the no-restricted-properties rule config.
+ *
+ * @param {Object} options
+ * @param {boolean} [options.allowWindowStreamlit] - Whether to allow window.__streamlit access.
+ *   Set to true for files that need to mock the config module itself.
+ * @param {boolean} [options.includeUseTimeout] - Whether to add setTimeout restrictions.
+ */
+const getRestrictedProperties = ({ allowWindowStreamlit = false } = {}) => {
+  const restrictions = [
+    {
+      object: "window",
+      property: "innerWidth",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "window",
+      property: "innerHeight",
+      message: "Please use the `useWindowDimensionsContext` hook instead.",
+    },
+    {
+      object: "navigator",
+      property: "clipboard",
+      message: "Please use the `useCopyToClipboard` hook instead.",
+    },
+  ]
+
+  if (!allowWindowStreamlit) {
+    restrictions.push({
+      object: "window",
+      property: "__streamlit",
+      message:
+        "Please access window.__streamlit properties via StreamlitConfig in '@streamlit/utils' instead.",
+    })
+  }
+
+  return restrictions
+}
+
+export const getNoRestrictedProperties = ({
+  allowWindowStreamlit = false,
+  includeUseTimeout = false,
+} = {}) => {
+  return [
+    "error",
+    ...getRestrictedProperties({ allowWindowStreamlit }),
+    ...(includeUseTimeout ? useTimeoutRestrictedProperties : []),
+  ]
+}
+
 export default defineConfig([
   // Base recommended configs
   eslint.configs.recommended,
@@ -101,7 +210,6 @@ export default defineConfig([
   reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
   importPlugin.flatConfigs.recommended,
-  eslintPluginPrettierRecommended,
   // Global configuration for all files
   {
     languageOptions: {
@@ -189,13 +297,11 @@ export default defineConfig([
           args: "all",
           ignoreRestSiblings: false,
           argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": [
-        "warn",
-        { functions: false },
-      ],
+      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -239,41 +345,8 @@ export default defineConfig([
             "Please use the useEmotionTheme hook instead.",
         },
       ],
-      "no-restricted-globals": [
-        "error",
-        {
-          name: "localStorage",
-          message:
-            "Please use window.localStorage instead since localStorage is not " +
-            "supported in some browsers (e.g. Android WebView).",
-        },
-        {
-          name: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          name: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-      ],
-      "no-restricted-properties": [
-        "error",
-        {
-          object: "window",
-          property: "innerWidth",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "window",
-          property: "innerHeight",
-          message: "Please use the `useWindowDimensionsContext` hook instead.",
-        },
-        {
-          object: "navigator",
-          property: "clipboard",
-          message: "Please use the `useCopyToClipboard` hook instead.",
-        },
-      ],
+      "no-restricted-globals": getNoRestrictedGlobals(),
+      "no-restricted-properties": getNoRestrictedProperties(),
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
@@ -354,6 +427,7 @@ export default defineConfig([
       // We only turn this rule on for certain directories
       "streamlit-custom/enforce-memo": "off",
       "streamlit-custom/no-force-reflow-access": "error",
+      "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
       "no-restricted-imports": getNoRestrictedImports(),
       // React configuration
       "react/jsx-uses-react": "off",
@@ -367,6 +441,13 @@ export default defineConfig([
       // prohibit autoFocus prop
       // https://github.com/jsx-eslint/eslint-plugin-jsx-a11y/blob/main/docs/rules/no-autofocus.md
       "jsx-a11y/no-autofocus": ["error", { ignoreNonDOM: true }],
+      // Stricter a11y enforcement beyond the recommended ruleset:
+      // - Require accessible names for icon-only controls
+      "jsx-a11y/control-has-associated-label": "error",
+      // - Do not hide focusable controls from assistive technology
+      "jsx-a11y/no-aria-hidden-on-focusable": "error",
+      // - Avoid making non-interactive elements keyboard-focusable via tabIndex>=0
+      "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
       react: {
@@ -378,6 +459,18 @@ export default defineConfig([
           project: path.resolve(__dirname, "./tsconfig.json"),
         },
       },
+    },
+  },
+  {
+    files: ["**/src/**/*.ts", "**/src/**/*.tsx"],
+    ignores: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "no-restricted-globals": getNoRestrictedGlobals({
+        includeUseTimeout: true,
+      }),
+      "no-restricted-properties": getNoRestrictedProperties({
+        includeUseTimeout: true,
+      }),
     },
   },
   // Test files specific configuration
@@ -408,6 +501,28 @@ export default defineConfig([
       "no-restricted-imports": getNoRestrictedImports([], true),
     },
   },
+  // Specific test files that need to access window.__streamlit for testing the config module itself
+  {
+    files: ["utils/src/config/index.test.ts", "lib/src/theme/utils.test.ts"],
+    rules: {
+      // These test files need to set window.__streamlit to test the config capture behavior
+      "no-restricted-properties": getNoRestrictedProperties({
+        allowWindowStreamlit: true,
+      }),
+    },
+  },
+  // Config module - allow direct window.__streamlit access for capturing values
+  {
+    files: ["utils/src/config/index.ts"],
+    rules: {
+      // This is the only place where direct window.__streamlit access is allowed
+      // as it captures values at module load time and exports frozen copies.
+      // Other restrictions (innerWidth, innerHeight, clipboard) still apply.
+      "no-restricted-properties": getNoRestrictedProperties({
+        allowWindowStreamlit: true,
+      }),
+    },
+  },
   // Theme files specific configuration
   {
     files: ["lib/src/theme/**/*"],
@@ -435,9 +550,10 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
+    "vitest.config.ts",
+    "vitest.setup.ts",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
-    "**/vendor/*",
     "**/node_modules/*",
     "**/dist/*",
     "**/build/*",

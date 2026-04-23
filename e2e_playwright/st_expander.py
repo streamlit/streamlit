@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -105,3 +105,164 @@ satisfying dance of creation that leaves you wanting more.')
 
 """
 st.expander("With code block:\n" + code_block)
+
+# ============================================================================
+# Dynamic Expander Tests (on_change="rerun")
+# ============================================================================
+
+if "lazy_exec_count" not in st.session_state:
+    st.session_state.lazy_exec_count = 0
+
+exp_lazy = st.expander("Dynamic lazy execution", on_change="rerun")
+
+if exp_lazy.open:
+    with exp_lazy:
+        st.session_state.lazy_exec_count += 1
+        st.write(f"Lazy content executed {st.session_state.lazy_exec_count} times")
+        st.write("This only runs when expander is open")
+
+st.write(f"Lazy execution count: {st.session_state.lazy_exec_count}")
+
+
+def open_dynamic_exp():
+    st.session_state.prog_exp = True
+
+
+def close_dynamic_exp():
+    st.session_state.prog_exp = False
+
+
+col1, col2 = st.columns(2)
+with col1:
+    st.button("Open Dynamic", on_click=open_dynamic_exp, key="open_dyn")
+with col2:
+    st.button("Close Dynamic", on_click=close_dynamic_exp, key="close_dyn")
+
+exp_prog = st.expander("Programmatic dynamic", key="prog_exp", on_change="rerun")
+
+if exp_prog.open:
+    with exp_prog:
+        st.write("Programmatically controlled")
+
+
+# Track execution for nested lazy loading
+if "nested_outer_exec" not in st.session_state:
+    st.session_state.nested_outer_exec = 0
+if "nested_inner_exec" not in st.session_state:
+    st.session_state.nested_inner_exec = 0
+
+
+def open_outer():
+    st.session_state.outer_dyn = True
+
+
+def close_outer():
+    st.session_state.outer_dyn = False
+
+
+def open_inner():
+    st.session_state.inner_dyn = True
+
+
+def close_inner():
+    st.session_state.inner_dyn = False
+
+
+# Buttons for programmatic control of nested expanders
+col1, col2, col3, col4 = st.columns(4)
+with col1:
+    st.button("Open Outer", on_click=open_outer, key="open_outer_btn")
+with col2:
+    st.button("Close Outer", on_click=close_outer, key="close_outer_btn")
+with col3:
+    st.button("Open Inner", on_click=open_inner, key="open_inner_btn")
+with col4:
+    st.button("Close Inner", on_click=close_inner, key="close_inner_btn")
+
+exp_outer_dyn = st.expander("Outer dynamic", key="outer_dyn", on_change="rerun")
+if exp_outer_dyn.open:
+    with exp_outer_dyn:
+        st.session_state.nested_outer_exec += 1
+        st.write(f"Outer executed {st.session_state.nested_outer_exec} times")
+
+        exp_inner_dyn = st.expander(
+            "Inner dynamic nested", key="inner_dyn", on_change="rerun"
+        )
+
+        if exp_inner_dyn.open:
+            with exp_inner_dyn:
+                st.session_state.nested_inner_exec += 1
+                st.write(f"Inner executed {st.session_state.nested_inner_exec} times")
+
+st.write(
+    f"Nested execution - Outer: {st.session_state.nested_outer_exec}, Inner: {st.session_state.nested_inner_exec}"
+)
+
+# Ignore mode (default) — should NOT trigger reruns on toggle
+# ============================================================================
+
+if "exp_ignore_rerun_count" not in st.session_state:
+    st.session_state.exp_ignore_rerun_count = 0
+
+st.session_state.exp_ignore_rerun_count += 1
+
+with st.expander("Ignore-mode expander"):
+    st.write("This expander uses the default on_change='ignore'")
+
+st.write(f"Expander ignore rerun count: {st.session_state.exp_ignore_rerun_count}")
+
+# Callback support
+# ============================================================================
+
+if "cb_toggle_count" not in st.session_state:
+    st.session_state.cb_toggle_count = 0
+if "cb_last_state" not in st.session_state:
+    st.session_state.cb_last_state = None
+
+
+def expander_callback() -> None:
+    st.session_state.cb_toggle_count += 1
+    st.session_state.cb_last_state = st.session_state.cb_expander
+
+
+with st.expander("Callback expander", key="cb_expander", on_change=expander_callback):
+    st.write("Callback expander content")
+
+st.write(f"Callback count: {st.session_state.cb_toggle_count}")
+st.write(f"Callback last state: {st.session_state.cb_last_state}")
+
+
+# Callback with args/kwargs
+# ============================================================================
+
+if "cb_args_result" not in st.session_state:
+    st.session_state.cb_args_result = ""
+
+
+def expander_callback_with_args(prefix: str, suffix: str = "") -> None:
+    st.session_state.cb_args_result = f"{prefix}-toggled-{suffix}"
+
+
+with st.expander(
+    "Callback args expander",
+    key="cb_args_expander",
+    on_change=expander_callback_with_args,
+    args=("hello",),
+    kwargs={"suffix": "world"},
+):
+    st.write("Callback args expander content")
+
+st.write(f"Callback args result: {st.session_state.cb_args_result}")
+
+# ============================================================================
+# State Persistence Test — keyed expander should persist open/close across remount
+# ============================================================================
+
+persist_show = st.toggle(
+    "Show extra text above expander", key="persist_expander_toggle"
+)
+if persist_show:
+    st.write("Extra text inserted above expander")
+
+with st.expander("Persist expander", expanded=False, key="persist_expander"):
+    st.write("Persist expander content")

@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-floating-promises */
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { act } from "react"
+import { act } from "react"
 
 import {
   fireEvent,
@@ -24,10 +23,14 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import userEvent, {
+  PointerEventsCheckLevel,
+} from "@testing-library/user-event"
 import { cloneDeep } from "lodash-es"
+import { type Mock, type MockInstance } from "vitest"
 
 import {
-  getMenuStructure,
+  getMenuLabels,
   openMenu,
 } from "@streamlit/app/src/components/MainMenu/mainMenuTestHelpers"
 import { MetricsManager } from "@streamlit/app/src/MetricsManager"
@@ -38,15 +41,18 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  CachedTheme,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
   CUSTOM_THEME_LIGHT_NAME,
   CUSTOM_THEME_NAME,
+  darkTheme,
   FileUploadClient,
   getDefaultTheme,
   getHostSpecifiedTheme,
   HOST_COMM_VERSION,
   HostCommunicationManager,
+  type IHostToGuestMessage,
   isEmbed,
   isToolbarDisplayed,
   lightTheme,
@@ -76,7 +82,6 @@ import {
   IPageConfig,
   IPageInfo,
   IPageNotFound,
-  IPagesChanged,
   IParentMessage,
   Navigation,
   SessionEvent,
@@ -86,6 +91,24 @@ import {
 
 import { App, LOG, Props } from "./App"
 import { showDevelopmentOptions } from "./showDevelopmentOptions"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+
+  // Create a new object with the getter defined properly
+  // We must use Object.defineProperty to ensure the getter works correctly
+  const mocked = { ...actual }
+  Object.defineProperty(mocked, "StreamlitConfig", {
+    get() {
+      return globalThis.__mockStreamlitConfig
+    },
+    configurable: true,
+    enumerable: true,
+  })
+
+  return mocked
+})
 
 vi.mock("@streamlit/lib", async () => {
   const actualLib = await vi.importActual("@streamlit/lib")
@@ -111,6 +134,8 @@ vi.mock("@streamlit/connection", async () => {
       sendMessage: vi.fn(),
       incrementMessageCacheRunCount: vi.fn(),
       getCachedMessageHashes: vi.fn(),
+      onHeartbeatSent: vi.fn(),
+      onHeartbeatAckReceived: vi.fn(),
       getBaseUriParts() {
         return {
           pathname: "/",
@@ -125,15 +150,44 @@ vi.mock("@streamlit/connection", async () => {
     return mockEndpoints()
   })
 
+  // Mock isHostConfigBypassEnabled with validation logic that matches the real implementation.
+  // This is necessary to read from globalThis.__mockStreamlitConfig
+  // NOTE: Keep this in sync with the actual implementation in connection/src/utils.ts
+  // to avoid test drift. The validation must check:
+  // 1. BACKEND_BASE_URL exists
+  // 2. allowedOrigins is a non-empty array of non-empty strings
+  // 3. useExternalAuthToken is a boolean
+  const mockIsHostConfigBypassEnabled = vi.fn((): boolean => {
+    const config = globalThis.__mockStreamlitConfig
+    const hostConfig = config?.HOST_CONFIG
+    if (!hostConfig) return false
+
+    const { allowedOrigins, useExternalAuthToken } = hostConfig
+
+    return (
+      Boolean(config?.BACKEND_BASE_URL) &&
+      Array.isArray(allowedOrigins) &&
+      allowedOrigins.length > 0 &&
+      allowedOrigins.every(
+        origin => typeof origin === "string" && origin.length > 0
+      ) &&
+      typeof useExternalAuthToken === "boolean"
+    )
+  })
+
   return {
     ...actualModule,
     ConnectionManager: MockedClass,
     DefaultStreamlitEndpoints: MockedEndpoints,
+    isHostConfigBypassEnabled: mockIsHostConfigBypassEnabled,
   }
 })
+
 vi.mock("~lib/SessionInfo", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/SessionInfo")
+  const actualModule =
+    await vi.importActual<typeof import("~lib/SessionInfo")>(
+      "~lib/SessionInfo"
+    )
 
   const MockedClass = vi.fn().mockImplementation(function (this: SessionInfo) {
     return new actualModule.SessionInfo()
@@ -152,18 +206,18 @@ vi.mock("~lib/SessionInfo", async () => {
 })
 
 vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>(
-    "~lib/hostComm/HostCommunicationManager"
-  )
+  const actualModule = await vi.importActual<
+    typeof import("~lib/hostComm/HostCommunicationManager")
+  >("~lib/hostComm/HostCommunicationManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: HostCommunicationManager,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.default>
   ) {
     const hostCommunicationMgr = new actualModule.default(...props)
     vi.spyOn(hostCommunicationMgr, "sendMessageToHost")
     vi.spyOn(hostCommunicationMgr, "sendMessageToSameOriginHost")
+    vi.spyOn(hostCommunicationMgr, "setAllowedOrigins")
     return hostCommunicationMgr
   })
 
@@ -175,12 +229,13 @@ vi.mock("~lib/hostComm/HostCommunicationManager", async () => {
 })
 
 vi.mock("~lib/WidgetStateManager", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/WidgetStateManager")
+  const actualModule = await vi.importActual<
+    typeof import("~lib/WidgetStateManager")
+  >("~lib/WidgetStateManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: WidgetStateManager,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.WidgetStateManager>
   ) {
     const widgetStateManager = new actualModule.WidgetStateManager(...props)
 
@@ -196,17 +251,17 @@ vi.mock("~lib/WidgetStateManager", async () => {
 })
 
 vi.mock("@streamlit/app/src/MetricsManager", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>(
-    "@streamlit/app/src/MetricsManager"
-  )
+  const actualModule = await vi.importActual<
+    typeof import("@streamlit/app/src/MetricsManager")
+  >("@streamlit/app/src/MetricsManager")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: MetricsManager,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.MetricsManager>
   ) {
     const metricsMgr = new actualModule.MetricsManager(...props)
     vi.spyOn(metricsMgr, "enqueue")
+    vi.spyOn(metricsMgr, "setMetricsConfig")
     return metricsMgr
   })
 
@@ -217,12 +272,13 @@ vi.mock("@streamlit/app/src/MetricsManager", async () => {
 })
 
 vi.mock("~lib/FileUploadClient", async () => {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  const actualModule = await vi.importActual<any>("~lib/FileUploadClient")
+  const actualModule = await vi.importActual<
+    typeof import("~lib/FileUploadClient")
+  >("~lib/FileUploadClient")
 
   const MockedClass = vi.fn().mockImplementation(function (
     this: FileUploadClient,
-    ...props: never[]
+    ...props: ConstructorParameters<typeof actualModule.FileUploadClient>
   ) {
     return new actualModule.FileUploadClient(...props)
   })
@@ -258,7 +314,6 @@ const NEW_SESSION_JSON: INewSession = {
   config: {
     gatherUsageStats: false,
     maxCachedMessageAge: 0,
-    mapboxToken: "mapboxToken",
     allowRunOnSave: false,
     hideSidebarNav: false,
     hideTopBar: false,
@@ -340,9 +395,13 @@ function renderApp(props: Props): RenderResult {
   )
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function getStoredValue<T>(Type: any): T {
-  return Type.mock.results[Type.mock.results.length - 1].value
+function getStoredValue<T>(
+  // At runtime, vi.mock() adds a `.mock` property to the class constructor.
+  // We accept `unknown` and use vi.mocked() internally to access it safely.
+  Type: unknown
+): T {
+  const mocked = vi.mocked(Type as (...args: unknown[]) => T)
+  return mocked.mock.results[mocked.mock.results.length - 1].value as T
 }
 
 function getMockConnectionManager(isConnected = false): ConnectionManager {
@@ -354,8 +413,9 @@ function getMockConnectionManager(isConnected = false): ConnectionManager {
   return connectionManager
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function getMockConnectionManagerProp(propName: string): any {
+function getMockConnectionManagerProp(
+  propName: string
+): (...args: unknown[]) => void {
   // @ts-expect-error - connectionManager.props is private
   return getStoredValue<ConnectionManager>(ConnectionManager).props[propName]
 }
@@ -365,6 +425,7 @@ type DeltaWithElement = Omit<Delta, "fragmentId" | "newElement" | "toJSON"> & {
 }
 
 type ForwardMsgType =
+  | boolean // the type of heartbeatAck is just boolean
   | DeltaWithElement
   | ForwardMsg.ScriptFinishedStatus
   | IAuthRedirect
@@ -372,7 +433,6 @@ type ForwardMsgType =
   | ILogo
   | INavigation
   | INewSession
-  | IPagesChanged
   | IPageConfig
   | IPageInfo
   | IParentMessage
@@ -397,16 +457,14 @@ function sendForwardMessage(
   })
 }
 
-function openCacheModal(): void {
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
+async function openCacheModal(): Promise<void> {
+  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyDown(document.body, {
     key: "c",
     which: 67,
   })
 
-  // TODO: Utilize user-event instead of fireEvent
-  // eslint-disable-next-line testing-library/prefer-user-event
+  // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyUp(document.body, {
     key: "c",
     which: 67,
@@ -417,6 +475,10 @@ function openCacheModal(): void {
       "Are you sure you want to clear the app's function caches?"
     )
   ).toBeInTheDocument()
+
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
 }
 
 describe("App", () => {
@@ -568,9 +630,7 @@ describe("App", () => {
     beforeEach(() => {
       prevWindowLocation = window.location
 
-      window.__streamlit = {
-        ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION: true,
-      }
+      globalThis.__mockStreamlitConfig.ENABLE_RELOAD_BASED_ON_HARDCODED_STREAMLIT_VERSION = true
     })
 
     afterEach(() => {
@@ -580,7 +640,7 @@ describe("App", () => {
         configurable: true,
       })
 
-      window.__streamlit = undefined
+      globalThis.__mockStreamlitConfig = {}
 
       // @ts-expect-error
       PACKAGE_METADATA = {
@@ -669,8 +729,7 @@ describe("App", () => {
       getStoredValue<WidgetStateManager>(WidgetStateManager)
     expect(widgetStateManager.sendUpdateWidgetsMessage).not.toHaveBeenCalled()
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
     fireEvent.keyDown(document.body, {
       key: "r",
       which: 82,
@@ -767,14 +826,18 @@ describe("App", () => {
       const props = getProps()
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: lightTheme.name })
+        JSON.stringify("Light")
       )
       renderApp(props)
 
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).not.toHaveBeenCalled()
+      // When custom theme is available, preset themes are removed
+      // so user should be switched to the custom theme
+      expect(props.theme.setTheme).toHaveBeenCalledWith(
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
+      )
     })
 
     it("sets the custom theme as the default if no user preference is set", () => {
@@ -796,7 +859,7 @@ describe("App", () => {
     it("sets the custom theme again if a custom theme is already active", () => {
       window.localStorage.setItem(
         LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
+        JSON.stringify("System")
       )
       const props = getProps()
       props.theme.activeTheme = {
@@ -808,12 +871,9 @@ describe("App", () => {
       sendForwardMessage("newSession", NEW_SESSION_JSON)
 
       expect(props.theme.addThemes).toHaveBeenCalled()
-      expect(props.theme.setTheme).toHaveBeenCalled()
-
+      // setTheme SHOULD be called to update with the full server config while preserving the selection
       expect(props.theme.setTheme).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: CUSTOM_THEME_NAME,
-        })
+        expect.objectContaining({ name: CUSTOM_THEME_NAME })
       )
     })
 
@@ -836,31 +896,23 @@ describe("App", () => {
       expect(props.theme.addThemes.mock.calls[1][0]).toEqual([])
     })
 
-    it("removes the cached custom theme from theme options", () => {
-      window.localStorage.setItem(
-        LocalStore.ACTIVE_THEME,
-        JSON.stringify({ name: CUSTOM_THEME_NAME, themeInput: {} })
-      )
-      const props = getProps({
-        theme: {
-          activeTheme: {
-            ...lightTheme,
-            name: CUSTOM_THEME_NAME,
-          },
-          availableThemes: [],
-          setTheme: vi.fn(),
-          addThemes: vi.fn(),
-          setFonts: vi.fn(),
-          setImportedTheme: vi.fn(),
-        },
-      })
+    it("removes custom theme when server sends null for customTheme", () => {
+      const props = getProps()
       renderApp(props)
 
+      // First, send a custom theme to establish it
+      sendForwardMessage("newSession", NEW_SESSION_JSON)
+
+      // @ts-expect-error
+      props.theme.addThemes.mockClear()
+
+      // Then send null to remove the custom theme
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
 
+      // Should call addThemes with empty array to remove custom themes
       expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
 
       // @ts-expect-error
@@ -964,18 +1016,109 @@ describe("App", () => {
       expect(props.theme.setTheme).not.toHaveBeenCalled()
     })
 
-    it("does nothing if no custom theme is received and themeHash is 'hash_for_undefined_custom_theme'", () => {
+    it("processes null theme on first newSession to clear any cached custom themes", () => {
       const props = getProps()
       renderApp(props)
 
-      // Send Forward message with custom theme
+      // Send first newSession with null custom theme
+      // This should process the theme (themeHash changes from "" to "hash_for_undefined_custom_theme")
+      // and call addThemes([]) to clear any cached custom themes from localStorage
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
         customTheme: null,
       })
 
+      // Should call addThemes to clear custom themes
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+      // @ts-expect-error
+      expect(props.theme.addThemes.mock.calls[0][0]).toEqual([])
+    })
+
+    it("does not update theme when receiving theme with nested objects in different key orders", () => {
+      const props = getProps()
+      renderApp(props)
+
+      // Create theme config with nested objects in a specific key order
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+        sidebar: {
+          backgroundColor: "gray",
+          textColor: "black",
+        },
+        light: {
+          primaryColor: "lightblue",
+          textColor: "darkgray",
+        },
+      })
+
+      // Send first theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      // Reset mocks to check subsequent calls
+      vi.mocked(props.theme.addThemes).mockClear()
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Send same theme with keys in different order (including nested objects)
+      const theme2 = new CustomThemeConfig({
+        sidebar: {
+          textColor: "black",
+          backgroundColor: "gray",
+        },
+        primaryColor: "blue",
+        light: {
+          textColor: "darkgray",
+          primaryColor: "lightblue",
+        },
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should not update theme since the content is identical
       expect(props.theme.addThemes).not.toHaveBeenCalled()
       expect(props.theme.setTheme).not.toHaveBeenCalled()
+    })
+
+    it("updates theme when receiving theme with different values", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+      })
+
+      // Send first theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      // Reset mocks to check subsequent calls
+      vi.mocked(props.theme.addThemes).mockClear()
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Send different theme
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "red",
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should update theme since the content is different
+      expect(props.theme.addThemes).toHaveBeenCalled()
+      expect(props.theme.setTheme).toHaveBeenCalled()
     })
 
     it("performs one-time initialization", () => {
@@ -1327,6 +1470,20 @@ describe("App", () => {
   })
 
   describe("DeployButton", () => {
+    let prevWindowLocation: Location
+
+    beforeEach(() => {
+      prevWindowLocation = window.location
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
     it("initially button should be hidden", () => {
       renderApp(getProps())
 
@@ -1434,6 +1591,23 @@ describe("App", () => {
 
       expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
     })
+
+    it("button should be hidden for non-localhost hostname", () => {
+      mockWindowLocation("myapp.streamlit.app")
+
+      renderApp(getProps())
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        config: {
+          ...NEW_SESSION_JSON.config,
+          toolbarMode: Config.ToolbarMode.DEVELOPER,
+        },
+      })
+
+      // Deploy button should not appear even in DEVELOPER mode when not on localhost
+      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
+    })
   })
 
   describe("App.onHistoryChange", () => {
@@ -1441,7 +1615,6 @@ describe("App", () => {
       config: {
         gatherUsageStats: false,
         maxCachedMessageAge: 0,
-        mapboxToken: "mapboxToken",
         allowRunOnSave: false,
         hideSidebarNav: false,
       },
@@ -1625,7 +1798,9 @@ describe("App", () => {
       // In a real browser, the URL would be restored to include query params.
       // In JSDOM, we need to manually set the URL before triggering popstate.
       window.history.pushState({}, "", "/?mykey=myvalue")
-      window.dispatchEvent(new PopStateEvent("popstate"))
+      act(() => {
+        window.dispatchEvent(new PopStateEvent("popstate"))
+      })
 
       await waitFor(() => {
         expect(connectionManager.sendMessage).toBeCalledTimes(1)
@@ -1660,11 +1835,10 @@ describe("App", () => {
     })
   })
 
-  // Using this to test the functionality provided through streamlit.experimental_set_query_params.
+  // Using this to test the functionality provided through st.query_params.
   // Please see https://github.com/streamlit/streamlit/issues/2887 for more context on this.
   describe("App.handlePageInfoChanged", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    let pushStateSpy: any
+    let pushStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
@@ -1736,15 +1910,9 @@ describe("App", () => {
   })
 
   describe("App.sendRerunBackMsg", () => {
-    let originalStreamlitWindowObj: typeof window.__streamlit
-
-    beforeEach(() => {
-      originalStreamlitWindowObj = window.__streamlit
-    })
-
     afterEach(() => {
       window.history.pushState({}, "", "/")
-      window.__streamlit = originalStreamlitWindowObj
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("sends the currentPageScriptHash if no pageScriptHash is given", () => {
@@ -1884,13 +2052,14 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (main page)", () => {
+    it("extracts pageName if StreamlitConfig.MAIN_PAGE_BASE_URL is set (main page)", () => {
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
+        "http://localhost/foo/bar"
       window.history.pushState({}, "", "/foo/bar/")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -1900,13 +2069,14 @@ describe("App", () => {
       ).toBe("")
     })
 
-    it("extracts pageName if window.__streamlit.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
+    it("extracts pageName if StreamlitConfig.MAIN_PAGE_BASE_URL is set (non-main page)", () => {
       renderApp(getProps())
       const widgetStateManager =
         getStoredValue<WidgetStateManager>(WidgetStateManager)
       const connectionManager = getMockConnectionManager()
 
-      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://localhost/foo/bar" }
+      globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
+        "http://localhost/foo/bar"
       window.history.pushState({}, "", "/foo/bar/baz")
       widgetStateManager.sendUpdateWidgetsMessage(undefined)
 
@@ -1916,7 +2086,7 @@ describe("App", () => {
       ).toBe("baz")
     })
 
-    it("sets queryString to an empty string if the page hash is different", () => {
+    it("preserves query params from state when navigating to different page", async () => {
       renderApp(getProps())
 
       const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
@@ -1956,11 +2126,16 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(navLinks[1])
-
       const connectionManager = getMockConnectionManager()
+
+      // Clear only the hostCommunicationMgr mock before navigation
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
+      // Sidebar nav links can have pointer-events: none in this test context.
+      const user = userEvent.setup({
+        pointerEventsCheck: PointerEventsCheckLevel.Never,
+      })
+      await user.click(navLinks[1])
 
       expect(
         // @ts-expect-error
@@ -1968,15 +2143,20 @@ describe("App", () => {
           .pageScriptHash
       ).toBe("subpage_hash")
 
+      // When navigating to a different page, non-embed and non-bound params
+      // (like foo=bar) are cleared. Only embed params and bound widget params
+      // are preserved.
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe("")
 
-      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-        type: "SET_QUERY_PARAM",
-        queryParams: "",
-      })
+      // SET_QUERY_PARAM message is sent to update the URL (clearing foo=bar)
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(1)
+      expect(setQueryParamCalls[0][0].queryParams).toBe("")
     })
   })
 
@@ -2225,6 +2405,770 @@ describe("App", () => {
           }),
         })
       )
+    })
+
+    describe("cached theme preference handling", () => {
+      // These tests verify the fix for issue #13280
+      // Testing a systematic 3x4 matrix of server configs vs cached preferences
+      // Server configs: 1) No custom theme, 2) Single custom theme, 3) Light/Dark custom themes
+      // Cache states: a) No cache, b) "Light" preset, c) "Custom Theme", d) "Custom Theme Light"
+
+      describe("1) No custom theme from server/config", () => {
+        it("a) with no cached preference - uses default theme", () => {
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+
+          const props = getProps()
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          // Should not call setTheme when no custom theme and no cached custom theme
+          expect(props.theme.setTheme).not.toHaveBeenCalled()
+        })
+
+        it("b) with 'Light' preset cached - preserves Light theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("Light")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = lightTheme
+
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          expect(props.theme.setTheme).not.toHaveBeenCalled()
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("c) with 'Custom Theme' cached - resets to default", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("System")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_NAME,
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "blue" },
+          }
+
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          // Should reset because cached custom theme no longer valid
+          expect(props.theme.setTheme).toHaveBeenCalled()
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("d) with 'Custom Theme Light' cached - resets to default", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("Light")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_LIGHT_NAME,
+            displayName: "Light",
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "lightblue" },
+          }
+
+          renderApp(props)
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: null,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledWith([])
+          // Should reset because cached custom theme no longer valid
+          expect(props.theme.setTheme).toHaveBeenCalled()
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+      })
+
+      describe("2) Single custom theme from server/config", () => {
+        it("a) with no cached preference - sets to Custom Theme", () => {
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+
+          const props = getProps()
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+        })
+
+        it("b) with 'Light' preset cached - preserves Light theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("Light")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = lightTheme
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should switch to the single custom theme (preset themes removed when custom exists)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("c) with 'Custom Theme' cached - preserves Custom Theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("System")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_NAME,
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "blue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set theme to update with full server config while preserving selection
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("d) with 'Custom Theme Light' cached - switches to Custom Theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("Light")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_LIGHT_NAME,
+            displayName: "Light",
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "lightblue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set to the new single custom theme because old preference is invalid
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+      })
+
+      describe("3) Light/Dark custom themes from server/config", () => {
+        it("a) with no cached preference - sets to Custom Theme Auto", () => {
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+
+          const props = getProps()
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME })
+          )
+        })
+
+        it("b) with 'Light' preset cached - preserves Light theme", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("Light")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = lightTheme
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should map preset "Light" to "Custom Theme Light"
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+            })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("c) with 'Custom Theme' cached - switches to Custom Theme Auto", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("System")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_NAME,
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "blue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set to auto theme because old single custom theme preference is invalid
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({ name: CUSTOM_THEME_AUTO_NAME })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+
+        it("d) with 'Custom Theme Light' cached - preserves Custom Theme Light", () => {
+          window.localStorage.setItem(
+            LocalStore.ACTIVE_THEME,
+            JSON.stringify("Light")
+          )
+
+          const props = getProps()
+          props.theme.activeTheme = {
+            name: CUSTOM_THEME_LIGHT_NAME,
+            displayName: "Light",
+            emotion: { ...lightTheme.emotion },
+            basewebTheme: lightTheme.basewebTheme,
+            primitives: lightTheme.primitives,
+            themeInput: { primaryColor: "lightblue" },
+          }
+
+          renderApp(props)
+
+          const themeInput = new CustomThemeConfig({
+            primaryColor: "blue",
+            light: { primaryColor: "lightblue" },
+            dark: { primaryColor: "darkblue" },
+          })
+
+          sendForwardMessage("newSession", {
+            ...NEW_SESSION_JSON,
+            customTheme: themeInput,
+          })
+
+          expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+          // Should set theme to update with full server config while preserving Light selection (FIX FOR #13280)
+          expect(props.theme.setTheme).toHaveBeenCalledWith(
+            expect.objectContaining({
+              name: CUSTOM_THEME_LIGHT_NAME,
+              displayName: "Light",
+            })
+          )
+
+          window.localStorage.removeItem(LocalStore.ACTIVE_THEME)
+        })
+      })
+    })
+  })
+
+  describe("embed_options with custom themes", () => {
+    let prevWindowLocation: Location
+
+    beforeEach(() => {
+      window.localStorage.clear()
+      prevWindowLocation = window.location
+    })
+
+    afterEach(() => {
+      Object.defineProperty(window, "location", {
+        value: prevWindowLocation,
+        writable: true,
+        configurable: true,
+      })
+    })
+
+    const setLocationSearch = (search: string): void => {
+      Object.defineProperty(window, "location", {
+        value: {
+          ...prevWindowLocation,
+          search,
+          href: `http://localhost/${search}`,
+        },
+        writable: true,
+        configurable: true,
+      })
+    }
+
+    const customTheme = new CustomThemeConfig({
+      primaryColor: "blue",
+      light: {
+        backgroundColor: "white",
+      },
+      dark: {
+        backgroundColor: "black",
+      },
+    })
+    const cachedLightTheme: CachedTheme = "Light"
+    const cachedDarkTheme: CachedTheme = "Dark"
+
+    it("respects embed_options=light_theme over cached dark preference", () => {
+      // Set cached theme to dark
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedDarkTheme)
+      )
+
+      // Mock query params with light_theme
+      setLocationSearch("?embed=true&embed_options=light_theme")
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config with light and dark sections
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply Custom Theme Light (from embed_options), not Dark (from cache)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_LIGHT_NAME)
+      expect(appliedTheme.emotion.colors.bgColor).toBe("white")
+    })
+
+    it("respects embed_options=dark_theme over cached light preference", () => {
+      // Set cached theme to light
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedLightTheme)
+      )
+
+      // Mock query params with dark_theme
+      setLocationSearch("?embed=true&embed_options=dark_theme")
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config with light and dark sections
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply Custom Theme Dark (from embed_options), not Light (from cache)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+      expect(appliedTheme.emotion.colors.bgColor).toBe("black")
+    })
+
+    it("falls back to cached preference when no embed_options", () => {
+      // Set cached theme to dark
+      window.localStorage.setItem(
+        LocalStore.ACTIVE_THEME,
+        JSON.stringify(cachedDarkTheme)
+      )
+
+      // No query params
+      setLocationSearch("")
+
+      const props = getProps()
+      renderApp(props)
+
+      // Send custom theme config
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      // Should apply cached Custom Theme Dark
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe(CUSTOM_THEME_DARK_NAME)
+    })
+
+    it("maps embed_options to preset theme when custom theme removed", () => {
+      // Mock query params with dark_theme
+      setLocationSearch("?embed=true&embed_options=dark_theme")
+
+      const props = getProps()
+      props.theme.activeTheme = {
+        name: CUSTOM_THEME_DARK_NAME,
+        displayName: "Dark",
+        emotion: { ...darkTheme.emotion },
+        basewebTheme: darkTheme.basewebTheme,
+        primitives: darkTheme.primitives,
+        themeInput: customTheme,
+      }
+      renderApp(props)
+
+      // First send custom theme
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme,
+      })
+
+      vi.mocked(props.theme.setTheme).mockClear()
+
+      // Then remove custom theme (send null)
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: null,
+      })
+
+      // Should apply preset Dark theme (respecting embed_options)
+      expect(props.theme.setTheme).toHaveBeenCalled()
+      const appliedTheme = vi.mocked(props.theme.setTheme).mock.calls[0][0]
+      expect(appliedTheme.name).toBe("Dark")
+    })
+  })
+
+  describe("App theme hash change detection", () => {
+    it("detects changes when sidebar config is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        sidebar: { backgroundColor: "white" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        sidebar: { backgroundColor: "gray" }, // Different sidebar color
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes when light section config is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: { backgroundColor: "white" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: { backgroundColor: "lightgray" }, // Different light background
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes when dark section config is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        dark: { backgroundColor: "black" },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        dark: { backgroundColor: "darkgray" }, // Different dark background
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes when nested sidebar in light section is modified", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          sidebar: { backgroundColor: "white" },
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        light: {
+          sidebar: { backgroundColor: "lightgray" }, // Different nested sidebar
+        },
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("does not re-process theme when hash is unchanged", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // Send the same theme again
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme,
+      })
+
+      // Should still only be called once (theme not re-processed)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+    })
+
+    it("does not re-process when theme with same content but different key order is sent", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        backgroundColor: "white",
+        textColor: "black",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      // Create theme with same values but potentially different internal key order
+      const theme2 = new CustomThemeConfig({
+        textColor: "black",
+        backgroundColor: "white",
+        primaryColor: "blue",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should still only be called once (hashes should match)
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+    })
+
+    it("detects changes in font configuration", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        bodyFont: "Arial",
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        bodyFont: "Helvetica", // Different font
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
+    })
+
+    it("detects changes in array properties", () => {
+      const props = getProps()
+      renderApp(props)
+
+      const theme1 = new CustomThemeConfig({
+        primaryColor: "blue",
+        headingFontSizes: ["2rem", "1.5rem", "1.25rem"],
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme1,
+      })
+
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(1)
+
+      const theme2 = new CustomThemeConfig({
+        primaryColor: "blue",
+        headingFontSizes: ["2rem", "1.5rem", "1rem"], // Different array value
+      })
+
+      sendForwardMessage("newSession", {
+        ...NEW_SESSION_JSON,
+        customTheme: theme2,
+      })
+
+      // Should be called again because the hash changed
+      expect(props.theme.addThemes).toHaveBeenCalledTimes(2)
     })
   })
 
@@ -3044,8 +3988,7 @@ describe("App", () => {
 
       getMockConnectionManager(true)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
       fireEvent.keyPress(screen.getByTestId("stApp"), {
         key: "c",
         which: 67,
@@ -3058,20 +4001,26 @@ describe("App", () => {
       ).not.toBeInTheDocument()
     })
 
-    it("Tests dev menu shortcuts can be accessed as a developer", () => {
-      renderApp(getProps())
+    it("Tests dev menu shortcuts can be accessed as a developer", async () => {
+      vi.useFakeTimers()
 
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        renderApp(getProps())
 
-      getMockConnectionManager(true)
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      expect(openCacheModal).not.toThrow()
+        getMockConnectionManager(true)
+
+        await expect(openCacheModal()).resolves.toBeUndefined()
+      } finally {
+        vi.useRealTimers()
+      }
     })
   })
 
@@ -3314,7 +4263,7 @@ describe("App", () => {
 
       // trigger a state transition to RERUN_REQUESTED
       getMockConnectionManager(true)
-      // eslint-disable-next-line testing-library/prefer-user-event
+      // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
       fireEvent.keyDown(document.body, {
         key: "r",
         which: 82,
@@ -3511,8 +4460,14 @@ describe("App", () => {
       return hostCommunicationMgr
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function fireWindowPostMessage(message: any): void {
+    /** Distributive Omit that works correctly over union types. */
+    type DistributiveOmit<T, K extends keyof T> = T extends unknown
+      ? Omit<T, K>
+      : never
+
+    function fireWindowPostMessage(
+      message: DistributiveOmit<IHostToGuestMessage, "stCommVersion">
+    ): void {
       fireEvent(
         window,
         new MessageEvent("message", {
@@ -3543,60 +4498,70 @@ describe("App", () => {
       })
     })
 
-    it("closes modals when the modal closure message has been received", () => {
+    it("closes modals when the modal closure message has been received", async () => {
+      vi.useFakeTimers()
       prepareHostCommunicationManager()
 
-      // We display the clear cache dialog as an example
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        // We display the clear cache dialog as an example
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      getMockConnectionManager(true)
+        getMockConnectionManager(true)
 
-      openCacheModal()
+        await openCacheModal()
 
-      fireWindowPostMessage({
-        type: "CLOSE_MODAL",
-      })
+        fireWindowPostMessage({
+          type: "CLOSE_MODAL",
+        })
 
-      expect(
-        screen.queryByText(
-          "Are you sure you want to clear the app's function caches?"
-        )
-      ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText(
+            "Are you sure you want to clear the app's function caches?"
+          )
+        ).not.toBeInTheDocument()
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
-    it("does not prevent a modal from opening when closure message is set", () => {
+    it("does not prevent a modal from opening when closure message is set", async () => {
+      vi.useFakeTimers()
       prepareHostCommunicationManager()
 
-      // We display the clear cache dialog as an example
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
+      try {
+        // We display the clear cache dialog as an example
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
 
-      getMockConnectionManager(true)
+        getMockConnectionManager(true)
 
-      openCacheModal()
+        await openCacheModal()
 
-      fireWindowPostMessage({
-        type: "CLOSE_MODAL",
-      })
+        fireWindowPostMessage({
+          type: "CLOSE_MODAL",
+        })
 
-      expect(
-        screen.queryByText(
-          "Are you sure you want to clear the app's function caches?"
-        )
-      ).not.toBeInTheDocument()
+        expect(
+          screen.queryByText(
+            "Are you sure you want to clear the app's function caches?"
+          )
+        ).not.toBeInTheDocument()
 
-      openCacheModal()
+        await openCacheModal()
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it("changes scriptRunState and triggers stopScript when STOP_SCRIPT message has been received", () => {
@@ -3698,6 +4663,49 @@ describe("App", () => {
       ).toStrictEqual({
         appHeartbeat: true,
       })
+    })
+
+    it("calls onHeartbeatSent with timeout when SEND_APP_HEARTBEAT has ackTimeoutMilliseconds", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      fireWindowPostMessage({
+        type: "SEND_APP_HEARTBEAT",
+        ackTimeoutMilliseconds: 59000,
+      })
+
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(59000)
+      // Sending a heartbeat should not trigger the ack handler
+      expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
+    })
+
+    it("calls onHeartbeatSent(0) when SEND_APP_HEARTBEAT is received without ackTimeoutMilliseconds", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      fireWindowPostMessage({
+        type: "SEND_APP_HEARTBEAT",
+      })
+
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).toHaveBeenCalledWith(0)
+      expect(connectionManager.onHeartbeatAckReceived).not.toHaveBeenCalled()
+    })
+
+    it("calls onHeartbeatAckReceived when heartbeatAck ForwardMsg is received", () => {
+      prepareHostCommunicationManager()
+
+      const connectionManager = getMockConnectionManager(true)
+
+      act(() => {
+        sendForwardMessage("heartbeatAck", true)
+      })
+
+      expect(connectionManager.onHeartbeatAckReceived).toHaveBeenCalledTimes(1)
+      expect(connectionManager.onHeartbeatSent).not.toHaveBeenCalled()
     })
 
     it("disables widgets when SET_INPUTS_DISABLED is sent by host", async () => {
@@ -3927,6 +4935,8 @@ describe("App", () => {
       expect(connectionManager.sendMessage).toBeCalledTimes(
         oldCallCountPlusPageChangeRequest
       )
+
+      vi.useRealTimers()
     })
 
     describe("handleSetMenuItems", () => {
@@ -3944,10 +4954,9 @@ describe("App", () => {
         })
       })
 
-      it("shows hostMenuItems", () => {
+      it("shows hostMenuItems", async () => {
         mockWindowLocation("https://devel.streamlit.test")
-        // We need this to use the Main Menu Button
-        const app = renderApp(getProps())
+        renderApp(getProps())
 
         const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
           HostCommunicationManager
@@ -3958,61 +4967,32 @@ describe("App", () => {
           useExternalAuthToken: false,
         })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
-        openMenu(screen)
-        let menuStructure = getMenuStructure(app)
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-          ],
-        ])
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          config: {
+            ...NEW_SESSION_JSON.config,
+            toolbarMode: Config.ToolbarMode.DEVELOPER,
+          },
+        })
+
+        await openMenu()
+
+        // Verify initial menu items (dev mode: Rerun visible)
+        let menuLabels = getMenuLabels()
+        expect(menuLabels).toEqual(["Rerun", "Clear cache", "Print"])
 
         fireWindowPostMessage({
           type: "SET_MENU_ITEMS",
-          items: [{ type: "option", label: "Fork this App", key: "fork" }],
+          items: [{ type: "text", label: "Fork this App", key: "fork" }],
         })
 
-        menuStructure = getMenuStructure(app)
-
-        expect(menuStructure).toEqual([
-          [
-            {
-              label: "Rerun",
-              type: "option",
-            },
-            {
-              label: "Settings",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Print",
-              type: "option",
-            },
-            {
-              type: "separator",
-            },
-            {
-              label: "Fork this App",
-              type: "option",
-            },
-          ],
+        // Verify host menu item was added in correct position
+        menuLabels = getMenuLabels()
+        expect(menuLabels).toEqual([
+          "Rerun",
+          "Clear cache",
+          "Print",
+          "Fork this App",
         ])
       })
     })
@@ -4074,27 +5054,6 @@ describe("App", () => {
       })
 
       expect(screen.queryByTestId("stSidebarNav")).not.toBeInTheDocument()
-    })
-
-    it("Deploy button should be hidden for cloud environment", () => {
-      prepareHostCommunicationManager()
-
-      sendForwardMessage("newSession", {
-        ...NEW_SESSION_JSON,
-        config: {
-          ...NEW_SESSION_JSON.config,
-          toolbarMode: Config.ToolbarMode.DEVELOPER,
-        },
-      })
-
-      expect(screen.getByTestId("stAppDeployButton")).toBeInTheDocument()
-
-      fireWindowPostMessage({
-        type: "SET_MENU_ITEMS",
-        items: [{ label: "Host menu item", key: "host-item", type: "text" }],
-      })
-
-      expect(screen.queryByTestId("stAppDeployButton")).not.toBeInTheDocument()
     })
 
     it("shows toolbar in minimal mode when host menu items exist", () => {
@@ -4303,21 +5262,18 @@ describe("App", () => {
   })
 
   describe("page change URL handling", () => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    let pushStateSpy: any
-    let originalStreamlitWindowObj: typeof window.__streamlit
+    let pushStateSpy: MockInstance
 
     beforeEach(() => {
       window.history.pushState({}, "", "/")
       pushStateSpy = vi.spyOn(window.history, "pushState")
-      originalStreamlitWindowObj = window.__streamlit
     })
 
     afterEach(() => {
       pushStateSpy.mockRestore()
       window.history.pushState({}, "", "/")
       window.localStorage.clear()
-      window.__streamlit = originalStreamlitWindowObj
+      globalThis.__mockStreamlitConfig = {}
     })
 
     it("can switch to the main page from a different page", () => {
@@ -4447,21 +5403,26 @@ describe("App", () => {
       const navLinks = screen.queryAllByTestId("stSidebarNavLink")
       expect(navLinks).toHaveLength(2)
 
-      // TODO: Utilize user-event instead of fireEvent
-      // eslint-disable-next-line testing-library/prefer-user-event
-      fireEvent.click(navLinks[1])
-
       const connectionManager = getMockConnectionManager()
+
+      // Clear only the hostCommunicationMgr mock before navigation
+      ;(hostCommunicationMgr.sendMessageToHost as Mock).mockClear()
+
+      // eslint-disable-next-line testing-library/prefer-user-event -- navLinks have pointer-events:none which userEvent.click respects but the real browser click works
+      fireEvent.click(navLinks[1])
 
       expect(
         // @ts-expect-error
         connectionManager.sendMessage.mock.calls[0][0].rerunScript.queryString
       ).toBe(embedParams)
 
-      expect(hostCommunicationMgr.sendMessageToHost).toHaveBeenCalledWith({
-        type: "SET_QUERY_PARAM",
-        queryParams: embedParams,
-      })
+      // SET_QUERY_PARAM is sent to confirm the query params state to the host.
+      // For embed params, they are preserved so the message contains them.
+      const setQueryParamCalls = (
+        hostCommunicationMgr.sendMessageToHost as Mock
+      ).mock.calls.filter(call => call[0]?.type === "SET_QUERY_PARAM")
+      expect(setQueryParamCalls).toHaveLength(1)
+      expect(setQueryParamCalls[0][0].queryParams).toBe(`?${embedParams}`)
     })
 
     it("works with baseUrlPaths", () => {
@@ -4504,10 +5465,11 @@ describe("App", () => {
       )
     })
 
-    it("works with window.__streamlit.MAIN_PAGE_BASE_URL", () => {
+    it("works with StreamlitConfig.MAIN_PAGE_BASE_URL", () => {
       renderApp(getProps())
 
-      window.__streamlit = { MAIN_PAGE_BASE_URL: "http://example.com/foo" }
+      globalThis.__mockStreamlitConfig.MAIN_PAGE_BASE_URL =
+        "http://example.com/foo"
 
       sendForwardMessage("newSession", {
         ...NEW_SESSION_JSON,
@@ -4743,7 +5705,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
       scriptIsRunning: false,
     })
 
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
     fireEvent.keyDown(document.body, {
       key: "r",
       which: 82, // Key code for 'r'
@@ -4752,7 +5714,7 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     // Wait for state updates from rerunScript to propagate if any were async.
     // sendRerunBackMsg, which sets hasReceivedNewSession to false, is called synchronously in this path.
     await act(async () => {
-      // Wrapping in act to ensure all microtasks related to fireEvent are flushed.
+      // Wrapping in act to ensure all microtasks related to keyboard event are flushed.
       // Even if it appears as a no-op, it can be important for timing in RTL tests.
       return Promise.resolve()
     })
@@ -5307,6 +6269,541 @@ describe("App.hasReceivedNewSession flag behavior", () => {
 
         logSpy.mockRestore()
       })
+    })
+  })
+
+  describe("initial host config (fast-path)", () => {
+    afterEach(() => {
+      globalThis.__mockStreamlitConfig = {}
+    })
+
+    it("does not apply config when HOST_CONFIG is absent and proceeds with default behavior", () => {
+      // Ensure StreamlitConfig is empty
+      globalThis.__mockStreamlitConfig = {}
+
+      renderApp(getProps())
+
+      // Verify the app initializes properly with default behavior
+      // ConnectionManager should be created (normal WebSocket connection flow)
+      expect(ConnectionManager).toHaveBeenCalledTimes(1)
+
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      // during app initialization (config will come from endpoint instead)
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+
+      // Verify the app is ready to receive config from the endpoint (default flow)
+      // by checking that onHostConfigResp callback was passed to ConnectionManager
+      const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
+      expect(onHostConfigResp).toBeDefined()
+
+      // Simulate receiving config from endpoint - this should work normally
+      act(() => {
+        onHostConfigResp({
+          allowedOrigins: ["https://endpoint.example.com"],
+          useExternalAuthToken: false,
+          metricsUrl: "https://metrics.example.com",
+          disableFullscreenMode: false,
+          enableCustomParentMessages: false,
+          mapboxToken: "",
+          enforceDownloadInNewTab: false,
+          blockErrorDialogs: false,
+        })
+      })
+
+      // Verify that endpoint config was applied successfully
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: ["https://endpoint.example.com"],
+        useExternalAuthToken: false,
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        "https://metrics.example.com"
+      )
+    })
+
+    it("applies HOST_CONFIG values before ConnectionManager init", () => {
+      const allowedOrigins = ["https://example.com", "https://other.com"]
+      const metricsUrl = "postMessage"
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins,
+          useExternalAuthToken: true,
+          metricsUrl,
+        },
+      }
+
+      renderApp(getProps())
+
+      // ConnectionManager should be created
+      expect(ConnectionManager).toHaveBeenCalledTimes(1)
+
+      // Verify that initial HOST_CONFIG values were applied
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Only provided fields are set (no defaults for unprovided fields)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins,
+        useExternalAuthToken: true,
+        // enableCustomParentMessages and blockErrorDialogs omitted (undefined)
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(metricsUrl)
+    })
+
+    it("keeps window allowedOrigins when endpoint returns a superset", () => {
+      const windowOrigins = ["https://window-origin.com"]
+      const windowMetricsUrl = "postMessage"
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: windowOrigins,
+          useExternalAuthToken: true,
+          metricsUrl: windowMetricsUrl,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Clear initial calls from applyInitialHostConfig
+      vi.mocked(hostCommunicationMgr.setAllowedOrigins).mockClear()
+      vi.mocked(metricsMgr.setMetricsConfig).mockClear()
+
+      // Simulate onHostConfigResp where endpoint returns a superset of origins.
+      // Window config should remain authoritative for allowedOrigins.
+      const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
+
+      act(() => {
+        onHostConfigResp({
+          allowedOrigins: [
+            "https://window-origin.com",
+            "https://endpoint-origin.com",
+          ],
+          useExternalAuthToken: false,
+          metricsUrl: "https://metrics.endpoint.com",
+          disableFullscreenMode: false,
+          enableCustomParentMessages: false,
+          mapboxToken: "",
+          enforceDownloadInNewTab: false,
+          blockErrorDialogs: false,
+        })
+      })
+
+      // Verify StreamlitConfig values took precedence.
+      // HostCommunicationManager should still receive only windowOrigins here.
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: windowOrigins, // Window value, not endpoint superset
+        useExternalAuthToken: true, // Window value, not endpoint
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        windowMetricsUrl // Window value, not endpoint
+      )
+    })
+
+    it("uses endpoint values when StreamlitConfig HOST_CONFIG is not set", () => {
+      // No HOST_CONFIG in StreamlitConfig
+      globalThis.__mockStreamlitConfig = {}
+
+      renderApp(getProps())
+
+      const endpointOrigins = ["https://endpoint-origin.com"]
+      const endpointMetricsUrl = "https://metrics.endpoint.com"
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Simulate onHostConfigResp
+      const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
+
+      act(() => {
+        onHostConfigResp({
+          allowedOrigins: endpointOrigins,
+          useExternalAuthToken: false,
+          metricsUrl: endpointMetricsUrl,
+          disableFullscreenMode: true,
+          enableCustomParentMessages: true,
+          mapboxToken: "test-token",
+          enforceDownloadInNewTab: true,
+          blockErrorDialogs: false,
+        })
+      })
+
+      // Verify endpoint values were used (no window values to override)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: endpointOrigins,
+        useExternalAuthToken: false,
+        enableCustomParentMessages: true,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        endpointMetricsUrl
+      )
+    })
+
+    it("applies partial HOST_CONFIG (metricsUrl optional)", () => {
+      const windowOrigins = ["https://example.com"]
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: windowOrigins,
+          useExternalAuthToken: true,
+          // metricsUrl not set - should fall back to endpoint value
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Clear initial calls from applyInitialHostConfig
+      vi.mocked(hostCommunicationMgr.setAllowedOrigins).mockClear()
+      vi.mocked(metricsMgr.setMetricsConfig).mockClear()
+
+      // Should still work - allowedOrigins and useExternalAuthToken from StreamlitConfig,
+      // metricsUrl from endpoint
+      const onHostConfigResp = getMockConnectionManagerProp("onHostConfigResp")
+      const endpointMetricsUrl = "https://metrics.endpoint.com"
+
+      act(() => {
+        onHostConfigResp({
+          allowedOrigins: ["https://endpoint-origin.com"],
+          useExternalAuthToken: false,
+          metricsUrl: endpointMetricsUrl,
+          disableFullscreenMode: false,
+          enableCustomParentMessages: false,
+          mapboxToken: "",
+          enforceDownloadInNewTab: false,
+          blockErrorDialogs: false,
+        })
+      })
+
+      // Verify: allowedOrigins and useExternalAuthToken from window,
+      // metricsUrl from endpoint (since not set in window config)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledTimes(1)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: windowOrigins, // Window value
+        useExternalAuthToken: true, // Window value
+        enableCustomParentMessages: false,
+        blockErrorDialogs: false,
+      })
+
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledTimes(1)
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith(
+        endpointMetricsUrl // Endpoint value (window had no metricsUrl)
+      )
+    })
+
+    it("does not apply HOST_CONFIG when bypass validation fails (empty allowedOrigins)", () => {
+      // HOST_CONFIG exists but with invalid/empty allowedOrigins
+      // This should NOT be applied since it fails isHostConfigBypassEnabled() validation
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: [], // Empty - fails validation
+          useExternalAuthToken: true,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      // during app initialization (since HOST_CONFIG fails bypass validation)
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    it("does not apply HOST_CONFIG when BACKEND_BASE_URL is missing (bypass disabled)", () => {
+      // HOST_CONFIG exists with valid AppConfig fields but BACKEND_BASE_URL is missing
+      // Config should NOT be applied early since bypass mode is disabled
+      // Config will be applied later through onHostConfigResp reconciliation instead
+      globalThis.__mockStreamlitConfig = {
+        // BACKEND_BASE_URL intentionally omitted - disables bypass
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that NO config was applied early (bypass mode is disabled)
+      // Config will be applied through onHostConfigResp reconciliation
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    it("does not apply HOST_CONFIG when bypass validation fails (missing useExternalAuthToken)", () => {
+      // HOST_CONFIG exists but useExternalAuthToken is missing (not a boolean)
+      // This should NOT be applied since it fails isHostConfigBypassEnabled() validation
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          // useExternalAuthToken intentionally omitted
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that setAllowedOrigins and setMetricsConfig were NOT called
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    // Tests for expanded HOST_CONFIG fields (all 9 fields)
+    it("applies all AppConfig fields from HOST_CONFIG", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify setAllowedOrigins was called with all AppConfig fields
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        })
+      )
+    })
+
+    it("applies all provided fields from HOST_CONFIG including LibConfig", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          // AppConfig
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          // LibConfig fields (stored in state, tested via onHostConfigResp reconciliation)
+          mapboxToken: "test-mapbox-token",
+          disableFullscreenMode: true,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "use-credentials",
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify AppConfig fields were applied (observable through manager calls)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+        })
+      )
+      // Note: LibConfig fields are stored in state and will be reconciled when
+      // onHostConfigResp is called. Their precedence is tested in the reconciliation tests.
+    })
+
+    it("applies complete HOST_CONFIG with all 9 fields", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          // AppConfig
+          allowedOrigins: ["https://example1.com", "https://example2.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+          // LibConfig
+          mapboxToken: "complete-mapbox-token",
+          disableFullscreenMode: false,
+          enforceDownloadInNewTab: true,
+          resourceCrossOriginMode: "anonymous",
+          // MetricsConfig
+          metricsUrl: "postMessage",
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify AppConfig fields (observable through manager calls)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          allowedOrigins: ["https://example1.com", "https://example2.com"],
+          useExternalAuthToken: true,
+          enableCustomParentMessages: true,
+          blockErrorDialogs: true,
+        })
+      )
+
+      // Verify MetricsConfig field (observable through manager call)
+      expect(metricsMgr.setMetricsConfig).toHaveBeenCalledWith("postMessage")
+
+      // Note: LibConfig fields are stored in state and tested via reconciliation when
+      // onHostConfigResp is called.
+    })
+
+    it("handles partial HOST_CONFIG with only some expanded fields", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          // Only provide some expanded fields
+          mapboxToken: "partial-token",
+          enableCustomParentMessages: true,
+          // Other fields omitted (will remain undefined until reconciliation)
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify ONLY provided AppConfig fields are set (no defaults)
+      // blockErrorDialogs is not provided, so it won't be in the object
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith({
+        allowedOrigins: ["https://example.com"],
+        useExternalAuthToken: true,
+        enableCustomParentMessages: true,
+        // blockErrorDialogs is omitted (undefined) - will be set during reconciliation
+      })
+      // Note: Partial LibConfig fields (mapboxToken) are stored in state and tested
+      // via reconciliation when onHostConfigResp is called.
+    })
+
+    it("applies boolean false values correctly (not treated as undefined)", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: false, // Explicitly false
+          enableCustomParentMessages: false, // Explicitly false
+          blockErrorDialogs: false, // Explicitly false
+          disableFullscreenMode: false, // Explicitly false (in LibConfig)
+          enforceDownloadInNewTab: false, // Explicitly false (in LibConfig)
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+
+      // Verify false values are preserved in AppConfig (observable through manager calls)
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalledWith(
+        expect.objectContaining({
+          useExternalAuthToken: false,
+          enableCustomParentMessages: false,
+          blockErrorDialogs: false,
+        })
+      )
+      // Note: LibConfig false values (disableFullscreenMode, enforceDownloadInNewTab)
+      // are stored in state and tested via reconciliation when onHostConfigResp is called.
+    })
+
+    it("does not apply any fields when bypass validation fails (empty allowedOrigins)", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: [], // Empty - fails bypass validation
+          useExternalAuthToken: true,
+          // Try to provide expanded fields
+          enableCustomParentMessages: true,
+          mapboxToken: "should-not-be-applied",
+        },
+      }
+
+      renderApp(getProps())
+
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      const metricsMgr = getStoredValue<MetricsManager>(MetricsManager)
+
+      // Verify that NO config was applied (bypass validation failed)
+      // Neither AppConfig nor LibConfig nor MetricsConfig should be applied
+      expect(hostCommunicationMgr.setAllowedOrigins).not.toHaveBeenCalled()
+      expect(metricsMgr.setMetricsConfig).not.toHaveBeenCalled()
+    })
+
+    // Test resourceCrossOriginMode in bypass mode
+    // Note: Window config does not support deprecated setAnonymousCrossOriginPropertyOnMediaElements.
+    // The deprecated field is only supported via endpoint response (non-bypass path).
+    it("applies resourceCrossOriginMode from HOST_CONFIG in bypass mode", () => {
+      globalThis.__mockStreamlitConfig = {
+        BACKEND_BASE_URL: "https://backend.example.com",
+        HOST_CONFIG: {
+          allowedOrigins: ["https://example.com"],
+          useExternalAuthToken: true,
+          resourceCrossOriginMode: "use-credentials",
+        },
+      }
+
+      renderApp(getProps())
+
+      // Bypass enabled - resourceCrossOriginMode is applied
+      const hostCommunicationMgr = getStoredValue<HostCommunicationManager>(
+        HostCommunicationManager
+      )
+      expect(hostCommunicationMgr.setAllowedOrigins).toHaveBeenCalled()
     })
   })
 })

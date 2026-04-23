@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,11 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { transparentize } from "color2k"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
-export interface CameraInputButtonProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+interface CameraInputButtonProps {
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   children: ReactNode
   progress?: number | null
@@ -69,7 +67,7 @@ export const StyledCameraInput = styled.div({
   objectFit: "contain",
 })
 
-export interface StyledBoxProps {
+interface StyledBoxProps {
   width: number
 }
 
@@ -89,7 +87,7 @@ export const StyledDescription = styled.p(({ theme }) => ({
   textAlign: "center",
 }))
 
-export interface StyledImgProps {
+interface StyledImgProps {
   opacity: string
 }
 
@@ -119,10 +117,6 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   mixBlendMode: "difference",
   opacity: 0.6,
 }))
-
-export const StyledWebcamWrapper = styled.div({
-  display: "flex",
-})
 
 export const StyledProgressBar = styled.div({
   height: "fit-content",
@@ -171,7 +165,7 @@ export const StyledCameraInputBaseButton =
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+      boxShadow: theme.shadows.focusRing,
     },
     ...getSizeStyle(Size.MEDIUM, theme),
   }))

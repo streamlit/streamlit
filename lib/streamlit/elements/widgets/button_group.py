@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,11 +15,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Generic,
     Literal,
     TypeAlias,
@@ -28,17 +26,19 @@ from typing import (
     overload,
 )
 
-from streamlit import config
+from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
-    check_and_convert_to_indices,
     convert_to_sequence_and_check_comparable,
     get_default_indices,
+    maybe_coerce_enum,
+    maybe_coerce_enum_sequence,
+    validate_and_sync_multiselect_value_with_options,
+    validate_and_sync_value_with_options,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -56,8 +56,8 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import register_widget
-from streamlit.string_util import is_emoji, validate_material_icon
+from streamlit.runtime.state import BindOption, register_widget
+from streamlit.string_util import extract_leading_icon
 
 if TYPE_CHECKING:
     from streamlit.dataframe_util import OptionSequence
@@ -76,142 +76,153 @@ if TYPE_CHECKING:
 T = TypeVar("T")
 V = TypeVar("V")
 
-_THUMB_ICONS: Final = (":material/thumb_up:", ":material/thumb_down:")
-_FACES_ICONS: Final = (
-    ":material/sentiment_sad:",
-    ":material/sentiment_dissatisfied:",
-    ":material/sentiment_neutral:",
-    ":material/sentiment_satisfied:",
-    ":material/sentiment_very_satisfied:",
-)
-_NUMBER_STARS: Final = 5
-_STAR_ICON: Final = ":material/star:"
-# we don't have the filled-material icon library as a dependency. Hence, we have it here
-# in base64 format and send it over the wire as an image.
-_SELECTED_STAR_ICON: Final = ":material/star_filled:"
-
 SelectionMode: TypeAlias = Literal["single", "multi"]
 
 
-@dataclass
-class _MultiSelectSerde(Generic[T]):
-    """Only meant to be used internally for the button_group element.
+class _SingleSelectButtonGroupSerde(Generic[T]):
+    """String-based serde for single-select ButtonGroup widgets.
 
-    This serde is inspired by the MultiSelectSerde from multiselect.py. That serde has
-    been updated since then to support the accept_new_options parameter, which is not
-    required by the button_group element. If this changes again at some point,
-    the two elements can share the same serde again.
+    Uses string-based values (formatted option strings) for robust handling
+    of dynamic option changes.
     """
 
     options: Sequence[T]
-    default_value: list[int] = field(default_factory=list)
-
-    def serialize(self, value: list[T]) -> list[int]:
-        indices = check_and_convert_to_indices(self.options, value)
-        return indices if indices is not None else []
-
-    def deserialize(self, ui_value: list[int] | None) -> list[T]:
-        current_value: list[int] = (
-            ui_value if ui_value is not None else self.default_value
-        )
-        return [self.options[i] for i in current_value]
-
-
-class _SingleSelectSerde(Generic[T]):
-    """Only meant to be used internally for the button_group element.
-
-    Uses the ButtonGroup's _MultiSelectSerde under-the-hood, but accepts a single
-    index value and deserializes to a single index value.
-    This is because button_group can be single and multi select, but we use the same
-    proto for both and, thus, map single values to a list of values and a receiving
-    value wrapped in a list to a single value.
-
-    When a default_value is provided is provided, the option corresponding to the
-    index is serialized/deserialized.
-    """
-
-    def __init__(
-        self,
-        option_indices: Sequence[T],
-        default_value: list[int] | None = None,
-    ) -> None:
-        # see docstring about why we use MultiSelectSerde here
-        self.multiselect_serde: _MultiSelectSerde[T] = _MultiSelectSerde(
-            option_indices, default_value if default_value is not None else []
-        )
-
-    def serialize(self, value: T | None) -> list[int]:
-        _value = [value] if value is not None else []
-        return self.multiselect_serde.serialize(_value)
-
-    def deserialize(self, ui_value: list[int] | None) -> T | None:
-        deserialized = self.multiselect_serde.deserialize(ui_value)
-
-        if len(deserialized) == 0:
-            return None
-
-        return deserialized[0]
-
-
-class ButtonGroupSerde(Generic[T]):
-    """A serde that can handle both single and multi select options.
-
-    It uses the same proto to wire the data, so that we can send and receive
-    single values via a list. We have different serdes for both cases though so
-    that when setting / getting the value via session_state, it is mapped correctly.
-    So for single select, the value will be a single value and for multi select, it will
-    be a list of values.
-    """
+    formatted_options: list[str]
+    formatted_option_to_option_index: dict[str, int]
+    default_option_index: int | None
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
         options: Sequence[T],
-        default_values: list[int],
-        type: Literal["single", "multi"],
+        *,
+        formatted_options: list[str],
+        formatted_option_to_option_index: dict[str, int],
+        default_option_index: int | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         self.options = options
-        self.default_values = default_values
-        self.type = type
-        self.serde: _SingleSelectSerde[T] | _MultiSelectSerde[T] = (
-            _SingleSelectSerde(options, default_value=default_values)
-            if type == "single"
-            else _MultiSelectSerde(options, default_values)
-        )
+        self.formatted_options = formatted_options
+        self.formatted_option_to_option_index = formatted_option_to_option_index
+        self.default_option_index = default_option_index
+        self.format_func = format_func
 
-    def serialize(self, value: T | list[T] | None) -> list[int]:
-        return self.serde.serialize(cast("Any", value))
+    def serialize(self, v: T | str | None) -> list[str]:
+        """Serialize single-select value to a list of strings for wire format."""
+        if v is None:
+            return []
+        if len(self.options) == 0:
+            return []
 
-    def deserialize(self, ui_value: list[int] | None) -> list[T] | T | None:
-        return self.serde.deserialize(ui_value)
+        # First, try to find the option by value in the options list
+        for index, opt in enumerate(self.options):
+            if opt == v:
+                return [self.formatted_options[index]]
+
+        # If not found by direct comparison, try by formatted string
+        try:
+            formatted_value = self.format_func(v)
+        except Exception:
+            return [str(v)]
+
+        return [formatted_value]
+
+    def deserialize(self, ui_value: list[str] | None) -> T | str | None:
+        """Deserialize from a list of strings to a single value."""
+        if len(self.options) == 0:
+            return None
+
+        # None means initial state - use default if available
+        if ui_value is None:
+            if self.default_option_index is not None:
+                return self.options[self.default_option_index]
+            return None
+
+        # Empty list means explicit deselection by user - return None
+        if len(ui_value) == 0:
+            return None
+
+        string_value = ui_value[0]
+
+        # Look up the option index by formatted string
+        option_index = self.formatted_option_to_option_index.get(string_value)
+        if option_index is not None:
+            return self.options[option_index]
+
+        # Value not found in options - return as-is
+        return string_value
 
 
-def get_mapped_options(
-    feedback_option: Literal["thumbs", "faces", "stars"],
-) -> tuple[list[ButtonGroupProto.Option], list[int]]:
-    # options object understandable by the web app
-    options: list[ButtonGroupProto.Option] = []
-    # we use the option index in the webapp communication to
-    # indicate which option is selected
-    options_indices: list[int] = []
+class _MultiSelectButtonGroupSerde(Generic[T]):
+    """String-based serde for multi-select ButtonGroup widgets.
 
-    if feedback_option == "thumbs":
-        # reversing the index mapping to have thumbs up first (but still with the higher
-        # index (=sentiment) in the list)
-        options_indices = list(reversed(range(len(_THUMB_ICONS))))
-        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _THUMB_ICONS]
-    elif feedback_option == "faces":
-        options_indices = list(range(len(_FACES_ICONS)))
-        options = [ButtonGroupProto.Option(content_icon=icon) for icon in _FACES_ICONS]
-    elif feedback_option == "stars":
-        options_indices = list(range(_NUMBER_STARS))
-        options = [
-            ButtonGroupProto.Option(
-                content_icon=_STAR_ICON,
-                selected_content_icon=_SELECTED_STAR_ICON,
-            )
-        ] * _NUMBER_STARS
+    Uses string-based values (formatted option strings) for robust handling
+    of dynamic option changes.
+    """
 
-    return options, options_indices
+    options: Sequence[T]
+    formatted_options: list[str]
+    formatted_option_to_option_index: dict[str, int]
+    default_option_indices: list[int]
+    format_func: Callable[[Any], str]
+
+    def __init__(
+        self,
+        options: Sequence[T],
+        *,
+        formatted_options: list[str],
+        formatted_option_to_option_index: dict[str, int],
+        default_option_indices: list[int] | None = None,
+        format_func: Callable[[Any], str] = str,
+    ) -> None:
+        self.options = options
+        self.formatted_options = formatted_options
+        self.formatted_option_to_option_index = formatted_option_to_option_index
+        self.default_option_indices = default_option_indices or []
+        self.format_func = format_func
+
+    def serialize(self, value: list[T | str] | list[T] | None) -> list[str]:
+        """Serialize multi-select values to list of strings for wire format."""
+        if value is None:
+            return []
+        converted_value = convert_anything_to_list(value)
+        values: list[str] = []
+        for v in converted_value:
+            # First, try to find the option by value in the options list
+            found = False
+            for index, opt in enumerate(self.options):
+                if opt == v:
+                    values.append(self.formatted_options[index])
+                    found = True
+                    break
+
+            if found:
+                continue
+
+            # If not found by direct comparison, try by formatted string
+            try:
+                formatted_value = self.format_func(v)
+            except Exception:
+                values.append(str(v))
+                continue
+
+            values.append(formatted_value)
+        return values
+
+    def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
+        """Deserialize from list of strings to list of values."""
+        if ui_value is None:
+            return [self.options[i] for i in self.default_option_indices]
+
+        values: list[T | str] = []
+        for v in ui_value:
+            option_index = self.formatted_option_to_option_index.get(v)
+            if option_index is not None:
+                values.append(self.options[option_index])
+            else:
+                # Value not found in options - append as-is
+                values.append(v)
+        return values
 
 
 def _build_proto(
@@ -221,13 +232,11 @@ def _build_proto(
     disabled: bool,
     current_form_id: str,
     click_mode: ButtonGroupProto.ClickMode.ValueType,
-    selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
-        ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-    ),
-    style: Literal["borderless", "pills", "segmented_control"] = "pills",
+    style: Literal["pills", "segmented_control"] = "pills",
     label: str | None = None,
     label_visibility: LabelVisibility = "visible",
     help: str | None = None,
+    required: bool = False,
 ) -> ButtonGroupProto:
     proto = ButtonGroupProto()
 
@@ -237,6 +246,7 @@ def _build_proto(
     proto.disabled = disabled
     proto.click_mode = click_mode
     proto.style = ButtonGroupProto.Style.Value(style.upper())
+    proto.required = required
 
     # not passing the label looks the same as a collapsed label
     if label is not None:
@@ -249,13 +259,12 @@ def _build_proto(
 
     for formatted_option in formatted_options:
         proto.options.append(formatted_option)
-    proto.selection_visualization = selection_visualization
     return proto
 
 
 def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
     """Check if the selection_mode value is valid or raise exception otherwise."""
-    if selection_mode not in ["single", "multi"]:
+    if selection_mode not in {"single", "multi"}:
         raise StreamlitAPIException(
             "The selection_mode argument must be one of ['single', 'multi']. "
             f"The argument passed was '{selection_mode}'."
@@ -263,219 +272,50 @@ def _maybe_raise_selection_mode_warning(selection_mode: SelectionMode) -> None:
 
 
 class ButtonGroupMixin:
-    # These overloads are not documented in the docstring, at least not at this time, on
-    # the theory that most people won't know what it means. And the Literals here are a
-    # subclass of int anyway. Usually, we would make a type alias for
-    # Literal["thumbs", "faces", "stars"]; but, in this case, we don't use it in too
-    # many other places, and it's a more helpful autocomplete if we just enumerate the
-    # values explicitly, so a decision has been made to keep it as not an alias.
+    # pills overloads:
+    # 1. required=True with default set -> guaranteed V return
     @overload
-    def feedback(
+    def pills(
         self,
-        options: Literal["thumbs"] = ...,
+        label: str,
+        options: OptionSequence[V],
         *,
+        selection_mode: Literal["single"] = "single",
+        default: V,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
-        default: int | None = None,
-        disabled: bool = False,
+        help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
         width: Width = "content",
-    ) -> Literal[0, 1] | None: ...
+        bind: BindOption = None,
+    ) -> V: ...
+    # 2. required=True without default -> V | None
     @overload
-    def feedback(
+    def pills(
         self,
-        options: Literal["faces", "stars"] = ...,
+        label: str,
+        options: OptionSequence[V],
         *,
+        selection_mode: Literal["single"] = "single",
+        default: None = None,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
-        default: int | None = None,
-        disabled: bool = False,
+        help: str | None = None,
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        width: Width = "content",
-    ) -> Literal[0, 1, 2, 3, 4] | None: ...
-    @gather_metrics("feedback")
-    def feedback(
-        self,
-        options: Literal["thumbs", "faces", "stars"] = "thumbs",
-        *,
-        key: Key | None = None,
-        default: int | None = None,
         disabled: bool = False,
-        on_change: WidgetCallback | None = None,
-        args: WidgetArgs | None = None,
-        kwargs: WidgetKwargs | None = None,
+        label_visibility: LabelVisibility = "visible",
         width: Width = "content",
-    ) -> int | None:
-        """Display a feedback widget.
-
-        A feedback widget is an icon-based button group available in three
-        styles, as described in ``options``. It is commonly used in chat and AI
-        apps to allow users to rate responses.
-
-        Parameters
-        ----------
-        options : "thumbs", "faces", or "stars"
-            The feedback options displayed to the user. ``options`` can be one
-            of the following:
-
-            - ``"thumbs"`` (default): Streamlit displays a thumb-up and
-              thumb-down button group.
-            - ``"faces"``: Streamlit displays a row of five buttons with
-              facial expressions depicting increasing satisfaction from left to
-              right.
-            - ``"stars"``: Streamlit displays a row of star icons, allowing the
-              user to select a rating from one to five stars.
-
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
-
-        default : int or None
-            Default feedback value. This must be consistent with the feedback
-            type in ``options``:
-
-            - 0 or 1 if ``options="thumbs"``.
-            - Between 0 and 4, inclusive, if ``options="faces"`` or
-              ``options="stars"``.
-
-        disabled : bool
-            An optional boolean that disables the feedback widget if set
-            to ``True``. The default is ``False``.
-
-        on_change : callable
-            An optional callback invoked when this feedback widget's value
-            changes.
-
-        args : list or tuple
-            An optional list or tuple of args to pass to the callback.
-
-        kwargs : dict
-            An optional dict of kwargs to pass to the callback.
-
-        width : "content", "stretch", or int
-            The width of the feedback widget. This can be one of the following:
-
-            - ``"content"`` (default): The width of the widget matches the
-              width of its content, but doesn't exceed the width of the parent
-              container.
-            - ``"stretch"``: The width of the widget matches the width of the
-              parent container.
-            - An integer specifying the width in pixels: The widget has a
-              fixed width. If the specified width is greater than the width of
-              the parent container, the width of the widget matches the width
-              of the parent container.
-
-        Returns
-        -------
-        int or None
-            An integer indicating the user's selection, where ``0`` is the
-            lowest feedback. Higher values indicate more positive feedback.
-            If no option was selected, the widget returns ``None``.
-
-            - For ``options="thumbs"``, a return value of ``0`` indicates
-              thumbs-down, and ``1`` indicates thumbs-up.
-            - For ``options="faces"`` and ``options="stars"``, return values
-              range from ``0`` (least satisfied) to ``4`` (most satisfied).
-
-        Examples
-        --------
-        Display a feedback widget with stars, and show the selected sentiment:
-
-        >>> import streamlit as st
-        >>>
-        >>> sentiment_mapping = ["one", "two", "three", "four", "five"]
-        >>> selected = st.feedback("stars")
-        >>> if selected is not None:
-        >>>     st.markdown(f"You selected {sentiment_mapping[selected]} star(s).")
-
-        .. output::
-            https://doc-feedback-stars.streamlit.app/
-            height: 200px
-
-        Display a feedback widget with thumbs, and show the selected sentiment:
-
-        >>> import streamlit as st
-        >>>
-        >>> sentiment_mapping = [":material/thumb_down:", ":material/thumb_up:"]
-        >>> selected = st.feedback("thumbs")
-        >>> if selected is not None:
-        >>>     st.markdown(f"You selected: {sentiment_mapping[selected]}")
-
-        .. output::
-            https://doc-feedback-thumbs.streamlit.app/
-            height: 200px
-
-        """
-
-        if options not in ["thumbs", "faces", "stars"]:
-            raise StreamlitAPIException(
-                "The options argument to st.feedback must be one of "
-                "['thumbs', 'faces', 'stars']. "
-                f"The argument passed was '{options}'."
-            )
-        transformed_options, options_indices = get_mapped_options(options)
-
-        if default is not None and (default < 0 or default >= len(transformed_options)):
-            raise StreamlitAPIException(
-                f"The default value in '{options}' must be a number between 0 and {len(transformed_options) - 1}."
-                f" The passed default value is {default}"
-            )
-
-        # Convert small pixel widths to "content" to prevent icon wrapping.
-        # Calculate threshold based on theme.baseFontSize to be responsive to
-        # custom themes. The calculation is based on icon buttons sized in rem:
-        # - Button size: ~1.5rem (icon 1.25rem + padding 0.125rem x 2)
-        # - Gap: 0.125rem between buttons
-        # - thumbs: 2 buttons + 1 gap = 3.125rem
-        # - faces/stars: 5 buttons + 4 gaps = 8rem
-        base_font_size = config.get_option("theme.baseFontSize") or 16
-        button_size_rem = 1.5
-        gap_size_rem = 0.125
-
-        if options == "thumbs":
-            # 2 buttons + 1 gap
-            min_width_rem = 2 * button_size_rem + gap_size_rem
-        else:
-            # 5 buttons + 4 gaps (faces or stars)
-            min_width_rem = 5 * button_size_rem + 4 * gap_size_rem
-
-        # Convert rem to pixels based on base font size, add 10% buffer
-        min_width_threshold = int(min_width_rem * base_font_size * 1.1)
-
-        if isinstance(width, int) and width < min_width_threshold:
-            width = "content"
-
-        _default: list[int] | None = (
-            [options_indices[default]] if default is not None else None
-        )
-        serde = _SingleSelectSerde[int](options_indices, default_value=_default)
-
-        selection_visualization = ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-        if options == "stars":
-            selection_visualization = (
-                ButtonGroupProto.SelectionVisualization.ALL_UP_TO_SELECTED
-            )
-
-        sentiment = self._button_group(
-            transformed_options,
-            default=_default,
-            key=key,
-            selection_mode="single",
-            disabled=disabled,
-            deserializer=serde.deserialize,
-            serializer=serde.serialize,
-            on_change=on_change,
-            args=args,
-            kwargs=kwargs,
-            selection_visualization=selection_visualization,
-            style="borderless",
-            width=width,
-        )
-        return sentiment.value
-
+        bind: BindOption = None,
+    ) -> V | None: ...
+    # 3. Single-select (default, required=False) -> V | None
     @overload
     def pills(
         self,
@@ -484,6 +324,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
+        required: Literal[False] = ...,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -493,7 +334,9 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> V | None: ...
+    # 4. Multi-select -> list[V]
     @overload
     def pills(
         self,
@@ -502,6 +345,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -511,6 +355,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V]: ...
     @gather_metrics("pills")
     def pills(
@@ -520,6 +365,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: Key | None = None,
         help: str | None = None,
@@ -529,6 +375,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         r"""Display a pills widget.
 
@@ -546,9 +393,9 @@ class ButtonGroupMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -579,6 +426,15 @@ class ButtonGroupMixin:
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
 
+        required : bool
+            Whether a selection is required. If this is ``True`` and
+            ``selection_mode="single"``, users cannot deselect an option once
+            one is selected. Clicking an already-selected option does nothing.
+            The default is ``False``.
+
+            If ``required=True`` is used with ``selection_mode="multi"``, an
+            exception is raised.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -587,11 +443,24 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``selection_mode`` resets the widget even when a
+               key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -633,6 +502,27 @@ class ButtonGroupMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -692,6 +582,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default,
+            required=required,
             format_func=format_func,
             key=key,
             help=help,
@@ -702,8 +593,53 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
+    # segmented_control overloads:
+    # 1. required=True with default set -> guaranteed V return
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: V,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V: ...
+    # 2. required=True without default -> V | None
+    @overload
+    def segmented_control(
+        self,
+        label: str,
+        options: OptionSequence[V],
+        *,
+        selection_mode: Literal["single"] = "single",
+        default: None = None,
+        required: Literal[True],
+        format_func: Callable[[Any], str] | None = None,
+        key: str | int | None = None,
+        help: str | None = None,
+        on_change: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        disabled: bool = False,
+        label_visibility: LabelVisibility = "visible",
+        width: Width = "content",
+        bind: BindOption = None,
+    ) -> V | None: ...
+    # 3. Single-select (default, required=False) -> V | None
     @overload
     def segmented_control(
         self,
@@ -712,6 +648,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single"] = "single",
         default: V | None = None,
+        required: Literal[False] = ...,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -721,7 +658,9 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> V | None: ...
+    # 4. Multi-select -> list[V]
     @overload
     def segmented_control(
         self,
@@ -730,6 +669,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["multi"],
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -739,6 +679,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V]: ...
 
     @gather_metrics("segmented_control")
@@ -749,6 +690,7 @@ class ButtonGroupMixin:
         *,
         selection_mode: Literal["single", "multi"] = "single",
         default: Sequence[V] | V | None = None,
+        required: bool = False,
         format_func: Callable[[Any], str] | None = None,
         key: str | int | None = None,
         help: str | None = None,
@@ -758,6 +700,7 @@ class ButtonGroupMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         r"""Display a segmented control widget.
 
@@ -774,9 +717,9 @@ class ButtonGroupMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -807,6 +750,15 @@ class ButtonGroupMixin:
             single value, or ``None``. If the ``selection_mode`` is
             ``"single"``, this can be a single value or ``None``.
 
+        required : bool
+            Whether a selection is required. If this is ``True`` and
+            ``selection_mode="single"``, users cannot deselect an option once
+            one is selected. Clicking an already-selected option does nothing.
+            The default is ``False``.
+
+            If ``required=True`` is used with ``selection_mode="multi"``, an
+            exception is raised.
+
         format_func : function
             Function to modify the display of the options. It receives
             the raw option as an argument and should output the label to be
@@ -815,11 +767,24 @@ class ButtonGroupMixin:
             Markdown, including the Markdown directives described in the
             ``body`` parameter of ``st.markdown``.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. Multiple widgets of the same type may
-            not share the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``selection_mode`` resets the widget even when a
+               key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -862,6 +827,27 @@ class ButtonGroupMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and removed from
+            the URL. For ``selection_mode="multi"``, multiple selections use
+            repeated parameters (e.g., ``?tags=Red&tags=Blue``) and duplicates
+            are deduplicated.
 
         Returns
         -------
@@ -924,6 +910,7 @@ class ButtonGroupMixin:
             label=label,
             selection_mode=selection_mode,
             default=default,
+            required=required,
             format_func=format_func,
             key=key,
             help=help,
@@ -934,6 +921,7 @@ class ButtonGroupMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            bind=bind,
         )
 
     @gather_metrics("_internal_button_group")
@@ -944,6 +932,7 @@ class ButtonGroupMixin:
         key: Key | None = None,
         default: Sequence[V] | V | None = None,
         selection_mode: Literal["single", "multi"] = "single",
+        required: bool = False,
         disabled: bool = False,
         format_func: Callable[[Any], str] | None = None,
         style: Literal["pills", "segmented_control"] = "segmented_control",
@@ -954,66 +943,118 @@ class ButtonGroupMixin:
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        bind: BindOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
+
+        # Validate required with multi-select
+        if required and selection_mode == "multi":
+            raise StreamlitAPIException(
+                "The `required` argument cannot be used with `selection_mode='multi'`. "
+                "The `required` parameter is only supported for single-select mode."
+            )
+
+        # Use str as default format_func
+        actual_format_func: Callable[[Any], str] = format_func or str
 
         def _transformed_format_func(option: V) -> ButtonGroupProto.Option:
             """If option starts with a material icon or an emoji, we extract it to send
             it parsed to the frontend.
-            """
-            transformed = format_func(option) if format_func else str(option)
-            transformed_parts = transformed.split(" ")
-            icon: str | None = None
-            if len(transformed_parts) > 0:
-                maybe_icon = transformed_parts[0].strip()
-                try:
-                    if maybe_icon.startswith(":material"):
-                        icon = validate_material_icon(maybe_icon)
-                    elif is_emoji(maybe_icon):
-                        icon = maybe_icon
 
-                    if icon:
-                        # reassamble the option string without the icon - also
-                        # works if len(transformed_parts) == 1
-                        transformed = " ".join(transformed_parts[1:])
-                except StreamlitAPIException:
-                    # we don't have a valid icon or emoji, so we just pass
-                    pass
+            Note: The icon is only extracted if it's followed by a space or is the
+            entire content (icon-only).
+            """
+            transformed = actual_format_func(option)
+
+            # Split by space to check if first token is an icon
+            parts = transformed.split(" ", 1)
+            first_part = parts[0].strip()
+
+            icon, remaining = extract_leading_icon(first_part)
+            if icon and not remaining:
+                # First token is a pure icon (emoji or material icon)
+                # Use remaining parts as content, or empty string if icon-only
+                transformed = parts[1] if len(parts) > 1 else ""
+            else:
+                icon = ""
+
             return ButtonGroupProto.Option(
                 content=transformed,
-                content_icon=icon,
+                content_icon=icon or None,
             )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         default_values = get_default_indices(indexable_options, default)
 
-        serde: ButtonGroupSerde[V] = ButtonGroupSerde[V](
-            indexable_options, default_values, selection_mode
-        )
+        # Create string-based mappings for the serde
+        formatted_options: list[str] = []
+        formatted_option_to_option_index: dict[str, int] = {}
+        for index, option in enumerate(indexable_options):
+            formatted = actual_format_func(option)
+            formatted_options.append(formatted)
+            # If formatted labels are duplicated, the last one wins. We keep this
+            # behavior to mirror radio/selectbox/multiselect.
+            formatted_option_to_option_index[formatted] = index
 
-        res = self._button_group(
+        # Create appropriate serde based on selection mode
+        serializer: WidgetSerializer[Any]
+        deserializer: WidgetDeserializer[Any]
+        if selection_mode == "multi":
+            multi_serde = _MultiSelectButtonGroupSerde[V](
+                indexable_options,
+                formatted_options=formatted_options,
+                formatted_option_to_option_index=formatted_option_to_option_index,
+                default_option_indices=default_values,
+                format_func=actual_format_func,
+            )
+            serializer = multi_serde.serialize
+            deserializer = multi_serde.deserialize
+        else:
+            single_serde = _SingleSelectButtonGroupSerde[V](
+                indexable_options,
+                formatted_options=formatted_options,
+                formatted_option_to_option_index=formatted_option_to_option_index,
+                default_option_index=default_values[0] if default_values else None,
+                format_func=actual_format_func,
+            )
+            serializer = single_serde.serialize
+            deserializer = single_serde.deserialize
+
+        # Single call to _button_group with the appropriate serde
+        result: RegisterWidgetResult[Any] = self._button_group(
             indexable_options,
             default=default_values,
             selection_mode=selection_mode,
+            required=required,
             disabled=disabled,
             format_func=_transformed_format_func,
             key=key,
             help=help,
             style=style,
-            serializer=serde.serialize,
-            deserializer=serde.deserialize,
+            serializer=serializer,
+            deserializer=deserializer,
             on_change=on_change,
             args=args,
             kwargs=kwargs,
             label=label,
             label_visibility=label_visibility,
             width=width,
+            options_format_func=actual_format_func,
+            bind=bind,
+            string_formatted_options=formatted_options,
         )
 
+        # Handle return type based on selection mode
         if selection_mode == "multi":
-            return res.value
+            multi_res = cast("RegisterWidgetResult[list[V] | list[V | str]]", result)
+            multi_res = maybe_coerce_enum_sequence(
+                multi_res, options, indexable_options
+            )
+            return cast("list[V]", multi_res.value)
 
-        return res.value
+        single_res = cast("RegisterWidgetResult[V | str | None]", result)
+        single_res = maybe_coerce_enum(single_res, options, indexable_options)
+        return cast("V | None", single_res.value)
 
     def _button_group(
         self,
@@ -1022,23 +1063,22 @@ class ButtonGroupMixin:
         key: Key | None = None,
         default: list[int] | None = None,
         selection_mode: SelectionMode = "single",
+        required: bool = False,
         disabled: bool = False,
-        style: Literal[
-            "borderless", "pills", "segmented_control"
-        ] = "segmented_control",
+        style: Literal["pills", "segmented_control"] = "segmented_control",
         format_func: Callable[[V], ButtonGroupProto.Option] | None = None,
         deserializer: WidgetDeserializer[T],
         serializer: WidgetSerializer[T],
         on_change: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        selection_visualization: ButtonGroupProto.SelectionVisualization.ValueType = (
-            ButtonGroupProto.SelectionVisualization.ONLY_SELECTED
-        ),
         label: str | None = None,
         label_visibility: LabelVisibility = "visible",
         help: str | None = None,
         width: Width = "content",
+        options_format_func: Callable[[Any], str] | None = None,
+        bind: BindOption = None,
+        string_formatted_options: list[str] | None = None,
     ) -> RegisterWidgetResult[T]:
         _maybe_raise_selection_mode_warning(selection_mode)
 
@@ -1062,9 +1102,9 @@ class ButtonGroupMixin:
                 "`selection_mode='single'`."
             )
 
-        if style not in ["borderless", "pills", "segmented_control"]:
+        if style not in {"pills", "segmented_control"}:
             raise StreamlitAPIException(
-                "The style argument must be one of ['borderless', 'pills', 'segmented_control']. "
+                "The style argument must be one of ['pills', 'segmented_control']. "
                 f"The argument passed was '{style}'."
             )
 
@@ -1074,8 +1114,7 @@ class ButtonGroupMixin:
         if default is not None and len(default) == 0:
             _default = None
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 
@@ -1091,14 +1130,9 @@ class ButtonGroupMixin:
         )
 
         element_id = compute_and_register_element_id(
-            # The borderless style is used by st.feedback, but users expect to see
-            # "feedback" in errors
-            "feedback" if style == "borderless" else style,
+            style,
             user_key=key,
-            # Treat the provided key as the main identity for segmented_control, pills and feedback,
-            # and only include kwargs that can invalidate the current selection.
-            # We whitelist the formatted options and the click mode (single vs multi).
-            key_as_main_identity={"options", "click_mode"},
+            key_as_main_identity={"click_mode"},
             dg=self.dg,
             options=formatted_options,
             default=default,
@@ -1116,12 +1150,15 @@ class ButtonGroupMixin:
             disabled,
             form_id,
             click_mode=parsed_selection_mode,
-            selection_visualization=selection_visualization,
             style=style,
             label=label,
             label_visibility=label_visibility,
             help=help,
+            required=required,
         )
+
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
 
         widget_state = register_widget(
             proto.id,
@@ -1131,17 +1168,60 @@ class ButtonGroupMixin:
             deserializer=deserializer,
             serializer=serializer,
             ctx=ctx,
-            value_type="int_array_value",
+            value_type="string_array_value",
+            bind=bind,
+            clearable=True,
+            formatted_options=string_formatted_options,
+            max_array_length=1 if selection_mode == "single" else None,
         )
 
-        if widget_state.value_changed:
-            proto.value[:] = serializer(widget_state.value)
+        # Validate and sync value with options for pills/segmented_control
+        value_needs_reset = False
+        current_value: Any = widget_state.value
+        if options_format_func is not None:
+            if selection_mode == "single":
+                # Single select: validate and possibly reset to default
+                default_index = default[0] if default else None
+                current_value, value_needs_reset = validate_and_sync_value_with_options(
+                    cast("T | None", widget_state.value),
+                    indexable_options,
+                    default_index,
+                    key,
+                    options_format_func,
+                )
+            else:
+                # Multi select: filter out invalid values
+                current_value, value_needs_reset = (
+                    validate_and_sync_multiselect_value_with_options(
+                        cast("list[T] | list[T | str]", widget_state.value),
+                        indexable_options,
+                        key,
+                        options_format_func,
+                    )
+                )
+
+        if value_needs_reset or widget_state.value_changed:
+            # Always use string-based raw_values field
+            value_for_serialization = (
+                current_value if value_needs_reset else widget_state.value
+            )
+            proto.raw_values[:] = serializer(cast("T", value_for_serialization))
             proto.set_value = True
 
         if ctx:
-            save_for_app_testing(ctx, element_id, format_func)
+            # Save format function for AppTest to serialize values as strings
+            save_for_app_testing(ctx, element_id, options_format_func or str)
 
         self.dg._enqueue("button_group", proto, layout_config=layout_config)
+
+        # Return widget_state with possibly updated value
+        if value_needs_reset:
+            from streamlit.runtime.state.common import RegisterWidgetResult
+
+            return RegisterWidgetResult(
+                cast("T", current_value),
+                widget_state.value_changed or value_needs_reset,
+            )
 
         return widget_state
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,12 +25,12 @@ import {
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 import { parseBidiComponentData } from "~lib/components/widgets/BidiComponent/utils/parseBidiComponentData"
 import { extractComponentsV2Theme } from "~lib/components/widgets/BidiComponent/utils/theme"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-export type BidiComponentContextProviderProps = PropsWithChildren<{
+type BidiComponentContextProviderProps = PropsWithChildren<{
   element: BidiComponentProto
   widgetMgr: WidgetStateManager
   fragmentId: string | undefined

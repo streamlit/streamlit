@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,17 @@ from streamlit.runtime.caching.cache_data_api import (
     CacheDataAPI,
     get_data_cache_stats_provider,
 )
+from streamlit.runtime.caching.cache_data_api import (
+    clear_session_cache as clear_session_data_cache,
+)
 from streamlit.runtime.caching.cache_errors import CACHE_DOCS_URL
 from streamlit.runtime.caching.cache_resource_api import (
     CACHE_RESOURCE_MESSAGE_REPLAY_CTX,
     CacheResourceAPI,
     get_resource_cache_stats_provider,
+)
+from streamlit.runtime.caching.cache_resource_api import (
+    clear_session_cache as clear_session_resource_cache,
 )
 from streamlit.runtime.caching.legacy_cache_api import cache as _cache
 
@@ -102,6 +108,8 @@ __all__ = [
     "cache",
     "cache_data",
     "cache_resource",
+    "clear_session_data_cache",
+    "clear_session_resource_cache",
     "get_data_cache_stats_provider",
     "get_resource_cache_stats_provider",
     "save_block_message",

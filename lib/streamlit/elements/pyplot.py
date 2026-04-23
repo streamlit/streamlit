@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.image_utils import marshall_images
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import LayoutConfig, Width
 
 
 class PyplotMixin:
@@ -108,8 +109,8 @@ class PyplotMixin:
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import matplotlib.pyplot as plt
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng
@@ -167,8 +168,7 @@ If you have a specific use case that requires this functionality, please let us
 know via [issue on Github](https://github.com/streamlit/streamlit/issues).
 """)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         image_list_proto = ImageListProto()
         marshall(
@@ -199,7 +199,7 @@ def marshall(
         import matplotlib.pyplot as plt
 
         plt.ioff()
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         raise ImportError("pyplot() command requires matplotlib")
 
     # You can call .savefig() on a Figure object or directly on the pyplot

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,17 @@
  */
 
 import { getCrossOriginAttribute, isValidOrigin } from "./UriUtil"
+
+// Mock StreamlitConfig using global mock state (see vitest.setup.ts)
+vi.mock("@streamlit/utils", async () => {
+  const actual = await vi.importActual("@streamlit/utils")
+  return {
+    ...actual,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
+  }
+})
 
 describe("isValidOrigin", () => {
   it("returns false if allowedOrigin is invalid", () => {
@@ -107,14 +118,12 @@ describe("isValidOrigin", () => {
     // issue is fixed.
     const OrigURL = globalThis.URL
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      globalThis.URL = function (url: string, ...rest: any[]) {
+      globalThis.URL = function (url: string, ...rest: string[]) {
         if (url.includes("*")) {
           throw new Error("Invalid URL")
         }
         return new OrigURL(url, ...rest)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      } as any
+      } as unknown as typeof URL
       expect(
         isValidOrigin(
           "https://*.streamlit.app",
@@ -321,16 +330,8 @@ describe("isValidOrigin", () => {
 })
 
 describe("getCrossOriginAttribute", () => {
-  let originalStreamlit: typeof window.__streamlit
-
-  beforeEach(() => {
-    // Save the original window.__streamlit
-    originalStreamlit = window.__streamlit
-  })
-
   afterEach(() => {
-    // Restore the original window.__streamlit
-    window.__streamlit = originalStreamlit
+    globalThis.__mockStreamlitConfig = {}
   })
 
   describe("when no URL is provided", () => {
@@ -342,11 +343,10 @@ describe("getCrossOriginAttribute", () => {
   })
 
   describe("when URL is an absolute URL", () => {
-    describe("when window.__streamlit.BACKEND_BASE_URL is set", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL is set", () => {
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com",
-        } as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com"
       })
 
       it("returns resourceCrossOriginMode when URL has same origin as BACKEND_BASE_URL", () => {
@@ -415,11 +415,10 @@ describe("getCrossOriginAttribute", () => {
       })
     })
 
-    describe("when window.__streamlit.BACKEND_BASE_URL has explicit port", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL has explicit port", () => {
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com:8080",
-        } as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com:8080"
       })
 
       it("matches URLs with the same explicit port", () => {
@@ -447,9 +446,9 @@ describe("getCrossOriginAttribute", () => {
       })
     })
 
-    describe("when window.__streamlit is not set", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL is undefined", () => {
       beforeEach(() => {
-        window.__streamlit = undefined as unknown as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = undefined
       })
 
       it("returns undefined for any absolute URL", () => {
@@ -465,9 +464,9 @@ describe("getCrossOriginAttribute", () => {
       })
     })
 
-    describe("when window.__streamlit.BACKEND_BASE_URL is not set", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL is not set", () => {
       beforeEach(() => {
-        window.__streamlit = {} as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = undefined
       })
 
       it("returns undefined for any absolute URL", () => {
@@ -485,11 +484,10 @@ describe("getCrossOriginAttribute", () => {
   })
 
   describe("when URL is a relative URL or invalid", () => {
-    describe("when window.__streamlit.BACKEND_BASE_URL is set", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL is set", () => {
       beforeEach(() => {
-        window.__streamlit = {
-          BACKEND_BASE_URL: "https://backend.example.com",
-        } as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+          "https://backend.example.com"
       })
 
       it("returns resourceCrossOriginMode for relative URLs", () => {
@@ -526,9 +524,9 @@ describe("getCrossOriginAttribute", () => {
       })
     })
 
-    describe("when window.__streamlit.BACKEND_BASE_URL is not set", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL is not set", () => {
       beforeEach(() => {
-        window.__streamlit = {} as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = undefined
       })
 
       it("returns undefined for relative URLs", () => {
@@ -565,9 +563,9 @@ describe("getCrossOriginAttribute", () => {
       })
     })
 
-    describe("when window.__streamlit is not set", () => {
+    describe("when StreamlitConfig.BACKEND_BASE_URL is undefined", () => {
       beforeEach(() => {
-        window.__streamlit = undefined as unknown as typeof window.__streamlit
+        globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = undefined
       })
 
       it("returns undefined for relative URLs", () => {
@@ -586,18 +584,15 @@ describe("getCrossOriginAttribute", () => {
 
   describe("edge cases", () => {
     it("handles empty string URL", () => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "https://backend.example.com",
-      } as typeof window.__streamlit
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL =
+        "https://backend.example.com"
 
       // Empty string is falsy, so the function returns undefined
       expect(getCrossOriginAttribute("anonymous", "")).toBe(undefined)
     })
 
     it("handles malformed BACKEND_BASE_URL", () => {
-      window.__streamlit = {
-        BACKEND_BASE_URL: "not a valid url",
-      } as typeof window.__streamlit
+      globalThis.__mockStreamlitConfig.BACKEND_BASE_URL = "not a valid url"
 
       // Should not throw and should return resourceCrossOriginMode for relative URLs
       expect(getCrossOriginAttribute("anonymous", "/image.png")).toBe(

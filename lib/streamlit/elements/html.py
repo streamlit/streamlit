@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,11 +20,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
-from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
-    Width,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Html_pb2 import Html as HtmlProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -33,6 +29,7 @@ from streamlit.type_util import SupportsReprHtml, SupportsStr, has_callable_attr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Width
 
 
 class HtmlMixin:
@@ -98,8 +95,8 @@ class HtmlMixin:
             JavaScript is executed. Use this with caution and never pass
             untrusted input.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.html(
@@ -135,8 +132,7 @@ class HtmlMixin:
         if html_content == "":
             raise StreamlitAPIException("`st.html` body cannot be empty")
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         # Handle the case where there are only style tags - issue #9388
         # Use event container for style tags so they don't take up space in the app content

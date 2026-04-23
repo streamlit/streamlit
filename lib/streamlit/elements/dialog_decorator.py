@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -65,6 +65,7 @@ def _dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F:
     if title is None or title == "":
@@ -80,7 +81,11 @@ def _dialog_decorator(
         # Streamlit UI flow. For example, if it is called from the sidebar, it should
         # not inherit the sidebar theming.
         dialog = get_dg_singleton_instance().event_dg._dialog(
-            title=title, dismissible=dismissible, width=width, on_dismiss=on_dismiss
+            title=title,
+            dismissible=dismissible,
+            width=width,
+            icon=icon,
+            on_dismiss=on_dismiss,
         )
         dialog.open()
 
@@ -111,6 +116,7 @@ def dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> Callable[[F], F]: ...
 
@@ -127,6 +133,7 @@ def dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F: ...
 
@@ -137,6 +144,7 @@ def dialog_decorator(
     *,
     width: DialogWidth = "small",
     dismissible: bool = True,
+    icon: str | None = None,
     on_dismiss: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
 ) -> F | Callable[[F], F]:
     r"""Function decorator to create a modal dialog.
@@ -189,9 +197,9 @@ def dialog_decorator(
         the font height.
 
         Unsupported Markdown elements are unwrapped so only their children
-        (text contents) render. Display unsupported elements as literal
-        characters by backslash-escaping them. E.g.,
-        ``"1\. Not an ordered list"``.
+        (text contents) render. Common block-level Markdown (headings,
+        lists, blockquotes) is automatically escaped and displays as
+        literal text in labels.
 
         See the ``body`` parameter of |st.markdown|_ for additional,
         supported Markdown directives.
@@ -219,6 +227,25 @@ def dialog_decorator(
             Setting ``dismissible`` to ``False`` does not guarantee that all
             interactions in the main app are blocked. Don't rely on
             ``dismissible`` for security-critical checks.
+
+    icon : str or None
+        An optional emoji or icon to display next to the dialog title. If ``icon``
+        is ``None`` (default), no icon is displayed. If ``icon`` is a
+        string, the following options are valid:
+
+        - A single-character emoji. For example, you can set ``icon="🚨"``
+          or ``icon="🔥"``. Emoji short codes are not supported.
+
+        - An icon from the Material Symbols library (rounded style) in the
+          format ``":material/icon_name:"`` where "icon_name" is the name
+          of the icon in snake case.
+
+          For example, ``icon=":material/thumb_up:"`` will display the
+          Thumb Up icon. Find additional icons in the `Material Symbols \
+          <https://fonts.google.com/icons?icon.set=Material+Symbols&icon.style=Rounded>`_
+          font library.
+
+        - ``"spinner"``: Displays a spinner as an icon.
 
     on_dismiss : "ignore", "rerun", or callable
         How the dialog should respond to dismissal events.
@@ -276,6 +303,7 @@ def dialog_decorator(
                 title=func_or_title,
                 width=width,
                 dismissible=dismissible,
+                icon=icon,
                 on_dismiss=on_dismiss,
             )
 
@@ -283,5 +311,10 @@ def dialog_decorator(
 
     func: F = func_or_title
     return _dialog_decorator(
-        func, "", width=width, dismissible=dismissible, on_dismiss=on_dismiss
+        func,
+        "",
+        width=width,
+        dismissible=dismissible,
+        icon=icon,
+        on_dismiss=on_dismiss,
     )

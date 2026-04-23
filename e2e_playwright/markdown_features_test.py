@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -108,6 +108,7 @@ MARKDOWN_FEATURE_PLAYWRIGHT_LOCATORS: dict[str, Callable[[Locator], Locator]] = 
     "Colored Text": lambda locator: locator.locator("span"),
     "Colored Background": lambda locator: locator.locator("span"),
     "Badge": lambda locator: locator.locator("span"),
+    "Shimmer": lambda locator: locator.locator("span.stMarkdownShimmer"),
     "Latex": lambda locator: locator.locator("span.katex"),
     "Link": lambda locator: locator.locator("a"),
     "Blockquote": lambda locator: locator.locator("blockquote"),
@@ -147,7 +148,7 @@ def test_markdown_restrictions_for_all_elements(app: Page):
             markdown_container_test_id = "stMarkdownContainer"
 
             # st.caption and st.image caption uses a different container
-            if element_name in ["st_caption", "st_image"]:
+            if element_name in {"st_caption", "st_image"}:
                 markdown_container_test_id = "stCaptionContainer"
 
             element_locator = locator_fn(

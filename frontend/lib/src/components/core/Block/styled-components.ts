@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,32 +14,44 @@
  * limitations under the License.
  */
 
-import React, { CSSProperties } from "react"
+import { CSSProperties } from "react"
 
 import styled from "@emotion/styled"
 
 import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { StyledCheckbox } from "~lib/components/widgets/Checkbox/styled-components"
-import { EmotionTheme, STALE_STYLES } from "~lib/theme"
+import { STALE_STYLES } from "~lib/theme/consts"
+import type { EmotionTheme } from "~lib/theme/types"
 import { assertNever } from "~lib/util/assertNever"
 
 function translateGapWidth(
   gap: streamlit.GapSize | undefined,
   theme: EmotionTheme
 ): string {
-  let gapWidth = theme.spacing.lg
-  if (gap === streamlit.GapSize.MEDIUM) {
-    gapWidth = theme.spacing.threeXL
-  } else if (gap === streamlit.GapSize.LARGE) {
-    gapWidth = theme.spacing.fourXL
-  } else if (gap === streamlit.GapSize.NONE) {
-    gapWidth = theme.spacing.none
+  switch (gap) {
+    case streamlit.GapSize.XXSMALL:
+      return theme.spacing.twoXS
+    case streamlit.GapSize.XSMALL:
+      return theme.spacing.sm
+    case streamlit.GapSize.SMALL:
+      return theme.spacing.lg
+    case streamlit.GapSize.MEDIUM:
+      return theme.spacing.threeXL
+    case streamlit.GapSize.LARGE:
+      return theme.spacing.fourXL
+    case streamlit.GapSize.XLARGE:
+      return theme.spacing.fiveXL
+    case streamlit.GapSize.XXLARGE:
+      return theme.spacing.sixXL
+    case streamlit.GapSize.NONE:
+      return theme.spacing.none
+    default:
+      return theme.spacing.lg
   }
-  return gapWidth
 }
 
-export interface StyledElementContainerProps {
+interface StyledElementContainerProps {
   isStale: boolean
   width: React.CSSProperties["width"]
   height: React.CSSProperties["height"]
@@ -200,7 +212,7 @@ const getAlignItems = (
     case null:
       return "stretch"
     default:
-      assertNever(align)
+      return assertNever(align)
   }
 }
 
@@ -221,7 +233,7 @@ const getJustifyContent = (
     case null:
       return "start"
     default:
-      assertNever(justify)
+      return assertNever(justify)
   }
 }
 
@@ -281,7 +293,7 @@ export const StyledFlexContainerBlock =
     }
   )
 
-export interface StyledLayoutWrapperProps {
+interface StyledLayoutWrapperProps {
   width?: React.CSSProperties["width"]
   height?: React.CSSProperties["height"]
   flex?: React.CSSProperties["flex"]

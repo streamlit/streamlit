@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ This is a big error message.
 ### LATEST MATERIAL ICON TEST START ###
 st.success(
     "Success message to test material icon from latest material symbols font",
-    icon=":material/assignment_globe:",
+    icon=":material/car_fan_recirculate_2:",
 )
 ### LATEST MATERIAL ICON TEST END ###
 
@@ -119,3 +119,22 @@ st.error("This is an error with width='stretch' and icon", width="stretch", icon
 
 # Alerts with width=200 and icon
 st.info("This is an info message with width=200 and icon", width=200, icon="👉🏻")
+
+### Test cases for icon extraction from body ###
+
+# Test case with emoji icon extracted from body
+st.warning("🔔 This warning has an emoji icon extracted from body")
+
+# Test case with material icon extracted from body
+st.info(":material/lightbulb: This info has a material icon extracted from body")
+
+### Test cases for title parameter ###
+
+# Alerts with title
+st.success(
+    "This is the success body text.",
+    title="Success _Title_ :material/celebration:",
+)
+
+# Alert with title and icon
+st.info("Body with title and icon.", title="Notice", icon=":material/info:")

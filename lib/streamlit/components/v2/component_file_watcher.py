@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,12 +32,6 @@ This watcher exists to keep the registry in sync by listening for changes in
 component asset roots and notifying a higher-level manager that can re-resolve
 the affected component definitions.
 
-Notes
------
-- Watching is directory-based with a recursive glob ("**/*").
-- Common noisy directories (e.g., ``node_modules``) are ignored in callbacks.
-- Startup is exception-safe and does not leak partially created watchers.
-
 See Also
 --------
 - :class:`streamlit.watcher.local_sources_watcher.LocalSourcesWatcher` - watches
@@ -45,6 +39,12 @@ See Also
 - :class:`streamlit.components.v2.component_registry.BidiComponentRegistry` -
   the server-side store of Custom Component v2 definitions that reacts to
   watcher notifications.
+
+Notes
+-----
+- Watching is directory-based with a recursive glob ("**/*").
+- Common noisy directories (e.g., ``node_modules``) are ignored in callbacks.
+- Startup is exception-safe and does not leak partially created watchers.
 """
 
 from __future__ import annotations
@@ -286,7 +286,7 @@ class ComponentFileWatcher:
             try:
                 cb = self._make_directory_callback(tuple(component_names))
                 # Use a glob pattern that matches all files to let Streamlit's
-                # watcher handle MD5 calculation and change detection
+                # watcher handle hash calculation and change detection
                 watcher = path_watcher_class(
                     directory,
                     cb,

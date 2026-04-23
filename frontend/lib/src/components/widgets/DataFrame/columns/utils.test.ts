@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,13 @@
  */
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { Field, makeVector, Utf8 } from "apache-arrow"
-import moment, { Moment } from "moment-timezone"
 
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
-import { withTimezones } from "~lib/util/withTimezones"
 
 import {
   arrayToCopyValue,
   BaseColumnProps,
   countDecimals,
-  formatMoment,
   getEmptyCell,
   getErrorCell,
   getLinkDisplayValueFromRegex,
@@ -196,8 +193,7 @@ describe("arrayToCopyValue", () => {
     [["hello,world", 42, true], "hello world,42,true"],
     [[{ foo: "bar" }], "[object Object]"],
   ])("converts %s to copy string '%s'", (input, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(arrayToCopyValue(input as any)).toBe(expected)
+    expect(arrayToCopyValue(input as unknown[])).toBe(expected)
   })
 })
 
@@ -471,80 +467,6 @@ describe("truncateDecimals", () => {
   )
 })
 
-withTimezones(() => {
-  describe("formatMoment", () => {
-    beforeAll(() => {
-      const d = new Date("2022-04-28T00:00:00Z")
-      vi.useFakeTimers()
-      vi.setSystemTime(d)
-    })
-
-    afterAll(() => {
-      vi.useRealTimers()
-    })
-
-    it.each([
-      [
-        "YYYY-MM-DD HH:mm:ss z",
-        moment.utc("2023-04-27T10:20:30Z"),
-        "2023-04-27 10:20:30 UTC",
-      ],
-      [
-        "YYYY-MM-DD HH:mm:ss z",
-        moment.utc("2023-04-27T10:20:30Z").tz("America/Los_Angeles"),
-        "2023-04-27 03:20:30 PDT",
-      ],
-      [
-        "YYYY-MM-DD HH:mm:ss Z",
-        moment.utc("2023-04-27T10:20:30Z").tz("America/Los_Angeles"),
-        "2023-04-27 03:20:30 -07:00",
-      ],
-      [
-        "YYYY-MM-DD HH:mm:ss Z",
-        moment.utc("2023-04-27T10:20:30Z").utcOffset("+04:00"),
-        "2023-04-27 14:20:30 +04:00",
-      ],
-      ["YYYY-MM-DD", moment.utc("2023-04-27T10:20:30Z"), "2023-04-27"],
-      [
-        "MMM Do, YYYY [at] h:mm A",
-        moment.utc("2023-04-27T15:45:00Z"),
-        "Apr 27th, 2023 at 3:45 PM",
-      ],
-      [
-        "MMMM Do, YYYY Z",
-        moment.utc("2023-04-27T10:20:30Z").utcOffset("-02:30"),
-        "April 27th, 2023 -02:30",
-      ],
-      // Distance:
-      ["distance", moment.utc("2022-04-10T20:20:30Z"), "17 days ago"],
-      ["distance", moment.utc("2020-04-10T20:20:30Z"), "2 years ago"],
-      ["distance", moment.utc("2022-04-27T23:59:59Z"), "a few seconds ago"],
-      ["distance", moment.utc("2022-04-20T00:00:00Z"), "8 days ago"],
-      ["distance", moment.utc("2022-05-27T23:59:59Z"), "in a month"],
-      // Calendar:
-      ["calendar", moment.utc("2022-04-30T15:30:00Z"), "Saturday at 3:30 PM"],
-      [
-        "calendar",
-        moment.utc("2022-04-24T12:20:30Z"),
-        "Last Sunday at 12:20 PM",
-      ],
-      ["calendar", moment.utc("2022-04-28T12:00:00Z"), "Today at 12:00 PM"],
-      ["calendar", moment.utc("2022-04-29T12:00:00Z"), "Tomorrow at 12:00 PM"],
-      // ISO8601:
-      [
-        "iso8601",
-        moment.utc("2023-04-27T10:20:30.123Z"),
-        "2023-04-27T10:20:30.123Z",
-      ],
-    ])(
-      "uses %s format to format %s to %s",
-      (format: string, momentDate: Moment, expected: string) => {
-        expect(formatMoment(momentDate, format)).toBe(expected)
-      }
-    )
-  })
-})
-
 it("removeLineBreaks should remove line breaks", () => {
   expect(removeLineBreaks("\n")).toBe(" ")
   expect(removeLineBreaks("\nhello\n\nworld")).toBe(" hello  world")
@@ -659,15 +581,13 @@ describe("toJsonString", () => {
     // Circular reference (should use toSafeString fallback)
     [
       (() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        const circular: any = { a: 1 }
+        const circular: Record<string, unknown> = { a: 1 }
         circular.self = circular
         return circular
       })(),
       "[object Object]",
     ],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ])("converts %o to JSON string %s", (input: any, expected: string) => {
+  ])("converts %o to JSON string %s", (input: unknown, expected: string) => {
     expect(toJsonString(input)).toBe(expected)
   })
 })
@@ -730,9 +650,9 @@ describe("isMaybeJson", () => {
     }
   )
 
-  it("returns undefined for null and undefined values", () => {
-    expect(isMaybeJson(null)).toBeUndefined()
-    expect(isMaybeJson(undefined)).toBeUndefined()
+  it("returns false for null and undefined values", () => {
+    expect(isMaybeJson(null)).toBe(false)
+    expect(isMaybeJson(undefined)).toBe(false)
   })
 })
 

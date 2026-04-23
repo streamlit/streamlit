@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -28,11 +28,12 @@ from typing import (
     TextIO,
     TypeAlias,
     cast,
+    overload,
 )
 
 from streamlit import runtime
 from streamlit.elements.lib.form_utils import current_form_id, is_in_form
-from streamlit.elements.lib.layout_utils import LayoutConfig, Width, validate_width
+from streamlit.elements.lib.layout_utils import Width, create_layout_config
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
 from streamlit.elements.lib.utils import (
@@ -49,6 +50,9 @@ from streamlit.errors import (
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.Button_pb2 import Button as ButtonProto
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import DownloadButton as DownloadButtonProto
 from streamlit.proto.LinkButton_pb2 import LinkButton as LinkButtonProto
 from streamlit.proto.PageLink_pb2 import PageLink as PageLinkProto
@@ -86,6 +90,36 @@ DownloadButtonDataType: TypeAlias = (
     | Callable[[], str | bytes | TextIO | BinaryIO | io.RawIOBase]
 )
 
+IconPosition: TypeAlias = Literal["left", "right"]
+
+_DEFAULT_ICON_POSITION: Final[IconPosition] = "left"
+_VALID_ICON_POSITIONS: Final[tuple[IconPosition, ...]] = ("left", "right")
+
+
+def _normalize_icon_position(
+    icon_position: IconPosition | str | None, command: str
+) -> IconPosition:
+    if icon_position is None:
+        return _DEFAULT_ICON_POSITION
+
+    if icon_position not in _VALID_ICON_POSITIONS:
+        raise StreamlitAPIException(
+            f'The icon_position argument to {command} must be "left" or "right". \n'
+            f'The argument passed was "{icon_position}".'
+        )
+
+    return cast("IconPosition", icon_position)  # type: ignore[redundant-cast]
+
+
+def _icon_position_to_proto(
+    icon_position: IconPosition,
+) -> ProtoButtonLikeIconPosition.ValueType:
+    return (
+        ProtoButtonLikeIconPosition.RIGHT
+        if icon_position == "right"
+        else ProtoButtonLikeIconPosition.LEFT
+    )
+
 
 @dataclass
 class ButtonSerde:
@@ -109,6 +143,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -126,9 +161,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -136,10 +171,21 @@ class ButtonMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -187,6 +233,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             An optional boolean that disables the button if set to ``True``.
@@ -318,11 +368,13 @@ class ButtonMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.button must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'
             )
+
+        normalized_icon_position = _normalize_icon_position(icon_position, "st.button")
 
         return self.dg._button(
             label,
@@ -335,6 +387,7 @@ class ButtonMixin:
             disabled=disabled,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             ctx=ctx,
             width=width,
             shortcut=shortcut,
@@ -355,6 +408,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -385,9 +439,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -433,10 +487,21 @@ class ButtonMixin:
             For more information about MIME types, see
             https://www.iana.org/assignments/media-types/media-types.xhtml.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -495,6 +560,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             An optional boolean that disables the download button if set to
@@ -690,11 +759,15 @@ class ButtonMixin:
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
 
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.download_button must be "primary", "secondary", or "tertiary". \n'
                 f'The argument passed was "{type}".'
             )
+
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.download_button"
+        )
 
         return self._download_button(
             label=label,
@@ -708,11 +781,72 @@ class ButtonMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
             shortcut=shortcut,
         )
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: Literal["ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+    ) -> DeltaGenerator: ...
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: Literal["rerun"],
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+    ) -> bool: ...
+
+    @overload
+    def link_button(
+        self,
+        label: str,
+        url: str,
+        *,
+        key: Key | None = None,
+        on_click: WidgetCallback,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
+        type: Literal["primary", "secondary", "tertiary"] = "secondary",
+        icon: str | None = None,
+        icon_position: IconPosition = "left",
+        disabled: bool = False,
+        use_container_width: bool | None = None,
+        width: Width = "content",
+        shortcut: str | None = None,
+    ) -> bool: ...
 
     @gather_metrics("link_button")
     def link_button(
@@ -720,14 +854,19 @@ class ButtonMixin:
         label: str,
         url: str,
         *,
+        key: Key | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
         help: str | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
         shortcut: str | None = None,
-    ) -> DeltaGenerator:
+    ) -> bool | DeltaGenerator:
         r"""Display a link button element.
 
         When clicked, a new tab will be opened to the specified URL. This will
@@ -743,9 +882,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -754,7 +893,45 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         url : str
-            The url to be opened on user click
+            The URL to open on user click.
+
+        key : str, int, or None
+            An optional string to use for giving this element a stable
+            identity. If this is ``None`` (default), the element's identity
+            will be determined based on the values of the other parameters.
+
+            If ``on_click`` enables widget behavior and ``key`` is provided,
+            Streamlit will register the key in Session State to store the button state.
+            The button state is read-only. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        on_click : callable, "rerun", or "ignore"
+            How the button should respond to user interaction. This controls
+            whether or not the button behaves like an input widget. This can
+            be one of the following values:
+
+            - ``"ignore"`` (default): Streamlit opens the link in a new tab
+              and doesn't rerun the app. The button won't behave like an
+              input widget.
+            - ``"rerun"``: Streamlit opens the link in a new tab and reruns
+              the app. In this case, ``st.link_button`` returns a Boolean value
+              like ``st.button``.
+            - A ``callable``: Streamlit opens the link in a new tab, reruns
+              the app, and executes the callable at the beginning of the rerun.
+              In this case, ``st.link_button`` returns a Boolean value.
+
+        args : list or tuple
+            An optional list or tuple of args to pass to the callback when
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
+
+        kwargs : dict
+            An optional dict of kwargs to pass to the callback when
+            ``on_click`` is a callable. If ``on_click`` isn't a callable,
+            this is ignored.
 
         help : str or None
             A tooltip that gets displayed when the button is hovered over. If
@@ -793,6 +970,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             An optional boolean that disables the link button if set to
@@ -847,8 +1028,16 @@ class ButtonMixin:
             .. |st.button| replace:: ``st.button``
             .. _st.button: https://docs.streamlit.io/develop/api-reference/widgets/st.button
 
-        Example
+        Returns
         -------
+        element or bool
+            If ``on_click`` is ``"ignore"`` (default), this command returns an internal
+            placeholder for the button element. Otherwise, this command returns a Boolean
+            value in the same manner as ``st.button``: ``True`` if the button was clicked
+            on the last rerun and ``False`` if it wasn't.
+
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.link_button("Go to gallery", "https://streamlit.io/gallery")
@@ -858,12 +1047,16 @@ class ButtonMixin:
            height: 200px
 
         """
-        # Checks whether the entered button type is one of the allowed options - either "primary" or "secondary"
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.link_button must be "primary", "secondary", or "tertiary". '
                 f'\nThe argument passed was "{type}".'
             )
+
+        ctx = get_script_run_ctx()
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.link_button"
+        )
 
         if use_container_width is not None:
             width = "stretch" if use_container_width else "content"
@@ -871,12 +1064,18 @@ class ButtonMixin:
         return self._link_button(
             label=label,
             url=url,
+            key=key,
+            on_click=on_click,
+            args=args,
+            kwargs=kwargs,
             help=help,
             disabled=disabled,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             width=width,
             shortcut=shortcut,
+            ctx=ctx,
         )
 
     @gather_metrics("page_link")
@@ -886,6 +1085,7 @@ class ButtonMixin:
         *,
         label: str | None = None,
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         help: str | None = None,
         disabled: bool = False,
         use_container_width: bool | None = None,
@@ -905,9 +1105,30 @@ class ButtonMixin:
         Parameters
         ----------
         page : str, Path, or StreamlitPage
-            The file path (relative to the main script) or a ``StreamlitPage``
-            indicating the page to switch to. Alternatively, this can be the
-            URL to an external page (must start with "http://" or "https://").
+            The page to switch to on user click. This can be one of the
+            following values:
+
+            - Path to a Python file: The path can be a string or
+              ``pathlib.Path`` object. It can be absolute or relative to the
+              entrypoint file. The Python file must be the source of a page in
+              ``st.navigation``.
+
+              If you are using the ``pages/`` directory instead of
+              ``st.navigation``, the Python file must be your entrypoint file
+              or a file in the ``pages/`` directory.
+
+            - ``StreamlitPage``: The source of the ``StreamlitPage`` and its
+              ``url_path`` must match a page defined in ``st.navigation``.
+              Use ``st.Page`` to create a ``StreamlitPage`` object.
+
+            - URL: The URL must contain an HTTP or HTTPS scheme, like
+              ``"https://docs.streamlit.io"``. When a user clicks a
+              URL-defined page link, the URL opens in a new tab and the app
+              doesn't rerun. If the page link is defined by a URL, then the
+              ``label`` parameter is required.
+
+            To link to a page defined by a ``callable``, you must use a
+            ``StreamlitPage`` object.
 
         label : str
             The label for the page link. Labels are required for external pages.
@@ -917,9 +1138,9 @@ class ButtonMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -928,7 +1149,7 @@ class ButtonMixin:
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         icon : str or None
-            An optional emoji or icon to display next to the button label. If
+            An optional emoji or icon to display next to the link label. If
             ``icon`` is ``None`` (default), the icon is inferred from the
             ``StreamlitPage`` object or no icon is displayed. If ``icon`` is a
             string, the following options are valid:
@@ -946,6 +1167,10 @@ class ButtonMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the link label. This
+            defaults to ``"left"``.
 
         help : str or None
             A tooltip that gets displayed when the link is hovered over. If
@@ -990,8 +1215,8 @@ class ButtonMixin:
             ``None`` (default), all non-embed query parameters are cleared during
             navigation.
 
-        Example
-        -------
+        Examples
+        --------
         **Example 1: Basic usage**
 
         The following example shows how to create page links in a multipage app
@@ -1056,10 +1281,15 @@ class ButtonMixin:
             # Sidebar page links should always be stretch width.
             width = "stretch"
 
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.page_link"
+        )
+
         return self._page_link(
             page=page,
             label=label,
             icon=icon,
+            icon_position=normalized_icon_position,
             help=help,
             disabled=disabled,
             width=width,
@@ -1080,6 +1310,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -1117,6 +1348,7 @@ class ButtonMixin:
             help=help,
             type=type,
             width=width,
+            icon_position=icon_position,
             shortcut=normalized_shortcut,
         )
 
@@ -1140,6 +1372,7 @@ class ButtonMixin:
 
         if icon is not None:
             download_button_proto.icon = validate_icon_or_emoji(icon)
+        download_button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if on_click == "ignore":
             download_button_proto.ignore_rerun = True
@@ -1162,8 +1395,7 @@ class ButtonMixin:
             value_type="trigger_value",
         )
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue(
             "download_button", download_button_proto, layout_config=layout_config
         )
@@ -1173,27 +1405,52 @@ class ButtonMixin:
         self,
         label: str,
         url: str,
-        help: str | None,
+        key: Key | None = None,
+        on_click: WidgetCallback | Literal["rerun", "ignore"] = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        help: str | None = None,
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         width: Width = "content",
         shortcut: str | None = None,
-    ) -> DeltaGenerator:
-        link_button_proto = LinkButtonProto()
-        normalized_shortcut: str | None = None
-        if shortcut is not None:
-            normalized_shortcut = normalize_shortcut(shortcut)
+        ctx: ScriptRunContext | None = None,
+    ) -> bool | DeltaGenerator:
+        key = to_key(key)
+        ignore_rerun = on_click == "ignore"
+        is_rerun_mode = not ignore_rerun
+        on_click_callback: WidgetCallback | None = (
+            None
+            if on_click in {"ignore", "rerun"}
+            else cast("WidgetCallback", on_click)
+        )
 
-        if normalized_shortcut is not None:
-            # We only register the element ID if a shortcut is provide.
-            # The ID is required to correctly register and handle the shortcut
-            # on the client side.
+        link_button_proto = LinkButtonProto()
+        normalized_shortcut = (
+            normalize_shortcut(shortcut) if shortcut is not None else None
+        )
+
+        should_check_widget_policies = is_rerun_mode or key is not None
+        should_register_element_id = (
+            should_check_widget_policies or normalized_shortcut is not None
+        )
+        if should_check_widget_policies:
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=on_click_callback,
+                default_value=None,
+                writes_allowed=False,
+            )
+
+        if should_register_element_id:
             link_button_proto.id = compute_and_register_element_id(
                 "link_button",
-                user_key=None,
-                key_as_main_identity=False,
+                user_key=key,
+                key_as_main_identity=should_check_widget_policies,
                 dg=self.dg,
                 label=label,
                 icon=icon,
@@ -1201,27 +1458,48 @@ class ButtonMixin:
                 help=help,
                 type=type,
                 width=width,
+                icon_position=icon_position,
                 shortcut=normalized_shortcut,
             )
+
         link_button_proto.label = label
         link_button_proto.url = url
         link_button_proto.type = type
         link_button_proto.disabled = disabled
+        link_button_proto.ignore_rerun = ignore_rerun
 
         if help is not None:
             link_button_proto.help = dedent(help)
 
         if icon is not None:
             link_button_proto.icon = validate_icon_or_emoji(icon)
+        link_button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if normalized_shortcut is not None:
             link_button_proto.shortcut = normalized_shortcut
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
-        return self.dg._enqueue(
+        button_state = None
+        if is_rerun_mode:
+            serde = ButtonSerde()
+            button_state = register_widget(
+                link_button_proto.id,
+                on_change_handler=on_click_callback,
+                args=args,
+                kwargs=kwargs,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="trigger_value",
+            )
+
+        layout_config = create_layout_config(width=width, allow_content_width=True)
+        link_button_dg = self.dg._enqueue(
             "link_button", link_button_proto, layout_config=layout_config
         )
+
+        if button_state is not None:
+            return button_state.value
+        return link_button_dg
 
     def _page_link(
         self,
@@ -1229,6 +1507,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         label: str | None = None,
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         help: str | None = None,
         disabled: bool = False,
         width: Width = "content",
@@ -1238,11 +1517,13 @@ class ButtonMixin:
         if query_params:
             page_link_proto.query_string = process_query_params(query_params)
 
-        validate_width(width, allow_content=True)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
+
+        # Set icon_position early so it's set even in early return paths
+        page_link_proto.icon_position = _icon_position_to_proto(icon_position)
 
         ctx = get_script_run_ctx()
         if not ctx:
-            layout_config = LayoutConfig(width=width)
             return self.dg._enqueue(
                 "page_link", page_link_proto, layout_config=layout_config
             )
@@ -1259,14 +1540,22 @@ class ButtonMixin:
             page_link_proto.help = dedent(help)
 
         if isinstance(page, StreamlitPage):
-            page_link_proto.page_script_hash = page._script_hash
-            page_link_proto.page = page.url_path
             if label is None:
                 page_link_proto.label = page.title
             if icon is None:
                 page_link_proto.icon = page.icon
                 # Here the StreamlitPage's icon is already validated
                 # (using validate_icon_or_emoji) during its initialization
+
+            if page.is_external:
+                page_link_proto.page = page.external_url or ""
+                page_link_proto.external = True
+                return self.dg._enqueue(
+                    "page_link", page_link_proto, layout_config=layout_config
+                )
+
+            page_link_proto.page_script_hash = page._script_hash
+            page_link_proto.page = page.url_path
         else:
             # Convert Path to string if necessary
             if isinstance(page, Path):
@@ -1278,7 +1567,6 @@ class ButtonMixin:
                     raise StreamlitMissingPageLabelError()
                 page_link_proto.page = page
                 page_link_proto.external = True
-                layout_config = LayoutConfig(width=width)
                 return self.dg._enqueue(
                     "page_link", page_link_proto, layout_config=layout_config
                 )
@@ -1312,7 +1600,6 @@ class ButtonMixin:
                     uses_pages_directory=bool(PagesManager.uses_pages_directory),
                 )
 
-        layout_config = LayoutConfig(width=width)
         return self.dg._enqueue(
             "page_link", page_link_proto, layout_config=layout_config
         )
@@ -1329,6 +1616,7 @@ class ButtonMixin:
         *,  # keyword-only arguments:
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -1362,6 +1650,7 @@ class ButtonMixin:
             is_form_submitter=is_form_submitter,
             type=type,
             width=width,
+            icon_position=icon_position,
             shortcut=normalized_shortcut,
         )
 
@@ -1394,6 +1683,7 @@ class ButtonMixin:
 
         if icon is not None:
             button_proto.icon = validate_icon_or_emoji(icon)
+        button_proto.icon_position = _icon_position_to_proto(icon_position)
 
         if normalized_shortcut is not None:
             button_proto.shortcut = normalized_shortcut
@@ -1414,8 +1704,7 @@ class ButtonMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, button_state.value)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
         self.dg._enqueue("button", button_proto, layout_config=layout_config)
 
         return button_state.value

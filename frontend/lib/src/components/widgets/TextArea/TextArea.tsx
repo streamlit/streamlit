@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,21 +14,24 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback, useRef, useState } from "react"
+import {
+  FC,
+  memo,
+  useCallback,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Textarea as UITextArea } from "baseui/textarea"
-import { uniqueId } from "lodash-es"
 
 import { Element, TextArea as TextAreaProto } from "@streamlit/protobuf"
 
 import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import {
-  StyledWidgetLabelHelp,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -39,6 +42,7 @@ import useOnInputChange from "~lib/hooks/useOnInputChange"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
+import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -59,8 +63,8 @@ type TextAreaValue = string | null
 const getStateFromWidgetMgr = (
   widgetMgr: WidgetStateManager,
   element: TextAreaProto
-): TextAreaValue | undefined => {
-  return widgetMgr.getStringValue(element) ?? element.default ?? null
+): TextAreaValue | null => {
+  return widgetMgr.getStringValue(element) ?? null
 }
 
 const getDefaultStateFromProto = (element: TextAreaProto): TextAreaValue => {
@@ -75,7 +79,7 @@ const updateWidgetMgrState = (
   element: TextAreaProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<TextAreaValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -92,8 +96,7 @@ const TextArea: FC<Props> = ({
   fragmentId,
   outerElement,
 }) => {
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  const id = useRef(uniqueId("text_area_")).current
+  const id = useId()
 
   const { width, elementRef } = useCalculatedDimensions()
 
@@ -131,6 +134,15 @@ const TextArea: FC<Props> = ({
     setDirty(true)
   }, [element])
 
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Text area is clearable (empty string is a valid value)
+        clearable: true,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     TextAreaValue,
     TextAreaProto
@@ -142,12 +154,18 @@ const TextArea: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueAndRunCallback",
     onFormCleared,
+    queryParamBinding,
   })
 
   useUpdateUiValue(value, uiValue, setUiValue, dirty)
 
   const theme = useEmotionTheme()
+
+  // Track if we've done the initial height calculation with a valid width.
+  // This prevents recalculating on every window resize, which would override manual user resizes.
+  const hasInitializedWithWidthRef = useRef(false)
 
   const {
     height: autoExpandHeight,
@@ -155,8 +173,24 @@ const TextArea: FC<Props> = ({
     updateScrollHeight,
   } = useTextInputAutoExpand({
     textareaRef,
-    dependencies: [element.placeholder],
+    // Recalculate height when placeholder or displayed value changes.
+    // When isAutoHeight is true, use uiValue to ensure height updates during typing and after blur.
+    // When isAutoHeight is false, the effect only needs to run when value changes (less frequent).
+    dependencies: [
+      element.placeholder,
+      ...(isAutoHeight ? [uiValue] : [value]),
+    ],
   })
+
+  // Recalculate height once when width first becomes available (ResizeObserver is async).
+  // We don't include width in dependencies above to avoid overriding manual user resizes.
+  useLayoutEffect(() => {
+    if (!isAutoHeight) return
+    if (width > 0 && !hasInitializedWithWidthRef.current) {
+      hasInitializedWithWidthRef.current = true
+      updateScrollHeight()
+    }
+  }, [isAutoHeight, width, updateScrollHeight])
 
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
@@ -207,7 +241,7 @@ const TextArea: FC<Props> = ({
 
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
-    focused && width > theme.breakpoints.hideWidgetDetails
+    focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   return (
     <StyledTextAreaContainer
@@ -224,12 +258,7 @@ const TextArea: FC<Props> = ({
         htmlFor={id}
       >
         {element.help && (
-          <StyledWidgetLabelHelp>
-            <TooltipIcon
-              content={element.help}
-              placement={Placement.TOP_RIGHT}
-            />
-          </StyledWidgetLabelHelp>
+          <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
 

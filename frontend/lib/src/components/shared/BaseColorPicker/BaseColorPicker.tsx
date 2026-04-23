@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,20 +14,19 @@
  * limitations under the License.
  */
 
-import React, { memo, useCallback, useState } from "react"
+import { memo, useCallback, useState } from "react"
 
 import { StatefulPopover as UIPopover } from "baseui/popover"
 import { ChromePicker, ColorResult } from "react-color"
 import SaturationComponent from "react-color/es/components/common/Saturation"
 
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import {
-  StyledWidgetLabelHelpInline,
-  WidgetLabel,
-} from "~lib/components/widgets/BaseWidget"
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { convertRemToPx } from "~lib/theme/utils"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
@@ -45,6 +44,7 @@ import {
  * embedded app or in Notebooks. We're applying this fix here to prevent that:
  * https://github.com/uiwjs/react-color/issues/81#issuecomment-2208219820
  */
+/* istanbul ignore next -- browser-only: traverses window.parent chain for cross-origin iframes, untestable in jsdom */
 SaturationComponent.prototype.getContainerRenderWindow = function () {
   const container = this.container
   let renderWindow: Window & typeof globalThis = window
@@ -58,8 +58,7 @@ SaturationComponent.prototype.getContainerRenderWindow = function () {
       lastRenderWindow = renderWindow
       renderWindow = renderWindow.parent as Window & typeof globalThis
     }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     renderWindow = lastRenderWindow
   }
   return renderWindow
@@ -72,8 +71,7 @@ export interface BaseColorPickerProps {
   showValue?: boolean
   label: string
   labelVisibility?: LabelVisibilityOptions
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onChange: (value: string) => any
+  onChange: (value: string) => void
   help?: string
 }
 
@@ -89,7 +87,6 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
   } = props
   const [value, setValue] = useState(propValue)
   const theme = useEmotionTheme()
-
   useExecuteWhenChanged(() => setValue(propValue), [propValue])
 
   // Note: This is a "local" onChange handler used to update the color preview
@@ -139,14 +136,17 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
         labelVisibility={labelVisibility}
       >
         {help && (
-          <StyledWidgetLabelHelpInline>
-            <TooltipIcon content={help} placement={Placement.TOP_RIGHT} />
-          </StyledWidgetLabelHelpInline>
+          <WidgetLabelHelpIconInline
+            content={help}
+            placement={Placement.TOP_RIGHT}
+            label={label}
+          />
         )}
       </WidgetLabel>
       <UIPopover
         onClose={onColorClose}
         placement="bottomLeft"
+        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
         content={() => (
           <StyledChromePicker data-testid="stColorPickerPopover">
             <ChromePicker
@@ -157,6 +157,11 @@ const BaseColorPicker = (props: BaseColorPickerProps): React.ReactElement => {
             />
           </StyledChromePicker>
         )}
+        overrides={{
+          Body: {
+            style: getPopoverContainerStyle(theme),
+          },
+        }}
       >
         <StyledColorPreview disabled={disabled}>
           <StyledColorBlock

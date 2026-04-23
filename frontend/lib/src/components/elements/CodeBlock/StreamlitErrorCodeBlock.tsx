@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,15 +14,10 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
-import CopyButton from "./CopyButton"
-import {
-  StyledCode,
-  StyledCodeBlock,
-  StyledCopyButtonContainer,
-  StyledPre,
-} from "./styled-components"
+import CodeBlockCopyToolbar from "./CodeBlockCopyToolbar"
+import { StyledCode, StyledCodeBlock, StyledPre } from "./styled-components"
 
 export interface StreamlitErrorCodeBlockProps {
   children: string | string[]
@@ -38,15 +33,12 @@ function StreamlitErrorCodeBlock({
     <StyledCodeBlock
       className="stErrorCodeBlock"
       data-testid="stErrorCodeBlock"
+      tabIndex={shouldShowCopyButton ? 0 : undefined}
     >
       <StyledPre wrapLines={false}>
         <StyledCode wrapLines={false}>{children}</StyledCode>
       </StyledPre>
-      {shouldShowCopyButton && (
-        <StyledCopyButtonContainer>
-          <CopyButton text={children} />
-        </StyledCopyButtonContainer>
-      )}
+      {shouldShowCopyButton && <CodeBlockCopyToolbar text={children} />}
     </StyledCodeBlock>
   )
 }

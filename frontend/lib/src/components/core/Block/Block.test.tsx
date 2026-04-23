@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { ReactElement } from "react"
+import { ReactElement } from "react"
 
 import { screen } from "@testing-library/react"
 
@@ -23,8 +23,9 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 import { BlockNode } from "~lib/AppNode"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { renderWithContexts } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { FlexBoxContainer, VerticalBlock } from "./Block"
+import { BlockNodeRenderer, FlexBoxContainer, VerticalBlock } from "./Block"
 
 const FAKE_SCRIPT_HASH = "fake_script_hash"
 
@@ -220,6 +221,16 @@ describe("FlexBoxContainer layout props", () => {
 
   it.each([
     [
+      "gap: xxsmall",
+      { gapConfig: { gapSize: streamlit.GapSize.XXSMALL } },
+      "gap: 0.25rem;",
+    ],
+    [
+      "gap: xsmall",
+      { gapConfig: { gapSize: streamlit.GapSize.XSMALL } },
+      "gap: 0.5rem;",
+    ],
+    [
       "gap: small",
       { gapConfig: { gapSize: streamlit.GapSize.SMALL } },
       "gap: 1rem;",
@@ -233,6 +244,16 @@ describe("FlexBoxContainer layout props", () => {
       "gap: large",
       { gapConfig: { gapSize: streamlit.GapSize.LARGE } },
       "gap: 4rem;",
+    ],
+    [
+      "gap: xlarge",
+      { gapConfig: { gapSize: streamlit.GapSize.XLARGE } },
+      "gap: 6rem;",
+    ],
+    [
+      "gap: xxlarge",
+      { gapConfig: { gapSize: streamlit.GapSize.XXLARGE } },
+      "gap: 8rem;",
     ],
     [
       "gap: none",
@@ -256,5 +277,66 @@ describe("FlexBoxContainer layout props", () => {
     })
     renderWithContexts(makeVerticalBlockComponent(block))
     expect(screen.getByTestId("stVerticalBlock")).toHaveStyle(expectedStyle)
+  })
+})
+
+describe("BlockNodeRenderer CSS key class placement", () => {
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeBlockNodeComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("places st-key-* on StyledLayoutWrapper for expander blocks", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        expandable: { label: "test expander", expanded: false },
+        id: "$$ID-abc123-my_expander",
+      })
+    )
+
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveClass("st-key-my_expander")
+
+    const innerBlock = screen.getByTestId("stVerticalBlock")
+    expect(innerBlock.className).not.toContain("st-key-")
+  })
+
+  it("places st-key-* on StyledLayoutWrapper for popover blocks", () => {
+    const node = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        popover: { label: "test popover" },
+        id: "$$ID-abc123-my_popover",
+      })
+    )
+
+    renderWithContexts(makeBlockNodeComponent(node))
+
+    const layoutWrapper = screen.getByTestId("stLayoutWrapper")
+    expect(layoutWrapper).toHaveClass("st-key-my_popover")
+
+    const innerBlock = screen.getByTestId("stVerticalBlock")
+    expect(innerBlock.className).not.toContain("st-key-")
   })
 })

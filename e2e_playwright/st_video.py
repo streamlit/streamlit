@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,14 +17,14 @@ from pathlib import Path
 
 import streamlit as st
 
-# Construct test assets path relative to this script file to
+# Construct static path relative to this script file to
 # allow its execution with different working directories.
-TEST_ASSETS_DIR = Path(__file__).parent / "test_assets"
+STATIC_DIR = Path(__file__).parent / "static"
 
-WEBM_VIDEO_PATH = TEST_ASSETS_DIR / "sintel-short.webm"
-MP4_VIDEO_PATH = TEST_ASSETS_DIR / "sintel-short.mp4"
-VTT_EN_PATH = TEST_ASSETS_DIR / "sintel-en.vtt"
-VTT_DE_PATH = TEST_ASSETS_DIR / "sintel-de.vtt"
+WEBM_VIDEO_PATH = STATIC_DIR / "sintel-short.webm"
+MP4_VIDEO_PATH = STATIC_DIR / "sintel-short.mp4"
+VTT_EN_PATH = STATIC_DIR / "sintel-en.vtt"
+VTT_DE_PATH = STATIC_DIR / "sintel-de.vtt"
 
 mp4_video = "mp4 video"
 mp4_video_with_subtitles = "mp4 video with subtitles"

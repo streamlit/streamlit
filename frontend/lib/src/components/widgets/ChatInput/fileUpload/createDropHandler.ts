@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import {
   IFileURLs,
 } from "@streamlit/protobuf"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { getRejectedFileInfo } from "~lib/util/FileHelper"
 
@@ -31,7 +31,6 @@ import { validateFileType } from "./fileUploadUtils"
 
 interface CreateDropHandlerParams {
   acceptMultipleFiles: boolean
-  acceptDirectoryFiles: boolean
   maxFileSize: number
   uploadClient: FileUploadClient
   uploadFile: (fileURLs: FileURLsProto, file: File) => void
@@ -43,20 +42,37 @@ interface CreateDropHandlerParams {
 }
 
 /**
- * Helper function to separate directory files into accepted and rejected based on file type
+ * Validates files against type and size constraints, separating them into
+ * accepted and rejected lists. This validation is necessary because:
+ * 1. Directory uploads (webkitdirectory) bypass react-dropzone's validation
+ * 2. Retry uploads call the drop handler directly, bypassing react-dropzone
  */
-const filterDirectoryFiles = (
+const filterFiles = (
   files: File[],
-  element: ChatInputProto
+  element: ChatInputProto,
+  maxFileSize: number
 ): { accepted: File[]; rejected: FileRejection[] } => {
   const accepted: File[] = []
   const rejected: FileRejection[] = []
 
   files.forEach(file => {
+    // Check file size first
+    if (file.size > maxFileSize) {
+      rejected.push({
+        file,
+        errors: [
+          {
+            code: FileErrorCode.FileTooLarge,
+            message: `File is too large. Maximum size is ${maxFileSize} bytes.`,
+          },
+        ],
+      })
+      return
+    }
+
+    // Check file type
     const validation = validateFileType(file, element.fileType)
-    if (validation.isValid) {
-      accepted.push(file)
-    } else {
+    if (!validation.isValid) {
       rejected.push({
         file,
         errors: [
@@ -66,7 +82,10 @@ const filterDirectoryFiles = (
           },
         ],
       })
+      return
     }
+
+    accepted.push(file)
   })
 
   return { accepted, rejected }
@@ -75,7 +94,6 @@ const filterDirectoryFiles = (
 export const createDropHandler =
   ({
     acceptMultipleFiles,
-    acceptDirectoryFiles,
     maxFileSize,
     uploadClient,
     uploadFile,
@@ -86,12 +104,15 @@ export const createDropHandler =
     element,
   }: CreateDropHandlerParams) =>
   (acceptedFiles: File[], rejectedFiles: FileRejection[]): void => {
-    // For directory uploads, we need to do our own file type filtering
-    // because webkitdirectory bypasses react-dropzone's normal validation
-    if (acceptDirectoryFiles && acceptedFiles.length > 0) {
-      const { accepted, rejected } = filterDirectoryFiles(
+    // Always validate files - this catches files that bypass react-dropzone's
+    // validation, such as:
+    // 1. Directory uploads (webkitdirectory bypasses react-dropzone)
+    // 2. Retry uploads (dropHandler is called directly, bypassing react-dropzone)
+    if (acceptedFiles.length > 0) {
+      const { accepted, rejected } = filterFiles(
         acceptedFiles,
-        element
+        element,
+        maxFileSize
       )
       acceptedFiles = accepted
       rejectedFiles = [...rejectedFiles, ...rejected]
@@ -132,10 +153,16 @@ export const createDropHandler =
       .catch((errorMessage: string) => {
         addFiles(
           acceptedFiles.map(f => {
-            return new UploadFileInfo(f.name, f.size, getNextLocalFileId(), {
-              type: "error",
-              errorMessage,
-            })
+            return new UploadFileInfo(
+              f.name,
+              f.size,
+              getNextLocalFileId(),
+              {
+                type: "error",
+                errorMessage,
+              },
+              f
+            )
           })
         )
       })

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ digraph Dot {
   A -> B -> C -> D -> {F}
 }
 """
-st.graphviz_chart(horizontal_flow_chart, use_container_width=True)
+st.graphviz_chart(horizontal_flow_chart, width="stretch")
 
 st.subheader("Width Parameters")
 

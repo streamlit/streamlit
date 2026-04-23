@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, fireEvent, screen } from "@testing-library/react"
 import { Mock, MockInstance } from "vitest"
 
@@ -29,7 +27,7 @@ import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { renderWithContexts } from "~lib/test_util"
-import { bgColorToBaseString, toExportedTheme } from "~lib/theme"
+import { bgColorToBaseString, toExportedTheme } from "~lib/theme/utils"
 import {
   DEFAULT_IFRAME_FEATURE_POLICY,
   DEFAULT_IFRAME_SANDBOX_POLICY,
@@ -49,7 +47,7 @@ import { ComponentMessageType, StreamlitMessageType } from "./enums"
 // We have some timeouts that we want to use fake timers for.
 vi.useFakeTimers()
 
-// Mock uri utils.
+// Mock uri utils and StreamlitConfig
 vi.mock("@streamlit/utils", async () => {
   const actualModule = await vi.importActual("@streamlit/utils")
   const mockedBuildHttpUri = vi.fn().mockImplementation(() => "registry/url")
@@ -57,6 +55,9 @@ vi.mock("@streamlit/utils", async () => {
   return {
     ...actualModule,
     buildHttpUri: mockedBuildHttpUri,
+    get StreamlitConfig() {
+      return globalThis.__mockStreamlitConfig
+    },
   }
 })
 
@@ -69,7 +70,6 @@ const MOCK_COMPONENT_NAME = "mock_component_name"
 
 describe("ComponentInstance", () => {
   let logWarnSpy: MockInstance
-  let originalStreamlitWindowObj: typeof window.__streamlit
   const getComponentRegistry = (): ComponentRegistry => {
     return new ComponentRegistry(mockEndpoints())
   }
@@ -87,11 +87,10 @@ describe("ComponentInstance", () => {
       elementRef: { current: null },
       values: [250],
     })
-    originalStreamlitWindowObj = window.__streamlit
   })
 
   afterEach(() => {
-    window.__streamlit = originalStreamlitWindowObj
+    globalThis.__mockStreamlitConfig = {}
   })
 
   it("registers a message listener on render", () => {
@@ -188,8 +187,8 @@ describe("ComponentInstance", () => {
     )
   })
 
-  it("includes window.__streamlit?.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
-    window.__streamlit = { CUSTOM_COMPONENT_CLIENT_ID: "foobar" }
+  it("includes StreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID in queryString if set", () => {
+    globalThis.__mockStreamlitConfig.CUSTOM_COMPONENT_CLIENT_ID = "foobar"
     const componentRegistry = getComponentRegistry()
     renderWithContexts(
       <ComponentInstance
@@ -705,8 +704,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setJsonValue).toHaveBeenCalledWith(
         element,
         jsonValue,
@@ -769,8 +767,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
         element,
         bytesValue,
@@ -819,8 +816,7 @@ describe("ComponentInstance", () => {
           source: iframe.contentWindow,
         })
       )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+      const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
       expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
 
       expect(logWarnSpy).toHaveBeenCalledWith(
@@ -918,8 +914,7 @@ describe("ComponentInstance", () => {
             source: iframe.contentWindow,
           })
         )
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        const widgetMgr = (WidgetStateManager as any).mock.instances[0]
+        const widgetMgr = vi.mocked(WidgetStateManager).mock.instances[0]
         expect(widgetMgr.setJsonValue).not.toHaveBeenCalled()
 
         expect(logWarnSpy).toHaveBeenCalledWith(
@@ -930,10 +925,8 @@ describe("ComponentInstance", () => {
   })
 
   function renderMsg(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    args: { [name: string]: any },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    dataframes: any[],
+    args: Record<string, unknown>,
+    dataframes: unknown[],
     disabled = false,
     theme = {
       ...toExportedTheme(mockTheme.emotion),
@@ -941,8 +934,7 @@ describe("ComponentInstance", () => {
       font: mockTheme.emotion.genericFonts.bodyFont,
       base: bgColorToBaseString(mockTheme.emotion.colors.bgColor),
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ): any {
+  ): Record<string, unknown> {
     return forwardMsg(StreamlitMessageType.RENDER, {
       args,
       dfs: dataframes,
@@ -951,15 +943,16 @@ describe("ComponentInstance", () => {
     })
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  function forwardMsg(type: StreamlitMessageType, data: any): any {
+  function forwardMsg(
+    type: StreamlitMessageType,
+    data: Record<string, unknown>
+  ): Record<string, unknown> {
     return { type, ...data }
   }
 
   /** Create a ComponentInstance.props.element prop with the given args. */
   function createElementProp(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    jsonArgs: { [name: string]: any } = {},
+    jsonArgs: Record<string, unknown> = {},
     specialArgs: SpecialArg[] = [],
     overrides: Partial<IComponentInstanceProto> = {}
   ): ComponentInstanceProto {

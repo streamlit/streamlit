@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,25 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  MutableRefObject,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export const usePrevious = (value: any): any => {
-  const ref = useRef()
-
-  useEffect(() => {
-    ref.current = value
-  }, [value])
-
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
-  return ref.current
-}
+import { MutableRefObject, useCallback, useEffect, useState } from "react"
 
 export const useIsOverflowing = (
   ref: MutableRefObject<HTMLElement | null>,

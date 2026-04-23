@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -94,4 +94,18 @@ if TYPE_CHECKING:
     assert_type(
         multiselect("foo", Alfred, default=Alfred.HITCHCOCK, accept_new_options=True),
         list[Alfred | str],
+    )
+    assert_type(
+        multiselect("foo", ["foo", "bar"], filter_mode="contains"),
+        list[str],
+    )
+    assert_type(multiselect("foo", ["foo", "bar"], filter_mode=None), list[str])
+
+    # Check bind parameter
+    assert_type(multiselect("foo", ["a", "b"], bind="query-params"), list[str])
+    assert_type(multiselect("foo", [1, 2, 3], bind="query-params"), list[int])
+    assert_type(multiselect("foo", ["a", "b"], bind=None), list[str])
+    assert_type(
+        multiselect("foo", ["a", "b"], bind="query-params", accept_new_options=True),
+        list[str],
     )

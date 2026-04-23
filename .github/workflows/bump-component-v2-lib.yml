@@ -46,14 +46,16 @@ jobs:
       - name: Compute next version (@streamlit/component-v2-lib)
         id: compute
         working-directory: frontend/component-v2-lib
+        env:
+          NEW_VERSION: ${{ inputs.new_version }}
         run: |
           set -euo pipefail
           CURR=$(node -p "require('./package.json').version")
           echo "current=$CURR" >> $GITHUB_OUTPUT
-          NEXT="${{ inputs.new_version }}"
+          NEXT="$NEW_VERSION"
           if ! echo "$NEXT" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then echo "invalid semver: $NEXT"; exit 1; fi
           if [ "$NEXT" = "$CURR" ]; then echo "new_version equals current"; exit 1; fi
-          npm version "${{ inputs.new_version }}" --no-git-tag-version
+          yarn version "$NEW_VERSION"
           echo "next=$NEXT" >> $GITHUB_OUTPUT
 
       - name: Create branch and commit (@streamlit/component-v2-lib)
@@ -71,7 +73,7 @@ jobs:
       - name: Create PR to develop (@streamlit/component-v2-lib)
         if: inputs.dry_run != true
         id: create_pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           NEXT: ${{ steps.compute.outputs.next }}
         with:
@@ -89,7 +91,7 @@ jobs:
               draft: false,
             });
             const pr = created.data;
-            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore','impact:internal'] });
+            await github.rest.issues.addLabels({ owner: context.repo.owner, repo: context.repo.repo, issue_number: pr.number, labels: ['change:chore', 'impact:internal', 'autofix'] });
             core.setOutput('pr_url', pr.html_url);
 
       - name: Summary (@streamlit/component-v2-lib)

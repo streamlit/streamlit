@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -124,3 +124,21 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+# Query param binding color picker (no provided default = black)
+st.markdown("Query param binding:")
+bound_color = st.color_picker(
+    "Bound color (no provided default)",
+    key="bound_color",
+    bind="query-params",
+)
+st.write("bound color value:", bound_color)
+
+# Query param binding color picker with custom default
+bound_color_custom = st.color_picker(
+    "Bound color (default red)",
+    value="#ff0000",
+    key="bound_red",
+    bind="query-params",
+)
+st.write("bound color red value:", bound_color_custom)

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,7 +18,12 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_toggle,
@@ -30,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
 )
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
-NUM_TIME_INPUTS = 13
+NUM_TIME_INPUTS = 16
 
 
 def test_time_input_widget_rendering(
@@ -132,8 +137,10 @@ def test_correct_menu_font_colors(
     # Take a snapshot of the time selection dropdown:
     selection_dropdown = themed_app.locator('[data-baseweb="popover"]').first
 
-    # Hover over another option:
-    selection_dropdown.get_by_text("08:30").hover()
+    # Hover over another option (scroll into view first for consistent scroll position):
+    target = selection_dropdown.get_by_text("08:30")
+    target.scroll_into_view_if_needed()
+    target.hover()
 
     # Take a screenshot
     assert_snapshot(selection_dropdown, name="st_time_input-menu_colors")
@@ -218,6 +225,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Select last option:
     time_dropdown = app.locator('[data-baseweb="popover"]').first
     time_dropdown.get_by_text("00:00").first.click()
+    # Wait for app to process the change before checking values
+    wait_for_app_run(app)
 
     # Check that selection worked:
     expect_markdown(app, "Value 6: 00:00:00")
@@ -229,6 +238,8 @@ def test_handles_callback_on_change_correctly(app: Page):
     # Type an option:
     empty_time_input_field.type("00:15")
     empty_time_input_field.press("Enter")
+    # Wait for app to process the change before checking values
+    wait_for_app_run(app)
 
     expect_markdown(app, "Value 1: 00:15:00")
     expect_markdown(app, "Value 6: 00:00:00")
@@ -276,6 +287,7 @@ def test_dynamic_time_input_props(app: Page, assert_snapshot: ImageCompareFuncti
     # Ensure the previously entered value remains visible
     expect_prefixed_markdown(app, "Updated time input value:", "00:15:00")
 
+    # Ensure element is scrolled into view and stable before snapshot
     dynamic_time_input.scroll_into_view_if_needed()
     assert_snapshot(dynamic_time_input, name="st_time_input-dynamic_updated")
 
@@ -304,9 +316,9 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     # Click on the first time input to open the dropdown
     get_time_input(app, "Time input 1 (8:45)").locator("input").click()
 
-    # Hover over the first option:
+    # Wait for the dropdown to be visible before taking snapshot
     selection_dropdown = app.locator('[data-baseweb="popover"]').first
-    selection_dropdown.get_by_text("00:00").first.hover()
+    expect(selection_dropdown).to_be_visible()
 
     # Take a snapshot of the time selection dropdown:
     assert_snapshot(selection_dropdown, name="st_time_input-dropdown-custom-theme")
@@ -314,3 +326,43 @@ def test_time_input_with_custom_theme(app: Page, assert_snapshot: ImageCompareFu
     assert_snapshot(
         get_time_input(app, "Time input 1 (8:45)"), name="st_time_input-custom-theme"
     )
+
+
+# --- Query param binding tests ---
+
+
+def test_time_input_query_param_seeding(page: Page, app_base_url: str):
+    """Test that time input value can be seeded from URL query params using HH:MM format."""
+    page.goto(build_app_url(app_base_url, query={"bound_time": "14:30"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound time:", "14:30:00")
+    expect(page).to_have_url(re.compile(r"bound_time=14%3A30"))
+
+
+def test_time_input_query_param_clearable_empty(page: Page, app_base_url: str):
+    """Test that a clearable time input (value=None) can be seeded as empty from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_clearable_time": ""}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound clearable time:", "None")
+
+
+def test_time_input_query_param_invalid_reverts_to_default(
+    page: Page, app_base_url: str
+):
+    """Test that an invalid URL value reverts to the default."""
+    page.goto(build_app_url(app_base_url, query={"bound_time": "not-a-time"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound time:", "08:45:00")
+    expect(page).not_to_have_url(re.compile(r"[?&]bound_time="))
+
+
+def test_time_input_query_param_step_not_snapped(page: Page, app_base_url: str):
+    """Test that URL-seeded time values not aligned to step are accepted as-is."""
+    page.goto(build_app_url(app_base_url, query={"bound_step_time": "09:17"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "Bound step time:", "09:17:00")
+    expect(page).to_have_url(re.compile(r"bound_step_time=09%3A17"))

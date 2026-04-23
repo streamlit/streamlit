@@ -18,12 +18,10 @@ jobs:
           fetch-depth: 2
       - name: Set Python version vars
         uses: ./.github/actions/build_info
-      - name: Set up Python ${{ env.PYTHON_MAX_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ env.PYTHON_MAX_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
       - name: Run make frontend-fast
         run: make frontend-fast
       - name: Upload FE build files to S3
@@ -33,8 +31,7 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.STATIC_S3_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.STATIC_S3_SECRET_KEY }}
         run: |
-          source venv/bin/activate
-          # Install awscli via pip/uv:
+          # Install awscli via uv:
           uv pip install awscli==1.37.6
 
           # Remove old build files from static (which have hashes in their names)

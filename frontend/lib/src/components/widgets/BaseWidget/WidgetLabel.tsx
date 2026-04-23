@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { isNullOrUndefined, LabelVisibilityOptions } from "~lib/util/utils"
 
 import { StyledWidgetLabel } from "./styled-components"
@@ -50,16 +48,20 @@ export function WidgetLabel({
   }
 
   return (
-    // we use aria-hidden to disable ARIA for StyleWidgetLabel, because each
-    // widget should have its own aria-label and/or implement accessibility.
     <StyledWidgetLabel
       data-testid="stWidgetLabel"
-      aria-hidden="true"
       disabled={disabled}
       labelVisibility={labelVisibility}
       htmlFor={htmlFor}
     >
-      <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+      {/* Accessibility contract:
+          Widget inputs must expose their own accessible name (e.g. via aria-label
+          and/or aria-labelledby). We hide the visual label text from assistive tech
+          to avoid duplicate announcements, while keeping any children (e.g. help
+          icons) accessible. */}
+      <span aria-hidden="true">
+        <StreamlitMarkdown source={label} allowHTML={false} isLabel />
+      </span>
       {children}
     </StyledWidgetLabel>
   )

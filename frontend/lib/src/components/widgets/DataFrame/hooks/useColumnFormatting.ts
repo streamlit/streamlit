@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import React, { useCallback } from "react"
+import { useCallback } from "react"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
+import { ColumnConfigProps } from "./useColumnLoader"
 
 type ColumnFormattingReturn = {
   // A callback to change the format of a column
@@ -33,8 +34,7 @@ type ColumnFormattingReturn = {
  */
 function useColumnFormatting(
   setColumnConfigMapping: React.Dispatch<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    React.SetStateAction<Map<string, any>>
+    React.SetStateAction<Map<string, ColumnConfigProps>>
   >
 ): ColumnFormattingReturn {
   const changeColumnFormat = useCallback(

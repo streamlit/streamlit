@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ from collections import defaultdict
 from typing import TYPE_CHECKING
 
 from streamlit import util
-from streamlit.runtime.stats import CacheStat, group_stats
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat, group_cache_stats
 from streamlit.runtime.uploaded_file_manager import (
     UploadedFileManager,
     UploadedFileRec,
@@ -38,6 +38,10 @@ class MemoryUploadedFileManager(UploadedFileManager):
     def __init__(self, upload_endpoint: str) -> None:
         self.file_storage: dict[str, dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
+
+    @property
+    def stats_families(self) -> Sequence[str]:
+        return (CACHE_MEMORY_FAMILY,)
 
     def get_files(
         self, session_id: str, file_ids: Sequence[str]
@@ -113,7 +117,9 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
         return result
 
-    def get_stats(self) -> list[CacheStat]:
+    def get_stats(
+        self, _family_names: Sequence[str] | None = None
+    ) -> dict[str, list[CacheStat]]:
         """Return the manager's CacheStats.
 
         Safe to call from any thread.
@@ -135,4 +141,9 @@ class MemoryUploadedFileManager(UploadedFileManager):
             )
             for file in all_files
         ]
-        return group_stats(stats)
+        if not stats:
+            return {}
+        # In general, get_stats methods need to be able to return only requested stat
+        # families, but this method only returns a single family, and we're guaranteed
+        # that it was one of those requested if we make it here.
+        return {CACHE_MEMORY_FAMILY: group_cache_stats(stats)}

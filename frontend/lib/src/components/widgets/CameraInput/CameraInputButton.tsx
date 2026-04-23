@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { memo, MouseEvent, ReactElement, ReactNode } from "react"
+import { memo, MouseEvent, ReactElement, ReactNode } from "react"
 
 import ProgressBar, {
   Size as ProgressBarSize,
-} from "~lib/components/shared/ProgressBar"
+} from "~lib/components/shared/ProgressBar/ProgressBar"
 
 import {
   StyledCameraInputBaseButton,
@@ -26,8 +26,7 @@ import {
 } from "./styled-components"
 
 export interface CameraInputButtonProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   progress?: number | null
   children?: ReactNode

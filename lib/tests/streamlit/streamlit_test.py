@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,12 +17,17 @@
 from __future__ import annotations
 
 import os
-import re
 import statistics
 import subprocess
 import sys
 import tempfile
 import unittest
+
+# tomllib is available in Python 3.11+, use tomli as fallback for Python 3.10
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
 
 import matplotlib as mpl
 import pytest
@@ -37,28 +42,26 @@ from tests.streamlit.element_mocks import (
 
 
 def get_version() -> str | None:
-    """Get version by parsing out setup.py."""
+    """Get version by parsing pyproject.toml."""
     dirname = os.path.dirname(__file__)
     base_dir = os.path.abspath(os.path.join(dirname, "../.."))
-    pattern = re.compile(r"(?:.*VERSION = \")(?P<version>.*)(?:\"  # PEP-440$)")
-    for line in open(os.path.join(base_dir, "setup.py")):
-        m = pattern.match(line)
-        if m:
-            return m.group("version")
-    return None
+    pyproject_path = os.path.join(base_dir, "pyproject.toml")
+
+    with open(pyproject_path, "rb") as f:
+        pyproject = tomllib.load(f)
+
+    return pyproject.get("project", {}).get("version")
 
 
 # Commands that don't result in rendered elements in the frontend
 NON_ELEMENT_COMMANDS: set[str] = {
+    "App",
     "Page",
     "cache",
     "cache_data",
     "cache_resource",
     "connection",
     "context",
-    "experimental_get_query_params",
-    "experimental_set_query_params",
-    "experimental_user",
     "fragment",
     "get_option",
     "login",

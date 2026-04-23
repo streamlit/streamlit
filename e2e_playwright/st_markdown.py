@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -256,6 +256,8 @@ $$
 - :blue-background[blue], :green-background[green], :yellow-background[yellow], :red-background[red],
   :violet-background[violet], :orange-background[orange], :gray-background[gray],
   :grey-background[grey], :primary-background[primary], :rainbow-background[rainbow]
+- :color[custom foreground]{foreground="#FF5733"}, :color[custom background]{background="#4287f5"},
+  :color[both colors]{foreground="#FFFFFF" background="#000000"}
 - [x] :blue-badge[blue], :green-badge[green], :yellow-badge[yellow], :red-badge[red], :violet-badge[violet],
   :orange-badge[orange], :gray-badge[gray], :grey-badge[grey], :primary-badge[primary]
 - [ ] Material icons :red[:material/local_fire_department:] :green-background[:material/celebration: Yay]
@@ -494,3 +496,50 @@ text justification properly. The text stretches to fill the available width.""",
     text_alignment="justify",
     help="This is a help tooltip!",
 )
+
+# Test for gh-13339: Tooltip with newlines should render correctly
+st.header("Tooltip with Newlines (gh-13339)")
+
+st.container(key="markdown_newlines_tooltip").markdown(
+    "Markdown with newlines in tooltip",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="caption_newlines_tooltip").caption(
+    "Caption with newlines in tooltip",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="markdown_center_newlines_tooltip").markdown(
+    "Center aligned with newlines in tooltip",
+    text_alignment="center",
+    help="Line 1\n\nLine 2\n\nLine 3",
+)
+
+st.container(key="markdown_spaces_around_newlines").markdown(
+    "Markdown with spaces around newlines",
+    help="Line 1 \n\n Line 2 \n\n Line 3",
+)
+
+st.container(key="markdown_bracket_in_tooltip").markdown(
+    "Markdown with closing bracket in tooltip",
+    help="Line 1 ] Line 2 ] Line 3",
+)
+
+# Complex markdown in tooltip - comprehensive test
+st.header("Complex Tooltip Case")
+
+st.container(key="markdown_complex_tooltip").markdown(
+    "Tooltip with complex markdown",
+    help="""**Bold**, *italic*, and `code` with brackets [x]
+
+Links: [Streamlit](https://streamlit.io) Colors: :red[red] :blue[blue]
+
+Emoji: 🎉 Array: array[index] Dict: dict[key]""",
+)
+
+# Shimmer directive test
+with st.container(key="shimmer_elements"):
+    st.markdown(
+        "Normal text before :red[:shimmer[:material/hourglass_empty: :blue[Please] **wait**...]] and after"
+    )

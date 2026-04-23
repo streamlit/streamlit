@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -214,6 +214,7 @@ describe("metrics helpers", () => {
     browserName: RESULT.browser.name || "Unknown",
     browserVersion: RESULT.browser.version || "Unknown",
     deviceType: RESULT.device.type || "Unknown",
+    serverMode: "starlette-managed",
   }
   it("buildEventProto populates expected fields - viewReport", async () => {
     const mm = getMetricsManager()
@@ -280,6 +281,7 @@ describe("metrics helpers", () => {
       PAGE_PROFILE_DATA.browserVersion
     )
     expect(pageProfileProto.deviceType).toEqual(PAGE_PROFILE_DATA.deviceType)
+    expect(pageProfileProto.serverMode).toEqual(PAGE_PROFILE_DATA.serverMode)
   })
 
   it("buildEventProto populates expected fields - menuClick", async () => {

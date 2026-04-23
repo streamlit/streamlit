@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { ReactElement, ReactNode } from "react"
+import { ReactElement, ReactNode } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 
 import { StyledEmojiIcon, StyledIcon } from "./styled-components"
 

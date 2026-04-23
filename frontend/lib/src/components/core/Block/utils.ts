@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,13 @@ import { Block as BlockProto, streamlit } from "@streamlit/protobuf"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { Direction } from "~lib/components/core/Layout/utils"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { ElementsSetVisitor } from "~lib/render-tree/visitors/ElementsSetVisitor"
 import { ScriptRunState } from "~lib/ScriptRunState"
 import { StreamlitEndpoints } from "~lib/StreamlitEndpoints"
-import { EmotionTheme, getDividerColors } from "~lib/theme"
+import { getDividerColors } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 import { isValidElementId } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -58,8 +59,8 @@ export function isElementStale(
       // If they have the same scriptRunId, they were just updated.
       return Boolean(
         node.fragmentId &&
-          fragmentIdsThisRun.includes(node.fragmentId) &&
-          node.scriptRunId !== scriptRunId
+        fragmentIdsThisRun.includes(node.fragmentId) &&
+        node.scriptRunId !== scriptRunId
       )
     }
     return node.scriptRunId !== scriptRunId
@@ -183,19 +184,11 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function backwardsCompatibleColumnGapSize(
+export function getColumnGapSize(
   columnProto: BlockProto.IColumn
 ): streamlit.GapSize {
   if (columnProto.gapConfig?.gapSize) {
     return columnProto.gapConfig.gapSize
-  } else if (columnProto.gap) {
-    if (columnProto.gap === "small") {
-      return streamlit.GapSize.SMALL
-    } else if (columnProto.gap === "medium") {
-      return streamlit.GapSize.MEDIUM
-    } else if (columnProto.gap === "large") {
-      return streamlit.GapSize.LARGE
-    }
   }
   return streamlit.GapSize.SMALL
 }
@@ -213,26 +206,22 @@ export function checkFlexContainerBackwardsCompatibile(
   return false
 }
 
-export function getActivateScrollToBottomBackwardsCompatible(
-  blockNode: BlockNode
-): boolean {
-  const hasHeight =
-    blockNode.deltaBlock.heightConfig?.pixelHeight ||
-    // This is deprecated, but we have some integrations that
-    // cache messages so we are keeping this here to make sure the
-    // frontend is backwards compatible with the old messages.
-    blockNode.deltaBlock.vertical?.height
-  if (
-    hasHeight &&
-    blockNode.children.some(node => {
-      return (
-        node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
-      )
-    })
-  ) {
-    return true
+export function shouldActivateScrollToBottom(blockNode: BlockNode): boolean {
+  const hasFixedPixelHeight = blockNode.deltaBlock.heightConfig?.pixelHeight
+  if (!hasFixedPixelHeight) {
+    return false
   }
-  return false
+
+  // When autoscroll is explicitly set, use that value directly.
+  const { autoscroll } = blockNode.deltaBlock
+  if (autoscroll !== null && autoscroll !== undefined) {
+    return autoscroll
+  }
+
+  // Default: auto-scroll when container has chat messages.
+  return blockNode.children.some(
+    node => node instanceof BlockNode && node.deltaBlock.type === "chatMessage"
+  )
 }
 
 export function getBorderBackwardsCompatible(blockProto: BlockProto): boolean {

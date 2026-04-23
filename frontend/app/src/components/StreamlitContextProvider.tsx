@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, PropsWithChildren, useMemo } from "react"
+import { memo, PropsWithChildren, RefObject, useMemo } from "react"
 
 import {
   DownloadContext,
@@ -38,6 +38,7 @@ import {
   ViewStateContextProps,
 } from "@streamlit/lib"
 import {
+  Config,
   DeferredFileResponse,
   IAppPage,
   Logo,
@@ -55,6 +56,7 @@ type LibConfigContextValues = {
   mapboxToken?: string
   enforceDownloadInNewTab?: boolean
   resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+  showErrorLinks?: Config.ShowErrorLinks
 }
 
 type NavigationContextValues = {
@@ -71,7 +73,9 @@ type SidebarConfigContextValues = {
   appLogo: Logo | null
   sidebarChevronDownshift: number
   expandSidebarNav: boolean
+  sidebarNavVisibleItems?: number
   hideSidebarNav: boolean
+  appRootRef?: RefObject<HTMLDivElement> | null
 }
 
 type ThemeContextValues = {
@@ -94,7 +98,7 @@ type DownloadContextValues = {
   requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
 }
 
-export type StreamlitContextProviderProps = PropsWithChildren<
+type StreamlitContextProviderProps = PropsWithChildren<
   ViewStateContextValues &
     LibConfigContextValues &
     NavigationContextValues &
@@ -118,6 +122,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   mapboxToken,
   enforceDownloadInNewTab,
   resourceCrossOriginMode,
+  showErrorLinks,
   // NavigationContext
   pageLinkBaseUrl,
   currentPageScriptHash,
@@ -130,7 +135,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   appLogo,
   sidebarChevronDownshift,
   expandSidebarNav,
+  sidebarNavVisibleItems,
   hideSidebarNav,
+  appRootRef,
   // ThemeContext
   activeTheme,
   setTheme,
@@ -153,8 +160,15 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       mapboxToken,
       enforceDownloadInNewTab,
       resourceCrossOriginMode,
+      showErrorLinks,
     }),
-    [locale, mapboxToken, enforceDownloadInNewTab, resourceCrossOriginMode]
+    [
+      locale,
+      mapboxToken,
+      enforceDownloadInNewTab,
+      resourceCrossOriginMode,
+      showErrorLinks,
+    ]
   )
 
   // Memoized object for SidebarConfigContext values
@@ -165,7 +179,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       hideSidebarNav,
+      appRootRef,
     }),
     [
       initialSidebarState,
@@ -173,7 +189,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       appLogo,
       sidebarChevronDownshift,
       expandSidebarNav,
+      sidebarNavVisibleItems,
       hideSidebarNav,
+      appRootRef,
     ]
   )
 

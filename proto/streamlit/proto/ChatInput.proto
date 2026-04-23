@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,6 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ChatInputProto";
-
 message ChatInput {
   string id = 1;
   string placeholder = 2;
@@ -27,12 +24,6 @@ message ChatInput {
   string value = 5;
   bool set_value = 6;
   string default = 7;
-
-  // DEPRECATED: position property is deprecated and unused.
-  enum Position {
-    BOTTOM = 0;
-  }
-  Position position = 8;
 
   enum AcceptFile {
     NONE = 0;
@@ -54,4 +45,6 @@ message ChatInput {
   // Sample rate for audio recording in Hz (e.g., 16000, 48000)
   // If not set, uses browser default
   optional int32 audio_sample_rate = 13;
+
+  reserved 8;
 }

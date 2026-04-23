@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,10 +20,15 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.widgets.audio_input import AudioInputSerde
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
-from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.runtime.uploaded_file_manager import (
+    DeletedFile,
+    UploadedFile,
+    UploadedFileRec,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
@@ -36,17 +41,16 @@ class AudioInputTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.audio_input
         assert c.label == "the label"
         assert (
-            c.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            c.label_visibility.value == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         # Default sample_rate should be 16000
         assert c.sample_rate == 16000
 
     @parameterized.expand(
         [
-            ("visible", LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE),
-            ("hidden", LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN),
-            ("collapsed", LabelVisibilityMessage.LabelVisibilityOptions.COLLAPSED),
+            ("visible", LabelVisibility.LabelVisibilityOptions.VISIBLE),
+            ("hidden", LabelVisibility.LabelVisibilityOptions.HIDDEN),
+            ("collapsed", LabelVisibility.LabelVisibilityOptions.COLLAPSED),
         ]
     )
     def test_label_visibility(self, label_visibility_value, proto_value):
@@ -208,3 +212,45 @@ class AudioInputTest(DeltaGeneratorTestCase):
             return_val = st.audio_input("label")
             st.write(return_val)
         assert str(e.value) == "Invalid file extension: `.mp3`. Allowed: ['.wav']"
+
+
+class AudioInputSerdeTest(DeltaGeneratorTestCase):
+    """Test AudioInputSerde serialization and deserialization."""
+
+    def test_serialize_with_uploaded_audio(self):
+        """Test serialization of a recorded audio file."""
+        serde = AudioInputSerde()
+
+        # Create a mock uploaded audio file
+        rec = UploadedFileRec("audio123", "recording.wav", "audio/wav", b"audio_data")
+        file_urls = FileURLsProto(
+            file_id="audio123", delete_url="delete_url", upload_url="upload_url"
+        )
+        uploaded_file = UploadedFile(rec, file_urls)
+
+        # Serialize the file
+        result = serde.serialize(uploaded_file)
+
+        # Verify the serialized proto
+        assert len(result.uploaded_file_info) == 1
+        file_info = result.uploaded_file_info[0]
+        assert file_info.file_id == "audio123"
+        assert file_info.name == "recording.wav"
+        assert file_info.size == len(b"audio_data")
+
+    def test_serialize_with_none(self):
+        """Test serialization when no audio is recorded."""
+        serde = AudioInputSerde()
+        result = serde.serialize(None)
+
+        # Should return empty state
+        assert len(result.uploaded_file_info) == 0
+
+    def test_serialize_with_deleted_file(self):
+        """Test serialization with a deleted audio file."""
+        serde = AudioInputSerde()
+        deleted = DeletedFile("audio123")
+        result = serde.serialize(deleted)
+
+        # Should return empty state for deleted file
+        assert len(result.uploaded_file_info) == 0

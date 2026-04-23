@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,10 +14,49 @@
  * limitations under the License.
  */
 
-import { makePath } from "@streamlit/utils"
+import {
+  isValidAllowedOrigins,
+  makePath,
+  StreamlitConfig,
+} from "@streamlit/utils"
 
 const FINAL_SLASH_RE = /\/+$/
 const INITIAL_SLASH_RE = /^\/+/
+
+/**
+ * Returns true when host has provided sufficient config properties for establishing the
+ * initial websocket connection without waiting for the host-config endpoint response.
+ *
+ * This bypass relies on minimal host configuration provided via window.__streamlit (StreamlitConfig)
+ *
+ * Required fields:
+ * - BACKEND_BASE_URL: string
+ * - HOST_CONFIG.allowedOrigins: non-empty array of non-empty strings
+ * - HOST_CONFIG.useExternalAuthToken: boolean (true or false)
+ *
+ * NOTE: changes to this function must be reflected in the mock in App.test.tsx
+ */
+export function isHostConfigBypassEnabled(): boolean {
+  const initialHostConfig = StreamlitConfig.HOST_CONFIG
+
+  if (!initialHostConfig) {
+    return false
+  }
+
+  const { allowedOrigins, useExternalAuthToken } = initialHostConfig
+
+  // Validate required fields using shared validation logic
+  const hasValidBackendBaseUrl = Boolean(StreamlitConfig.BACKEND_BASE_URL)
+  const hasValidAllowedOrigins = isValidAllowedOrigins(allowedOrigins)
+  const hasValidUseExternalAuthToken =
+    typeof useExternalAuthToken === "boolean"
+
+  return (
+    hasValidBackendBaseUrl &&
+    hasValidAllowedOrigins &&
+    hasValidUseExternalAuthToken
+  )
+}
 
 /**
  * Return the BaseUriParts for either the given url or the global window
@@ -45,9 +84,7 @@ export function parseUriIntoBaseParts(url?: string): URL {
 // the best path forward may be tricky as I wasn't able to come up with an
 // easy solution covering every deployment scenario.
 export function getPossibleBaseUris(): Array<URL> {
-  const baseUriParts = parseUriIntoBaseParts(
-    window.__streamlit?.BACKEND_BASE_URL
-  )
+  const baseUriParts = parseUriIntoBaseParts(StreamlitConfig.BACKEND_BASE_URL)
   const { pathname } = baseUriParts
 
   if (pathname === "/") {
@@ -149,6 +186,7 @@ export async function fetchWithTimeout(
   timeoutMs: number
 ): Promise<{ data: unknown; url: string }> {
   const controller = new AbortController()
+  // eslint-disable-next-line no-restricted-globals -- Network timeout utility runs outside React and cannot use hooks.
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {

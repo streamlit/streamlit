@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "CheckboxProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message Checkbox {
   enum StyleType {
@@ -35,6 +32,8 @@ message Checkbox {
   bool value = 6;
   bool set_value = 7;
   bool disabled = 8;
-  LabelVisibilityMessage label_visibility = 9;
+  LabelVisibility label_visibility = 9;
   StyleType type = 10;
+  // If set, widget value is bound to this query parameter key.
+  optional string query_param_key = 11;
 }

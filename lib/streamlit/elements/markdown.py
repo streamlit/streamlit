@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,11 +17,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     TextAlignment,
     Width,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -37,6 +36,37 @@ MARKDOWN_HORIZONTAL_RULE_EXPRESSION: Final = "---"
 
 
 class MarkdownMixin:
+    def _markdown(
+        self,
+        body: SupportsStr,
+        unsafe_allow_html: bool = False,
+        *,
+        help: str | None = None,
+        width: Width | Literal["auto"] = "auto",
+        text_alignment: TextAlignment = "left",
+        unterminated_parsing: bool = False,
+    ) -> DeltaGenerator:
+        """Internal markdown method with extended options."""
+        markdown_proto = MarkdownProto()
+
+        markdown_proto.body = clean_text(body)
+        markdown_proto.allow_html = unsafe_allow_html
+        markdown_proto.element_type = MarkdownProto.Type.NATIVE
+        markdown_proto.unterminated_parsing = unterminated_parsing
+        if help:
+            markdown_proto.help = help
+
+        if width != "auto":
+            layout_config = create_layout_config(
+                width=width,
+                text_alignment=text_alignment,
+                allow_content_width=True,
+            )
+        else:
+            layout_config = create_layout_config(text_alignment=text_alignment)
+
+        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+
     @gather_metrics("markdown")
     def markdown(
         self,
@@ -44,7 +74,7 @@ class MarkdownMixin:
         unsafe_allow_html: bool = False,
         *,  # keyword-only arguments:
         help: str | None = None,
-        width: Width = "stretch",
+        width: Width | Literal["auto"] = "auto",
         text_alignment: TextAlignment = "left",
     ) -> DeltaGenerator:
         r"""Display string formatted as Markdown.
@@ -79,21 +109,43 @@ class MarkdownMixin:
               must be on their own lines). Supported LaTeX functions are listed
               at https://katex.org/docs/supported.html.
 
-            - Colored text and background colors for text, using the syntax
-              ``:color[text to be colored]`` and ``:color-background[text to be colored]``,
-              respectively. ``color`` must be replaced with any of the following
-              supported colors: red, orange, yellow, green, blue, violet, gray/grey,
-              rainbow, or primary. For example, you can use
-              ``:orange[your text here]`` or ``:blue-background[your text here]``.
-              If you use "primary" for color, Streamlit will use the default
-              primary accent color unless you set the ``theme.primaryColor``
-              configuration option.
+            - Colored text and background colors for text. There are two ways
+              to apply colors:
+
+              - Streamlit color palette: Use the syntax
+                ``:color[your text]`` and
+                ``:color-background[your text]``, where ``color`` is one of: red,
+                orange, yellow, green, blue, violet, gray, grey, rainbow, or
+                primary. For example, ``:orange[your text]`` or
+                ``:blue-background[your text]``. If you use "primary", Streamlit
+                will use the default primary accent color unless you set the
+                ``theme.primaryColor`` configuration option.
+
+              - Custom CSS colors: Use the syntax
+                ``:color[your text]{foreground="..." background="..."}`` with a
+                valid CSS color value. Both ``foreground`` and ``background`` are
+                optional. Supported formats include named CSS colors, HEX, RGB(A),
+                and HSL(A). For example,
+                ``:color[warning]{foreground="#d50000"}`` or
+                ``:color[note]{foreground="rgb(0,100,200)" background="hsl(60,100%,90%)"}``.
+
+                .. note::
+                   When using ``:color[...]{}`` with custom CSS colors, a named
+                   color like ``"red"`` refers to the standard CSS named color,
+                   not the Streamlit palette color. RGB and HSL values must use
+                   comma-separated syntax; the modern space-separated syntax
+                   isn't supported. Colors are parsed by `color2k
+                   <https://color2k.com>`_.
 
             - Colored badges, using the syntax ``:color-badge[text in the badge]``.
               ``color`` must be replaced with any of the following supported
               colors: red, orange, yellow, green, blue, violet, gray/grey, or primary.
               For example, you can use ``:orange-badge[your text here]`` or
               ``:blue-badge[your text here]``.
+
+            - Shimmer effect for loading or in-progress text, using the syntax
+              ``:shimmer[text to shimmer]``. The text fades in and out to indicate
+              ongoing activity. This respects the user's reduced motion preferences.
 
             - Small text, using the syntax ``:small[text to show small]``.
 
@@ -119,11 +171,15 @@ class MarkdownMixin:
             including the Markdown directives described in the ``body``
             parameter of ``st.markdown``.
 
-        width : "stretch", "content", or int
+        width : "auto", "stretch", "content", or int
             The width of the Markdown element. This can be one of the following:
 
-            - ``"stretch"`` (default): The width of the element matches the
-              width of the parent container.
+            - ``"auto"`` (default): The width of the element adapts based on
+              the container flex layout. In vertical containers, the element
+              uses ``"stretch"`` width. In horizontal containers, the element
+              uses ``"content"`` width.
+            - ``"stretch"``: The width of the element matches the width of
+              the parent container.
             - ``"content"``: The width of the element matches the width of its
               content, but doesn't exceed the width of the parent container.
             - An integer specifying the width in pixels: The element has a
@@ -170,18 +226,13 @@ class MarkdownMixin:
            height: 350px
 
         """
-        markdown_proto = MarkdownProto()
-
-        markdown_proto.body = clean_text(body)
-        markdown_proto.allow_html = unsafe_allow_html
-        markdown_proto.element_type = MarkdownProto.Type.NATIVE
-        if help:
-            markdown_proto.help = help
-
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
-
-        return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
+        return self._markdown(
+            body,
+            unsafe_allow_html,
+            help=help,
+            width=width,
+            text_alignment=text_alignment,
+        )
 
     @gather_metrics("caption")
     def caption(
@@ -270,13 +321,13 @@ class MarkdownMixin:
         caption_proto = MarkdownProto()
         caption_proto.body = clean_text(body)
         caption_proto.allow_html = unsafe_allow_html
-        caption_proto.is_caption = True
         caption_proto.element_type = MarkdownProto.Type.CAPTION
         if help:
             caption_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width, text_alignment=text_alignment, allow_content_width=True
+        )
 
         return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
 
@@ -322,8 +373,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.latex(r'''
@@ -345,8 +396,7 @@ class MarkdownMixin:
         if help:
             latex_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
 
@@ -370,8 +420,8 @@ class MarkdownMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.divider()
@@ -382,8 +432,7 @@ class MarkdownMixin:
         divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
         divider_proto.element_type = MarkdownProto.Type.DIVIDER
 
-        validate_width(width, allow_content=False)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
 
@@ -513,8 +562,7 @@ class MarkdownMixin:
         if help is not None:
             badge_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
 

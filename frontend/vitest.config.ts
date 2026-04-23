@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,14 @@ export default defineConfig({
     // Global coverage configuration
     coverage: {
       provider: "v8",
-      reporter: ["text-summary", "json-summary", "html"],
+      reportsDirectory: "coverage",
+      reporter: [
+        "text-summary",
+        "json-summary",
+        "html",
+        // Add full JSON report when COVERAGE_JSON=1 (used by AI coverage workflows)
+        ...(process.env.COVERAGE_JSON ? (["json"] as const) : []),
+      ],
       include: ["*/src/**/*.{js,jsx,ts,tsx}"],
       exclude: [
         "**/*.d.ts",

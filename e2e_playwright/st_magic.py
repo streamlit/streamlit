@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,12 +32,12 @@ if True:
     "IF"
 
 if False:
-    pass
+    pass  # type: ignore[unreachable]
 elif True:
     "ELIF"
 
 if False:
-    pass
+    pass  # type: ignore[unreachable]
 else:
     "ELSE"
 
@@ -52,10 +52,7 @@ while True:
 
 @contextlib.contextmanager
 def context_mgr():
-    try:
-        yield
-    finally:
-        pass
+    yield
 
 
 with context_mgr():
@@ -105,10 +102,7 @@ async_loop.run_until_complete(async_for())
 async def async_with():
     @contextlib.asynccontextmanager
     async def async_context_mgr():
-        try:
-            yield
-        finally:
-            pass
+        yield
 
     async with async_context_mgr():
         "ASYNC WITH"
@@ -126,12 +120,9 @@ def docstrings():
         """Multiline docstring.
         Should not be printed.
         """
-        pass
 
     class Foo:
         """Class docstring. Should not be printed."""
-
-        pass
 
     nested()
 
@@ -141,7 +132,6 @@ docstrings()
 
 def my_func():
     """my_func: this help block should be printed."""
-    pass
 
 
 my_func

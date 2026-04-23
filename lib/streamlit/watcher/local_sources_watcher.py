@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -151,9 +151,26 @@ class LocalSourcesWatcher:
         # However, determining all import paths for a given loaded module is
         # non-trivial, and so as a workaround we simply unload all watched
         # modules.
-        for wm in self._watched_modules.values():
-            if wm.module_name is not None and wm.module_name in sys.modules:
-                del sys.modules[wm.module_name]
+        #
+        # Also evict every sys.modules entry that is a child (name prefix) of an
+        # evicted module. Otherwise PEP 420 namespace packages that span watched
+        # paths and blacklisted paths (e.g. site-packages) leave orphaned children
+        # in sys.modules; re-import then skips binding them on the new parent.
+        modules_to_evict = {
+            wm.module_name
+            for wm in self._watched_modules.values()
+            if wm.module_name is not None and wm.module_name in sys.modules
+        }
+        if modules_to_evict:
+            prefixes = tuple(f"{name}." for name in modules_to_evict)
+            all_to_evict = modules_to_evict.copy()
+            for key in list(sys.modules.keys()):
+                if key.startswith(prefixes):
+                    all_to_evict.add(key)
+
+            for name in all_to_evict:
+                if name in sys.modules:
+                    del sys.modules[name]
 
         for cb in self._on_path_changed:
             cb(filepath)
@@ -180,7 +197,7 @@ class LocalSourcesWatcher:
             glob_pattern = "**/*" if is_directory else None
 
             wm = WatchedModule(
-                watcher=PathWatcher(  # ty: ignore
+                watcher=PathWatcher(
                     filepath,
                     self.on_path_changed,
                     glob_pattern=glob_pattern,  # Pass as named parameter
@@ -254,20 +271,24 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # (or resource within a system) from which a module originates
         # ... It is up to the loader to decide on how to interpret
         # and use a module's origin, if at all.
-        lambda m: [m.__spec__.origin]
-        if hasattr(m, "__spec__") and m.__spec__ is not None
-        else [],
+        lambda m: (
+            [m.__spec__.origin]
+            if hasattr(m, "__spec__") and m.__spec__ is not None
+            else []
+        ),
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
-        lambda m: list(m.__path__._path)
-        if hasattr(m, "__path__")
-        # This check prevents issues with torch classes:
-        # https://github.com/streamlit/streamlit/issues/10992
-        and type(m.__path__).__name__ == "_NamespacePath"
-        and hasattr(m.__path__, "_path")
-        else [],
+        lambda m: (
+            list(m.__path__._path)
+            if hasattr(m, "__path__")
+            # This check prevents issues with torch classes:
+            # https://github.com/streamlit/streamlit/issues/10992
+            and type(m.__path__).__name__ == "_NamespacePath"
+            and hasattr(m.__path__, "_path")
+            else []
+        ),
     ]
 
     all_paths = set()

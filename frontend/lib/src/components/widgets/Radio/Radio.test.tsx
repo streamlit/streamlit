@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { act, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
@@ -59,25 +57,26 @@ describe("Radio widget", () => {
 
   it("sets widget value on mount", () => {
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    // Widget uses string values - the default option string at index 0 is "a"
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      "a",
       { fromUi: false },
       undefined
     )
   })
 
-  it("can pass fragmentId to setIntValue", () => {
+  it("can pass fragmentId to setStringValue", () => {
     const props = getProps(undefined, { fragmentId: "myFragmentId" })
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
       props.element,
-      props.element.default,
+      "a",
       { fromUi: false },
       "myFragmentId"
     )
@@ -168,16 +167,17 @@ describe("Radio widget", () => {
   it("sets the widget value when an option is selected", async () => {
     const user = userEvent.setup()
     const props = getProps()
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
     const radioOptions = screen.getAllByRole("radio")
     const secondOption = radioOptions[1]
 
     await user.click(secondOption)
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    // Widget uses string values - selecting index 1 sends option "b"
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      1,
+      "b",
       { fromUi: true },
       undefined
     )
@@ -190,7 +190,7 @@ describe("Radio widget", () => {
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
 
-    vi.spyOn(props.widgetMgr, "setIntValue")
+    vi.spyOn(props.widgetMgr, "setStringValue")
     render(<Radio {...props} />)
 
     const radioOptions = screen.getAllByRole("radio")
@@ -200,9 +200,9 @@ describe("Radio widget", () => {
     await user.click(secondOption)
     expect(secondOption).toBeChecked()
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      1,
+      "b",
       { fromUi: true },
       undefined
     )
@@ -217,12 +217,75 @@ describe("Radio widget", () => {
     const defaultValue = radioOptions[props.element.default]
     expect(defaultValue).toBeChecked()
 
-    expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+    // Reset sends the default option string "a"
+    expect(props.widgetMgr.setStringValue).toHaveBeenLastCalledWith(
       props.element,
-      props.element.default,
+      "a",
       {
         fromUi: true,
       },
+      undefined
+    )
+  })
+})
+
+describe("Radio query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_radio" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Radio {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_radio",
+      "string_value",
+      "a",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_radio" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<Radio {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Radio {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when no default", () => {
+    const props = getProps({ queryParamKey: "my_radio", default: null })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Radio {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_radio",
+      "string_value",
+      null,
+      true,
       undefined
     )
   })

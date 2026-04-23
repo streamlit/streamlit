@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -48,10 +48,6 @@ from tests.streamlit.data_mocks.pyspark_connect_mocks import (
     DataFrame as PySparkConnectDataFrame,
 )
 from tests.streamlit.data_mocks.pyspark_mocks import DataFrame as PySparkDataFrame
-from tests.streamlit.data_mocks.ray_mocks import Dataset as RayDataset
-from tests.streamlit.data_mocks.ray_mocks import (
-    MaterializedDataset as RayMaterializedDataset,
-)
 from tests.streamlit.data_mocks.snowpandas_mocks import DataFrame as SnowpandasDataFrame
 from tests.streamlit.data_mocks.snowpandas_mocks import Index as SnowpandasIndex
 from tests.streamlit.data_mocks.snowpandas_mocks import Series as SnowpandasSeries
@@ -1039,46 +1035,6 @@ SHARED_TEST_CASES: list[tuple[str, Any, CaseMetadata]] = [
             pd.DataFrame,
         ),
     ),
-    (
-        "Ray Dataset",
-        RayDataset(
-            pd.DataFrame(
-                [
-                    {"name": "st.text_area", "type": "widget"},
-                    {"name": "st.markdown", "type": "element"},
-                ]
-            )
-        ),
-        CaseMetadata(
-            2,
-            2,
-            DataFormat.RAY_DATASET,
-            ["st.text_area", "st.markdown"],
-            "dataframe",
-            True,
-            pd.DataFrame,
-        ),
-    ),
-    (
-        "Ray Materialized Dataset",
-        RayMaterializedDataset(
-            pd.DataFrame(
-                [
-                    {"name": "st.text_area", "type": "widget"},
-                    {"name": "st.markdown", "type": "element"},
-                ]
-            )
-        ),
-        CaseMetadata(
-            2,
-            2,
-            DataFormat.RAY_DATASET,
-            ["st.text_area", "st.markdown"],
-            "dataframe",
-            True,
-            pd.DataFrame,
-        ),
-    ),
 ]
 
 ###################################
@@ -1248,6 +1204,61 @@ try:
                     "json",
                     False,
                     dict,
+                ),
+            ),
+            (
+                "List of Pydantic Models",
+                [
+                    ElementPydanticModel(
+                        name="st.number_input", is_widget=True, usage=0.32
+                    ),
+                    ElementPydanticModel(
+                        name="st.text_input", is_widget=True, usage=0.45
+                    ),
+                ],
+                CaseMetadata(
+                    2,
+                    3,
+                    DataFormat.LIST_OF_RECORDS,
+                    [
+                        ElementPydanticModel(
+                            name="st.number_input", is_widget=True, usage=0.32
+                        ),
+                        ElementPydanticModel(
+                            name="st.text_input", is_widget=True, usage=0.45
+                        ),
+                    ],
+                    "json",
+                    False,
+                    list,
+                ),
+            ),
+            (
+                "Tuple of Pydantic Models",
+                (
+                    ElementPydanticModel(
+                        name="st.number_input", is_widget=True, usage=0.32
+                    ),
+                    ElementPydanticModel(
+                        name="st.text_input", is_widget=True, usage=0.45
+                    ),
+                ),
+                CaseMetadata(
+                    2,
+                    3,
+                    DataFormat.LIST_OF_RECORDS,
+                    [
+                        ElementPydanticModel(
+                            name="st.number_input", is_widget=True, usage=0.32
+                        ),
+                        ElementPydanticModel(
+                            name="st.text_input", is_widget=True, usage=0.45
+                        ),
+                    ],
+                    "json",
+                    False,
+                    # LIST_OF_RECORDS always converts back to list, not tuple
+                    list,
                 ),
             ),
         ]

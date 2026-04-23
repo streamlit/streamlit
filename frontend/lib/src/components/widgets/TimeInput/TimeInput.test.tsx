@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, screen, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   TimeInput as TimeInputProto,
 } from "@streamlit/protobuf"
 
@@ -66,7 +64,7 @@ describe("TimeInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<TimeInput {...props} />)
@@ -79,7 +77,7 @@ describe("TimeInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<TimeInput {...props} />)
@@ -259,5 +257,65 @@ describe("TimeInput widget", () => {
 
     expect(timeDisplay).toHaveAttribute("value", "12:45")
     expect(timeDisplay).toHaveTextContent("12:45")
+  })
+})
+
+describe("TimeInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_time" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_time",
+      "string_value",
+      "12:45",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_time" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<TimeInput {...props} />)
+
+    unregisterSpy.mockClear()
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when default is empty", () => {
+    const props = getProps({ queryParamKey: "my_time", default: undefined })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TimeInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_time",
+      "string_value",
+      null,
+      true,
+      undefined
+    )
   })
 })

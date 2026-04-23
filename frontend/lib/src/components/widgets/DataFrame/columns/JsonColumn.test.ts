@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,8 +92,7 @@ describe("JsonColumn", () => {
     [undefined, null, ""],
   ])(
     "handles different JSON-compatible values (%p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, expected: any, displayValue: string) => {
+    (input: unknown, expected: unknown, displayValue: string) => {
       const mockColumn = JsonColumn(MOCK_JSON_COLUMN_PROPS)
       const cell = mockColumn.getCell(input) as JsonCell
       expect(mockColumn.getCellValue(cell)).toEqual(expected)

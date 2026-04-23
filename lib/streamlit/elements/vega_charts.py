@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
     Any,
-    Final,
     Literal,
     TypeAlias,
     TypedDict,
@@ -40,7 +39,6 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib import dicttools
 from streamlit.elements.lib.built_in_chart_utils import (
     AddRowsMetadata,
     ChartStackType,
@@ -59,13 +57,13 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
-from streamlit.proto.ArrowVegaLiteChart_pb2 import (
-    ArrowVegaLiteChart as ArrowVegaLiteChartProto,
+from streamlit.proto.VegaLiteChart_pb2 import (
+    VegaLiteChart as VegaLiteChartProto,
 )
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_md5
+from streamlit.util import AttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -75,36 +73,6 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.color_util import Color
-
-# See https://vega.github.io/vega-lite/docs/encoding.html
-_CHANNELS: Final = {
-    "x",
-    "y",
-    "x2",
-    "y2",
-    "xError",
-    "xError2",
-    "yError",
-    "yError2",
-    "longitude",
-    "latitude",
-    "color",
-    "opacity",
-    "fillOpacity",
-    "strokeOpacity",
-    "strokeWidth",
-    "size",
-    "shape",
-    "text",
-    "tooltip",
-    "href",
-    "key",
-    "order",
-    "detail",
-    "facet",
-    "row",
-    "column",
-}
 
 VegaLiteSpec: TypeAlias = dict[str, Any]
 AltairChart: TypeAlias = Union[
@@ -279,20 +247,50 @@ def _patch_null_legend_titles(spec: VegaLiteSpec) -> None:
         legend["title"] = " "
 
 
+def _has_nested_composition(spec: VegaLiteSpec) -> bool:
+    """Check if a vconcat spec contains nested multi-view compositions.
+
+    This function checks if a vconcat chart contains nested hconcat, vconcat,
+    concat, layer, facet, or repeat operators. Such nested compositions don't
+    work well with fit-x autosize and forced child widths, and can cause
+    infinite extent errors.
+
+    In valid Vega-Lite specs, composition operators
+    (hconcat, vconcat, concat, layer, facet, repeat) are always top-level keys
+    of a view specification. They cannot be buried inside encoding, mark, or
+    other nested properties. This allows us to check only the immediate children
+    of vconcat for nested composition operators.
+
+    Parameters
+    ----------
+    spec : VegaLiteSpec
+        The Vega-Lite spec to check.
+
+    Returns
+    -------
+    bool
+        True if the spec contains nested composition operators, False otherwise.
+    """
+    # Check if vconcat contains nested compositions.
+    # We only need to check top-level keys of each child spec since composition
+    # operators are always top-level in valid Vega-Lite specs.
+    if "vconcat" in spec and isinstance(spec["vconcat"], list):
+        for item in spec["vconcat"]:
+            # Check if this item is a dict containing any composition operator
+            if isinstance(item, dict) and any(
+                k in item
+                for k in ["hconcat", "vconcat", "concat", "layer", "facet", "repeat"]
+            ):
+                return True
+    return False
+
+
 def _prepare_vega_lite_spec(
     spec: VegaLiteSpec,
     use_container_width: bool,
-    **kwargs: Any,
 ) -> VegaLiteSpec:
-    if kwargs:
-        # Support passing in kwargs.
-        # > marshall(proto, {foo: 'bar'}, baz='boz')
-        # Merge spec with unflattened kwargs, where kwargs take precedence.
-        # This only works for string keys, but kwarg keys are strings anyways.
-        spec = dict(spec, **dicttools.unflatten(kwargs, _CHANNELS))
-    else:
-        # Clone the spec dict, since we may be mutating it.
-        spec = dict(spec)
+    # Clone the spec dict, since we may be mutating it.
+    spec = dict(spec)
 
     if len(spec) == 0:
         raise StreamlitAPIException("Vega-Lite charts require a non-empty spec dict.")
@@ -306,10 +304,33 @@ def _prepare_vega_lite_spec(
             "encoding" in spec
             and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
         )
-        if "vconcat" in spec and use_container_width:
-            spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+        has_nested_comp = _has_nested_composition(spec)
 
-        elif is_facet_chart:
+        if "vconcat" in spec and use_container_width:
+            # For vconcat charts with container width stretching:
+            # - Simple vconcat: use fit-x (fits width only, better control)
+            # - Nested compositions (vconcat+hconcat): use pad (no automatic fitting)
+            #   fit-x causes "Infinite extent" errors with nested hconcat (issue #13410)
+            #
+            # Known limitation: Nested compositions may overflow the container because
+            # Vega-Lite's width property only controls the plotting area (data marks),
+            # not the total SVG width which includes axes, labels, legends, and padding.
+            # The frontend sets spec.width to containerWidth, but with autosize: pad,
+            # Vega adds decorations on top, causing total SVG to exceed container bounds.
+            # This is a Vega-Lite architectural limitation similar to facet charts
+            # (see https://github.com/vega/vega-lite/issues/5219).
+            # Trade-off: Accept overflow to ensure charts render correctly rather than
+            # appear as empty elements with "Infinite extent" errors.
+            if has_nested_comp:
+                # use pad = "no automatic fitting" - accurate description of what's happening
+                # produces same overflow behavior as fit
+                spec["autosize"] = {"type": "pad", "contains": "padding"}
+            else:
+                spec["autosize"] = {"type": "fit-x", "contains": "padding"}
+
+        elif is_facet_chart or (has_nested_comp and not use_container_width):
+            # Facet charts and nested compositions without stretching use pad
+            # (no automatic sizing, uses natural/content size)
             spec["autosize"] = {"type": "pad", "contains": "padding"}
 
         else:
@@ -321,7 +342,7 @@ def _prepare_vega_lite_spec(
 
 
 def _marshall_chart_data(
-    proto: ArrowVegaLiteChartProto,
+    proto: VegaLiteChartProto,
     spec: VegaLiteSpec,
     data: Data = None,
 ) -> None:
@@ -379,7 +400,7 @@ def _convert_altair_to_vega_lite_spec(
 
     # alt.themes was deprecated in Altair 5.5.0 in favor of alt.theme
     if type_util.is_altair_version_less_than("5.5.0"):
-        alt_theme = alt.themes  # ty: ignore[unresolved-attribute]
+        alt_theme = alt.themes
     else:
         alt_theme = alt.theme
 
@@ -423,40 +444,44 @@ def _convert_altair_to_vega_lite_spec(
     return chart_dict
 
 
-def _disallow_multi_view_charts(spec: VegaLiteSpec) -> None:
-    """Raise an exception if the spec contains a multi-view chart (view composition).
-
-    This is intended to be used as a temporary solution to prevent selections on
-    multi-view charts. There are too many edge cases to handle selections on these
-    charts correctly, so we're disallowing them for now.
-
-    More information about view compositions: https://vega.github.io/vega-lite/docs/composition.html
-    """
-
-    if (
-        any(key in spec for key in ["layer", "hconcat", "vconcat", "concat", "spec"])
-        or "encoding" not in spec
-    ):
-        raise StreamlitAPIException(
-            "Selections are not yet supported for multi-view charts (chart compositions). "
-            "If you would like to use selections on multi-view charts, please upvote "
-            "this [Github issue](https://github.com/streamlit/streamlit/issues/8643)."
-        )
-
-
 def _extract_selection_parameters(spec: VegaLiteSpec) -> set[str]:
-    """Extract the names of all valid selection parameters from the spec."""
-    if not spec or "params" not in spec:
+    """Extract the names of all valid selection parameters from the spec.
+
+    This function recursively traverses composite view specs (layer, hconcat,
+    vconcat, concat, facet, repeat) to find all selection parameters, regardless
+    of where they are defined in the spec hierarchy.
+
+    Altair automatically hoists params to the top level, but raw Vega-Lite specs
+    may have params defined at any level in the view hierarchy.
+    """
+    if not spec:
         return set()
 
-    param_names = set()
+    param_names: set[str] = set()
 
-    for param in spec["params"]:
-        # Check if it looks like a valid selection parameter:
-        # https://vega.github.io/vega-lite/docs/selection.html
-        if param.get("name") and param.get("select"):
-            # Selection found, just return here to not show the exception.
-            param_names.add(param["name"])
+    # Extract from top-level params.
+    # Non-list params or non-dict entries are silently skipped as they are malformed.
+    if "params" in spec and isinstance(spec["params"], list):
+        for param in spec["params"]:
+            if not isinstance(param, dict):
+                # This is unexpected and should not happen
+                continue
+            # Check if it looks like a valid selection parameter:
+            # https://vega.github.io/vega-lite/docs/selection.html
+            if param.get("name") and param.get("select"):
+                param_names.add(param["name"])
+
+    # Recursively check composite view specs (layer, hconcat, vconcat, concat).
+    # Non-dict entries in the list are silently skipped as they are malformed.
+    for key in ("layer", "hconcat", "vconcat", "concat"):
+        if key in spec and isinstance(spec[key], list):
+            for child_spec in spec[key]:
+                if isinstance(child_spec, dict):
+                    param_names.update(_extract_selection_parameters(child_spec))
+
+    # Check facet/repeat spec (the inner view specification)
+    if "spec" in spec and isinstance(spec["spec"], dict):
+        param_names.update(_extract_selection_parameters(spec["spec"]))
 
     return param_names
 
@@ -667,6 +692,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name: "red", "orange", "yellow", "green",
+              "blue", "violet", "gray"/"grey", or "primary". These map to
+              theme colors that you can customize using ``theme.<color>Color``
+              configuration options.
 
             For a line chart with multiple lines, where the dataframe is in
             long format (that is, y is None or just one column), this can be:
@@ -695,7 +724,8 @@ class VegaChartsMixin:
             - A list of string colors or color tuples to be used for each of
               the lines in the chart. This list should have the same length
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
-              for three lines).
+              for three lines). You can also use built-in color names in the
+              list (e.g. ``color=["red", "blue", "green"]``).
 
             You can set the default colors in the ``theme.chartCategoryColors``
             configuration option.
@@ -737,7 +767,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -901,6 +931,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name: "red", "orange", "yellow", "green",
+              "blue", "violet", "gray"/"grey", or "primary". These map to
+              theme colors that you can customize using ``theme.<color>Color``
+              configuration options.
 
             For an area chart with multiple series, where the dataframe is in
             long format (that is, y is None or just one column), this can be:
@@ -929,7 +963,8 @@ class VegaChartsMixin:
             - A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
-              for three lines).
+              for three lines). You can also use built-in color names in the
+              list (e.g. ``color=["red", "blue", "green"]``).
 
             You can set the default colors in the ``theme.chartCategoryColors``
             configuration option.
@@ -983,7 +1018,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1190,6 +1225,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name: "red", "orange", "yellow", "green",
+              "blue", "violet", "gray"/"grey", or "primary". These map to
+              theme colors that you can customize using ``theme.<color>Color``
+              configuration options.
 
             For a bar chart with multiple series, where the dataframe is in
             long format (that is, y is None or just one column), this can be:
@@ -1218,7 +1257,8 @@ class VegaChartsMixin:
             - A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
-              for three lines).
+              for three lines). You can also use built-in color names in the
+              list (e.g. ``color=["red", "blue", "green"]``).
 
             You can set the default colors in the ``theme.chartCategoryColors``
             configuration option.
@@ -1292,7 +1332,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1517,6 +1557,10 @@ class VegaChartsMixin:
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
+            - A built-in color name: "red", "orange", "yellow", "green",
+              "blue", "violet", "gray"/"grey", or "primary". These map to
+              theme colors that you can customize using ``theme.<color>Color``
+              configuration options.
             - The name of a column in the dataset where the color of that
               datapoint will come from.
 
@@ -1544,7 +1588,8 @@ class VegaChartsMixin:
             - A list of string colors or color tuples to be used for each of
               the series in the chart. This list should have the same length
               as the number of y values (e.g. ``color=["#fd0", "#f0f", "#04f"]``
-              for three series).
+              for three series). You can also use built-in color names in the
+              list (e.g. ``color=["red", "blue", "green"]``).
 
         size : str, float, int, or None
             The size of the circles representing each point.
@@ -1593,7 +1638,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1780,6 +1825,10 @@ class VegaChartsMixin:
                 - Horizontal concatenation charts: the spec contains
                   ``"hconcat"``.
                 - Repeat charts: the spec contains ``"repeat"``.
+                - Nested composition charts: the spec contains ``"vconcat"``
+                  with nested ``"hconcat"``, ``"vconcat"``, ``"concat"``, or
+                  ``"layer"`` operators (e.g., scatter plots with marginal
+                  histograms).
 
         height : "content", "stretch", or int
             The height of the chart element. This can be one of the following:
@@ -1809,7 +1858,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -1823,14 +1872,19 @@ class VegaChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
             Additionally, if selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -1857,6 +1911,15 @@ class VegaChartsMixin:
             <https://altair-viz.github.io/user_guide/interactions.html>`_
             in Altair's documentation.
 
+            For consistent selection output, especially in multi-view charts
+            (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
+            ``encodings`` in your selection, like
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
+
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
             ``selection_mode`` is ``None`` (default), Streamlit will use all
@@ -1880,9 +1943,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
-
+        Examples
+        --------
         >>> import altair as alt
         >>> import pandas as pd
         >>> import streamlit as st
@@ -1928,7 +1990,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["ignore"] = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> DeltaGenerator: ...
 
     # When on_select=rerun, return VegaLiteState.
@@ -1945,7 +2006,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun"] | WidgetCallback,
         selection_mode: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> VegaLiteState: ...
 
     @gather_metrics("vega_lite_chart")
@@ -1961,7 +2021,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Display a chart using the Vega-Lite library.
 
@@ -1999,6 +2058,10 @@ class VegaChartsMixin:
                 - Horizontal concatenation charts: the spec contains
                   ``"hconcat"``.
                 - Repeat charts: the spec contains ``"repeat"``.
+                - Nested composition charts: the spec contains ``"vconcat"``
+                  with nested ``"hconcat"``, ``"vconcat"``, ``"concat"``, or
+                  ``"layer"`` operators (e.g., scatter plots with marginal
+                  histograms).
 
         height : "content", "stretch", or int
             The height of the chart element. This can be one of the following:
@@ -2028,7 +2091,7 @@ class VegaChartsMixin:
               the parent container.
 
             .. deprecated::
-               ``use_container_width`` is deprecated and will be removed in a
+                ``use_container_width`` is deprecated and will be removed in a
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``.
 
@@ -2042,14 +2105,19 @@ class VegaChartsMixin:
             ``theme.chartSequentialColors``. Font configuration options are
             also applied.
 
-        key : str
+        key : str, int, or None
             An optional string to use for giving this element a stable
-            identity. If ``key`` is ``None`` (default), this element's identity
+            identity. If this is ``None`` (default), the element's identity
             will be determined based on the values of the other parameters.
 
-            Additionally, if selections are activated and ``key`` is provided,
+            If selections are activated and ``key`` is provided,
             Streamlit will register the key in Session State to store the
-            selection state. The selection state is read-only.
+            selection state. The selection state is read-only. For more
+            details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_select : "ignore", "rerun", or callable
             How the figure should respond to user selection events. This
@@ -2076,6 +2144,15 @@ class VegaChartsMixin:
             <https://vega.github.io/vega-lite/docs/parameter.html>`_
             in Vega-Lite's documentation.
 
+            For consistent selection output, especially in multi-view charts
+            (layer, hconcat, vconcat, facet, repeat), specify ``fields`` or
+            ``encodings`` in your selection, like
+            ``alt.selection_point(fields=["Origin"])`` or
+            ``alt.selection_point(encodings=["x", "y"])``. Without explicit
+            fields, Vega may add an internal row identifier field (``vgsid``)
+            to your data, and selections can then return this identifier
+            instead of your original data values.
+
         selection_mode : str or Iterable of str
             The selection parameters Streamlit should use. If
             ``selection_mode`` is ``None`` (default), Streamlit will use all
@@ -2089,15 +2166,6 @@ class VegaChartsMixin:
 
             Selection parameters are identified by their ``name`` property.
 
-        **kwargs : any
-            The Vega-Lite spec for the chart as keywords. This is an alternative
-            to ``spec``.
-
-            .. deprecated::
-               ``**kwargs`` are deprecated and will be removed in a future
-               release. To specify Vega-Lite configuration options, use the
-               ``spec`` argument instead.
-
         Returns
         -------
         element or dict
@@ -2108,8 +2176,8 @@ class VegaChartsMixin:
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import pandas as pd
         >>> import streamlit as st
         >>> from numpy.random import default_rng as rng
@@ -2138,14 +2206,6 @@ class VegaChartsMixin:
         translated to the syntax shown above.
 
         """
-        if kwargs:
-            show_deprecation_warning(
-                "Variable keyword arguments for `st.vega_lite_chart` have been "
-                "deprecated and will be removed in a future release. Use the "
-                "`spec` argument instead to specify Vega-Lite configuration "
-                "options."
-            )
-
         return self._vega_lite_chart(
             data=data,
             spec=spec,
@@ -2156,7 +2216,6 @@ class VegaChartsMixin:
             selection_mode=selection_mode,
             width=width,
             height=height,
-            **kwargs,
         )
 
     def _altair_chart(
@@ -2210,20 +2269,19 @@ class VegaChartsMixin:
         add_rows_metadata: AddRowsMetadata | None = None,
         width: Width | None = None,
         height: Height = "content",
-        **kwargs: Any,
     ) -> DeltaGenerator | VegaLiteState:
         """Internal method to enqueue a vega-lite chart element based on a vega-lite spec.
 
         See the `vega_lite_chart` method docstring for more information.
         """
-        if theme not in ["streamlit", None]:
+        if theme not in {"streamlit", None}:
             raise StreamlitAPIException(
                 f'You set theme="{theme}" while Streamlit charts only support '
                 "theme=”streamlit” or theme=None to fallback to the default "
                 "library theme."
             )
 
-        if on_select not in ["ignore", "rerun"] and not callable(on_select):
+        if on_select not in {"ignore", "rerun"} and not callable(on_select):
             raise StreamlitAPIException(
                 f"You have passed {on_select} to `on_select`. But only 'ignore', "
                 "'rerun', or a callable is supported."
@@ -2263,13 +2321,21 @@ class VegaChartsMixin:
             # those charts (see https://github.com/streamlit/streamlit/issues/9091).
             # All other charts (including vertical concatenation) default to
             # `width=stretch` unless width is provided.
+            # Nested vconcat+hconcat charts (issue #13410) also don't work well
+            # with width=stretch, so we treat them like hconcat charts.
             is_facet_chart = "facet" in spec or (
                 "encoding" in spec
                 and (any(x in spec["encoding"] for x in ["row", "column", "facet"]))
             )
+            has_nested_comp = _has_nested_composition(spec)
             width = (
                 "stretch"
-                if not (is_facet_chart or "hconcat" in spec or "repeat" in spec)
+                if not (
+                    is_facet_chart
+                    or "hconcat" in spec
+                    or "repeat" in spec
+                    or has_nested_comp
+                )
                 else "content"
             )
 
@@ -2296,7 +2362,7 @@ class VegaChartsMixin:
             validate_width(width, allow_content=True)
         validate_height(height, allow_content=True)
 
-        vega_lite_proto = ArrowVegaLiteChartProto()
+        vega_lite_proto = VegaLiteChartProto()
 
         use_container_width_for_spec = (
             use_container_width
@@ -2304,7 +2370,7 @@ class VegaChartsMixin:
             else width == "stretch"
         )
 
-        spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec, **kwargs)
+        spec = _prepare_vega_lite_spec(spec, use_container_width_for_spec)
         _marshall_chart_data(vega_lite_proto, spec, data)
 
         # Prevent the spec from changing across reruns:
@@ -2317,8 +2383,6 @@ class VegaChartsMixin:
         if is_selection_activated:
             # Load the stabilized spec again as a dict:
             final_spec = json.loads(vega_lite_proto.spec)
-            # Temporary limitation to disallow multi-view charts (compositions) with selections.
-            _disallow_multi_view_charts(final_spec)
 
             # Parse and check the specified selection modes
             parsed_selection_modes = _parse_selection_mode(final_spec, selection_mode)
@@ -2328,9 +2392,12 @@ class VegaChartsMixin:
 
             ctx = get_script_run_ctx()
             vega_lite_proto.id = compute_and_register_element_id(
-                "arrow_vega_lite_chart",
+                "vega_lite_chart",
                 user_key=key,
-                key_as_main_identity=False,
+                # There are some edge cases where selections can become orphaned when the data changes.
+                #  The frontend can handle this without errors, but it might be a nice enhancement
+                # to automatically reset the backend & frontend selection state in this case.
+                key_as_main_identity={"selection_mode"},
                 dg=self.dg,
                 vega_lite_spec=vega_lite_proto.spec,
                 # The data is either in vega_lite_proto.data.data
@@ -2357,7 +2424,7 @@ class VegaChartsMixin:
 
             layout_config = LayoutConfig(width=width, height=height)
             self.dg._enqueue(
-                "arrow_vega_lite_chart",
+                "vega_lite_chart",
                 vega_lite_proto,
                 add_rows_metadata=add_rows_metadata,
                 layout_config=layout_config,
@@ -2368,7 +2435,7 @@ class VegaChartsMixin:
         # the delta generator related to this element.
         layout_config = LayoutConfig(width=width, height=height)
         return self.dg._enqueue(
-            "arrow_vega_lite_chart",
+            "vega_lite_chart",
             vega_lite_proto,
             add_rows_metadata=add_rows_metadata,
             layout_config=layout_config,
@@ -2389,8 +2456,8 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
     # Already serialize the data to be able to create a stable
     # dataset name:
     data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    # Use the md5 hash of the data as the name:
-    name = calc_md5(str(data_bytes))
+    # Use the content hash of the data as the name:
+    name = calc_hash(str(data_bytes))
 
     datasets[name] = data_bytes
     return {"name": name}

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,32 +16,17 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "DeckGlJsonChartProto";
-
 message DeckGlJsonChart {
   // The json of the pydeck object (https://deckgl.readthedocs.io/en/latest/deck.html)
   string json = 1;
 
   string tooltip = 2;
 
-  // DEPRECATED: If True, will overwrite the chart width spec to fit to container.
-  // Use widthConfig in layout configuration instead.
-  bool use_container_width = 4 [deprecated=true];
-
   // ID, required for selection events.
   string id = 5;
 
   // The Mapbox token, if any.
   string mapbox_token = 6;
-
-  // DEPRECATED: Width in pixels
-  // Use widthConfig in layout configuration instead.
-  uint32 width = 7 [deprecated=true];
-
-  // DEPRECATED: Height in pixels
-  // Use heightConfig in layout configuration instead.
-  uint32 height = 8 [deprecated=true];
 
   // If non-empty, treat this instance as a Widget
   repeated SelectionMode selection_mode = 9;
@@ -55,5 +40,5 @@ message DeckGlJsonChart {
     MULTI_OBJECT = 1; // Multiple objects can be selected at a time.
   }
 
-  // Next ID: 11
+  reserved 4, 7, 8;
 }

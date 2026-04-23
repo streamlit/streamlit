@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -187,8 +187,13 @@ def _is_likely_streamlit_component_package(
     bool
         True if the package might contain streamlit components, False otherwise.
     """
-    # Get package metadata
-    name = dist.name.lower()
+    dist_name = dist.name
+    if not isinstance(dist_name, str) or not dist_name:
+        # We do not expect a distribution to be missing its name, be defensive
+        # and fail closed to prevent runtime issues.
+        return False
+
+    name = dist_name.lower()
     summary = dist.metadata["Summary"].lower() if "Summary" in dist.metadata else ""
 
     # Filter 1: Package name suggests streamlit component
@@ -386,7 +391,7 @@ def _validate_pyproject_for_package(
             canonical_package = packaging_utils.canonicalize_name(package_name)
 
             # Check if project name matches either the distribution name or the package name
-            return canonical_project in (canonical_dist, canonical_package)
+            return canonical_project in {canonical_dist, canonical_package}
 
         # If we can't determine ownership, be conservative and reject it
         return False

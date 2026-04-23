@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,23 +19,24 @@
 import { lightThemePrimitives } from "baseui"
 import { transparentize } from "color2k"
 
-import { ThemeConfig } from "~lib/theme"
 import { createBaseUiTheme } from "~lib/theme/createBaseUiTheme"
 import { createEmotionColors } from "~lib/theme/getColors"
+import { createShadows } from "~lib/theme/getShadows"
+import { breakpoints } from "~lib/theme/primitives/breakpoints"
+import { colors } from "~lib/theme/primitives/colors"
+import { iconSizes } from "~lib/theme/primitives/iconSizes"
+import { radii } from "~lib/theme/primitives/radii"
+import { sizes } from "~lib/theme/primitives/sizes"
+import { spacing } from "~lib/theme/primitives/spacing"
 import {
-  breakpoints,
-  colors,
   fonts,
   fontSizes,
   fontWeights,
   genericFonts,
-  iconSizes,
   lineHeights,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "~lib/theme/primitives"
+} from "~lib/theme/primitives/typography"
+import { zIndices } from "~lib/theme/primitives/zIndices"
+import type { ThemeConfig } from "~lib/theme/types"
 
 const requiredThemeColors = {
   bgColor: colors.white,
@@ -85,12 +86,16 @@ const genericColors = {
   ...optionalThemeColors,
 }
 
+// Create colors and shadows using the same pattern as emotionBaseTheme
+const emotionColors = createEmotionColors(genericColors)
+const shadows = createShadows(emotionColors)
+
 const emotionMockTheme = {
   inSidebar: false,
   showSidebarBorder: false,
   linkUnderline: true,
   breakpoints,
-  colors: createEmotionColors(genericColors),
+  colors: emotionColors,
   fonts,
   fontSizes,
   fontWeights,
@@ -98,6 +103,7 @@ const emotionMockTheme = {
   iconSizes,
   lineHeights,
   radii,
+  shadows,
   sizes,
   spacing,
   zIndices,

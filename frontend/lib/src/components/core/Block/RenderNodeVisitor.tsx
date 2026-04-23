@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,10 @@ import { BlockNode, ElementNode, TransientNode } from "~lib/AppNode"
 import { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 import { getElementId } from "~lib/util/utils"
 
-import { BlockNodeRenderer } from "./Block"
+import { BlockNodeRenderer, BlockPropsWithoutWidth } from "./Block"
 import ElementNodeRenderer from "./ElementNodeRenderer"
 
-import { BlockPropsWithoutWidth } from "."
-
-export type OptionalReactElements =
-  | ReactElement
-  | ReactElement[]
-  | null
-  | undefined
+type OptionalReactElements = ReactElement | ReactElement[] | null | undefined
 
 /**
  * A visitor that renders AppNodes as React elements.
@@ -47,9 +41,7 @@ export type OptionalReactElements =
  * return <>{elements}</>
  * ```
  */
-export class RenderNodeVisitor
-  implements AppNodeVisitor<OptionalReactElements>
-{
+export class RenderNodeVisitor implements AppNodeVisitor<OptionalReactElements> {
   private readonly props: BlockPropsWithoutWidth
   private readonly elementKeyOverride?: string
   private readonly elementKeySet: Set<string>
@@ -91,7 +83,10 @@ export class RenderNodeVisitor
       node,
     }
 
-    const key = this.getCurrentKey()
+    // Use blockId as React key when available so that keyed containers
+    // maintain component identity across positional shifts (e.g. when a
+    // conditional element above the container causes it to move).
+    const key = this.getCurrentKey(node.deltaBlock?.id || undefined)
     this.index += 1
     const renderer = <BlockNodeRenderer key={key} {...childProps} />
     this.reactElements.push(renderer)

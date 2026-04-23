@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -83,8 +83,8 @@ def cache(
         The maximum number of seconds to keep an entry in the cache, or
         None if cache entries should not expire. The default is None.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> @st.cache

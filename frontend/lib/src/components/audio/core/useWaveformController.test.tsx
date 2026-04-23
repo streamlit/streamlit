@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -247,9 +247,8 @@ describe("useWaveformController", () => {
     }
 
     const WaveSurferModule = await import("wavesurfer.js")
-    const RecordPluginModule = await import(
-      "wavesurfer.js/dist/plugins/record"
-    )
+    const RecordPluginModule =
+      await import("wavesurfer.js/dist/plugins/record")
 
     // Mock the WaveSurfer.create to return our mock instance
     const createMock = WaveSurferModule.default.create as ReturnType<
@@ -346,9 +345,8 @@ describe("useWaveformController", () => {
     mockRecordPlugin.on.mockImplementation(() => {})
 
     const WaveSurferModule = await import("wavesurfer.js")
-    const RecordPluginModule = await import(
-      "wavesurfer.js/dist/plugins/record"
-    )
+    const RecordPluginModule =
+      await import("wavesurfer.js/dist/plugins/record")
 
     const createMock = WaveSurferModule.default.create as ReturnType<
       typeof vi.fn

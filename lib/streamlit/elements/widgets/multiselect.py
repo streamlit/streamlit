@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,15 +29,17 @@ from typing import (
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
+    SelectWidgetFilterMode,
     convert_to_sequence_and_check_comparable,
     create_mappings,
     get_default_indices,
     maybe_coerce_enum_sequence,
+    validate_and_sync_multiselect_value_with_options,
+    validate_select_widget_filter_mode,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -52,12 +54,13 @@ from streamlit.elements.lib.utils import (
     to_key,
 )
 from streamlit.errors import (
+    StreamlitInvalidMaxError,
     StreamlitSelectionCountExceedsMaxError,
 )
 from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import ScriptRunContext, get_script_run_ctx
-from streamlit.runtime.state import register_widget
+from streamlit.runtime.state import BindOption, register_widget
 from streamlit.type_util import (
     is_iterable,
 )
@@ -81,6 +84,7 @@ class MultiSelectSerde(Generic[T]):
     formatted_options: list[str]
     formatted_option_to_option_index: dict[str, int]
     default_options_indices: list[int]
+    format_func: Callable[[Any], str]
 
     def __init__(
         self,
@@ -89,6 +93,7 @@ class MultiSelectSerde(Generic[T]):
         formatted_options: list[str],
         formatted_option_to_option_index: dict[str, int],
         default_options_indices: list[int] | None = None,
+        format_func: Callable[[Any], str] = str,
     ) -> None:
         """Initialize the MultiSelectSerde.
 
@@ -107,27 +112,48 @@ class MultiSelectSerde(Generic[T]):
         formatted_option_to_option_index : dict[str, int]
             A mapping from formatted option strings to their corresponding indices in
             the options sequence.
-        default_option_index : int or None, optional
-            The index of the default option to use when no selection is made.
-            If None, no default option is selected.
+        default_options_indices : list[int] or None, optional
+            The indices of the default options to use when no selection is made.
+            If None, no default options are selected.
+        format_func : Callable[[Any], str], optional
+            Function to format options for comparison. Used to compare values by their
+            string representation instead of using == directly. This is necessary because
+            widget values are deepcopied, and for custom classes without __eq__, the
+            deepcopied instances would fail identity comparison.
         """
 
         self.options = options
         self.formatted_options = formatted_options
         self.formatted_option_to_option_index = formatted_option_to_option_index
         self.default_options_indices = default_options_indices or []
+        self.format_func = format_func
 
     def serialize(self, value: list[T | str] | list[T]) -> list[str]:
         converted_value = convert_anything_to_list(value)
         values: list[str] = []
         for v in converted_value:
+            # Use format_func to find the formatted option instead of using
+            # self.options.index(v) which relies on == comparison. This is necessary
+            # because widget values are deepcopied, and for custom classes without
+            # __eq__, the deepcopied instances would fail identity comparison.
             try:
-                option_index = self.options.index(v)
-                values.append(self.formatted_options[option_index])
-            except ValueError:  # noqa: PERF203
-                # at this point we know that v is a string, otherwise
-                # it would have been found in the options
-                values.append(cast("str", v))
+                formatted_value = self.format_func(v)
+            except Exception:
+                # format_func failed (e.g., v is a string but format_func expects
+                # an object with specific attributes). Use str(v) to ensure we append
+                # a proper string, not the original object. This handles both cases:
+                # - v is already a string -> str(v) returns it unchanged
+                # - v is a custom object -> str(v) gives its string representation
+                values.append(str(v))
+                continue
+
+            if formatted_value in self.formatted_option_to_option_index:
+                values.append(formatted_value)
+            else:
+                # Value not found in options - it's likely a user-entered string
+                # (when accept_new_options=True) or an invalid value. Use the
+                # formatted string (not the original object) for type consistency.
+                values.append(formatted_value)
         return values
 
     def deserialize(self, ui_value: list[str] | None) -> list[T | str] | list[T]:
@@ -184,7 +210,9 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[False] = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T]: ...
 
     @overload
@@ -205,7 +233,9 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: Literal[True] = True,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T | str]: ...
 
     @overload
@@ -226,7 +256,9 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T] | list[T | str]: ...
 
     @gather_metrics("multiselect")
@@ -246,8 +278,10 @@ class MultiSelectMixin:
         placeholder: str | None = None,
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
-        accept_new_options: Literal[False, True] | bool = False,
+        accept_new_options: bool = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
     ) -> list[T] | list[T | str]:
         r"""Display a multiselect widget.
         The multiselect widget starts as empty.
@@ -262,9 +296,9 @@ class MultiSelectMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -291,10 +325,24 @@ class MultiSelectMixin:
             shown for that option. This has no impact on the return value of
             the command.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``max_selections`` or ``accept_new_options``
+               resets the widget even when a key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -314,8 +362,10 @@ class MultiSelectMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        max_selections : int
-            The max selections that can be selected at a time.
+        max_selections : int or None
+            The max selections that can be selected at a time. If this is
+            ``None`` (default), there is no limit on the number of selections.
+            If this is an integer, it must be positive.
 
         placeholder : str or  None
             A string to display when no options are selected.
@@ -355,6 +405,18 @@ class MultiSelectMixin:
             can't be added if a case-insensitive match is already selected. The
             ``max_selections`` argument is still enforced.
 
+        filter_mode : "fuzzy", "contains", "prefix", or None
+            The matching mode used to filter options while the user types.
+            If this is ``"fuzzy"`` (default), options are matched by in-order
+            subsequence and sorted by match score. If this is ``"contains"``,
+            options are matched by case-insensitive substring. If this is
+            ``"prefix"``, options are matched by case-insensitive prefix. If
+            this is ``None``, typing is disabled and the options are not
+            filtered.
+
+            ``filter_mode=None`` is incompatible with
+            ``accept_new_options=True``.
+
         width : "stretch" or int
             The width of the multiselect widget. This can be one of the
             following:
@@ -365,6 +427,29 @@ class MultiSelectMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        bind : "query-params" or None
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            An empty query parameter (e.g., ``?tags=``) clears the
+            widget. Invalid query parameter values are ignored and
+            removed from the URL. Multiple selections use repeated
+            parameters (e.g., ``?tags=Red&tags=Blue``). Duplicates are
+            deduplicated. If ``max_selections`` is set, excess values
+            are truncated. When ``accept_new_options`` is ``True``, any
+            value is accepted.
 
         Returns
         -------
@@ -440,7 +525,9 @@ class MultiSelectMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -461,7 +548,9 @@ class MultiSelectMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         accept_new_options: bool = False,
+        filter_mode: SelectWidgetFilterMode = "fuzzy",
         width: WidthWithoutContent = "stretch",
+        bind: BindOption = None,
         ctx: ScriptRunContext | None = None,
     ) -> list[T] | list[T | str]:
         key = to_key(key)
@@ -474,6 +563,16 @@ class MultiSelectMixin:
             default_value=default,
         )
         maybe_raise_label_warnings(label, label_visibility)
+
+        if max_selections is not None and max_selections < 1:
+            raise StreamlitInvalidMaxError(
+                "st.multiselect",
+                "max_selections",
+                max_selections,
+                corrective_action="To disable `st.multiselect`, use `disabled=True`."
+                if max_selections == 0
+                else None,
+            )
 
         indexable_options = convert_to_sequence_and_check_comparable(options)
         formatted_options, formatted_option_to_option_index = create_mappings(
@@ -489,19 +588,19 @@ class MultiSelectMixin:
         if placeholder == "":
             placeholder = " "
 
+        proto_filter_mode = validate_select_widget_filter_mode(
+            filter_mode,
+            accept_new_options=accept_new_options,
+            command="st.multiselect",
+        )
+
         form_id = current_form_id(self.dg)
         element_id = compute_and_register_element_id(
             widget_name,
             user_key=key,
-            # Treat the provided key as the main identity. Only include
-            # changes to the options, accept_new_options, and max_selections
-            # in the identity computation as those can invalidate the
-            # current selection.
             key_as_main_identity={
-                "options",
                 "max_selections",
                 "accept_new_options",
-                "format_func",
             },
             dg=self.dg,
             label=label,
@@ -511,6 +610,7 @@ class MultiSelectMixin:
             max_selections=max_selections,
             placeholder=placeholder,
             accept_new_options=accept_new_options,
+            filter_mode=filter_mode,
             width=width,
         )
 
@@ -529,12 +629,18 @@ class MultiSelectMixin:
         if help is not None:
             proto.help = dedent(help)
         proto.accept_new_options = accept_new_options
+        proto.filter_mode = proto_filter_mode
+
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
 
         serde = MultiSelectSerde(
             indexable_options,
             formatted_options=formatted_options,
             formatted_option_to_option_index=formatted_option_to_option_index,
             default_options_indices=default_values,
+            format_func=format_func,
         )
 
         widget_state = register_widget(
@@ -546,6 +652,17 @@ class MultiSelectMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="string_array_value",
+            bind=bind,
+            # Multiselect is always clearable: users can always remove all
+            # selections, so ?key= (empty URL param) should clear to [].
+            clearable=True,
+            # Pass formatted_options so _seed_widget_from_url can filter out
+            # invalid option strings from URLs. Not passed when
+            # accept_new_options=True since any string is valid.
+            formatted_options=None if accept_new_options else formatted_options,
+            # Pass max_selections so _seed_widget_from_url can truncate
+            # URL-seeded arrays that exceed the limit, instead of crashing.
+            max_array_length=max_selections,
         )
 
         _check_max_selections(widget_state.value, max_selections)
@@ -554,19 +671,33 @@ class MultiSelectMixin:
             widget_state, options, indexable_options
         )
 
-        if widget_state.value_changed:
-            proto.raw_values[:] = serde.serialize(widget_state.value)
+        if accept_new_options:
+            # accept_new_options is True, so we keep the user-entered values.
+            current_values = widget_state.value
+            value_needs_reset = False
+        else:
+            # Validate the current values against the new options.
+            # If values are no longer valid (not in options), filter them out.
+            # This handles the case where options change dynamically and the
+            # previously selected values are no longer available.
+            current_values, value_needs_reset = (
+                validate_and_sync_multiselect_value_with_options(
+                    widget_state.value, indexable_options, key, format_func
+                )
+            )
+
+        if value_needs_reset or widget_state.value_changed:
+            proto.raw_values[:] = serde.serialize(current_values)
             proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
         self.dg._enqueue(widget_name, proto, layout_config=layout_config)
 
-        return widget_state.value
+        return current_values
 
     @property
     def dg(self) -> DeltaGenerator:

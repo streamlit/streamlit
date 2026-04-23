@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@
 import { Field, Vector } from "apache-arrow"
 import { immerable, produce } from "immer"
 
-import { IArrow, Styler as StylerProto } from "@streamlit/protobuf"
+import { ArrowData, IArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
@@ -147,18 +147,18 @@ export class Quiver {
   /** Number of bytes in the Arrow IPC bytes. */
   private readonly _num_bytes: number
 
-  constructor(element: IArrow) {
+  constructor(arrowData: IArrowData) {
     const {
       pandasIndexData,
       columnNames,
       data,
       dataColumnTypes,
       pandasIndexColumnTypes,
-    } = parseArrowIpcBytes(element.data)
+    } = parseArrowIpcBytes(arrowData.data)
 
     // Load styler data (if provided):
-    const styler = element.styler
-      ? parseStyler(element.styler as StylerProto)
+    const styler = arrowData.styler
+      ? parseStyler(arrowData.styler as ArrowData.PandasStyler)
       : undefined
 
     // The assignment is done below to avoid partially populating the instance
@@ -169,7 +169,7 @@ export class Quiver {
     this._dataColumnTypes = dataColumnTypes
     this._pandasIndexColumnTypes = pandasIndexColumnTypes
     this._styler = styler
-    this._num_bytes = element.data?.length ?? 0
+    this._num_bytes = arrowData.data?.length ?? 0
     this._columnTypes = this._pandasIndexColumnTypes.concat(
       this._dataColumnTypes
     )
@@ -285,8 +285,7 @@ export class Quiver {
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private getIndexValue(rowIndex: number, columnIndex: number): any {
+  private getIndexValue(rowIndex: number, columnIndex: number): DataType {
     const index = this._pandasIndexData[columnIndex]
     const value =
       index instanceof Vector ? index.get(rowIndex) : index[rowIndex]
@@ -294,8 +293,7 @@ export class Quiver {
   }
 
   /** Get the raw value of a data cell. */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private getDataValue(rowIndex: number, columnIndex: number): any {
+  private getDataValue(rowIndex: number, columnIndex: number): DataType {
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
   }
 
@@ -357,7 +355,7 @@ st.add_rows(my_styler.data)
 }
 
 /** Parse Pandas styler information from proto. */
-function parseStyler(pandasStyler: StylerProto): PandasStylerData {
+function parseStyler(pandasStyler: ArrowData.PandasStyler): PandasStylerData {
   return {
     uuid: pandasStyler.uuid,
     caption: pandasStyler.caption,

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +16,10 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "MetricsEventProto";
-
 import "streamlit/proto/PageProfile.proto";
 
 // Metrics events:
 message MetricsEvent {
-
   // Common Event Fields:
   string event = 1;
   string anonymous_id = 2;
@@ -58,10 +54,8 @@ message MetricsEvent {
   string context_locale = 20;
   string context_user_agent = 21;
 
-
   // Menu Click Event field:
   string label = 22;
-
 
   // Page Profile Event fields:
   // Same as PageProfile msg
@@ -77,13 +71,14 @@ message MetricsEvent {
   bool is_fragment_run = 32;
 
   // Addtl for page profile metrics
-  int64 numPages = 34;
+  int64 num_pages = 34;
   string page_script_hash = 37;
   string active_theme = 38;
   int64 total_load_time = 39;
   BrowserInfo browser_info = 40;
+  string server_mode = 45;
 
-  // Next ID: 45
+  // Next ID: 46
 }
 
 message BrowserInfo {

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,22 +23,17 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     import graphviz
 
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Height, Width
 
 FigureOrDot: TypeAlias = Union[
     "graphviz.Graph", "graphviz.Digraph", "graphviz.Source", str
@@ -111,8 +106,8 @@ class GraphvizMixin:
               fixed height. If the content is larger than the specified
               height, scrolling is enabled.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import graphviz
         >>>
@@ -176,16 +171,19 @@ class GraphvizMixin:
 
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
-        element_id = calc_md5(delta_path.encode())
+        element_id = calc_hash(delta_path.encode())
 
         graphviz_chart_proto = GraphVizChartProto()
 
         marshall(graphviz_chart_proto, figure_or_dot, element_id)
 
         # Validate and set layout configuration
-        validate_width(width, allow_content=True)
-        validate_height(height, allow_content=True)
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         return self.dg._enqueue(
             "graphviz_chart", graphviz_chart_proto, layout_config=layout_config
@@ -208,8 +206,11 @@ def marshall(
     """
 
     if type_util.is_graphviz_chart(figure_or_dot):
-        dot = figure_or_dot.source
-        engine = figure_or_dot.engine
+        chart = cast(
+            "graphviz.Graph | graphviz.Digraph | graphviz.Source", figure_or_dot
+        )
+        dot = chart.source
+        engine = chart.engine
     elif isinstance(figure_or_dot, str):
         dot = figure_or_dot
         engine = "dot"

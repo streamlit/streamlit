@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_until,
 )
 from e2e_playwright.shared.app_utils import (
@@ -50,8 +51,10 @@ def _wait_until_video_has_data(app: Page, video_element: Locator):
     # this seems to be flaky, so we check also the duration of the video.
     wait_until(
         app,
-        lambda: video_element.evaluate("el => el.readyState >= 3 || el.duration > 0")
-        is True,
+        lambda: (
+            video_element.evaluate("el => el.readyState >= 3 || el.duration > 0")
+            is True
+        ),
         timeout=15000,
     )
     # Wait another 2 seconds to prevent some flakiness
@@ -231,11 +234,11 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stVideo")
 
 
-def test_video_source_error(app: Page, app_port: int):
+def test_video_source_error(app: Page, app_base_url: str):
     """Test `st.video` source error."""
     # Ensure video source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/media/**",
+        build_app_url(app_base_url, path="/media/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -246,7 +249,7 @@ def test_video_source_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
     _select_video_to_show(app, "mp4 video")
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent

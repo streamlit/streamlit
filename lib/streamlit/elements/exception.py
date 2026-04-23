@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -72,8 +72,8 @@ class ExceptionMixin:
               the parent container, the width of the element matches the width
               of the parent container.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> e = RuntimeError("This is an exception of type RuntimeError")
@@ -135,7 +135,7 @@ def marshall(
     # Some exceptions (like UserHashError) have an alternate_name attribute so
     # we can pretend to the user that the exception is called something else.
     if getattr(exception, "alternate_name", None) is not None:
-        exception_proto.type = exception.alternate_name  # type: ignore[attr-defined]
+        exception_proto.type = exception.alternate_name  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
     else:
         exception_proto.type = type(exception).__name__
 
@@ -278,8 +278,10 @@ def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
     # Format the extracted traceback and add it to the protobuf element.
     if extracted_traceback is None:
         trace_str_list = [
-            "Cannot extract the stack trace for this exception. "
-            "Try calling exception() within the `catch` block."
+            (
+                "Cannot extract the stack trace for this exception. "
+                "Try calling exception() within the `catch` block."
+            )
         ]
     else:
         internal_frames, external_frames = _split_internal_streamlit_frames(
@@ -299,7 +301,7 @@ def _get_stack_trace_str_list(exception: BaseException) -> list[str]:
 def _is_in_package(file: str, package_path: str) -> bool:
     """True if the given file is part of package_path."""
     try:
-        common_prefix = os.path.commonprefix([os.path.realpath(file), package_path])
+        common_prefix = os.path.commonprefix([os.path.realpath(file), package_path])  # noqa: RUF071
     except ValueError:
         # Raised if paths are on different drives.
         return False

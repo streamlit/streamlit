@@ -2,14 +2,16 @@
 applyTo: "**/*.py"
 ---
 
+<!-- Generated from lib/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Python Development Guide
 
 - Supported Python versions: 3.10 - 3.14
 - Docstrings: Numpy style
-- Linter: Ruff 0.x (`.ruff.toml`)
-- Formatter: Ruff 0.x (`.ruff.toml`)
-- Type Checker: mypy 1.x (`mypy.ini`)
-- Testing: pytest 8.x (`lib/pytest.ini`)
+- Linter: Ruff 0.x (config in root `pyproject.toml`)
+- Formatter: Ruff 0.x (config in root `pyproject.toml`)
+- Type Checker: mypy 1.x + ty 0.x (config in root `pyproject.toml`)
+- Testing: pytest 9.x (config in root `pyproject.toml`)
 
 ## Key Principles
 
@@ -47,7 +49,7 @@ applyTo: "**/*.py"
 - `streamlit/vendor`: Vendored dependencies.
 - `streamlit/watcher`: File-watcher implementations.
 - `streamlit/__init__.py`: Defines all commands in the `st` namespace.
-- `setup.py`: Setup configuration of the Streamlit library.
+- `pyproject.toml`: Package configuration of the Streamlit library.
 - `tests`: Python unit tests (pytest).
 
 ## Typing

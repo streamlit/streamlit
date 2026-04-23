@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
     from streamlit.runtime.state.safe_session_state import SafeSessionState
+    from streamlit.runtime.uploaded_file_manager import UploadedFileRec
 
 
 class LocalScriptRunner(ScriptRunner):
@@ -90,6 +91,24 @@ class LocalScriptRunner(ScriptRunner):
                 self.forward_msg_queue.enqueue(forward_msg)
 
         self.on_event.connect(record_event, weak=False)
+
+    def register_file(self, file_rec: UploadedFileRec) -> None:
+        """Register an uploaded file with the file manager.
+
+        This is a typed helper method to avoid accessing private attributes
+        directly from AppTest.
+
+        Parameters
+        ----------
+        file_rec
+            The uploaded file record to register.
+        """
+        # Cast to MemoryUploadedFileManager since that's what LocalScriptRunner uses.
+        # The Protocol UploadedFileManager doesn't include add_file.
+        from typing import cast
+
+        file_mgr = cast("MemoryUploadedFileManager", self._uploaded_file_mgr)
+        file_mgr.add_file(self._session_id, file_rec)
 
     def join(self) -> None:
         """Wait for the script thread to finish, if it is running."""

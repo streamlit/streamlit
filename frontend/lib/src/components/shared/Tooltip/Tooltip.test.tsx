@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-import React from "react"
-
-import { screen } from "@testing-library/react"
+import { RenderResult, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import { BaseProvider, LightTheme } from "baseui"
 
@@ -34,8 +32,7 @@ const getProps = (
 })
 
 // Wrap in BaseProvider to avoid warnings
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-const renderTooltip = (props: Partial<TooltipProps> = {}): any => {
+const renderTooltip = (props: Partial<TooltipProps> = {}): RenderResult => {
   return render(
     <BaseProvider theme={LightTheme}>
       <Tooltip {...getProps(props)} />
@@ -93,5 +90,25 @@ describe("Tooltip element", () => {
 
     const tooltipContent = await screen.findByTestId("stTooltipErrorContent")
     expect(tooltipContent).toHaveTextContent("Error Text")
+  })
+
+  it("closes on Escape when focus-triggered without blurring the trigger", async () => {
+    const user = userEvent.setup()
+    renderTooltip({ children: <button type="button">Trigger</button> })
+
+    const trigger = screen.getByRole("button", { name: "Trigger" })
+    expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+
+    await user.tab()
+    expect(trigger).toHaveFocus()
+
+    await screen.findByTestId("stTooltipContent")
+
+    await user.keyboard("{Escape}")
+
+    expect(trigger).toHaveFocus()
+    await waitFor(() =>
+      expect(screen.queryByTestId("stTooltipContent")).not.toBeInTheDocument()
+    )
   })
 })

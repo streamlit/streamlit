@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import { FC, memo, useEffect, useLayoutEffect, useState } from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -26,12 +26,10 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, {
-  StyledToolbarElementContainer,
-  ToolbarAction,
-} from "~lib/components/shared/Toolbar"
-import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
+import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -44,7 +42,8 @@ import {
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
 import { useVegaEmbed } from "./useVegaEmbed"
 
-function isFacetChart(spec: string | object): boolean {
+// Exported for testing
+export function isFacetChart(spec: string | object): boolean {
   try {
     const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
 
@@ -56,6 +55,43 @@ function isFacetChart(spec: string | object): boolean {
       parsedSpec.encoding?.row ||
       parsedSpec.encoding?.column ||
       parsedSpec.encoding?.facet
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Check if a vconcat spec contains nested composition operators.
+ *
+ * In valid Vega-Lite specs, composition operators
+ * (hconcat, vconcat, concat, layer, facet, repeat) are always top-level keys
+ * of a view specification. They cannot be buried inside encoding, mark, or
+ * other nested properties.
+ *
+ * Nested compositions don't work well with fit-x autosize type and forced width
+ * settings, as they can cause "infinite extent" errors (issues #13410, #14050).
+ */
+// Exported for testing
+export function hasNestedComposition(spec: string | object): boolean {
+  try {
+    const parsedSpec = typeof spec === "string" ? JSON.parse(spec) : spec
+
+    if (!("vconcat" in parsedSpec) || !Array.isArray(parsedSpec.vconcat)) {
+      return false
+    }
+
+    // Check if any child in vconcat contains a composition operator
+    return parsedSpec.vconcat.some(
+      (child: unknown) =>
+        child !== null &&
+        typeof child === "object" &&
+        ("hconcat" in child ||
+          "vconcat" in child ||
+          "concat" in child ||
+          "layer" in child ||
+          "facet" in child ||
+          "repeat" in child)
     )
   } catch {
     return false
@@ -101,9 +137,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
   } = useCalculatedDimensions(
     // We need to update whenever the showData state changes because
     // the underlying element ref that needs to be observed is updated.
-    [showData],
-    // Use 0 as fallback instead of -1 because Vega-Lite cannot handle negative dimensions
-    0
+    [showData]
   )
 
   const useStretchWidth =
@@ -116,6 +150,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // so they cannot use the width from the StyledVegaLiteChartContainer.
   const isFacet = isFacetChart(inputElement.spec)
 
+  // Nested compositions (vconcat containing hconcat/layer/etc.) also don't work
+  // well with forced stretch width, as it can cause "infinite extent" errors.
+  const hasNestedComp = hasNestedComposition(inputElement.spec)
+
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
   //    theming, container width, and full screen mode
@@ -127,7 +165,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
     // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
     isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
-    isFullScreen ? true : useStretchWidth,
+    // Don't force stretch width for nested compositions - they need natural sizing
+    isFullScreen && !hasNestedComp ? true : useStretchWidth,
     isFullScreen ? true : useStretchHeight
   )
 
@@ -192,10 +231,14 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [data, datasets])
 
   if (showData) {
+    const derivedHeight =
+      fullScreenHeight ??
+      (chartContainerHeight > 0 ? chartContainerHeight : undefined)
+
     return (
       <ReadOnlyGrid
         data={data ?? datasets[0]?.data}
-        height={fullScreenHeight ?? chartContainerHeight ?? undefined}
+        height={derivedHeight}
         width={widthConfig ?? undefined}
         customToolbarActions={[
           <ToolbarAction

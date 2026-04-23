@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -27,8 +27,6 @@ if TYPE_CHECKING:
 
 class MarshallComponentException(StreamlitAPIException):
     """Class for exceptions generated during custom component marshalling."""
-
-    pass
 
 
 class BaseCustomComponent(ABC):
@@ -144,17 +142,17 @@ class BaseCustomComponent(ABC):
         **kwargs
             Keyword args to pass to the component.
 
+        Returns
+        -------
+        any or None
+            The component's widget value.
+
         Raises
         ------
         MarshallComponentException
             Raised when args is not empty or component cannot be marshalled.
         StreamlitAPIException
             Raised when PyArrow is not installed.
-
-        Returns
-        -------
-        any or None
-            The component's widget value.
 
         """
         raise NotImplementedError

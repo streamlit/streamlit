@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,31 +14,60 @@
  * limitations under the License.
  */
 
-import { Theme } from "@emotion/react"
+import { keyframes, Theme } from "@emotion/react"
 import styled from "@emotion/styled"
 
 import { roundFontSizeToNearestEighth } from "~lib/theme/utils"
 
-export interface StyledStreamlitMarkdownProps {
+// Shimmer animation: sweeps a mask gradient from right to left across the text.
+// Uses mask-position animation to fade text opacity in/out.
+const shimmerAnimation = keyframes`
+  0% {
+    mask-position: 600% center;
+    -webkit-mask-position: 600% center;
+  }
+  100% {
+    mask-position: -600% center;
+    -webkit-mask-position: -600% center;
+  }
+`
+
+interface StyledStreamlitMarkdownProps {
   isCaption: boolean
   isInDialog: boolean
   isLabel?: boolean
+  isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
   largerLabel?: boolean
   isToast?: boolean
+  truncate?: boolean
 }
 
 function convertRemToEm(s: string): string {
   return s.replace(/rem$/, "em")
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function sharedMarkdownStyle(theme: Theme): any {
+function sharedMarkdownStyle(theme: Theme): Record<string, unknown> {
   return {
     a: {
       color: theme.colors.link,
       textDecoration: theme.linkUnderline ? "underline" : "none",
+      "&:focus": {
+        outline: "none",
+        // Fallback for environments without :focus-visible support:
+        boxShadow: theme.shadows.focusRing,
+        borderRadius: theme.radii.default,
+      },
+      // In browsers that support :focus-visible, avoid showing the focus ring on
+      // mouse focus (while still keeping the fallback behavior in others).
+      "&:focus:not(:focus-visible)": {
+        boxShadow: theme.shadows.none,
+      },
+      "&:focus-visible": {
+        boxShadow: theme.shadows.focusRing,
+        borderRadius: theme.radii.default,
+      },
     },
   }
 }
@@ -74,9 +103,9 @@ function convertFontSizes(
 function getMarkdownHeadingDefinitions(
   theme: Theme,
   isInDialog: boolean,
-  isCaption: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
+  isCaption: boolean,
+  isInHorizontalLayout: boolean
+): Record<string, unknown> {
   return {
     "h1, h2, h3, h4, h5, h6": {
       fontFamily: theme.genericFonts.headingFont,
@@ -92,7 +121,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h1FontWeight,
-      padding: `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xl} 0 ${theme.spacing.lg} 0`,
     },
     "h1 b, h1 strong": {
       // Per Pull Request #9395, setting text to bold in headers
@@ -109,7 +140,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h2FontWeight,
-      padding: `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.lg} 0 ${theme.spacing.lg} 0`,
     },
     h3: {
       fontSize: convertFontSizes(
@@ -119,7 +152,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h3FontWeight,
-      padding: `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.md} 0 ${theme.spacing.lg} 0`,
     },
     h4: {
       fontSize: convertFontSizes(
@@ -128,7 +163,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h4FontWeight,
-      padding: `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.sm} 0 ${theme.spacing.lg} 0`,
     },
     h5: {
       fontSize: convertFontSizes(
@@ -137,7 +174,9 @@ function getMarkdownHeadingDefinitions(
         isCaption
       ),
       fontWeight: theme.fontWeights.h5FontWeight,
-      padding: `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.xs} 0 ${theme.spacing.lg} 0`,
     },
     h6: {
       fontSize: convertFontSizes(
@@ -147,7 +186,9 @@ function getMarkdownHeadingDefinitions(
       ),
 
       fontWeight: theme.fontWeights.h6FontWeight,
-      padding: `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
+      padding: isInHorizontalLayout
+        ? 0
+        : `${theme.spacing.twoXS} 0 ${theme.spacing.lg} 0`,
     },
   }
 }
@@ -159,10 +200,12 @@ export const StyledStreamlitMarkdown =
       isCaption,
       isInDialog,
       isLabel,
+      isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
       largerLabel,
       isToast,
+      truncate,
     }) => {
       // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
       // Toasts also have smaller font size as well as pills and segmented controls.
@@ -176,7 +219,9 @@ export const StyledStreamlitMarkdown =
           : useSmallerFontSize
             ? theme.fontSizes.sm
             : theme.fontSizes.md,
-        marginBottom: isLabel ? "" : `-${theme.spacing.lg}`,
+        fontWeight: inheritFont ? "inherit" : undefined,
+        marginBottom:
+          isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
         opacity: isCaption ? 0.6 : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
@@ -185,7 +230,31 @@ export const StyledStreamlitMarkdown =
         // Break long words to prevent them from overflowing the container:
         overflowWrap: "break-word",
         ...sharedMarkdownStyle(theme),
-        ...getMarkdownHeadingDefinitions(theme, isInDialog, isCaption),
+        ...getMarkdownHeadingDefinitions(
+          theme,
+          isInDialog,
+          isCaption,
+          isInHorizontalLayout
+        ),
+
+        // Truncate text with ellipsis when it overflows the container.
+        // This is useful for single-line text that should not wrap.
+        // When inheritFont is false, lineHeight: "normal" resets inherited line heights
+        // (e.g., when parent has a large line-height). When inheritFont is true,
+        // we preserve the parent's line height for consistent styling.
+        ...(truncate && {
+          overflow: "hidden",
+          whiteSpace: "nowrap",
+          textOverflow: "ellipsis",
+          lineHeight: inheritFont ? "inherit" : "normal",
+
+          "& p": {
+            overflow: "hidden",
+            whiteSpace: "nowrap",
+            textOverflow: "ellipsis",
+            lineHeight: inheritFont ? "inherit" : "normal",
+          },
+        }),
 
         // This is required so that long Latex formulas in `st.latex` are scrollable
         // when `help` is set (see below).
@@ -200,7 +269,7 @@ export const StyledStreamlitMarkdown =
             ? "inherit"
             : boldLabel
               ? theme.fontWeights.bold
-              : "",
+              : undefined,
           marginTop: theme.spacing.none,
           marginLeft: theme.spacing.none,
           marginRight: theme.spacing.none,
@@ -288,14 +357,14 @@ export const StyledStreamlitMarkdown =
         },
 
         "span.stMarkdownColoredBackground": {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.sm,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,
           margin: theme.spacing.none,
           boxDecorationBreak: "clone",
         },
 
         "span.stMarkdownBadge": {
-          borderRadius: theme.radii.md,
+          borderRadius: theme.radii.sm,
           // Since we're using inline-block below, we're not using vertical padding here,
           // because inline-block already makes the element look a bit taller.
           padding: `0 ${theme.spacing.twoXS}`,
@@ -310,6 +379,43 @@ export const StyledStreamlitMarkdown =
           maxWidth: "100%",
           display: "inline-block",
           verticalAlign: "middle",
+        },
+
+        // Shimmer animation for loading/thinking text. Uses mask-image with an
+        // animated gradient to fade text opacity in and out. The shimmer uses
+        // fadedText60 as its base color. When nesting with color directives:
+        // - :shimmer[:red[text]] - inner color wins (displays red)
+        // - :red[:shimmer[text]] - shimmer color wins (displays fadedText60)
+        "span.stMarkdownShimmer": {
+          // Use theme's secondary text color for shimmer text
+          color: theme.colors.fadedText60,
+          // Mask gradient: fades from 40% opacity to 100% at the shimmer peak and back
+          maskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          WebkitMaskImage: `linear-gradient(
+            90deg,
+            rgba(0, 0, 0, 0.4) 0%,
+            rgba(0, 0, 0, 0.4) 40%,
+            rgba(0, 0, 0, 1) 50%,
+            rgba(0, 0, 0, 0.4) 60%,
+            rgba(0, 0, 0, 0.4) 100%
+          )`,
+          maskSize: "200% 100%",
+          WebkitMaskSize: "200% 100%",
+          animation: `${shimmerAnimation} 8s linear infinite`,
+
+          // Respect user's motion preferences for accessibility
+          "@media (prefers-reduced-motion: reduce)": {
+            animation: "none",
+            maskImage: "none",
+            WebkitMaskImage: "none",
+          },
         },
 
         "p, ol, ul, dl, li": {
@@ -347,15 +453,23 @@ export const StyledLinkIcon = styled.a(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
+  opacity: 0,
+  pointerEvents: "none",
+  transition: "opacity 150ms ease-in-out",
 
   svg: {
     // same color as the tooltip-icon
     stroke: theme.colors.fadedText60,
-    strokeWidth: 2.25,
+    strokeWidth: theme.sizes.defaultStrokeWidth,
   },
 
   "&:hover svg": {
     stroke: theme.colors.bodyText,
+  },
+
+  "&:focus-visible": {
+    opacity: 1,
+    pointerEvents: "auto",
   },
 }))
 
@@ -370,17 +484,12 @@ export const StyledHeadingWithActionElements = styled.div(({ theme }) => ({
   wordBreak: "break-word",
   textWrap: "pretty",
 
-  // show link-icon when hovering somewhere over the heading
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [StyledLinkIcon as any]: {
-    visibility: "hidden",
-  },
-
-  // we have to set the hover here so that the link icon becomes visible when hovering anywhere over the heading
-  "&:hover": {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    [StyledLinkIcon as any]: {
-      visibility: "visible",
+  // Show link icon when hovering or when focus is within the heading container.
+  // We use opacity instead of visibility so the link remains in the tab order.
+  "&:hover, &:focus-within": {
+    [StyledLinkIcon as unknown as string]: {
+      opacity: 1,
+      pointerEvents: "auto",
     },
   },
 }))
@@ -398,7 +507,7 @@ export const StyledHeadingActionElements = styled.span(({ theme }) => ({
   },
 }))
 
-export interface StyledDividerProps {
+interface StyledDividerProps {
   rainbow: boolean
   color: string
 }

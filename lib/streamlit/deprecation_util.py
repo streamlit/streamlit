@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,16 @@ from typing import Any, Final, TypeVar, cast
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
+from streamlit.util import calc_hash
 
 _LOGGER: Final = get_logger(__name__)
 
 TFunc = TypeVar("TFunc", bound=Callable[..., Any])
 TObj = TypeVar("TObj", bound=object)
+
+# Set to track which deprecation warnings have been shown (by message hash)
+# when show_once=True is used
+_shown_warnings: set[str] = set()
 
 
 def _error_details_in_browser_enabled() -> bool:
@@ -42,7 +47,9 @@ def _error_details_in_browser_enabled() -> bool:
     )
 
 
-def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None:
+def show_deprecation_warning(
+    message: str, show_in_browser: bool = True, show_once: bool = False
+) -> None:
     """Show a deprecation warning message.
 
     Parameters
@@ -55,7 +62,18 @@ def show_deprecation_warning(message: str, show_in_browser: bool = True) -> None
         set `client.showErrorDetails` to "full" or the legacy True value. All
         other values ("stacktrace", "type", "none", False) will hide deprecation
         warnings in the browser (but still log them to the console).
+    show_once : bool, default=False
+        If True, the warning will only be shown once per unique message (based on
+        message hash). Subsequent calls with the same message will be skipped.
+        This is useful for warnings that may be triggered many times during a
+        script run.
     """
+    if show_once:
+        message_hash = calc_hash(message)
+        if message_hash in _shown_warnings:
+            return
+        _shown_warnings.add(message_hash)
+
     if _error_details_in_browser_enabled() and show_in_browser:
         streamlit.warning(message)
 
@@ -87,6 +105,9 @@ def deprecate_func_name(
     removal_date: str,
     extra_message: str | None = None,
     name_override: str | None = None,
+    include_st_prefix: bool = True,
+    show_in_browser: bool = True,
+    show_once: bool = False,
 ) -> TFunc:
     """Wrap an `st` function whose name has changed.
 
@@ -112,6 +133,19 @@ def deprecate_func_name(
 
     name_override
         An optional name to use in place of func.__name__.
+
+    include_st_prefix
+        If False, does not prefix each of the function names in the deprecation
+        message with `st.*`. Defaults to True.
+
+    show_in_browser
+        Whether to show the deprecation warning in the browser. Defaults to True.
+        Set to False for less intrusive deprecation warnings that only log to
+        the console.
+
+    show_once
+        If True, the warning will only be shown once per unique message.
+        Defaults to False.
     """
 
     @functools.wraps(func)
@@ -124,7 +158,10 @@ def deprecate_func_name(
                 or (str(func.__name__) if hasattr(func, "__name__") else "unknown"),
                 removal_date,
                 extra_message,
-            )
+                include_st_prefix=include_st_prefix,
+            ),
+            show_in_browser=show_in_browser,
+            show_once=show_once,
         )
         return result
 

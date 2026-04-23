@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -278,3 +278,102 @@ class StWarningAPITest(DeltaGeneratorTestCase):
             == WidthConfigFields.USE_STRETCH.value
         )
         assert el.alert.width_config.use_stretch
+
+
+class AlertIconExtractionTest(DeltaGeneratorTestCase):
+    """Test auto-extraction of leading icons from body text."""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_leading_emoji(self, alert_func):
+        """Test that alerts extract emoji from the beginning of body text."""
+        alert_func("🚨 Something went wrong")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == "🚨"
+        assert el.alert.body == "Something went wrong"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_material_icon(self, alert_func):
+        """Test that alerts extract material icon from the beginning of body text."""
+        alert_func(":material/warning: Please be careful")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ":material/warning:"
+        assert el.alert.body == "Please be careful"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_explicit_icon_takes_precedence(self, alert_func):
+        """Test that explicit icon parameter takes precedence over body icon."""
+        alert_func("🚨 Something went wrong", icon="⚠️")
+
+        el = self.get_delta_from_queue().new_element
+        # Explicit icon should be used, body should remain unchanged
+        assert el.alert.icon == "⚠️"
+        assert el.alert.body == "🚨 Something went wrong"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_no_icon_extraction_without_leading_icon(self, alert_func):
+        """Test that alerts without leading icons work normally."""
+        alert_func("No icon here")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ""
+        assert el.alert.body == "No icon here"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_icon_only_body(self, alert_func):
+        """Test alert with only an emoji as body."""
+        alert_func("✅")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == "✅"
+        assert el.alert.body == ""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_extracts_icon_from_multiline_body(self, alert_func):
+        """Test that alerts correctly extract icon from multiline body text."""
+        alert_func(":material/warning:\nLine 1\nLine 2")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.icon == ":material/warning:"
+        assert el.alert.body == "Line 1\nLine 2"
+
+
+class AlertTitleTest(DeltaGeneratorTestCase):
+    """Test title parameter for alert elements."""
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_with_title(self, alert_func):
+        """Test that alerts accept and pass through title parameter."""
+        alert_func("Body text", title="Alert Title")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == "Alert Title"
+        assert el.alert.body == "Body text"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_without_title(self, alert_func):
+        """Test that alerts without title have empty title field."""
+        alert_func("Body text only")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == ""
+        assert el.alert.body == "Body text only"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_with_title_and_icon(self, alert_func):
+        """Test that alerts accept both title and icon parameters."""
+        alert_func("Body text", title="Alert Title", icon="🔔")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == "Alert Title"
+        assert el.alert.body == "Body text"
+        assert el.alert.icon == "🔔"
+
+    @parameterized.expand([(st.error,), (st.warning,), (st.info,), (st.success,)])
+    def test_alert_title_cleaned(self, alert_func):
+        """Test that title text is cleaned (whitespace trimmed)."""
+        alert_func("Body text", title="  Title with whitespace  ")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.alert.title == "Title with whitespace"

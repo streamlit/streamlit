@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
+
+import type { DropzoneInputProps, DropzoneRootProps } from "react-dropzone"
 
 import { AcceptFileValue } from "~lib/util/utils"
 
@@ -27,11 +29,9 @@ import {
   StyledChatFileUploadDropzoneLabel,
 } from "./styled-components"
 
-export interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getRootProps: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getInputProps: any
+interface Props {
+  getRootProps: <T extends DropzoneRootProps>(props?: T) => T
+  getInputProps: <T extends DropzoneInputProps>(props?: T) => T
   acceptFile: AcceptFileValue
 }
 

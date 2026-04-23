@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,8 +42,7 @@ const CSV_SPECIAL_CHARS_REGEX = new RegExp(
 )
 const LOG = getLogger("useDataExporter")
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export function toCsvRow(rowValues: any[]): string {
+export function toCsvRow(rowValues: unknown[]): string {
   return (
     rowValues.map(cell => escapeValue(cell)).join(CSV_DELIMITER) +
     CSV_ROW_DELIMITER
@@ -55,8 +54,7 @@ export function toCsvRow(rowValues: any[]): string {
  *
  * Makes sure that the value is a string, and special characters are escaped correctly.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function escapeValue(value: any): string {
+function escapeValue(value: unknown): string {
   if (isNullOrUndefined(value)) {
     return ""
   }
@@ -109,8 +107,7 @@ async function writeCsv(
   await writable.write(textEncoder.encode(toCsvRow(headers)))
 
   for (let row = 0; row < numRows; row++) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    const rowData: any[] = []
+    const rowData: unknown[] = []
     columns.forEach((column: BaseColumn, col: number, _map) => {
       rowData.push(column.getCellValue(getCellContent([col, row])))
     })
@@ -144,9 +141,8 @@ function useDataExporter(
       // in all of the common browser, but might cause some trouble in
       // less common browsers. To not crash the whole app, we just lazy import
       // this here.
-      const nativeFileSystemAdapter = await import(
-        "native-file-system-adapter"
-      )
+      const nativeFileSystemAdapter =
+        await import("native-file-system-adapter")
       const fileHandle = await nativeFileSystemAdapter.showSaveFilePicker({
         suggestedName,
         types: [{ accept: { "text/csv": [".csv"] } }],

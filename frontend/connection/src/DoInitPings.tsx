@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,11 @@
 import { getLogger } from "loglevel"
 
 // Note we expect the polyfill to load from this import
-import { buildHttpUri, notNullOrUndefined } from "@streamlit/utils"
+import {
+  buildHttpUri,
+  notNullOrUndefined,
+  StreamlitConfig,
+} from "@streamlit/utils"
 
 import {
   CORS_ERROR_MESSAGE_DOCUMENTATION_LINK,
@@ -32,7 +36,7 @@ import {
   PING_TIMEOUT_MS,
   SERVER_PING_PATH,
 } from "./constants"
-import { ErrorDetails, IHostConfigResponse, OnRetry } from "./types"
+import { ErrorDetails, IHostConfigProperties, OnRetry } from "./types"
 import {
   FetchError,
   fetchWithTimeout,
@@ -63,7 +67,7 @@ export function doInitPings(
     message: string,
     source: string
   ) => void,
-  onHostConfigResp: (resp: IHostConfigResponse) => void
+  onHostConfigResp: (resp: IHostConfigProperties) => void
 ): AsyncPingRequest {
   const { promise, resolve, reject } = Promise.withResolvers<number>()
   let totalTries = 0
@@ -103,6 +107,7 @@ export function doInitPings(
       return
     }
     // Use globalThis to ensure timers can be cleared even if window is undefined later
+    // eslint-disable-next-line no-restricted-properties -- Ping retry scheduler requires a raw timer outside React.
     timeout = globalThis.setTimeout(retryImmediately, retryTimeout)
   }
 
@@ -139,8 +144,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     if (url) {
       try {
         source = new URL(url).pathname
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (e) {
+      } catch {
         LOG.error(`unrecognized url: ${url}`)
       }
     }
@@ -152,11 +156,8 @@ If you are trying to access a Streamlit app running on another server, this coul
     const uriParts = uriPartsList[uriNumber]
     const healthzUri = buildHttpUri(uriParts, SERVER_PING_PATH)
 
-    // Guard against environments where window may be undefined
-    const hostConfigBaseUrl =
-      typeof window !== "undefined"
-        ? window.__streamlit?.HOST_CONFIG_BASE_URL
-        : undefined
+    // Use the securely captured config value
+    const hostConfigBaseUrl = StreamlitConfig.HOST_CONFIG_BASE_URL
     const hostConfigServerUriParts = hostConfigBaseUrl
       ? parseUriIntoBaseParts(hostConfigBaseUrl)
       : uriParts
@@ -184,7 +185,7 @@ If you are trying to access a Streamlit app running on another server, this coul
       fetchWithTimeout(hostConfigUri, PING_TIMEOUT_MS),
     ])
       .then(([_, hostConfigResp]) => {
-        onHostConfigResp(hostConfigResp.data as IHostConfigResponse)
+        onHostConfigResp(hostConfigResp.data as IHostConfigProperties)
         resolve(uriNumber)
       })
       .catch((error: FetchError) => {

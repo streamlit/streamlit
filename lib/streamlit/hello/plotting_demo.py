@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,16 +23,24 @@ from streamlit.hello.utils import show_code
 def plotting_demo() -> None:
     progress_bar = st.sidebar.progress(0)
     status_text = st.sidebar.empty()
-    last_rows = np.random.randn(1, 1)  # noqa: NPY002
-    chart = st.line_chart(last_rows)
+    chart = st.empty()
 
-    for i in range(1, 101):
-        new_rows = last_rows[-1, :] + np.random.randn(5, 1).cumsum(axis=0)  # noqa: NPY002
-        status_text.text(f"{i}% complete")
-        chart.add_rows(new_rows)
-        progress_bar.progress(i)
-        last_rows = new_rows
-        time.sleep(0.05)
+    # Initialize with one data point
+    data = np.random.randn(1, 1)  # noqa: NPY002
+    chart.line_chart(data)
+
+    for i in range(1, 51):
+        # Generate new rows based on the last value (random walk)
+        new_rows = data[-1, :] + np.random.randn(5, 1).cumsum(axis=0)  # noqa: NPY002
+        # Append new rows to existing data
+        data = np.concatenate([data, new_rows])
+        # Update the chart with full data
+        chart.line_chart(data)
+        # Scale progress to show 0-100% with 50 iterations
+        progress = i * 2
+        status_text.text(f"{progress}% complete")
+        progress_bar.progress(progress)
+        time.sleep(0.01)
 
     progress_bar.empty()
 
@@ -47,8 +55,7 @@ st.title("Plotting demo")
 st.write(
     """
     This demo illustrates a combination of plotting and animation with
-    Streamlit. We're generating a bunch of random numbers in a loop for around
-    5 seconds. Enjoy!
+    Streamlit. We're generating a bunch of random numbers in a loop. Enjoy!
     """
 )
 plotting_demo()

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect, useRef, useState } from "react"
+import { memo, ReactElement, useEffect, useRef, useState } from "react"
 
 import classNames from "classnames"
 
 import { Spinner as SpinnerProto } from "@streamlit/protobuf"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 import {
   StyledSpinner,

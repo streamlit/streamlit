@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -140,8 +140,7 @@ function parseHeaderName(name: string, numLevels: number): string[] {
     return JSON.parse(
       name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replace(/'/g, '"')
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     // Add empty strings for the missing levels
     return [...Array(numLevels - 1).fill(""), name]
   }

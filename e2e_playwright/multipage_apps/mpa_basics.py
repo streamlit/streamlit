@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@ import streamlit as st
 
 st.header("Main Page")
 st.slider("x")
+
+bound_cb = st.checkbox("Bound checkbox", key="bound_cb", bind="query-params")
+st.write("bound_cb:", bound_cb)
 
 st.write("Query Params:", st.query_params)
 

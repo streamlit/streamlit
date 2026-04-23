@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+import { spacing } from "./spacing"
+
+// Base values used in computed sizes
+const minElementHeight = "2.5rem"
+const borderWidth = "1px"
+
 export const sizes = {
   full: "100%",
   headerHeight: "3.75rem",
@@ -27,11 +33,15 @@ export const sizes = {
   maxChartTooltipWidth: "30rem",
   // Used for checkboxes, radio, and toggles:
   checkbox: "1rem",
-  borderWidth: "1px",
+  borderWidth,
   // Used for checkboxes/toggle
   smallElementHeight: "1.5rem",
   // min height used for most input widgets
-  minElementHeight: "2.5rem",
+  minElementHeight,
+  // Height for hover/focus highlights inside input widgets (e.g., dropdown items)
+  // Calculated as: minElementHeight - 2 * spacing.xs (vertical padding)
+  elementHighlightHeight: `calc(${minElementHeight} - 2 * ${spacing.xs})`,
+  tagMarginInsideBorder: `calc(${spacing.xs} - ${borderWidth})`,
   // min height for larger input widgets like text area and audio input
   largestElementHeight: "4.25rem",
   smallLogoHeight: "1.25rem",
@@ -40,8 +50,10 @@ export const sizes = {
   sliderThumb: "0.75rem",
   wideSidePadding: "5rem",
   headerDecorationHeight: "0.125rem",
+  appMainMenu: "12rem",
   appRunningMen: "1.6rem",
   appStatusMaxWidth: "20rem",
+  tableColumnMaxWidth: "25rem",
   spinnerSize: "1.375rem",
   spinnerThickness: "0.125rem",
   tabHeight: "2.5rem",
@@ -62,6 +74,18 @@ export const sizes = {
   // The minimum width of the menu (used for the dataframe column menu)
   minMenuWidth: "8rem",
   minChatInputFileListHeight: "3rem",
+  uploadedFileIconSize: "2rem",
   headerItemHeight: "1.75rem",
   headerRightContentMaxWidth: "12.5rem",
+  chatInputTextareaMinHeight: "1.5rem",
+  chatInputPrimaryButtonSize: "2rem",
+  // Offset to vertically center button with textarea text in simple mode
+  // (3px margin the bottom with flex-end to center by default but keep it at the bottom)
+  chatInputButtonVerticalOffset: "0.1875rem",
+  dialogLargeWidth: "80rem",
+  defaultStrokeWidth: 2.25,
+  metricStrokeWidth: 2,
+  // Default for box-shadow focus ring width
+  focusRingWidth: "0.2rem",
+  fileChipNameMinWidth: "4.875rem",
 }

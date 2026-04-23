@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,7 @@ export type ParseBidiComponentDataArgs = BaseParseArgs & {
   mixedJson?: string
 }
 
-export type ParsedComponentData = unknown
+type ParsedComponentData = unknown
 
 /**
  * Parses the data payload provided to a Custom Component v2 instance.
@@ -56,20 +56,16 @@ export const parseBidiComponentData = ({
       return bytes ?? null
     case "mixed": {
       if (mixedJson && arrowBlobs) {
-        if (mixedJson) {
-          const jsonData = JSON.parse(mixedJson)
+        const jsonData = JSON.parse(mixedJson)
 
-          const arrowBlobsMap: Record<string, Uint8Array> = {}
-          if (arrowBlobs) {
-            Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {
-              if (arrowProto?.data) {
-                arrowBlobsMap[key] = arrowProto.data
-              }
-            })
+        const arrowBlobsMap: Record<string, Uint8Array> = {}
+        Object.entries(arrowBlobs).forEach(([key, arrowProto]) => {
+          if (arrowProto?.data) {
+            arrowBlobsMap[key] = arrowProto.data
           }
+        })
 
-          return reconstructMixedData(jsonData, arrowBlobsMap)
-        }
+        return reconstructMixedData(jsonData, arrowBlobsMap)
       }
       return null
     }

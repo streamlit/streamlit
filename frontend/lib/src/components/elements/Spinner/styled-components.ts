@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,7 +46,9 @@ export const StyledSpinnerText = styled.div(({ theme }) => ({
 
 // TODO: Maybe move this to `theme/consts.ts`, see
 // https://github.com/streamlit/streamlit/pull/10085/files#diff-a5cce939bf6c73209a258132c71ccb368a3a1fd57b68b373d242736adb920093
-export const StyledSpinnerTimeText = styled.div(({ theme }) => ({
+export const StyledSpinnerTimeText = styled.span(({ theme }) => ({
   opacity: 0.6,
   fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.none,
+  whiteSpace: "nowrap",
 }))

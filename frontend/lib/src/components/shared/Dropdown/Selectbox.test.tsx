@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,16 @@
  * limitations under the License.
  */
 
-import { fireEvent, screen, within } from "@testing-library/react"
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+
+import { streamlit } from "@streamlit/protobuf"
 
 import { mockConvertRemToPx } from "~lib/mocks/mocks"
 import { render } from "~lib/test_util"
@@ -35,6 +43,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   onChange: vi.fn(),
   placeholder: "Select...",
   acceptNewOptions: false,
+  filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_FUZZY,
   ...props,
 })
 
@@ -187,6 +196,67 @@ describe("Selectbox widget", () => {
     expect(options[2]).toHaveTextContent("aA")
   })
 
+  it("filters options using contains mode", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["apple", "grape", "banana"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_CONTAINS,
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "AP")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(2)
+    expect(options[0]).toHaveTextContent("apple")
+    expect(options[1]).toHaveTextContent("grape")
+    expect(
+      screen.queryByRole("option", { name: "banana" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("filters options using prefix mode", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["apple", "apricot", "grape"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_PREFIX,
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    await user.type(selectboxInput, "ap")
+
+    const options = screen.queryAllByRole("option")
+    expect(options).toHaveLength(2)
+    expect(options[0]).toHaveTextContent("apple")
+    expect(options[1]).toHaveTextContent("apricot")
+    expect(
+      screen.queryByRole("option", { name: "grape" })
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps all options visible and the input readonly when filterMode is none", async () => {
+    const user = userEvent.setup()
+    const currProps = getProps({
+      options: ["yes", "no", "maybe"],
+      filterMode: streamlit.SelectWidgetFilterMode.FILTER_MODE_NONE,
+      value: undefined,
+    })
+    render(<Selectbox {...currProps} />)
+    const selectboxInput = screen.getByRole("combobox")
+
+    expect(selectboxInput).toHaveAttribute("readonly")
+
+    await user.click(selectboxInput)
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+
+    await user.type(selectboxInput, "no")
+    expect(screen.queryAllByRole("option")).toHaveLength(3)
+  })
+
   it("updates value if new value provided from parent", () => {
     const { rerender } = render(<Selectbox {...props} />)
     // Original value passed is 0
@@ -195,6 +265,33 @@ describe("Selectbox widget", () => {
     props = getProps({ value: "b" })
     rerender(<Selectbox {...props} />)
     expect(screen.getByText(props.options[1])).toBeInTheDocument()
+  })
+
+  it("preserves value after prop change and blur without selection", async () => {
+    // Regression test for https://github.com/streamlit/streamlit/issues/13435
+    // When value is set programmatically (e.g., via session state) and user
+    // opens/closes dropdown without selecting, the new value should be preserved.
+    const user = userEvent.setup()
+    const { rerender } = render(<Selectbox {...props} />)
+
+    // Verify initial value is "a"
+    expect(screen.getByText(props.options[0])).toBeInTheDocument()
+
+    // Simulate session state changing the value to "b"
+    props = getProps({ value: "b" })
+    rerender(<Selectbox {...props} />)
+    expect(screen.getByText(props.options[1])).toBeInTheDocument()
+
+    // Open the dropdown
+    const selectbox = screen.getByRole("combobox")
+    await user.click(selectbox)
+
+    // Close by clicking outside (blur) without making a selection
+    await user.click(document.body)
+
+    // The value should still be "b" (not reverted to "a")
+    expect(screen.getByTestId("stSelectbox")).toHaveTextContent("b")
+    expect(props.onChange).not.toHaveBeenCalled()
   })
 
   it("does not commit changes when clicking outside of the selectbox", async () => {
@@ -207,13 +304,16 @@ describe("Selectbox widget", () => {
     await user.click(document.body)
 
     // Check that clicking outside of the selectbox does not commit the change and the default is kept
-    expect(props.onChange).toHaveBeenCalledTimes(0)
-    expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
-      props.options[0]
-    )
+    // Use waitFor to ensure all async state updates from the Popover are processed
+    await waitFor(() => {
+      expect(props.onChange).toHaveBeenCalledTimes(0)
+      expect(screen.getByTestId("stSelectbox")).toHaveTextContent(
+        props.options[0]
+      )
+    })
   })
 
-  it("does not call onChange when the user deletes characters", () => {
+  it("does not call onChange when the user deletes characters", async () => {
     render(<Selectbox {...props} />)
     const selectbox = screen.getByTestId("stSelectbox")
     expect(
@@ -223,21 +323,24 @@ describe("Selectbox widget", () => {
     const selectboxInput = screen.getByRole("combobox")
 
     // Simulate deleting a character
-    // we are using fireEvent here instead of userEvent because userEvent
-    // did not trigger the backspace event correctly.
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.keyDown(selectboxInput, {
-      key: "Backspace",
-      keyCode: 8,
-      code: "Backspace",
+    act(() => {
+      // eslint-disable-next-line testing-library/prefer-user-event -- userEvent.keyboard("{Backspace}") causes a timeout with this BaseWeb combobox
+      fireEvent.keyDown(selectboxInput, {
+        key: "Backspace",
+        keyCode: 8,
+        code: "Backspace",
+      })
     })
 
-    // ensure that onChange was not called for the remove
-    expect(props.onChange).toHaveBeenCalledTimes(0)
-    // ensure that the input value was updated
-    expect(
-      within(selectbox).queryAllByText(props.options[0], { exact: true })
-    ).toHaveLength(0)
+    // Wait for async Popover state updates to complete
+    await waitFor(() => {
+      // ensure that onChange was not called for the remove
+      expect(props.onChange).toHaveBeenCalledTimes(0)
+      // ensure that the input value was updated
+      expect(
+        within(selectbox).queryAllByText(props.options[0], { exact: true })
+      ).toHaveLength(0)
+    })
   })
 
   it("allows new options when acceptNewOptions is true", async () => {

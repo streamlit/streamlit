@@ -1,0 +1,544 @@
+# AI Review workflow uses Cursor CLI to review PRs
+name: AI PR Review
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to review"
+        required: true
+        type: number
+      model:
+        description: "Model(s) to use for the review (comma-separated for multi-model). The last model serves as the 'judge' for consolidating reviews."
+        required: false
+        type: string
+        default: "gpt-5.3-codex-high,gemini-3.1-pro,claude-4.6-opus-high-thinking"
+
+# Computed PR number and model for use in jobs
+env:
+  PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+  MODEL: ${{ github.event.inputs.model || 'gpt-5.3-codex-high,gemini-3.1-pro,claude-4.6-opus-high-thinking' }}
+
+jobs:
+  # Job 1: Parse model list and check for API key
+  parse-models:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-review'
+    runs-on: ubuntu-latest
+    outputs:
+      models_json: ${{ steps.parse.outputs.models_json }}
+      model_count: ${{ steps.parse.outputs.model_count }}
+      judge_model: ${{ steps.parse.outputs.judge_model }}
+      judge_model_id: ${{ steps.parse.outputs.judge_model_id }}
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available. This typically happens for PRs from forks."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse model list
+        id: parse
+        run: |
+          # Guard against empty/whitespace model input
+          if [ -z "${MODEL// /}" ]; then
+            echo "::error::MODEL is empty or whitespace-only. Using default."
+            MODEL="claude-4.6-opus-high-thinking"
+          fi
+
+          # Split comma-separated, trim whitespace, convert to JSON array
+          # Use $MODEL shell variable (set from env) instead of ${{ env.MODEL }} for security
+          MODELS_JSON=$(echo "$MODEL" | tr ',' '\n' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | grep -v '^$' | jq -R . | jq -sc .)
+
+          # Verify we have at least one model
+          MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
+          if [ "$MODEL_COUNT" -eq 0 ]; then
+            echo "::error::No valid models found after parsing. Using default."
+            MODELS_JSON='["claude-4.6-opus-high-thinking"]'
+            MODEL_COUNT=1
+          fi
+
+          # The last model in the list serves as the "judge" for consolidating multi-model reviews
+          JUDGE_MODEL=$(echo "$MODELS_JSON" | jq -r '.[-1]')
+          # Sanitized version for artifact naming (same logic as sanitize step)
+          JUDGE_MODEL_ID=$(echo "$JUDGE_MODEL" | sed 's/[^a-zA-Z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//')
+
+          echo "models_json=$MODELS_JSON" >> $GITHUB_OUTPUT
+          echo "model_count=$MODEL_COUNT" >> $GITHUB_OUTPUT
+          echo "judge_model=$JUDGE_MODEL" >> $GITHUB_OUTPUT
+          echo "judge_model_id=$JUDGE_MODEL_ID" >> $GITHUB_OUTPUT
+
+          echo "Parsed models: $MODELS_JSON"
+          echo "Model count: $MODEL_COUNT"
+          echo "Judge model: $JUDGE_MODEL"
+          echo "Judge model ID: $JUDGE_MODEL_ID"
+
+  # Job 2: AI performs the review with READ-ONLY access (matrix for multi-model)
+  ai-pr-review:
+    needs: parse-models
+    if: needs.parse-models.outputs.has_key == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+
+    strategy:
+      fail-fast: false
+      matrix:
+        model: ${{ fromJson(needs.parse-models.outputs.models_json) }}
+
+    # Avoid duplicate workflows on same PR (use PR number for per-PR isolation)
+    concurrency:
+      group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}-${{ matrix.model }}
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Sanitize model name for artifact
+        id: sanitize
+        env:
+          MATRIX_MODEL: ${{ matrix.model }}
+        run: |
+          # Replace special characters with dashes for artifact naming
+          # Use $MATRIX_MODEL shell variable instead of ${{ matrix.model }} for security
+          MODEL_ID=$(echo "$MATRIX_MODEL" | sed 's/[^a-zA-Z0-9]/-/g; s/--*/-/g; s/^-//; s/-$//')
+          echo "model_id=$MODEL_ID" >> $GITHUB_OUTPUT
+          echo "Using model ID: $MODEL_ID"
+
+      - name: Get PR details
+        id: pr-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV")
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> "$GITHUB_OUTPUT"
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          # Use SHA instead of branch name to support fork PRs
+          ref: ${{ steps.pr-info.outputs.head_sha }}
+          persist-credentials: false
+          submodules: "recursive"
+          # Give the agent full git history access:
+          fetch-depth: 0
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Cursor AI PR Review
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MATRIX_MODEL: ${{ matrix.model }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          PR_HTML_URL: ${{ steps.pr-info.outputs.html_url }}
+          PR_BASE_REF: ${{ steps.pr-info.outputs.base_ref }}
+          PR_HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to perform a code review on a pull request. The branch is already checked out.
+
+          ## Context
+
+          - Repository: $REPOSITORY
+          - Main branch: develop
+          - PR Number: $PR_NUMBER_ENV
+          - PR URL: $PR_HTML_URL
+          - Base Ref: $PR_BASE_REF
+          - Head Ref: $PR_HEAD_REF
+
+          Gather additional context as needed:
+
+          The GitHub CLI (gh) is available for READ operations to get PR details, diff, and file contents, for example:
+
+          \`\`\`bash
+          # Get PR for current branch
+          gh pr view --json number,title,url,headRefName
+
+          # Get PR description and metadata
+          gh pr view --json title,body,labels,author
+
+          # List changed files
+          gh pr diff --name-only
+
+          # All changes
+          gh pr diff
+          \`\`\`
+
+          \`git\` is also available for read operations.
+
+          ## Goal
+
+          Review this branch (PR: $PR_HTML_URL) and ensure the changes are bug-free, backwards compatible, and ready for merge.
+
+          $(cat scripts/assets/code-review-instructions.md)
+
+          $(cat scripts/assets/code-review-inline-comments-instructions.md)
+
+          ## Finalize Review:
+
+          1. In the review footer, replace 'This is an automated AI review.' with 'This is an automated AI review by \`$MATRIX_MODEL\`.'
+          2. Write inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments section above.
+          3. Write the PR-level review body to \`review.md\`.
+          4. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` (exactly one of these) to \`verdict.txt\`.
+
+          "
+          cursor-agent -p "$PROMPT" --force --model "$MATRIX_MODEL" --output-format=text
+
+          if [ ! -f inline_comments.json ]; then
+            echo '{"comments":[]}' > inline_comments.json
+          fi
+
+      - name: Upload review artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: review-output-${{ steps.sanitize.outputs.model_id }}
+          path: |
+            review.md
+            inline_comments.json
+            verdict.txt
+          retention-days: 1
+
+  # Job 3: Consolidate multiple reviews into one (only runs for multi-model)
+  consolidate-reviews:
+    needs: [parse-models, ai-pr-review]
+    if: always() && fromJson(needs.parse-models.outputs.model_count) > 1 && needs.parse-models.outputs.has_key == 'true' && needs.ai-pr-review.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Download all review artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: review-output-*
+          path: reviews/
+
+      - name: List downloaded reviews
+        run: |
+          echo "Downloaded review artifacts:"
+          ls -la reviews/ || echo "No reviews directory"
+          for dir in reviews/review-output-*; do
+            if [ -d "$dir" ]; then
+              echo "=== $dir ==="
+              ls -la "$dir"
+            fi
+          done
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Consolidate reviews
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODELS_JSON: ${{ needs.parse-models.outputs.models_json }}
+          JUDGE_MODEL: ${{ needs.parse-models.outputs.judge_model }}
+        run: |
+          # Build the reviews content into a file (avoids shell interpretation issues)
+          REVIEWS_FILE="all_reviews.md"
+          > "$REVIEWS_FILE"
+
+          REVIEW_COUNT=0
+          INLINE_CANDIDATES_FILE="all_inline_comments.json"
+          echo '{"comments":[]}' > "$INLINE_CANDIDATES_FILE"
+          for dir in reviews/review-output-*; do
+            if [ -d "$dir" ] && [ -f "$dir/review.md" ]; then
+              model_id=$(basename "$dir" | sed 's/review-output-//')
+              echo "### Review from $model_id" >> "$REVIEWS_FILE"
+              echo "" >> "$REVIEWS_FILE"
+              cat "$dir/review.md" >> "$REVIEWS_FILE"
+              echo "" >> "$REVIEWS_FILE"
+              echo "---" >> "$REVIEWS_FILE"
+              echo "" >> "$REVIEWS_FILE"
+              REVIEW_COUNT=$((REVIEW_COUNT + 1))
+            fi
+
+            if [ -d "$dir" ] && [ -f "$dir/inline_comments.json" ]; then
+              if jq -e '.comments | type == "array"' "$dir/inline_comments.json" >/dev/null 2>&1; then
+                jq -s '{comments: (map(.comments // []) | add // [])}' "$INLINE_CANDIDATES_FILE" "$dir/inline_comments.json" > inline_merge_tmp.json
+                mv inline_merge_tmp.json "$INLINE_CANDIDATES_FILE"
+              fi
+            fi
+          done
+
+          if [ "$REVIEW_COUNT" -eq 0 ]; then
+            echo "Error: No reviews found to consolidate"
+            exit 1
+          fi
+
+          echo "Found $REVIEW_COUNT reviews to consolidate"
+
+          # Write prompt to file using heredoc with placeholder substitution
+          # (avoids shell interpretation of review content and heredoc split issues)
+          cat > prompt.txt << 'PROMPT_EOF'
+          You are a senior code reviewer tasked with consolidating multiple AI code reviews into a single comprehensive review.
+
+          ## Context
+
+          - Repository: streamlit/streamlit
+          - Main branch: develop
+
+          Github CLI (`gh`) and the `git` command are available for read operations if needed.
+
+          ## Expected Models:
+          __MODELS_JSON__
+
+          ## Reviews to consolidate:
+          Read the file `all_reviews.md` in the current directory for all individual reviews.
+          Read the file `all_inline_comments.json` for candidate inline comments from individual reviews.
+
+          ## Your Task:
+
+          1. **Synthesize** the reviews into a single comprehensive review that captures all important findings
+          2. **Note agreement/disagreement** - highlight where reviewers agreed and where they differed
+          3. **Resolve conflicts** - use your judgment or own verification to determine the correct assessment when reviewers disagree
+          4. **Track missing reviews** - if any expected models are missing from the reviews above, note them as 'failed to complete review'
+          5. **Determine final verdict**:
+             - APPROVED: Only if the majority of available reviews approve AND there are no critical issues raised by any reviewer
+             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/blocking issues
+
+          __CONSOLIDATION_INSTRUCTIONS__
+
+          ## Output Format:
+
+          Follow the same output format used by the individual reviews you are consolidating.
+          Use the exact section structure and ordering defined in `scripts/assets/code-review-instructions.md` under "Output Format".
+          Do not add extra top-level sections beyond that template.
+          Mention the consolidation model - `__JUDGE_MODEL__` - in the footer.
+          Do not attach or embed the individual reviews in the output. The consolidated review should stand on its own.
+
+          ## Finalize:
+          1. Write triaged inline comments to \`inline_comments.json\` following the schema and rules in the Inline Comments Triage section above.
+          2. Write your consolidated PR-level review body to \`review.md\`.
+          3. Write either \`APPROVED\` or \`CHANGES_REQUESTED\` to \`verdict.txt\`
+          PROMPT_EOF
+
+          # Replace placeholders using awk with ENVIRON (safely handles JSON double quotes).
+          # Note: awk gsub treats '&' and '\' as special chars in replacements. The current
+          # placeholder values don't contain these, so this is safe. If future content includes
+          # them, switch to envsubst or a Python-based substitution.
+          export CONSOLIDATION_INSTRUCTIONS
+          CONSOLIDATION_INSTRUCTIONS="$(cat scripts/assets/code-review-consolidation-instructions.md)"
+          awk '{
+            gsub(/__MODELS_JSON__/, ENVIRON["MODELS_JSON"])
+            gsub(/__JUDGE_MODEL__/, ENVIRON["JUDGE_MODEL"])
+            gsub(/__CONSOLIDATION_INSTRUCTIONS__/, ENVIRON["CONSOLIDATION_INSTRUCTIONS"])
+            print
+          }' prompt.txt > prompt_final.txt && mv prompt_final.txt prompt.txt
+
+          cursor-agent -p "$(cat prompt.txt)" --force --model "$JUDGE_MODEL" --output-format=text
+
+          if [ ! -f inline_comments.json ]; then
+            echo '{"comments":[]}' > inline_comments.json
+          fi
+
+      - name: Upload consolidated artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: review-output-consolidated
+          path: |
+            review.md
+            inline_comments.json
+            verdict.txt
+          retention-days: 1
+
+  # Job 4: Post the review with WRITE access (no agent)
+  ai-pr-post-review:
+    needs: [parse-models, ai-pr-review, consolidate-reviews]
+    # Run on success or failure, but NOT when skipped (i.e., label wasn't 'ai-review')
+    if: always() && needs.parse-models.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      # Required for posting comments, but this step is safe since it is not running the agent operation:
+      pull-requests: write
+
+    steps:
+      - name: Remove 'ai-review' label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-review" --repo "$REPOSITORY"
+
+      - name: Download consolidated review
+        id: download-consolidated
+        if: needs.consolidate-reviews.result == 'success'
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: review-output-consolidated
+
+      - name: Download judge model review (fallback for failed consolidation)
+        id: download-single
+        # When consolidation fails or wasn't run, fall back to posting just the judge model's review.
+        # This provides a deterministic fallback rather than randomly selecting from multiple reviews.
+        if: steps.download-consolidated.outcome != 'success' && needs.parse-models.outputs.has_key == 'true'
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: review-output-${{ needs.parse-models.outputs.judge_model_id }}
+
+      - name: Post missing key notice
+        if: needs.parse-models.outputs.has_key == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body "ℹ️ **AI Review Not Available via Label**
+
+          The \`ai-review\` label cannot trigger AI reviews for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
+
+          **To request an AI review, a maintainer can:**
+          1. Go to the [AI PR Review workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-pr-review.yml)
+          2. Click **Run workflow**
+          3. Enter the PR number: \`$PR_NUMBER_ENV\`
+          4. Click **Run workflow**" --repo "$REPOSITORY"
+
+      - name: Post review
+        id: post_review
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success')
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          # Always post as COMMENT — the bot should never formally approve or request
+          # changes on a PR. The verdict is still written to verdict.txt and used for
+          # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
+          EVENT="COMMENT"
+
+          # Verify review file exists
+          if [ ! -f review.md ]; then
+            echo "Error: review.md not found"
+            exit 1
+          fi
+
+          # Get head SHA for review API
+          HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
+
+          # Build inline comments array (default to empty if missing/invalid).
+          # Note: We don't pre-validate path/line against the PR diff here for simplicity.
+          # GitHub's Reviews API validates that each path/line falls within the diff and
+          # returns 422 if any comment is invalid. If that happens, we fall back to posting
+          # the review body plus a formatted summary of the inline comments as a plain comment.
+          if [ -f inline_comments.json ]; then
+            # Filters: require path, line, body; line must be a positive integer (rejects 0
+            # which the Reviews API would 422 on); hard cap at 20 comments as a guardrail
+            # beyond the model prompt instructions; side is always RIGHT since AI review
+            # comments target added/modified code.
+            INLINE_COMMENTS=$(jq '[.comments[]? | select(.path and .line and .body) | select(.line | tostring | test("^[1-9][0-9]*$")) | {path, line: (.line | tonumber), body, side: "RIGHT"}] | .[0:20]' inline_comments.json 2>/dev/null || echo '[]')
+          else
+            INLINE_COMMENTS='[]'
+          fi
+
+          # Append inline comment count note to review.md if there are inline comments
+          INLINE_COUNT=$(echo "$INLINE_COMMENTS" | jq 'length')
+          if [ "$INLINE_COUNT" -gt 0 ]; then
+            echo "" >> review.md
+            echo "*This review also includes ${INLINE_COUNT} inline comment(s) on specific code lines.*" >> review.md
+          fi
+
+          # Build and post review payload
+          if jq -n \
+            --rawfile body review.md \
+            --arg event "$EVENT" \
+            --arg commit_id "$HEAD_SHA" \
+            --argjson comments "$INLINE_COMMENTS" \
+            '{body: $body, event: $event, commit_id: $commit_id, comments: $comments}' \
+            | gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV/reviews" -X POST --input -; then
+            echo "Review posted successfully with $(echo "$INLINE_COMMENTS" | jq 'length') inline comments"
+          else
+            echo "::warning::Review API failed, falling back to plain comment with inline summary"
+            # Build a fallback comment that includes both the review body and inline comments.
+            # Since we always post as COMMENT (not APPROVE/REQUEST_CHANGES), no verdict is
+            # lost when falling back to a plain comment — the review content is fully preserved.
+            INLINE_SUMMARY=""
+            INLINE_COUNT=$(echo "$INLINE_COMMENTS" | jq 'length')
+            if [ "$INLINE_COUNT" -gt 0 ]; then
+              INLINE_SUMMARY=$(echo "$INLINE_COMMENTS" | jq -r '
+                "\n\n---\n\n<details>\n<summary>Inline comments (" + (length | tostring) + ") that could not be posted on specific lines</summary>\n\n" +
+                (map("**`" + .path + "` (line " + (.line | tostring) + ")**\n" + .body + "\n") | join("\n---\n\n")) +
+                "\n</details>"
+              ')
+            fi
+            # Append inline summary to review body and post as plain comment
+            { cat review.md; echo "$INLINE_SUMMARY"; } | gh pr comment "$PR_NUMBER_ENV" --body-file - --repo "$REPOSITORY"
+          fi
+
+      - name: Post failure notice
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.post_review.outcome == 'failure' || (steps.download-consolidated.outcome != 'success' && steps.download-single.outcome != 'success'))
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI Review Failed**
+
+          The AI review job failed to complete. Please check the [workflow run](${SERVER_URL}/$REPOSITORY/actions/runs/${RUN_ID}) for details.
+
+          You can retry by adding the 'ai-review' label again or manually triggering the workflow." --repo "$REPOSITORY"
+
+      - name: Apply label based on verdict
+        if: needs.parse-models.outputs.has_key == 'true' && (steps.download-consolidated.outcome == 'success' || steps.download-single.outcome == 'success') && steps.post_review.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ ! -f verdict.txt ]; then
+            echo "Warning: verdict.txt not found, skipping label"
+            exit 0
+          fi
+
+          VERDICT=$(cat verdict.txt | tr -d '[:space:]')
+          if [ "$VERDICT" = "CHANGES_REQUESTED" ]; then
+            echo "Adding 'do-not-merge' label"
+            gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
+          elif [ "$VERDICT" = "APPROVED" ]; then
+            echo "Removing 'do-not-merge' label if present"
+            gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
+          fi

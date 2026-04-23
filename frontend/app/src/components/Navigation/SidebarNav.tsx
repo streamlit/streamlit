@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   MouseEvent,
   ReactElement,
   ReactNode,
@@ -34,7 +34,7 @@ import {
   SidebarConfigContext,
 } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
-import { localStorageAvailable } from "@streamlit/utils"
+import { localStorageAvailable, notNullOrUndefined } from "@streamlit/utils"
 
 import NavSection from "./NavSection"
 import SidebarNavLink from "./SidebarNavLink"
@@ -45,7 +45,13 @@ import {
   StyledSidebarNavSeparator,
   StyledViewButton,
 } from "./styled-components"
-import { groupPagesBySection, processNavigationStructure } from "./utils"
+import {
+  filterVisiblePages,
+  getExternalPageUrl,
+  groupPagesBySection,
+  isExternalPage,
+  processNavigationStructure,
+} from "./utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -54,9 +60,7 @@ export interface Props {
   widgetsDisabled: boolean
 }
 
-// We make the sidebar nav collapsible when there are more than 12 pages.
-const COLLAPSE_THRESHOLD = 12
-// However, we show the first 10 pages when the sidebar is collapsed.
+// Default number of pages to show when the sidebar is collapsed.
 const NUM_PAGES_TO_SHOW_WHEN_COLLAPSED = 10
 
 const LOG = getLogger("SidebarNav")
@@ -86,6 +90,8 @@ function NavLink({
         icon={page.icon}
         onClick={onClick}
         widgetsDisabled={widgetsDisabled}
+        isExternal={isExternalPage(page)}
+        externalUrl={getExternalPageUrl(page)}
       >
         {pageName}
       </SidebarNavLink>
@@ -99,7 +105,8 @@ function generateNavSections(
   generateNavLink: (page: IAppPage, index: number) => ReactElement,
   expandedSections: Record<string, boolean>,
   toggleSection: (section: string) => void,
-  currentPageCount: number
+  currentPageCount: number,
+  numPagesToShowWhenCollapsed: number
 ): { sections: ReactNode[]; updatedPageCount: number } {
   const contents: ReactNode[] = []
   let pageCount = currentPageCount
@@ -112,7 +119,7 @@ function generateNavSections(
     const isExpanded = expandedSections[header]
 
     if (needsCollapse) {
-      const availableSlots = NUM_PAGES_TO_SHOW_WHEN_COLLAPSED - pageCount
+      const availableSlots = numPagesToShowWhenCollapsed - pageCount
       if (availableSlots <= 0) {
         viewablePages = []
       } else if (sectionPages.length > availableSlots) {
@@ -150,9 +157,19 @@ const SidebarNav = ({
   widgetsDisabled,
 }: Props): ReactElement | null => {
   const [expanded, setExpanded] = useState(false)
-  const { expandSidebarNav } = useContext(SidebarConfigContext)
+  const { expandSidebarNav, sidebarNavVisibleItems } = useContext(
+    SidebarConfigContext
+  )
   const { pageLinkBaseUrl, appPages, onPageChange, currentPageScriptHash } =
     useContext(NavigationContext)
+
+  // Use the value from context if provided, otherwise use the default
+  const numPagesToShowWhenCollapsed =
+    notNullOrUndefined(sidebarNavVisibleItems) && sidebarNavVisibleItems > 0
+      ? sidebarNavVisibleItems
+      : NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+  // The collapse threshold is numPagesToShowWhenCollapsed + 2
+  const collapseThreshold = numPagesToShowWhenCollapsed + 2
 
   const localStorageKey = `stSidebarSectionsState-${pageLinkBaseUrl}`
   const [expandedSections, setExpandedSections] = useState<Record<
@@ -160,15 +177,18 @@ const SidebarNav = ({
     boolean
   > | null>(null)
 
+  // Filter out hidden pages for display purposes
+  const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
+
   const navigationStructure = useMemo(() => {
-    return processNavigationStructure(groupPagesBySection(appPages))
-  }, [appPages])
+    return processNavigationStructure(groupPagesBySection(visiblePages))
+  }, [visiblePages])
 
   const numVisiblePages = useMemo(() => {
     const hasSections = Object.keys(navigationStructure.sections).length > 0
 
     if (!hasSections) {
-      return appPages.length
+      return visiblePages.length
     }
 
     let count = navigationStructure.individualPages.length
@@ -183,7 +203,7 @@ const SidebarNav = ({
     )
 
     return count
-  }, [appPages.length, expandedSections, navigationStructure])
+  }, [visiblePages.length, expandedSections, navigationStructure])
 
   useEffect(() => {
     const cachedSidebarNavExpanded =
@@ -198,40 +218,27 @@ const SidebarNav = ({
 
   // Loading the state of sections (expanded/collapsed) from localStorage:
   useEffect(() => {
+    let storedState: Record<string, boolean> = {}
     if (localStorageAvailable()) {
-      const storedState = window.localStorage.getItem(localStorageKey)
-      let initialState: Record<string, boolean> = {}
-      if (storedState) {
+      const stored = window.localStorage.getItem(localStorageKey)
+      if (stored) {
         try {
-          initialState = JSON.parse(storedState)
+          storedState = JSON.parse(stored)
         } catch (e) {
-          // The stored state is invalid, so we'll just use the default.
-          initialState = {}
           LOG.warn("Could not parse sidebar nav state from localStorage", e)
         }
       }
-
-      const allSections = Object.keys(navigationStructure.sections).reduce(
-        (acc, sectionName) => {
-          // Default to expanded
-          acc[sectionName] = initialState[sectionName] ?? true
-          return acc
-        },
-        {} as Record<string, boolean>
-      )
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
-      setExpandedSections(allSections)
-    } else {
-      // If localStorage is not available, default to all expanded.
-      const allSections = Object.keys(navigationStructure.sections).reduce(
-        (acc, sectionName) => {
-          acc[sectionName] = true
-          return acc
-        },
-        {} as Record<string, boolean>
-      )
-      setExpandedSections(allSections)
     }
+
+    const allSections = Object.keys(navigationStructure.sections).reduce<
+      Record<string, boolean>
+    >((acc, sectionName) => {
+      // Default to expanded if not in stored state
+      acc[sectionName] = storedState[sectionName] ?? true
+      return acc
+    }, {})
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
+    setExpandedSections(allSections)
   }, [navigationStructure.sections, localStorageKey])
 
   // Store the current expanded sections state in localStorage:
@@ -272,6 +279,7 @@ const SidebarNav = ({
     (page: IAppPage, index: number) => {
       const pageUrl = endpoints.buildAppPageURL(pageLinkBaseUrl, page)
       const isActive = page.pageScriptHash === currentPageScriptHash
+      const isExternal = isExternalPage(page)
 
       return (
         <NavLink
@@ -280,6 +288,14 @@ const SidebarNav = ({
           page={page}
           isActive={isActive}
           onClick={e => {
+            // External links are handled by the browser (target="_blank")
+            if (isExternal) {
+              // Still collapse sidebar on mobile for external links
+              if (isMobile()) {
+                collapseSidebar()
+              }
+              return
+            }
             e.preventDefault()
             onPageChange(page.pageScriptHash as string)
             if (isMobile()) {
@@ -309,7 +325,7 @@ const SidebarNav = ({
   const contents: ReactNode[] = []
   const shouldShowViewButton =
     hasSidebarElements &&
-    numVisiblePages > COLLAPSE_THRESHOLD &&
+    numVisiblePages > collapseThreshold &&
     !expandSidebarNav
   const needsCollapse = shouldShowViewButton && !expanded
 
@@ -319,7 +335,7 @@ const SidebarNav = ({
     const individualPages = needsCollapse
       ? navigationStructure.individualPages.slice(
           0,
-          NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
+          numPagesToShowWhenCollapsed
         )
       : navigationStructure.individualPages
     contents.push(...individualPages.map(generateNavLink))
@@ -334,7 +350,8 @@ const SidebarNav = ({
       generateNavLink,
       expandedSections,
       toggleSection,
-      currentPageCount
+      currentPageCount,
+      numPagesToShowWhenCollapsed
     )
     contents.push(...result.sections)
   }
@@ -351,9 +368,7 @@ const SidebarNav = ({
         >
           {expanded
             ? "View less"
-            : `View ${
-                numVisiblePages - NUM_PAGES_TO_SHOW_WHEN_COLLAPSED
-              } more`}
+            : `View ${numVisiblePages - numPagesToShowWhenCollapsed} more`}
         </StyledViewButton>
       )}
       {hasSidebarElements && (

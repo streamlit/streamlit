@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -93,6 +93,9 @@ st.bar_chart(
     df, x="b", y="a", sort="b", horizontal=True
 )  # horizontal, sort by categories
 st.bar_chart(df, x="b", y="a", sort="a", horizontal=True)  # horizontal, sort by values
+st.bar_chart(
+    df, x="a", y=["b", "c"], sort="-a"
+)  # sort by x column with multiple y columns (regression test)
 
 # Test that add_rows maintains original styling params:
 # color, width, height, horizontal, stack

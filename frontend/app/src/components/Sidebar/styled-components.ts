@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,7 @@ import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
  * @param theme The theme to use.
  * @returns The horizontal spacing for the sidebar.
  */
-export const getSidebarHorizontalSpacing = (
+const getSidebarHorizontalSpacing = (
   theme: EmotionTheme,
   scrollbarGutterSize: number
 ): string => {
@@ -40,7 +40,7 @@ export const getSidebarHorizontalSpacing = (
   )`
 }
 
-export interface StyledSidebarProps {
+interface StyledSidebarProps {
   isCollapsed: boolean
   adjustTop: boolean
   sidebarWidth: string
@@ -74,9 +74,9 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
       },
 
       [`@media (max-width: ${theme.breakpoints.md})`]: {
-        boxShadow: `-2rem 0 2rem 2rem ${
-          isCollapsed ? "transparent" : "#00000029"
-        }`,
+        boxShadow: isCollapsed
+          ? "-2rem 0 2rem 2rem transparent"
+          : theme.shadows.sidebar,
       },
 
       [`@media print`]: {
@@ -92,7 +92,7 @@ export const StyledSidebar = styled.section<StyledSidebarProps>(
   }
 )
 
-export interface StyledSidebarUserContentProps {
+interface StyledSidebarUserContentProps {
   hasPageNavAbove: boolean
 }
 
@@ -102,7 +102,7 @@ export const StyledSidebarUserContent =
     paddingBottom: theme.sizes.sidebarTopSpace,
   }))
 
-export interface StyledSidebarContentProps {
+interface StyledSidebarContentProps {
   scrollbarGutterSize: number
 }
 
@@ -158,13 +158,23 @@ export const StyledLogoLink = styled.a({
   },
 })
 
-export interface StyledLogoProps {
+export const StyledLogoButton = styled.button({
+  // Reset button styles
+  background: "none",
+  border: "none",
+  padding: 0,
+  cursor: "pointer",
+  "&:hover": {
+    opacity: "0.7",
+  },
+})
+
+interface StyledLogoProps {
   size: string
   sidebarWidth?: string
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function translateLogoHeight(theme: any, size: string): string {
+function translateLogoHeight(theme: EmotionTheme, size: string): string {
   if (size === "small") {
     return theme.sizes.smallLogoHeight
   } else if (size === "large") {
@@ -187,11 +197,27 @@ export const StyledLogo = styled.img<StyledLogoProps>(({ theme, size }) => ({
   maxWidth: `100%`,
 }))
 
+export const StyledIconLogo = styled.div<StyledLogoProps>(
+  ({ theme, size }) => ({
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "flex-start",
+    height: translateLogoHeight(theme, size),
+    marginTop: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginBottom: size == "small" ? theme.spacing.xs : theme.spacing.twoXS,
+    marginLeft: theme.spacing.none,
+    zIndex: theme.zIndices.header,
+    fontSize: translateLogoHeight(theme, size),
+    lineHeight: theme.lineHeights.none,
+    color: theme.colors.bodyText,
+  })
+)
+
 export const StyledNoLogoSpacer = styled.div(({ theme }) => ({
   height: theme.sizes.largeLogoHeight,
 }))
 
-export interface StyledCollapseSidebarButtonProps {
+interface StyledCollapseSidebarButtonProps {
   showSidebarCollapse: boolean
 }
 

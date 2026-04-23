@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   ReactElement,
   useCallback,
   useContext,
@@ -30,11 +30,9 @@ import {
   ResizeDirection,
 } from "re-resizable"
 
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
-import {
-  shouldShowNavigation,
-  SidebarNav,
-} from "@streamlit/app/src/components/Navigation"
+import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
+import SidebarNav from "@streamlit/app/src/components/Navigation/SidebarNav"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
   BaseButton,
@@ -88,11 +86,10 @@ const Sidebar: React.FC<SidebarProps> = ({
   const mediumBreakpointPx = calculateMaxBreakpoint(theme.breakpoints.md)
   const { innerWidth } = useWindowDimensionsContext()
 
-  const { appPages, navSections } = useContext(NavigationContext)
+  const { appPages } = useContext(NavigationContext)
 
-  const { hideSidebarNav, appLogo, initialSidebarWidth } = useContext(
-    SidebarConfigContext
-  )
+  const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
+    useContext(SidebarConfigContext)
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 
@@ -184,17 +181,26 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
-      if (sidebarRef && window) {
-        const { current } = sidebarRef
+      const sidebarElement = sidebarRef.current
+      const appRootElement = appRootRef?.current
+      const target = event.target as Node | null
 
-        if (
-          current &&
-          !current.contains(event.target as Node | null) &&
-          innerWidth <= mediumBreakpointPx &&
-          !isCollapsed
-        ) {
-          onToggleCollapse(true)
-        }
+      if (!sidebarElement || !target) {
+        return
+      }
+
+      const isInsideSidebar = sidebarElement.contains(target)
+      const isInsideApp = appRootElement?.contains(target) ?? false
+      const isMobileViewport = innerWidth <= mediumBreakpointPx
+
+      // Only collapse if click is outside the sidebar but inside the main app.
+      // This excludes clicks on portaled elements (dropdowns, modals, etc.)
+      // since they render outside the main app container.
+      const shouldCollapse =
+        !isInsideSidebar && isInsideApp && isMobileViewport && !isCollapsed
+
+      if (shouldCollapse) {
+        onToggleCollapse(true)
       }
     }
 
@@ -204,11 +210,11 @@ const Sidebar: React.FC<SidebarProps> = ({
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [
-    lastInnerWidth,
     mediumBreakpointPx,
     isCollapsed,
     onToggleCollapse,
     innerWidth,
+    appRootRef,
   ])
 
   function resetSidebarWidth(): void {
@@ -243,8 +249,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     )
   }
 
-  const hasPageNavAbove =
-    shouldShowNavigation(appPages, navSections) && !hideSidebarNav
+  const hasPageNavAbove = shouldShowNavigation(appPages) && !hideSidebarNav
 
   // The tabindex is required to support scrolling by arrow keys.
   return (

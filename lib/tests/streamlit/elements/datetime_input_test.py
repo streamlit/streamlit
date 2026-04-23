@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,14 +23,19 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
-from streamlit.proto.LabelVisibilityMessage_pb2 import LabelVisibilityMessage
+from streamlit.elements.widgets.time_widgets import DateTimeInputSerde
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
+from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.element_tree import DateTimeInput
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
-DATETIME_FORMAT = "%Y/%m/%d, %H:%M"
+DATETIME_FORMAT = "%Y-%m-%dT%H:%M"
 
 
 class DateTimeInputTest(DeltaGeneratorTestCase):
@@ -44,7 +49,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         assert proto.label == "the label"
         assert (
             proto.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.VISIBLE
+            == LabelVisibility.LabelVisibilityOptions.VISIBLE
         )
         assert proto.format == "YYYY/MM/DD"
         assert proto.step == timedelta(minutes=15).seconds
@@ -119,7 +124,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
         proto = self.get_delta_from_queue().new_element.date_time_input
         assert (
             proto.label_visibility.value
-            == LabelVisibilityMessage.LabelVisibilityOptions.HIDDEN
+            == LabelVisibility.LabelVisibilityOptions.HIDDEN
         )
 
     def test_label_visibility_wrong_value(self):
@@ -256,7 +261,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             proto = self.get_delta_from_queue().new_element.date_time_input
 
             # min should be exactly the mocked now
-            assert proto.min == "2024/01/01, 12:00"
+            assert proto.min == "2024-01-01T12:00"
 
     def test_max_value_now(self):
         """Test max_value='now'."""
@@ -272,7 +277,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
             proto = self.get_delta_from_queue().new_element.date_time_input
 
             # max should be exactly the mocked now
-            assert proto.max == "2024/01/01, 12:00"
+            assert proto.max == "2024-01-01T12:00"
 
     def test_min_max_exception(self):
         """Test that min_value > max_value raises an exception."""
@@ -311,7 +316,7 @@ class DateTimeInputTest(DeltaGeneratorTestCase):
 
         proto = self.get_delta_from_queue().new_element.date_time_input
         # Proto string should not contain timezone info
-        assert proto.default[0] == "2025/01/01, 12:00"
+        assert proto.default[0] == "2025-01-01T12:00"
 
     def test_invalid_value_exception(self):
         """Test that passing an invalid value raises an exception."""
@@ -436,3 +441,316 @@ def test_session_state_takes_precedence():
     at = AppTest.from_function(script).run()
     widget = at.datetime_input[0]
     assert widget.value == datetime(2024, 12, 25, 10, 0)
+
+
+def test_dynamic_min_value_resets_value_when_below_new_min():
+    """Test that value resets to default when dynamically changing min_value makes current value invalid."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New min_value makes the previous value invalid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 6, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 7, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to March 1 (valid with min_value=Jan 1)
+    at = at.datetime_input[0].set_value(datetime(2024, 3, 1, 10, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 3, 1, 10, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now min_value=June 1, so March 1 is invalid and should reset to default (July 15)
+    assert at.datetime_input[0].value == datetime(2024, 7, 15, 12, 0)
+
+
+def test_dynamic_max_value_resets_value_when_above_new_max():
+    """Test that value resets to default when dynamically changing max_value makes current value invalid."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New max_value makes the previous value invalid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 6, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 3, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to October 1 (valid with max_value=Dec 31)
+    at = at.datetime_input[0].set_value(datetime(2024, 10, 1, 14, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 10, 1, 14, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Now max_value=June 30, so October 1 is invalid and should reset to default (March 15)
+    assert at.datetime_input[0].value == datetime(2024, 3, 15, 12, 0)
+
+
+def test_dynamic_bounds_preserves_valid_value():
+    """Test that value is preserved when it remains valid after bound changes."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # Changing bounds but May 15 is still valid (between Apr 1 and Sep 30)
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 4, 1, 0, 0),
+                max_value=datetime(2024, 9, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # Value should be preserved because it's still within the new bounds
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+
+def test_dynamic_bounds_preserves_user_set_valid_value():
+    """Test that a user-set value (different from default) is preserved when still valid after bound changes."""
+
+    def script():
+        from datetime import datetime
+
+        import streamlit as st
+
+        if "update_bounds" not in st.session_state:
+            st.session_state["update_bounds"] = False
+
+        if st.session_state["update_bounds"]:
+            # New bounds: Apr 1 to Sep 30 - July 1 is still valid
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 4, 1, 0, 0),
+                max_value=datetime(2024, 9, 30, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        else:
+            value = st.datetime_input(
+                "datetime",
+                min_value=datetime(2024, 1, 1, 0, 0),
+                max_value=datetime(2024, 12, 31, 23, 59),
+                key="datetime",
+                value=datetime(2024, 5, 15, 12, 0),
+            )
+        st.write(f"value: {value}")
+
+        if st.button("Toggle bounds"):
+            st.session_state["update_bounds"] = not st.session_state["update_bounds"]
+
+    at = AppTest.from_function(script).run()
+    assert at.datetime_input[0].value == datetime(2024, 5, 15, 12, 0)
+
+    # Set value to July 1 (different from default May 15, valid in both bound ranges)
+    at = at.datetime_input[0].set_value(datetime(2024, 7, 1, 10, 0)).run()
+    assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
+
+    # Toggle bounds - the click updates session_state["update_bounds"] to True
+    at = at.button[0].click().run()
+    # AppTest requires an additional run to process the widget with the new bounds
+    at = at.run()
+    # User-set value (July 1) should be preserved, not reset to default (May 15)
+    assert at.datetime_input[0].value == datetime(2024, 7, 1, 10, 0)
+    # Ensure it's not reset to the default value
+    assert at.datetime_input[0].value != datetime(2024, 5, 15, 12, 0)
+
+
+class DateTimeInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Test query param binding for st.datetime_input."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' sets query_param_key."""
+        st.datetime_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == "my_key"
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that query_param_key is empty without bind."""
+        st.datetime_input("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == ""
+
+    def test_bind_requires_key(self):
+        """Test that bind without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException):
+            st.datetime_input("the label", bind="query-params")
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.datetime_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_explicit_value(self):
+        """Test that bind works when value is explicitly set."""
+        st.datetime_input(
+            "the label",
+            value=datetime(2025, 11, 19, 16, 45),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == "my_key"
+        assert c.default == ["2025-11-19T16:45"]
+
+    def test_bind_query_params_with_none_value(self):
+        """Test that bind works with value=None (clearable)."""
+        st.datetime_input("the label", value=None, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.date_time_input
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == []
+
+
+class TestDateTimeInputSerdeISO:
+    """Tests for DateTimeInputSerde ISO 8601 format parsing."""
+
+    def test_deserialize_internal_format(self):
+        """Test that the internal YYYY/MM/DD, HH:MM format is correctly parsed."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2025/01/15, 10:00"])
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_iso_format(self):
+        """Test that ISO YYYY-MM-DDThh:mm format is correctly parsed."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2025-06-20T14:30"])
+        assert result == datetime(2025, 6, 20, 14, 30)
+
+    def test_deserialize_invalid_format_reverts_to_default(self):
+        """Test that unparseable strings revert to the default value."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["not-a-datetime"])
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_none_returns_default(self):
+        """Test that None ui_value returns the default value."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(None)
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_empty_returns_default(self):
+        """Test that empty list returns the default value."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 1, 15, 10, 0),
+            min=datetime(2020, 1, 1, 0, 0),
+            max=datetime(2030, 12, 31, 23, 59),
+        )
+        result = serde.deserialize([])
+        assert result == datetime(2025, 1, 15, 10, 0)
+
+    def test_deserialize_out_of_bounds_reverts_to_default(self):
+        """Test that out-of-bounds values revert to the default."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 6, 15, 12, 0),
+            min=datetime(2025, 1, 1, 0, 0),
+            max=datetime(2025, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2024-06-15T12:00"])
+        assert result == datetime(2025, 6, 15, 12, 0)
+
+    def test_deserialize_above_max_reverts_to_default(self):
+        """Test that values above max revert to the default."""
+        serde = DateTimeInputSerde(
+            value=datetime(2025, 6, 15, 12, 0),
+            min=datetime(2025, 1, 1, 0, 0),
+            max=datetime(2025, 12, 31, 23, 59),
+        )
+        result = serde.deserialize(["2026-01-01T00:00"])
+        assert result == datetime(2025, 6, 15, 12, 0)

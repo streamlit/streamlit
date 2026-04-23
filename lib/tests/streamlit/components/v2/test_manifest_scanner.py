@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,9 +18,156 @@ import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, mock_open, patch
 
+import pytest
 from parameterized import parameterized
 
-from streamlit.components.v2.manifest_scanner import ComponentConfig, ComponentManifest
+from streamlit.components.v2.manifest_scanner import (
+    ComponentConfig,
+    ComponentManifest,
+    _derive_project_metadata,
+    _extract_components,
+    _is_likely_streamlit_component_package,
+    _load_pyproject,
+)
+
+
+def test_component_config_from_dict_missing_name() -> None:
+    """Test ComponentConfig.from_dict raises when name is missing."""
+    with pytest.raises(ValueError, match="missing required 'name' field"):
+        ComponentConfig.from_dict({})
+
+
+def test_component_config_from_dict_empty_name() -> None:
+    """Test ComponentConfig.from_dict raises when name is empty string."""
+    with pytest.raises(ValueError, match="missing required 'name' field"):
+        ComponentConfig.from_dict({"name": ""})
+
+
+def test_component_config_from_dict_non_string_name() -> None:
+    """Test ComponentConfig.from_dict raises when name is not a string."""
+    with pytest.raises(ValueError, match="missing required 'name' field"):
+        ComponentConfig.from_dict({"name": 123})
+
+
+def test_component_config_from_dict_non_string_asset_dir() -> None:
+    """Test ComponentConfig.from_dict raises when asset_dir is not a string."""
+    with pytest.raises(ValueError, match="'asset_dir' must be a string"):
+        ComponentConfig.from_dict({"name": "my-comp", "asset_dir": 42})
+
+
+def test_component_config_parse_or_none_malformed() -> None:
+    """Test ComponentConfig.parse_or_none returns None for malformed input."""
+    result = ComponentConfig.parse_or_none({})
+    assert result is None
+
+
+def test_component_config_parse_or_none_valid() -> None:
+    """Test ComponentConfig.parse_or_none returns config for valid input."""
+    result = ComponentConfig.parse_or_none({"name": "my-comp", "asset_dir": "dist"})
+    assert result is not None
+    assert result.name == "my-comp"
+    assert result.asset_dir == "dist"
+
+
+def test_extract_components_no_streamlit_section() -> None:
+    """Test _extract_components returns None when no streamlit section."""
+    assert _extract_components({"project": {"name": "test"}}) is None
+
+
+def test_extract_components_no_components_list() -> None:
+    """Test _extract_components returns None when components is not a list."""
+    data = {"tool": {"streamlit": {"component": {"components": "not-a-list"}}}}
+    assert _extract_components(data) is None
+
+
+def test_extract_components_empty_after_filtering() -> None:
+    """Test _extract_components returns None when all items are filtered."""
+    data = {"tool": {"streamlit": {"component": {"components": ["not-a-dict", 42]}}}}
+    assert _extract_components(data) is None
+
+
+def test_extract_components_valid() -> None:
+    """Test _extract_components returns list of dicts for valid data."""
+    data = {
+        "tool": {
+            "streamlit": {
+                "component": {"components": [{"name": "foo"}, {"name": "bar"}]}
+            }
+        }
+    }
+    result = _extract_components(data)
+    assert result is not None
+    assert len(result) == 2
+
+
+def test_load_pyproject_invalid_file() -> None:
+    """Test _load_pyproject returns None for invalid TOML file."""
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp) / "pyproject.toml"
+        path.write_text("[[[invalid toml")
+        assert _load_pyproject(path) is None
+
+
+def test_load_pyproject_nonexistent_file() -> None:
+    """Test _load_pyproject returns None for non-existent file."""
+    assert _load_pyproject(Path("/nonexistent/pyproject.toml")) is None
+
+
+def test_is_likely_streamlit_component_package_by_summary() -> None:
+    """Test filter detects packages with 'streamlit' in summary."""
+    dist = MagicMock()
+    dist.name = "my-chart-lib"
+    mock_metadata = MagicMock()
+    metadata_dict = {"Summary": "A streamlit chart component"}
+    mock_metadata.__getitem__.side_effect = metadata_dict.__getitem__
+    mock_metadata.__contains__.side_effect = metadata_dict.__contains__
+    dist.metadata = mock_metadata
+    assert _is_likely_streamlit_component_package(dist) is True
+
+
+def test_is_likely_streamlit_component_package_by_requires_dist() -> None:
+    """Test filter detects packages that depend on streamlit."""
+    dist = MagicMock()
+    dist.name = "my-widget"
+    mock_metadata = MagicMock()
+    metadata_dict = {"Summary": "A widget library"}
+    mock_metadata.__getitem__.side_effect = metadata_dict.__getitem__
+    mock_metadata.__contains__.side_effect = metadata_dict.__contains__
+    mock_metadata.get_all.return_value = ["streamlit>=1.0"]
+    dist.metadata = mock_metadata
+    assert _is_likely_streamlit_component_package(dist) is True
+
+
+def test_is_likely_streamlit_component_package_metadata_error() -> None:
+    """Test filter handles metadata parsing errors gracefully."""
+    dist = MagicMock()
+    dist.name = "my-package"
+    mock_metadata = MagicMock()
+    metadata_dict = {"Summary": "A plain widget library"}
+    mock_metadata.__getitem__.side_effect = metadata_dict.__getitem__
+    mock_metadata.__contains__.side_effect = metadata_dict.__contains__
+    mock_metadata.get_all.side_effect = Exception("metadata parsing error")
+    dist.metadata = mock_metadata
+    assert _is_likely_streamlit_component_package(dist) is False
+
+
+def test_derive_project_metadata_with_fallbacks() -> None:
+    """Test _derive_project_metadata uses dist fallbacks when project table is empty."""
+    dist = MagicMock()
+    dist.name = "fallback-name"
+    dist.version = "0.1.0"
+    name, version = _derive_project_metadata({}, dist)
+    assert name == "fallback-name"
+    assert version == "0.1.0"
+
+
+def test_derive_project_metadata_no_version() -> None:
+    """Test _derive_project_metadata defaults to 0.0.0 when no version is available."""
+    dist = MagicMock()
+    dist.name = "pkg"
+    dist.version = None
+    _name, version = _derive_project_metadata({}, dist)
+    assert version == "0.0.0"
 
 
 @parameterized.expand(
@@ -126,8 +273,8 @@ def test_process_single_package_valid_manifest() -> None:
     mock_dist = Mock()
     mock_dist.files = [mock_file, mock_init_file]
     mock_dist.name = "test-package"
-    mock_dist.locate_file.side_effect = (
-        lambda f: "/path/to/pyproject.toml"
+    mock_dist.locate_file.side_effect = lambda f: (
+        "/path/to/pyproject.toml"
         if f == mock_file
         else "/path/to/test_package/__init__.py"
     )
@@ -221,8 +368,8 @@ def test_scan_multiple_component_manifests() -> None:
         ) as mock_process,
     ):
         mock_distributions.return_value = mock_dists
-        mock_process.side_effect = (
-            lambda dist: results[int(dist.name.split("-")[-1])]
+        mock_process.side_effect = lambda dist: (
+            results[int(dist.name.split("-")[-1])]
             if "streamlit" in dist.name and int(dist.name.split("-")[-1]) < 3
             else None
         )
@@ -310,6 +457,56 @@ def test_scan_component_manifests_empty_distributions() -> None:
 
         manifests = scan_component_manifests()
         assert manifests == []
+
+
+@parameterized.expand(
+    [
+        ("none_name", None),
+        ("empty_string_name", ""),
+    ]
+)
+def test_scan_component_manifests_skips_distributions_without_name(
+    _case: str, dist_name: str | None
+) -> None:
+    """Test scanning skips distributions with missing or invalid dist.name."""
+    from streamlit.components.v2.manifest_scanner import scan_component_manifests
+
+    invalid_dist = Mock()
+    invalid_dist.name = dist_name
+    invalid_metadata = MagicMock()
+    invalid_metadata.__contains__.return_value = False
+    invalid_metadata.get_all.return_value = []
+    invalid_dist.metadata = invalid_metadata
+
+    valid_dist = Mock()
+    valid_dist.name = "streamlit-package-0"
+    valid_metadata = MagicMock()
+    metadata_dict = {
+        "Name": "streamlit-package-0",
+        "Summary": "Description for streamlit-package-0",
+    }
+    valid_metadata.__getitem__.side_effect = metadata_dict.__getitem__
+    valid_metadata.__contains__.side_effect = metadata_dict.__contains__
+    valid_metadata.get_all.return_value = []
+    valid_dist.metadata = valid_metadata
+
+    with (
+        patch(
+            "streamlit.components.v2.manifest_scanner.importlib.metadata.distributions"
+        ) as mock_distributions,
+        patch(
+            "streamlit.components.v2.manifest_scanner._process_single_package"
+        ) as mock_process,
+    ):
+        mock_distributions.return_value = [invalid_dist, valid_dist]
+        mock_process.return_value = None
+
+        # Should not raise, even with malformed distributions.
+        manifests = scan_component_manifests(max_workers=1)
+
+        assert manifests == []
+        # Anti-regression: do not attempt to process the invalid distribution.
+        mock_process.assert_called_once_with(valid_dist)
 
 
 def test_scan_component_manifests_error_handling() -> None:

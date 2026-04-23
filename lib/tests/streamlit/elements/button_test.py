@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -31,6 +31,9 @@ import streamlit as st
 from streamlit.elements.widgets.button import marshall_file
 from streamlit.errors import StreamlitAPIException, StreamlitPageNotFoundError
 from streamlit.navigation.page import StreamlitPage
+from streamlit.proto.ButtonLikeIconPosition_pb2 import (
+    ButtonLikeIconPosition as ProtoButtonLikeIconPosition,
+)
 from streamlit.proto.DownloadButton_pb2 import (
     DownloadButton as DownloadButtonProto,
 )
@@ -139,6 +142,35 @@ class ButtonTest(DeltaGeneratorTestCase):
 
         c = getattr(self.get_delta_from_queue().new_element, name)
         assert c.icon == icon
+
+    @parameterized.expand(get_button_command_matrix())
+    def test_invalid_icon_position_raises(
+        self, name: str, command: Callable[..., Any]
+    ) -> None:
+        """Test that invalid icon_position values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            command(icon_position="center")  # type: ignore[arg-type]
+
+    @parameterized.expand(
+        [
+            (name, command, position)
+            for name, command in get_button_command_matrix()
+            for position in ["left", "right"]
+        ]
+    )
+    def test_icon_position(
+        self, name: str, command: Callable[..., Any], icon_position: str
+    ):
+        """Test that icon_position is serialized for button-like commands."""
+        command(icon_position=icon_position)
+
+        c = getattr(self.get_delta_from_queue().new_element, name)
+        expected = (
+            ProtoButtonLikeIconPosition.RIGHT
+            if icon_position == "right"
+            else ProtoButtonLikeIconPosition.LEFT
+        )
+        assert c.icon_position == expected
 
     @parameterized.expand(get_button_command_matrix())
     def test_just_disabled(self, name: str, command: Callable[..., Any]):
@@ -299,6 +331,60 @@ class ButtonTest(DeltaGeneratorTestCase):
             id2 = c2.id
             assert id1 == id2
 
+    @parameterized.expand(
+        [
+            ("rerun_and_callback", "rerun", lambda: st.write("Link clicked"), True),
+            ("ignore_mode", "ignore", "ignore", False),
+        ]
+    )
+    def test_stable_id_link_button_with_key(
+        self, _, first_on_click, second_on_click, include_callback_args
+    ):
+        """Test that key-based identity is stable for rerun and ignore modes."""
+        with patch(
+            "streamlit.elements.lib.utils._register_element_id",
+            return_value=MagicMock(),
+        ):
+            first_link_button_kwargs = {"on_click": first_on_click}
+            second_link_button_kwargs = {"on_click": second_on_click}
+
+            if include_callback_args:
+                first_link_button_kwargs |= {
+                    "args": ("arg1", "arg2"),
+                    "kwargs": {"kwarg1": "kwarg1"},
+                }
+                second_link_button_kwargs |= {
+                    "args": ("arg_1", "arg_2"),
+                    "kwargs": {"kwarg_1": "kwarg_1"},
+                }
+
+            st.link_button(
+                label="Label 1",
+                url="https://streamlit.io/1",
+                key="link_button_key",
+                help="Help 1",
+                type="secondary",
+                disabled=False,
+                width="content",
+                **first_link_button_kwargs,
+            )
+            c1 = self.get_delta_from_queue().new_element.link_button
+            id1 = c1.id
+
+            st.link_button(
+                label="Label 2",
+                url="https://streamlit.io/2",
+                key="link_button_key",
+                help="Help 2",
+                type="primary",
+                disabled=True,
+                width="stretch",
+                **second_link_button_kwargs,
+            )
+            c2 = self.get_delta_from_queue().new_element.link_button
+            id2 = c2.id
+            assert id1 == id2
+
     def test_use_container_width_true(self):
         """Test use_container_width=True is mapped to width='stretch'."""
         for button_type, button_func, width in get_button_command_matrix(
@@ -366,7 +452,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         st.cache_data(lambda: st.button("the label"))()
 
         # The widget itself is still created, so we need to go back one element more:
-        el = self.get_delta_from_queue(-2).new_element.exception
+        el = self.get_delta_from_queue(-3).new_element.exception
         assert el.type == "CachedWidgetWarning"
         assert el.is_warning
 
@@ -560,6 +646,7 @@ class ButtonTest(DeltaGeneratorTestCase):
         page.title = "Test Page"
         page.icon = "🏠"
         page.url_path = "test-page"
+        page.is_external = False
 
         ctx = MagicMock()
         with patch(

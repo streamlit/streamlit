@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,12 +21,23 @@ import pandas as pd
 import streamlit as st
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.bidi_component import BidiComponentResult
+    from streamlit.components.v2.bidi_component import ComponentResult
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
 
 
 st.header("Custom Components v2 - Basics")
+
+
+# ---------------------------------------------------------------------------
+# Empty content: component with no HTML/CSS/JS should not error
+# ---------------------------------------------------------------------------
+_EMPTY_CMP = st.components.v2.component("bidi_empty_content", isolate_styles=False)
+
+with st.container(key="empty_component_container"):
+    st.subheader("Empty content")
+    _EMPTY_CMP(key="empty_component")
+    st.write("After empty component")
 
 
 # ---------------------------------------------------------------------------
@@ -96,9 +107,8 @@ def stateful_component(
     width: Width = "stretch",
     height: Height = "content",
     default: dict[str, Any] | None = None,
-) -> BidiComponentResult:
+) -> ComponentResult:
     return _STATEFUL_CMP(
-        isolate_styles=True,
         key=key,
         data=data,
         on_range_change=on_range_change,
@@ -155,9 +165,8 @@ def trigger_component(
     data: Any | None = None,
     on_foo_change: WidgetCallback | None = None,
     on_bar_change: WidgetCallback | None = None,
-) -> BidiComponentResult:
+) -> ComponentResult:
     return _TRIGGER_CMP(
-        isolate_styles=True,
         key=key,
         data=data,
         on_foo_change=on_foo_change,
@@ -219,9 +228,8 @@ def ctx_component(
     data: Any | None = None,
     on_text_change: WidgetCallback | None = None,
     on_clicked_change: WidgetCallback | None = None,
-) -> BidiComponentResult:
+) -> ComponentResult:
     return _CTX_CMP(
-        isolate_styles=True,
         key=key,
         data=data,
         on_text_change=on_text_change,
@@ -374,7 +382,7 @@ with st.container():
     def _remount_stateful_component(
         *,
         key: str,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         # Resolve initial values: prefer session_state if available, else fall back to default values
         state_value = st.session_state.get(key)
         initial_defaults: dict[str, Any] = {"range": 10, "text": "hello"}
@@ -488,9 +496,8 @@ div {
         on_formValues_change: WidgetCallback | None = None,  # noqa: N803
         on_clicked_change: WidgetCallback | None = None,
         default: dict[str, Any] | None = None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         return _BASIC_CMP(
-            isolate_styles=True,
             key=key,
             data=data,
             on_formValues_change=on_formValues_change,
@@ -519,6 +526,56 @@ div {
     st.write(f"Result: {basic_result}")
     st.text(f"session_state: {st.session_state.get('basic_component_1')}")
     st.write(f"Click count: {st.session_state.basic_click_count}")
+
+st.divider()
+
+with st.container():
+    st.subheader("Global hotkey interface")
+
+    if "hotkey_runs" not in st.session_state:
+        st.session_state.hotkey_runs = 0
+    st.session_state.hotkey_runs += 1
+
+    _HOTKEY_JS = """
+export default function(component) {
+  const { parentElement, setStateValue } = component
+
+  const form = parentElement.querySelector("form")
+  const input = parentElement.querySelector("#hotkey-text")
+
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    setStateValue("text", input?.value ?? "")
+  }
+
+  form.addEventListener("submit", handleSubmit)
+
+  return () => {
+    form.removeEventListener("submit", handleSubmit)
+  }
+}
+"""
+
+    _HOTKEY_HTML = """
+<form>
+  <label for="hotkey-text">Hotkey Text</label>
+  <input type="text" id="hotkey-text" name="hotkey-text" value="" />
+  <button type="submit">Submit</button>
+</form>
+"""
+
+    _HOTKEY_CMP = st.components.v2.component(
+        name="bidi_hotkey_regression",
+        js=_HOTKEY_JS,
+        html=_HOTKEY_HTML,
+    )
+
+    def hotkey_regression_component(*, key: str) -> ComponentResult:
+        return _HOTKEY_CMP(key=key)
+
+    hotkey_result = hotkey_regression_component(key="hotkey_regression_component")
+    st.write(f"Hotkey runs: {st.session_state.hotkey_runs}")
+    st.write(f"Result: {hotkey_result}")
 
 
 st.divider()
@@ -554,7 +611,7 @@ export default function(component) {
         html=_ARROW_HTML,
     )
 
-    def arrow_component(*, key: str, data: Any) -> BidiComponentResult:
+    def arrow_component(*, key: str, data: Any) -> ComponentResult:
         return _ARROW_CMP(key=key, data=data)
 
     df = pd.DataFrame({"a": [1, 2, 3]})

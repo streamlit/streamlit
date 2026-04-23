@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
@@ -41,7 +41,7 @@ class PagesManager:
         **kwargs: Any,
     ) -> None:
         self._main_script_path = main_script_path
-        self._main_script_hash: PageHash = calc_md5(main_script_path)
+        self._main_script_hash: PageHash = calc_hash(main_script_path)
         self._script_cache = script_cache
         self._intended_page_script_hash: PageHash | None = None
         self._intended_page_name: PageName | None = None

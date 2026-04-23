@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -52,6 +52,16 @@ def large_logo_w_sidebar_subtest():
         size="large",
         icon_image=STATIC_ASSETS_DIR / "streamlit-mark.png",
     )
+    st.sidebar.write("Hi")
+
+
+def material_icon_logo_subtest():
+    st.logo(":material/rocket_launch:", size="medium")
+    st.sidebar.write("Hi")
+
+
+def emoji_logo_subtest():
+    st.logo("🚀", size="medium")
     st.sidebar.write("Hi")
 
 

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { screen, waitFor } from "@testing-library/react"
 import embed from "vega-embed"
 import { TopLevelSpec } from "vega-lite"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   Metric as MetricProto,
 } from "@streamlit/protobuf"
 
@@ -81,26 +79,26 @@ describe("Metric element", () => {
   it("pass labelVisibility prop to StyledMetricLabelText correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN)
+      String(LabelVisibilityProto.LabelVisibilityOptions.HIDDEN)
     )
   })
 
   it("pass labelVisibility prop to StyledMetricLabelText correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<Metric {...props} />)
     expect(screen.getByTestId("stMetricLabel")).toHaveAttribute(
       "visibility",
-      String(LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED)
+      String(LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED)
     )
   })
 
@@ -196,6 +194,29 @@ describe("Metric element", () => {
     expect(screen.getByTestId("stMetric")).toHaveStyle(
       `border: ${expectedBorder}`
     )
+  })
+
+  // Metric value font styling tests
+  describe("Metric value font styling", () => {
+    it("applies default font-weight when theme does not specify metricValueFontWeight", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // Default fontWeight should be 400 (normal) from theme fontWeights
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-weight: 400"
+      )
+    })
+
+    it("applies font-size to metric value text", () => {
+      const props = getProps({ body: "123" })
+      render(<Metric {...props} />)
+
+      // Default font-size should be metricValueFontSize (2.25rem) from theme fontSizes
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-size: 2.25rem"
+      )
+    })
   })
 
   // Markdown support tests
@@ -509,7 +530,7 @@ describe("Metric element", () => {
             mark: expect.objectContaining({
               type: "line",
               strokeCap: "round",
-              strokeWidth: 2,
+              strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
             }),
           }),
         ]),
@@ -558,7 +579,7 @@ describe("Metric element", () => {
               type: "area",
               opacity: 1,
               line: expect.objectContaining({
-                strokeWidth: 2,
+                strokeWidth: mockTheme.emotion.sizes.metricStrokeWidth,
                 strokeCap: "round",
               }),
             }),
@@ -658,6 +679,77 @@ describe("Metric element", () => {
         size: 65,
         tooltip: true,
       })
+    })
+  })
+
+  describe("Delta description", () => {
+    it("renders delta description when provided with delta", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDeltaDescription")).toHaveTextContent(
+        "month over month"
+      )
+      expect(screen.getByTestId("stMetricDelta")).toBeVisible()
+    })
+
+    it("renders delta description without delta value", () => {
+      const props = getProps({
+        delta: "",
+        deltaDescription: "since yesterday",
+      })
+      render(<Metric {...props} />)
+
+      expect(screen.getByTestId("stMetricDeltaDescription")).toHaveTextContent(
+        "since yesterday"
+      )
+      expect(screen.queryByTestId("stMetricDelta")).not.toBeInTheDocument()
+    })
+
+    it("does not render delta description when not provided", () => {
+      const props = getProps({ delta: "-5%" })
+      render(<Metric {...props} />)
+
+      expect(
+        screen.queryByTestId("stMetricDeltaDescription")
+      ).not.toBeInTheDocument()
+    })
+
+    it("renders delta description with correct styling and title attribute", () => {
+      const description = "compared to previous month average"
+      const props = getProps({
+        delta: "+10%",
+        deltaDescription: description,
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      // Font size and opacity are handled by the inner StreamlitMarkdown with isLabel + isCaption
+      // StyledDeltaDescription provides flex truncation properties
+      expect(descriptionElement).toHaveStyle({
+        overflow: "hidden",
+      })
+      expect(descriptionElement).toHaveAttribute("title", description)
+    })
+
+    it("connects delta to description via aria-describedby", () => {
+      const props = getProps({
+        delta: "-5%",
+        deltaDescription: "month over month",
+      })
+      render(<Metric {...props} />)
+
+      const descriptionElement = screen.getByTestId("stMetricDeltaDescription")
+      const deltaElement = screen.getByTestId("stMetricDelta")
+
+      expect(descriptionElement.id).toBeTruthy()
+      expect(deltaElement).toHaveAttribute(
+        "aria-describedby",
+        descriptionElement.id
+      )
     })
   })
 })

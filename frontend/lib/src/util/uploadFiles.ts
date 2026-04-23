@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,7 +73,10 @@ export const uploadFiles = async ({
   await Promise.all(
     filesWithUrls.map(async ([file, fileUrl]) => {
       if (!file || !fileUrl?.uploadUrl || !fileUrl.fileId) {
-        return { file, fileUrl, error: new Error("No upload URL found") }
+        if (file) {
+          failedUploads.push({ file, error: new Error("No upload URL found") })
+        }
+        return undefined
       }
 
       try {
@@ -89,6 +92,7 @@ export const uploadFiles = async ({
         const error = ensureError(e)
         failedUploads.push({ file, error })
       }
+      return undefined
     })
   )
 

@@ -85,12 +85,10 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
 
-      - name: Set up Python ${{ env.PYTHON_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
       - name: Setup virtual env
         uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_VERSION }}
       - name: Run Linters
         run: make python-lint
         env:
@@ -102,10 +100,10 @@ jobs:
       - name: CLI Smoke Tests
         run: make cli-smoke-tests
       - name: Upload coverage data
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage_data_${{ matrix.python_version }}
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -125,31 +123,26 @@ jobs:
           ref: ${{ inputs.ref }}
           persist-credentials: false
           submodules: "recursive"
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
         with:
-          # Deactivate usage of cached venv to avoid inferring with the Python 3.11
-          # unit test job. The key generation for the cache resolves to the same key,
+          python_version: "3.12"
+          # Deactivate usage of cached venv to avoid interfering with other Python
+          # version jobs. The key generation for the cache could resolve to the same key,
           # which might cause some unexpected issues with dependencies.
           use_cached_venv: false
       - name: Install integration dependencies
-        run: |
-          source venv/bin/activate
-          uv pip install -r lib/integration-requirements.txt --force-reinstall
+        run: uv sync --python python --group integration
       - name: Run Python integration tests
         run: make python-integration-tests
         env:
           SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
           SNOWFLAKE_PASSWORD: ${{ secrets.SNOWFLAKE_PASSWORD }}
       - name: Upload coverage data
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage_data_integration
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -175,26 +168,11 @@ jobs:
           persist-credentials: false
           submodules: "recursive"
           fetch-depth: 2
-      - name: Set up Python ${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}
-        uses: actions/setup-python@v6
-        with:
-          python-version: "${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}"
       - name: Setup virtual env
         uses: ./.github/actions/make_init
         with:
+          python_version: ${{ needs.build_info.outputs.PYTHON_MIN_VERSION }}
           use_cached_venv: false
-      - name: Install min dependencies (force reinstall)
-        run: |
-          source venv/bin/activate
-          uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
-      - name: Make local modules visible
-        run: |
-          source venv/bin/activate
-          uv pip install --editable ./lib --no-deps
-      - name: Run Python Tests
-        run: make python-tests
-      - name: CLI Smoke Tests
-        run: make cli-smoke-tests
       - name: Validate min-constraints-gen
         run: |
           make update-min-deps
@@ -209,11 +187,19 @@ jobs:
           else
             echo "min constraints file is up to date."
           fi
+      - name: Install min dependencies (force reinstall)
+        run: uv pip install -r scripts/assets/min-constraints-gen.txt --force-reinstall
+      - name: Make local modules visible
+        run: uv pip install --editable ./lib --no-deps
+      - name: Run Python Tests
+        run: make python-tests
+      - name: CLI Smoke Tests
+        run: make cli-smoke-tests
       - name: Upload coverage data
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: coverage_data_min_deps
-          path: lib/${{ env.COVERAGE_FILE }}
+          path: ${{ env.COVERAGE_FILE }}
           include-hidden-files: true
           if-no-files-found: ignore
 
@@ -243,7 +229,7 @@ jobs:
           python-version: "3.12"
 
       - name: Download all coverage files
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           pattern: coverage_data_*
           merge-multiple: true
@@ -275,18 +261,18 @@ jobs:
         working-directory: lib
 
       - name: Upload combined coverage data
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: combined_coverage_data
           path: lib/.coverage
           include-hidden-files: true
       - name: Upload combined coverage JSON
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: combined_coverage_json
           path: lib/coverage.json
       - name: Upload combined coverage HTML report
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: combined_coverage_report
           path: lib/htmlcov
@@ -295,7 +281,7 @@ jobs:
       - name: Get latest develop run ID
         if: github.event_name == 'pull_request'
         id: get-latest-run
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
             const { data: runs } = await github.rest.actions.listWorkflowRuns({
@@ -315,7 +301,7 @@ jobs:
 
       - name: Download develop coverage
         if: github.event_name == 'pull_request'
-        uses: actions/download-artifact@v6
+        uses: actions/download-artifact@v8
         with:
           repository: streamlit/streamlit
           run-id: ${{ steps.get-latest-run.outputs.run_id }}
@@ -327,10 +313,10 @@ jobs:
 
       - name: Check coverage changes and comment
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         with:
           script: |
-            const COVERAGE_CHANGE_THRESHOLD = 0.03; // 0.03%
+            const COVERAGE_CHANGE_THRESHOLD = 0.05; // 0.05%
 
             try {
               // Read current coverage from the existing file
@@ -350,6 +336,15 @@ jobs:
               console.log(`Current coverage: ${currentTotal.toFixed(4)}%`);
               console.log(`Develop coverage: ${developTotal.toFixed(4)}%`);
               console.log(`Coverage difference: ${diffPercent.toFixed(4)}%`);
+
+            // Check if this PR is from a fork - fork PRs have limited GITHUB_TOKEN permissions
+            // and cannot post comments to the PR
+            const isForkPR = context.payload.pull_request?.head?.repo?.fork === true;
+            if (isForkPR) {
+              console.log('PR is from a fork - skipping coverage comment (insufficient permissions)');
+              console.log('Coverage information is available in the job summary above.');
+              return;
+            }
 
               const changeType = diffPercent > 0 ? 'increased' : 'decreased';
               const emoji = diffPercent > 0 ? '📈' : '📉';

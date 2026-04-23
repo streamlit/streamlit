@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -185,3 +185,28 @@ else:
         max_chars=100,
     )
     st.write("Initial text area value:", ta_value)
+
+# Query param binding text areas
+st.markdown("Query param binding:")
+bound_area = st.text_area(
+    "Bound no default",
+    key="bound_text_area",
+    bind="query-params",
+)
+st.write("bound area value:", bound_area)
+
+bound_area_default = st.text_area(
+    "Bound with default",
+    value="hello",
+    key="bound_area_default",
+    bind="query-params",
+)
+st.write("bound area default value:", bound_area_default)
+
+bound_area_max = st.text_area(
+    "Bound max chars",
+    key="bound_area_max",
+    bind="query-params",
+    max_chars=5,
+)
+st.write("bound area max value:", bound_area_max)

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-import React, { FC, memo, useCallback } from "react"
+import { FC, memo, useCallback } from "react"
 
 import { ColorPicker as ColorPickerProto } from "@streamlit/protobuf"
 
-import BaseColorPicker from "~lib/components/shared/BaseColorPicker"
+import BaseColorPicker from "~lib/components/shared/BaseColorPicker/BaseColorPicker"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -49,20 +49,24 @@ const getStateFromWidgetMgr = (
 const getDefaultStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.default ?? null
+  // Default to a sensible color if proto default is not set
+  // Defensive as backend always sets default
+  return element.default ?? "#000000"
 }
 
 const getCurrStateFromProto = (
   element: ColorPickerProto
 ): ColorPickerValue => {
-  return element.value ?? null
+  // Return the current value, falling back to default if not set
+  // Defensive as backend always sets default
+  return element.value ?? element.default ?? "#000000"
 }
 
 const updateWidgetMgrState = (
   element: ColorPickerProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ColorPickerValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void => {
   widgetMgr.setStringValue(
     element,
@@ -78,6 +82,15 @@ const ColorPicker: FC<Props> = ({
   widgetMgr,
   fragmentId,
 }) => {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        // Color picker is not clearable (always defaults to black)
+        clearable: false,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     ColorPickerValue,
     ColorPickerProto
@@ -89,6 +102,8 @@ const ColorPicker: FC<Props> = ({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const handleColorClose = useCallback(

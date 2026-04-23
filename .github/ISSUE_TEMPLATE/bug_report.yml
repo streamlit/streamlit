@@ -9,6 +9,8 @@ body:
         We really appreciate the community's efforts to improve Streamlit.
 
         If you are not sure whether you have found a bug, please consider asking in our [community forum](https://discuss.streamlit.io/) first.
+
+        If your issue is about Streamlit Community Cloud (e.g., fair-use / usage limits, account access, being blocked with a 403 error, or other Community Cloud platform support), please **do not** file a GitHub issue. Submit a support case instead: [How to submit a support case for Streamlit Community Cloud](https://docs.streamlit.io/knowledge-base/deploy/how-to-submit-a-support-case-for-streamlit-community-cloud).
   - type: checkboxes
     attributes:
       label: Checklist

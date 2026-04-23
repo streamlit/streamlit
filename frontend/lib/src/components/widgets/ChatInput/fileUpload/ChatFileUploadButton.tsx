@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,70 +14,89 @@
  * limitations under the License.
  */
 
-import React, { memo } from "react"
+import { memo } from "react"
 
 import { Add } from "@emotion-icons/material-rounded"
+import { Accept, FileRejection, useDropzone } from "react-dropzone"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
-import { Placement } from "~lib/components/shared/Tooltip"
-import TooltipIcon from "~lib/components/shared/TooltipIcon"
-import { EmotionTheme } from "~lib/theme"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { StyledSendIconButton } from "~lib/components/widgets/ChatInput/styled-components"
+import { formatTypesForDisplay } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
   getUploadDescription,
 } from "./fileUploadUtils"
-import {
-  StyledFileUploadButton,
-  StyledFileUploadButtonContainer,
-} from "./styled-components"
+import { StyledFileUploadButton } from "./styled-components"
 
-export interface Props {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getRootProps: any
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  getInputProps: any
+interface Props {
+  onDrop: (acceptedFiles: File[], rejectedFiles: FileRejection[]) => void
+  multiple: boolean
+  accept?: Accept
+  maxSize: number
   acceptFile: AcceptFileValue
   disabled: boolean
-  theme: EmotionTheme
+  fileTypes?: string[]
 }
 
 const ChatFileUploadButton = ({
-  getRootProps,
-  getInputProps,
+  onDrop,
+  multiple,
+  accept,
+  maxSize,
   acceptFile,
   disabled,
-  theme,
+  fileTypes,
 }: Props): React.ReactElement => {
+  const { getRootProps, getInputProps } = useDropzone({
+    onDrop,
+    multiple,
+    accept,
+    maxSize,
+    // Disable the File System Access API to avoid browser-specific issues
+    // (see issue #6176 and FileDropzone for details).
+    useFsAccessApi: false,
+  })
+
   const inputProps = configureFileInputProps(getInputProps(), acceptFile)
 
+  // React-dropzone's root props include `tabIndex=0` by default, which makes the
+  // wrapper a keyboard focus target. Since we render an actual <button> inside
+  // the wrapper, we don't want two tab stops for the same control.
+  const rootProps = getRootProps({ tabIndex: -1 })
+
+  // Build tooltip content with file types if specified
+  const getTooltipContent = (): string => {
+    const baseText = `Upload or drag and drop ${getUploadDescription(acceptFile)}`
+    if (fileTypes && fileTypes.length > 0) {
+      return `${baseText} (${formatTypesForDisplay(fileTypes)})`
+    }
+    return baseText
+  }
+
   return (
-    <StyledFileUploadButtonContainer disabled={disabled}>
-      <StyledFileUploadButton
-        data-testid="stChatInputFileUploadButton"
-        disabled={disabled}
-        {...getRootProps()}
+    <StyledFileUploadButton
+      data-testid="stChatInputFileUploadButton"
+      disabled={disabled}
+      {...rootProps}
+    >
+      <input {...inputProps} />
+      <Tooltip
+        content={getTooltipContent()}
+        placement={Placement.TOP}
+        onMouseEnterDelay={500}
       >
-        <input {...inputProps} />
-        <TooltipIcon
-          content={`Upload or drag and drop ${getUploadDescription(acceptFile)}`}
-          placement={Placement.TOP}
-          onMouseEnterDelay={500}
+        <StyledSendIconButton
+          type="button"
+          disabled={disabled}
+          aria-label={`Upload ${getUploadDescription(acceptFile)}`}
         >
-          <BaseButton kind={BaseButtonKind.MINIMAL} disabled={disabled}>
-            <Icon
-              content={Add}
-              size="lg"
-              color={
-                disabled ? theme.colors.fadedText40 : theme.colors.fadedText60
-              }
-            />
-          </BaseButton>
-        </TooltipIcon>
-      </StyledFileUploadButton>
-    </StyledFileUploadButtonContainer>
+          <Icon content={Add} size="xl" color="inherit" />
+        </StyledSendIconButton>
+      </Tooltip>
+    </StyledFileUploadButton>
   )
 }
 

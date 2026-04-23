@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, cast
 
-from streamlit.elements.lib.layout_utils import LayoutConfig, validate_width
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.string_util import clean_text
@@ -86,8 +86,8 @@ class TextMixin:
                 ``width="content"`` with short text, the alignment may not be
                 noticeable.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.text("This is text\n[and more text](that's not a Markdown link).")
@@ -102,8 +102,11 @@ class TextMixin:
         if help:
             text_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width,
+            text_alignment=text_alignment,
+            allow_content_width=True,
+        )
 
         return self.dg._enqueue("text", text_proto, layout_config=layout_config)
 

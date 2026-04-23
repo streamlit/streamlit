@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from streamlit.dataframe_util import convert_anything_to_arrow_bytes, is_datafra
 from streamlit.logger import get_logger
 from streamlit.proto.BidiComponent_pb2 import BidiComponent as BidiComponentProto
 from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
-from streamlit.util import AttributeDictionary, calc_md5
+from streamlit.util import AttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from streamlit.components.v2.bidi_component.state import BidiComponentState
@@ -69,7 +69,7 @@ def _extract_dataframes_from_dict(
                 # Use deterministic, content-addressed ref IDs so placeholders
                 # are stable for identical content on each run. This also provides
                 # natural deduplication - identical DataFrames share a single blob.
-                ref_id = calc_md5(arrow_bytes)
+                ref_id = calc_hash(arrow_bytes)
                 arrow_blobs[ref_id] = arrow_bytes
                 processed_data[key] = {ARROW_REF_KEY: ref_id}
             except Exception as e:

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
 import { SwitchCamera } from "@emotion-icons/material-rounded"
 
-import BaseButton, { BaseButtonKind } from "~lib/components/shared/BaseButton"
-import Icon from "~lib/components/shared/Icon"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
+import BaseButton, {
+  BaseButtonKind,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import Icon from "~lib/components/shared/Icon/Icon"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 
 import { StyledSwitchFacingModeButton } from "./styled-components"
@@ -30,7 +32,7 @@ export enum FacingMode {
   ENVIRONMENT = "environment",
 }
 
-export interface SwitchFacingModeButtonProps {
+interface SwitchFacingModeButtonProps {
   switchFacingMode: () => void
 }
 

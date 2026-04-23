@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+import type { AxiosProgressEvent } from "axios"
+
 import { IFileURLs } from "@streamlit/protobuf"
 
-import { UploadFileInfo } from "~lib/components/widgets/FileUploader/UploadFileInfo"
+import { UploadFileInfo } from "~lib/components/shared/UploadedFile/UploadFileInfo"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { WidgetInfo } from "~lib/WidgetStateManager"
 
@@ -26,7 +28,7 @@ interface CreateUploadFileParams {
   updateFile: (id: number, fileInfo: UploadFileInfo) => void
   uploadClient: FileUploadClient
   element: WidgetInfo
-  onUploadProgress: (e: ProgressEvent, id: number) => void
+  onUploadProgress: (e: AxiosProgressEvent, id: number) => void
   onUploadComplete: (id: number, fileURLs: IFileURLs) => void
 }
 
@@ -55,7 +57,8 @@ export const createUploadFileHandler =
         type: "uploading",
         abortController,
         progress: 1,
-      }
+      },
+      file
     )
     addFiles([uploadingFileInfo])
 

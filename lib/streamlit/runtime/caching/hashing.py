@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -21,11 +21,11 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
-import pickle
+import pickle  # noqa: S403
+import re
 import sys
 import tempfile
 import threading
@@ -33,7 +33,6 @@ import uuid
 import weakref
 from collections.abc import Callable
 from enum import Enum
-from re import Pattern
 from types import MappingProxyType
 from typing import TYPE_CHECKING, Any, Final, TypeAlias, cast
 
@@ -352,7 +351,7 @@ class _CacheFuncHasher:
         runs.
         """
 
-        h = hashlib.new("md5", usedforsecurity=False)
+        h = util.create_fast_hasher()
 
         if type_util.is_type(obj, "unittest.mock.Mock") or type_util.is_type(
             obj, "unittest.mock.MagicMock"
@@ -403,10 +402,10 @@ class _CacheFuncHasher:
         if obj is None:
             return b"0"
 
-        if obj is True:
+        if obj is True:  # pragma: no cover - unreachable; bool subclasses int
             return b"1"
 
-        if obj is False:
+        if obj is False:  # pragma: no cover - unreachable; bool subclasses int
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
@@ -415,7 +414,8 @@ class _CacheFuncHasher:
         if isinstance(obj, Enum):
             return str(obj).encode()
 
-        if type_util.is_type(obj, "pandas.core.series.Series"):
+        # pandas 3.x changed __module__ from pandas.core.* to pandas.*
+        if type_util.is_type(obj, re.compile(r"^pandas(\.core\.series)?\.Series$")):
             from pandas.util import hash_pandas_object
 
             series_obj = cast("pd.Series[Any]", obj)
@@ -438,7 +438,7 @@ class _CacheFuncHasher:
                 # it contains unhashable objects.
                 return b"%s" % pickle.dumps(series_obj, pickle.HIGHEST_PROTOCOL)
 
-        elif type_util.is_type(obj, "pandas.core.frame.DataFrame"):
+        elif type_util.is_type(obj, re.compile(r"^pandas(\.core\.frame)?\.DataFrame$")):
             from pandas.util import hash_pandas_object
 
             df_obj: pd.DataFrame = cast("pd.DataFrame", obj)
@@ -465,7 +465,7 @@ class _CacheFuncHasher:
                 return b"%s" % pickle.dumps(df_obj, pickle.HIGHEST_PROTOCOL)
 
         elif type_util.is_type(obj, "polars.series.series.Series"):
-            import polars as pl  # type: ignore[import-not-found]
+            import polars as pl
 
             obj = cast("pl.Series", obj)
             self.update(h, str(obj.dtype).encode())
@@ -576,7 +576,7 @@ class _CacheFuncHasher:
             self.update(h, obj.tell())
             return h.digest()
 
-        elif isinstance(obj, Pattern):
+        elif isinstance(obj, re.Pattern):
             return self.to_bytes([obj.pattern, obj.flags])
 
         elif isinstance(obj, (io.StringIO, io.BytesIO)):
@@ -653,5 +653,3 @@ class _CacheFuncHasher:
 
 class NoResult:
     """Placeholder class for return values when None is meaningful."""
-
-    pass

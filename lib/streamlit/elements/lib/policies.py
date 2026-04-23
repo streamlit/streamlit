@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     in_cached_function,
 )
 from streamlit.runtime.state import WidgetCallback, get_session_state
+from streamlit.runtime.state.common import require_valid_user_key
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -62,13 +63,13 @@ def check_session_state_rules(
     """Ensures that no values are set for widgets with the given key when writing
     is not allowed.
 
-    Additionally, if `global.disableWidgetStateDuplicationWarning` is False a warning is
-    shown when a widget has a default value but its value is also set via session state.
+    Additionally, if `global.disableWidgetStateDuplicationWarning` is False, logs a
+    warning when a widget has a default value but its value is also set via session state.
 
     Raises
     ------
-    StreamlitAPIException:
-        Raised when the described rule is violated.
+    StreamlitValueAssignmentNotAllowedError:
+        Raised when writing is not allowed but session state contains a new value.
     """
     global _shown_default_value_warning  # noqa: PLW0603
 
@@ -87,11 +88,11 @@ def check_session_state_rules(
         and not _shown_default_value_warning
         and not config.get_option("global.disableWidgetStateDuplicationWarning")
     ):
-        from streamlit import warning
-
-        warning(
-            f'The widget with key "{key}" was created with a default value but'
-            " also had its value set via the Session State API."
+        _LOGGER.warning(
+            'The widget with key "%s" was created with a default value but also had '
+            "its value set via the Session State API.",
+            key,
+            stack_info=True,
         )
         _shown_default_value_warning = True
 
@@ -174,6 +175,8 @@ def check_widget_policies(
     check_cache_replay_rules()
     if enable_check_callback_rules:
         check_callback_rules(dg, on_change)
+    if key is not None:
+        require_valid_user_key(key)
     check_session_state_rules(
         default_value=default_value, key=key, writes_allowed=writes_allowed
     )
@@ -188,7 +191,7 @@ def maybe_raise_label_warnings(label: str | None, label_visibility: str | None) 
             "if needed.",
             stack_info=True,
         )
-    if label_visibility not in ("visible", "hidden", "collapsed"):
+    if label_visibility not in {"visible", "hidden", "collapsed"}:
         raise errors.StreamlitAPIException(
             f"Unsupported label_visibility option '{label_visibility}'. "
             f"Valid values are 'visible', 'hidden' or 'collapsed'."

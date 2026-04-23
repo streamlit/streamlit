@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any, Final, Literal, TypeVar, overload
 
 from streamlit.connections import (
     BaseConnection,
+    SnowflakeCallersRightsConnection,
     SnowflakeConnection,
     SnowparkConnection,
     SQLConnection,
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
 #   3. Updating test_get_first_party_connection_helper in connection_factory_test.py.
 _FIRST_PARTY_CONNECTIONS: Final[dict[str, type[BaseConnection[Any]]]] = {
     "snowflake": SnowflakeConnection,
+    "snowflake-callers-rights": SnowflakeCallersRightsConnection,
     "snowpark": SnowparkConnection,
     "sql": SQLConnection,
 }
@@ -95,10 +97,23 @@ def _create_connection(
     __create_connection.__qualname__ = (
         f"{__create_connection.__qualname__}_{ttl_str}_{max_entries}"
     )
+
+    scope = connection_class.scope()
+    if scope not in {"global", "session"}:
+        raise StreamlitAPIException(
+            f"Connection class {connection_class} has scope '{scope}'. Valid values "
+            "are 'global' or 'session'."
+        )
+
+    def on_release_wrapped(connection: ConnectionClass) -> None:
+        connection.close()
+
     __create_connection = cache_resource(
         max_entries=max_entries,
         show_spinner="Running `st.connection(...)`.",
         ttl=ttl,
+        scope=scope,
+        on_release=on_release_wrapped,
     )(__create_connection)
 
     return __create_connection(name, connection_class, **kwargs)
@@ -162,6 +177,29 @@ def connection_factory(
 
 @overload
 def connection_factory(
+    name: Literal["snowflake-callers-rights"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs: Any,
+) -> SnowflakeCallersRightsConnection:
+    pass
+
+
+@overload
+def connection_factory(
+    name: str,
+    type: Literal["snowflake-callers-rights"],
+    max_entries: int | None = None,
+    ttl: float | timedelta | None = None,
+    autocommit: bool = False,
+    **kwargs: Any,
+) -> SnowflakeCallersRightsConnection:
+    pass
+
+
+@overload
+def connection_factory(
     name: Literal["snowpark"],
     max_entries: int | None = None,
     ttl: float | timedelta | None = None,
@@ -220,7 +258,8 @@ def connection_factory(  # type: ignore
     - Any connection-specific configuration files.
 
     The connection returned from ``st.connection`` is internally cached with
-    ``st.cache_resource`` and is therefore shared between sessions.
+    ``st.cache_resource``. Connection types with a scope of ``"global"`` will be shared
+    between sessions.
 
     Parameters
     ----------
@@ -238,6 +277,10 @@ def connection_factory(  # type: ignore
           be specified in ``secrets.toml`` instead.
         - ``"snowflake"``: Streamlit will initialize a connection with
           |SnowflakeConnection|_.
+        - ``"snowflake-callers-rights"``: Streamlit will initialize a
+          ``"snowflake"``-type connection, except the connection uses the
+          current viewer's identity tokens instead of the app's connection
+          configuration.
         - ``"snowpark"``: Streamlit will initialize a connection with
           |SnowparkConnection|_. This is deprecated.
         - ``"sql"``: Streamlit will initialize a connection with
@@ -249,6 +292,16 @@ def connection_factory(  # type: ignore
         - An imported class reference: Streamlit will initialize a connection
           with the referenced class, which must extend
           ``st.connections.BaseConnection``.
+
+        .. Important::
+           Connections of type ``"snowflake-callers-rights"`` only work when
+           they run in a Snowflake Snowpark Container Services environment. If
+           they are used in a local environment, they will raise exceptions.
+
+           For local development, use an environment variable or secret to
+           logically switch between a ``"snowflake"`` and
+           ``"snowflake-callers-rights"`` connection depending on the runtime
+           environment.
 
         .. |SnowflakeConnection| replace:: ``SnowflakeConnection``
         .. _SnowflakeConnection: https://docs.streamlit.io/develop/api-reference/connections/st.connections.snowflakeconnection
@@ -285,18 +338,21 @@ def connection_factory(  # type: ignore
     to use their default names and define corresponding sections in your ``secrets.toml``
     file. The following example creates a ``"sql"``-type connection.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [connections.sql]
-    >>> dialect = "xxx"
-    >>> host = "xxx"
-    >>> username = "xxx"
-    >>> password = "xxx"
+        [connections.sql]
+        dialect = "xxx"
+        host = "xxx"
+        username = "xxx"
+        password = "xxx"
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>> conn = st.connection("sql")
+        import streamlit as st
+
+        conn = st.connection("sql")
 
     **Example 2: Named connections**
 
@@ -307,26 +363,29 @@ def connection_factory(  # type: ignore
     custom name. The first defines ``type`` in the ``st.connection`` command;
     the second defines ``type`` in ``secrets.toml``.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [connections.first_connection]
-    >>> dialect = "xxx"
-    >>> host = "xxx"
-    >>> username = "xxx"
-    >>> password = "xxx"
-    >>>
-    >>> [connections.second_connection]
-    >>> type = "sql"
-    >>> dialect = "yyy"
-    >>> host = "yyy"
-    >>> username = "yyy"
-    >>> password = "yyy"
+        [connections.first_connection]
+        dialect = "xxx"
+        host = "xxx"
+        username = "xxx"
+        password = "xxx"
 
-    Your app code:
+        [connections.second_connection]
+        type = "sql"
+        dialect = "yyy"
+        host = "yyy"
+        username = "yyy"
+        password = "yyy"
 
-    >>> import streamlit as st
-    >>> conn1 = st.connection("first_connection", type="sql")
-    >>> conn2 = st.connection("second_connection")
+    .. code-block:: python
+        :filename: streamlit_app.py
+
+        import streamlit as st
+
+        conn1 = st.connection("first_connection", type="sql")
+        conn2 = st.connection("second_connection")
 
     **Example 3: Using a path to the connection class**
 
@@ -336,17 +395,20 @@ def connection_factory(  # type: ignore
     creates the same type of connection as one with ``type="sql"``. Note that
     ``type`` is a string path.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [connections.my_sql_connection]
-    >>> url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
+        [connections.my_sql_connection]
+        url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>> conn = st.connection(
-    ...     "my_sql_connection", type="streamlit.connections.SQLConnection"
-    ... )
+        import streamlit as st
+
+        conn = st.connection(
+            "my_sql_connection", type="streamlit.connections.SQLConnection"
+        )
 
     **Example 4: Importing the connection class**
 
@@ -355,16 +417,19 @@ def connection_factory(  # type: ignore
     infer the exact return type of ``st.connection``. The following example
     creates the same connection as in Example 3.
 
-    ``.streamlit/secrets.toml``:
+    .. code-block:: toml
+        :filename: .streamlit/secrets.toml
 
-    >>> [connections.my_sql_connection]
-    >>> url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
+        [connections.my_sql_connection]
+        url = "xxx+xxx://xxx:xxx@xxx:xxx/xxx"
 
-    Your app code:
+    .. code-block:: python
+        :filename: streamlit_app.py
 
-    >>> import streamlit as st
-    >>> from streamlit.connections import SQLConnection
-    >>> conn = st.connection("my_sql_connection", type=SQLConnection)
+        import streamlit as st
+        from streamlit.connections import SQLConnection
+
+        conn = st.connection("my_sql_connection", type=SQLConnection)
 
     """
 

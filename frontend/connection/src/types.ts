@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +20,13 @@
  * Returns a promise with the index of the URI that worked.
  */
 
-import { IAppPage } from "@streamlit/protobuf"
-import type { StreamlitWindowObject } from "@streamlit/utils"
+import type { AxiosProgressEvent } from "axios"
+
+import { ForwardMsg, IAppPage } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 
-declare global {
-  interface Window {
-    __streamlit?: StreamlitWindowObject
-  }
-}
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export type OnMessage = (ForwardMsg: any) => void
+export type OnMessage = (ForwardMsg: ForwardMsg) => void
 
 export interface ErrorDetails {
   message: string
@@ -163,8 +157,7 @@ export interface StreamlitEndpoints {
     fileUploadUrl: string,
     file: File,
     sessionId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    onUploadProgress?: (progressEvent: any) => void,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
     signal?: AbortSignal
   ): Promise<void>
 
@@ -183,83 +176,11 @@ export interface StreamlitEndpoints {
   setFileUploadClientConfig?(config: FileUploadClientConfig): void
 }
 
-/**
- * The lib config contains various configurations that the host platform can
- * use to configure streamlit-lib frontend behavior. This should to be treated as part of the public
- * API, and changes need to be backwards-compatible meaning that an old host configuration
- * should still work with a new frontend versions.
- */
-export type LibConfig = {
-  /**
-   * The mapbox token that can be configured by a platform.
-   */
-  mapboxToken?: string
-
-  /**
-   * Whether to disable the full screen mode all elements / widgets.
-   */
-  disableFullscreenMode?: boolean
-
-  enforceDownloadInNewTab?: boolean
-
-  /**
-   * Whether and which value to set the `crossOrigin` property on media elements (img, video, audio).
-   * If it is set to undefined, the `crossOrigin` property will not be set on media elements at all.
-   * For img elements, see https://developer.mozilla.org/en-US/docs/Web/API/HTMLImageElement/crossOrigin
-   */
-  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
-
-  /** Deprecated. Use resourceCrossOriginMode instead. If set to true, the value of resourceCrossOriginMode will be "anonymous". */
-  setAnonymousCrossOriginPropertyOnMediaElements?: boolean
-}
-
-/**
- * The app config contains various configurations that the host platform can
- * use to configure streamlit-app frontend behavior. This should to be treated as part of the public
- * API, and changes need to be backwards-compatible meaning that an old host configuration
- * should still work with a new frontend versions.
- *
- * TODO(lukasmasuch): Potentially refactor HostCommunicationManager and move this type
- * to AppContext.tsx.
- */
-export type AppConfig = {
-  /**
-   * A list of origins that we're allowed to receive cross-iframe messages
-   * from via the browser's window.postMessage API.
-   */
-  allowedOrigins?: string[]
-  /**
-   * Whether to wait until we've received a SET_AUTH_TOKEN message before
-   * resolving deferredAuthToken.promise. The WebsocketConnection class waits
-   * for this promise to resolve before attempting to establish a connection
-   * with the Streamlit server.
-   */
-  useExternalAuthToken?: boolean
-  /**
-   * Enables custom string messages to be sent to the host
-   */
-  enableCustomParentMessages?: boolean
-  /**
-   * Whether host wants to block error dialogs. If true, blocks error dialogs
-   * from being shown to the user, sends error info to host via postMessage
-   */
-  blockErrorDialogs?: boolean
-}
-
-export type MetricsConfig = {
-  /**
-   * URL to send metrics data to via POST request.
-   * Setting to "postMessage" sends metrics events via postMessage to host.
-   * Setting to "off" disables metrics collection.
-   * If undefined, metricsUrl requested from centralized config file.
-   */
-  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-  metricsUrl?: string | "postMessage" | "off"
-}
-
-/**
- * The response structure of the `_stcore/host-config` endpoint.
- * This combines streamlit-lib specific configuration options with
- * streamlit-app specific options (e.g. allowed message origins).
- */
-export type IHostConfigResponse = LibConfig & AppConfig & MetricsConfig
+// Re-export base config types from @streamlit/utils for backward compatibility
+// These types are now defined in the utils package to avoid duplication
+export type {
+  AppConfig,
+  IHostConfigProperties,
+  LibConfig,
+  MetricsConfig,
+} from "@streamlit/utils"

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import React, { useMemo } from "react"
+import { useMemo } from "react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 import { isFromMac } from "~lib/util/utils"
 
 import {
@@ -33,6 +33,7 @@ export interface DynamicButtonLabelProps {
   label?: string
   iconSize?: IconSize
   useSmallerFont?: boolean
+  iconPosition?: "left" | "right"
   shortcut?: string | null
 }
 
@@ -41,6 +42,7 @@ export const DynamicButtonLabel = ({
   label,
   iconSize,
   useSmallerFont = false,
+  iconPosition = "left",
   shortcut,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
   const displayShortcut = useMemo(() => {
@@ -50,7 +52,9 @@ export const DynamicButtonLabel = ({
   return (
     <StyledButtonLabel>
       <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
-        {icon && <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />}
+        {icon && iconPosition === "left" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+        )}
         {label && (
           <StreamlitMarkdown
             source={label}
@@ -59,6 +63,9 @@ export const DynamicButtonLabel = ({
             largerLabel={!useSmallerFont}
             disableLinks
           />
+        )}
+        {icon && iconPosition === "right" && (
+          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
         )}
         {displayShortcut && (
           <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>

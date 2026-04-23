@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     wait_for_app_run,
     wait_until,
 )
@@ -32,7 +33,7 @@ from e2e_playwright.shared.app_utils import (
     goto_app,
 )
 
-DOWNLOAD_BUTTON_ELEMENTS = 18
+DOWNLOAD_BUTTON_ELEMENTS = 19
 
 
 def check_download_button_source_error_count(messages: list[str], expected_count: int):
@@ -92,6 +93,10 @@ def test_download_button_widget_rendering(
     assert_snapshot(
         get_element_by_key(themed_app, "shortcut_download_button"),
         name="st_download_button-shortcut",
+    )
+    assert_snapshot(
+        get_element_by_key(themed_app, "download_emoji_right"),
+        name="st_download_button-icon_position_right_emoji",
     )
 
 
@@ -242,11 +247,11 @@ def test_custom_css_class_via_key(app: Page):
     expect(get_element_by_key(app, "download_button")).to_be_visible()
 
 
-def test_download_button_source_error(app: Page, app_port: int):
+def test_download_button_source_error(app: Page, app_base_url: str):
     """Test that the download button source error is correctly logged."""
     # Ensure download source request return a 404 status
     app.route(
-        f"http://localhost:{app_port}/media/**",
+        build_app_url(app_base_url, path="/media/**"),
         lambda route: route.fulfill(
             status=404, headers={"Content-Type": "text/plain"}, body="Not Found"
         ),
@@ -257,7 +262,7 @@ def test_download_button_source_error(app: Page, app_port: int):
     app.on("console", lambda msg: messages.append(msg.text))
 
     # Navigate to the app
-    goto_app(app, f"http://localhost:{app_port}")
+    goto_app(app, app_base_url)
 
     # Wait until the expected error is logged, indicating CLIENT_ERROR was sent
     wait_until(

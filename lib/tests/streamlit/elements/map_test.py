@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -309,13 +309,17 @@ class StMapTest(DeltaGeneratorTestCase):
         [
             [
                 "lat",
-                "Map data must contain a latitude column named: 'LAT', 'LATITUDE', 'lat', 'latitude'. "
-                "Existing columns: 'lon'",
+                (
+                    "Map data must contain a latitude column named: 'LAT', 'LATITUDE', 'lat', 'latitude'. "
+                    "Existing columns: 'lon'"
+                ),
             ],
             [
                 "lon",
-                "Map data must contain a longitude column named: 'LON', 'LONGITUDE', 'lon', 'longitude'. "
-                "Existing columns: 'lat'",
+                (
+                    "Map data must contain a longitude column named: 'LON', 'LONGITUDE', 'lon', 'longitude'. "
+                    "Existing columns: 'lat'"
+                ),
             ],
         ]
     )

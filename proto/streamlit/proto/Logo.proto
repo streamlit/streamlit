@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,19 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "LogoProto";
-
 // Handle the logo for an app
 message Logo {
+  // Type of the logo image (image file, emoji, or material icon)
+  enum ImageType {
+    IMAGE = 0;
+    EMOJI = 1;
+    ICON = 2;
+  }
+
   string image = 1;
   string link = 2;
   string icon_image = 3;
   string size = 4;
+  ImageType image_type = 5;
+  ImageType icon_image_type = 6;
 }

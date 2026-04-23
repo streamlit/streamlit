@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ from streamlit.runtime.caching import (
 )
 from streamlit.runtime.caching.hashing import UserHashError
 from streamlit.runtime.scriptrunner import add_script_run_ctx
-from streamlit.runtime.stats import CacheStat
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.vendor.pympler.asizeof import asizeof
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -232,6 +232,50 @@ If you think this is actually a Streamlit bug, please
         # So the call to foo() should return the new value 2
         assert example_instance.foo(1) == 2
 
+    def test_on_release_fires(self):
+        """Tests that on_release functions are called appropriately."""
+        seen: list[int] = []
+
+        def release(element: int) -> None:
+            seen.append(element)
+
+        @st.cache_resource(max_entries=2, on_release=release)
+        def return_plus_one(value: int) -> int:
+            return value + 1
+
+        for i in range(5):
+            assert return_plus_one(i) == i + 1
+
+        # Validate that release was called for the first three elements.
+        assert seen == [1, 2, 3]
+
+        # Clear the cache, and validate that `release` was called.
+        st.cache_resource.clear()
+        assert seen == [1, 2, 3, 4, 5]
+
+    def test_on_release_fires_when_cleared_with_exceptions(self):
+        """Tests that on_release functions are called.
+
+        Tests that on_release is called for all elements when clear() is called even if
+        some invocations throw exceptions."""
+        seen: list[int] = []
+
+        def release(element: int) -> None:
+            seen.append(element)
+            if element % 3 == 0:
+                raise Exception("third time is the charm")
+
+        @st.cache_resource(on_release=release)
+        def return_plus_one(value: int) -> int:
+            return value + 1
+
+        for i in range(10):
+            assert return_plus_one(i) == i + 1
+
+        # Clear the cache, and validate that `release` was called for each element.
+        st.cache_resource.clear()
+        assert seen == [i + 1 for i in range(10)]
+
 
 class CacheResourceValidateTest(unittest.TestCase):
     def setUp(self) -> None:
@@ -302,14 +346,14 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
         st.cache_resource.clear()
 
     def test_no_stats(self):
-        assert get_resource_cache_stats_provider().get_stats() == []
+        assert get_resource_cache_stats_provider().get_stats() == {}
 
     def test_multiple_stats(self):
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def foo(count):
             return [3.14] * count
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def bar():
             return threading.Lock()
 
@@ -339,7 +383,9 @@ class CacheResourceStatsProviderTest(unittest.TestCase):
 
         # The order of these is non-deterministic, so check Set equality
         # instead of List equality
-        assert set(expected) == set(get_resource_cache_stats_provider().get_stats())
+        stats_dict = get_resource_cache_stats_provider().get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        assert set(expected) == set(stats_dict[CACHE_MEMORY_FAMILY])
 
 
 class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
@@ -378,12 +424,15 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
     ):
         """Test that it works with element replay if used as non-widget element."""
 
-        if element_name == "toast":
-            # The toast element is not supported in the cache_data API
-            # since elements on the event dg are not supported.
+        if element_name in {"toast", "spinner", "logo", "echo"}:
+            # These elements are not supported in the cache_resource API
+            #   - toast only corresponds to the event dg
+            #   - spinner is transient and not replayed
+            #   - logo is not replayed because it's not tied to a specific dg
+            #   - echo does not produce an element unless it's executed with code
             return
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def cache_element():
             element_producer()
 
@@ -442,7 +491,7 @@ class CacheResourceMessageReplayTest(DeltaGeneratorTestCase):
         expected_width = 300
         expected_height = 150
 
-        @st.cache_resource
+        @st.cache_resource(show_spinner=False)
         def cache_resource_code_with_layout():
             # Use code element with both width and height since it supports both
             st.code(

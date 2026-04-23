@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +17,13 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darken, transparentize } from "color2k"
+import { darken } from "color2k"
 
 import {
   BaseButtonKind,
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/styled-components"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export { BaseButtonKind, BaseButtonSize }
 
@@ -41,8 +41,7 @@ export interface BaseLinkButtonProps {
   href: string
   target: string
   rel: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick: (event: MouseEvent<HTMLAnchorElement>) => any
+  onClick: (event: MouseEvent<HTMLAnchorElement>) => void
 }
 
 type RequiredBaseLinkButtonProps = Required<BaseLinkButtonProps>
@@ -69,7 +68,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
-export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
+const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
   ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",
@@ -95,7 +94,7 @@ export const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: `0 0 0 0.2rem ${transparentize(theme.colors.primary, 0.5)}`,
+        boxShadow: theme.shadows.focusRing,
       },
       "&:hover": {
         textDecoration: "none",

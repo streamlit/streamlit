@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -19,11 +19,13 @@ import fractions
 import numbers
 import re
 import textwrap
-from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union
+from typing import TYPE_CHECKING, Any, Final, TypeAlias, Union, cast
 
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     import numpy as np
 
     from streamlit.type_util import SupportsStr
@@ -150,6 +152,47 @@ def extract_leading_emoji(text: str) -> tuple[str, str]:
     return re_match.group(1), re_match.group(2)
 
 
+def extract_leading_icon(text: str) -> tuple[str, str]:
+    """Extract a leading emoji or material icon from text.
+
+    Returns a tuple of (icon, remaining_text) where icon is either an emoji,
+    a validated material icon string (e.g., ":material/thumb_up:"), or an
+    empty string if no icon was found. The remaining_text has the icon and
+    any separator whitespace removed.
+
+    This function is used to auto-detect icons at the start of text content,
+    allowing users to include an icon inline rather than via a separate parameter.
+
+    Examples
+    --------
+    >>> extract_leading_icon("🚨 Error occurred")
+    ('🚨', 'Error occurred')
+    >>> extract_leading_icon(":material/warning: Caution")
+    (':material/warning:', 'Caution')
+    >>> extract_leading_icon("No icon here")
+    ('', 'No icon here')
+    """
+    if not text:
+        return "", text
+
+    # First, check for material icon at the start
+    if text.startswith(":material"):
+        # Find the closing colon
+        # Material icon format: :material/icon_name:
+        match = re.match(r"^(:[^:]+:)\s*(.*)", text, re.DOTALL)
+        if match:
+            maybe_icon = match.group(1)
+            try:
+                validated_icon = validate_material_icon(maybe_icon)
+                return validated_icon, match.group(2)
+            except StreamlitAPIException:
+                # Not a valid material icon, continue to check for emoji
+                pass
+
+    # Check for leading emoji
+    return extract_leading_emoji(text)
+
+
 def max_char_sequence(string: str, char: str) -> int:
     """Returns the count of the max sequence of a given char in a string."""
     max_sequence = 0
@@ -207,8 +250,8 @@ def to_snake_case(camel_case_str: str) -> str:
         BazBang -> baz_bang
 
     """
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
+    s1 = re.sub(r"(.)([A-Z][a-z]+)", r"\1_\2", camel_case_str)
+    return re.sub(r"([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 AnyNumber: TypeAlias = Union[
@@ -249,8 +292,9 @@ def from_number(value: AnyNumber) -> str:
         # Add support for numpy values (e.g. int16, float64, etc.)
         try:
             # Item could also be just a variable, so we use try, except
-            if isinstance(value.item(), (float, int)):
-                return str(value.item())
+            item_value = cast("Callable[[], Any]", value.item)()
+            if isinstance(item_value, (float, int)):
+                return str(item_value)
         except Exception:  # noqa: S110
             # If the numpy item is not a valid value, the TypeError below will be raised.
             pass

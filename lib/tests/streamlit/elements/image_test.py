@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -359,7 +359,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
     def test_BytesIO_to_bytes(self):
         """Test streamlit.image.BytesIO_to_bytes."""
-        pass
 
     def test_verify_np_shape(self):
         """Test streamlit.image.verify_np_shape.
@@ -387,7 +386,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         - float with clipping
         - int  with clipping
         """
-        pass
 
     @parameterized.expand([("P", True), ("RGBA", True), ("LA", True), ("RGB", False)])
     def test_image_may_have_alpha_channel(self, format: str, expected_alpha: bool):
@@ -586,3 +584,91 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             st.image(img, width=invalid_width)
 
         assert expected_error_message in str(exc_info.value)
+
+    def test_st_image_with_link(self):
+        """Test st.image with a valid link parameter."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="https://streamlit.io")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "https://streamlit.io"
+
+    def test_st_image_with_http_link(self):
+        """Test st.image with an http link."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="http://example.com")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "http://example.com"
+
+    def test_st_image_without_link(self):
+        """Test st.image without a link parameter."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == ""
+
+    def test_st_image_with_empty_string_link(self):
+        """Test st.image with link='' is treated the same as link=None."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == ""
+
+    def test_st_image_with_relative_link(self):
+        """Test st.image with a relative link."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="/my_page")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "/my_page"
+
+    def test_st_image_with_link_no_scheme(self):
+        """Test st.image with a link without scheme."""
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="example.com/path")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "example.com/path"
+
+    def test_st_image_link_with_multiple_images(self):
+        """Test st.image with link and multiple images raises an error."""
+        imgs = [
+            Image.new("RGB", (64, 64), color="red"),
+            Image.new("RGB", (64, 64), color="blue"),
+        ]
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(imgs, link="https://streamlit.io")
+
+        assert "single image" in str(exc_info.value)
+        assert "2 images" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "static_url",
+    [
+        "/app/static/my_image.png",
+        "/app/static/images/subdir/my_image.png",
+    ],
+    ids=["simple", "subdirectory"],
+)
+def test_image_to_url_with_relative_static_url(static_url: str) -> None:
+    """Test that image_to_url passes through relative static URLs unchanged."""
+    result = image_to_url(
+        static_url,
+        layout_config=LayoutConfig(width="stretch"),
+        clamp=False,
+        channels="RGB",
+        output_format="auto",
+        image_id="test",
+    )
+    assert result == static_url

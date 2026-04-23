@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ class LLMThoughtLabeler:
         input_str_len = min(MAX_TOOL_INPUT_STR_LENGTH, len(input_str))
         input_str = input_str[:input_str_len]
         if len(tool.input_str) > input_str_len:
-            input_str = input_str + "..."
+            input_str += "..."
         input_str = input_str.replace("\n", " ")
         return f"**{name}:** {input_str}"
 
@@ -250,7 +250,7 @@ class LLMThought:
     def complete(self, final_label: str | None = None) -> None:
         """Finish the thought."""
         if final_label is None and self._state == LLMThoughtState.RUNNING_TOOL:
-            if self._last_tool is None:
+            if self._last_tool is None:  # pragma: no cover - defensive
                 raise RuntimeError(
                     "_last_tool should never be null when _state == RUNNING_TOOL"
                 )
@@ -330,7 +330,7 @@ class StreamlitCallbackHandler(BaseCallbackHandler):
         """Return our current LLMThought. Raise an error if we have no current
         thought.
         """
-        if self._current_thought is None:
+        if self._current_thought is None:  # pragma: no cover - defensive
             raise RuntimeError("Current LLMThought is unexpectedly None!")
         return self._current_thought
 

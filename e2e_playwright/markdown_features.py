@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -63,6 +63,7 @@ MARKDOWN_FEATURES = {
     "Colored Text": ":red[Colored] :rainbow[Text]",
     "Colored Background": ":blue-background[Colored] :red-background[Background]",
     "Badge": ":blue-badge[Badge] :red-badge[Badge]",
+    "Shimmer": ":shimmer[Loading...]",
     "Latex": "$ax^2 + bx + c = 0$",
     "Link": "[Link](https://streamlit.io)",
     "Blockquote": "> Testing Blockquote",

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -36,7 +36,6 @@ class FormUtilsTest(unittest.TestCase):
         super().setUpClass()
         config = RuntimeConfig(
             script_path="",
-            command_line=None,
             media_file_storage=None,
             uploaded_file_manager=None,
         )

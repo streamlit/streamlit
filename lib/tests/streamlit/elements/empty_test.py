@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,6 +14,7 @@
 
 import streamlit as st
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -26,3 +27,19 @@ class StEmptyAPITest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert el.empty == EmptyProto()
+
+    def test_skeleton_with_height(self):
+        """Test that _skeleton sets the height on the proto."""
+        placeholder = st.empty()
+        placeholder._skeleton(height=200)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.skeleton.height == 200
+
+    def test_skeleton_without_height(self):
+        """Test that _skeleton works without height (default behavior)."""
+        placeholder = st.empty()
+        placeholder._skeleton()
+
+        el = self.get_delta_from_queue().new_element
+        assert el.skeleton == SkeletonProto()

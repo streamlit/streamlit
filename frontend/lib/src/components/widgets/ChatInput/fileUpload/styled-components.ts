@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 import styled from "@emotion/styled"
-
-import { FileStatus } from "~lib/components/widgets/FileUploader/UploadFileInfo"
 
 // A transparent dropzone overlay that covers the ContentArea
 export const StyledChatFileUploadDropzone = styled.div(({ theme }) => ({
@@ -42,83 +40,12 @@ export const StyledChatFileUploadDropzoneLabel = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.priority, // Ensure it's visible
 }))
 
-export interface StyledFileUploadButtonContainerProps {
-  disabled: boolean
-}
-
-export const StyledFileUploadButtonContainer =
-  styled.div<StyledFileUploadButtonContainerProps>(({ disabled }) => ({
-    display: "flex",
-    alignItems: "center",
-    height: "100%",
-    cursor: disabled ? "not-allowed" : "auto",
-  }))
-
-export interface StyledFileUploadButtonProps {
+interface StyledFileUploadButtonProps {
   disabled: boolean
 }
 
 export const StyledFileUploadButton = styled.div<StyledFileUploadButtonProps>(
   ({ disabled }) => ({
     pointerEvents: disabled ? "none" : "auto",
-  })
-)
-
-export const StyledChatUploadedFiles = styled.div(({ theme }) => ({
-  lineHeight: theme.lineHeights.tight,
-}))
-
-export const StyledUploadedChatFileList = styled.div(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
-  gap: theme.spacing.sm, // Figma: 8px gap between file chips
-}))
-
-export const StyledUploadedChatFileListItem = styled.div({
-  flex: "0 0 auto",
-})
-
-export const StyledChatUploadedFile = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  backgroundColor: theme.colors.bgColor,
-  padding: theme.spacing.sm,
-  borderRadius: theme.radii.default,
-  gap: theme.spacing.sm,
-}))
-
-export const StyledChatUploadedFileIcon = styled.div(({ theme }) => ({
-  color: theme.colors.fadedText60,
-}))
-
-export interface StyledChatUploadedFileStatusProps {
-  fileStatus: FileStatus
-}
-
-export const StyledChatUploadedFileName =
-  styled.div<StyledChatUploadedFileStatusProps>(({ theme, fileStatus }) => ({
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
-    color:
-      fileStatus.type === "uploading"
-        ? theme.colors.fadedText60
-        : theme.colors.bodyText,
-  }))
-
-export const StyledChatUploadedFileSize = styled.div(({ theme }) => ({
-  marginRight: theme.spacing.md,
-  color: theme.colors.fadedText60,
-}))
-
-export const StyledChatUploadedFileDeleteButton = styled.small(
-  ({ theme }) => ({
-    display: "flex",
-    alignItems: "center",
-    maxHeight: theme.sizes.smallElementHeight,
-    color: theme.colors.fadedText60,
-    "& :hover": {
-      color: theme.colors.bodyText,
-    },
   })
 )

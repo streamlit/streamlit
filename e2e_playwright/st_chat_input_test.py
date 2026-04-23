@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from functools import wraps
 from typing import TYPE_CHECKING
-from urllib.parse import parse_qs, urlencode, urlparse
+from urllib.parse import parse_qs, urlencode, urlparse, urlunsplit
 
 import pytest
 from playwright.sync_api import Error, FilePayload, Locator, Page, expect
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 from e2e_playwright.conftest import (
     ImageCompareFunction,
+    build_app_url,
     rerun_app,
     wait_for_app_loaded,
     wait_for_app_run,
@@ -42,6 +43,7 @@ from e2e_playwright.shared.app_utils import (
     get_element_by_key,
     goto_app,
     reset_hovering,
+    select_selectbox_option,
 )
 
 
@@ -94,11 +96,8 @@ def use_chat_input(key: str) -> Callable[[Callable[..., Any]], Callable[..., Any
 
 def goto_chat_input(app: Page, key: str) -> None:
     """Navigate to a specific chat input using query params."""
-    # Extract port and existing query params from current URL
+    # Parse the current URL so we can preserve existing query params and rebuild it
     parsed = urlparse(app.url)
-
-    if parsed.port is None:
-        raise ValueError(f"Could not parse port from URL: {app.url}")
 
     # Preserve existing query parameters (especially theme-related ones like embed_options)
     existing_params = parse_qs(parsed.query)
@@ -107,8 +106,9 @@ def goto_chat_input(app: Page, key: str) -> None:
     # Set/override the key parameter
     params["key"] = key
 
+    base_url = urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
     query_string = urlencode(params)
-    app.goto(f"http://localhost:{parsed.port}/?{query_string}")
+    app.goto(build_app_url(base_url, query=query_string))
     wait_for_app_loaded(app)
 
 
@@ -298,6 +298,17 @@ def test_chat_input_rendering(themed_app: Page, assert_snapshot: ImageCompareFun
         get_element_by_key(themed_app, "width_stretch"),
         name="st_chat_input-width_stretch",
     )
+    goto_chat_input(themed_app, "height_200")
+    assert_snapshot(
+        get_element_by_key(themed_app, "height_200"),
+        name="st_chat_input-height_200px",
+    )
+    goto_chat_input(themed_app, "height_stretch")
+    # Screenshot the container to show the chat input fills it
+    assert_snapshot(
+        get_element_by_key(themed_app, "height_stretch_container"),
+        name="st_chat_input-height_stretch",
+    )
     # The bottom chat input appears last in DOM order because st.chat_input() renders at bottom
     goto_chat_input(themed_app, "bottom_max_chars")
     assert_snapshot(
@@ -367,7 +378,7 @@ def test_max_characters_enforced(
 
 def test_embedded_app_with_bottom_chat_input(
     themed_app: Page,
-    app_port: int,
+    app_base_url: str,
     app_theme: str,
     assert_snapshot: ImageCompareFunction,
 ):
@@ -376,7 +387,14 @@ def test_embedded_app_with_bottom_chat_input(
 
     goto_app(
         themed_app,
-        f"http://localhost:{app_port}/?key=bottom_max_chars&embed=true&embed_options={app_theme}",
+        build_app_url(
+            app_base_url,
+            query={
+                "key": "bottom_max_chars",
+                "embed": "true",
+                "embed_options": app_theme,
+            },
+        ),
     )
 
     app_view_block = themed_app.get_by_test_id("stMainBlockContainer")
@@ -442,21 +460,33 @@ def test_submit_hover_state_with_input_value(
     assert_snapshot(chat_input, name="st_chat_input-submit_hover")
 
 
-@use_chat_input("bottom_max_chars")
-def test_enter_submits_clears_input(app: Page):
-    """Test that pressing Enter submits and clears the input."""
+@use_chat_input("inline")
+def test_submit_methods_and_clear_input(app: Page):
+    """Test that both Enter key and click button submit and clear input."""
+    # Test 1: Click button to submit
+    chat_input = get_element_by_key(app, "inline")
+    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
+    chat_input_area = chat_input.locator("textarea").first
+
+    chat_input_area.type("Corgi")
+    submit_button.click()
+
+    expect(chat_input_area).to_have_value("")
+    expect_markdown(app, "inline - value: Corgi")
+
+    # Test 2: Enter key to submit (navigate to different input to test fresh)
+    goto_chat_input(app, "bottom_max_chars")
     expect_markdown(app, "bottom_max_chars - value: None")
 
     chat_input_area = (
         get_element_by_key(app, "bottom_max_chars").locator("textarea").first
     )
-    chat_input_area.type("Corgi")
+    chat_input_area.type("Husky")
     chat_input_area.press("Enter")
     wait_for_app_run(app)
 
     expect(chat_input_area).to_have_value("")
-
-    expect_markdown(app, "bottom_max_chars - value: Corgi")
+    expect_markdown(app, "bottom_max_chars - value: Husky")
 
 
 def test_shift_enter_creates_new_line(
@@ -480,21 +510,6 @@ def test_shift_enter_creates_new_line(
     chat_input_area.press("Shift+Enter")
     chat_input_area.type("New Line")
     assert_snapshot(chat_input, name="st_chat_input-file_upload_shift_enter_new_line")
-
-
-@use_chat_input("inline")
-def test_click_button_to_submit_clears_input(app: Page):
-    """Test that clicking the button submits and clears the input."""
-    chat_input = get_element_by_key(app, "inline")
-    submit_button = chat_input.get_by_test_id("stChatInputSubmitButton")
-    chat_input_area = chat_input.locator("textarea").first
-
-    chat_input_area.type("Corgi")
-    submit_button.click()
-
-    expect(chat_input_area).to_have_value("")
-
-    expect_markdown(app, "inline - value: Corgi")
 
 
 @use_chat_input("bottom_max_chars")
@@ -573,7 +588,7 @@ def test_uploads_and_deletes_single_file(
 
     file_upload_helper(themed_app, chat_input, [file1])
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
     uploaded_files.scroll_into_view_if_needed()
 
@@ -589,12 +604,12 @@ def test_uploads_and_deletes_single_file(
     expect(uploaded_files.get_by_text(file_name2)).to_be_visible()
 
     # Delete the uploaded file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
 
     wait_for_app_run(themed_app)
 
     # After deletion, the uploaded files container should not be visible
-    expect(chat_input.get_by_test_id("stChatUploadedFiles")).not_to_be_visible()
+    expect(chat_input.get_by_test_id("stFileChips")).not_to_be_visible()
 
 
 @use_chat_input("multiple_files")
@@ -617,7 +632,7 @@ def test_uploads_and_deletes_multiple_files(
 
     file_upload_helper(app, chat_input, files)
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
 
     # Wait for file names to be visible before taking snapshot
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
@@ -628,15 +643,15 @@ def test_uploads_and_deletes_multiple_files(
 
     assert_snapshot(uploaded_files, name="st_chat_input-multiple_files_uploaded")
 
-    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    uploaded_file_names = uploaded_files.get_by_test_id("stFileChipName")
     expect(uploaded_file_names).to_have_count(2)
 
     # Delete one uploaded file
-    uploaded_files.get_by_test_id("stChatInputDeleteBtn").first.click()
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
 
     wait_for_app_run(app)
 
-    uploaded_file_names = uploaded_files.get_by_test_id("stChatInputFileName")
+    uploaded_file_names = uploaded_files.get_by_test_id("stFileChipName")
     expect(uploaded_file_names).to_have_count(1)
 
     expect(uploaded_file_names).to_have_text(files[1]["name"], use_inner_text=True)
@@ -646,7 +661,7 @@ def test_uploads_and_deletes_multiple_files(
 def test_file_upload_error_message_disallowed_files(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
-    """Test that shows error message for disallowed files."""
+    """Test that shows error message for disallowed files and retry attributes."""
     themed_app.set_viewport_size({"width": 750, "height": 2000})
 
     file_name1 = "file1.json"
@@ -660,23 +675,30 @@ def test_file_upload_error_message_disallowed_files(
         themed_app, get_element_by_key(themed_app, "single_file"), [file1]
     )
 
-    uploaded_files = (
-        get_element_by_key(themed_app, "single_file")
-        .get_by_test_id("stChatUploadedFiles")
-        .first
-    )
+    chat_input = get_element_by_key(themed_app, "single_file")
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
 
-    # Dismiss any tooltips before taking snapshot (WebKit can leave upload tooltip visible)
-    reset_hovering(themed_app)
+    # Verify file chip has retry attributes (all errors are retryable)
+    file_chip = uploaded_files.get_by_test_id("stFileChip").first
+    expect(file_chip).to_have_attribute("role", "button")
+    expect(file_chip).to_have_attribute("tabindex", "0")
+    expect(file_chip).to_have_attribute("title", "Click to retry upload")
 
-    assert_snapshot(uploaded_files, name="st_chat_input-file_uploaded_error")
+    # Snapshot the error file chip (without tooltip)
+    assert_snapshot(file_chip, name="st_chat_input-file_uploaded_error")
 
-    # Reset hovering again before hovering on error tooltip to ensure upload tooltip is dismissed
-    reset_hovering(themed_app)
+    # Verify tooltip is NOT visible before hovering
+    expect(themed_app.get_by_test_id("stTooltipErrorContent")).not_to_be_visible()
 
-    uploaded_files.get_by_test_id("stTooltipHoverTarget").first.hover()
-    expect(themed_app.get_by_text("json files are not allowed.")).to_be_visible()
+    # Hover to show error tooltip
+    file_chip.hover()
+    error_tooltip = themed_app.get_by_test_id("stTooltipErrorContent").first
+    expect(error_tooltip).to_be_visible()
+    expect(error_tooltip).to_have_text("application/json files are not allowed.")
+
+    # Snapshot the tooltip content directly (tooltips are portals rendered to <body>)
+    assert_snapshot(error_tooltip, name="st_chat_input-file_uploaded_error_tooltip")
 
 
 @use_chat_input("single_file")
@@ -696,104 +718,77 @@ def test_file_upload_error_message_file_too_large(app: Page):
     expect(chat_input).to_be_visible()
     file_upload_helper(app, chat_input, [file1])
 
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
     expect(uploaded_files).to_be_visible()
 
     # Verify the file appears in the uploaded files list
     expect(uploaded_files.get_by_text(file_name1)).to_be_visible()
 
-    uploaded_file = uploaded_files.get_by_test_id("stChatInputFile").first
+    uploaded_file = uploaded_files.get_by_test_id("stFileChip").first
     expect(uploaded_file).to_be_visible()
 
     uploaded_files.scroll_into_view_if_needed()
 
-    # Reset hovering to not cause issues with the upload tooltip being
-    # shown over the uploaded file tooltip hover target:
+    # Reset hovering to dismiss any upload tooltips
     reset_hovering(app)
 
-    # Ensure the upload button tooltip has disappeared before checking the error tooltip
-    expect(app.get_by_text("Upload or drag and drop a file")).not_to_be_attached()
-
-    # Ensure the tooltip hover target is in viewport before hovering (WebKit requirement)
-    hover_target = uploaded_files.get_by_test_id("stTooltipHoverTarget")
-    hover_target.scroll_into_view_if_needed()
-
-    expect_help_tooltip(app, uploaded_files, "File must be 1.0MB or smaller.")
+    # Verify error message is displayed as a tooltip when hovering
+    file_chip = uploaded_files.get_by_test_id("stFileChip").first
+    file_chip.hover()
+    error_tooltip = app.get_by_test_id("stTooltipErrorContent").first
+    expect(error_tooltip).to_be_visible()
+    expect(error_tooltip).to_have_text("File must be 1.0MB or smaller.")
 
 
-@use_chat_input("single_file")
-def test_single_file_upload_button_tooltip(app: Page):
-    """Test that the single file upload button tooltip renders correctly."""
+def test_file_upload_button_tooltips(app: Page):
+    """Test upload button tooltips for single file, multiple files, and directory modes."""
     app.set_viewport_size({"width": 750, "height": 2000})
 
-    chat_input_upload_button = get_element_by_key(app, "single_file").get_by_test_id(
-        "stChatInputFileUploadButton"
-    )
-    expect(chat_input_upload_button).to_be_visible()
-    chat_input_upload_button.scroll_into_view_if_needed()
+    # Test cases: (key, expected_tooltip)
+    tooltip_cases = [
+        ("single_file", "Upload or drag and drop a file (TXT)"),
+        ("multiple_files", "Upload or drag and drop files"),
+        ("directory", "Upload or drag and drop a directory"),
+    ]
 
-    expect_help_tooltip(app, chat_input_upload_button, "Upload or drag and drop a file")
-    # Hover on the tooltip hover target
-
-
-@use_chat_input("multiple_files")
-def test_multi_file_upload_button_tooltip(app: Page):
-    """Test that the multi file upload button tooltip renders correctly."""
-    app.set_viewport_size({"width": 750, "height": 2000})
-
-    chat_input_upload_button = get_element_by_key(app, "multiple_files").get_by_test_id(
-        "stChatInputFileUploadButton"
-    )
-    expect(chat_input_upload_button).to_be_visible()
-    chat_input_upload_button.scroll_into_view_if_needed()
-
-    expect_help_tooltip(app, chat_input_upload_button, "Upload or drag and drop files")
+    for key, expected_tooltip in tooltip_cases:
+        goto_chat_input(app, key)
+        chat_input_upload_button = get_element_by_key(app, key).get_by_test_id(
+            "stChatInputFileUploadButton"
+        )
+        expect(chat_input_upload_button).to_be_visible()
+        chat_input_upload_button.scroll_into_view_if_needed()
+        expect_help_tooltip(app, chat_input_upload_button, expected_tooltip)
 
 
-@use_chat_input("directory")
-def test_directory_upload_button_tooltip(app: Page):
-    """Test that the directory upload button tooltip renders correctly."""
-    app.set_viewport_size({"width": 750, "height": 2000})
-
-    chat_input_upload_button = get_element_by_key(app, "directory").get_by_test_id(
-        "stChatInputFileUploadButton"
-    )
-    expect(chat_input_upload_button).to_be_visible()
-    chat_input_upload_button.scroll_into_view_if_needed()
-
-    expect_help_tooltip(
-        app, chat_input_upload_button, "Upload or drag and drop a directory"
-    )
-
-
-@use_chat_input("directory_disabled")
-def test_directory_upload_disabled_state(app: Page):
-    """Test that disabled directory upload input cannot be interacted with."""
+def test_directory_upload_behavior(app: Page):
+    """Test directory upload: disabled state and enabled interaction."""
+    # Test disabled state
+    goto_chat_input(app, "directory_disabled")
     disabled_chat_input = get_element_by_key(app, "directory_disabled")
     disabled_upload_button = disabled_chat_input.get_by_test_id(
         "stChatInputFileUploadButton"
     )
 
-    # Check that the upload button has disabled attribute (div elements don't use standard disabled behavior)
+    # Check that the upload button has disabled attribute
     expect(disabled_upload_button).to_have_attribute("disabled", "")
 
     # Check that the text area is also disabled
     disabled_text_area = disabled_chat_input.locator("textarea")
     expect(disabled_text_area).to_be_disabled()
 
-
-@use_chat_input("directory")
-def test_directory_upload_button_interaction(app: Page):
-    """Test directory upload button can be clicked when enabled."""
+    # Test enabled state
+    goto_chat_input(app, "directory")
     chat_input = get_element_by_key(app, "directory")
-    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+    upload_button = chat_input.get_by_role("button", name="Upload a directory")
 
     expect(upload_button).to_be_visible()
+    expect(upload_button).to_have_accessible_name("Upload a directory")
     expect(upload_button).to_be_enabled()
 
-    # Just verify that the button is clickable without interacting with file chooser
-    # Directory uploads require actual directory paths which we can't simulate
-    expect(upload_button).to_have_attribute("tabindex", "0")
+    # Verify that the button is focusable
+    upload_button.focus()
+    expect(upload_button).to_be_focused()
 
 
 @use_chat_input("bottom_max_chars")
@@ -821,14 +816,11 @@ def test_chat_input_adjusts_for_long_placeholder(
 
 
 @use_chat_input("inline")
-def test_check_top_level_class(app: Page):
-    """Check that the top level class is correctly set."""
+def test_css_classes(app: Page):
+    """Test top-level class and custom css class via key argument."""
     check_top_level_class(app, "stChatInput")
 
-
-@use_chat_input("callback")
-def test_custom_css_class_via_key(app: Page):
-    """Test that the element can have a custom css class via the key argument."""
+    goto_chat_input(app, "callback")
     expect(get_element_by_key(app, "callback")).to_be_visible()
 
 
@@ -955,140 +947,84 @@ def test_dynamic_chat_input_props(
 
 @use_chat_input("audio_with_files")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_recording_lifecycle(app: Page):
-    """Test complete audio recording lifecycle: record, approve, verify output."""
+def test_audio_recording_basic_lifecycle(app: Page):
+    """Test complete audio recording lifecycle: record, cancel, approve, verify state.
+
+    Covers: recording lifecycle, cancel, submit clears state, audio-only submission.
+    """
     grant_microphone_permissions(app)
 
     chat_input = get_element_by_key(app, "audio_with_files")
     chat_input.scroll_into_view_if_needed()
 
-    # Verify mic button is visible
     mic_button = chat_input.get_by_test_id("stChatInputMicButton")
     expect(mic_button).to_be_visible()
 
-    # Record audio
-    record_audio_in_chat_input(app, chat_input)
-
-    # Verify audio was submitted successfully
-    expect_chat_input_value_contains_audio(app, "audio_with_files")
-
-
-@use_chat_input("audio_with_files")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_recording_cancel(app: Page):
-    """Test that canceling audio recording works correctly."""
-    grant_microphone_permissions(app)
-
-    chat_input = get_element_by_key(app, "audio_with_files")
-    chat_input.scroll_into_view_if_needed()
-
-    # Start recording
-    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
-    expect(mic_button).to_be_visible()
+    # Part 1: Test cancel recording
     mic_button.click()
-
-    # Wait for cancel button to appear (indicates recording started)
     cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
     expect(cancel_button).to_be_visible()
-
-    # Record for a moment
     app.wait_for_timeout(500)
-
-    # Cancel recording
     cancel_button.click()
-
-    # Cancel button should disappear (recording stopped)
     expect(cancel_button).not_to_be_visible()
-
-    # Mic button should be visible and enabled again
     expect(mic_button).to_be_visible()
     expect(mic_button).to_be_enabled()
 
+    # Part 2: Test full recording and submission
+    record_audio_in_chat_input(app, chat_input)
+    expect_chat_input_value_contains_audio(app, "audio_with_files")
+
+    # Part 3: Verify submit clears the recording state
+    audio_elements = app.get_by_test_id("stAudio")
+    expect(audio_elements.first).to_be_visible()
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
+    expect(approve_button).not_to_be_visible()
+    expect(cancel_button).not_to_be_visible()
+
 
 @use_chat_input("audio_with_files")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_with_text_input(app: Page):
-    """Test recording audio along with text input."""
+def test_audio_combined_with_other_inputs(app: Page):
+    """Test audio combined with text and file inputs.
+
+    Covers: audio + text, audio + files, audio + text + files (max complexity).
+    """
     grant_microphone_permissions(app)
 
     chat_input = get_element_by_key(app, "audio_with_files")
     chat_input.scroll_into_view_if_needed()
 
-    # Type text
+    # Part 1: Audio with text
     textarea = chat_input.locator("textarea").first
     textarea.fill("Hello world")
-
-    # Record audio
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
-
-    # Verify both text and audio were submitted successfully
     expect_chat_input_value_contains_text(app, "audio_with_files", "Hello world")
     expect_chat_input_value_contains_audio(app, "audio_with_files")
 
-
-@use_chat_input("audio_with_files")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_with_file_uploads(app: Page):
-    """Test combining audio recording with file uploads."""
-    grant_microphone_permissions(app)
-
-    chat_input = get_element_by_key(app, "audio_with_files")
-    chat_input.scroll_into_view_if_needed()
-
-    # Upload file first
+    # Part 2: Audio with files (fresh submission)
     file = FilePayload(name="test.txt", mimeType="text/plain", buffer=b"test content")
     file_upload_helper(app, chat_input, [file])
-
-    # Record audio
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
-
-    # Verify audio and file were submitted successfully
     expect_chat_input_value_contains_audio(app, "audio_with_files")
     expect_chat_input_value_contains_files(app, "audio_with_files", 1)
 
-
-@use_chat_input("audio_with_files")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_only_submission(app: Page):
-    """Test submitting only audio without text or files."""
-    grant_microphone_permissions(app)
-
-    chat_input = get_element_by_key(app, "audio_with_files")
-    chat_input.scroll_into_view_if_needed()
-
-    # Record audio only (no text or files)
+    # Part 3: Audio with text and multiple files (max complexity)
+    file1 = FilePayload(name="file1.txt", mimeType="text/plain", buffer=b"content1")
+    file2 = FilePayload(name="file2.txt", mimeType="text/plain", buffer=b"content2")
+    file_upload_helper(app, chat_input, [file1, file2])
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
+    expect(uploaded_files.get_by_text("file1.txt")).to_be_visible()
+    expect(uploaded_files.get_by_text("file2.txt")).to_be_visible()
+    textarea.fill("Message with everything")
     record_audio_in_chat_input(app, chat_input, duration_ms=1000)
-
-    # Verify audio was submitted successfully
+    expect_chat_input_value_contains_text(
+        app, "audio_with_files", "Message with everything"
+    )
     expect_chat_input_value_contains_audio(app, "audio_with_files")
-
-
-@use_chat_input("audio_with_files")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_submit_clears_recording(app: Page):
-    """Test that submitting clears the recording state."""
-    grant_microphone_permissions(app)
-
-    chat_input = get_element_by_key(app, "audio_with_files")
-    chat_input.scroll_into_view_if_needed()
-
-    # Record and submit audio
-    record_audio_in_chat_input(app, chat_input, duration_ms=1000)
-
-    # Verify st.audio component is displayed
-    audio_elements = app.get_by_test_id("stAudio")
-    expect(audio_elements.first).to_be_visible()
-
-    # Verify mic button is back to initial state
-    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
-    expect(mic_button).to_be_visible()
-    expect(mic_button).to_be_enabled()
-
-    # Verify approve/cancel buttons are not visible (not recording)
-    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
-    expect(approve_button).not_to_be_visible()
-    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
-    expect(cancel_button).not_to_be_visible()
+    expect_chat_input_value_contains_files(app, "audio_with_files", 2)
+    expect(textarea).to_have_value("")
 
 
 @use_chat_input("audio_with_files")
@@ -1195,7 +1131,7 @@ def test_audio_input_visual_states(app: Page, assert_snapshot: ImageCompareFunct
     file_upload_helper(app, chat_input_with_files, [file])
 
     # Snapshot: Audio button + uploaded files
-    uploaded_files = chat_input_with_files.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input_with_files.get_by_test_id("stFileChips").first
     expect(uploaded_files).to_be_visible()
     assert_snapshot(
         chat_input_with_files, name="st_chat_input-audio_with_uploaded_files"
@@ -1232,8 +1168,12 @@ def test_audio_input_combined_features(
 
 @use_chat_input("audio_only")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_recording_state_transitions(app: Page):
-    """Test exhaustive state machine transitions for audio recording."""
+def test_audio_state_transitions_and_edge_cases(app: Page):
+    """Test state machine transitions, keyboard accessibility, and boundary conditions.
+
+    Covers: state transitions (idle/recording/uploading), keyboard navigation,
+    short recordings, multiple cancel/restart cycles.
+    """
     grant_microphone_permissions(app)
 
     chat_input = get_element_by_key(app, "audio_only")
@@ -1242,48 +1182,34 @@ def test_audio_recording_state_transitions(app: Page):
     # Get element references
     textarea = chat_input.locator("textarea").first
     mic_button = chat_input.get_by_test_id("stChatInputMicButton")
-
-    # State 1: Idle - verify initial state
-    expect(textarea).to_be_visible()
-    expect(mic_button).to_be_visible()
-    expect(mic_button).to_be_enabled()
-
-    # Verify approve/cancel buttons not visible in idle
-    expect(chat_input.get_by_test_id("stChatInputApproveButton")).not_to_be_visible()
-    expect(chat_input.get_by_test_id("stChatInputCancelButton")).not_to_be_visible()
-
-    # Transition: idle → recording
-    start_audio_recording(chat_input)
-
-    # State 2: Recording - verify recording state elements
     approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
     cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
 
+    # Part 1: Verify initial idle state
+    expect(textarea).to_be_visible()
+    expect(mic_button).to_be_visible()
+    expect(mic_button).to_be_enabled()
+    expect(approve_button).not_to_be_visible()
+    expect(cancel_button).not_to_be_visible()
+
+    # Part 2: Transition idle → recording via keyboard
+    mic_button.focus()
+    expect(mic_button).to_be_focused()
+    app.keyboard.press("Space")
     expect(approve_button).to_be_visible()
     expect(cancel_button).to_be_visible()
 
-    # Verify textarea becomes hidden during recording
-    # Note: The textarea is not removed, but waveform takes over visually
-
-    # Transition: recording → idle (via cancel)
+    # Transition recording → idle via cancel
     cancel_button.click()
-
-    # Verify return to idle state
     expect(approve_button).not_to_be_visible()
     expect(cancel_button).not_to_be_visible()
     expect(mic_button).to_be_visible()
     expect(mic_button).to_be_enabled()
 
-    # Test full cycle: idle → recording → uploading → idle
-    mic_button.click()
-    expect(approve_button).to_be_visible()
+    # Part 3: Full cycle idle → recording → uploading → idle
+    start_audio_recording(chat_input)
     app.wait_for_timeout(1000)
-
-    # Click approve to enter uploading state
     approve_button.click()
-
-    # During upload, approve button should show spinner (verify button still exists)
-    # This happens very quickly, so we just verify transition to idle
     wait_for_app_run(app)
 
     # Verify return to idle after upload
@@ -1291,103 +1217,26 @@ def test_audio_recording_state_transitions(app: Page):
     expect(cancel_button).not_to_be_visible()
     expect(mic_button).to_be_visible()
     expect(mic_button).to_be_enabled()
-
-    # Verify textarea is cleared after submission
     expect(textarea).to_have_value("")
 
-
-@use_chat_input("audio_only")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_keyboard_accessibility(app: Page):
-    """Test keyboard-only interactions with audio input."""
-    grant_microphone_permissions(app)
-
-    chat_input = get_element_by_key(app, "audio_only")
-    chat_input.scroll_into_view_if_needed()
-
-    # Tab to mic button
-    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
-
-    # Focus the mic button using keyboard navigation
-    mic_button.focus()
-    expect(mic_button).to_be_focused()
-
-    # Trigger with Space
-    app.keyboard.press("Space")
-
-    # Verify recording started
-    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
-    expect(approve_button).to_be_visible()
-
-    # Try Escape to cancel (if implemented)
-    app.keyboard.press("Escape")
-
-    # Verify either cancel worked or recording continues
-    # (This depends on implementation - we just verify state consistency)
-
-    # Clean up - cancel if still recording
-    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
-    if cancel_button.is_visible():
-        cancel_button.click()
-
-
-@use_chat_input("audio_only")
-@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-def test_audio_boundary_conditions(app: Page):
-    """Test edge cases and boundary conditions for audio recording."""
-    grant_microphone_permissions(app)
-
-    chat_input = get_element_by_key(app, "audio_only")
-    chat_input.scroll_into_view_if_needed()
-
-    # Test 1: Very short recording (< 1 second)
-    mic_button = chat_input.get_by_test_id("stChatInputMicButton")
+    # Part 4: Very short recording (boundary condition)
     mic_button.click()
-
-    approve_button = chat_input.get_by_test_id("stChatInputApproveButton")
     expect(approve_button).to_be_visible()
-
-    # Record for very short duration
-    app.wait_for_timeout(200)
+    app.wait_for_timeout(200)  # < 1 second
     approve_button.click()
-
     wait_for_app_run(app)
-
-    # Verify submission worked despite short duration
     expect(mic_button).to_be_visible()
 
-    # Test 2: Rapid click on mic button (shouldn't allow double-start)
-    mic_button.click()
-    expect(approve_button).to_be_visible()
-
-    # Try clicking mic button again while recording
-    # It should be hidden or disabled during recording
-    # so this shouldn't cause issues
-
-    # Cancel to reset
-    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
-    cancel_button.click()
-
-    # Test 3: Click approve immediately after starting
-    mic_button.click()
-    expect(approve_button).to_be_visible()
-
-    # Click approve almost immediately (< 100ms of recording)
-    approve_button.click()
-
-    wait_for_app_run(app)
-
-    # Verify state is clean
-    expect(mic_button).to_be_visible()
-    expect(mic_button).to_be_enabled()
-
-    # Test 4: Multiple cancel/restart cycles
+    # Part 5: Multiple cancel/restart cycles
     for _ in range(3):
         mic_button.click()
         expect(approve_button).to_be_visible()
         app.wait_for_timeout(300)
         cancel_button.click()
+        expect(approve_button).not_to_be_visible()
+        expect(cancel_button).not_to_be_visible()
         expect(mic_button).to_be_visible()
+        expect(mic_button).to_be_enabled()
 
 
 @use_chat_input("audio_with_files")
@@ -1405,7 +1254,7 @@ def test_audio_with_all_features_combined(app: Page):
     file_upload_helper(app, chat_input, [file1, file2])
 
     # Verify files uploaded
-    uploaded_files = chat_input.get_by_test_id("stChatUploadedFiles").first
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
     expect(uploaded_files.get_by_text("file1.txt")).to_be_visible()
     expect(uploaded_files.get_by_text("file2.txt")).to_be_visible()
 
@@ -1577,38 +1426,364 @@ def test_chat_input_recording_error(app: Page, assert_snapshot: ImageCompareFunc
 
 @use_chat_input("audio_sample_rate")
 @pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
-@pytest.mark.parametrize(
-    ("option_text", "expected_hz"),
-    [
-        ("16 kHz (Default)", 16000),
-        ("48 kHz (High quality)", 48000),
-        ("8 kHz (Low quality)", 8000),
-    ],
-)
-def test_audio_sample_rate_validation(app: Page, option_text: str, expected_hz: int):
+def test_audio_sample_rate_validation(app: Page):
     """Test recording audio at various sample rates and validate the output."""
     grant_microphone_permissions(app)
 
-    # Select the specified sample rate from dropdown
-    selectbox = app.get_by_test_id("stSelectbox").first
-    selectbox.click()
-    # Click the option in the dropdown (not the selected value display)
-    app.get_by_test_id("stSelectboxVirtualDropdown").get_by_text(option_text).click()
+    # Test all sample rate variations in one test to avoid multiple browser sessions
+    sample_rate_cases = [
+        ("16 kHz (Default)", 16000),
+        ("48 kHz (High quality)", 48000),
+        ("8 kHz (Low quality)", 8000),
+    ]
+
+    for option_text, expected_hz in sample_rate_cases:
+        # Select the specified sample rate from dropdown
+        select_selectbox_option(app, "Select audio sample rate", option_text)
+
+        # Get the chat input for audio recording
+        chat_input = get_element_by_key(app, "audio_sample_rate_test")
+        chat_input.scroll_into_view_if_needed()
+
+        # Record audio
+        record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+
+        # Verify the validation message appears
+        expect(
+            app.get_by_text("Sample rate validation PASSED", exact=False)
+        ).to_be_visible()
+        expect(
+            app.get_by_text(f"Expected {expected_hz} Hz", exact=False)
+        ).to_be_visible()
+        expect(app.get_by_text(f"got {expected_hz} Hz", exact=False)).to_be_visible()
+
+
+def upload_single_file_and_snapshot(
+    app: Page,
+    chat_input: Locator,
+    file: FilePayload,
+    snapshot_name: str,
+    assert_snapshot: ImageCompareFunction,
+) -> None:
+    """Helper to upload a single file and take a snapshot of just that file chip."""
+    file_upload_helper(app, chat_input, [file])
+
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
+    file_chip = uploaded_files.get_by_test_id("stFileChip").first
+    expect(file_chip).to_be_visible()
+
+    # Verify title attribute contains full filename (for native tooltip on hover)
+    filename_element = uploaded_files.get_by_test_id("stFileChipName").first
+    expect(filename_element).to_have_attribute("title", file["name"])
+
+    reset_hovering(app)
+
+    assert_snapshot(file_chip, name=snapshot_name)
+
+    # Delete the file to reset for next test
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
+    wait_for_app_run(app, 500)
+
+
+@use_chat_input("multiple_files")
+def test_file_chip_theming(
+    themed_app: Page,
+    assert_snapshot: ImageCompareFunction,
+):
+    """Test file chip theming with one representative file type (light and dark)."""
+    # Use image file type as representative - theme styling is shared across all file types
+    # Uses a real PNG so the image preview thumbnail renders correctly
+    chat_input = get_element_by_key(themed_app, "multiple_files")
+    file = FilePayload(name="photo.png", mimeType="image/png", buffer=SMILEY_PNG)
+    upload_single_file_and_snapshot(
+        themed_app,
+        chat_input,
+        file,
+        "st_chat_input-file_chip_themed",
+        assert_snapshot,
+    )
+
+
+# Minimal 8x8 smiley face PNG for image preview testing
+# This is a valid PNG that renders as a yellow smiley face
+SMILEY_PNG = (
+    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x08\x00\x00\x00\x08\x08\x02"
+    b'\x00\x00\x00Km)\xdc\x00\x00\x00"IDATx\xdac\xf8\x7f\x86\x01+\x82Q\x98\x0c\x02'
+    b"\x12\xd8\x8db@\x95\x86p\x890\n\x02\xd0]\x85\x89\x007\xa7`\xd3Z\xff>.\x00\x00"
+    b"\x00\x00IEND\xaeB`\x82"
+)
+
+# File types to test (excluding image which is tested in test_file_chip_theming)
+FILE_CHIP_VARIATIONS = [
+    ("pdf", "document.pdf", "application/pdf", b"fake pdf"),
+    ("spreadsheet", "data.csv", "text/csv", b"a,b,c"),
+    ("text", "readme.txt", "text/plain", b"Hello world"),
+    ("code", "script.py", "text/x-python", b"print('hi')"),
+    ("audio", "song.mp3", "audio/mpeg", b"fake audio"),
+    ("video", "movie.mp4", "video/mp4", b"fake video"),
+    ("archive", "archive.zip", "application/zip", b"fake zip"),
+    ("unknown", "data.unknown", "application/octet-stream", b"mystery"),
+    (
+        "truncated",
+        "data_analysis_results.csv",
+        "text/csv",
+        b"content",
+    ),
+]
+
+
+@use_chat_input("multiple_files")
+def test_file_chip_variations(app: Page, assert_snapshot: ImageCompareFunction):
+    """Test file chip rendering for various file types (icon and truncation variations)."""
+    chat_input = get_element_by_key(app, "multiple_files")
+
+    for test_id, filename, mimetype, content in FILE_CHIP_VARIATIONS:
+        file = FilePayload(name=filename, mimeType=mimetype, buffer=content)
+        upload_single_file_and_snapshot(
+            app,
+            chat_input,
+            file,
+            f"st_chat_input-file_chip_{test_id}",
+            assert_snapshot,
+        )
+
+
+@use_chat_input("multiple_files")
+@pytest.mark.skip_browser("webkit")
+def test_file_upload_retry_click_success(app: Page):
+    """Test that clicking retry on error chip successfully re-uploads the file."""
+    from playwright.sync_api import Route
+
+    app.set_viewport_size({"width": 750, "height": 2000})
+
+    chat_input = get_element_by_key(app, "multiple_files")
+    expect(chat_input).to_be_visible()
+
+    # Track upload request count to fail first request, succeed on retry
+    request_count = {"value": 0}
+
+    def handle_route(route: Route):
+        request_count["value"] += 1
+        if request_count["value"] == 1:
+            # First request fails
+            route.abort("failed")
+        else:
+            # Subsequent requests succeed
+            route.continue_()
+
+    # Set up route interception BEFORE uploading
+    app.route("**/_stcore/upload_file/**", handle_route)
+
+    file_name = "test_retry.txt"
+    file = FilePayload(name=file_name, mimeType="text/plain", buffer=b"test content")
+
+    try:
+        file_upload_helper(app, chat_input, [file])
+
+        # Wait for error state to appear
+        uploaded_files = chat_input.get_by_test_id("stFileChips").first
+        file_chip = uploaded_files.get_by_test_id("stFileChip").first
+        expect(file_chip).to_be_visible()
+
+        # Verify file is in error state with retry attributes
+        expect(file_chip).to_have_attribute("role", "button")
+        expect(file_chip).to_have_attribute("title", "Click to retry upload")
+
+        # Verify error message is displayed as a tooltip when hovering
+        file_chip.hover()
+        error_tooltip = app.get_by_test_id("stTooltipErrorContent").first
+        expect(error_tooltip).to_be_visible()
+
+        # Click to retry - this should succeed since we now allow requests through
+        file_chip.click()
+
+        # Wait for successful upload - tooltip wrapper should disappear
+        # After successful upload, file chip is no longer wrapped in error tooltip
+        tooltip_wrapper = app.get_by_test_id("stTooltipErrorHoverTarget").first
+        expect(tooltip_wrapper).not_to_be_visible(timeout=5000)
+
+        # Verify file is now in uploaded state (shows size instead of error)
+        file_size = uploaded_files.get_by_test_id("stFileChipName").first
+        expect(file_size).to_be_visible()
+
+    finally:
+        # Clean up route interception
+        app.unroute("**/_stcore/upload_file/**")
+
+
+@use_chat_input("single_file")
+def test_upload_button_works_after_upload_and_delete(app: Page):
+    """Test that the upload button still works after uploading a file and deleting it.
+
+    This tests a react-dropzone bug where the file input becomes unresponsive after
+    files are removed. The fix resets the dropzone state via React key when files
+    are deleted. See: https://github.com/react-dropzone/react-dropzone/issues/972
+    """
+    chat_input = get_element_by_key(app, "single_file")
+    expect(chat_input).to_be_visible()
+
+    # Get the upload button
+    upload_button = chat_input.get_by_test_id("stChatInputFileUploadButton")
+    expect(upload_button).to_be_visible()
+
+    # Step 1: Upload a file using the button
+    # Use short filenames (max 16 chars) to avoid truncation in the UI
+    first_file_name = "first.txt"
+    first_file = FilePayload(
+        name=first_file_name, mimeType="text/plain", buffer=b"first file content"
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click(force=True)
+        file_chooser = fc_info.value
+        file_chooser.set_files(files=[first_file])
+
+    wait_for_app_run(app, 500)
+
+    # Verify the file was uploaded
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
+    expect(uploaded_files).to_be_visible()
+    expect(uploaded_files.get_by_text(first_file_name)).to_be_visible()
+
+    # Step 2: Delete the uploaded file
+    uploaded_files.get_by_test_id("stFileChipDeleteBtn").first.click()
+    wait_for_app_run(app, 500)
+
+    # Verify the file was deleted
+    expect(chat_input.get_by_test_id("stFileChips")).not_to_be_visible()
+
+    # Step 3: Verify the upload button still works after the upload + delete cycle
+    # This is the key assertion - without the fix, the button would be unresponsive
+    expect(upload_button).to_be_visible()
+    expect(upload_button).to_be_enabled()
+
+    # Upload a new file using the button
+    second_file_name = "second.txt"
+    second_file = FilePayload(
+        name=second_file_name, mimeType="text/plain", buffer=b"second file content"
+    )
+
+    with app.expect_file_chooser() as fc_info:
+        upload_button.click(force=True)
+        file_chooser = fc_info.value
+        file_chooser.set_files(files=[second_file])
+
+    wait_for_app_run(app, 500)
+
+    # Verify the new file was uploaded successfully
+    uploaded_files = chat_input.get_by_test_id("stFileChips").first
+    expect(uploaded_files).to_be_visible()
+    expect(uploaded_files.get_by_text(second_file_name)).to_be_visible()
+
+    # Verify the first deleted file doesn't reappear (negative assertion)
+    expect(uploaded_files.get_by_text(first_file_name)).not_to_be_visible()
+
+
+@use_chat_input("inline")
+def test_dynamic_stacked_layout_transitions(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that chat input dynamically transitions between inline and stacked layouts.
+
+    The layout should:
+    1. Start in inline mode (buttons and textarea on same row)
+    2. Switch to stacked mode when text fills available width
+    3. Stay in stacked mode when text is partially deleted (still has content)
+    4. Return to inline mode only when all text is cleared
+    """
+    app.set_viewport_size({"width": 750, "height": 400})
+
+    chat_input = get_element_by_key(app, "inline")
+    textarea = chat_input.locator("textarea").first
+
+    # 1. Type short text - should still be in inline mode
+    short_text = "Hello, this is test"  # 19 chars
+    textarea.type(short_text)
+    assert_snapshot(chat_input, name="st_chat_input-layout_inline_short_text")
+
+    # 2. Type more text to trigger stacked mode
+    long_text = (
+        " and now I'm adding a lot more text to fill up the available width "
+        "so that the layout switches to stacked mode with buttons below"
+    )
+    textarea.type(long_text)
+    assert_snapshot(chat_input, name="st_chat_input-layout_stacked_long_text")
+
+    # 3. Replace with shorter text (but not empty) - should STAY in stacked mode
+    # Use fill() to efficiently replace text without character-by-character deletion
+    partial_text = "Hello, this is test "  # 20 chars - still has content
+    textarea.fill(partial_text)
+    assert_snapshot(chat_input, name="st_chat_input-layout_stacked_after_delete")
+
+    # 4. Clear all text - should return to inline mode
+    # Use select all + backspace for efficient clearing
+    textarea.press(
+        "Meta+a"
+        if app.evaluate("navigator.platform").startswith("Mac")
+        else "Control+a"
+    )
+    textarea.press("Backspace")
+    assert_snapshot(chat_input, name="st_chat_input-layout_inline_after_clear")
+
+    # Negative assertion: verify that typing short text does NOT trigger stacked mode
+    textarea.type("Brief")
+    expect(textarea).to_have_value("Brief")
+    # Take a snapshot to verify we're still in inline mode with brief text
+    assert_snapshot(chat_input, name="st_chat_input-layout_inline_brief_text")
+
+
+@use_chat_input("audio_only")
+@pytest.mark.skip_browser("webkit")  # Webkit CI audio permission issue
+def test_layout_behavior_after_audio_operations(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test layout alignment and stacked mode after audio operations.
+
+    Regression tests covering:
+    1. Alignment before/after audio submission
+    2. Stacked layout mode triggers after audio submission
+    3. Layout after canceling audio recording
+    """
+    grant_microphone_permissions(app)
+    app.set_viewport_size({"width": 750, "height": 400})
+
+    chat_input = get_element_by_key(app, "audio_only")
+
+    # Part 1: Initial alignment
+    assert_snapshot(chat_input, name="st_chat_input-audio_initial_alignment")
+
+    # Part 2: Record and submit audio, verify alignment preserved
+    record_audio_in_chat_input(app, chat_input)
     wait_for_app_run(app)
+    expect_chat_input_value_contains_audio(app, "audio_only")
 
-    # Verify the selection
-    expect(selectbox).to_contain_text(option_text)
+    chat_input = get_element_by_key(app, "audio_only")
+    assert_snapshot(chat_input, name="st_chat_input-audio_alignment_after_submit")
 
-    # Get the chat input for audio recording
-    chat_input = get_element_by_key(app, "audio_sample_rate_test")
-    chat_input.scroll_into_view_if_needed()
+    # Part 3: Verify stacked layout still works after audio submission
+    textarea = chat_input.locator("textarea").first
+    long_text = (
+        "This is a very long message that should trigger the stacked layout mode "
+        "where the textarea appears above the buttons instead of inline"
+    )
+    textarea.type(long_text)
+    assert_snapshot(chat_input, name="st_chat_input-stacked_after_audio_submit")
 
-    # Record audio
-    record_audio_in_chat_input(app, chat_input, duration_ms=2000)
+    # Clear for next test
+    textarea.fill("")
 
-    # Verify the validation message appears
-    expect(
-        app.get_by_text("Sample rate validation PASSED", exact=False)
-    ).to_be_visible()
-    expect(app.get_by_text(f"Expected {expected_hz} Hz", exact=False)).to_be_visible()
-    expect(app.get_by_text(f"got {expected_hz} Hz", exact=False)).to_be_visible()
+    # Part 4: Test layout after cancel
+    start_audio_recording(chat_input)
+    cancel_button = chat_input.get_by_test_id("stChatInputCancelButton")
+    cancel_button.click()
+
+    expect(textarea).to_be_visible()
+    assert_snapshot(chat_input, name="st_chat_input-alignment_after_audio_cancel")
+
+    # Verify stacking works after cancel
+    long_text_cancel = (
+        "A very long message that should trigger stacked mode even after "
+        "canceling an audio recording"
+    )
+    textarea.type(long_text_cancel)
+    assert_snapshot(chat_input, name="st_chat_input-stacked_after_audio_cancel")

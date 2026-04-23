@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -11,6 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Keep Attributes before Notes/Examples in API docstrings.
 
 from __future__ import annotations
 
@@ -34,9 +36,11 @@ from streamlit.elements.lib.file_uploader_utils import (
 from streamlit.elements.lib.form_utils import is_in_form
 from streamlit.elements.lib.image_utils import AtomicImage, image_to_url
 from streamlit.elements.lib.layout_utils import (
+    Height,
     LayoutConfig,
     Width,
     WidthWithoutContent,
+    create_layout_config,
     validate_width,
 )
 from streamlit.elements.lib.policies import check_widget_policies
@@ -147,7 +151,7 @@ class ChatInputValue(MutableMapping[str, Any]):
             raise KeyError(f"Invalid key: {item}")
         try:
             return getattr(self, item)  # type: ignore[no-any-return]
-        except AttributeError:
+        except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {item}") from None
 
     def __getattribute__(self, name: str) -> Any:
@@ -174,7 +178,7 @@ class ChatInputValue(MutableMapping[str, Any]):
             raise KeyError(f"Invalid key: {key}")
         try:
             delattr(self, key)
-        except AttributeError:
+        except AttributeError:  # pragma: no cover - defensive
             raise KeyError(f"Invalid key: {key}") from None
 
     def to_dict(self) -> dict[str, str | list[UploadedFile] | UploadedFile | None]:
@@ -223,7 +227,7 @@ def _process_avatar_input(
             AvatarType.ICON,
             (
                 "assistant"
-                if avatar in [PresetNames.AI, PresetNames.ASSISTANT]
+                if avatar in {PresetNames.AI, PresetNames.ASSISTANT}
                 else "user"
             ),
         )
@@ -254,7 +258,7 @@ def _pop_upload_files(
         return []
 
     ctx = get_script_run_ctx()
-    if ctx is None:
+    if ctx is None:  # pragma: no cover - defensive
         return []
 
     uploaded_file_info = files_value.uploaded_file_info
@@ -317,7 +321,7 @@ def _pop_audio_file(
         return None
 
     ctx = get_script_run_ctx()
-    if ctx is None:
+    if ctx is None:  # pragma: no cover - defensive
         return None
 
     file_recs_list = ctx.uploaded_file_mgr.get_files(
@@ -547,6 +551,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
@@ -555,6 +560,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
     ) -> str | None: ...
 
     @overload
@@ -564,6 +570,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
@@ -573,6 +580,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
     ) -> ChatInputValue | None: ...
 
     @overload
@@ -582,6 +590,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -591,6 +600,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
     ) -> ChatInputValue | None: ...
 
     @gather_metrics("chat_input")
@@ -600,6 +610,7 @@ class ChatMixin:
         *,
         key: Key | None = None,
         max_chars: int | None = None,
+        max_upload_size: int | None = None,
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
@@ -609,6 +620,7 @@ class ChatMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         width: WidthWithoutContent = "stretch",
+        height: Height = "content",
     ) -> str | ChatInputValue | None:
         """Display a chat input widget.
 
@@ -619,14 +631,37 @@ class ChatMixin:
             defaults to ``"Your message"``. For accessibility reasons, you
             should not use an empty string.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget based on
-            its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``accept_file``, ``file_type``, ``max_chars``,
+               or ``max_upload_size`` resets the widget even when a key
+               is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         max_chars : int or None
             The maximum number of characters that can be entered. If this is
             ``None`` (default), there will be no maximum.
+
+        max_upload_size : int or None
+            The maximum allowed size of each uploaded file in megabytes.
+
+            If this is ``None`` (default), the maximum file size is set by the
+            ``server.maxUploadSize`` configuration option in your
+            ``config.toml`` file. If this is an integer, it must be positive
+            and will override the ``server.maxUploadSize`` configuration option.
 
         accept_file : bool, "multiple", or "directory"
             Whether the chat input should accept files. This can be one of the
@@ -650,15 +685,25 @@ class ChatMixin:
             .. _config.toml: https://docs.streamlit.io/develop/api-reference/configuration/config.toml
 
         file_type : str, Sequence[str], or None
-            The allowed file extension(s) for uploaded files. This can be one
-            of the following types:
+            The allowed file types for uploaded files. This can be one of the
+            following values:
 
             - ``None`` (default): All file extensions are allowed.
-            - A string: A single file extension is allowed. For example, to
-              only accept CSV files, use ``"csv"``.
-            - A sequence of strings: Multiple file extensions are allowed. For
-              example, to only accept JPG/JPEG and PNG files, use
-              ``["jpg", "jpeg", "png"]``.
+            - A file extension: Only one file extension is allowed. For example,
+              to only accept CSV files, use ``"csv"`` or ``".csv"``.
+            - A MIME type: Only one MIME type is allowed. For example,
+              to accept JPEG images, use ``"image/jpeg"``.
+            - A MIME wildcard: All types within a MIME media type are allowed.
+              For example, to accept all images, use ``"image/*"``.
+            - A MIME media type: This is a shortcut that is equivalent to a
+              MIME wildcard. If you use ``"image"``, ``"audio"``, ``"video"``, or
+              ``"text"``, Streamlit will internally append ``/*`` to create
+              a MIME wildcard.
+            - A sequence of strings: Use a combination of the previously listed
+              strings to accept multiple file types.
+
+            For more information about MIME types, see
+            https://www.iana.org/assignments/media-types/media-types.xhtml.
 
             .. note::
                 This is a best-effort check, but doesn't provide a
@@ -706,6 +751,20 @@ class ChatMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        height : "content", "stretch", or int
+            The minimum height of the chat input widget. This can be one of
+            the following:
+
+            - ``"content"`` (default): The widget uses the default single-line
+              height and automatically expands based on the text content.
+            - ``"stretch"``: The height of the widget stretches to fill the
+              available height of the parent container. The parent container
+              must have a defined height for this to work properly.
+            - An integer specifying the minimum height in pixels: The widget
+              has a fixed minimum height but still auto-expands based on text
+              content. The minimum recommended height is 68 pixels, which fits
+              a single line of text.
 
         Returns
         -------
@@ -810,6 +869,9 @@ class ChatMixin:
         **Example 4: Programmatically set the text via session state**
 
         You can use ``st.session_state`` to set the text of the chat input widget.
+        Because ``st.chat_input`` is a trigger widget, the value in Session State
+        is cleared after the widget is populated. This prevents the widget from
+        returning the value until the user submits it.
 
         >>> import streamlit as st
         >>>
@@ -860,6 +922,15 @@ class ChatMixin:
                 "The `accept_file` parameter must be a boolean or 'multiple' or 'directory'."
             )
 
+        if max_upload_size is not None and (
+            not isinstance(max_upload_size, int) or max_upload_size <= 0
+        ):
+            raise StreamlitAPIException(
+                "The `max_upload_size` parameter must be a positive integer "
+                "representing the maximum file size in megabytes, or None "
+                "to fall back to the `server.maxUploadSize` configuration option."
+            )
+
         ctx = get_script_run_ctx()
 
         element_id = compute_and_register_element_id(
@@ -871,15 +942,23 @@ class ChatMixin:
             # - accept_file: Changes whether files can be attached (and how)
             # - file_type: Restricts the accepted file types
             # - max_chars: Changes the maximum allowed characters for the input
-            key_as_main_identity={"accept_file", "file_type", "max_chars"},
+            # - max_upload_size: Changes the maximum allowed file size
+            key_as_main_identity={
+                "accept_file",
+                "file_type",
+                "max_chars",
+                "max_upload_size",
+            },
             dg=self.dg,
             placeholder=placeholder,
             max_chars=max_chars,
+            max_upload_size=max_upload_size,
             accept_file=accept_file,
             file_type=file_type,
             accept_audio=accept_audio,
             audio_sample_rate=audio_sample_rate,
             width=width,
+            height=height,
         )
 
         if file_type:
@@ -932,7 +1011,12 @@ class ChatMixin:
         )
 
         chat_input_proto.file_type[:] = file_type if file_type is not None else []
-        chat_input_proto.max_upload_size_mb = config.get_option("server.maxUploadSize")
+        if max_upload_size is not None:
+            chat_input_proto.max_upload_size_mb = max_upload_size
+        else:
+            chat_input_proto.max_upload_size_mb = config.get_option(
+                "server.maxUploadSize"
+            )
         chat_input_proto.accept_audio = accept_audio
 
         if audio_sample_rate is not None:
@@ -954,8 +1038,9 @@ class ChatMixin:
             value_type="chat_input_value",
         )
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(
+            width=width, height=height, allow_content_height=True
+        )
 
         chat_input_proto.disabled = disabled
         if widget_state.value_changed and widget_state.value is not None:

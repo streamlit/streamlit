@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,10 @@ export default defineConfig({
     viteTsconfigPaths(),
     dts({
       insertTypesEntry: true,
+      // Keep declaration emit on a separate tsconfig so normal typechecking can
+      // still resolve sibling workspace source without pulling those files into
+      // the build root under TypeScript 6.
+      tsconfigPath: path.resolve(__dirname, "tsconfig.build.json"),
     }),
   ],
   build: {
@@ -49,7 +53,7 @@ export default defineConfig({
       fileName: format => `streamlit-lib.${format}.js`,
       formats: ["es", "umd", "cjs"], // Output formats
     },
-    rollupOptions: {
+    rolldownOptions: {
       input: "src/index.ts",
       // Externalize dependencies that shouldn't be bundled into your library
       external: ["react", "react-dom"],

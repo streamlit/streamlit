@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))  # type: ignore[arg-type]
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,7 +146,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload]
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload] # ty: ignore[invalid-argument-type]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
@@ -213,9 +213,9 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])  # type: ignore
+styled_df.set_table_styles([cell_hover, headers])  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
 styled_df.set_table_styles(
-    {
+    {  # ty: ignore[invalid-argument-type]
         ("Regression", "Tumour"): [
             {"selector": "th", "props": "border-left: 1px solid white"},
             {"selector": "td", "props": "border-left: 1px solid #000066"},
@@ -254,6 +254,7 @@ index = pd.Index(
         "*Italic* Row 4",
         "~Strikethrough~ Row 5",
         "`Code Block` Row 6",
+        ":violet[Brief] Row 7",
     ]
 )
 
@@ -266,6 +267,7 @@ data = pd.DataFrame(
             "`Code Block` text",
             "# Heading 1",
             "> This is a blockquote",
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.",
         ],
         "*Advanced* Features": [
             ":red[Red text] :red-background[Red background]",
@@ -274,6 +276,11 @@ data = pd.DataFrame(
             "| Table | Row |\n|---|---|\n| Cell | Cell |",
             "```python\ndef code():\n    pass\n```",
             "<- -> <-> -- >= <= ~=",
+            r"""**Bold** *italic* `code` :red[red] :blue-background[blue bg]
+:material/home: :streamlit: $x^2$ [link](https://streamlit.io)
+```python
+print("hi")
+```""",
         ],
     },
     index=index,
@@ -295,3 +302,69 @@ st.table(data_dict, border=False)
 
 st.subheader("Horizontal borders only (border='horizontal')")
 st.table(data_dict, border="horizontal")
+
+st.header("Width and Height Parameters")
+
+# Create a larger dataset for scrolling tests
+large_df = pd.DataFrame(
+    {f"Column {i}": [f"Row {j}, Col {i}" for j in range(20)] for i in range(10)}
+)
+
+st.subheader("Fixed dimensions with custom index (scrollable)")
+indexed_df = large_df.set_index(large_df.columns[0])
+st.table(indexed_df, width=400, height=200)
+
+st.subheader("Content width sizing")
+small_df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+st.table(small_df, width="content")
+
+st.header("Hide Index and Hide Header Parameters")
+
+st.subheader("DataFrame with auto-hidden RangeIndex")
+df_range = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+st.table(df_range)  # Index auto-hidden
+
+st.subheader("DataFrame with custom index (auto-shown)")
+df_custom_idx = df_range.set_index(pd.Index(["row1", "row2", "row3"]))
+st.table(df_custom_idx)  # Custom index shown
+
+st.subheader("Explicit hide_index=True on custom index")
+st.table(df_custom_idx, hide_index=True)
+
+st.subheader("Explicit hide_index=False on RangeIndex")
+st.table(df_range, hide_index=False)
+
+st.subheader("Dict data with auto-hidden headers")
+st.table({"Price": "$145.00", "Customer": "Bobby Jones", "Address": "NYC"})
+
+st.subheader("List data with auto-hidden headers")
+st.table([1, 2, 3, 4, 5])
+
+st.subheader("Explicit hide_header=True on DataFrame")
+st.table(df_range, hide_header=True)
+
+st.subheader("Explicit hide_header=False on dict")
+st.table({"A": 1, "B": 2}, hide_header=False)
+
+st.subheader("Both hide_index=True and hide_header=True")
+st.table(df_custom_idx, hide_index=True, hide_header=True)
+
+st.subheader("MultiIndex with hide_index=True")
+mi_df = pd.DataFrame(
+    {"Value": [1, 2, 3, 4]},
+    index=pd.MultiIndex.from_tuples(
+        [("A", 1), ("A", 2), ("B", 1), ("B", 2)], names=["Letter", "Number"]
+    ),
+)
+st.table(mi_df, hide_index=True)
+
+st.subheader("Key-value with mixed content")
+# Combining markdown formatting, links, and badges
+kv_mixed = {
+    ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+    ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+    ":material/new_releases: Version": ":gray-badge[1.45.0]",
+    ":material/license: License": ":green-badge[Apache 2.0]",
+    ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+}
+st.table(kv_mixed, border="horizontal", width="content")

@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "ForwardMsgProto";
-
+import "streamlit/proto/AuthRedirect.proto";
 import "streamlit/proto/AutoRerun.proto";
 import "streamlit/proto/Common.proto";
 import "streamlit/proto/Delta.proto";
@@ -28,13 +26,11 @@ import "streamlit/proto/Navigation.proto";
 import "streamlit/proto/NewSession.proto";
 import "streamlit/proto/PageConfig.proto";
 import "streamlit/proto/PageInfo.proto";
-import "streamlit/proto/PageProfile.proto";
 import "streamlit/proto/PageNotFound.proto";
-import "streamlit/proto/PagesChanged.proto";
+import "streamlit/proto/PageProfile.proto";
 import "streamlit/proto/ParentMessage.proto";
 import "streamlit/proto/SessionEvent.proto";
 import "streamlit/proto/SessionStatus.proto";
-import "streamlit/proto/AuthRedirect.proto";
 
 // A message sent from Proxy to the browser
 message ForwardMsg {
@@ -77,7 +73,6 @@ message ForwardMsg {
     // Other messages.
     Navigation navigation = 23;
     PageNotFound page_not_found = 15;
-    PagesChanged pages_changed = 16 [deprecated = true];
     FileURLsResponse file_urls_response = 19;
     AutoRerun auto_rerun = 21;
 
@@ -97,6 +92,12 @@ message ForwardMsg {
 
     // Response for a deferred file request
     DeferredFileResponse deferred_file_response = 25;
+
+    // Acknowledgment of app_heartbeat BackMsg, used for connection health
+    // monitoring. When the frontend sends an app_heartbeat, the server
+    // responds with this ack so the frontend can verify the connection is
+    // healthy.
+    bool heartbeat_ack = 26;
   }
 
   // The ID of the last BackMsg that we received before sending this
@@ -104,8 +105,8 @@ message ForwardMsg {
   // testing.
   string debug_last_backmsg_id = 17;
 
-  reserved 7, 8;
-  // Next: 26
+  reserved 7, 8, 16;
+  // Next: 27
 }
 
 message DeferredFileResponse {
@@ -127,23 +128,12 @@ message ForwardMsgMetadata {
   // Only set for Delta messages.
   repeated uint32 delta_path = 2;
 
-  // DEPRECATED: This is not used anymore.
-  ElementDimensionSpec element_dimension_spec = 3;
-
   // active_script_hash the forward message is associated from.
   // For multipage apps v1, this will always be the page file running
   // For multipage apps v2, this can be the main script or the page script
   string active_script_hash = 4;
-}
 
-// DEPRECATED: This is not used anymore.
-// Specifies the dimensions for the element
-message ElementDimensionSpec {
-  // width in pixels
-  uint32 width = 1;
-
-  // height in pixels
-  uint32 height = 2;
+  reserved 3;
 }
 
 // This is a list of ForwardMessages used to have a single protobuf message

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -132,6 +132,10 @@ st.radio(
 if st.toggle("Update radio props"):
     dr_value = st.radio(
         "Updated dynamic radio",
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 0 here, default is index 1 (papaya)
+        options=["mango", "papaya", "grape", "apple"],
+        index=1,  # default is "papaya"
         key="dynamic_radio_with_key",
         help="updated help",
         width=300,
@@ -141,15 +145,22 @@ if st.toggle("Update radio props"):
         ),
         args=("Updated radio arg",),
         kwargs={"param": "updated kwarg param"},
-        captions=["🍎", "🍌", "🍊"],
-        # Whitelisted kwargs:
-        options=["apple", "banana", "orange"],
+        captions=["🥭", "🍈", "🍇", "🍎"],
+        # Changing format_func is allowed, but selection is based on the
+        # formatted string labels. If the formatted label changes (e.g.,
+        # "Apple" vs "APPLE"), previously selected options may become
+        # unselected. This is something we might be able to improve with
+        # additional refactorings.
         format_func=lambda x: x.capitalize(),
     )
     st.write("Updated radio value:", dr_value)
 else:
     dr_value = st.radio(
         "Initial dynamic radio",
+        # "mango" exists in both lists at different indices for testing preservation
+        # mango is at index 2 here, default is index 0 (apple)
+        options=["apple", "banana", "mango", "orange"],
+        index=0,  # default is "apple"
         key="dynamic_radio_with_key",
         help="initial help",
         width="content",
@@ -159,9 +170,70 @@ else:
         ),
         args=("Initial radio arg",),
         kwargs={"param": "initial kwarg param"},
-        captions=["🍎 Apple", "🍌 Banana", "🍊 Orange"],
-        # Whitelisted kwargs:
-        options=["apple", "banana", "orange"],
+        captions=["🍎 Apple", "🍌 Banana", "🥭 Mango", "🍊 Orange"],
         format_func=lambda x: x.capitalize(),
     )
     st.write("Initial radio value:", dr_value)
+
+# --- Bound widgets (query-params) ---
+
+v_bound = st.radio(
+    "Bound radio",
+    ["cat", "dog", "bird"],
+    key="bound_radio",
+    bind="query-params",
+)
+st.write("bound radio value:", v_bound)
+
+v_bound_fmt = st.radio(
+    "Bound formatted",
+    ["cat", "dog"],
+    format_func=str.upper,
+    key="bound_radio_fmt",
+    bind="query-params",
+)
+st.write("bound radio fmt value:", v_bound_fmt)
+
+v_bound_clear = st.radio(
+    "Bound clearable",
+    ["red", "green", "blue"],
+    index=None,
+    key="bound_radio_clear",
+    bind="query-params",
+)
+st.write("bound radio clear value:", v_bound_clear)
+
+# --- Regression test for gh-14814 ---
+
+
+class Gh14814Option:
+    """Custom option type for gh-14814 (stable __eq__ / __hash__, no __str__)."""
+
+    __slots__ = ("label", "value")
+
+    def __init__(self, label: str, value: int) -> None:
+        self.label = label
+        self.value = value
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Gh14814Option):
+            return False
+        return self.value == other.value
+
+    def __hash__(self) -> int:
+        return hash(self.value)
+
+
+_gh14814_options = [
+    Gh14814Option("Option A", 1),
+    Gh14814Option("Option B", 2),
+    Gh14814Option("Option C", 3),
+]
+
+v15 = st.radio(
+    "radio 15 (custom class format_func, gh-14814)",
+    options=_gh14814_options,
+    format_func=lambda x: x.label,
+    key="radio_gh14814",
+)
+st.write("value 15:", v15.value)

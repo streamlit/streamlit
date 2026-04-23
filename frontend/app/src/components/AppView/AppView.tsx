@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, {
+import {
   ReactElement,
   useCallback,
   useContext,
@@ -22,14 +22,12 @@ import React, {
   useState,
 } from "react"
 
-import EventContainer from "@streamlit/app/src/components/EventContainer"
-import Header from "@streamlit/app/src/components/Header"
-import { LogoComponent } from "@streamlit/app/src/components/Logo"
-import {
-  shouldShowNavigation,
-  TopNav,
-} from "@streamlit/app/src/components/Navigation"
-import ThemedSidebar from "@streamlit/app/src/components/Sidebar"
+import EventContainer from "@streamlit/app/src/components/EventContainer/EventContainer"
+import Header from "@streamlit/app/src/components/Header/Header"
+import LogoComponent from "@streamlit/app/src/components/Logo/LogoComponent"
+import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
+import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
+import ThemedSidebar from "@streamlit/app/src/components/Sidebar/ThemedSidebar"
 import {
   getSavedSidebarState,
   saveSidebarState,
@@ -141,8 +139,7 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { activeTheme } = useContext(ThemeContext)
 
-  const { appPages, navSections, pageLinkBaseUrl } =
-    useContext(NavigationContext)
+  const { appPages, pageLinkBaseUrl } = useContext(NavigationContext)
 
   const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
     SidebarConfigContext
@@ -162,7 +159,7 @@ function AppView(props: AppViewProps): ReactElement {
     (hasSidebarElements ||
       (navigationPosition === Navigation.Position.SIDEBAR &&
         !hideSidebarNav &&
-        appPages.length > 1) ||
+        shouldShowNavigation(appPages)) ||
       showSidebarOverride)
 
   useEffect(() => {
@@ -281,7 +278,7 @@ function AppView(props: AppViewProps): ReactElement {
   const shouldShowExpandButton = showSidebar && isSidebarCollapsed
   const shouldShowTopNav =
     navigationPosition === Navigation.Position.TOP &&
-    shouldShowNavigation(appPages, navSections)
+    shouldShowNavigation(appPages)
 
   const hasHeaderUserContent =
     shouldShowLogo || shouldShowExpandButton || shouldShowTopNav || showToolbar
@@ -315,7 +312,7 @@ function AppView(props: AppViewProps): ReactElement {
           onToggleSidebar={toggleSidebar}
           navigation={
             navigationPosition === Navigation.Position.TOP &&
-            shouldShowNavigation(appPages, navSections) ? (
+            shouldShowNavigation(appPages) ? (
               <TopNav
                 endpoints={endpoints}
                 widgetsDisabled={widgetsDisabled}

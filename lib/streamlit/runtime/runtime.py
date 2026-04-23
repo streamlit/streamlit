@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -49,7 +49,10 @@ from streamlit.runtime.state import (
     SCRIPT_RUN_WITHOUT_ERRORS_KEY,
     SessionStateStatProvider,
 )
-from streamlit.runtime.stats import StatsManager
+from streamlit.runtime.stats import (
+    StatsManager,
+    StatsProvider,
+)
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
@@ -59,6 +62,7 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
     from streamlit.runtime.media_file_storage import MediaFileStorage
+    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -81,10 +85,6 @@ class RuntimeConfig:
 
     # The filesystem path of the Streamlit script to run.
     script_path: str
-
-    # DEPRECATED: We need to keep this field around for compatibility reasons, but we no
-    # longer use this anywhere.
-    command_line: str | None
 
     # The storage backend for Streamlit's MediaFileManager.
     media_file_storage: MediaFileStorage
@@ -226,8 +226,16 @@ class Runtime:
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())
         self._stats_mgr.register_provider(get_resource_cache_stats_provider())
-        self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        if self._uploaded_file_mgr is not None:
+            self._stats_mgr.register_provider(self._uploaded_file_mgr)
+        # Register media file storage for stats if it implements StatsProvider
+        if isinstance(config.media_file_storage, StatsProvider):
+            self._stats_mgr.register_provider(config.media_file_storage)
         self._stats_mgr.register_provider(SessionStateStatProvider(self._session_mgr))
+
+        # Register session manager for session event metrics if it implements StatsProvider
+        if isinstance(self._session_mgr, StatsProvider):
+            self._stats_mgr.register_provider(self._session_mgr)
 
     @property
     def state(self) -> RuntimeState:
@@ -333,7 +341,7 @@ class Runtime:
         async_objs = self._get_async_objs()
 
         def stop_on_eventloop() -> None:
-            if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+            if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
                 return
 
             _LOGGER.debug("Runtime stopping...")
@@ -354,7 +362,7 @@ class Runtime:
     def connect_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -393,13 +401,13 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if existing_session_id and session_id_override:
+        if existing_session_id and session_id_override:  # pragma: no cover - defensive
             raise RuntimeError(
                 "Only one of existing_session_id and session_id_override should be set. "
                 "This should never happen."
             )
 
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't connect_session (state={self._state})")
 
         session_id = self._session_mgr.connect_session(
@@ -417,7 +425,7 @@ class Runtime:
     def create_session(
         self,
         client: SessionClient,
-        user_info: dict[str, str | bool | None],
+        user_info: UserInfoType,
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
@@ -498,7 +506,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(f"Can't handle_backmsg (state={self._state})")
 
         session_info = self._session_mgr.get_active_session_info(session_id)
@@ -526,7 +534,7 @@ class Runtime:
         -----
         Threading: UNSAFE. Must be called on the eventloop thread.
         """
-        if self._state in (RuntimeState.STOPPING, RuntimeState.STOPPED):
+        if self._state in {RuntimeState.STOPPING, RuntimeState.STOPPED}:
             raise RuntimeStoppedError(
                 f"Can't handle_backmsg_deserialization_exception (state={self._state})"
             )
@@ -543,11 +551,11 @@ class Runtime:
 
     @property
     async def is_ready_for_browser_connection(self) -> tuple[bool, str]:
-        if self._state not in (
+        if self._state not in {
             RuntimeState.INITIAL,
             RuntimeState.STOPPING,
             RuntimeState.STOPPED,
-        ):
+        }:
             return True, "ok"
 
         return False, "unavailable"

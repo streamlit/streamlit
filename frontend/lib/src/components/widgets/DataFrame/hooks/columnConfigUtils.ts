@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,15 +36,15 @@ export const updateColumnConfigTypeProps = ({
   const existingConfig = newColumnConfigMapping.get(columnId)
 
   const baseConfig = {
-    ...(existingConfig || {}),
-    ...(updatedProps || {}),
+    ...existingConfig,
+    ...updatedProps,
   }
 
   // Only add type_config if either existing or updated config has it
   if (existingConfig?.type_config || updatedProps?.type_config) {
     baseConfig.type_config = {
-      ...(existingConfig?.type_config || {}),
-      ...(updatedProps?.type_config || {}),
+      ...existingConfig?.type_config,
+      ...updatedProps?.type_config,
     }
   }
 

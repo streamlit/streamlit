@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -57,7 +57,10 @@ class FragmentStorage(Protocol):
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
     @abstractmethod
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+    def clear(
+        self,
+        new_fragment_ids: set[str] | None = None,  # ty: ignore[invalid-type-form]
+    ) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
         """
@@ -101,7 +104,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
     # Weirdly, we have to define this above the `set` method, or mypy gets it confused
     # with the `set` type of `new_fragments_ids`.
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:
+    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty: ignore[invalid-type-form]
         if new_fragment_ids is None:
             new_fragment_ids = set()
 
@@ -164,7 +167,7 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        fragment_id = calc_md5(
+        fragment_id = calc_hash(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
 
@@ -180,7 +183,7 @@ def _fragment(
             # fragment runs will generally run in a new script run, thus we'll have a
             # new ctx.
             ctx = get_script_run_ctx(suppress_warning=True)
-            if ctx is None:
+            if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
             if ctx.fragment_ids_this_run:
@@ -264,9 +267,11 @@ def _fragment(
         # Immediate execute the wrapped fragment since we are in a full app run
         return wrapped_fragment()
 
-    with contextlib.suppress(AttributeError):
+    with contextlib.suppress(AttributeError, NameError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports in inspect.signature()
         wrap.__dict__.update(non_optional_func.__dict__)
         wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
 

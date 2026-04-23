@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,8 +13,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-import React from "react"
 
 import { act, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
@@ -178,5 +176,67 @@ describe("Selectbox widget", () => {
     render(<Selectbox {...props} />)
 
     expect(screen.getByText("Please select an option...")).toBeInTheDocument()
+  })
+})
+
+describe("Selectbox query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_select" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select",
+      "string_value",
+      "a",
+      false,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_select" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<Selectbox {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers with clearable=true when no default", () => {
+    const props = getProps({ queryParamKey: "my_select", default: null })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<Selectbox {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_select",
+      "string_value",
+      null,
+      true,
+      undefined
+    )
   })
 })

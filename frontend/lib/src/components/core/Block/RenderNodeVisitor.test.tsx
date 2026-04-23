@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,22 @@
  * limitations under the License.
  */
 
-import React from "react"
+import { isValidElement } from "react"
 
 import { BlockNode, TransientNode } from "~lib/AppNode"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
-import { block, text, textInput } from "~lib/render-tree/test-utils"
+import {
+  block,
+  blockWithId,
+  text,
+  textInput,
+} from "~lib/render-tree/test-utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { BlockPropsWithoutWidth } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
-
-import { BlockPropsWithoutWidth } from "./index"
 
 // Mock props for testing
 const sessionInfo = mockSessionInfo()
@@ -67,7 +71,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitElementNode(elementNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       expect(visitor.reactElements).toHaveLength(1)
       expect(visitor.reactElements[0]).toBe(result)
     })
@@ -103,7 +107,7 @@ describe("RenderNodeVisitor", () => {
       // Only one widget should be rendered
       expect(visitor.reactElements).toHaveLength(1)
       expect(result1).not.toBeNull()
-      expect(React.isValidElement(result1)).toBe(true)
+      expect(isValidElement(result1)).toBe(true)
       expect(visitor.reactElements[0]).toBe(result1)
       expect(result2).toBeNull()
     })
@@ -119,7 +123,7 @@ describe("RenderNodeVisitor", () => {
 
       expect(visitor.reactElements).toHaveLength(1)
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       expect(visitor.reactElements[0]).toBe(result)
       expect((result as React.ReactElement).key).toBe(
         element.element?.textInput?.id
@@ -137,7 +141,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitBlockNode(blockNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       expect(visitor.reactElements).toHaveLength(1)
       expect(visitor.reactElements[0]).toBe(result)
     })
@@ -158,7 +162,7 @@ describe("RenderNodeVisitor", () => {
       expect(visitor.reactElements[1]).toBe(result2)
     })
 
-    it("uses index as key for BlockNode", () => {
+    it("uses index as key for BlockNode without id", () => {
       const blockNode = block([])
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
@@ -167,9 +171,21 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitBlockNode(blockNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
-      // The key should be "0" for the first block
+      expect(isValidElement(result)).toBe(true)
       expect((result as React.ReactElement).key).toBe("0")
+    })
+
+    it("uses blockId as key for BlockNode with id", () => {
+      const blockNode = blockWithId("$$ID-abc123-my_key")
+      const mockBlock = block([])
+      const mockProps = createMockProps(mockBlock)
+      const visitor = new RenderNodeVisitor(mockProps)
+
+      const result = visitor.visitBlockNode(blockNode)
+
+      expect(result).not.toBeNull()
+      expect(isValidElement(result)).toBe(true)
+      expect((result as React.ReactElement).key).toBe("$$ID-abc123-my_key")
     })
 
     it("passes disableFullscreenMode prop from props correctly", () => {
@@ -184,7 +200,7 @@ describe("RenderNodeVisitor", () => {
       const result = visitor.visitBlockNode(blockNode)
 
       expect(result).not.toBeNull()
-      expect(React.isValidElement(result)).toBe(true)
+      expect(isValidElement(result)).toBe(true)
       // Check that the props contain disableFullscreenMode: true
       const props = (result as React.ReactElement).props
       expect(props.disableFullscreenMode).toBe(true)
@@ -204,9 +220,9 @@ describe("RenderNodeVisitor", () => {
       const blockResult = visitor.visitBlockNode(blockNode)
 
       expect(elementResult).not.toBeNull()
-      expect(React.isValidElement(elementResult)).toBe(true)
+      expect(isValidElement(elementResult)).toBe(true)
       expect(blockResult).not.toBeNull()
-      expect(React.isValidElement(blockResult)).toBe(true)
+      expect(isValidElement(blockResult)).toBe(true)
 
       expect(visitor.reactElements).toHaveLength(2)
       expect(visitor.reactElements[0]).toBe(elementResult)
@@ -238,7 +254,7 @@ describe("RenderNodeVisitor", () => {
       expect(result).toHaveLength(3)
       result.forEach(element => {
         expect(element).not.toBeNull()
-        expect(React.isValidElement(element)).toBe(true)
+        expect(isValidElement(element)).toBe(true)
       })
     })
 
@@ -253,7 +269,7 @@ describe("RenderNodeVisitor", () => {
 
       expect(result).toHaveLength(1)
       expect(result[0]).not.toBeNull()
-      expect(React.isValidElement(result[0])).toBe(true)
+      expect(isValidElement(result[0])).toBe(true)
       // Check that the props contain disableFullscreenMode: true
       const props = result[0].props
       expect(props.disableFullscreenMode).toBe(true)
@@ -289,7 +305,7 @@ describe("RenderNodeVisitor", () => {
       expect(result).toHaveLength(4)
       result.forEach(element => {
         expect(element).not.toBeNull()
-        expect(React.isValidElement(element)).toBe(true)
+        expect(isValidElement(element)).toBe(true)
       })
     })
   })
@@ -308,7 +324,7 @@ describe("RenderNodeVisitor", () => {
       expect(result).toHaveLength(3)
       result.forEach(element => {
         expect(element).not.toBeNull()
-        expect(React.isValidElement(element)).toBe(true)
+        expect(isValidElement(element)).toBe(true)
       })
     })
   })

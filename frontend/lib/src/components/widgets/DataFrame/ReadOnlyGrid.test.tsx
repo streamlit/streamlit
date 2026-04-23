@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { Arrow } from "@streamlit/protobuf"
+import { Dataframe } from "@streamlit/protobuf"
 
 import type { Quiver } from "~lib/dataframes/Quiver"
 
@@ -62,7 +60,7 @@ describe("ReadOnlyGrid", () => {
     // Element should be configured as read-only
     expect(receivedProps?.element?.disabled).toBe(true)
     expect(receivedProps?.element?.editingMode).toBe(
-      Arrow.EditingMode.READ_ONLY
+      Dataframe.EditingMode.READ_ONLY
     )
   })
 

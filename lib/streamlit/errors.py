@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# ruff: noqa: RUF027 - We allow template strings in localizable exception messages instead of f-strings.
+
 from __future__ import annotations
 
 import os
@@ -24,7 +26,7 @@ if TYPE_CHECKING:
     from datetime import date, time
 
 
-class Error(Exception):
+class Error(Exception):  # pragma: no cover - trivial base class
     """The base class for all exceptions thrown by Streamlit.
 
     Should be used for exceptions raised due to user errors (typically via
@@ -32,16 +34,12 @@ class Error(Exception):
     code.
     """
 
-    pass
 
-
-class CustomComponentError(Error):
+class CustomComponentError(Error):  # pragma: no cover - trivial subclass
     """Exceptions thrown in the custom components code path."""
 
-    pass
 
-
-class StreamlitComponentRegistryError(Error):
+class StreamlitComponentRegistryError(Error):  # pragma: no cover - trivial subclass
     """Exceptions raised while discovering or registering Streamlit components.
 
     These errors occur during Streamlit startup when scanning installed
@@ -49,51 +47,41 @@ class StreamlitComponentRegistryError(Error):
     registry.
     """
 
+
+class DeprecationError(Error):  # pragma: no cover - trivial subclass
     pass
 
 
-class DeprecationError(Error):
-    pass
-
-
-class FragmentStorageKeyError(Error, KeyError):
+class FragmentStorageKeyError(Error, KeyError):  # pragma: no cover - trivial subclass
     """A KeyError raised when a KeyError is encountered during a FragmentStorage
     operation.
     """
 
-    pass
 
-
-class FragmentHandledException(Exception):  # noqa: N818
+class FragmentHandledException(Exception):  # noqa: N818  # pragma: no cover - trivial subclass
     """An exception that is raised by the fragment
     when it has handled the exception itself.
     """
 
+
+class NoStaticFiles(Error):  # noqa: N818  # pragma: no cover - trivial subclass
     pass
 
 
-class NoStaticFiles(Error):  # noqa: N818
+class NoSessionContext(Error):  # noqa: N818  # pragma: no cover - trivial subclass
     pass
 
 
-class NoSessionContext(Error):  # noqa: N818
-    pass
-
-
-class MarkdownFormattedException(Error):  # noqa: N818
+class MarkdownFormattedException(Error):  # noqa: N818  # pragma: no cover - trivial subclass
     """Exceptions with Markdown in their description.
 
     Instances of this class can use markdown in their messages, which will get
     nicely formatted on the frontend.
     """
 
-    pass
 
-
-class StreamlitMaxRetriesError(Error):
+class StreamlitMaxRetriesError(Error):  # pragma: no cover - trivial subclass
     """An exception raised when a file or folder cannot be accessed after multiple retries."""
-
-    pass
 
 
 class StreamlitAPIException(MarkdownFormattedException):
@@ -114,15 +102,17 @@ class StreamlitAPIException(MarkdownFormattedException):
         return util.repr_(self)
 
 
-class DuplicateWidgetID(StreamlitAPIException):
+class DuplicateWidgetID(StreamlitAPIException):  # pragma: no cover - trivial subclass
     pass
 
 
-class StreamlitAuthError(StreamlitAPIException):
+class StreamlitAuthError(StreamlitAPIException):  # pragma: no cover - trivial subclass
     pass
 
 
-class StreamlitDuplicateElementId(DuplicateWidgetID):
+class StreamlitDuplicateElementId(
+    DuplicateWidgetID
+):  # pragma: no cover - simple f-string
     """An exception raised when the auto-generated ID of an element is not unique."""
 
     def __init__(self, element_type: str) -> None:
@@ -136,7 +126,9 @@ class StreamlitDuplicateElementId(DuplicateWidgetID):
         )
 
 
-class StreamlitDuplicateElementKey(DuplicateWidgetID):
+class StreamlitDuplicateElementKey(
+    DuplicateWidgetID
+):  # pragma: no cover - simple f-string
     """An exception raised when the key of an element is not unique."""
 
     def __init__(self, user_key: str) -> None:
@@ -147,7 +139,9 @@ class StreamlitDuplicateElementKey(DuplicateWidgetID):
         )
 
 
-class UnserializableSessionStateError(StreamlitAPIException):
+class UnserializableSessionStateError(
+    StreamlitAPIException
+):  # pragma: no cover - trivial subclass
     pass
 
 
@@ -265,7 +259,9 @@ class StreamlitInvalidColumnGapError(LocalizableStreamlitException):
 
     def __init__(self, gap: str, element_type: str) -> None:
         super().__init__(
-            'The `gap` argument to `{element_type}` must be `"small"`, `"medium"`, `"large"`, or `"none"`. \n'
+            'The `gap` argument to `{element_type}` must be `"xxsmall"`, '
+            '`"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, '
+            '`"xxlarge"`, or `"none"`. \n'
             "The argument passed was {gap}.",
             gap=gap,
             element_type=element_type,
@@ -296,6 +292,17 @@ class StreamlitInvalidTextAlignmentError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidBindValueError(LocalizableStreamlitException):
+    """Exception raised when an invalid value is specified for the bind parameter."""
+
+    def __init__(self, bind_value: Any) -> None:
+        super().__init__(
+            'Invalid `bind` value: "{bind_value}". '
+            'Supported values are: `"query-params"` or `None`.',
+            bind_value=bind_value,
+        )
+
+
 # st.multiselect
 class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
     """Exception raised when there are more default selections specified than the max allowable selections."""
@@ -319,6 +326,30 @@ class StreamlitSelectionCountExceedsMaxError(LocalizableStreamlitException):
         )
 
 
+class StreamlitInvalidMaxError(LocalizableStreamlitException):
+    """Exception raised when an invalid max value is provided (e.g. zero or negative)."""
+
+    def __init__(
+        self,
+        widget_name: str,
+        parameter_name: str,
+        value: int,
+        corrective_action: str | None = None,
+    ) -> None:
+        message = (
+            "In `{widget_name}`, `{parameter_name}` was set to {value}. "
+            "`{parameter_name}` must be a positive integer."
+        )
+        if corrective_action:
+            message += " " + corrective_action
+        super().__init__(
+            message,
+            widget_name=widget_name,
+            parameter_name=parameter_name,
+            value=value,
+        )
+
+
 # st.number_input
 class StreamlitMixedNumericTypesError(LocalizableStreamlitException):
     """Exception raised mixing floats and ints in st.number_input."""
@@ -337,19 +368,19 @@ class StreamlitMixedNumericTypesError(LocalizableStreamlitException):
 
         error_message = "All numerical arguments must be of the same type."
 
-        if value:
+        if value is not None:
             value_type = type(value).__name__
             error_message += "\n`value` has {value_type} type."
 
-        if min_value:
+        if min_value is not None:
             min_value_type = type(min_value).__name__
             error_message += "\n`min_value` has {min_value_type} type."
 
-        if max_value:
+        if max_value is not None:
             max_value_type = type(max_value).__name__
             error_message += "\n`max_value` has {max_value_type} type."
 
-        if step:
+        if step is not None:
             step_type = type(step).__name__
             error_message += "\n`step` has {step_type} type."
 
@@ -471,18 +502,6 @@ class BidiComponentInvalidIdError(LocalizableStreamlitException):
             "the delimiter sequence `{delimiter}`.",
             part=part,
             delimiter=delimiter,
-        )
-
-
-class BidiComponentMissingContentError(LocalizableStreamlitException):
-    """Exception raised when a component is missing required content."""
-
-    def __init__(self, component_name: str) -> None:
-        super().__init__(
-            "Component `{component_name}` must have either JavaScript content "
-            "(`js_content` or `js_url`) or HTML content (`html_content`), or both. "
-            "Please ensure the component definition includes at least one of these.",
-            component_name=component_name,
         )
 
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -74,7 +74,7 @@ class PyplotTest(DeltaGeneratorTestCase):
         with patch.object(plt, "clf", wraps=plt.clf, autospec=True) as plt_clf:
             st.pyplot(clear_figure=clear_figure)
 
-            if clear_figure in (True, None):
+            if clear_figure in {True, None}:
                 plt_clf.assert_called_once()
             else:
                 plt_clf.assert_not_called()

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -30,6 +30,10 @@ from streamlit.elements.lib.policies import (
     check_session_state_rules,
 )
 from streamlit.elements.lib.utils import Key, to_key
+from streamlit.elements.widgets.button import (
+    IconPosition,
+    _normalize_icon_position,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto import Block_pb2
 from streamlit.runtime.metrics_util import gather_metrics
@@ -104,6 +108,10 @@ class FormMixin:
         key : str
             A string that identifies the form. Each form must have its own
             key. (This key is not displayed to the user in the interface.)
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
         clear_on_submit : bool
             If True, all widgets inside the form will be reset to their default
             values after the user presses the Submit button. Defaults to False.
@@ -247,6 +255,7 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         use_container_width: bool | None = None,
         width: Width = "content",
@@ -273,9 +282,9 @@ class FormMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -300,10 +309,21 @@ class FormMixin:
         kwargs : dict
             An optional dict of kwargs to pass to the callback.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         type : "primary", "secondary", or "tertiary"
             An optional string that specifies the button type. This can be one
@@ -334,6 +354,10 @@ class FormMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        icon_position : "left" or "right"
+            The position of the icon relative to the button label. This
+            defaults to ``"left"``.
 
         disabled : bool
             Whether to disable the button. If this is ``False`` (default), the
@@ -404,11 +428,15 @@ class FormMixin:
             width = "stretch" if use_container_width else "content"
 
         # Checks whether the entered button type is one of the allowed options
-        if type not in ["primary", "secondary", "tertiary"]:
+        if type not in {"primary", "secondary", "tertiary"}:
             raise StreamlitAPIException(
                 'The type argument to st.form_submit_button must be "primary", "secondary", or "tertiary". \n'
                 f'The argument passed was "{type}".'
             )
+
+        normalized_icon_position = _normalize_icon_position(
+            icon_position, "st.form_submit_button"
+        )
 
         return self._form_submit_button(
             label=label,
@@ -418,6 +446,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=normalized_icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,
@@ -436,6 +465,7 @@ class FormMixin:
         key: Key | None = None,
         type: Literal["primary", "secondary", "tertiary"] = "secondary",
         icon: str | None = None,
+        icon_position: IconPosition = "left",
         disabled: bool = False,
         ctx: ScriptRunContext | None = None,
         width: Width = "content",
@@ -453,6 +483,7 @@ class FormMixin:
             kwargs=kwargs,
             type=type,
             icon=icon,
+            icon_position=icon_position,
             disabled=disabled,
             ctx=ctx,
             width=width,

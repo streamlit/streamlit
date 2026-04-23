@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -82,7 +82,7 @@ class MediaFileStorage(Protocol):
             path is invalid).
 
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def get_url(self, file_id: str) -> str:
@@ -105,7 +105,7 @@ class MediaFileStorage(Protocol):
             Raised if the manager doesn't contain an object with the given ID.
 
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def delete_file(self, file_id: str) -> None:
@@ -140,4 +140,4 @@ class MediaFileStorage(Protocol):
             deletion usually occurs on session disconnect).
 
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract

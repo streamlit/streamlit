@@ -1,5 +1,5 @@
 /**!
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,7 @@
 
 syntax = "proto3";
 
-option java_package = "com.snowflake.apps.streamlit";
-option java_outer_classname = "AudioInputProto";
-
-import "streamlit/proto/LabelVisibilityMessage.proto";
+import "streamlit/proto/LabelVisibility.proto";
 
 message AudioInput {
   string id = 1;
@@ -27,6 +24,6 @@ message AudioInput {
   string help = 3;
   string form_id = 4;
   bool disabled = 5;
-  LabelVisibilityMessage label_visibility = 6;
+  LabelVisibility label_visibility = 6;
   optional int32 sample_rate = 7;
 }

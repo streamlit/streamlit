@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -35,13 +35,15 @@ kb_message_size = st.number_input(
 message_1kb = "\n\n".join(
     2
     * [
-        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus quis neque "
-        "eu orci faucibus pellentesque. Vivamus dapibus pellentesque sem, vitae "
-        "ultricies sem pharetra at. Curabitur eu congue magna, eu tempor libero. "
-        "Donec vitae condimentum odio. Sed neque elit, porttitor eget laoreet "
-        "volutpat, imperdiet et leo. Phasellus vel velit sit amet nulla hendrerit "
-        "pharetra et non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing "
-        "elit. In malesuada sem sit amet felis vestibulum, maximus."
+        (
+            "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus quis neque "
+            "eu orci faucibus pellentesque. Vivamus dapibus pellentesque sem, vitae "
+            "ultricies sem pharetra at. Curabitur eu congue magna, eu tempor libero. "
+            "Donec vitae condimentum odio. Sed neque elit, porttitor eget laoreet "
+            "volutpat, imperdiet et leo. Phasellus vel velit sit amet nulla hendrerit "
+            "pharetra et non tortor. Lorem ipsum dolor sit amet, consectetur adipiscing "
+            "elit. In malesuada sem sit amet felis vestibulum, maximus."
+        )
     ]
 )
 

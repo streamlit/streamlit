@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-import styled, { StyledComponent } from "@emotion/styled"
+import { ComponentSelector } from "@emotion/serialize"
+import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export const TOP_DISTANCE = "-2.65rem"
 
+/** A styled component usable as a CSS selector in template literals. */
+type StyledComponentSelector = ComponentSelector & { toString(): string }
+
 export interface StyledToolbarWrapperProps {
   locked?: boolean
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  target?: StyledComponent<any, any, any>
+  target?: StyledComponentSelector
 }
 
 export const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
@@ -59,7 +62,7 @@ export const StyledToolbar = styled.div(({ theme }) => ({
   flexDirection: "row",
   alignItems: "center",
   justifyContent: "flex-end",
-  boxShadow: "1px 2px 8px rgba(0, 0, 0, 0.08)",
+  boxShadow: theme.shadows.toolbar,
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.lightenedBg05,
   width: "fit-content",

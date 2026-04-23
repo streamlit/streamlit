@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -18,10 +18,12 @@ from __future__ import annotations
 
 import dataclasses
 import re
+import sys
 import types
 from collections import UserList, deque
 from collections.abc import (
     AsyncGenerator,
+    Callable,
     Generator,
     ItemsView,
     Iterable,
@@ -46,6 +48,8 @@ from typing import (
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
+    import inspect
+
     import graphviz
     import sympy
     from plotly.graph_objs import Figure
@@ -103,9 +107,8 @@ def is_type(obj: object, fqn_type_pattern: str | re.Pattern[str]) -> bool:
         The fully-qualified type string or a regular expression.
         Regexes should start with `^` and end with `$`.
 
-    Example
-    -------
-
+    Examples
+    --------
     To check whether something is a Matplotlib Figure without importing
     matplotlib, use:
 
@@ -184,7 +187,7 @@ def is_sympy_expression(obj: object) -> TypeGuard[sympy.Expr]:
         import sympy
 
         return isinstance(obj, sympy.Expr)
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return False
 
 
@@ -234,7 +237,7 @@ def is_plotly_chart(obj: object) -> TypeGuard[Figure | list[Any] | dict[str, Any
 
 def is_graphviz_chart(
     obj: object,
-) -> TypeGuard[graphviz.Graph | graphviz.Digraph]:
+) -> TypeGuard[graphviz.Graph | graphviz.Digraph | graphviz.Source]:
     """True if input looks like a GraphViz chart."""
     return (
         # In GraphViz < 0.18
@@ -268,7 +271,7 @@ def _is_probably_plotly_dict(obj: object) -> TypeGuard[dict[str, Any]]:
     if len(obj.keys()) == 0:
         return False
 
-    if any(k not in ["config", "data", "frames", "layout"] for k in obj):
+    if any(k not in {"config", "data", "frames", "layout"} for k in obj):
         return False
 
     if any(_is_plotly_obj(v) for v in obj.values()):
@@ -288,6 +291,29 @@ def is_delta_generator(obj: object) -> TypeGuard[DeltaGenerator]:
 def is_function(x: object) -> TypeGuard[types.FunctionType]:
     """Return True if x is a function."""
     return isinstance(x, types.FunctionType)
+
+
+def get_func_parameters(func: Callable[..., Any]) -> list[inspect.Parameter]:
+    """Return the parameters of a function's signature.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names and kinds
+    (not annotations), we use ``annotation_format=Format.STRING`` to avoid
+    evaluation. Note that on Python 3.14+, the returned Parameter.annotation
+    values will be strings rather than actual types.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+
+    if sys.version_info >= (3, 14):
+        from annotationlib import Format
+
+        return list(
+            inspect.signature(func, annotation_format=Format.STRING).parameters.values()
+        )
+    return list(inspect.signature(func).parameters.values())
 
 
 def has_callable_attr(obj: object, name: str) -> bool:
@@ -331,6 +357,25 @@ def is_pydantic_model(obj: object) -> bool:
     return _is_type_instance(obj, "pydantic.main.BaseModel")
 
 
+def is_sequence_of_pydantic_models(obj: object) -> TypeGuard[Sequence[Any]]:
+    """True if obj is a non-empty list/tuple/set/frozenset of Pydantic model instances."""
+    if not isinstance(obj, (list, tuple, set, frozenset)) or len(obj) == 0:
+        return False
+    first_element = next(iter(obj))
+    return is_pydantic_model(first_element)
+
+
+def dump_pydantic_sequence(obj: Sequence[object]) -> list[dict[str, Any]]:
+    """Dump a sequence of Pydantic models to a list of dictionaries."""
+    first_element = next(iter(obj))
+    # Pydantic v2 uses model_dump(), v1 uses dict()
+    if has_callable_attr(first_element, "model_dump"):
+        # Use mode="json" to ensure proper serialization of types like Decimal
+        return [item.model_dump(mode="json") for item in obj]  # type: ignore
+    # Pydantic v1 fallback
+    return [item.dict() for item in obj]  # type: ignore  # pragma: no cover - pydantic v1 compat
+
+
 def _is_from_streamlit(obj: object) -> bool:
     """True if the object is from the streamlit package."""
     return obj.__class__.__module__.startswith("streamlit")
@@ -349,7 +394,7 @@ def is_iterable(obj: object) -> TypeGuard[Iterable[Any]]:
     try:
         # The ignore statement here is intentional, as this is a
         # perfectly fine way of checking for iterables.
-        iter(obj)  # type: ignore[call-overload]
+        iter(obj)  # type: ignore[call-overload] # ty: ignore[no-matching-overload]
     except TypeError:
         return False
     return True
@@ -415,12 +460,6 @@ def is_altair_version_less_than(v: str) -> bool:
     -------
     bool
 
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
-
     """
     import altair as alt
 
@@ -430,11 +469,6 @@ def is_altair_version_less_than(v: str) -> bool:
 def is_version_less_than(v1: str, v2: str) -> bool:
     """Return True if the v1 version string is less than the v2 version string
     based on semantic versioning.
-
-    Raises
-    ------
-    InvalidVersion
-        If the version strings are not valid.
     """
     from packaging import version
 
@@ -454,7 +488,7 @@ def async_generator_to_sync(
     try:
         # Iterate over the async generator until it raises StopAsyncIteration
         while True:
-            yield loop.run_until_complete(async_gen.__anext__())
+            yield loop.run_until_complete(anext(async_gen))
     except StopAsyncIteration:
         # The async generator has finished
         pass

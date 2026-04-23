@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,8 +81,7 @@ describe("TextColumn", () => {
     [undefined, null],
   ])(
     "supports string-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: string | null) => {
+    (input: unknown, value: string | null) => {
       const mockColumn = TextColumn(MOCK_TEXT_COLUMN_PROPS)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)

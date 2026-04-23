@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,3 +86,39 @@ with st.expander("Link Button Width Examples", expanded=True):
     st.link_button("Content Width (Default)", "https://example.com", width="content")
     st.link_button("Stretch Width", "https://example.com", width="stretch")
     st.link_button("400px Width", "https://example.com", width=400)
+
+
+st.link_button(
+    "Icon Right",
+    "https://streamlit.io",
+    icon=":material/bolt:",
+    icon_position="right",
+)
+
+
+def on_click_callback() -> None:
+    st.session_state.link_button_click_count = (
+        st.session_state.get("link_button_click_count", 0) + 1
+    )
+
+
+callback_link_clicked = st.link_button(
+    "Link Button with on_click callback",
+    "https://streamlit.io",
+    key="on_click_link_button",
+    on_click=on_click_callback,
+)
+st.write("Link Button with on_click value:", callback_link_clicked)
+if "link_button_click_count" in st.session_state:
+    st.write(
+        "Link Button callback times clicked:",
+        st.session_state.link_button_click_count,
+    )
+
+rerun_link_clicked = st.link_button(
+    "Link Button with rerun",
+    "https://streamlit.io",
+    key="rerun_link_button",
+    on_click="rerun",
+)
+st.write("Link Button with rerun value:", rerun_link_clicked)

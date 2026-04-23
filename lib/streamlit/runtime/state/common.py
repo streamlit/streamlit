@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -50,6 +50,10 @@ T_co = TypeVar("T_co", covariant=True)
 WidgetArgs: TypeAlias = tuple[Any, ...] | list[Any]
 WidgetKwargs: TypeAlias = dict[str, Any]
 WidgetCallback: TypeAlias = Callable[..., None]
+
+# Type for the bind parameter on widgets
+# Currently only supports binding to query params
+BindOption: TypeAlias = Literal["query-params"] | None
 
 # A deserializer receives the value from whatever field is set on the
 # WidgetState proto, and returns a regular python value. A serializer
@@ -147,6 +151,39 @@ class WidgetMetadata(Generic[T]):
     # multiple internal widget states.
     presenter: WidgetValuePresenter | None = None
 
+    # Optional binding for the widget's value to external state (e.g. query params)
+    bind: BindOption = None
+
+    # The list of valid formatted option strings for selection widgets.
+    # When set, _seed_widget_from_url validates URL values against this list and
+    # rejects any that aren't valid options (e.g., ?foo=invalid). Widgets with a fixed set
+    # of options (radio, selectbox) pass this; widgets that accept arbitrary values (selectbox
+    # with accept_new_options=True) should not, since any string is valid.
+    formatted_options: list[str] | None = None
+
+    # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).
+    # When True, an empty URL param (e.g., ?foo=) will seed the widget with an empty value.
+    # When False, an empty URL param will be ignored and the widget uses its default.
+    # Examples:
+    #   - multiselect: always clearable (users can remove all selections)
+    #   - checkbox: never clearable (always has a boolean value)
+    #   - selectbox: clearable only if index=None (allows "no selection" state)
+    clearable: bool = False
+
+    # Maximum number of elements allowed in array-valued widgets (e.g. multiselect
+    # max_selections). When set, _seed_widget_from_url truncates URL-seeded arrays
+    # that exceed this limit to the first max_array_length values, preventing URL
+    # params from triggering selection-count errors.
+    max_array_length: int | None = None
+
+    # Whether duplicate values in URL array params are semantically valid for this
+    # widget. When False (default), _sanitize_url_array deduplicates URL values
+    # (e.g., ?tags=Red&tags=Red → ["Red"]) because the UI prevents duplicate
+    # selections (multiselect). When True, duplicates are preserved because the UI
+    # allows them (e.g., select_slider range mode: ?color=red&color=red is a valid
+    # zero-width range).
+    allow_url_duplicates: bool = False
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -211,6 +248,8 @@ def is_keyed_element_id(key: str) -> bool:
 
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
+    if key == "":
+        raise StreamlitAPIException("The `key` argument must be non-empty.")
     if is_element_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."

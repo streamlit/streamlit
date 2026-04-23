@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -81,7 +81,32 @@ st.time_input(
 st.time_input("Time input 11 (width=200px)", time(8, 45), width=200)
 st.time_input("Time input 12 (width='stretch')", time(8, 45), width="stretch")
 
-st.markdown("Dynamic time input:")
+# --- Bound widgets (query-params) ---
+
+bound_time = st.time_input(
+    "Bound time",
+    value=time(8, 45),
+    key="bound_time",
+    bind="query-params",
+)
+st.write("Bound time:", bound_time)
+
+bound_clearable_time = st.time_input(
+    "Bound clearable time",
+    value=None,
+    key="bound_clearable_time",
+    bind="query-params",
+)
+st.write("Bound clearable time:", bound_clearable_time)
+
+bound_step_time = st.time_input(
+    "Bound step time",
+    value=time(9, 0),
+    key="bound_step_time",
+    step=1800,
+    bind="query-params",
+)
+st.write("Bound step time:", bound_step_time)
 
 if st.toggle("Update time input props"):
     tval = st.time_input(

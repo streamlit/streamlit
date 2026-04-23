@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -29,6 +29,7 @@ from streamlit.runtime.memory_media_file_storage import (
     MemoryMediaFileStorage,
     get_extension_for_mimetype,
 )
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 
 
 class MemoryMediaFileStorageTest(unittest.TestCase):
@@ -178,8 +179,8 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.storage.delete_file("mock_file_id")
 
     def test_cache_stats(self):
-        """Test our CacheStatsProvider implementation."""
-        assert len(self.storage.get_stats()) == 0
+        """Test our StatsProvider implementation."""
+        assert self.storage.get_stats() == {}
 
         # Add several files to storage. We'll unique-ify them by filename.
         mock_data = b"some random mock binary data"
@@ -192,7 +193,9 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
                 filename=f"{ii}.mp4",
             )
 
-        stats = self.storage.get_stats()
+        stats_dict = self.storage.get_stats()
+        assert CACHE_MEMORY_FAMILY in stats_dict
+        stats = stats_dict[CACHE_MEMORY_FAMILY]
         assert len(stats) == 1
         assert stats[0].category_name == "st_memory_media_file_storage"
         assert len(mock_data) * num_files == sum(stat.byte_length for stat in stats)
@@ -201,7 +204,7 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         for file_id in list(self.storage._files_by_id.keys()):
             self.storage.delete_file(file_id)
 
-        assert len(self.storage.get_stats()) == 0
+        assert self.storage.get_stats() == {}
 
 
 class MemoryMediaFileStorageUtilTest(unittest.TestCase):

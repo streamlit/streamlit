@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import React from "react"
-
 import { act, screen, waitFor, within } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
 import {
-  LabelVisibilityMessage as LabelVisibilityMessageProto,
+  LabelVisibility as LabelVisibilityProto,
   TextInput as TextInputProto,
 } from "@streamlit/protobuf"
 
@@ -76,7 +74,7 @@ describe("TextInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.HIDDEN,
+        value: LabelVisibilityProto.LabelVisibilityOptions.HIDDEN,
       },
     })
 
@@ -89,7 +87,7 @@ describe("TextInput widget", () => {
   it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: {
-        value: LabelVisibilityMessageProto.LabelVisibilityOptions.COLLAPSED,
+        value: LabelVisibilityProto.LabelVisibilityOptions.COLLAPSED,
       },
     })
     render(<TextInput {...props} />)
@@ -429,13 +427,17 @@ describe("TextInput widget", () => {
     await user.type(textInput, "TEST")
 
     // Remove focus
-    textInput.blur()
+    act(() => {
+      textInput.blur()
+    })
     await waitFor(() => {
       expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
     })
 
     // Then focus again
-    textInput.focus()
+    act(() => {
+      textInput.focus()
+    })
     expect(await screen.findByText("Press Enter to submit form")).toBeVisible()
   })
 
@@ -529,5 +531,70 @@ describe("TextInput widget", () => {
     // Element rendering material icon
     const materialIcon = screen.getByTestId("stIconMaterial")
     expect(materialIcon).toHaveTextContent("search")
+  })
+})
+
+describe("TextInput query param binding", () => {
+  it("registers query param binding on mount when queryParamKey is set", () => {
+    const props = getProps({ queryParamKey: "my_text" })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_text",
+      "string_value",
+      props.element.default,
+      true,
+      undefined
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({ queryParamKey: "my_text" })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<TextInput {...props} />)
+
+    // Clear any calls from React Strict Mode's initial mount/unmount/remount cycle
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps()
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+
+  it("registers query param binding with custom default value", () => {
+    const props = getProps({
+      queryParamKey: "search",
+      default: "initial search",
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<TextInput {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "search",
+      "string_value",
+      "initial search",
+      true,
+      undefined
+    )
   })
 })

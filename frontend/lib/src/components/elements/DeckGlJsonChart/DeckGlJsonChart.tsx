@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-import React, {
-  FC,
-  memo,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react"
+import { FC, memo, useCallback, useContext, useEffect, useState } from "react"
+
+import "./patchLumaCanvasContext"
 
 import { LayersList, PickingInfo } from "@deck.gl/core"
 import { DeckGL } from "@deck.gl/react"
@@ -35,11 +30,11 @@ import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { assertNever } from "~lib/util/assertNever"
 
 import { MapBoxCss } from "./MapBoxCss"
@@ -64,6 +59,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     fragmentId,
     heightConfig,
     widgetMgr,
+    widthConfig,
   } = props
   const { mapboxToken: contextMapboxToken } = useContext(LibConfigContext)
   const theme = useEmotionTheme()
@@ -91,6 +87,7 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
     isLightTheme: hasLightBackgroundColor(theme),
     theme,
     widgetMgr,
+    widthConfig,
   })
 
   const mapboxToken = element.mapboxToken || contextMapboxToken
@@ -160,10 +157,8 @@ export const DeckGlJsonChart: FC<DeckGLProps> = props => {
 
             if (selectionMap.size === 0) {
               // If the layer has nothing selected, remove the layer from the returned value
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: _, ...restIndices } =
                 currState.selection.indices
-              // eslint-disable-next-line @typescript-eslint/no-unused-vars
               const { [layerId]: __, ...restObjects } =
                 currState.selection.objects
 

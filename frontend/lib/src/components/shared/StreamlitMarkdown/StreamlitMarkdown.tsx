@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import React, {
+import {
+  createContext,
   CSSProperties,
   type FC,
   type HTMLProps,
@@ -25,13 +26,16 @@ import React, {
   Suspense,
   useCallback,
   useContext,
+  useId,
   useMemo,
   useState,
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
-import { type Element, type Root } from "hast"
+import { parseToRgba } from "color2k"
+import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
+import type { Root as MdastRoot, Text } from "mdast"
 import { findAndReplace } from "mdast-util-find-and-replace"
 import { Link2 as LinkIcon } from "react-feather"
 import ReactMarkdown, {
@@ -41,6 +45,7 @@ import ReactMarkdown, {
 import remarkDirective from "remark-directive"
 import remarkGfm from "remark-gfm"
 import remarkMathPlugin from "remark-math"
+import remend, { type RemendHandler } from "remend"
 import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
@@ -51,17 +56,17 @@ import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.s
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton"
-import ErrorBoundary from "~lib/components/shared/ErrorBoundary"
-import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon"
+import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
+import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
-  convertRemToPx,
-  EmotionTheme,
-  getMarkdownBgColors,
   getMarkdownTextColors,
-} from "~lib/theme"
+  getThemeBackgroundColors,
+} from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
+import { convertRemToPx } from "~lib/theme/utils"
 
 import {
   StyledHeadingActionElements,
@@ -80,6 +85,7 @@ import {
   loadRehypeRaw,
   loadRemarkEmoji,
   type RawPlugin,
+  type RemarkPluginFactory,
   useLazyPlugin,
   wrapRehypePlugin,
   wrapRemarkPlugin,
@@ -166,6 +172,38 @@ export interface Props {
    * Inherit font family, size, and weight from parent
    */
   inheritFont?: boolean
+
+  /**
+   * Optional help text for inline help tooltips.
+   * When present, :help[] markers in the source will use this text.
+   */
+  helpText?: string
+
+  /**
+   * Truncate text with ellipsis when it overflows the container.
+   * Useful for single-line text that should not wrap, such as metric labels.
+   */
+  truncate?: boolean
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
+}
+
+/**
+ * Type for mdast text nodes that carry hast transformation data.
+ * Used by mdast-util-to-hast to convert these placeholder nodes into specific HTML elements.
+ * @see https://github.com/syntax-tree/mdast-util-to-hast#fields-on-nodes
+ */
+interface MdastTextWithHastData {
+  type: "text"
+  value: string
+  data: {
+    hName: string
+    hProperties: Record<string, string>
+    hChildren?: Array<{ type: string; value: string }>
+  }
 }
 
 /**
@@ -174,7 +212,7 @@ export interface Props {
  * It is needed for versions of react-markdown from v9 onwards.
  */
 function rehypeSetCodeInlineProperty() {
-  return (tree: Root) => {
+  return (tree: HastRoot) => {
     visit(tree, "element", (node: Element, _index, parent) => {
       if (node.tagName !== "code") {
         return
@@ -254,9 +292,13 @@ const HeaderActionElements: FC<HeadingActionElements> = ({
     <StyledHeadingActionElements data-testid="stHeaderActionElements">
       {help && <InlineTooltipIcon content={help} />}
       {elementId && !hideAnchor && (
-        <StyledLinkIcon href={`#${elementId}`}>
-          {/* Convert size to px because using rem works but logs a console error (at least on webkit) */}
-          <LinkIcon size={convertRemToPx(theme.iconSizes.base)} />
+        <StyledLinkIcon href={`#${elementId}`} aria-label="Link to heading">
+          <LinkIcon
+            // Convert size to px because using rem works but logs a console
+            // error (at least on webkit)
+            size={convertRemToPx(theme.iconSizes.base)}
+            aria-hidden="true"
+          />
         </StyledLinkIcon>
       )}
     </StyledHeadingActionElements>
@@ -309,14 +351,42 @@ export const HeadingWithActionElements: FC<HeadingWithActionElementsProps> = ({
     />
   )
 
-  const attributes = isInSidebarOrDialog ? {} : { ref, id: elementId }
+  // Accessibility:
+  // Headings can contain action elements (help tooltip icon, anchor link icon).
+  // Those elements are rendered inside the <h*> for layout reasons, but they
+  // can accidentally become part of the heading's computed accessible name.
+  //
+  // To keep the heading name stable (visible heading text only), we use
+  // aria-labelledby to point at a span that wraps only the text content.
+  //
+  // We generate the label span id with useId() to ensure uniqueness even if
+  // multiple headings end up sharing the same anchor slug.
+  //
+  // Only set aria-labelledby when action elements are present:
+  // - help: tooltip icon can be present even in sidebar/dialog (where we don't
+  //   set a heading id/anchor)
+  // - anchor icon: only present when we have an elementId and it's not hidden
+  const rawHeadingTextId = useId()
+  const headingTextId =
+    help || (elementId && !hideAnchor && !isInSidebarOrDialog)
+      ? rawHeadingTextId
+      : undefined
+
+  const idAttribute = elementId ? { id: elementId } : {}
+  const ariaLabelledbyAttribute = headingTextId
+    ? { "aria-labelledby": headingTextId }
+    : {}
+  const mergedAttributes = {
+    ...(isInSidebarOrDialog ? {} : { ref, ...idAttribute }),
+    ...ariaLabelledbyAttribute,
+  }
   const Tag = tag
   // We nest the action-elements (tooltip, link-icon) into the header element (e.g. h1),
   // so that it appears inline. For context: we also tried setting the h's display attribute to 'inline', but
   // then we would need to add padding to the outer container and fiddle with the vertical alignment.
   const headerElementWithActions = (
-    <Tag {...tagProps} {...attributes}>
-      {children}
+    <Tag {...tagProps} {...mergedAttributes}>
+      {headingTextId ? <span id={headingTextId}>{children}</span> : children}
       {actionElements}
     </Tag>
   )
@@ -340,11 +410,7 @@ type HeadingProps = JSX.IntrinsicElements["h1"] &
     node: Element
   }
 
-export const CustomHeading: FC<HeadingProps> = ({
-  node,
-  children,
-  ...rest
-}) => {
+const CustomHeading: FC<HeadingProps> = ({ node, children, ...rest }) => {
   const anchor = rest["data-anchor"]
   return (
     <HeadingWithActionElements
@@ -356,7 +422,7 @@ export const CustomHeading: FC<HeadingProps> = ({
     </HeadingWithActionElements>
   )
 }
-export interface RenderedMarkdownProps {
+interface RenderedMarkdownProps {
   /**
    * The Markdown formatted text to render.
    */
@@ -379,6 +445,17 @@ export interface RenderedMarkdownProps {
    * Does not allow links
    */
   disableLinks?: boolean
+
+  /**
+   * Optional help text for inline help tooltips.
+   * When present, :help[] markers in the source will use this text.
+   */
+  helpText?: string
+
+  /**
+   * Enables unterminated markdown completion (via remend) during streaming.
+   */
+  unterminatedParsing?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -449,6 +526,9 @@ export const CustomMediaTag: FC<
   return <Tag {...attributes} />
 }
 
+const HelpTextContext = createContext<string | undefined>(undefined)
+HelpTextContext.displayName = "HelpTextContext"
+
 interface CustomHelpIconProps {
   children?: string
 }
@@ -456,11 +536,22 @@ interface CustomHelpIconProps {
 /**
  * Custom component to render inline help icons in markdown.
  * Wraps InlineTooltipIcon in an inline-block span for proper inline flow.
+ *
+ * Gets the help text from HelpTextContext (used by the `help` parameter) if available,
+ * or falls back to `children` (for manual :help[content] directive usage).
+ *
+ * Note: When using the :help[content] directive manually in markdown, be aware of
+ * text directive limitations:
+ * - Newlines (\n) are not supported - use context via the help parameter instead
+ * - Brackets [, ] and other special markdown characters may cause parsing issues
+ * - For reliable multiline or complex markdown in tooltips, use the help parameter
+ *   which passes content via context and avoids directive label limitations.
  */
-export const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
-  // Ensure we only pass strings to the tooltip. Text directives should always
-  // pass plain strings, but we check defensively at runtime.
-  const tooltipContent = typeof children === "string" ? children : ""
+const CustomHelpIcon: FC<CustomHelpIconProps> = ({ children }) => {
+  // Prefer context (from help parameter) over children (from directive label)
+  const contextHelpText = useContext(HelpTextContext)
+  const tooltipContent =
+    contextHelpText || (typeof children === "string" ? children : "")
 
   return (
     <StyledHelpIconWrapper>
@@ -502,7 +593,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
     purplebg,
     graybg,
     primarybg,
-  }: Record<string, string> = getMarkdownBgColors(theme)
+  }: Record<string, string> = getThemeBackgroundColors(theme)
 
   return new Map(
     Object.entries({
@@ -538,8 +629,7 @@ function createColorMapping(theme: EmotionTheme): Map<string, string> {
  * Factory function to create the help icon directive plugin
  */
 function createRemarkHelpIcon() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
@@ -558,16 +648,42 @@ function createRemarkHelpIcon() {
 }
 
 /**
+ * Validates that a string is a valid CSS color value.
+ * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
+ * and named colors.
+ *
+ * @param color - The color string to validate
+ * @returns true if the color is valid, false otherwise
+ */
+export function isValidCssColor(color: string): boolean {
+  if (!color) return false
+  try {
+    parseToRgba(color)
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Factory function to create the color and small text directive plugin
  */
 function createRemarkColoringAndSmall(
   theme: EmotionTheme,
   colorMapping: Map<string, string>
 ) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
+
+      // Handle shimmer text directive (:shimmer[])
+      if (nodeName === "shimmer") {
+        const data = node.data || (node.data = {})
+        data.hName = "span"
+        data.hProperties = data.hProperties || {}
+        data.hProperties.className = "stMarkdownShimmer"
+        return
+      }
 
       // Handle small text directive (:small[])
       if (nodeName === "small") {
@@ -575,6 +691,41 @@ function createRemarkColoringAndSmall(
         data.hName = "span"
         data.hProperties = data.hProperties || {}
         data.hProperties.style = `font-size: ${theme.fontSizes.sm};`
+        return
+      }
+
+      // Handle custom color directive (:color[text]{foreground="...", background="..."})
+      if (nodeName === "color" && node.attributes) {
+        const { foreground, background } = node.attributes
+        const validForeground = foreground && isValidCssColor(foreground)
+        const validBackground = background && isValidCssColor(background)
+
+        const data = node.data || (node.data = {})
+        data.hName = "span"
+        data.hProperties = data.hProperties || {}
+
+        if (validForeground || validBackground) {
+          const styles: string[] = []
+
+          if (validForeground) {
+            styles.push(`color: ${foreground}`)
+          }
+
+          if (validBackground) {
+            styles.push(`background-color: ${background}`)
+          }
+
+          // Use background class when background is set (has more styling: padding, border-radius)
+          const className = validBackground
+            ? "stMarkdownColoredBackground"
+            : "stMarkdownColoredText"
+
+          data.hProperties.style = styles.join("; ")
+          data.hProperties.className = className
+        }
+        // When both colors are invalid, render as plain span (no style)
+        // to preserve the content text rather than falling through to
+        // unsupported directive cleanup which would lose the content
         return
       }
 
@@ -636,21 +787,21 @@ function createRemarkColoringAndSmall(
  * This plugin should run last to convert any unsupported text directives
  * to plain text, ensuring they are rendered rather than ignored.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    visit(tree, "textDirective", (node, _index, _parent) => {
-      const nodeName = String(node.name)
-
+function createRemarkUnsupportedDirectivesCleanup(): () => (
+  tree: MdastRoot
+) => MdastRoot {
+  return () => (tree: MdastRoot) => {
+    visit(tree, "textDirective", (node, index, parent) => {
       // Convert unsupported text directives to plain text to avoid them being
       // ignored / not rendered. See https://github.com/streamlit/streamlit/issues/8726,
       // https://github.com/streamlit/streamlit/issues/5968
       // Don't convert if the directive was already handled by another plugin
-      if (!node.data?.hName) {
-        node.type = "text"
-        node.value = `:${nodeName}`
-        node.data = {}
+      if (!node.data?.hName && parent && index !== undefined) {
+        const textNode: Text = {
+          type: "text",
+          value: `:${node.name}`,
+        }
+        parent.children[index] = textNode
       }
     })
     return tree
@@ -661,10 +812,11 @@ function createRemarkUnsupportedDirectivesCleanup(): () => (tree: any) => any {
  * Factory function to create the material icons directive plugin
  */
 function createRemarkMaterialIcons(theme: EmotionTheme) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function replace(fullMatch: string, iconName: string): any {
+  return () => (tree: MdastRoot) => {
+    function replace(
+      fullMatch: string,
+      iconName: string
+    ): MdastTextWithHastData {
       return {
         type: "text",
         value: fullMatch,
@@ -698,7 +850,12 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
     // Since all `:material/` already got replaced with `:material_`
     // within the markdown text (see below), we need to use `:material_`
     // within the regex.
-    findAndReplace(tree, [[/:material_(\w+):/g, replace]])
+    findAndReplace(tree, [
+      [
+        /:material_(\w+):/g,
+        replace as (fullMatch: string, iconName: string) => Text,
+      ],
+    ])
     return tree
   }
 }
@@ -707,10 +864,8 @@ function createRemarkMaterialIcons(theme: EmotionTheme) {
  * Factory function to create the streamlit logo plugin
  */
 function createRemarkStreamlitLogo() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    function replaceStreamlit(): any {
+  return () => (tree: MdastRoot) => {
+    function replaceStreamlit(): MdastTextWithHastData {
       return {
         type: "text",
         value: "",
@@ -728,7 +883,7 @@ function createRemarkStreamlitLogo() {
         },
       }
     }
-    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit]])
+    findAndReplace(tree, [[/:streamlit:/g, replaceStreamlit as () => Text]])
     return tree
   }
 }
@@ -737,8 +892,7 @@ function createRemarkStreamlitLogo() {
  * Factory function to create typographical symbols plugin
  */
 function createRemarkTypographicalSymbols() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  return () => (tree: any) => {
+  return () => (tree: MdastRoot) => {
     visit(tree, (node, _index, parent) => {
       if (
         parent &&
@@ -777,6 +931,66 @@ function createRemarkTypographicalSymbols() {
     return tree
   }
 }
+
+/**
+ * Completes unclosed Streamlit directive syntax (e.g., `:red[text`) during streaming.
+ *
+ * Runs before remend's link handler (priority 10 < 20) to prevent incomplete directives
+ * from being misinterpreted as markdown links, which produces "(streamdown:incomplete-link)".
+ * See: https://github.com/streamlit/streamlit/issues/14460
+ */
+const directiveCompletionHandler: RemendHandler = {
+  name: "streamlit-directives",
+  priority: 10,
+  handle: (text: string): string => {
+    // Match directive patterns like :red[, :small[, :red-background[
+    const directivePattern = /:[a-z][a-z0-9-]*\[/
+    const firstMatch = directivePattern.exec(text)
+    if (!firstMatch) {
+      return text
+    }
+
+    // Track directive openings (:<name>[), nested brackets, and close with ']'.
+    // We track all '[' inside directives to handle cases like `:red[text [link]`
+    // where nested brackets need proper balancing.
+    let depth = 1
+    let i = firstMatch.index + firstMatch[0].length
+
+    while (i < text.length) {
+      const char = text[i]
+
+      if (char === "[" && depth > 0) {
+        depth += 1
+        i += 1
+        continue
+      }
+
+      if (char === "]" && depth > 0) {
+        depth -= 1
+        i += 1
+        continue
+      }
+
+      if (char === ":") {
+        // Attempt to match another directive starting at this position.
+        const remainingText = text.slice(i)
+        const nextMatch = directivePattern.exec(remainingText)
+        if (nextMatch?.index === 0) {
+          depth += 1
+          i += nextMatch[0].length
+          continue
+        }
+      }
+
+      i += 1
+    }
+
+    return depth > 0 ? text + "]".repeat(depth) : text
+  },
+}
+
+// Options for remend to use the directive completion handler
+const REMEND_OPTIONS = { handlers: [directiveCompletionHandler] }
 
 // Standard remark plugins that don't depend on theme or props
 // Note: remarkEmoji is lazy-loaded and added conditionally when emoji shortcodes are detected
@@ -817,8 +1031,7 @@ const LABEL_DISALLOWED_ELEMENTS = [
 const LINKS_DISALLOWED_ELEMENTS = [...LABEL_DISALLOWED_ELEMENTS, "a"]
 
 interface LinkProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  node?: any
+  node?: Element
   children?: ReactNode
   href?: string
   title?: string
@@ -856,6 +1069,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   overrideComponents,
   isLabel,
   disableLinks,
+  helpText,
+  unterminatedParsing,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -907,8 +1122,8 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   const wrappedEmojiPlugin = useMemo(
     () =>
       isLoadedPlugin(emojiPlugin)
-        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any -- unified's Plugin type is more complex than our wrapper expects
-          wrapRemarkPlugin(emojiPlugin as any, "remark-emoji")
+        ? // Cast needed: unified's Plugin type is more complex than our RemarkPluginFactory wrapper
+          wrapRemarkPlugin(emojiPlugin as RemarkPluginFactory, "remark-emoji")
         : null,
     [emojiPlugin]
   )
@@ -953,15 +1168,42 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       ({
         ...BASE_RENDERERS,
         a: LinkWithTargetBlank,
-        ...(overrideComponents || {}),
+        ...overrideComponents,
       }) as Components,
     [overrideComponents]
   )
 
-  const processedSource = useMemo(
-    () => source.replaceAll(":material/", ":material_"),
-    [source]
-  )
+  const processedSource = useMemo(() => {
+    // Replace :material/ with :material_ to avoid conflicts with the directive plugin.
+    // The material icon regex in createMaterialIconPlugin uses :material_ to match.
+    let processed = source.replaceAll(":material/", ":material_")
+
+    if (isLabel) {
+      // Escape markdown syntax that would be stripped in labels, leaving empty content.
+      // See: https://github.com/streamlit/streamlit/issues/7359
+      //
+      // Escapes: "- item", "+ item", "* item", "# heading", "> quote"
+      // Does not escape: "not-a-list", "#hashtag", "1.5" (no space after marker)
+      //
+      // Unordered lists (-, +, *), headings (#), and blockquotes (>)
+      // Note: > doesn't need lookahead (always a blockquote), others need (?=\s|$)
+      processed = processed.replace(
+        /^(\s*)((?:[+\-*]|#+)(?=\s|$)|>)/gm,
+        "$1\\$2"
+      )
+      // Ordered lists (1., 2., etc.): escape only the punctuation, not the digits
+      processed = processed.replace(/^(\s*)(\d+)([.)])(?=\s|$)/gm, "$1$2\\$3")
+    }
+
+    // Complete incomplete markdown syntax (e.g., unclosed **bold) during streaming.
+    // Only apply when unterminatedParsing is enabled (during streaming).
+    // Skip for labels (short, complete strings) and HTML content (may interfere).
+    if (unterminatedParsing && !isLabel && !allowHTML) {
+      processed = remend(processed, REMEND_OPTIONS)
+    }
+
+    return processed
+  }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
     if (!isLabel) return []
@@ -988,19 +1230,21 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }
 
   return (
-    <ErrorBoundary>
-      <ReactMarkdown
-        remarkPlugins={remarkPlugins}
-        rehypePlugins={rehypePlugins}
-        components={renderers}
-        urlTransform={transformLinkUri}
-        disallowedElements={disallowed}
-        // unwrap and render children from invalid markdown
-        unwrapDisallowed={true}
-      >
-        {processedSource}
-      </ReactMarkdown>
-    </ErrorBoundary>
+    <HelpTextContext.Provider value={helpText}>
+      <ErrorBoundary>
+        <ReactMarkdown
+          remarkPlugins={remarkPlugins}
+          rehypePlugins={rehypePlugins}
+          components={renderers}
+          urlTransform={transformLinkUri}
+          disallowedElements={disallowed}
+          // unwrap and render children from invalid markdown
+          unwrapDisallowed={true}
+        >
+          {processedSource}
+        </ReactMarkdown>
+      </ErrorBoundary>
+    </HelpTextContext.Provider>
   )
 })
 
@@ -1019,6 +1263,9 @@ const StreamlitMarkdown: FC<Props> = ({
   disableLinks,
   isToast,
   inheritFont,
+  helpText,
+  truncate,
+  unterminatedParsing,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1031,6 +1278,7 @@ const StreamlitMarkdown: FC<Props> = ({
       boldLabel={boldLabel}
       largerLabel={largerLabel}
       isToast={isToast}
+      truncate={truncate}
       style={style}
       data-testid={isCaption ? "stCaptionContainer" : "stMarkdownContainer"}
     >
@@ -1039,6 +1287,8 @@ const StreamlitMarkdown: FC<Props> = ({
         allowHTML={allowHTML}
         isLabel={isLabel}
         disableLinks={disableLinks}
+        helpText={helpText}
+        unterminatedParsing={unterminatedParsing}
       />
     </StyledStreamlitMarkdown>
   )

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,14 +27,17 @@ import { isEqual } from "lodash-es"
 
 import { DeckGlJsonChart as DeckGlJsonChartProto } from "@streamlit/protobuf"
 
+import { shouldWidthStretch } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
 import {
   useBasicWidgetClientState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import type {
@@ -125,7 +128,10 @@ function getDefaultState(
     return EMPTY_STATE
   }
 
-  const initialFigureState = widgetMgr.getElementState(element.id, "selection")
+  const initialFigureState = widgetMgr.getElementState<DeckGlElementState>(
+    element.id,
+    "selection"
+  )
 
   return initialFigureState ?? EMPTY_STATE
 }
@@ -150,7 +156,7 @@ function updateWidgetMgrState(
   element: DeckGlJsonChartProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<DeckGlElementState>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (!element.id) {
     return
@@ -164,6 +170,137 @@ function updateWidgetMgrState(
   )
 }
 
+type LayerDataInfo = {
+  layerData: Map<string, unknown[] | undefined>
+  hasUnknownLayerId: boolean
+}
+
+/**
+ * Builds a Map from layer ID to data array (or undefined for non-array data).
+ * Layers without an explicit ID are tracked separately because selections
+ * cannot be reliably validated against them.
+ */
+const getLayerDataInfo = (
+  layers: ParsedDeckGlConfig["layers"] | undefined
+): LayerDataInfo => {
+  const layerData = new Map<string, unknown[] | undefined>()
+  let hasUnknownLayerId = false
+
+  if (!layers) {
+    return { layerData, hasUnknownLayerId }
+  }
+
+  for (const layer of layers) {
+    if (layer && !Array.isArray(layer)) {
+      if (isNullOrUndefined(layer.id)) {
+        hasUnknownLayerId = true
+        continue
+      }
+
+      const layerId = `${layer.id}`
+      // For URL strings, GeoJSON objects, or undefined data, store undefined
+      // to indicate we cannot validate indices for this layer.
+      layerData.set(
+        layerId,
+        Array.isArray(layer.data) ? layer.data : undefined
+      )
+    }
+  }
+
+  return { layerData, hasUnknownLayerId }
+}
+
+type SanitizedSelection = {
+  indices: Record<string, number[]>
+  objects: Record<string, unknown[]>
+  changed: boolean
+}
+
+/**
+ * Filters valid indices for a layer with array data.
+ * Removes indices that are out of bounds after data shrinks and updates
+ * objects to match the current data at each index.
+ */
+const filterValidIndicesForLayer = (
+  indices: number[],
+  objects: unknown[],
+  layerDataArray: unknown[]
+): { validIndices: number[]; validObjects: unknown[]; changed: boolean } => {
+  const validIndices: number[] = []
+  const validObjects: unknown[] = []
+  let changed = false
+
+  indices.forEach((idx, i) => {
+    if (idx < layerDataArray.length) {
+      const nextObject = layerDataArray[idx]
+      if (nextObject !== objects[i]) {
+        changed = true
+      }
+      validIndices.push(idx)
+      validObjects.push(nextObject ?? objects[i] ?? {})
+    } else {
+      changed = true
+    }
+  })
+
+  return { validIndices, validObjects, changed }
+}
+
+/**
+ * Sanitizes selection state by removing orphaned selections.
+ * Orphaned selections occur when layers are removed or data length shrinks.
+ * For layers with non-array data (URLs, GeoJSON), selections are preserved
+ * since we cannot validate indices against them.
+ */
+const sanitizeSelection = (
+  currentSelection: {
+    indices: Record<string, number[]>
+    objects: Record<string, unknown[]>
+  },
+  layerDataInfo: LayerDataInfo
+): SanitizedSelection => {
+  const { layerData, hasUnknownLayerId } = layerDataInfo
+  const newIndices: Record<string, number[]> = {}
+  const newObjects: Record<string, unknown[]> = {}
+  let changed = false
+
+  for (const [layerId, indices] of Object.entries(currentSelection.indices)) {
+    const layerDataForId = layerData.get(layerId)
+    if (layerDataForId === undefined) {
+      // Layer doesn't exist OR has non-array data (URL, GeoJSON).
+      if (!layerData.has(layerId)) {
+        // Layer no longer exists in spec. Only preserve if we cannot validate
+        // at all (i.e., ALL layers lack IDs, so layerData is empty).
+        if (hasUnknownLayerId && layerData.size === 0) {
+          newIndices[layerId] = indices
+          newObjects[layerId] = currentSelection.objects[layerId] || []
+          continue
+        }
+        changed = true // layer no longer exists
+        continue
+      }
+      // Non-array data: preserve all selections for this layer
+      newIndices[layerId] = indices
+      newObjects[layerId] = currentSelection.objects[layerId] || []
+      continue
+    }
+
+    const objects = currentSelection.objects[layerId] || []
+    const result = filterValidIndicesForLayer(indices, objects, layerDataForId)
+
+    if (result.changed) {
+      changed = true
+    }
+
+    if (result.validIndices.length > 0) {
+      newIndices[layerId] = result.validIndices
+      newObjects[layerId] = result.validObjects
+    }
+  }
+
+  return { indices: newIndices, objects: newObjects, changed }
+}
+
 export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   const {
     height: fullScreenHeight,
@@ -171,13 +308,13 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     expanded: propsIsFullScreen,
   } = useRequiredContext(ElementFullscreenContext)
 
-  const { element, fragmentId, isLightTheme, theme, widgetMgr } = props
-  const {
-    selectionMode: allSelectionModes,
-    tooltip,
-    useContainerWidth: shouldUseContainerWidth,
-  } = element
+  const { element, fragmentId, isLightTheme, theme, widgetMgr, widthConfig } =
+    props
+  const { selectionMode: allSelectionModes, tooltip } = element
   const isFullScreen = propsIsFullScreen ?? false
+
+  // Determine if we should use container width based on layout config
+  const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
 
   const [data, setSelection] = useBasicWidgetClientState<
     DeckGlElementState,
@@ -196,7 +333,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   )
 
   const { height, width } = useStWidthHeight({
-    element,
+    element: {},
     isFullScreen,
     shouldUseContainerWidth,
     container: { height: fullScreenHeight, width: propsWidth },
@@ -230,6 +367,30 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [isFullScreen, isLightTheme, element.json])
 
+  // Sanitize selection when spec changes to remove orphaned indices
+  // (layer removed or data length shrunk). This prevents visual glitches
+  // when selection state is preserved via key-based identity.
+  useExecuteWhenChanged(() => {
+    if (!isSelectionModeActivated || !parsedPydeckJson.layers) {
+      return
+    }
+
+    const layerDataInfo = getLayerDataInfo(parsedPydeckJson.layers)
+    const sanitized = sanitizeSelection(data.selection, layerDataInfo)
+
+    if (sanitized.changed) {
+      setSelection({
+        fromUi: false,
+        value: {
+          selection: {
+            indices: sanitized.indices,
+            objects: sanitized.objects,
+          },
+        },
+      })
+    }
+  }, [parsedPydeckJson, isSelectionModeActivated])
+
   const deck = useMemo<DeckObject>(() => {
     const jsonCopy = { ...parsedPydeckJson }
 
@@ -253,9 +414,26 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
     }
 
     if (jsonCopy.layers) {
-      const anyLayersHaveSelection = Object.values(
+      // Build a map of layer IDs to data lengths for validation
+      const { layerData } = getLayerDataInfo(jsonCopy.layers)
+
+      // Only consider a selection valid if the layer exists and has at least one
+      // index within the current data length. This prevents "dimming" (reducing
+      // opacity of unselected points to 40%) when selection state is stale
+      // (e.g., after data shrinks or layers are removed).
+      // For layers with non-array data (undefined length), we cannot validate
+      // indices, so we assume the selection is valid.
+      const anyLayersHaveSelection = Object.entries(
         data.selection.indices
-      ).some(layer => layer?.length)
+      ).some(([layerId, indices]) => {
+        const layerDataForId = layerData.get(layerId)
+        // If layerDataForId is undefined but the layer exists, it has non-array data - assume valid.
+        // If the layer doesn't exist, treat the selection as invalid to avoid dimming everything.
+        if (layerDataForId === undefined) {
+          return layerData.has(layerId) && indices?.length > 0
+        }
+        return indices?.some(idx => idx < layerDataForId.length)
+      })
 
       const anyLayersHavePickableDefined = jsonCopy.layers.some(layer =>
         Object.hasOwn(layer, "pickable")
@@ -278,8 +456,11 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           layer.pickable = true
         }
 
-        const layerId = `${layer.id || null}`
-        const selectedIndices = data?.selection?.indices?.[layerId] || []
+        const layerId = isNullOrUndefined(layer.id) ? undefined : `${layer.id}`
+        const selectedIndices =
+          layerId !== undefined
+            ? data?.selection?.indices?.[layerId] || []
+            : []
 
         const fillFunctions = LAYER_TYPE_TO_FILL_FUNCTION[layer["@@type"]]
 
@@ -308,7 +489,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
           if (shouldUseOriginalFillFunction || !originalFillFunction) {
             // If we aren't changing the fill color, we don't need to change the fillFunction
-            return clonedLayer
+            return
           }
 
           const selectedOpacity = 255
@@ -365,22 +546,20 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
   useEffect(() => {
     // If the ViewState on the server has changed, apply the diff to the current state
     if (!isEqual(deck.initialViewState, initialViewState)) {
-      const diff = Object.keys(deck.initialViewState).reduce(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        (diffArg, key): any => {
-          // @ts-expect-error
-          if (deck.initialViewState[key] === initialViewState?.[key]) {
-            return diffArg
-          }
+      const diff = Object.keys(deck.initialViewState).reduce<
+        Record<string, unknown>
+      >((diffArg, key): Record<string, unknown> => {
+        // @ts-expect-error
+        if (deck.initialViewState[key] === initialViewState?.[key]) {
+          return diffArg
+        }
 
-          return {
-            ...diffArg,
-            // @ts-expect-error
-            [key]: deck.initialViewState[key],
-          }
-        },
-        {}
-      )
+        return {
+          ...diffArg,
+          // @ts-expect-error
+          [key]: deck.initialViewState[key],
+        }
+      }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
       setInitialViewState(deck.initialViewState)

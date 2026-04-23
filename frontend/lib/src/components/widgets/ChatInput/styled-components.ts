@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,32 +15,33 @@
  */
 import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "~lib/theme"
-
-export const StyledChatInputContainer = styled.div({
+export const StyledChatInputContainer = styled.div<{
+  isStretchHeight?: boolean
+}>(({ isStretchHeight }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-})
+  ...(isStretchHeight && { height: "100%" }),
+}))
 
-export interface StyledChatInputProps {
-  extended?: boolean
-}
-
-export const StyledChatInput = styled.div<StyledChatInputProps>(
-  ({ theme }) => ({
-    // Per Figma: Widget styling with proper theme colors
-    backgroundColor: theme.colors.secondaryBg, // Widget background (matches other input widgets)
+export const StyledChatInput = styled.div<{ isStretchHeight?: boolean }>(
+  ({ theme, isStretchHeight }) => ({
+    backgroundColor: theme.colors.secondaryBg,
     border: `${theme.sizes.borderWidth} solid`,
     borderColor: theme.colors.widgetBorderColor ?? theme.colors.transparent,
     position: "relative",
     display: "flex",
     flexDirection: "column",
     alignItems: "stretch",
-    padding: theme.spacing.lg,
-    gap: theme.spacing.lg,
+    flex: 1,
+    paddingTop: theme.spacing.md,
+    paddingBottom: theme.spacing.md,
+    paddingLeft: theme.spacing.lg,
+    paddingRight: theme.spacing.lg,
+    gap: theme.spacing.sm,
     borderRadius: theme.radii.default,
     boxSizing: "border-box",
+    ...(isStretchHeight && { height: "100%" }),
 
     ":focus-within": {
       borderColor: theme.colors.primary,
@@ -48,20 +49,74 @@ export const StyledChatInput = styled.div<StyledChatInputProps>(
   })
 )
 
-export const StyledContentArea = styled.div(({ theme }) => ({
-  position: "relative",
+// Files area - wrapping container for file chips above the input row
+export const StyledFilesArea = styled.div(({ theme }) => ({
   display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing.sm, // Gap between FilePreviewList and PrimaryRegion
+  flexWrap: "wrap",
+  gap: theme.spacing.sm,
 }))
 
-export const StyledPrimaryRegion = styled.div({
-  position: "relative",
+// Main input row - contains textarea and toolbar
+// When expanded: column layout with textarea above toolbar
+// When not expanded: row layout (inline or stacked via flex-wrap)
+export const StyledInputRow = styled.div<{
+  isStacked?: boolean
+  hasExpandedHeight?: boolean
+}>(({ theme, isStacked, hasExpandedHeight }) => ({
   display: "flex",
-  flexDirection: "column",
-})
+  // Column layout when expanded, row layout otherwise
+  flexDirection: hasExpandedHeight ? "column" : "row",
+  alignItems: hasExpandedHeight ? "stretch" : "center",
+  justifyContent: hasExpandedHeight ? "flex-start" : "space-between",
+  width: "100%",
+  gap: theme.spacing.sm,
+  // Only use flex-wrap for stacked mode (non-expanded)
+  flexWrap: !hasExpandedHeight && isStacked ? "wrap" : "nowrap",
+  ...(hasExpandedHeight && { flex: 1 }),
+}))
 
-export const StyledActionRow = styled.div(({ theme }) => ({
+// Wrapper for textarea - adapts to inline, stacked, or expanded layout
+// In stacked mode: order: -1 moves it above buttons, width: 100% makes it wrap to own line
+// In inline mode: flex: 1 makes it fill remaining space between button clusters
+// In expanded height mode: flex: 1 fills vertical space, width: 100% for full width
+export const StyledTextareaWrapper = styled.div<{
+  isStacked?: boolean
+  hasExpandedHeight?: boolean
+}>(({ isStacked, hasExpandedHeight }) => ({
+  flex: isStacked && !hasExpandedHeight ? "none" : 1,
+  width: isStacked || hasExpandedHeight ? "100%" : "auto",
+  // Use order only for stacked mode (non-expanded) to move textarea above buttons
+  order: isStacked && !hasExpandedHeight ? -1 : 0,
+  display: "flex",
+  alignItems: hasExpandedHeight ? "stretch" : "center",
+  minWidth: 0,
+}))
+
+// Left cluster - flex-shrink so it collapses when empty
+// In non-expanded row mode, use order: -1 to position before textarea (which is first in DOM)
+export const StyledLeftCluster = styled.div<{
+  hasExpandedHeight?: boolean
+}>(({ theme, hasExpandedHeight }) => ({
+  display: "flex",
+  flexDirection: "row",
+  flexShrink: 0,
+  gap: theme.spacing.sm,
+  alignItems: "center",
+  // In non-expanded mode, position before textarea via CSS order
+  order: hasExpandedHeight ? 0 : -1,
+}))
+
+// Right cluster - contains mic and send buttons
+export const StyledRightCluster = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  gap: theme.spacing.sm,
+  alignItems: "center",
+}))
+
+// Toolbar row - contains left and right button clusters
+// Used when hasExpandedHeight is true to keep buttons in a dedicated bottom row
+export const StyledToolbarRow = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "row",
   justifyContent: "space-between",
@@ -70,33 +125,14 @@ export const StyledActionRow = styled.div(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledLeftCluster = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  flex: "1 0 0",
-  gap: theme.spacing.sm,
-  alignItems: "center",
-}))
-
-export const StyledRightCluster = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  gap: theme.spacing.sm,
-  alignItems: "center",
-  position: "relative",
-}))
-
+// Character count indicator - displayed inline with buttons
 export const StyledInputInstructions = styled.div(({ theme }) => ({
-  position: "absolute",
-  top: theme.spacing.sm,
-  right: theme.spacing.lg,
   color: theme.colors.fadedText60,
   fontSize: theme.fontSizes.twoSm,
   textAlign: "right",
   whiteSpace: "nowrap",
   pointerEvents: "auto",
   cursor: "text",
-  zIndex: theme.zIndices.priority,
   "& .stChatInputInstructions": {
     position: "static",
   },
@@ -104,7 +140,6 @@ export const StyledInputInstructions = styled.div(({ theme }) => ({
 
 interface StyledSendIconButtonProps {
   disabled: boolean
-  extended?: boolean
   hasError?: boolean
   primary?: boolean
 }
@@ -124,8 +159,8 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         lineHeight: theme.lineHeights.none,
         margin: theme.spacing.none,
         padding: theme.spacing.xs,
-        width: theme.sizes.minElementHeight,
-        height: theme.sizes.minElementHeight,
+        width: theme.sizes.chatInputPrimaryButtonSize,
+        height: theme.sizes.chatInputPrimaryButtonSize,
         color: disabled ? theme.colors.fadedText40 : theme.colors.white,
         cursor: disabled ? "not-allowed" : "pointer",
         transition: "background-color 200ms ease",
@@ -135,6 +170,9 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         ":focus": {
           outline: "none",
         },
+        "&:focus-visible": {
+          boxShadow: theme.shadows.focusRing,
+        },
         "&:hover": {
           backgroundColor: disabled
             ? theme.colors.darkenedBgMix15
@@ -143,15 +181,10 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
       }
     }
 
-    const lightTheme = hasLightBackgroundColor(theme)
-    const [cleanIconColor, dirtyIconColor] = lightTheme
-      ? [theme.colors.gray60, theme.colors.gray80]
-      : [theme.colors.gray80, theme.colors.gray40]
-
     const getSendIconColor = (): string => {
       if (hasError) return theme.colors.redTextColor
-      if (disabled) return cleanIconColor
-      return dirtyIconColor
+      if (disabled) return theme.colors.fadedText40
+      return theme.colors.fadedText60
     }
 
     return {
@@ -173,17 +206,18 @@ export const StyledSendIconButton = styled.button<StyledSendIconButtonProps>(
         outline: "none",
       },
       "&:focus-visible": {
-        backgroundColor: lightTheme
-          ? theme.colors.gray10
-          : theme.colors.gray90,
+        boxShadow: theme.shadows.focusRing,
       },
       "&:hover": {
-        color: hasError ? theme.colors.red70 : theme.colors.primary,
+        color: hasError ? theme.colors.redColor : theme.colors.bodyText,
+      },
+      "&:active": {
+        color: theme.colors.primary,
       },
       "&:disabled, &:disabled:hover, &:disabled:active": {
         backgroundColor: theme.colors.transparent,
         borderColor: theme.colors.transparent,
-        color: theme.colors.gray60,
+        color: theme.colors.fadedText40,
         cursor: "not-allowed",
       },
       "& svg": {
@@ -209,7 +243,7 @@ export const StyledWaveformContainer =
 export const StyledChatAudioWave = styled.div(({ theme }) => ({
   position: "relative",
   width: "100%",
-  minHeight: theme.sizes.minElementHeight,
+  height: theme.sizes.chatInputPrimaryButtonSize,
   borderRadius: theme.radii.default,
   overflow: "hidden",
   "& > div": {

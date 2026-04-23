@@ -1,5 +1,5 @@
 /**
- * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+ * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import React, { memo, ReactElement, useEffect } from "react"
+import { memo, ReactElement, useEffect } from "react"
 
 import { Engine, graphviz } from "d3-graphviz"
 import { getLogger } from "loglevel"
@@ -29,10 +29,9 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
-import { withFullScreenWrapper } from "~lib/components/shared/FullScreenWrapper"
-import Toolbar, {
-  StyledToolbarElementContainer,
-} from "~lib/components/shared/Toolbar"
+import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
+import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
+import Toolbar from "~lib/components/shared/Toolbar/Toolbar"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
@@ -68,9 +67,8 @@ function GraphVizChart({
     collapse,
   } = useRequiredContext(ElementFullscreenContext)
 
-  // Determine if we should use container width based on layout config or legacy prop
-  const shouldUseContainerWidth =
-    shouldWidthStretch(widthConfig) || element.useContainerWidth
+  // Determine if we should use container width based on layout config
+  const shouldUseContainerWidth = shouldWidthStretch(widthConfig)
 
   const shouldUseContainerHeight = shouldHeightStretch(heightConfig)
 

@@ -1,4 +1,4 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2025)
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -20,7 +20,8 @@ import dataclasses
 import time
 import unittest
 from collections import namedtuple
-from typing import Any
+from io import StringIO
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, Mock, PropertyMock, call, mock_open, patch
 
 import numpy as np
@@ -31,8 +32,10 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
+from streamlit.elements.write import StreamingOutput
 from streamlit.error_util import handle_uncaught_app_exception
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
+from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.state import QueryParamsProxy, SessionStateProxy
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import (
@@ -40,6 +43,9 @@ from tests.streamlit.data_test_cases import (
     CaseMetadata,
 )
 from tests.streamlit.runtime.secrets_test import MOCK_TOML
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class StreamlitWriteTest(unittest.TestCase):
@@ -412,12 +418,16 @@ class StreamlitWriteTest(unittest.TestCase):
 
     def test_spinner(self):
         """Test st.spinner."""
-        # TODO(armando): Test that the message is actually passed to
-        # message.warning
-        with patch("streamlit.delta_generator.DeltaGenerator.empty") as e:
-            with st.spinner("some message"):
-                time.sleep(0.15)
-            e.assert_called_once_with()
+        with patch("streamlit.delta_generator.DeltaGenerator._transient") as t:
+            t.return_value = (ForwardMsg, ForwardMsg)
+            try:
+                with st.spinner("some message"):
+                    time.sleep(0.15)
+            except NoSessionContext:
+                # This happens on the clear call, so we can safely ignore it.
+                pass
+            # Spinner now uses _transient instead of empty
+            t.assert_called()
 
     def test_sidebar(self):
         """Test st.write in the sidebar."""
@@ -640,3 +650,261 @@ def make_is_type_mock(true_type_matchers):
         return any(type_matcher in true_type_matchers for type_matcher in type_matchers)
 
     return new_is_type
+
+
+class WriteStreamEdgeCasesTest(DeltaGeneratorTestCase):
+    """Test edge cases for st.write_stream API."""
+
+    def test_write_stream_with_async_generator(self):
+        """Test st.write_stream with an async generator object (already called)."""
+
+        async def async_stream():
+            yield "async "
+            yield "message"
+
+        # Pass the generator object, not the function
+        result = st.write_stream(async_stream())
+        assert result == "async message"
+
+    def test_write_stream_with_async_generator_function(self):
+        """Test st.write_stream with an async generator function (not called)."""
+
+        async def async_gen_func():
+            yield "async "
+            yield "generator"
+
+        # Pass the function itself, not called - write_stream should handle this
+        result = st.write_stream(async_gen_func)
+        assert result == "async generator"
+
+    def test_write_stream_with_empty_stream(self):
+        """Test st.write_stream with an empty generator returns empty string."""
+
+        def empty_stream():
+            return
+            yield  # Make this a generator
+
+        result = st.write_stream(empty_stream)
+        assert result == ""
+
+    def test_write_stream_with_generator_function(self):
+        """Test st.write_stream with a generator function (not called)."""
+
+        def gen_func():
+            yield "gen "
+            yield "func"
+
+        result = st.write_stream(gen_func)
+        assert result == "gen func"
+
+    def test_write_stream_with_non_iterable_raises_exception(self):
+        """Test st.write_stream raises error for non-iterable input."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.write_stream(12345)
+
+        assert "cannot be iterated" in str(exc.value)
+
+    def test_write_stream_with_dataframe_raises_exception(self):
+        """Test st.write_stream raises error for dataframe input."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.write_stream(pd.DataFrame({"a": [1, 2, 3]}))
+
+        assert "expects a generator or stream-like object" in str(exc.value)
+
+    def test_write_stream_with_string_raises_exception(self):
+        """Test st.write_stream raises error for string input."""
+
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.write_stream("test string")
+
+        assert "expects a generator or stream-like object" in str(exc.value)
+
+    def test_write_stream_with_callable_chunks(self):
+        """Test st.write_stream handles callable chunks."""
+
+        def test_stream():
+            yield "text before "
+            yield lambda: st.markdown("callable output")
+            yield "text after"
+
+        with patch("streamlit.delta_generator.DeltaGenerator.markdown") as mock_md:
+            st.write_stream(test_stream)
+            # Callable should have been called
+            assert mock_md.call_count >= 1
+
+    def test_write_stream_with_empty_string_chunks(self):
+        """Test st.write_stream ignores empty string chunks."""
+
+        def test_stream():
+            yield ""
+            yield "text"
+            yield ""
+            yield " more"
+
+        result = st.write_stream(test_stream)
+        assert result == "text more"
+
+
+class WriteWithStreamingOutputTest(DeltaGeneratorTestCase):
+    """Test st.write with StreamingOutput."""
+
+    def test_write_with_streaming_output_containing_strings(self):
+        """Test st.write handles StreamingOutput with strings."""
+
+        output = StreamingOutput(["text1", "text2"])
+        st.write(output)
+
+        # StreamingOutput calls write() on each item separately, creating multiple elements
+        deltas = self.get_all_deltas_from_queue()
+        assert len(deltas) == 2
+        assert deltas[0].new_element.markdown.body == "text1"
+        assert deltas[1].new_element.markdown.body == "text2"
+
+    def test_write_with_streaming_output_containing_callable(self):
+        """Test st.write handles StreamingOutput with callable items."""
+
+        called = []
+
+        def my_callable():
+            called.append(True)
+
+        output = StreamingOutput([my_callable, "text"])
+        st.write(output)
+        assert len(called) == 1
+
+
+class TestWriteStringIO(DeltaGeneratorTestCase):
+    """Test st.write with StringIO."""
+
+    @parameterized.expand(
+        [
+            ("plain_text", "Hello from StringIO"),
+            ("markdown_content", "**Bold** and *italic*"),
+        ]
+    )
+    def test_stringio_input(self, _name: str, content: str):
+        """Test st.write handles StringIO and calls markdown with its content."""
+        string_io = StringIO(content)
+
+        st.write(string_io)
+
+        delta = self.get_delta_from_queue()
+        assert delta.new_element.markdown.body == content
+
+
+def _broken_openai_chat_completion_chunk() -> Any:
+    """Instance whose type FQN matches ``is_openai_chunk`` but lacks expected attrs."""
+    cls = type("ChatCompletionChunk", (), {})
+    cls.__module__ = "openai.types.chat.chat_completion_chunk"
+    return cls()
+
+
+def _broken_langchain_ai_message_chunk() -> Any:
+    """Instance whose type FQN matches LangChain AIMessageChunk checks."""
+    cls = type("AIMessageChunk", (), {})
+    cls.__module__ = "langchain_core.messages.ai"
+    return cls()
+
+
+@pytest.mark.parametrize(
+    ("make_chunk", "match_substr"),
+    [
+        (_broken_openai_chat_completion_chunk, "Failed to parse the OpenAI"),
+        (_broken_langchain_ai_message_chunk, "Failed to parse the LangChain"),
+    ],
+    ids=["openai", "langchain"],
+)
+def test_write_stream_chunk_attribute_error_raises(
+    make_chunk: Callable[[], Any], match_substr: str
+) -> None:
+    """``write_stream`` wraps AttributeError when chunk types lack expected shape."""
+
+    def stream() -> Any:
+        yield make_chunk()
+
+    with pytest.raises(StreamlitAPIException, match=match_substr):
+        st.write_stream(stream)
+
+
+def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
+    """Route bokeh figures to ``DeltaGenerator.bokeh_chart``."""
+
+    class FakeBokehFigure:
+        pass
+
+    with patch("streamlit.type_util.is_type") as is_type:
+        is_type.side_effect = make_is_type_mock("bokeh.plotting.figure.Figure")
+        with patch("streamlit.delta_generator.DeltaGenerator.bokeh_chart") as p:
+            st.write(FakeBokehFigure())
+            p.assert_called_once()
+
+
+def test_write_mixin_dg_property_returns_self() -> None:
+    """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
+    dg = st.container()
+    assert dg.dg is dg
+
+
+@pytest.mark.require_integration
+def test_write_real_sympy_expression_routes_to_latex() -> None:
+    """With sympy installed, real expressions use ``st.latex`` via ``st.write``."""
+    import sympy
+
+    x = sympy.Symbol("x")
+    with patch("streamlit.delta_generator.DeltaGenerator.latex") as p:
+        st.write(x + 1)
+        p.assert_called_once()
+
+
+class TestWritePydanticModels(DeltaGeneratorTestCase):
+    """Test st.write with Pydantic models."""
+
+    @pytest.mark.require_integration
+    def test_write_list_of_pydantic_models_to_json(self) -> None:
+        """Verify st.write correctly serializes a list of Pydantic models to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class User(BaseModel):
+            name: str
+            age: int
+            active: bool
+
+        users = [
+            User(name="Alice", age=30, active=True),
+            User(name="Bob", age=25, active=False),
+        ]
+
+        st.write(users)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert isinstance(body, list)
+        assert len(body) == 2
+        assert body[0] == {"name": "Alice", "age": 30, "active": True}
+        assert body[1] == {"name": "Bob", "age": 25, "active": False}
+
+    @pytest.mark.require_integration
+    def test_write_single_pydantic_model_to_json(self) -> None:
+        """Verify st.write correctly serializes a single Pydantic model to JSON."""
+        import json
+
+        from pydantic import BaseModel
+
+        class Config(BaseModel):
+            host: str
+            port: int
+            debug: bool
+
+        config = Config(host="localhost", port=8080, debug=True)
+
+        st.write(config)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+
+        assert body == {"host": "localhost", "port": 8080, "debug": True}
