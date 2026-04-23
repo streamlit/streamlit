@@ -13,7 +13,7 @@ error state and an error message is displayed, preventing the value from being s
 
 ## Problem
 
-Currently, validating user input in `st.text_input` requires triggering a full app  or fragment rerun. This creates a poor user experience:
+Currently, validating user input in `st.text_input` requires triggering a full app or fragment rerun. This creates a poor user experience:
 
 1. **Slow feedback**: Users must wait for a round-trip to the server before seeing validation errors
 2. **Complex implementation**: Developers must manually track and display validation errors
@@ -93,7 +93,7 @@ st.text_input("Username", validate=r"^.{5,}$")
    - Input turns red (error state) showing an error icon and a tooltip with the error message
    - Submit/Enter is blocked; value is not sent to backend
    - Similar to the error state update planned for number input:
-  ![alt text](number-input-validation.png "Number input validation error")
+  ![Number input validation error state mockup](number-input-validation.png)
 4. If input matches the pattern:
    - Normal styling is restored
    - Value can be submitted, triggering a normal rerun and on_change callback execution if provided.
