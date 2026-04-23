@@ -27,11 +27,16 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementNode } from "~lib/AppNode"
+import {
+  FlexContext,
+  IFlexContext,
+} from "~lib/components/core/Layout/FlexContext"
+import { Direction } from "~lib/components/core/Layout/utils"
 import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
 import { ScriptRunState } from "~lib/ScriptRunState"
-import { renderWithContexts } from "~lib/test_util"
+import { render, renderWithContexts } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ElementContainer, ElementContainerProps } from "./ElementContainer"
@@ -416,19 +421,54 @@ describe("ElementNodeRenderer Block Component", () => {
   })
 
   describe("render Markdown", () => {
+    const verticalFlexContext: IFlexContext = {
+      direction: Direction.VERTICAL,
+      isInHorizontalLayout: false,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
+    const horizontalFlexContext: IFlexContext = {
+      direction: Direction.HORIZONTAL,
+      isInHorizontalLayout: true,
+      isInRoot: false,
+      isInContentWidthContainer: false,
+    }
+
     it("should use FULL_WIDTH config when no widthConfig is set (vertical layout)", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const node = createElementNode(scriptRunId, "markdown", {
         body: "**bold text**",
       })
       const props = getProps({ node })
-      renderWithContexts(<ElementNodeRenderer {...props} />, {
-        scriptRunContext: { scriptRunId },
-      })
+      render(
+        <FlexContext.Provider value={verticalFlexContext}>
+          <ElementNodeRenderer {...props} />
+        </FlexContext.Provider>
+      )
 
       expect(screen.getByTestId("stElementContainer")).toBeVisible()
       const lastCall = mockElementContainer.mock.calls.at(-1)
       expect(lastCall?.[0].config).toBe(ElementContainerConfig.FULL_WIDTH)
+    })
+
+    it("should use fit-content config when no widthConfig is set (horizontal layout)", () => {
+      const scriptRunId = "SCRIPT_RUN_ID"
+      const node = createElementNode(scriptRunId, "markdown", {
+        body: "**bold text**",
+      })
+      const props = getProps({ node })
+      render(
+        <FlexContext.Provider value={horizontalFlexContext}>
+          <ElementNodeRenderer {...props} />
+        </FlexContext.Provider>
+      )
+
+      expect(screen.getByTestId("stElementContainer")).toBeVisible()
+      const lastCall = mockElementContainer.mock.calls.at(-1)
+      expect(lastCall?.[0].config?.styleOverrides).toEqual({
+        width: "fit-content",
+      })
     })
 
     it("should use DEFAULT config when widthConfig is set", () => {
@@ -486,7 +526,7 @@ describe("ElementNodeRenderer Block Component", () => {
   })
 
   describe("render PageLink", () => {
-    it("should render with DEFAULT config and respect disabled state", () => {
+    it("should render with DEFAULT config", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const node = createElementNode(scriptRunId, "pageLink", {
         label: "Go to page",

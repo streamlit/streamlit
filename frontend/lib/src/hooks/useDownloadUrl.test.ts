@@ -27,11 +27,21 @@ vi.mock("~lib/util/createDownloadLinkElement", () => ({
 }))
 
 describe("useDownloadUrl", () => {
-  it("returns a no-op callback when url is null", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    document.body.innerHTML = ""
+  })
+
+  it("returns a no-op callback when url is null", async () => {
+    const createDownloadLinkElement =
+      await import("~lib/util/createDownloadLinkElement")
+    const mockCreate = vi.mocked(createDownloadLinkElement.default)
+
     const { result } = renderHook(() => useDownloadUrl(null, "file.txt"))
     const downloadFn = result.current
 
     expect(() => downloadFn()).not.toThrow()
+    expect(mockCreate).not.toHaveBeenCalled()
     expect(document.body.querySelector("a")).toBeNull()
   })
 
@@ -41,7 +51,10 @@ describe("useDownloadUrl", () => {
     const mockCreate = vi.mocked(createDownloadLinkElement.default)
 
     const mockLink = document.createElement("a")
-    mockLink.click = vi.fn()
+    // Verify the link is in the DOM at the time click is called
+    mockLink.click = vi.fn(() => {
+      expect(document.body.contains(mockLink)).toBe(true)
+    })
     mockCreate.mockReturnValue(mockLink)
 
     const { result } = renderHook(() =>
