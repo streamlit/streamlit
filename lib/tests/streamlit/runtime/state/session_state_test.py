@@ -2007,8 +2007,8 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_skips_url_sync_when_session_state_set(self, mock_ctx: MagicMock) -> None:
-        """Programmatic st.session_state set this run should not sync to URL."""
+    def test_syncs_url_when_session_state_set(self, mock_ctx: MagicMock) -> None:
+        """Programmatic st.session_state set this run syncs to URL (gh-14670)."""
         metadata = self._setup_remount_state("old_value")
         self.session_state._new_session_state["my_widget"] = "programmatic_value"
 
@@ -2016,7 +2016,9 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
             self.query_params, "set_corrected_value"
         ) as mock_set_corrected:
             self.session_state.register_widget(metadata, user_key="my_widget")
-            mock_set_corrected.assert_not_called()
+            mock_set_corrected.assert_called_once_with(
+                "my_widget", "programmatic_value", "string_value"
+            )
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
