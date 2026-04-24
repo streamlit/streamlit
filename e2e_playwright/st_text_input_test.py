@@ -451,9 +451,7 @@ def test_text_input_query_param_programmatic_session_state_syncs_url(app: Page):
     expect_prefixed_markdown(app, "bound text ss value:", "default")
     expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))
 
-    app.get_by_role(
-        "button", name="Set bound_text_ss via session_state"
-    ).click()
+    app.get_by_role("button", name="Set bound_text_ss via session_state").click()
     wait_for_app_run(app)
 
     expect(app).to_have_url(re.compile(r"bound_text_ss="))
@@ -463,9 +461,7 @@ def test_text_input_query_param_programmatic_session_state_syncs_url(app: Page):
     wait_for_app_loaded(app)
     expect_prefixed_markdown(app, "bound text ss value:", "arbitrary value")
 
-    app.get_by_role(
-        "button", name="Reset bound_text_ss to default"
-    ).click()
+    app.get_by_role("button", name="Reset bound_text_ss to default").click()
     wait_for_app_run(app)
 
     expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))

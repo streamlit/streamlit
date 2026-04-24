@@ -170,13 +170,9 @@ st.write("bound text max value:", bound_text_max)
 # Programmatic st.session_state updates must sync the browser URL for bound widgets
 if runtime.exists():
     st.markdown("Bound widget + session_state sync:")
-    if st.button(
-        "Set bound_text_ss via session_state", key="set_bound_text_ss_btn"
-    ):
+    if st.button("Set bound_text_ss via session_state", key="set_bound_text_ss_btn"):
         st.session_state["bound_text_ss"] = "arbitrary value"
-    if st.button(
-        "Reset bound_text_ss to default", key="reset_bound_text_ss_btn"
-    ):
+    if st.button("Reset bound_text_ss to default", key="reset_bound_text_ss_btn"):
         st.session_state["bound_text_ss"] = "default"
     st.text_input(
         "bound text session state input",
