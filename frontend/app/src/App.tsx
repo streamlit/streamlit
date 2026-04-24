@@ -428,6 +428,7 @@ export class App extends PureComponent<Props, State> {
         this.connectionManager?.disconnect()
         this.connectionManager = null
       },
+      printApp: this.printCallback,
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
