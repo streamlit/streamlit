@@ -4649,14 +4649,17 @@ describe("App", () => {
 
     it("calls window.print when PRINT_APP window message has been received", () => {
       const printSpy = vi.spyOn(window, "print").mockImplementation(() => {})
-      prepareHostCommunicationManager()
+      try {
+        prepareHostCommunicationManager()
 
-      fireWindowPostMessage({
-        type: "PRINT_APP",
-      })
+        fireWindowPostMessage({
+          type: "PRINT_APP",
+        })
 
-      expect(printSpy).toHaveBeenCalledTimes(1)
-      printSpy.mockRestore()
+        expect(printSpy).toHaveBeenCalledTimes(1)
+      } finally {
+        printSpy.mockRestore()
+      }
     })
 
     it("fires appHeartbeat BackMsg when SEND_APP_HEARTBEAT window message has been received", () => {
