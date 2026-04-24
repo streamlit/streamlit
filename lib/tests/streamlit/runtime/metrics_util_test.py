@@ -783,13 +783,6 @@ def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
     return marker
 
 
-def _init_git_repo(path: Path) -> None:
-    """Initialize ``path`` as a real git repo so GitPython recognizes it."""
-    from git import Repo
-
-    Repo.init(str(path))
-
-
 @pytest.fixture(autouse=True)
 def _clear_skills_cache() -> Iterator[None]:
     """Reset the skill-detection cache around each test in this module section."""
@@ -830,7 +823,7 @@ def test_detect_installed_skills_emits_expected_token(
     repo = tmp_path / "repo"
     home.mkdir()
     app.mkdir(parents=True)
-    _init_git_repo(repo)
+    (repo / ".git").mkdir()
 
     roots = {"home": home, "app": app, "repo": repo}
     harness_dir = home_dir if location == "home" else project_dir
@@ -875,7 +868,7 @@ def test_detect_installed_skills_skips_repo_when_same_as_app(
     app_and_repo = tmp_path / "proj"
     home.mkdir()
     app_and_repo.mkdir()
-    _init_git_repo(app_and_repo)
+    (app_and_repo / ".git").mkdir()
     _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
@@ -893,7 +886,7 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     app = repo / "nested" / "app"
     home.mkdir()
     app.mkdir(parents=True)
-    _init_git_repo(repo)
+    (repo / ".git").mkdir()
     _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
 
     monkeypatch.setenv("HOME", str(home))
@@ -911,7 +904,7 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     app = repo / "app"
     home.mkdir()
     app.mkdir(parents=True)
-    _init_git_repo(repo)
+    (repo / ".git").mkdir()
     _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
     _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")

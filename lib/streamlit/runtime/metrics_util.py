@@ -260,17 +260,30 @@ _HARNESSES: Final = (
     ("gemini", ".gemini/skills", (".gemini/skills",)),
     ("opencode", ".opencode/skills", (".config/opencode/skills",)),
 )
+# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
+# to avoid scanning the entire filesystem on pathological layouts.
+_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
 
 
 def _find_git_root(start: str) -> str | None:
-    """Return the working tree of the nearest git repo containing ``start``, or ``None``."""
-    try:
-        from git import Repo
+    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
 
-        working_tree_dir = Repo(start, search_parent_directories=True).working_tree_dir
-    except Exception:
-        return None
-    return str(working_tree_dir) if working_tree_dir is not None else None
+    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
+    GitPython. GitPython's cold import adds ~170ms on first call, which shows
+    up on every hosted-app startup via the ``create_page_profile_message``
+    code path — for a signal that almost always resolves to ``None`` in those
+    environments. The stdlib walk is ~1ms cold and returns the same path we
+    need.
+    """
+    current = os.path.abspath(start)
+    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+    return None
 
 
 def _detect_installed_skills(app_dir: str | None) -> list[str]:
