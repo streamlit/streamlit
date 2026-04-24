@@ -105,7 +105,7 @@ test = [
   "plotly>=5.3.1",
   "seaborn>=0.11.2",
   "watchdog>=2.1.5",
-  "streamlit-pdf>=1.0.0",
+  "streamlit-pdf>=2.0.1",
   # Optional dependency for better performance:
   "uvloop>=0.15.2; sys_platform != 'win32'",
   # Optional dependency used for improved exception formatting:
