@@ -214,7 +214,7 @@ describe("metrics helpers", () => {
     browserName: RESULT.browser.name || "Unknown",
     browserVersion: RESULT.browser.version || "Unknown",
     deviceType: RESULT.device.type || "Unknown",
-    serverMode: "tornado",
+    serverMode: "starlette-managed",
   }
   it("buildEventProto populates expected fields - viewReport", async () => {
     const mm = getMetricsManager()

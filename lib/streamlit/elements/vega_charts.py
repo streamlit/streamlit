@@ -65,7 +65,7 @@ from streamlit.proto.VegaLiteChart_pb2 import (
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import WidgetCallback, register_widget
-from streamlit.util import AttributeDictionary, calc_md5
+from streamlit.util import AttributeDictionary, calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Sequence
@@ -2518,8 +2518,8 @@ def _to_arrow_dataset(data: Any, datasets: dict[str, Any]) -> dict[str, str]:
     # Already serialize the data to be able to create a stable
     # dataset name:
     data_bytes = dataframe_util.convert_anything_to_arrow_bytes(data)
-    # Use the md5 hash of the data as the name:
-    name = calc_md5(str(data_bytes))
+    # Use the content hash of the data as the name:
+    name = calc_hash(str(data_bytes))
 
     datasets[name] = data_bytes
     return {"name": name}

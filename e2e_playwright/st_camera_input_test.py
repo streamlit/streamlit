@@ -110,11 +110,15 @@ def test_take_photo_button_styling(app: Page):
     expect(take_photo_button).to_be_enabled()
     expect(take_photo_button).to_have_css("cursor", "pointer")
 
-    # Check that the button is styled correctly when hovered over
+    # Check that the button is styled correctly when hovered over.
+    # Re-hover before each CSS assertion because Firefox can lose the :hover
+    # state between sequential expect() calls when the webcam layout reflows.
     take_photo_button.scroll_into_view_if_needed()
     take_photo_button.hover()
     expect(take_photo_button).to_have_css("color", "rgb(255, 75, 75)")
+    take_photo_button.hover()
     expect(take_photo_button).to_have_css("border-color", "rgb(255, 75, 75)")
+    take_photo_button.hover()
     expect(take_photo_button).to_have_css("background-color", "rgb(255, 255, 255)")
 
     # Disabled button styling

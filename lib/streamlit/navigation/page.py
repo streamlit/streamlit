@@ -25,7 +25,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 from streamlit.source_util import page_icon_and_name
 from streamlit.string_util import validate_icon_or_emoji
 from streamlit.url_util import is_url
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 
 def _sanitize_url_path(title: str) -> str:
@@ -495,4 +495,4 @@ class StreamlitPage:
 
     @property
     def _script_hash(self) -> str:
-        return calc_md5(self._url_path)
+        return calc_hash(self._url_path)

@@ -83,7 +83,6 @@ steps:
 | `playwright.yml` | Push/PR to `develop` | Full E2E test suite across webkit, chromium, and firefox |
 | `playwright-changed-files.yml` | PR | Runs E2E tests only for changed test files (faster feedback) |
 | `playwright-custom-components.yml` | Push/PR to `develop` | E2E tests specifically for custom components |
-| `playwright-starlette.yml` | Push to `develop`, labeled PR | E2E tests using experimental Starlette server backend |
 | `cli-regression.yml` | Push/PR to `develop` | CLI regression tests (builds package and runs CLI tests) |
 | `performance.yml` | Push to `develop`, `run-performance` label on PR | Performance benchmarks (Playwright, Python, Lighthouse) |
 | `load-testing.yml` | `run-load-testing` label or manual | Server load testing with concurrent Playwright sessions |

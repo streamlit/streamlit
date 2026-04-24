@@ -17,11 +17,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Final, Literal, cast
 
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     TextAlignment,
     Width,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
 from streamlit.runtime.metrics_util import gather_metrics
@@ -58,10 +57,13 @@ class MarkdownMixin:
             markdown_proto.help = help
 
         if width != "auto":
-            validate_width(width, allow_content=True)
-            layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+            layout_config = create_layout_config(
+                width=width,
+                text_alignment=text_alignment,
+                allow_content_width=True,
+            )
         else:
-            layout_config = LayoutConfig(text_alignment=text_alignment)
+            layout_config = create_layout_config(text_alignment=text_alignment)
 
         return self.dg._enqueue("markdown", markdown_proto, layout_config=layout_config)
 
@@ -140,6 +142,10 @@ class MarkdownMixin:
               colors: red, orange, yellow, green, blue, violet, gray/grey, or primary.
               For example, you can use ``:orange-badge[your text here]`` or
               ``:blue-badge[your text here]``.
+
+            - Shimmer effect for loading or in-progress text, using the syntax
+              ``:shimmer[text to shimmer]``. The text fades in and out to indicate
+              ongoing activity. This respects the user's reduced motion preferences.
 
             - Small text, using the syntax ``:small[text to show small]``.
 
@@ -319,8 +325,9 @@ class MarkdownMixin:
         if help:
             caption_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, text_alignment=text_alignment)
+        layout_config = create_layout_config(
+            width=width, text_alignment=text_alignment, allow_content_width=True
+        )
 
         return self.dg._enqueue("markdown", caption_proto, layout_config=layout_config)
 
@@ -389,8 +396,7 @@ class MarkdownMixin:
         if help:
             latex_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         return self.dg._enqueue("markdown", latex_proto, layout_config=layout_config)
 
@@ -426,8 +432,7 @@ class MarkdownMixin:
         divider_proto.body = MARKDOWN_HORIZONTAL_RULE_EXPRESSION
         divider_proto.element_type = MarkdownProto.Type.DIVIDER
 
-        validate_width(width, allow_content=False)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         return self.dg._enqueue("markdown", divider_proto, layout_config=layout_config)
 
@@ -557,8 +562,7 @@ class MarkdownMixin:
         if help is not None:
             badge_proto.help = help
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         return self.dg._enqueue("markdown", badge_proto, layout_config=layout_config)
 

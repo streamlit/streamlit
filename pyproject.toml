@@ -40,8 +40,8 @@ exclude-newer = "24 hours"
 # - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
 # - Python 3.11+: use pandas 3.x
 override-dependencies = [
-    "pandas>=1.4.0,<3; python_version < '3.11'",
-    "pandas>=3.0.0,<4; python_version >= '3.11'",
+  "pandas>=1.4.0,<3; python_version < '3.11'",
+  "pandas>=3.0.0,<4; python_version >= '3.11'",
 ]
 
 [tool.uv.sources]
@@ -58,9 +58,9 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.28",
+  "ty==0.0.29",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.9",
+  "ruff==0.15.10",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.21",
@@ -112,12 +112,6 @@ test = [
   "rich>=10.14.0",
   # Used by vega-lite / altair e2e tests:
   "vega_datasets",
-  # Required for Starlette support:
-  "starlette>=0.40.0",
-  "uvicorn>=0.30.0",
-  "python-multipart>=0.0.10",
-  "websockets>=12.0.0",
-  "itsdangerous>=2.1.2",
   # Only for unit tests:
   "httpx>=0.24.1",
   # Playwright and E2E test dependencies:
