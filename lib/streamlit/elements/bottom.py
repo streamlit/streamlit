@@ -55,14 +55,16 @@ class BottomContainerProxy:
                 "`st.bottom` cannot be used inside `st.sidebar`. "
                 "The bottom container is only available in the main app area."
             )
-        if root_container == RootContainer.EVENT:
-            raise StreamlitAPIException(
-                "`st.bottom` cannot be used inside event containers. "
-                "The bottom container is only available in the main app area."
-            )
+        # Check for dialog first since dialogs use EVENT root container
+        # but should get a more specific error message
         if "dialog" in current_dg._ancestor_block_types:
             raise StreamlitAPIException(
                 "`st.bottom` cannot be used inside a dialog. "
+                "The bottom container is only available in the main app area."
+            )
+        if root_container == RootContainer.EVENT:
+            raise StreamlitAPIException(
+                "`st.bottom` cannot be used inside event containers. "
                 "The bottom container is only available in the main app area."
             )
 

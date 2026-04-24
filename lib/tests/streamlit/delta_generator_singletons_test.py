@@ -130,9 +130,11 @@ def test_bottom_raises_exception_inside_nested_sidebar() -> None:
 )
 def test_bottom_raises_exception_inside_dialog(use_context_manager: bool) -> None:
     """Verify st.bottom raises inside a dialog."""
+    # Dialogs are created via event_dg._dialog(), so they have root_container=EVENT
+    # with block_type="dialog". See dialog_decorator.py:83.
     dialog_dg = DeltaGenerator(
-        root_container=RootContainer.MAIN,
-        parent=get_dg_singleton_instance().main_dg,
+        root_container=RootContainer.EVENT,
+        parent=get_dg_singleton_instance().event_dg,
         block_type="dialog",
     )
     token = context_dg_stack.set((*context_dg_stack.get(), dialog_dg))
