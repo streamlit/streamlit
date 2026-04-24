@@ -45,8 +45,8 @@ emit spurious filesystem events caused by:
 - Other background file access
 
 To mitigate false positives from these spurious events, this module:
-1. Checks modification time before calculating MD5 (fast rejection)
-2. Compares MD5 content hash to detect actual changes
+1. Checks modification time before calculating hash (fast rejection)
+2. Compares content hash to detect actual changes
 3. Re-verifies content stability after detecting a change (double-check)
 
 See: https://github.com/streamlit/streamlit/issues/13954
@@ -95,7 +95,7 @@ class EventBasedPathWatcher:
 
     Behavior differs based on whether watching a file or directory:
 
-    **File watching:** Detects content changes via MD5 hash comparison. The
+    **File watching:** Detects content changes via content hash comparison. The
     callback receives the file path and is invoked when content changes. With
     allow_nonexistent=True, also detects file creation.
 
@@ -303,13 +303,13 @@ class WatchedPath:
 
     def __init__(
         self,
-        md5: str,
+        content_hash: str,
         modification_time: float,
         *,  # keyword-only arguments:
         glob_pattern: str | None = None,
         allow_nonexistent: bool = False,
     ) -> None:
-        self.md5 = md5
+        self.content_hash = content_hash
         self.modification_time = modification_time
 
         self.glob_pattern = glob_pattern
@@ -355,7 +355,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
             watched_path = self._watched_paths.get(path, None)
             if watched_path is None:
                 try:
-                    md5 = util.calc_md5_with_blocking_retries(
+                    content_hash = util.calc_hash_with_blocking_retries(
                         path,
                         glob_pattern=glob_pattern,
                         allow_nonexistent=allow_nonexistent,
@@ -364,7 +364,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                         path, allow_nonexistent
                     )
                     watched_path = WatchedPath(
-                        md5=md5,
+                        content_hash=content_hash,
                         modification_time=modification_time,
                         glob_pattern=glob_pattern,
                         allow_nonexistent=allow_nonexistent,
@@ -372,7 +372,7 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                     self._watched_paths[path] = watched_path
                 except StreamlitMaxRetriesError as ex:
                     _LOGGER.debug(
-                        "Failed to calculate MD5 for path %s",
+                        "Failed to calculate hash for path %s",
                         path,
                         exc_info=ex,
                     )
@@ -492,27 +492,27 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 return
 
             changed_path_info.modification_time = modification_time
-            new_md5 = util.calc_md5_with_blocking_retries(
+            new_hash = util.calc_hash_with_blocking_retries(
                 abs_changed_path,
                 glob_pattern=changed_path_info.glob_pattern,
                 allow_nonexistent=changed_path_info.allow_nonexistent,
             )
-            if new_md5 == changed_path_info.md5:
-                _LOGGER.debug("File/dir MD5 did not change: %s", abs_changed_path)
+            if new_hash == changed_path_info.content_hash:
+                _LOGGER.debug("File/dir hash did not change: %s", abs_changed_path)
                 return
 
             # On Windows, background processes (Windows Defender, Search Indexer,
             # OneDrive) can trigger spurious file change events. These processes
             # may temporarily modify file state during their operations, causing
-            # a transient MD5 difference.
+            # a transient hash difference.
             #
             # To mitigate false positives, we perform a stability check: wait
-            # briefly and re-read the file. If the MD5 reverts to the original
+            # briefly and re-read the file. If the hash reverts to the original
             # value, this was likely a spurious event and we should ignore it.
             # See: https://github.com/streamlit/streamlit/issues/13954
             # Import at function level to avoid circular imports and
             # because this code path is rarely executed (only on Windows
-            # after an MD5 change is detected)
+            # after a hash change is detected)
             from streamlit import env_util
 
             if env_util.IS_WINDOWS:
@@ -521,38 +521,38 @@ class _FolderEventHandler(events.FileSystemEventHandler):
                 # Brief delay to let transient file operations complete
                 time.sleep(_WINDOWS_STABILITY_DELAY_SECS)
                 try:
-                    verification_md5 = util.calc_md5_with_blocking_retries(
+                    verification_hash = util.calc_hash_with_blocking_retries(
                         abs_changed_path,
                         glob_pattern=changed_path_info.glob_pattern,
                         allow_nonexistent=changed_path_info.allow_nonexistent,
                     )
                 except StreamlitMaxRetriesError as verification_error:
                     # If the stability re-check fails (e.g., due to a transient
-                    # file lock), proceed with the initially computed new_md5
+                    # file lock), proceed with the initially computed new_hash
                     # instead of dropping the change event entirely.
                     _LOGGER.debug(
-                        "Failed to calculate verification MD5 for path %s; "
-                        "proceeding with initial MD5.",
+                        "Failed to calculate verification hash for path %s; "
+                        "proceeding with initial hash.",
                         abs_changed_path,
                         exc_info=verification_error,
                     )
                 else:
-                    if verification_md5 == changed_path_info.md5:
+                    if verification_hash == changed_path_info.content_hash:
                         _LOGGER.debug(
-                            "File/dir MD5 reverted after stability check "
+                            "File/dir hash reverted after stability check "
                             "(likely spurious event): %s",
                             abs_changed_path,
                         )
                         return
-                    # Use the verified MD5 as the new value
-                    new_md5 = verification_md5
+                    # Use the verified hash as the new value
+                    new_hash = verification_hash
 
-            _LOGGER.debug("File/dir MD5 changed: %s", abs_changed_path)
-            changed_path_info.md5 = new_md5
+            _LOGGER.debug("File/dir hash changed: %s", abs_changed_path)
+            changed_path_info.content_hash = new_hash
             changed_path_info.on_changed.send(abs_changed_path)
         except StreamlitMaxRetriesError as ex:
             _LOGGER.debug(
-                "Ignoring file change. Failed to calculate MD5 for path %s",
+                "Ignoring file change. Failed to calculate hash for path %s",
                 abs_changed_path,
                 exc_info=ex,
             )

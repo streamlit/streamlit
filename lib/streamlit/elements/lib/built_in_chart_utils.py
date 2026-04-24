@@ -894,12 +894,12 @@ def _get_axis_encodings(
     stack_encoding: alt.X | alt.Y
     sort_encoding: alt.X | alt.Y
     if chart_type == ChartType.HORIZONTAL_BAR:
-        # Handle horizontal bar chart - switches x and y data:
+        # Handle horizontal bar chart - switches x and y data and labels:
         x_encoding = _get_x_encoding(
-            df, y_column, y_from_user, x_axis_label, chart_type
+            df, y_column, y_from_user, y_axis_label, chart_type
         )
         y_encoding = _get_y_encoding(
-            df, x_column, x_from_user, y_axis_label, chart_type
+            df, x_column, x_from_user, x_axis_label, chart_type
         )
         stack_encoding = x_encoding
         sort_encoding = y_encoding

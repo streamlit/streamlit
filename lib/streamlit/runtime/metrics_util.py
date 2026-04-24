@@ -22,7 +22,7 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Sized
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
 from streamlit import config, file_util, type_util, util
@@ -370,6 +370,29 @@ def _get_arg_metadata(arg: object) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
+def _get_arg_keywords_cached(func: Callable[..., Any]) -> tuple[str, ...]:
+    """Return POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameter names as an immutable tuple.
+
+    Results are cached by function identity. Callers must pass ``func.__func__``
+    for bound methods — this function operates on unbound callables only.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names (not
+    annotations), we use ``annotation_format=Format.STRING`` to avoid evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    params = type_util.get_func_parameters(func)
+    return tuple(
+        p.name
+        for p in params
+        if p.kind
+        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    )
+
+
 def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     """Return argument names from a function's signature.
 
@@ -377,28 +400,19 @@ def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
     - Both POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameters (not keyword-only)
     - Includes 'self' for bound methods
 
-    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
-    accessed. This can fail with NameError when annotations reference types
-    imported under TYPE_CHECKING. Since we only need parameter names (not
-    annotations), we use ``annotation_format=Format.STRING`` to avoid
-    evaluation.
+    Uses caching to avoid repeated expensive inspect.signature() calls.
 
-    See: https://github.com/streamlit/streamlit/issues/14324
+    Note: The underlying LRU cache holds strong references to function objects.
+    This is fine for typical Streamlit usage with module-level functions, but
+    dynamically created callables (e.g., closures, partials) may be retained
+    until evicted from the cache.
     """
-
-    params = type_util.get_func_parameters(func)
-    # Filter to POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD to match getfullargspec().args
-    names = [
-        p.name
-        for p in params
-        if p.kind
-        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
-    ]
-    # For bound methods, prepend 'self' since signature() removes it but
-    # getfullargspec() includes it
+    # For bound methods, use __func__ as cache key: this ensures cache hits
+    # across different bound instances of the same method, and
+    # get_func_parameters(__func__) already includes 'self'.
     if inspect.ismethod(func):
-        names.insert(0, "self")
-    return names
+        return list(_get_arg_keywords_cached(func.__func__))
+    return list(_get_arg_keywords_cached(func))
 
 
 def _get_command_telemetry(

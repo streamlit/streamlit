@@ -38,7 +38,6 @@ from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
 
@@ -344,7 +343,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 cache_resource_api.ResourceCache.write_result,
                 "_cache_resource_object",
             ),
-            (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
             (st.query_params.__setattr__, "query_params.set_attr"),
@@ -514,6 +512,55 @@ def test_get_arg_keywords_includes_positional_only_params() -> None:
     expected = ["a", "b", "c", "d"]
     assert metrics_util._get_arg_keywords(func_with_posonly) == expected
     assert metrics_util._get_arg_keywords(func_without_posonly) == expected
+
+
+def test_get_arg_keywords_caches_results_and_handles_bound_methods() -> None:
+    """Verify caching works and bound methods include 'self' for backwards compatibility."""
+    metrics_util._get_arg_keywords_cached.cache_clear()
+    try:
+
+        def simple_func(a: int, b: str) -> None:
+            pass
+
+        class MyClass:
+            def my_method(self, x: int, y: str) -> None:
+                pass
+
+        # Test regular function caching
+        result1 = metrics_util._get_arg_keywords(simple_func)
+        result2 = metrics_util._get_arg_keywords(simple_func)
+        assert result1 == ["a", "b"]
+        assert result1 == result2
+        cache_info = metrics_util._get_arg_keywords_cached.cache_info()
+        assert cache_info.hits >= 1, "Cache should have hits for repeated calls"
+
+        # Test bound method includes 'self' (backwards compatibility)
+        obj = MyClass()
+        bound_result = metrics_util._get_arg_keywords(obj.my_method)
+        assert bound_result == ["self", "x", "y"], "Bound methods must include 'self'"
+
+        # Test different bound instances share cache via __func__
+        obj2 = MyClass()
+        hits_before = metrics_util._get_arg_keywords_cached.cache_info().hits
+        metrics_util._get_arg_keywords(obj2.my_method)
+        hits_after = metrics_util._get_arg_keywords_cached.cache_info().hits
+        assert hits_after > hits_before, (
+            "Different instances should share cache via __func__"
+        )
+    finally:
+        metrics_util._get_arg_keywords_cached.cache_clear()
+
+
+def test_get_arg_keywords_classmethod_returns_cls() -> None:
+    """Verify classmethod returns actual first parameter name 'cls', not 'self'."""
+
+    class MyClass:
+        @classmethod
+        def class_method(cls, x: int) -> None:
+            pass
+
+    result = metrics_util._get_arg_keywords(MyClass.class_method)
+    assert result == ["cls", "x"]
 
 
 @pytest.mark.skipif(

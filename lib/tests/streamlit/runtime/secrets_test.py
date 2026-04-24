@@ -717,6 +717,262 @@ def test_attr_dict_repr() -> None:
     assert len(attr_dict) == 2
 
 
+# --- Tests for _validate_secrets_value ---
+
+
+class TestValidateSecretsValue:
+    """Tests for the _validate_secrets_value function."""
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            pytest.param("string", id="str"),
+            pytest.param(42, id="int"),
+            pytest.param(3.14, id="float"),
+            pytest.param(True, id="bool_true"),
+            pytest.param(False, id="bool_false"),
+            pytest.param({"level1": {"level2": {"value": "deep"}}}, id="nested_dict"),
+            pytest.param(
+                {"mixed": {"str": "a", "int": 1, "float": 2.5, "bool": True}},
+                id="mixed_nested",
+            ),
+        ],
+    )
+    def test_valid_types_pass_validation(self, value: object) -> None:
+        """Valid scalar types and nested dicts pass validation."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        # Should not raise
+        _validate_secrets_value(value, "key")
+
+    @pytest.mark.parametrize(
+        ("value", "expected_match"),
+        [
+            pytest.param(["a", "b"], "Unsupported type 'list'", id="list"),
+            pytest.param(None, "Unsupported type 'NoneType'", id="none"),
+        ],
+    )
+    def test_invalid_types_raise_typeerror(
+        self, value: object, expected_match: str
+    ) -> None:
+        """Invalid types raise TypeError with descriptive message."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=expected_match):
+            _validate_secrets_value(value, "key")
+
+    def test_invalid_nested_list_includes_path(self) -> None:
+        """Nested invalid types include the path in the error message."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=r"at 'key\.outer\.inner'"):
+            _validate_secrets_value({"outer": {"inner": [1, 2, 3]}}, "key")
+
+    def test_invalid_custom_object(self) -> None:
+        """Custom objects raise TypeError."""
+        from datetime import datetime
+
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match="Unsupported type 'datetime'"):
+            _validate_secrets_value(datetime.now(), "key")
+
+    def test_non_string_dict_key_raises_typeerror(self) -> None:
+        """Non-string dictionary keys raise TypeError."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=r"Dictionary keys.*must be strings.*int"):
+            _validate_secrets_value({1: "value"}, "")
+
+    def test_non_string_nested_dict_key_includes_path(self) -> None:
+        """Non-string nested dictionary keys include the path in the error message."""
+        from streamlit.runtime.secrets import _validate_secrets_value
+
+        with pytest.raises(TypeError, match=r"in 'outer'"):
+            _validate_secrets_value({"outer": {2: "nested_value"}}, "")
+
+
+# --- Tests for Secrets.merge_programmatic_secrets ---
+
+
+class TestMergeProgrammaticSecrets:
+    """Tests for the Secrets.merge_programmatic_secrets method."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_secrets(self, restore_os_environ: None) -> Iterator[None]:
+        """Ensure os.environ is restored after each test.
+
+        This fixture depends on restore_os_environ to save/restore os.environ.
+        Tests in this class create fresh Secrets() instances, so no singleton
+        reset is needed - the fixture's role is purely environment cleanup.
+        """
+        return
+
+    def test_merge_into_empty_secrets(self) -> None:
+        """Merging into empty secrets store works correctly."""
+        secrets = Secrets()
+        secrets.merge_programmatic_secrets({"api_key": "secret123"})
+
+        assert secrets["api_key"] == "secret123"
+
+    def test_merge_shallow_override(self) -> None:
+        """Programmatic secrets shallow-override file-based secrets at top level."""
+        secrets = Secrets()
+        secrets._secrets = {"auth": {"user": "file_user", "pass": "file_pass"}}
+
+        secrets.merge_programmatic_secrets({"auth": {"client_id": "prog_id"}})
+
+        # The entire "auth" section is replaced (shallow merge)
+        assert secrets["auth"]["client_id"] == "prog_id"
+        assert "user" not in secrets["auth"]
+
+    def test_merge_preserves_other_keys(self) -> None:
+        """Merging preserves keys not in programmatic secrets."""
+        secrets = Secrets()
+        secrets._secrets = {"existing": "value", "keep": {"nested": True}}
+
+        secrets.merge_programmatic_secrets({"new": "added"})
+
+        assert secrets["existing"] == "value"
+        assert secrets["keep"]["nested"] is True
+        assert secrets["new"] == "added"
+
+    @pytest.mark.parametrize(
+        ("key", "value", "expected_environ"),
+        [
+            pytest.param("str_key", "string_value", "string_value", id="str"),
+            pytest.param("int_key", 42, "42", id="int"),
+            pytest.param("float_key", 3.14, "3.14", id="float"),
+        ],
+    )
+    def test_merge_promotes_scalars_to_environ(
+        self, key: str, value: str | int | float, expected_environ: str
+    ) -> None:
+        """Top-level str/int/float values are promoted to os.environ."""
+        secrets = Secrets()
+        secrets.merge_programmatic_secrets({key: value})
+
+        assert os.environ[key] == expected_environ
+
+    def test_merge_does_not_promote_dicts_or_bools(self) -> None:
+        """Dict and bool values are not promoted to os.environ."""
+        secrets = Secrets()
+        secrets.merge_programmatic_secrets(
+            {"dict_key": {"nested": "value"}, "bool_key": True}
+        )
+
+        assert "dict_key" not in os.environ
+        assert "bool_key" not in os.environ
+
+    def test_merge_replaces_environ_on_override(self) -> None:
+        """When overriding a key, the environ value is updated."""
+        secrets = Secrets()
+        secrets._secrets = {"key": "old_value"}
+        os.environ["key"] = "old_value"
+
+        secrets.merge_programmatic_secrets({"key": "new_value"})
+
+        assert os.environ["key"] == "new_value"
+
+    def test_merge_removes_environ_when_int_overridden_with_dict(self) -> None:
+        """When an int/float env var is overridden with dict/bool, it's removed."""
+        secrets = Secrets()
+        # Set up initial int secret that was promoted to environ
+        secrets._secrets = {"port": 5432}
+        os.environ["port"] = "5432"
+
+        # Override with a dict (which should NOT be promoted to environ)
+        secrets.merge_programmatic_secrets({"port": {"host": "localhost"}})
+
+        # The old int env var should be removed
+        assert "port" not in os.environ
+
+    def test_merge_validates_types(self) -> None:
+        """Merging invalid types raises TypeError."""
+        secrets = Secrets()
+
+        with pytest.raises(TypeError, match="Unsupported type 'list'"):
+            secrets.merge_programmatic_secrets({"bad": [1, 2, 3]})
+
+    def test_merge_validates_top_level_keys_are_strings(self) -> None:
+        """Merging with non-string top-level keys raises TypeError."""
+        secrets = Secrets()
+
+        with pytest.raises(
+            TypeError, match=r"Dictionary keys in secrets must be strings.*at top level"
+        ):
+            secrets.merge_programmatic_secrets({123: "value"})  # type: ignore[dict-item]
+
+    def test_merge_thread_safety(self) -> None:
+        """Merging is thread-safe with concurrent reads."""
+        secrets = Secrets()
+        secrets._secrets = {"counter": 0}
+        errors: list[Exception] = []
+
+        def reader() -> None:
+            try:
+                for _ in range(100):
+                    _ = secrets["counter"]
+            except Exception as e:
+                errors.append(e)
+
+        def writer() -> None:
+            try:
+                for i in range(100):
+                    secrets.merge_programmatic_secrets({"counter": i})
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=reader) for _ in range(3)]
+        threads.append(threading.Thread(target=writer))
+
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Thread errors: {errors}"
+
+    def test_programmatic_secrets_survive_file_reload(self, tmp_path: Path) -> None:
+        """Programmatic secrets are re-applied after file-change reload."""
+        # Create a secrets.toml file
+        toml_file = tmp_path / "secrets.toml"
+        toml_file.write_text('file_key = "file_value"', encoding="utf-8")
+
+        mock_get_option = testutil.build_mock_config_get_option(
+            {"secrets.files": [str(toml_file)]}
+        )
+
+        with patch("streamlit.config.get_option", new=mock_get_option):
+            with patch("streamlit.watcher.path_watcher.watch_file"):
+                secrets = Secrets()
+
+                # Parse the file first to load file-based secrets
+                secrets.load_if_toml_exists()
+
+                # Merge programmatic secrets
+                secrets.merge_programmatic_secrets(
+                    {"prog_key": "prog_value", "prog_int": 42}
+                )
+
+                # Verify both file and programmatic secrets are present
+                assert secrets["file_key"] == "file_value"
+                assert secrets["prog_key"] == "prog_value"
+                assert os.environ.get("prog_int") == "42"
+
+                # Simulate file change (which triggers _on_secrets_changed)
+                toml_file.write_text('file_key = "new_file_value"', encoding="utf-8")
+                secrets._on_secrets_changed(str(toml_file))
+
+                # After reload, file-based secrets should be updated
+                assert secrets["file_key"] == "new_file_value"
+
+                # Programmatic secrets should survive the reload
+                assert secrets["prog_key"] == "prog_value"
+                # Environment variables should also be re-applied
+                assert os.environ.get("prog_int") == "42"
+
+
 def test_parse_directory_raises_when_top_level_entry_is_not_folder(
     tmp_path: Path,
 ) -> None:
