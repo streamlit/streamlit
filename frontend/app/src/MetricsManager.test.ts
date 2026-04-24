@@ -215,6 +215,11 @@ describe("metrics helpers", () => {
     browserVersion: RESULT.browser.version || "Unknown",
     deviceType: RESULT.device.type || "Unknown",
     serverMode: "starlette-managed",
+    installedSkills: [
+      "home:claude:developing-with-streamlit",
+      "app:codex:finding-streamlit-skills",
+    ],
+    installedAgents: ["claude", "codex"],
   }
   it("buildEventProto populates expected fields - viewReport", async () => {
     const mm = getMetricsManager()
@@ -282,6 +287,12 @@ describe("metrics helpers", () => {
     )
     expect(pageProfileProto.deviceType).toEqual(PAGE_PROFILE_DATA.deviceType)
     expect(pageProfileProto.serverMode).toEqual(PAGE_PROFILE_DATA.serverMode)
+    expect(pageProfileProto.installedSkills).toEqual(
+      PAGE_PROFILE_DATA.installedSkills
+    )
+    expect(pageProfileProto.installedAgents).toEqual(
+      PAGE_PROFILE_DATA.installedAgents
+    )
   })
 
   it("buildEventProto populates expected fields - menuClick", async () => {

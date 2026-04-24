@@ -77,8 +77,10 @@ message MetricsEvent {
   int64 total_load_time = 39;
   BrowserInfo browser_info = 40;
   string server_mode = 45;
+  repeated string installed_skills = 46;
+  repeated string installed_agents = 47;
 
-  // Next ID: 46
+  // Next ID: 48
 }
 
 message BrowserInfo {
