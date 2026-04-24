@@ -408,7 +408,7 @@ module = [
   "pydeck.*",
   "pyarrow.*",
   "graphviz.*",
-  "authlib.*",
+  "authlib>=1.7.0",
   "uvloop.*",
   "polars.*",
   # SQLAlchemy is optional and its stubs are only installed with integration extras
