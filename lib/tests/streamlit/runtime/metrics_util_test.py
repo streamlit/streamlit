@@ -921,6 +921,34 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     ]
 
 
+def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Project-level skills are detected even when the user has no harness installed at home.
+
+    Guards against an over-broad short-circuit that would skip app/repo
+    harness checks when the corresponding home directory doesn't exist.
+    """
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    # Note: no ``~/.claude`` directory is created — the user has never run
+    # Claude Code. But the project ships skills under its own .claude dir.
+    _make_skill_dir(app, ".claude/skills", "developing-with-streamlit")
+    _make_skill_dir(repo, ".claude/skills", "finding-streamlit-skills")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == [
+        "app:claude:developing-with-streamlit",
+        "repo:claude:finding-streamlit-skills",
+    ]
+
+
 @pytest.mark.parametrize(
     "detected",
     [[], ["home:claude:developing-with-streamlit"]],
