@@ -249,16 +249,17 @@ _STREAMLIT_SKILL_NAMES: Final = (
     "finding-streamlit-skills",
 )
 _SKILL_MARKER_FILENAME: Final = "SKILL.md"
-# (harness, project_dir, home_dirs) - each entry's project_dir is checked under
-# the app and repo roots; home_dirs are checked under ~.
+# (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs
+# are checked for the SKILL.md marker; agent_home_dir is checked for existence
+# to detect the harness itself independent of Streamlit skills.
 _HARNESSES: Final = (
-    ("agents", ".agents/skills", (".agents/skills",)),
-    ("claude", ".claude/skills", (".claude/skills",)),
-    ("codex", ".codex/skills", (".codex/skills",)),
-    ("cortex", ".cortex/skills", (".snowflake/cortex/skills",)),
-    ("cursor", ".cursor/skills", (".cursor/skills",)),
-    ("gemini", ".gemini/skills", (".gemini/skills",)),
-    ("opencode", ".opencode/skills", (".config/opencode/skills",)),
+    ("agents", ".agents/skills", ".agents/skills", ".agents"),
+    ("claude", ".claude/skills", ".claude/skills", ".claude"),
+    ("codex", ".codex/skills", ".codex/skills", ".codex"),
+    ("cortex", ".cortex/skills", ".snowflake/cortex/skills", ".snowflake/cortex"),
+    ("cursor", ".cursor/skills", ".cursor/skills", ".cursor"),
+    ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
+    ("opencode", ".opencode/skills", ".config/opencode/skills", ".config/opencode"),
 )
 # Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
 # to avoid scanning the entire filesystem on pathological layouts.
@@ -308,26 +309,29 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         repo = _find_git_root(app)
 
         roots: dict[str, str] = {"home": home, "app": app}
-        # Only include ``repo`` when it's distinct from ``app`` to avoid
-        # double-counting the common case where the app script lives at the
-        # repo root. ``normcase`` handles case-insensitive filesystems (Windows,
-        # default macOS).
-        if repo is not None and os.path.normcase(
-            os.path.abspath(repo)
-        ) != os.path.normcase(app):
+        # Skip ``repo`` when it matches ``app`` to avoid double-counting the
+        # common case where the app script lives at the repo root. ``normcase``
+        # handles case-insensitive filesystems (Windows, default macOS).
+        if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
             roots["repo"] = repo
 
         tokens: set[str] = set()
         for location, root in roots.items():
-            for harness, project_dir, home_dirs in _HARNESSES:
-                harness_dirs = home_dirs if location == "home" else (project_dir,)
-                for harness_dir in harness_dirs:
-                    for skill in _STREAMLIT_SKILL_NAMES:
-                        marker = os.path.join(
-                            root, harness_dir, skill, _SKILL_MARKER_FILENAME
-                        )
-                        if os.path.isfile(marker):
-                            tokens.add(f"{location}:{harness}:{skill}")
+            for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
+                # At home level, skip harnesses that aren't installed at all
+                # (saves 2 isfile calls per absent harness — common on hosted
+                # apps where no skills or harnesses exist).
+                if location == "home" and not os.path.isdir(
+                    os.path.join(root, agent_home_dir)
+                ):
+                    continue
+                harness_dir = home_skills_dir if location == "home" else project_dir
+                for skill in _STREAMLIT_SKILL_NAMES:
+                    marker = os.path.join(
+                        root, harness_dir, skill, _SKILL_MARKER_FILENAME
+                    )
+                    if os.path.isfile(marker):
+                        tokens.add(f"{location}:{harness}:{skill}")
         return tuple(sorted(tokens))
     except Exception as ex:  # pragma: no cover - defensive
         _LOGGER.debug("Failed to detect installed Streamlit skills", exc_info=ex)
@@ -353,14 +357,9 @@ def _detect_installed_agents_cached() -> tuple[str, ...]:
     try:
         home = os.path.expanduser("~")
         tokens: set[str] = set()
-        for harness, _project_dir, home_dirs in _HARNESSES:
-            for home_dir in home_dirs:
-                # ``home_dirs`` points at the skills subdirectory (e.g.
-                # ``.claude/skills``); the harness's own home is its parent.
-                agent_dir = os.path.dirname(home_dir)
-                if os.path.isdir(os.path.join(home, agent_dir)):
-                    tokens.add(harness)
-                    break
+        for harness, _project_dir, _home_skills_dir, agent_home_dir in _HARNESSES:
+            if os.path.isdir(os.path.join(home, agent_home_dir)):
+                tokens.add(harness)
         return tuple(sorted(tokens))
     except Exception as ex:  # pragma: no cover - defensive
         _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
