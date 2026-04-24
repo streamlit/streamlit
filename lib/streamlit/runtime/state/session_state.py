@@ -1077,8 +1077,7 @@ class SessionState:
                         self.query_params.set_corrected_value(
                             user_key, serialized, metadata.value_type
                         )
-                        restored_bound_value = True
-            elif widget_value == default_value:
+            else:
                 if user_key in self._new_session_state and self.query_params.has_param(
                     user_key
                 ):
