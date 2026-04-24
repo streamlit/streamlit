@@ -334,6 +334,39 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         return ()
 
 
+def _detect_installed_agents() -> list[str]:
+    """Detect agent harnesses installed under the user's home directory.
+
+    Returns a sorted, deduplicated list of harness name tokens (``agents``,
+    ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
+    for each harness whose home-level config directory exists. Independent
+    of whether Streamlit-specific skills are installed for that harness.
+
+    The result is cached for the lifetime of the process. Never raises:
+    filesystem errors are swallowed and produce an empty list.
+    """
+    return list(_detect_installed_agents_cached())
+
+
+@lru_cache(maxsize=1)
+def _detect_installed_agents_cached() -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        tokens: set[str] = set()
+        for harness, _project_dir, home_dirs in _HARNESSES:
+            for home_dir in home_dirs:
+                # ``home_dirs`` points at the skills subdirectory (e.g.
+                # ``.claude/skills``); the harness's own home is its parent.
+                agent_dir = os.path.dirname(home_dir)
+                if os.path.isdir(os.path.join(home, agent_dir)):
+                    tokens.add(harness)
+                    break
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
+        return ()
+
+
 def _get_machine_id_v3() -> str:
     """Get the machine ID.
 
@@ -749,5 +782,6 @@ def create_page_profile_message(
             app_dir = os.path.dirname(ctx.main_script_path)
 
     page_profile.installed_skills.extend(_detect_installed_skills(app_dir))
+    page_profile.installed_agents.extend(_detect_installed_agents())
 
     return msg

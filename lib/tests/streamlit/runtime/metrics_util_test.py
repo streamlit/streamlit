@@ -787,8 +787,10 @@ def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
 def _clear_skills_cache() -> Iterator[None]:
     """Reset the skill-detection cache around each test in this module section."""
     metrics_util._detect_installed_skills_cached.cache_clear()
+    metrics_util._detect_installed_agents_cached.cache_clear()
     yield
     metrics_util._detect_installed_skills_cached.cache_clear()
+    metrics_util._detect_installed_agents_cached.cache_clear()
 
 
 @pytest.mark.parametrize("location", ["home", "app", "repo"])
@@ -933,3 +935,80 @@ def test_create_page_profile_message_sets_installed_skills(
     ):
         msg = metrics_util.create_page_profile_message([], 0, 0)
     assert list(msg.page_profile.installed_skills) == detected
+
+
+@pytest.mark.parametrize(
+    ("harness", "marker_dir"),
+    [
+        ("agents", ".agents"),
+        ("claude", ".claude"),
+        ("codex", ".codex"),
+        ("cortex", ".snowflake/cortex"),
+        ("cursor", ".cursor"),
+        ("gemini", ".gemini"),
+        ("opencode", ".config/opencode"),
+    ],
+)
+def test_detect_installed_agents_finds_each_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    marker_dir: str,
+) -> None:
+    """Each harness is detected when its home-level marker directory exists."""
+    home = tmp_path / "home"
+    (home / marker_dir).mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == [harness]
+
+
+def test_detect_installed_agents_empty_when_no_harnesses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Returns an empty list when no harness marker directories exist."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == []
+
+
+def test_detect_installed_agents_ignores_plain_snowflake(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``.snowflake`` without a ``cortex`` subdirectory must not count as cortex."""
+    home = tmp_path / "home"
+    (home / ".snowflake").mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == []
+
+
+def test_detect_installed_agents_returns_sorted_deduped_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multiple harnesses are returned sorted and without duplicates."""
+    home = tmp_path / "home"
+    (home / ".cursor").mkdir(parents=True)
+    (home / ".claude").mkdir(parents=True)
+    (home / ".config/opencode").mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+
+
+@pytest.mark.parametrize(
+    "detected",
+    [[], ["claude", "codex"]],
+)
+def test_create_page_profile_message_sets_installed_agents(
+    detected: list[str],
+) -> None:
+    """``installed_agents`` is populated from the detection helper."""
+    with patch(
+        "streamlit.runtime.metrics_util._detect_installed_agents",
+        return_value=detected,
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+    assert list(msg.page_profile.installed_agents) == detected
