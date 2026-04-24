@@ -676,6 +676,15 @@ function createRemarkColoringAndSmall(
     visit(tree, "textDirective", (node, _index, _parent) => {
       const nodeName = String(node.name)
 
+      // Handle shimmer text directive (:shimmer[])
+      if (nodeName === "shimmer") {
+        const data = node.data || (node.data = {})
+        data.hName = "span"
+        data.hProperties = data.hProperties || {}
+        data.hProperties.className = "stMarkdownShimmer"
+        return
+      }
+
       // Handle small text directive (:small[])
       if (nodeName === "small") {
         const data = node.data || (node.data = {})

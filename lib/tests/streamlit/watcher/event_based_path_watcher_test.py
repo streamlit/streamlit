@@ -67,7 +67,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -79,7 +79,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -94,7 +94,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -106,7 +106,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent(b"/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -121,7 +121,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
 
@@ -133,7 +133,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/dir")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -150,7 +150,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
 
@@ -168,7 +168,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher(
             "/this/is/my/dir/file.txt", cb
@@ -188,7 +188,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 0.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "42"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "42"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/dir", cb)
 
@@ -199,7 +199,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb.assert_not_called()
 
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "64"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "64"
 
         ev = events.FileSystemEvent("/this/is/my/dir")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -210,9 +210,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
-    def test_kwargs_plumbed_to_calc_md5(self):
+    def test_kwargs_plumbed_to_calc_hash(self):
         """Test that we pass the glob_pattern and allow_nonexistent kwargs to
-        calc_md5_with_blocking_retries.
+        calc_hash_with_blocking_retries.
 
         `EventBasedPathWatcher`s can be created with optional kwargs allowing
         the caller to specify what types of files to watch (when watching a
@@ -223,7 +223,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
         ro = event_based_path_watcher.EventBasedPathWatcher(
             "/this/is/my/dir",
@@ -237,19 +237,19 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         folder_handler = fo._observer.schedule.call_args[0][0]
 
-        _, kwargs = self.mock_util.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.mock_util.calc_hash_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="3")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="3")
 
         ev = events.FileSystemEvent("/this/is/my/dir")
         ev.event_type = events.EVENT_TYPE_MODIFIED
         ev.is_directory = True
         folder_handler.on_modified(ev)
 
-        _, kwargs = self.mock_util.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.mock_util.calc_hash_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
         cb.assert_called_once()
 
@@ -260,7 +260,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -272,7 +272,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         # Same mtime!
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -283,12 +283,12 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         ro.close()
 
-    def test_callback_not_called_if_same_md5(self):
-        """Test that we ignore files with same md5."""
+    def test_callback_not_called_if_same_hash(self):
+        """Test that we ignore files with same content hash."""
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -300,7 +300,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        # Same MD5!
+        # Same hash!
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -316,7 +316,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb = mock.Mock()
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -328,7 +328,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_DELETED  # Wrong type
@@ -348,7 +348,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         def modify_mock_file():
             self.mock_util.path_modification_time = lambda *args: mod_count[0]
-            self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: (
+            self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: (
                 f"{mod_count[0]}"
             )
 
@@ -419,7 +419,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_handler = next(iter(fo._folder_handlers.values()))
 
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         ev = events.FileSystemEvent(file_path)
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -449,8 +449,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         folder_handler = next(iter(fo._folder_handlers.values()))
 
         # Mock fs-related utils to avoid disk access and to ensure
-        # that we always proceed past the mtime/md5 checks.
-        self.mock_util.calc_md5_with_blocking_retries.return_value = "md5"
+        # that we always proceed past the mtime/hash checks.
+        self.mock_util.calc_hash_with_blocking_retries.return_value = "hash"
         mod_time = [1.0]
 
         def mock_mod_time(*args, **kwargs):
@@ -498,9 +498,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb = mock.Mock()
 
-        # Ensure initial md5/mtime allow watcher creation
+        # Ensure initial hash/mtime allow watcher creation
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.mock_util.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         ro = event_based_path_watcher.EventBasedPathWatcher(watched_dir, cb)
 
@@ -532,7 +532,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         When watching a directory, file events inside the directory should:
         1. Trigger the callback with the actual file path (not directory path)
-        2. Calculate MD5 on the actual file (to detect content changes)
+        2. Calculate hash on the actual file (to detect content changes)
         """
         watched_dir = "/app/.streamlit"
 
@@ -544,7 +544,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # Initial setup
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(
             return_value="initial_hash"
         )
 
@@ -562,7 +562,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # Simulate config.toml being created
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(
             return_value="file_content_hash"
         )
 
@@ -571,9 +571,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         ev.event_type = events.EVENT_TYPE_CREATED
         folder_handler.on_created(ev)
 
-        # Verify calc_md5 was called with the FILE path (not directory)
+        # Verify calc_hash was called with the FILE path (not directory)
         # This ensures file content changes are detected
-        call_args = self.mock_util.calc_md5_with_blocking_retries.call_args
+        call_args = self.mock_util.calc_hash_with_blocking_retries.call_args
         assert call_args[0][0] == config_file_path
 
         # Callback should receive the actual file path (not directory)
@@ -605,9 +605,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         cb = mock.Mock()
 
-        # Initial MD5 when file doesn't exist (uses path string as content)
+        # Initial hash when file doesn't exist (uses path string as content)
         self.mock_util.path_modification_time = lambda *args: 0.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(
             return_value="nonexistent_hash"
         )
 
@@ -627,8 +627,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         mock_is_dir.return_value = False
 
         self.mock_util.path_modification_time = lambda *args: 101.0
-        # MD5 changes because file now exists with content
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+        # Hash changes because file now exists with content
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(
             return_value="initial_content_hash"
         )
 
@@ -641,8 +641,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # Step 2: Simulate file being modified
         self.mock_util.path_modification_time = lambda *args: 102.0
-        # MD5 changes because file content changed
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
+        # Hash changes because file content changed
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(
             return_value="modified_content_hash"
         )
 
@@ -666,14 +666,14 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         can temporarily modify files, causing spurious change events. The stability
         check should filter these out by re-reading the file after a brief delay.
 
-        Scenario: MD5 changes initially, but reverts on second read (transient change)
+        Scenario: Hash changes initially, but reverts on second read (transient change)
         Expected: Callback should NOT be triggered
         """
         cb = mock.Mock()
 
         # Initial state
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -683,19 +683,19 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         # Simulate a transient change:
-        # - First read: MD5 = "2" (different from stored "1")
-        # - Second read (after stability delay): MD5 = "1" (reverted to original)
+        # - First read: hash = "2" (different from stored "1")
+        # - Second read (after stability delay): hash = "1" (reverted to original)
         self.mock_util.path_modification_time = lambda *args: 102.0
 
         call_count = [0]
 
-        def transient_md5(*args, **kwargs):
+        def transient_hash(*args, **kwargs):
             call_count[0] += 1
-            # First call returns different MD5, second call returns original
+            # First call returns different hash, second call returns original
             return "2" if call_count[0] == 1 else "1"
 
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(
-            side_effect=transient_md5
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(
+            side_effect=transient_hash
         )
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
@@ -711,8 +711,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
             event_based_path_watcher._WINDOWS_STABILITY_DELAY_SECS
         )
 
-        # Verify calc_md5 was called twice (initial + stability check)
-        assert self.mock_util.calc_md5_with_blocking_retries.call_count == 2
+        # Verify calc_hash was called twice (initial + stability check)
+        assert self.mock_util.calc_hash_with_blocking_retries.call_count == 2
 
         ro.close()
 
@@ -725,14 +725,14 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         The stability check should NOT filter out genuine file modifications.
 
-        Scenario: MD5 changes initially and stays changed on second read
+        Scenario: Hash changes initially and stays changed on second read
         Expected: Callback SHOULD be triggered
         """
         cb = mock.Mock()
 
         # Initial state
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -742,9 +742,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         cb.assert_not_called()
 
         # Simulate a real change:
-        # Both reads return the new MD5 value
+        # Both reads return the new hash value
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="2")
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -758,8 +758,8 @@ class EventBasedPathWatcherTest(unittest.TestCase):
             event_based_path_watcher._WINDOWS_STABILITY_DELAY_SECS
         )
 
-        # Verify calc_md5 was called twice (initial + stability check)
-        assert self.mock_util.calc_md5_with_blocking_retries.call_count == 2
+        # Verify calc_hash was called twice (initial + stability check)
+        assert self.mock_util.calc_hash_with_blocking_retries.call_count == 2
 
         ro.close()
 
@@ -774,7 +774,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # Initial state
         self.mock_util.path_modification_time = lambda *args: 101.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
         ro = event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
 
@@ -785,7 +785,7 @@ class EventBasedPathWatcherTest(unittest.TestCase):
 
         # File changes
         self.mock_util.path_modification_time = lambda *args: 102.0
-        self.mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
+        self.mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="2")
 
         ev = events.FileSystemEvent("/this/is/my/file.py")
         ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -794,9 +794,9 @@ class EventBasedPathWatcherTest(unittest.TestCase):
         # Change should trigger callback
         cb.assert_called_once()
 
-        # Verify calc_md5 was only called once (no stability re-check)
+        # Verify calc_hash was only called once (no stability re-check)
         # Note: On non-Windows, we don't do the stability check
-        assert self.mock_util.calc_md5_with_blocking_retries.call_count == 1
+        assert self.mock_util.calc_hash_with_blocking_retries.call_count == 1
 
         ro.close()
 
@@ -827,15 +827,15 @@ def ebpw_mocks() -> Generator[tuple[mock.MagicMock, mock.MagicMock], None, None]
 def _folder_handler_after_simulated_change(
     mock_util: mock.MagicMock, watched_path: str
 ) -> tuple[Any, mock.Mock]:
-    """Register a file watcher and set default before/after mtime and MD5 values."""
+    """Register a file watcher and set default before/after mtime and hash values."""
     mock_util.path_modification_time = lambda *args, **kwargs: 101.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "1"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "1"
     cb = mock.Mock()
     event_based_path_watcher.EventBasedPathWatcher(watched_path, cb)
     fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
     folder_handler = fo._observer.schedule.call_args[0][0]
     mock_util.path_modification_time = lambda *args, **kwargs: 102.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "2"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "2"
     return folder_handler, cb
 
 
@@ -845,7 +845,7 @@ def test_event_based_path_watcher_repr(
     """``EventBasedPathWatcher.__repr__`` returns a readable class-based string."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
 
     watcher = event_based_path_watcher.EventBasedPathWatcher(
         "/tmp/watched.py", lambda _p: None
@@ -860,7 +860,7 @@ def test_multi_path_watcher_direct_ctor_raises_when_singleton_exists(
     """Constructing ``_MultiPathWatcher`` directly must fail once the singleton exists."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
 
     event_based_path_watcher._MultiPathWatcher.get_singleton()
     with pytest.raises(RuntimeError, match=r"Use \.get_singleton\(\) instead"):
@@ -873,7 +873,7 @@ def test_multi_path_watcher_repr(
     """``_MultiPathWatcher.__repr__`` identifies the singleton instance."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
 
     fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
     assert "_MultiPathWatcher" in repr(fo)
@@ -885,7 +885,7 @@ def test_event_based_path_watcher_close_all(
     """``EventBasedPathWatcher.close_all`` stops the shared observer."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
 
     event_based_path_watcher.EventBasedPathWatcher("/q/z.py", mock.Mock())
     event_based_path_watcher.EventBasedPathWatcher.close_all()
@@ -906,7 +906,7 @@ def test_watch_path_observer_schedule_failure_skips_registration(
     """If ``Observer.schedule`` fails, the folder handler is not registered."""
     mock_observer_class, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
     mock_observer_class.return_value.schedule.side_effect = schedule_error
 
     cb = mock.Mock()
@@ -922,7 +922,7 @@ def test_stop_watching_path_no_op_when_folder_not_registered(
     """``stop_watching_path`` returns quietly when the folder was never scheduled."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
 
     event_based_path_watcher.EventBasedPathWatcher("/alpha/file.py", mock.Mock())
     fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
@@ -936,7 +936,7 @@ def test_folder_event_handler_repr(
     """``_FolderEventHandler.__repr__`` includes the handler class name."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "h"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "h"
 
     event_based_path_watcher.EventBasedPathWatcher("/x/y.py", mock.Mock())
     fo = event_based_path_watcher._MultiPathWatcher.get_singleton()
@@ -944,13 +944,13 @@ def test_folder_event_handler_repr(
     assert "_FolderEventHandler" in repr(folder_handler)
 
 
-def test_add_path_skipped_when_initial_md5_raises_max_retries(
+def test_add_path_skipped_when_initial_hash_raises_max_retries(
     ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
 ) -> None:
-    """If initial MD5 calculation fails, the path is not added and events are ignored."""
+    """If initial hash calculation fails, the path is not added and events are ignored."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = mock.Mock(
+    mock_util.calc_hash_with_blocking_retries = mock.Mock(
         side_effect=StreamlitMaxRetriesError("locked")
     )
 
@@ -961,7 +961,7 @@ def test_add_path_skipped_when_initial_md5_raises_max_retries(
     folder_handler = fo._observer.schedule.call_args[0][0]
     assert folder_handler.is_watching_paths() is False
 
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "2"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "2"
     mock_util.path_modification_time = lambda *args, **kwargs: 2.0
     ev = events.FileSystemEvent("/only/path.py")
     ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -976,7 +976,7 @@ def test_stop_watching_unregistered_path_in_same_folder_is_no_op(
     """Removing a listener for a path that was never registered does nothing."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 1.0
-    mock_util.calc_md5_with_blocking_retries = lambda *args, **kwargs: "1"
+    mock_util.calc_hash_with_blocking_retries = lambda *args, **kwargs: "1"
 
     cb = mock.Mock()
     event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -988,7 +988,7 @@ def test_stop_watching_unregistered_path_in_same_folder_is_no_op(
 def test_moved_event_uses_destination_path(
     ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
 ) -> None:
-    """Move events compare MD5 against the destination file path."""
+    """Move events compare hash against the destination file path."""
     _, mock_util = ebpw_mocks
     dest = "/this/is/my/file.py"
     folder_handler, cb = _folder_handler_after_simulated_change(mock_util, dest)
@@ -1017,13 +1017,13 @@ def test_modified_event_ignores_editor_backup_suffix(
 
 @mock.patch("streamlit.env_util.IS_WINDOWS", True)
 @mock.patch("time.sleep", mock.Mock())
-def test_windows_stability_md5_verification_max_retries_keeps_initial_change(
+def test_windows_stability_hash_verification_max_retries_keeps_initial_change(
     ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
 ) -> None:
-    """If the stability re-read fails, the first new MD5 is still applied."""
+    """If the stability re-read fails, the first new hash is still applied."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 101.0
-    mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+    mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
     cb = mock.Mock()
     event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -1033,16 +1033,16 @@ def test_windows_stability_md5_verification_max_retries_keeps_initial_change(
 
     mock_util.path_modification_time = lambda *args, **kwargs: 102.0
 
-    md5_phase = 0
+    hash_phase = 0
 
-    def md5_side_effect(*_args: object, **_kwargs: object) -> str:
-        nonlocal md5_phase
-        md5_phase += 1
-        if md5_phase == 1:
+    def hash_side_effect(*_args: object, **_kwargs: object) -> str:
+        nonlocal hash_phase
+        hash_phase += 1
+        if hash_phase == 1:
             return "2"
         raise StreamlitMaxRetriesError("verification failed")
 
-    mock_util.calc_md5_with_blocking_retries = mock.Mock(side_effect=md5_side_effect)
+    mock_util.calc_hash_with_blocking_retries = mock.Mock(side_effect=hash_side_effect)
 
     ev = events.FileSystemEvent("/this/is/my/file.py")
     ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -1053,13 +1053,13 @@ def test_windows_stability_md5_verification_max_retries_keeps_initial_change(
 
 @mock.patch("streamlit.env_util.IS_WINDOWS", True)
 @mock.patch("time.sleep", mock.Mock())
-def test_windows_stability_uses_post_delay_md5_when_it_differs_from_both(
+def test_windows_stability_uses_post_delay_hash_when_it_differs_from_both(
     ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
 ) -> None:
-    """When verification reads a third hash, that value becomes the stored MD5."""
+    """When verification reads a third hash, that value becomes the stored hash."""
     _, mock_util = ebpw_mocks
     mock_util.path_modification_time = lambda *args, **kwargs: 101.0
-    mock_util.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+    mock_util.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
     cb = mock.Mock()
     event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)
@@ -1070,10 +1070,10 @@ def test_windows_stability_uses_post_delay_md5_when_it_differs_from_both(
     mock_util.path_modification_time = lambda *args, **kwargs: 102.0
     sequence = iter(["2", "3"])
 
-    def md5_side_effect(*_args: object, **_kwargs: object) -> str:
+    def hash_side_effect(*_args: object, **_kwargs: object) -> str:
         return next(sequence)
 
-    mock_util.calc_md5_with_blocking_retries = mock.Mock(side_effect=md5_side_effect)
+    mock_util.calc_hash_with_blocking_retries = mock.Mock(side_effect=hash_side_effect)
 
     ev = events.FileSystemEvent("/this/is/my/file.py")
     ev.event_type = events.EVENT_TYPE_MODIFIED
@@ -1103,22 +1103,22 @@ def test_nested_file_event_ignores_unrelated_file_watcher(
     cb.assert_not_called()
 
 
-def test_handle_path_change_ignores_event_when_md5_raises_max_retries(
+def test_handle_path_change_ignores_event_when_hash_raises_max_retries(
     ebpw_mocks: tuple[mock.MagicMock, mock.MagicMock],
 ) -> None:
-    """``StreamlitMaxRetriesError`` during change MD5 calculation drops the event."""
+    """``StreamlitMaxRetriesError`` during change hash calculation drops the event."""
     _, mock_util = ebpw_mocks
-    md5_calls = 0
+    hash_calls = 0
 
-    def md5_fn(*_args: object, **_kwargs: object) -> str:
-        nonlocal md5_calls
-        md5_calls += 1
-        if md5_calls == 1:
+    def hash_fn(*_args: object, **_kwargs: object) -> str:
+        nonlocal hash_calls
+        hash_calls += 1
+        if hash_calls == 1:
             return "1"
         raise StreamlitMaxRetriesError("cannot read")
 
     mock_util.path_modification_time = lambda *args, **kwargs: 101.0
-    mock_util.calc_md5_with_blocking_retries = md5_fn
+    mock_util.calc_hash_with_blocking_retries = hash_fn
 
     cb = mock.Mock()
     event_based_path_watcher.EventBasedPathWatcher("/this/is/my/file.py", cb)

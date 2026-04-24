@@ -105,8 +105,8 @@ dependencies = [
 [project.optional-dependencies]
 # Optional dependency required for Snowflake connection:
 snowflake = [
-  "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
-  "snowflake-connector-python>=3.3.0; python_version<'3.12'",
+  "snowflake-snowpark-python[modin]>=1.17.0",
+  "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=1.0.0"]
@@ -156,7 +156,11 @@ exclude = ["tests", "tests.*"]
 
 # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
 [tool.setuptools.package-data]
-streamlit = ["py.typed", "hello/**/*.py"]
+streamlit = [
+    "py.typed",
+    ".agents/**/*.md",
+    "hello/**/*.py",
+]
 
 # =============================================================================
 # Pytest Configuration
@@ -207,6 +211,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 
 [tool.coverage.report]
@@ -215,6 +220,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",

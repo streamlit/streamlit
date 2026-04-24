@@ -1395,40 +1395,12 @@ class VegaLiteChartTest(DeltaGeneratorTestCase):
             autosize_spec, {"data": {"name": "foo"}, "mark": "rect"}
         )
 
-    def test_dict_unflatten(self):
-        """Test passing a spec as keywords."""
-        st.vega_lite_chart(df1, x="foo", boink_boop=100, baz={"boz": "booz"})
-
-        proto = self.get_delta_from_queue().new_element.vega_lite_chart
-        pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.data.data), df1, check_dtype=False
-        )
-        assert json.loads(proto.spec) == merge_dicts(
-            autosize_spec,
-            {
-                "baz": {"boz": "booz"},
-                "boink": {"boop": 100},
-                "encoding": {"x": "foo"},
-            },
-        )
-
-    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
-    def test_kwargs_deprecation_warning(self, mock_warning: Mock):
-        """Test that passing kwargs shows a deprecation warning."""
-        st.vega_lite_chart(df1, x="foo", boink_boop=100)
-
-        mock_warning.assert_called_once()
-        warning_message = mock_warning.call_args[0][0]
-        assert "Variable keyword arguments" in warning_message
-        assert "deprecated" in warning_message
-        assert "spec" in warning_message
-
-    @patch("streamlit.elements.vega_charts.show_deprecation_warning")
-    def test_no_kwargs_no_deprecation_warning(self, mock_warning: Mock):
-        """Test that not passing kwargs does not show a deprecation warning."""
-        st.vega_lite_chart(df1, {"mark": "rect"})
-
-        mock_warning.assert_not_called()
+    def test_kwargs_raises_type_error(self):
+        """Test that passing unexpected kwargs raises TypeError after kwargs removal."""
+        # Passing spec-as-kwargs that were previously supported should now
+        # raise a TypeError since **kwargs support was removed.
+        with pytest.raises(TypeError):
+            st.vega_lite_chart(df1, x="foo", boink_boop=100)  # type: ignore[call-overload]
 
     def test_pyarrow_table_data(self):
         """Test that you can pass pyarrow.Table as data."""
@@ -2714,6 +2686,28 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         # In horizontal bar charts, sort should be applied to the categorical (y) axis
         assert chart_spec["encoding"]["y"]["sort"]["field"] == "C"
         assert chart_spec["encoding"]["y"]["sort"]["order"] == "ascending"
+
+    def test_bar_chart_horizontal_swaps_axis_labels(self):
+        """Test that x_label and y_label are swapped when horizontal=True."""
+        df = pd.DataFrame(
+            {
+                "A": ["foo", "bar", "baz"],
+                "B": [10, 20, 30],
+            }
+        )
+
+        st.bar_chart(
+            df, x="A", y="B", x_label="categories", y_label="values", horizontal=True
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        # When horizontal=True, the x-axis shows values and the y-axis shows categories.
+        # So y_label ("values") should appear on the x-axis and x_label ("categories")
+        # should appear on the y-axis.
+        assert chart_spec["encoding"]["x"]["title"] == "values"
+        assert chart_spec["encoding"]["y"]["title"] == "categories"
 
     def test_bar_chart_sort_false_disables_default_sorting(self):
         """Test that sort=False disables default alphabetical sorting."""
