@@ -1069,7 +1069,10 @@ class SessionState:
                         user_key, serialized, metadata.value_type
                     )
                     restored_bound_value = True
-                elif user_key in self._new_session_state:
+                elif (
+                    user_key in self._new_session_state
+                    and not url_value_seeded
+                ):
                     serialized = metadata.serializer(widget_value)
                     if not self.query_params.stored_param_matches_corrected_value(
                         user_key, serialized, metadata.value_type
@@ -1078,8 +1081,10 @@ class SessionState:
                             user_key, serialized, metadata.value_type
                         )
             else:
-                if user_key in self._new_session_state and self.query_params.has_param(
-                    user_key
+                if (
+                    user_key in self._new_session_state
+                    and not url_value_seeded
+                    and self.query_params.has_param(user_key)
                 ):
                     self.query_params.remove_param(user_key)
                 else:
