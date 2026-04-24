@@ -447,22 +447,26 @@ def test_text_input_query_param_max_chars_truncation(page: Page, app_port: int):
 
 
 def test_text_input_query_param_programmatic_session_state_syncs_url(app: Page):
-    """Programmatic session_state updates sync bind=query-params to the URL (gh-14670)."""
-    expect_prefixed_markdown(app, "gh14670 bound value:", "default")
-    expect(app).not_to_have_url(re.compile(r"[?&]gh14670_bound="))
+    """Programmatic session_state updates sync bind=query-params to the URL."""
+    expect_prefixed_markdown(app, "bound text ss value:", "default")
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))
 
-    app.get_by_role("button", name="Set gh14670_bound via session_state").click()
+    app.get_by_role(
+        "button", name="Set bound_text_ss via session_state"
+    ).click()
     wait_for_app_run(app)
 
-    expect(app).to_have_url(re.compile(r"gh14670_bound="))
-    expect_prefixed_markdown(app, "gh14670 bound value:", "arbitrary value")
+    expect(app).to_have_url(re.compile(r"bound_text_ss="))
+    expect_prefixed_markdown(app, "bound text ss value:", "arbitrary value")
 
     app.reload()
     wait_for_app_loaded(app)
-    expect_prefixed_markdown(app, "gh14670 bound value:", "arbitrary value")
+    expect_prefixed_markdown(app, "bound text ss value:", "arbitrary value")
 
-    app.get_by_role("button", name="Reset gh14670_bound to default").click()
+    app.get_by_role(
+        "button", name="Reset bound_text_ss to default"
+    ).click()
     wait_for_app_run(app)
 
-    expect(app).not_to_have_url(re.compile(r"[?&]gh14670_bound="))
-    expect_prefixed_markdown(app, "gh14670 bound value:", "default")
+    expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))
+    expect_prefixed_markdown(app, "bound text ss value:", "default")

@@ -1680,7 +1680,7 @@ class RegisterWidgetQueryParamProgrammaticSyncTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_programmatic_float_coercion_matches_url_integer_form(
+    def test_programmatic_float_scalar_matches_url_string_form(
         self, mock_ctx: MagicMock
     ) -> None:
         widget_id = "$$ID-hash-num"
