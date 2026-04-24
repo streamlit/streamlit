@@ -13,6 +13,8 @@ concurrently instead of sequentially, reducing total page load time from the sum
 section times to the maximum of any single section. Content appears progressively as each
 fragment completes.
 
+**Demo app:** [parallel-fragments.streamlit.app](https://parallel-fragments.streamlit.app/)
+
 ## Problem
 
 ### Current Behavior
@@ -99,7 +101,6 @@ def fragment(
 | `func` | `callable` | `None` | The function to turn into a fragment. |
 | `run_every` | `int \| float \| timedelta \| str \| None` | `None` | Time interval between automatic fragment reruns. |
 | `parallel` | `bool` | `False` | If `True`, the fragment runs in a separate thread during full app runs. Content renders progressively as the thread completes. |
-| `show_loading` | `bool` | `True` | If `True` (and `parallel=True`), displays a loading skeleton in the fragment's container while the thread is running. Set to `False` for side-effect-only fragments that produce no UI. Ignored when `parallel=False`. |
 
 ### Examples
 
@@ -188,7 +189,7 @@ own thread with a working event loop, and multiple async calls within it run con
 | `@st.dialog` | Prohibited during parallel execution; dialogs gated behind user interactions work normally | Non-deterministic dialog ordering during parallel runs violates principle #33. Dialogs triggered by user actions (button click, row selection) only execute during sequential fragment reruns, so they are unaffected. |
 | `st.switch_page` | Prohibited during parallel execution; page navigation from sequential fragment reruns works normally | Navigating aborts all sibling threads and races on the destination page. Navigation triggered by user actions only executes during sequential fragment reruns, so there is no conflict. |
 | Nesting | Regular and parallel fragments can nest inside parallel fragments | Thread count bounded by call sites, not depth. Outer waits for inner parallel fragments. |
-| Loading UX (initial) | Loading skeleton placeholder in reserved container; configurable via `show_loading` parameter (default `True`) | Gives visual feedback and prevents layout shift; `show_loading=False` for side-effect-only fragments. Follows `@st.cache_data(show_spinner=...)` precedent. |
+| Loading UX (initial) | No built-in loading indicator; container is reserved but empty until the thread produces output | Keeps `parallel=True` as a pure execution modifier — no UI side effects. Users can add their own loading UX (e.g., `st.spinner`, a future `st.skeleton` context manager) as needed. |
 | Loading UX (rerun) | Stale ghosting of previous content | Existing fragment rerun behavior — no change. |
 | Error handling | Error renders inline in the failing fragment's container | Other fragments continue normally. |
 | Concurrency limit | Thread pool with configurable `max_workers`; sensible default | Prevents resource exhaustion in loops; transparent for the common case of a few fragments. |
@@ -345,41 +346,16 @@ non-fragment content and subsequent fragments render without waiting. Content fi
 each fragment's container as its thread completes — fast fragments appear first.
 
 **Initial load (no previous content):** While a parallel fragment's thread is running, the
-reserved container displays a loading skeleton placeholder. This gives the user a visual
-indication that content is loading in that position and — critically — reserves layout
-space so that content rendered below the fragment does not jump when the fragment's output
-arrives. Once the thread produces its first output, the skeleton is replaced by the
-fragment's actual content. Content below the loading fragment is not blocked — it renders
-normally, flowing beneath the skeleton placeholder.
-
-**`show_loading` parameter:** By default, `show_loading=True` and the skeleton is shown.
-For fragments that only perform backend side effects (e.g., writing to a database, updating
-session state) without producing UI elements, the skeleton is undesirable — it reserves
-space for content that will never arrive, then collapses, itself causing a layout shift. In
-this case, `@st.fragment(parallel=True, show_loading=False)` suppresses the skeleton and
-the container remains invisible until content is emitted (if any).
-
-Adding a parameter rather than auto-detecting empty fragments is justified because:
-
-1. **Precedent:** `@st.cache_data(show_spinner=True|False|str)` follows the same pattern —
-   a configurable loading indicator that defaults to visible but can be suppressed for
-   functions where it is unwanted.
-2. **Complexity and performance:** Automatically detecting whether a fragment function
-   produces UI elements would require runtime introspection or heuristics (e.g., tracking
-   delta output across runs), adding implementation complexity and potential performance
-   overhead for an edge case that is simpler to address with an explicit opt-out.
-
-The loading indicator should be a skeleton rather than a spinner. Because content below the
-fragment renders immediately, a spinner (which takes minimal vertical space) would leave
-the fragment's layout slot small, causing a jump when the full content arrives. A skeleton
-better approximates the shape of the expected content and reserves a reasonable amount of
-vertical space. The exact skeleton design should be validated during prototyping.
+reserved container is empty. Content below the fragment is not blocked — it renders
+normally. Once the thread produces its first output, the fragment's actual content appears
+in the reserved container. There is no built-in loading indicator; `parallel=True` is a
+pure execution modifier that does not introduce UI side effects. Users who want loading
+feedback can wrap their fragment body with `st.spinner` or a similar loading primitive.
 
 **Reruns (previous content exists):** When a parallel fragment reruns (widget interaction,
 `run_every`, `st.rerun(scope="fragment")`), the existing behavior applies: the previous
 content remains visible but is dimmed (stale ghosting) while the thread re-executes. Once
-the new content arrives, it replaces the stale elements. No skeleton is shown in this case
-because the previous content serves as the placeholder.
+the new content arrives, it replaces the stale elements.
 
 Widgets in already-rendered sections are interactive while other sections are still loading.
 
