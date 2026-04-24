@@ -427,16 +427,16 @@ These commands behave consistently with regular fragments — `parallel=True` do
 their semantics:
 
 - **`st.stop()`** stops the entire app run. The calling fragment's thread terminates, all
-  sibling parallel fragment threads are cancelled via cooperative cancellation, and the run
-  ends. Content from fragments that already completed remains visible (same as calling
-  `st.stop()` partway through a sequential script).
-- **`st.rerun(scope="app")`** triggers a full app rerun. All in-flight sibling threads are
-  cancelled (their work is discarded since the rerun will re-execute everything), and the
-  run restarts from the top of the script.
+  other parallel fragment threads in the run are cancelled via cooperative cancellation, and
+  the run ends. Content from fragments that already completed remains visible (same as
+  calling `st.stop()` partway through a sequential script).
+- **`st.rerun(scope="app")`** triggers a full app rerun. All other in-flight parallel
+  fragment threads in the run are cancelled (their work is discarded since the rerun will
+  re-execute everything), and the run restarts from the top of the script.
 - **`st.rerun(scope="fragment")`** reruns only the calling fragment. The exception is local
-  to that fragment's thread — sibling fragments are unaffected.
+  to that fragment's thread — other fragments are unaffected.
 
-Cooperative cancellation means sibling threads are not killed instantly. A thread blocked on
+Cooperative cancellation means threads are not killed instantly. A thread blocked on
 a long I/O call (e.g., a slow database query) will not terminate until that call returns and
 the thread reaches its next yield point. This is inherent to Python threading — the barrier
 waits for the blocked thread to finish. This limitation should be documented for users.
