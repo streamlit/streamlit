@@ -612,6 +612,13 @@ bare-execution-tests:
 cli-smoke-tests:
 	uv run python scripts/cli_smoke_tests.py
 
+# Template apps under lib/streamlit/.agents/ need per-template mypy invocation:
+# (a) they all use the module name `streamlit_app`, so batching triggers a
+#     "duplicate module" error;
+# (b) they live under a dot-prefixed directory (`.agents/`), which confuses
+#     mypy's package-root resolution and prevents `import streamlit` from
+#     resolving — `MYPYPATH=lib` points at the real streamlit package.
+# `make python-types` applies the same per-template treatment to the full set.
 .PHONY: check
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
@@ -700,6 +707,7 @@ check:
 				echo "" || PY_EXIT=1; \
 			fi; \
 			if [ $$PY_EXIT -eq 0 ] && [ -n "$$(echo "$$PY_MYPY_TEMPLATES" | tr -d ' ')" ]; then \
+				echo "# Per-template mypy with MYPYPATH=lib (see 'make check' docstring for why)" && \
 				for tpl in $$PY_MYPY_TEMPLATES; do \
 					MYPYPATH=lib uv run mypy "$$tpl" || PY_EXIT=1; \
 				done; \
