@@ -184,10 +184,10 @@ own thread with a working event loop, and multiple async calls within it run con
 | Execution scope (MVP) | Parallel during full-app runs only; fragment reruns stay sequential | Delivers core value (page load speedup) without expanding scope. Parallel reruns are a small follow-up. |
 | Return value | `None` (call returns immediately) | Thread hasn't completed yet; matches STEP spec. |
 | Session state | Shared, single-operation atomicity via `RLock` | Multi-op sequences (e.g. `+=`) are the user's responsibility — standard Python threading. |
-| `st.stop()` / `st.rerun(scope="app")` | Stop/rerun the entire run; cancel sibling threads via cooperative cancellation | Consistent with regular fragment behavior — preserves the "drop-in upgrade" goal. |
-| `st.rerun(scope="fragment")` | Local to the calling fragment's thread | Same as regular fragments; siblings unaffected. |
+| `st.stop()` / `st.rerun(scope="app")` | Stop/rerun the entire run; cancel all other parallel fragment threads in the run via cooperative cancellation | Consistent with regular fragment behavior — preserves the "drop-in upgrade" goal. |
+| `st.rerun(scope="fragment")` | Local to the calling fragment's thread | Same as regular fragments; other fragments unaffected. |
 | `@st.dialog` | Prohibited during parallel execution; dialogs gated behind user interactions work normally | Non-deterministic dialog ordering during parallel runs violates principle #33. Dialogs triggered by user actions (button click, row selection) only execute during sequential fragment reruns, so they are unaffected. |
-| `st.switch_page` | Prohibited during parallel execution; page navigation from sequential fragment reruns works normally | Navigating aborts all sibling threads and races on the destination page. Navigation triggered by user actions only executes during sequential fragment reruns, so there is no conflict. |
+| `st.switch_page` | Prohibited during parallel execution; page navigation from sequential fragment reruns works normally | Navigating aborts all other parallel fragment threads and races on the destination page. Navigation triggered by user actions only executes during sequential fragment reruns, so there is no conflict. |
 | Nesting | Regular and parallel fragments can nest inside parallel fragments | Thread count bounded by call sites, not depth. Outer waits for inner parallel fragments. |
 | Loading UX (initial) | No built-in loading indicator; container is reserved but empty until the thread produces output | Keeps `parallel=True` as a pure execution modifier — no UI side effects. Users can add their own loading UX (e.g., `st.spinner`, a future `st.skeleton` context manager) as needed. |
 | Loading UX (rerun) | Stale ghosting of previous content | Existing fragment rerun behavior — no change. |
@@ -403,7 +403,7 @@ already knows whether it is executing as part of a full-app run or a fragment re
 
 **Page navigation:** `st.switch_page` is prohibited during parallel execution for the same
 reason. Navigating mutates query params and requests a rerun with a new page hash —
-effectively aborting all sibling parallel threads to redirect to a different page. If
+effectively aborting all other parallel fragment threads in the run to redirect to a different page. If
 multiple fragments attempted to navigate simultaneously, the destination page would be
 non-deterministic. During sequential fragment reruns (e.g., a button click that navigates
 to a detail page), `st.switch_page` works normally — only one fragment is executing.
@@ -614,7 +614,7 @@ a new rerun until all parallel fragment threads finish or are cancelled, and can
 cooperative — a thread blocked in external code won't see the cancellation signal until the
 blocking call returns.
 
-When a rerun is triggered (e.g., a widget click), the runtime signals all sibling threads
+When a rerun is triggered (e.g., a widget click), the runtime signals all other parallel fragment threads in the run
 to cancel via cooperative cancellation. But a thread blocked in external code (e.g.,
 mid-way through a 30-second query) won't see the cancellation signal until the blocking
 call returns and the thread reaches its next yield point. The rerun waits for that thread
