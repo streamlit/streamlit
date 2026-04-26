@@ -384,7 +384,7 @@ def fragment(
         height: 220px
 
     This next example demonstrates how elements both inside and outside of a
-    fragement update with each app or fragment rerun. In this app, clicking
+    fragment update with each app or fragment rerun. In this app, clicking
     "Rerun full app" will increment both counters and update all values
     displayed in the app. In contrast, clicking "Rerun fragment" will only
     increment the counter within the fragment. In this case, the ``st.write``
