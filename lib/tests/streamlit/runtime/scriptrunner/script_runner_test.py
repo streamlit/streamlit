@@ -112,6 +112,21 @@ class ScriptRunnerTest(unittest.TestCase):
         self._assert_control_events(scriptrunner, [ScriptRunnerEvent.SHUTDOWN])
         self._assert_text_deltas(scriptrunner, [])
 
+    def test_script_thread_is_daemon(self):
+        """The script thread must be a daemon thread so the process can exit
+        even if the user script is stuck in a tight loop with no st.* interrupt
+        points (issue #2975)."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        # Stop before the script runs so we don't actually execute it; we only
+        # care about the thread's daemon flag, which is set in start().
+        scriptrunner.request_stop()
+        scriptrunner.start()
+        try:
+            assert scriptrunner._script_thread is not None
+            assert scriptrunner._script_thread.daemon is True
+        finally:
+            scriptrunner.join()
+
     def test_yield_on_enqueue(self):
         """Make sure we try to handle execution control requests whenever
         our _enqueue_forward_msg function is called.
