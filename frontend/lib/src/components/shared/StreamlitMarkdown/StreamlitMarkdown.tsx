@@ -227,6 +227,46 @@ function rehypeSetCodeInlineProperty() {
   }
 }
 
+/** Matches valid CSS hex colors: #RGB, #RGBA, #RRGGBB, or #RRGGBBAA */
+const HEX_COLOR_REGEX =
+  /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{4}|[0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$/
+
+/**
+ * Rehype plugin that adds a color swatch before inline code elements
+ * containing a valid hex color (e.g., `#0969DA`), similar to GitHub's behavior.
+ */
+function createRehypeHexColorSwatch() {
+  return () => (tree: HastRoot) => {
+    visit(tree, "element", (node: Element, _index, parent) => {
+      if (node.tagName !== "code") return
+      // Skip code blocks (inline code has a non-<pre> parent)
+      if (parent?.type === "element" && (parent as Element).tagName === "pre") {
+        return
+      }
+
+      const textChild = node.children[0]
+      if (!textChild || textChild.type !== "text") return
+
+      const hexColor = textChild.value
+      if (!HEX_COLOR_REGEX.test(hexColor)) return
+
+      // Prepend a small color swatch circle before the hex code text
+      const swatchNode: Element = {
+        type: "element",
+        tagName: "span",
+        properties: {
+          ariaHidden: "true",
+          className: "stMarkdownHexColorSwatch",
+          style: `background-color: ${hexColor};`,
+        },
+        children: [],
+      }
+
+      node.children.unshift(swatchNode)
+    })
+  }
+}
+
 /**
  * Creates a URL-friendly anchor ID from a text string.
  *
@@ -1003,6 +1043,9 @@ const BASE_REMARK_PLUGINS = [
   createRemarkTypographicalSymbols(),
 ]
 
+// Rehype plugin instance for hex color swatches (stateless, created once)
+const rehypeHexColorSwatch = createRehypeHexColorSwatch()
+
 // Sets disallowed markdown for widget labels
 const LABEL_DISALLOWED_ELEMENTS = [
   // Restricts table elements, headings, unordered/ordered lists, task lists, horizontal rules, & blockquotes
@@ -1155,6 +1198,9 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
     if (allowHTML && wrappedRawPlugin) {
       plugins.push(wrappedRawPlugin)
     }
+
+    // Show color swatches for hex colors in inline code (e.g. `#0969DA`)
+    plugins.push(rehypeHexColorSwatch)
 
     // This plugin must run last to ensure the inline property is set correctly
     // and not overwritten by other plugins like rehypeRaw

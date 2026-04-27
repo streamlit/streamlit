@@ -356,6 +356,18 @@ export const StyledStreamlitMarkdown =
           border: `${theme.sizes.borderWidth} solid ${theme.colors.dataframeBorderColor}`,
         },
 
+        "span.stMarkdownHexColorSwatch": {
+          display: "inline-block",
+          width: "0.65em",
+          height: "0.65em",
+          borderRadius: "50%",
+          // Inset shadow creates a subtle border that remains visible for light colors
+          boxShadow: "inset 0 0 0 0.0625em rgba(0,0,0,0.25)",
+          verticalAlign: "middle",
+          marginRight: "0.25em",
+          flexShrink: 0,
+        },
+
         "span.stMarkdownColoredBackground": {
           borderRadius: theme.radii.sm,
           padding: `${theme.spacing.threeXS} ${theme.spacing.twoXS}`,

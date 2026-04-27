@@ -1119,6 +1119,53 @@ describe("StreamlitMarkdown", () => {
       expect(markdown).not.toHaveClass("stMarkdownColoredBackground")
     })
   })
+
+  describe("hex color swatches in inline code", () => {
+    it.each([
+      ["3-digit hex", "`#f00`", "#f00"],
+      ["4-digit hex with alpha", "`#f008`", "#f008"],
+      ["6-digit hex", "`#ff0000`", "#ff0000"],
+      ["8-digit hex with alpha", "`#ff000080`", "#ff000080"],
+      ["uppercase hex", "`#FF0000`", "#FF0000"],
+      ["mixed-case hex", "`#Ff0000`", "#Ff0000"],
+    ])("renders color swatch for %s", (_label, source, hexColor) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const swatch = document.querySelector(".stMarkdownHexColorSwatch")
+      expect(swatch).toBeInTheDocument()
+      expect(swatch).toHaveStyle({ "background-color": hexColor })
+      expect(swatch).toHaveAttribute("aria-hidden", "true")
+    })
+
+    it.each([
+      ["5-digit hex is invalid", "`#12345`"],
+      ["7-digit hex is invalid", "`#1234567`"],
+      ["non-hex text", "`not-a-color`"],
+      ["named color", "`red`"],
+      ["rgb() color", "`rgb(255,0,0)`"],
+    ])("does not render swatch for %s", (_label, source) => {
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const swatch = document.querySelector(".stMarkdownHexColorSwatch")
+      expect(swatch).not.toBeInTheDocument()
+    })
+
+    it("does not render swatch inside a code block (fenced)", () => {
+      render(
+        <StreamlitMarkdown
+          source={"```\n#ff0000\n```"}
+          allowHTML={false}
+        />
+      )
+      const swatch = document.querySelector(".stMarkdownHexColorSwatch")
+      expect(swatch).not.toBeInTheDocument()
+    })
+
+    it("renders the hex color text alongside the swatch", () => {
+      render(<StreamlitMarkdown source="`#ff0000`" allowHTML={false} />)
+      expect(screen.getByText("#ff0000")).toBeInTheDocument()
+      const swatch = document.querySelector(".stMarkdownHexColorSwatch")
+      expect(swatch).toBeInTheDocument()
+    })
+  })
 })
 
 const getCustomCodeTagProps = (
