@@ -26,6 +26,6 @@ export const StyledComponentIframe = styled.iframe<StyledComponentIframeProps>(
     border: "none",
     padding: theme.spacing.none,
     margin: theme.spacing.none,
-    display: componentReady ? "initial" : "none",
+    visibility: componentReady ? "visible" : "hidden",
   })
 )
