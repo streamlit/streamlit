@@ -346,15 +346,17 @@ class RunningCursor(Cursor):
     def __init__(self, ...):
         self._index = 0
         self._owner_ident: int | None = None  # claimed on first use
+        self._owner_lock = threading.Lock()
 
     def _check_owner(self) -> None:
-        current_ident = threading.get_ident()
-        if self._owner_ident is None:
-            self._owner_ident = current_ident
-        elif self._owner_ident != current_ident:
-            raise RuntimeError(
-                "Cursor accessed from a thread that doesn't own it"
-            )
+        with self._owner_lock:
+            current_ident = threading.get_ident()
+            if self._owner_ident is None:
+                self._owner_ident = current_ident
+            elif self._owner_ident != current_ident:
+                raise RuntimeError(
+                    "Cursor accessed from a thread that doesn't own it"
+                )
 
     def _advance(self) -> None:
         self._index += 1
@@ -397,12 +399,14 @@ immediately (enabling the loading skeleton). The child cursor starts with
 
 **3. Lazy thread ownership.** When the worker thread runs and calls `lock_element()`
 on the container's cursor for the first time, `_check_owner()` claims it — setting
-`_owner_ident` to the worker thread's ID via `threading.get_ident()`. From that
-point, any other thread accessing that cursor gets an immediate `RuntimeError`.
-This enforces the invariant without requiring explicit ownership transfer: the main
-thread creates the cursor but never uses it; the worker thread claims it on first
-use. Using `get_ident()` (an int) rather than `current_thread()` (a Thread object)
-avoids the dictionary lookup overhead on every `st.*` call.
+`_owner_ident` to the worker thread's ID via `threading.get_ident()`. The
+check-and-claim is wrapped in a `threading.Lock` to make it atomic, preventing a
+TOCTOU race where two threads could both read `_owner_ident` as `None` and both
+succeed. From that point, any other thread accessing that cursor gets an immediate
+`RuntimeError`. This enforces the invariant without requiring explicit ownership
+transfer: the main thread creates the cursor but never uses it; the worker thread
+claims it on first use. Using `get_ident()` (an int) rather than `current_thread()`
+(a Thread object) avoids the dictionary lookup overhead on every `st.*` call.
 
 #### Element registration
 
