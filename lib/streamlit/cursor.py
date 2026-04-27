@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import threading
 from typing import TYPE_CHECKING, Any, Generic, TypeVar
 
@@ -220,6 +221,18 @@ class RunningCursor(Cursor):
         self._parent_path = parent_path
         self._index = 0
         self._owner_ident: int | None = None
+        self._owner_lock = threading.Lock()
+
+    def __deepcopy__(self, memo: dict[int, Any]) -> RunningCursor:
+        cls = type(self)
+        result = cls.__new__(cls)
+        memo[id(self)] = result
+        for k, v in self.__dict__.items():
+            if k == "_owner_lock":
+                object.__setattr__(result, k, threading.Lock())
+            else:
+                object.__setattr__(result, k, copy.deepcopy(v, memo))
+        return result
 
     def _check_owner(self) -> None:
         """Enforce single-thread ownership via lazy claiming.
@@ -229,12 +242,17 @@ class RunningCursor(Cursor):
         ``RuntimeError``.  Using ``threading.get_ident()`` (an int) rather than
         ``threading.current_thread()`` avoids a dictionary lookup on every
         ``st.*`` call.
+
+        The check-and-claim is protected by ``_owner_lock`` to prevent a TOCTOU
+        race where two threads both read ``_owner_ident`` as ``None`` and both
+        claim ownership.
         """
         current_ident = threading.get_ident()
-        if self._owner_ident is None:
-            self._owner_ident = current_ident
-        elif self._owner_ident != current_ident:
-            raise RuntimeError("Cursor accessed from a thread that doesn't own it")
+        with self._owner_lock:
+            if self._owner_ident is None:
+                self._owner_ident = current_ident
+            elif self._owner_ident != current_ident:
+                raise RuntimeError("Cursor accessed from a thread that doesn't own it")
 
     def _advance(self) -> None:
         self._index += 1

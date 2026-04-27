@@ -41,11 +41,6 @@ message Block {
   optional streamlit.WidthConfig width_config = 15;
   optional bool autoscroll = 16;
 
-  // When true, the frontend renders a skeleton placeholder inside this block
-  // until the first child element arrives.  Used by parallel fragments to show
-  // immediate loading feedback while the worker thread is running.
-  optional bool loading_skeleton = 17;
-
   message Vertical {
     bool border = 1;
 
@@ -181,5 +176,5 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 18
+  // Next ID: 17
 }

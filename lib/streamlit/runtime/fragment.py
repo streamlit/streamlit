@@ -210,7 +210,6 @@ def _dispatch_parallel_fragment(
     ctx: ScriptRunContext,
     fragment_id: str,
     wrapped_fragment: Callable[[], Any],
-    show_loading: bool,
 ) -> None:
     """Pre-create the fragment container on the main thread, then dispatch
     ``wrapped_fragment`` to a worker thread.
@@ -218,9 +217,7 @@ def _dispatch_parallel_fragment(
     The container Block is created on the main thread so that:
     1. delta_path ordering is preserved (the frontend requires sequential
        child indices).
-    2. A ``loading_skeleton`` flag can be set on the Block proto so the
-       frontend renders a skeleton placeholder immediately.
-    3. The child RunningCursor has ``_owner_ident = None`` — the worker
+    2. The child RunningCursor has ``_owner_ident = None`` — the worker
        thread claims it on first use via ``_check_owner()``.
 
     ``wrapped_fragment`` handles fragment-ID setup, active-hash context,
@@ -239,8 +236,6 @@ def _dispatch_parallel_fragment(
     # parent cursor advances it past this slot; the child RunningCursor
     # starts with _owner_ident = None.
     block_proto = Block_pb2()
-    if show_loading:
-        block_proto.loading_skeleton = True
     active_dg = context_dg_stack.get()[-1]
     container_dg = active_dg._block(block_proto)
 
@@ -320,7 +315,6 @@ def _fragment(
     run_every: int | float | timedelta | str | None = None,
     additional_hash_info: str = "",
     parallel: bool = False,
-    show_loading: bool | str = "auto",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
 
@@ -336,7 +330,6 @@ def _fragment(
                 func=f,
                 run_every=run_every,
                 parallel=parallel,
-                show_loading=show_loading,
             )
 
         return wrapper
@@ -453,7 +446,6 @@ def _fragment(
                 ctx=ctx,
                 fragment_id=fragment_id,
                 wrapped_fragment=wrapped_fragment,
-                show_loading=show_loading in {True, "auto"},
             )
             return None
 
@@ -476,7 +468,6 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    show_loading: bool | str = "auto",
 ) -> F: ...
 
 
@@ -488,7 +479,6 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    show_loading: bool | str = "auto",
 ) -> Callable[[F], F]: ...
 
 
@@ -498,7 +488,6 @@ def fragment(
     *,
     run_every: int | float | timedelta | str | None = None,
     parallel: bool = False,
-    show_loading: bool | str = "auto",
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -646,6 +635,4 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(
-        func, run_every=run_every, parallel=parallel, show_loading=show_loading
-    )
+    return _fragment(func, run_every=run_every, parallel=parallel)

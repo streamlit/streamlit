@@ -38,7 +38,6 @@ import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
-import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import Tabs from "~lib/components/elements/Tabs/Tabs"
 import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
@@ -70,16 +69,6 @@ import {
 const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
-
-  if (props.node.deltaBlock.loadingSkeleton && props.node.isEmpty) {
-    return (
-      <SquareSkeleton
-        className="stSkeleton"
-        data-testid="stSkeleton"
-        height="200px"
-      />
-    )
-  }
 
   return <>{RenderNodeVisitor.collectReactElements(props)}</>
 }
@@ -277,11 +266,7 @@ export const BlockNodeRenderer = (
     minStretchBehavior,
   })
 
-  if (
-    node.isEmpty &&
-    !node.deltaBlock.allowEmpty &&
-    !node.deltaBlock.loadingSkeleton
-  ) {
+  if (node.isEmpty && !node.deltaBlock.allowEmpty) {
     return <></>
   }
 
