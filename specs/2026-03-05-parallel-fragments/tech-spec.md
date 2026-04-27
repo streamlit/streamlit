@@ -665,11 +665,12 @@ class PagesManager:
 
     def get_pages(self) -> dict[PageHash, PageInfo]:
         """Return a snapshot of the current page registry.
-        No lock needed — the only write to _pages goes through
-        set_pages_and_resolve(), which is already lock-protected."""
-        return dict(self._pages) if self._pages else {
-            self.main_script_hash: { ... }
-        }
+        Lock-protected for free-threaded Python (PEP 703) where
+        iterating a dict during concurrent mutation is unsafe."""
+        with self._lock:
+            return dict(self._pages) if self._pages else {
+                self.main_script_hash: { ... }
+            }
 
     def set_current_page_script_hash(self, h: PageHash) -> None:
         """No lock needed — standalone write, not read by
