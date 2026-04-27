@@ -139,7 +139,7 @@ integration = [
   "streamlit",
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
-  "snowflake-connector-python>=3.3.0",
+  "snowflake-connector-python>=4.4.0",
   # Required for testing the langchain integration:
   "langchain>=0.2.0,<0.4",
   "langchain-community>=0.2.0,<0.4",
