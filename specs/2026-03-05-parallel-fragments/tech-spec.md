@@ -86,25 +86,58 @@ class ParallelFragmentCoordinator:
         poll_interval: float = 0.1,
     ) -> None:
         self._threads: list[threading.Thread] = []
-        self._cancel_event = threading.Event()
+        self._stop_event = threading.Event()
+        self._worker_exception: RerunException | StopException | None = None
+        self._exception_lock = threading.Lock()
         self._yield_check = yield_check
         self._poll_interval = poll_interval
 
     def register(self, thread: threading.Thread) -> None:
         self._threads.append(thread)
 
-    def cancel(self) -> None:
-        self._cancel_event.set()
+    def request_stop(self) -> None:
+        """A worker called st.stop(). First writer wins."""
+        with self._exception_lock:
+            if self._worker_exception is None:
+                self._worker_exception = StopException()
+        self._stop_event.set()
 
-    def is_cancelled(self) -> bool:
-        return self._cancel_event.is_set()
+    def request_rerun(self, exc: RerunException) -> None:
+        """A worker called st.rerun(scope='app'). First writer wins."""
+        with self._exception_lock:
+            if self._worker_exception is None:
+                self._worker_exception = exc
+        self._stop_event.set()
+
+    def should_stop(self) -> bool:
+        """Check whether this thread should exit."""
+        return self._stop_event.is_set()
+
+    @property
+    def worker_exception(self) -> RerunException | StopException | None:
+        return self._worker_exception
 
     def join(self) -> None:
+        """Happy-path join. Responsive to external requests (via yield_check)
+        and worker-initiated cancellation (via worker_exception)."""
         while any(t.is_alive() for t in self._threads):
             self._yield_check()
+            if self._worker_exception is not None:
+                raise self._worker_exception
             time.sleep(self._poll_interval)
         for thread in self._threads:
             thread.join()
+        if self._worker_exception is not None:
+            raise self._worker_exception
+
+    def drain(self, timeout: float = 5.0) -> None:
+        """Cleanup join after cancellation. Signals workers to stop and
+        waits without yield-checking. Safe to call from except blocks."""
+        self._stop_event.set()
+        deadline = time.monotonic() + timeout
+        for t in self._threads:
+            remaining = max(0, deadline - time.monotonic())
+            t.join(timeout=remaining)
 ```
 
 Three places change:
@@ -213,13 +246,13 @@ def _run_parallel_fragment(
                     # siblings are unaffected
                     continue
                 else:
-                    # st.rerun(scope="app") — signal sibling threads to cancel
-                    # via the coordinator, then exit
-                    coordinator.cancel()
+                    # st.rerun(scope="app") — signal sibling threads to stop
+                    # and preserve the RerunException for the main thread
+                    coordinator.request_rerun(e)
                     break
             except StopException:
-                # st.stop() — signal sibling threads to cancel, then exit
-                coordinator.cancel()
+                # st.stop() — signal sibling threads to stop
+                coordinator.request_stop()
                 break
             except FragmentHandledException:
                 break  # error already rendered in the fragment's container
@@ -241,16 +274,17 @@ This can happen at two points:
 1. **While the main script is still executing.** The existing yield point mechanism
    fires at the next `st.*` call on the script thread, raises `RerunException`, and
    `exec()` exits. This falls into the `except` block below, which calls
-   `coordinator.cancel()` and then `coordinator.join()` to wait for the worker
-   threads to observe the cancellation and terminate.
+   `coordinator.drain()` to signal workers to stop and wait for them to exit.
 
 2. **During the join barrier** (script has finished, waiting for threads). The script
    thread isn't calling `st.*`, so `coordinator.join()` calls `self._yield_check()`
    on each poll interval. If a RERUN/STOP request has arrived, the yield check raises
-   `RerunException` or `StopException`, breaking out of the join loop.
+   `RerunException` or `StopException`, breaking out of the join loop into the
+   `except` block.
 
-In both cases, worker threads must be cancelled before the rerun can proceed. This
-is handled with a try/except in `code_to_exec`:
+In both cases, worker threads must be stopped before the rerun can proceed. The
+`except` block calls `drain()`, which sets the stop event and joins threads directly
+— no yield check loop, so no risk of recursive exceptions:
 
 ```python
 # In code_to_exec():
@@ -259,8 +293,7 @@ try:
     ctx.parallel_coordinator.join()
     self._fragment_storage.clear(new_fragment_ids=ctx.new_fragment_ids)  # existing
 except (RerunException, StopException):
-    ctx.parallel_coordinator.cancel()
-    ctx.parallel_coordinator.join()  # wait for threads to observe cancellation
+    ctx.parallel_coordinator.drain()  # signal workers to stop, wait without yield-checking
     raise  # propagate so _run_script's rerun loop can restart
 ```
 
@@ -270,34 +303,36 @@ Every `st.*` call goes through `_enqueue_forward_msg()` →
 `_maybe_handle_execution_control_request()` in `script_runner.py`. This function acts
 as a yield point — it checks for pending RERUN/STOP requests and raises the appropriate
 exception. Today it guards with `_is_in_script_thread()` and returns early for
-non-script threads. We extend it to also check the coordinator's cancel event for
-worker threads:
+non-script threads. We extend it to check the coordinator's stop event for worker
+threads, and the `worker_exception` for the main thread:
 
 ```python
 def _maybe_handle_execution_control_request(self) -> None:
     if not self._is_in_script_thread():
-        # Worker thread — check coordinator cancel event
+        # Worker thread — check coordinator stop event
         ctx = get_script_run_ctx()
-        if ctx and ctx.parallel_coordinator.is_cancelled():
+        if ctx and ctx.parallel_coordinator.should_stop():
             raise StopException()  # unwinds this thread's call stack
         return
 
     if not self._execing:
         return
 
-    # NEW: also check cancel event on the script thread — a parallel
-    # fragment may have called st.stop() or st.rerun(scope="app")
+    # NEW: check if a worker requested cancellation — propagate with
+    # the correct exception type (StopException or RerunException)
     ctx = self._get_script_run_ctx()
-    if ctx.parallel_coordinator.is_cancelled():
-        raise StopException()
+    exc = ctx.parallel_coordinator.worker_exception
+    if exc is not None:
+        raise exc
 
     # ... existing request checking logic (unchanged) ...
 ```
 
 For worker threads, the `StopException` propagates up into `_run_parallel_fragment`,
 is caught in the `while` loop, and the thread exits. For the main script thread,
-it propagates up through `exec()` into the `except` block in `code_to_exec`,
-which cancels remaining threads and re-raises.
+the worker's original exception (preserving `RerunException` vs `StopException`)
+propagates up through `exec()` into the `except` block in `code_to_exec`,
+which drains remaining threads and re-raises.
 
 A thread blocked on a long I/O call (e.g., a slow database query) will not terminate
 until the call returns and the thread reaches its next yield point. This is inherent to
@@ -311,10 +346,10 @@ between blocking operations to improve cancellation responsiveness (see
 |----------|---------|---------------|----------------------|---------|
 | Happy path | — | — | — | All threads complete → `join()` returns → `scriptFinished` |
 | `st.rerun(scope="fragment")` | Thread A | Caught → `continue` → re-executes `wrapped_fragment()` in same thread | Unaffected | Thread A reruns locally |
-| `st.stop()` | Thread A | Caught → `coordinator.cancel()` → exits | See `is_cancelled()` at next yield point → `StopException` → exit | Run ends |
-| `st.rerun(scope="app")` | Thread A | Caught → `coordinator.cancel()` → exits | Same as `st.stop()` | `_run_script` restarts |
-| External rerun during `exec()` | Frontend | Main thread: `RerunException` at next `st.*` call → `except` block → `cancel()` + `join()` | See `is_cancelled()` at next yield point → exit | `_run_script` restarts |
-| External rerun during `join()` | Frontend | `_yield_check()` raises `RerunException` → `except` block → `cancel()` + `join()` | See `is_cancelled()` at next yield point → exit | `_run_script` restarts |
+| `st.stop()` | Thread A | Caught → `request_stop()` → exits | See `should_stop()` at next yield point → `StopException` → exit | Main thread raises `StopException` → run ends |
+| `st.rerun(scope="app")` | Thread A | Caught → `request_rerun(e)` → exits | See `should_stop()` at next yield point → `StopException` → exit | Main thread raises `RerunException` (with rerun data) → `_run_script` restarts |
+| External rerun during `exec()` | Frontend | Main thread: `RerunException` at next `st.*` call → `except` block → `drain()` | See `should_stop()` at next yield point → exit | `_run_script` restarts |
+| External rerun during `join()` | Frontend | `_yield_check()` raises `RerunException` → `except` block → `drain()` | See `should_stop()` at next yield point → exit | `_run_script` restarts |
 
 ### Content rendering
 
