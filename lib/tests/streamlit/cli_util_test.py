@@ -102,3 +102,27 @@ class CliUtilTest(unittest.TestCase):
             subprocess_popen.assert_called_once()
             args = subprocess_popen.call_args[0][0]
             assert args[0] == "xdg-open"
+
+    def test_open_browser_command_not_found_falls_back(self):
+        """When browser.command is invalid, fall back to webbrowser."""
+        with (
+            patch_config_options({"browser.command": "/nonexistent/browser"}),
+            patch.object(env_util, "IS_DARWIN", False),
+            patch("subprocess.Popen", side_effect=FileNotFoundError),
+            patch("webbrowser.open") as webbrowser_open,
+        ):
+            open_browser("http://some-url")
+            assert webbrowser_open.called
+
+    def test_open_browser_command_macos_relative_uses_open(self):
+        """On macOS, a relative browser.command uses 'open -a'."""
+        with (
+            patch.object(env_util, "IS_DARWIN", True),
+            patch_config_options({"browser.command": "Google Chrome"}),
+            patch("subprocess.Popen") as subprocess_popen,
+        ):
+            open_browser("http://some-url")
+
+            subprocess_popen.assert_called_once()
+            args = subprocess_popen.call_args[0][0]
+            assert args == ["open", "-a", "Google Chrome", "http://some-url"]

@@ -57,12 +57,23 @@ def _open_browser_with_webbrowser(url: str) -> None:
     webbrowser.open(url)
 
 
-def _open_browser_with_command(command: str, url: str) -> None:
-    cmd_line = [command, url]
-    with open(os.devnull, "w", encoding="utf-8") as devnull:
-        import subprocess  # noqa: S404
+def _open_browser_with_command(
+    command: str, url: str, extra_args: list[str] | None = None
+) -> None:
+    import subprocess  # noqa: S404
 
-        subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # noqa: S603
+    cmd_line = [command, *(extra_args or []), url]
+    try:
+        with open(os.devnull, "w", encoding="utf-8") as devnull:
+            subprocess.Popen(cmd_line, stdout=devnull, stderr=subprocess.STDOUT)  # noqa: S603
+    except FileNotFoundError:
+        import logging
+
+        logging.getLogger(__name__).warning(
+            "Could not find browser command %r. Falling back to default browser.",
+            command,
+        )
+        _open_browser_with_webbrowser(url)
 
 
 def open_browser(url: str) -> None:
@@ -84,7 +95,10 @@ def open_browser(url: str) -> None:
 
     browser_command = config.get_option("browser.command")
     if browser_command:
-        _open_browser_with_command(browser_command, url)
+        if env_util.IS_DARWIN and not os.path.isabs(browser_command):
+            _open_browser_with_command("open", url, extra_args=["-a", browser_command])
+        else:
+            _open_browser_with_command(browser_command, url)
         return
 
     # Treat Windows separately because:
