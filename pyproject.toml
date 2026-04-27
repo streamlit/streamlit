@@ -153,7 +153,7 @@ integration = [
   # Used by audio test:
   "scipy>=1.7.3",
   # Used to ensure pydantic is supported:
-  "pydantic>=2.0.0",
+  "pydantic>=2.13.3",
   # Used by type_util tests:
   "sympy",
 ]
