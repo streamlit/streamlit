@@ -34,7 +34,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(25)
+    expect(popover_elements).to_have_count(27)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -418,3 +418,30 @@ def test_popover_menu_style_icons_hide_chevron(
 
     # Snapshot the container with all three menu-style icon popovers
     assert_snapshot(container, name="st_popover-menu_style_icons")
+
+
+def test_programmatic_close_does_not_reopen_other_popover(app: Page):
+    """Test that programmatically closing one popover does not cause it to
+    reopen when another stateful popover is interacted with.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14943
+    """
+    # Open popover A
+    open_popover(app, "Multi pop A")
+    expect(app.get_by_text("Close A")).to_be_visible()
+
+    # Programmatically close it via the button inside
+    click_button(app, "Close A")
+
+    # Popover A should be closed — the body should no longer be visible
+    expect(app.get_by_text("Close A")).not_to_be_visible()
+
+    # Open popover B
+    open_popover(app, "Multi pop B")
+
+    # Popover B should be open
+    expect(app.get_by_text("Close B")).to_be_visible()
+
+    # Popover A must NOT have reopened (the bug from #14943).
+    # If it did, "Close A" would be visible in a second popover body.
+    expect(app.get_by_text("Close A")).not_to_be_visible()

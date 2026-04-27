@@ -240,3 +240,23 @@ if st.session_state.get("persist_popover_shift"):
 with st.popover("Persist popover", key="persist_popover"):
     st.write("Persist popover content")
     st.checkbox("Shift delta path", key="persist_popover_shift")
+
+# ============================================================================
+# Multiple Stateful Popovers — programmatic close regression test
+# https://github.com/streamlit/streamlit/issues/14943
+# ============================================================================
+
+
+def close_multi_pop_a() -> None:
+    st.session_state.multi_pop_a = False
+
+
+def close_multi_pop_b() -> None:
+    st.session_state.multi_pop_b = False
+
+
+with st.popover("Multi pop A", key="multi_pop_a", on_change="rerun"):
+    st.button("Close A", on_click=close_multi_pop_a, key="close_multi_a_btn")
+
+with st.popover("Multi pop B", key="multi_pop_b", on_change="rerun"):
+    st.button("Close B", on_click=close_multi_pop_b, key="close_multi_b_btn")
