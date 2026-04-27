@@ -530,10 +530,6 @@ need thread-safe access:
 | `new_fragment_ids` | `set[str]` | Written by any thread executing `@st.fragment`; read after join for cleanup. Needs same per-field lock as the widget sets above. |
 | `fragment_storage` | `FragmentStorage` | Written concurrently when `@st.fragment` definitions register the wrapped function; read after join for `clear()`. `MemoryFragmentStorage` needs a `threading.Lock` around its internal dict — same per-field lock approach as the shared sets. Covered in the thread-safe `ScriptRunContext` shared sets spec. |
 
-#### Loading skeleton
-
-*TODO: needs prototyping and testing before specifying.*
-
 ### Other shared mutable state
 
 `ScriptRunContext` currently mixes per-thread, shared-mutable, shared-immutable, and
@@ -756,18 +752,18 @@ class SharedRunState:
     Single instance shared across main thread and all worker threads."""
     def __init__(self):
         self._lock = threading.Lock()
-        self.widget_ids: set[str] = set()
-        self.widget_user_keys: set[str] = set()
-        self.form_ids: set[str] = set()
-        self.new_fragment_ids: set[str] = set()
-        self.tracked_commands: list[Command] = []
-        self.tracked_commands_counter: Counter[str] = Counter()
+        self._widget_ids: set[str] = set()
+        self._widget_user_keys: set[str] = set()
+        self._form_ids: set[str] = set()
+        self._new_fragment_ids: set[str] = set()
+        self._tracked_commands: list[Command] = []
+        self._tracked_commands_counter: Counter[str] = Counter()
 
     def add_widget_id(self, widget_id: str) -> bool:
         """Add widget ID. Returns True if already present (duplicate)."""
         with self._lock:
-            was_present = widget_id in self.widget_ids
-            self.widget_ids.add(widget_id)
+            was_present = widget_id in self._widget_ids
+            self._widget_ids.add(widget_id)
             return was_present
     # ... similar methods for other fields
 ```
