@@ -68,32 +68,56 @@ def reset(self, ...) -> None:
     if threading.get_ident() != self._main_thread_ident:
         raise RuntimeError("reset() must only be called from the main script thread")
     ...
-    # NEW: create a fresh coordinator for this script run
+    # NEW: create a fresh coordinator (with thread pool) for this script run
     self.parallel_coordinator = ParallelFragmentCoordinator(
         yield_check=self._yield_check,
+        max_workers=config.get_option("runner.parallelMaxWorkers"),
     )
 ```
 
 The coordinator receives a `yield_check` callback from the `ScriptRunner` — this is a
 reference to `_maybe_handle_execution_control_request()`, which checks for pending
-RERUN/STOP requests and raises the appropriate exception:
+RERUN/STOP requests and raises the appropriate exception.
+
+**Thread pool scope and lifecycle:** The coordinator owns a `ThreadPoolExecutor` that
+lives for the duration of a single script run. The pool is created in `ctx.reset()`
+(via the coordinator constructor) and shut down in `drain()` or after `join()` completes.
+No threads outlive the run — this matches the bounded lifecycle of parallel fragments
+(spawned during `exec()`, joined before `scriptFinished`). Features with longer-lived
+threads (e.g., a future `st.background_task()` that survives reruns) would need a
+separate per-session pool with a different lifecycle.
+
+The default `max_workers` follows Python's `ThreadPoolExecutor` default
+(`min(32, os.cpu_count() + 4)`), which works well for the common case of 3-10
+I/O-bound fragments. A Streamlit config option (`[runner] parallelMaxWorkers`) allows
+overriding for constrained environments. When the number of parallel fragments exceeds
+`max_workers`, excess fragments queue in the pool and execute as workers become available.
 
 ```python
 class ParallelFragmentCoordinator:
     def __init__(
         self,
         yield_check: Callable[[], None],
+        max_workers: int | None = None,
         poll_interval: float = 0.1,
     ) -> None:
-        self._threads: list[threading.Thread] = []
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._futures: list[Future] = []
         self._stop_event = threading.Event()
         self._worker_exception: RerunException | StopException | None = None
         self._exception_lock = threading.Lock()
         self._yield_check = yield_check
         self._poll_interval = poll_interval
 
-    def register(self, thread: threading.Thread) -> None:
-        self._threads.append(thread)
+    def submit(
+        self,
+        fn: Callable[..., Any],
+        *args: Any,
+    ) -> Future:
+        """Submit a fragment to the thread pool."""
+        future = self._executor.submit(fn, *args)
+        self._futures.append(future)
+        return future
 
     def request_stop(self) -> None:
         """A worker called st.stop(). First writer wins."""
@@ -120,24 +144,20 @@ class ParallelFragmentCoordinator:
     def join(self) -> None:
         """Happy-path join. Responsive to external requests (via yield_check)
         and worker-initiated cancellation (via worker_exception)."""
-        while any(t.is_alive() for t in self._threads):
+        while not all(f.done() for f in self._futures):
             self._yield_check()
             if self._worker_exception is not None:
                 raise self._worker_exception
             time.sleep(self._poll_interval)
-        for thread in self._threads:
-            thread.join()
         if self._worker_exception is not None:
             raise self._worker_exception
+        self._executor.shutdown(wait=False)
 
     def drain(self, timeout: float = 5.0) -> None:
         """Cleanup join after cancellation. Signals workers to stop and
-        waits without yield-checking. Safe to call from except blocks."""
+        shuts down the pool. Safe to call from except blocks."""
         self._stop_event.set()
-        deadline = time.monotonic() + timeout
-        for t in self._threads:
-            remaining = max(0, deadline - time.monotonic())
-            t.join(timeout=remaining)
+        self._executor.shutdown(wait=True, cancel_futures=True)
 ```
 
 Three places change:
@@ -160,7 +180,7 @@ else:
 ```
 
 `_dispatch_parallel_fragment` is a new helper in `fragment.py` that copies the current
-context, spawns a thread, and registers it on `ctx` for the join barrier:
+context and submits the fragment to the coordinator's thread pool:
 
 ```python
 def _dispatch_parallel_fragment(
@@ -172,14 +192,16 @@ def _dispatch_parallel_fragment(
     #   - context_dg_stack: the DeltaGenerator/cursor position stack
     #   - in_cached_function: guard preventing widgets inside @st.cache_*
     parent_context = contextvars.copy_context()
-    thread = threading.Thread(
-        target=_run_parallel_fragment,
-        args=(ctx.parallel_coordinator, wrapped_fragment, fragment_id, parent_context),
-        name=f"parallel_fragment_{_short_id(fragment_id)}",
-    )
-    add_script_run_ctx(thread, ctx)
-    ctx.parallel_coordinator.register(thread)
-    thread.start()
+    coordinator = ctx.parallel_coordinator
+
+    def worker() -> None:
+        # Propagate ScriptRunContext to the pool thread (thread-local)
+        add_script_run_ctx(threading.current_thread(), ctx)
+        _run_parallel_fragment(
+            coordinator, wrapped_fragment, fragment_id, parent_context,
+        )
+
+    coordinator.submit(worker)
 ```
 
 `_run_parallel_fragment` is the thread entry point. It runs `wrapped_fragment` inside
@@ -610,6 +632,7 @@ class ScriptRunContext:
         self.thread_state.reset(...)
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=self._yield_check,
+            max_workers=config.get_option("runner.parallelMaxWorkers"),
         )
 
     def enqueue(self, msg: ForwardMsg) -> None:
