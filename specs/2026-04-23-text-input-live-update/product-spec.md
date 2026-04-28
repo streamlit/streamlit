@@ -213,9 +213,9 @@ if email:
    operations (e.g., saving to database, calling APIs).
 
 2. **Interaction with `on_change="ignore"`**: If the proposed `on_change="ignore"` mode (from
-   `specs/2026-04-14-on-change-modes/`) is combined with `debounce`, the `debounce` parameter
-   takes precedence and triggers reruns as specified. The `on_change="ignore"` mode only prevents
-   the default blur/Enter rerun behavior, but `debounce` explicitly enables timer-based reruns.
+   `specs/2026-04-14-on-change-modes/`) is combined with `debounce`, `on_change="ignore"` takes
+   precedence and prevents any reruns. The widget value is still updated in frontend state and
+   will be available on the next rerun triggered by another widget.
 
 3. **Interaction with `st.form`**: Inside forms, `debounce` is ignored since form widgets don't
    trigger reruns until submission. A warning could be logged.
