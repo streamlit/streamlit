@@ -153,7 +153,7 @@ class ParallelFragmentCoordinator:
             raise self._worker_exception
         self._executor.shutdown(wait=False)
 
-    def drain(self, timeout: float = 5.0) -> None:
+    def drain(self) -> None:
         """Cleanup join after cancellation. Signals workers to stop and
         shuts down the pool. Safe to call from except blocks."""
         self._stop_event.set()
