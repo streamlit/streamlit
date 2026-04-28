@@ -249,7 +249,7 @@ if email:
 | Item                         | ✅ or comment |
 | ---------------------------- | ------------- |
 | Works on SiS, Cloud, etc?    | ✅ frontend-only debounce logic |
-| No breaking API changes      | ✅ new optional parameter with None default |
+| No breaking API changes      | ✅ new optional parameter with False default |
 | No new dependencies          | ✅ |
 | Metrics collected            | ✅ existing text_input metrics apply |
 | Any security/legal impact?   | ✅ None |
