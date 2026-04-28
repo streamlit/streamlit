@@ -252,5 +252,5 @@ if email:
 | No breaking API changes      | ✅ new optional parameter with None default |
 | No new dependencies          | ✅ |
 | Metrics collected            | ✅ existing text_input metrics apply |
-| Any security/legal impact?   | None |
+| Any security/legal impact?   | ✅ None |
 | Any docs changes needed?     | ✅ update text_input docstring |
