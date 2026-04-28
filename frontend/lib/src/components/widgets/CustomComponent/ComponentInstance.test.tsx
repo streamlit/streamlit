@@ -23,6 +23,7 @@ import {
   SpecialArg,
 } from "@streamlit/protobuf"
 
+import * as UseCalculatedDimensions from "~lib/hooks/useCalculatedDimensions"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -450,9 +451,16 @@ describe("ComponentInstance", () => {
 
     it("send render message when viewport changes", () => {
       let width = 100
-      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-        elementRef: { current: null },
-        values: [width],
+      const mockElementRef = { current: null }
+
+      // Mock useCalculatedDimensions directly since that's what withCalculatedWidth uses
+      vi.spyOn(
+        UseCalculatedDimensions,
+        "useCalculatedDimensions"
+      ).mockReturnValue({
+        width,
+        height: 200,
+        elementRef: mockElementRef,
       })
 
       const jsonArgs = { foo: "string", bar: 5 }
@@ -488,10 +496,14 @@ describe("ComponentInstance", () => {
       )
       width = width + 1
 
-      // Update the spy to return the new width
-      vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
-        elementRef: { current: null },
-        values: [width],
+      // Update the mock to return the new width
+      vi.spyOn(
+        UseCalculatedDimensions,
+        "useCalculatedDimensions"
+      ).mockReturnValue({
+        width,
+        height: 200,
+        elementRef: mockElementRef,
       })
 
       rerender(

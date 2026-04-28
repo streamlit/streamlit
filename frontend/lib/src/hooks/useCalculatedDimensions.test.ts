@@ -15,8 +15,10 @@
  */
 
 import { renderHook } from "@testing-library/react"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useCalculatedDimensions } from "./useCalculatedDimensions"
+import * as useDebouncedValue from "./useDebouncedValue"
 import * as useResizeObserver from "./useResizeObserver"
 
 // Mock ResizeObserver
@@ -33,9 +35,14 @@ class MockResizeObserver {
 global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
 
 describe("useCalculatedDimensions", () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
   afterEach(() => {
     vi.clearAllMocks()
     vi.restoreAllMocks()
+    vi.useRealTimers()
   })
 
   it.each([
@@ -185,5 +192,138 @@ describe("useCalculatedDimensions", () => {
     const { elementRef: rerenderedRef } = result.current
 
     expect(initialRef).toBe(rerenderedRef)
+  })
+
+  describe("debouncing functionality", () => {
+    it("applies default 16ms debouncing when no debounceMs is provided", () => {
+      vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+        () => ({
+          values: [100, 50],
+          elementRef: { current: null },
+        })
+      )
+
+      const debouncedValueSpy = vi.spyOn(
+        useDebouncedValue,
+        "useDebouncedValue"
+      )
+
+      const { result } = renderHook(() => useCalculatedDimensions())
+      const { width, height } = result.current
+
+      expect(width).toBe(100)
+      expect(height).toBe(50)
+
+      // Should call useDebouncedValue with default 16ms delay
+      expect(debouncedValueSpy).toHaveBeenCalledWith(100, 16)
+      expect(debouncedValueSpy).toHaveBeenCalledWith(50, 16)
+    })
+
+    it("disables debouncing when debounceMs is 0", () => {
+      vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+        () => ({
+          values: [100, 50],
+          elementRef: { current: null },
+        })
+      )
+
+      const debouncedValueSpy = vi.spyOn(
+        useDebouncedValue,
+        "useDebouncedValue"
+      )
+
+      const { result } = renderHook(() => useCalculatedDimensions([], -1, 0))
+      const { width, height } = result.current
+
+      expect(width).toBe(100)
+      expect(height).toBe(50)
+
+      // Should still call useDebouncedValue but with 0 delay and return raw values
+      expect(debouncedValueSpy).toHaveBeenCalledWith(100, 0)
+      expect(debouncedValueSpy).toHaveBeenCalledWith(50, 0)
+    })
+
+    it("applies debouncing when debounceMs is provided", () => {
+      vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+        () => ({
+          values: [200, 100],
+          elementRef: { current: null },
+        })
+      )
+
+      // Mock useDebouncedValue to return debounced values
+      const debouncedValueSpy = vi
+        .spyOn(useDebouncedValue, "useDebouncedValue")
+        .mockImplementation((value: unknown, delay: number) => {
+          // For testing, just return the value immediately
+          // In real usage, this would be debounced
+          return delay > 0 ? (value as number) - 10 : value // Simulate debounced behavior
+        })
+
+      const { result } = renderHook(() => useCalculatedDimensions([], -1, 150))
+      const { width, height } = result.current
+
+      // Should use debounced values when debounceMs is provided
+      expect(width).toBe(190) // 200 - 10 (simulated debounced value)
+      expect(height).toBe(90) // 100 - 10 (simulated debounced value)
+
+      expect(debouncedValueSpy).toHaveBeenCalledWith(200, 150)
+      expect(debouncedValueSpy).toHaveBeenCalledWith(100, 150)
+    })
+
+    it("applies fallback values before debouncing", () => {
+      vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+        () => ({
+          values: [0, 0], // Zero values should use fallback
+          elementRef: { current: null },
+        })
+      )
+
+      const debouncedValueSpy = vi
+        .spyOn(useDebouncedValue, "useDebouncedValue")
+        .mockImplementation((value: unknown) => value)
+
+      const { result } = renderHook(() => useCalculatedDimensions([], 42, 100))
+      const { width, height } = result.current
+
+      expect(width).toBe(42)
+      expect(height).toBe(42)
+
+      // Should debounce the fallback values
+      expect(debouncedValueSpy).toHaveBeenCalledWith(42, 100)
+    })
+
+    it("handles changing debounce delays", () => {
+      vi.spyOn(useResizeObserver, "useResizeObserver").mockImplementation(
+        () => ({
+          values: [150, 75],
+          elementRef: { current: null },
+        })
+      )
+
+      const debouncedValueSpy = vi
+        .spyOn(useDebouncedValue, "useDebouncedValue")
+        .mockImplementation((value: unknown) => value)
+
+      const { rerender } = renderHook(
+        ({ debounceMs }: { debounceMs?: number }) =>
+          useCalculatedDimensions([], -1, debounceMs),
+        { initialProps: { debounceMs: 100 } }
+      )
+
+      // First render with 100ms debounce
+      expect(debouncedValueSpy).toHaveBeenCalledWith(150, 100)
+      expect(debouncedValueSpy).toHaveBeenCalledWith(75, 100)
+
+      // Change to 200ms debounce
+      rerender({ debounceMs: 200 })
+      expect(debouncedValueSpy).toHaveBeenCalledWith(150, 200)
+      expect(debouncedValueSpy).toHaveBeenCalledWith(75, 200)
+
+      // Use default debouncing (16ms) - omit debounceMs to use default
+      rerender({ debounceMs: 16 })
+      expect(debouncedValueSpy).toHaveBeenCalledWith(150, 16)
+      expect(debouncedValueSpy).toHaveBeenCalledWith(75, 16)
+    })
   })
 })

@@ -16,6 +16,7 @@
 
 import { MutableRefObject, useMemo } from "react"
 
+import { useDebouncedValue } from "./useDebouncedValue"
 import { useResizeObserver } from "./useResizeObserver"
 
 /**
@@ -32,6 +33,10 @@ import { useResizeObserver } from "./useResizeObserver"
  * that will cause the observer to be re-evaluated.
  * @param {number} [fallbackValue=-1] - The value to return when width or height is 0.
  * The default value is -1 which allows components to detect when dimensions aren't ready.
+ * @param {number} [debounceMs=16] - Debounce delay in milliseconds for dimension updates.
+ * Defaults to 16ms (one frame at 60fps) to batch rapid ResizeObserver updates while remaining
+ * imperceptible to users, improving performance and reducing layout thrashing.
+ * Set to 0 to disable debouncing.
  *
  * @returns An object containing:
  *   - width: The current width of the observed element in pixels (or fallbackValue if width is 0)
@@ -59,10 +64,29 @@ import { useResizeObserver } from "./useResizeObserver"
  *   // width and height will be 0 instead of -1 when not ready
  * };
  * ```
+ *
+ * @example
+ * ```tsx
+ * // For charts that need custom debouncing (default is 16ms)
+ * const PlotlyChart = () => {
+ *   const { width, height, elementRef } = useCalculatedDimensions([], -1, 100);
+ *   // width and height will be debounced by 100ms instead of the default 16ms
+ * };
+ * ```
+ *
+ * @example
+ * ```tsx
+ * // To disable debouncing entirely
+ * const FastUpdateChart = () => {
+ *   const { width, height, elementRef } = useCalculatedDimensions([], -1, 0);
+ *   // width and height will update immediately without debouncing
+ * };
+ * ```
  */
 export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = [],
-  fallbackValue: number = -1
+  fallbackValue: number = -1,
+  debounceMs: number = 16
 ): {
   width: number
   height: number
@@ -76,9 +100,17 @@ export const useCalculatedDimensions = <T extends HTMLDivElement>(
     dependencies
   )
 
+  const rawWidth = width || fallbackValue
+  const rawHeight = height || fallbackValue
+
+  // Apply debouncing to batch rapid ResizeObserver updates
+  // Default 16ms aligns with 60fps frame rate for optimal performance
+  const debouncedWidth = useDebouncedValue(rawWidth, debounceMs)
+  const debouncedHeight = useDebouncedValue(rawHeight, debounceMs)
+
   return {
-    width: width || fallbackValue,
-    height: height || fallbackValue,
+    width: debounceMs > 0 ? debouncedWidth : rawWidth,
+    height: debounceMs > 0 ? debouncedHeight : rawHeight,
     elementRef,
   }
 }
