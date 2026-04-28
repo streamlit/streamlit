@@ -28,13 +28,24 @@ export const StyledInputContainer = styled.div(({ theme }) => ({
   borderStyle: "solid",
   borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
   transitionDuration: "200ms",
-  transitionProperty: "border",
+  transitionProperty: "border, background-color",
   transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
   borderRadius: theme.radii.default,
   overflow: "hidden", // Fix rounded corner being overlaid with corner of internal input.
 
   "&.focused": {
     borderColor: theme.colors.primary,
+  },
+
+  // Validation error state: render the container with the same red
+  // background as st.date_input and blend the border so there is no
+  // visible gray border around the light-red fill.
+  "&.error": {
+    borderColor: theme.colors.redBackgroundColor,
+    backgroundColor: theme.colors.redBackgroundColor,
+    "& button": {
+      backgroundColor: theme.colors.redBackgroundColor,
+    },
   },
 
   input: {
@@ -83,16 +94,24 @@ interface StyledInstructionsContainerProps {
   // If widget is clearable, the instruction needs to be moved a couple
   // pixels to the left to avoid overlapping with the clear button.
   clearable: boolean
+  // If widget has a validation error, the instruction needs to be moved
+  // further to the left to avoid overlapping with the error icon.
+  hasError: boolean
 }
 
 export const StyledInstructionsContainer =
-  styled.div<StyledInstructionsContainerProps>(({ theme, clearable }) => ({
-    position: "absolute",
-    marginRight: theme.spacing.twoXS,
-    left: 0,
-    // The instructions should be placed after the two controls
-    // and the clear button if it's present.
-    right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
-      clearable ? "1em" : "0em"
-    })`,
-  }))
+  styled.div<StyledInstructionsContainerProps>(
+    ({ theme, clearable, hasError }) => ({
+      position: "absolute",
+      marginRight: theme.spacing.twoXS,
+      left: 0,
+      // The instructions should be placed after the two controls,
+      // the clear button (if present), and the error icon (if shown).
+      // The error icon offset includes extra padding for the BaseWeb endEnhancer.
+      right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
+        clearable ? "1em" : "0em"
+      } + ${
+        hasError ? `calc(${theme.iconSizes.lg} + ${theme.spacing.lg})` : "0em"
+      })`,
+    })
+  )

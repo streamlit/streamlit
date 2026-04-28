@@ -25,6 +25,7 @@ import {
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
 
@@ -36,6 +37,8 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
@@ -136,6 +139,11 @@ const NumberInput: React.FC<Props> = ({
       }
     : undefined
 
+  // Error state for out-of-range validation. Replaces the browser-native
+  // HTML5 validation popup with a custom Streamlit-styled error tooltip
+  // (matching st.date_input).
+  const [error, setError] = useState<string | null>(null)
+
   // Use useBasicWidgetState for core value management
   const [value, setValueWithSource] = useBasicWidgetState<
     number | null,
@@ -150,9 +158,10 @@ const NumberInput: React.FC<Props> = ({
     fragmentId,
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
-      // Reset dirty state and formatted value when form is cleared
+      // Reset dirty, error state, and formatted value when form is cleared
       const newValue = elementDefault ?? null
       setDirty(false)
+      setError(null)
       setFormattedValue(formatCurrentValue(newValue))
     }, [elementDefault, formatCurrentValue]),
     queryParamBinding,
@@ -195,11 +204,22 @@ const NumberInput: React.FC<Props> = ({
       value: number | null
       fromUi: boolean
     }) => {
-      // Validate range and show browser validation message if out of range
+      // Validate range and show a custom Streamlit-themed error instead of
+      // the browser-native HTML validation popup (see #10906).
       if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
-        inputRef.current?.reportValidity()
+        if (min > valueArg) {
+          setError(
+            `**Error**: Value set outside allowed range. Please enter a value greater than or equal to ${min}.`
+          )
+        } else {
+          setError(
+            `**Error**: Value set outside allowed range. Please enter a value less than or equal to ${max}.`
+          )
+        }
         return
       }
+
+      setError(null)
 
       const newValue = valueArg ?? elementDefault ?? null
 
@@ -378,7 +398,9 @@ const NumberInput: React.FC<Props> = ({
         )}
       </WidgetLabel>
       <StyledInputContainer
-        className={isFocused ? "focused" : ""}
+        className={[isFocused && "focused", error && "error"]
+          .filter(Boolean)
+          .join(" ")}
         data-testid="stNumberInputContainer"
       >
         <UIInput
@@ -395,6 +417,23 @@ const NumberInput: React.FC<Props> = ({
           clearOnEscape={clearable}
           disabled={disabled}
           aria-label={element.label}
+          endEnhancer={
+            error ? (
+              <Tooltip
+                content={
+                  <StreamlitMarkdown source={error} allowHTML={false} />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon
+                  content={ErrorOutline}
+                  size="lg"
+                  testid="stNumberInputErrorIcon"
+                />
+              </Tooltip>
+            ) : undefined
+          }
           startEnhancer={
             element.icon && (
               <DynamicIcon
@@ -429,12 +468,26 @@ const NumberInput: React.FC<Props> = ({
                 },
               },
             },
+            EndEnhancer: {
+              style: {
+                // Match text color with st.error in light and dark mode
+                color: theme.colors.redTextColor,
+                backgroundColor: theme.colors.transparent,
+                // Ensure the error tooltip remains hoverable even when the
+                // input is focused (e.g. after pressing Enter).
+                pointerEvents: "auto",
+              },
+            },
             Input: {
               props: {
                 "data-testid": "stNumberInputField",
+                "aria-invalid": !!error,
                 step: step,
-                min: min,
-                max: max,
+                // We intentionally do NOT pass `min` and `max` as HTML
+                // attributes here: we handle range validation in JS (see
+                // `commitValue`) and render our own error tooltip, so
+                // keeping the HTML attributes would trigger the browser's
+                // native validation popup on top of it.
                 // We specify the type as "number" to have numeric keyboard on mobile devices.
                 // We also set inputMode to "" since by default BaseWeb sets "text",
                 // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.
@@ -452,12 +505,18 @@ const NumberInput: React.FC<Props> = ({
                 "::placeholder": {
                   color: theme.colors.fadedText60,
                 },
+                // Change input value text color in error state - matches st.error in light and dark mode
+                ...(error && {
+                  color: theme.colors.redTextColor,
+                }),
               },
             },
             InputContainer: {
               style: () => ({
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
+                // Explicitly specified so error background renders correctly
+                backgroundColor: "transparent",
               }),
             },
             Root: {
@@ -473,6 +532,11 @@ const NumberInput: React.FC<Props> = ({
                 borderBottomWidth: 0,
                 paddingRight: 0,
                 paddingLeft: icon ? theme.spacing.sm : 0,
+                // Light red background (matching st.date_input) when value is
+                // outside the allowed range.
+                ...(error && {
+                  backgroundColor: theme.colors.redBackgroundColor,
+                }),
               },
             },
             StartEnhancer: {
@@ -520,7 +584,7 @@ const NumberInput: React.FC<Props> = ({
         )}
       </StyledInputContainer>
       {shouldShowInstructions && (
-        <StyledInstructionsContainer clearable={clearable}>
+        <StyledInstructionsContainer clearable={clearable} hasError={!!error}>
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}

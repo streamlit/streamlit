@@ -443,7 +443,12 @@ function DateInput({
                 },
                 Root: {
                   style: ({ $isFocused }: { $isFocused: boolean }) => {
-                    const borderColor = getBorderColor(colors, $isFocused)
+                    // In the error state we want the border to blend into the
+                    // red background (no visible gray border), matching the
+                    // design used by the other input widgets.
+                    const borderColor = error
+                      ? colors.redBackgroundColor
+                      : getBorderColor(colors, $isFocused)
                     return {
                       // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                       borderLeftWidth: sizes.borderWidth,

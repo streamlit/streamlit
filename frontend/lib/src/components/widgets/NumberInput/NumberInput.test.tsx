@@ -228,7 +228,12 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveAttribute("type", "number")
   })
 
-  it("sets min/max values", () => {
+  it("does not set min/max as HTML attributes (range is validated in JS)", () => {
+    // We intentionally do NOT render the HTML `min`/`max` attributes on
+    // the underlying <input>. Range validation is performed in JS and
+    // surfaced via a themed error tooltip, so keeping the HTML attributes
+    // would trigger the browser-native validation popup on top of ours
+    // (see #10906).
     const props = getIntProps({
       hasMin: true,
       hasMax: true,
@@ -239,8 +244,8 @@ describe("NumberInput widget", () => {
     render(<NumberInput {...props} />)
     const numberInput = screen.getByTestId("stNumberInputField")
 
-    expect(numberInput).toHaveAttribute("min", "0")
-    expect(numberInput).toHaveAttribute("max", "10")
+    expect(numberInput).not.toHaveAttribute("min")
+    expect(numberInput).not.toHaveAttribute("max")
   })
 
   it("resets its value when form is cleared", async () => {
@@ -1052,11 +1057,12 @@ describe("NumberInput widget", () => {
         expect(input).toHaveDisplayValue("42")
       })
 
-      it("handles out-of-range values by not updating formatted value", async () => {
+      it("shows a themed error tooltip for out-of-range values and does not trigger the browser-native popup", async () => {
         const user = userEvent.setup()
         const props = getIntProps({ default: 10, min: 0, max: 50 })
 
-        // Mock reportValidity to track if it's called
+        // Mock reportValidity to verify we do NOT fall back to the
+        // browser-native HTML5 validation popup (see #10906).
         const mockReportValidity = vi.fn()
         HTMLInputElement.prototype.reportValidity = mockReportValidity
 
@@ -1067,12 +1073,52 @@ describe("NumberInput widget", () => {
         await user.type(input, "100") // Above max
         await user.keyboard("{enter}")
 
-        // Should not change the formatted value and call reportValidity
-        expect(input).toHaveDisplayValue("100") // Still shows the invalid input
-        expect(mockReportValidity).toHaveBeenCalled()
+        // The display value is preserved so the user can correct it.
+        expect(input).toHaveDisplayValue("100")
+        // We should NOT fall back to the browser-native popup.
+        expect(mockReportValidity).not.toHaveBeenCalled()
+        // Instead, our custom error icon is rendered inside the input.
+        expect(
+          screen.getByTestId("stNumberInputErrorIcon")
+        ).toBeInTheDocument()
+        // And the container is in the error state.
+        expect(screen.getByTestId("stNumberInputContainer")).toHaveClass(
+          "error"
+        )
+        // And the input is marked as aria-invalid for screen readers.
+        expect(input).toHaveAttribute("aria-invalid", "true")
 
         // Cleanup
         HTMLInputElement.prototype.reportValidity = () => true
+      })
+
+      it("clears the error state once the value is back in range", async () => {
+        const user = userEvent.setup()
+        const props = getIntProps({ default: 10, min: 0, max: 50 })
+
+        render(<NumberInput {...props} />)
+
+        const input = screen.getByTestId("stNumberInputField")
+        await user.clear(input)
+        await user.type(input, "100") // Above max -> error state
+        await user.keyboard("{enter}")
+
+        expect(
+          screen.getByTestId("stNumberInputErrorIcon")
+        ).toBeInTheDocument()
+
+        // Now correct the value.
+        await user.clear(input)
+        await user.type(input, "25")
+        await user.keyboard("{enter}")
+
+        expect(
+          screen.queryByTestId("stNumberInputErrorIcon")
+        ).not.toBeInTheDocument()
+        expect(screen.getByTestId("stNumberInputContainer")).not.toHaveClass(
+          "error"
+        )
+        expect(input).toHaveAttribute("aria-invalid", "false")
       })
 
       it.each([
