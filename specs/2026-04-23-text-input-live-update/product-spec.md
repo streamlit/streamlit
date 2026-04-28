@@ -66,18 +66,19 @@ value = st_keyup("Search", debounce=500)
 
 We considered several parameter names for this feature:
 
-#### Option 1: `debounce` (integer in milliseconds) - PREFERRED
+#### Option 1: `debounce` (bool or integer in milliseconds) - PREFERRED
 
 ```python
-st.text_input("Search", debounce=300)  # Rerun after 300ms of inactivity
-st.text_input("Name")                  # Default: rerun on blur/enter only
+st.text_input("Search", debounce=True)   # Rerun with sensible default (300ms)
+st.text_input("Search", debounce=300)    # Rerun after 300ms of inactivity
+st.text_input("Name")                    # Default: rerun on blur/enter only
 ```
 
 **Pros:**
 - Familiar to web developers (standard term in JavaScript/frontend)
-- Single parameter controls both enabling the feature AND the timing
+- Simple `debounce=True` for most use cases, custom ms when needed
 - Mirrors `streamlit-keyup` API for easy migration
-- Allows fine-grained control over debounce timing
+- Allows fine-grained control over debounce timing when needed
 
 **Cons:**
 - Term "debounce" may be unfamiliar to data scientists
@@ -134,20 +135,21 @@ def text_input(
     value: str | SupportsStr | None = "",
     ...,
     *,
-    debounce: int | None = None,  # New parameter (milliseconds)
+    debounce: int | bool = False,  # New parameter
     ...,
 ) -> str | None:
 ```
 
 | Parameter | Type | Default | Description |
 | --------- | ---- | ------- | ----------- |
-| `debounce` | `int \| None` | `None` | Debounce delay in milliseconds. When set, the widget triggers a rerun after the user stops typing for the specified duration. When `None` (default), reruns occur only on blur or Enter. |
+| `debounce` | `int \| bool` | `False` | Debounce delay for live updates. When `True`, uses a sensible default (300ms). When an integer, specifies the delay in milliseconds. When `False` (default), reruns occur only on blur or Enter. |
 
 ### Behavior
 
 | `debounce` value | Behavior |
 | ---------------- | -------- |
-| `None` (default) | Rerun on blur or Enter (current behavior) |
+| `False` (default) | Rerun on blur or Enter (current behavior) |
+| `True` | Rerun after 300ms of typing inactivity (sensible default) |
 | `0` | Rerun on every keystroke (no debounce). **Warning:** Use sparingly - can cause excessive reruns with expensive app logic. |
 | `> 0` | Rerun after N milliseconds of typing inactivity |
 | `< 0` | Raises `StreamlitAPIException` - negative values are invalid |
@@ -159,22 +161,23 @@ def text_input(
 - After the debounce period with no input, call `commitWidgetValue()` to trigger rerun
 - Visual indicator (subtle spinner or border change) could show pending update
 
-**Recommended defaults:**
-- `debounce=300` is a good starting point for most live search use cases
+**Recommended usage:**
+- `debounce=True` is the simplest option for most live search/validation use cases
+- `debounce=300` (or similar) when you need specific timing control
 - `debounce=0` should be used sparingly - triggers a rerun on every keystroke which can
-  overload the server for apps with expensive computations (ML inference, large data loads).
-  Consider a minimum of 100-200ms for most use cases.
+  overload the server for apps with expensive computations (ML inference, large data loads)
 
 ### Examples
 
-**Example 1: Live search with debounce**
+**Example 1: Live search with default debounce**
 
 ```python
 import streamlit as st
 
 st.title("Product Search")
 
-query = st.text_input("Search products", debounce=300)
+# debounce=True uses a sensible default (300ms)
+query = st.text_input("Search products", debounce=True)
 
 if query:
     products = ["Apple", "Banana", "Cherry", "Date", "Elderberry"]
@@ -186,7 +189,7 @@ else:
     st.write("Start typing to search...")
 ```
 
-**Example 2: Instant validation**
+**Example 2: Instant validation with custom debounce**
 
 ```python
 import streamlit as st
