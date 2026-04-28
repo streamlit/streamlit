@@ -19,10 +19,19 @@ import { getLogger } from "loglevel"
 import { ForwardMsg } from "@streamlit/protobuf"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
+import {
+  createForwardMsgCacheInstrumentation,
+  ForwardMsgCacheInstrumentation,
+  ForwardMsgCacheStats,
+} from "./ForwardMessageCacheInstrumentation"
+import { freezeForwardMsgPayload } from "./ForwardMessagePayloadFreezer"
+
+export type { ForwardMsgCacheStats } from "./ForwardMessageCacheInstrumentation"
+
 const LOG = getLogger("ForwardMessageCache")
 
 class CacheEntry {
-  public readonly encodedMsg: Uint8Array
+  public readonly decodedMsg: ForwardMsg
 
   public readonly fragmentId?: string
 
@@ -33,14 +42,18 @@ class CacheEntry {
   }
 
   constructor(
-    encodedMsg: Uint8Array,
+    decodedMsg: ForwardMsg,
     scriptRunCount: number,
     fragmentId?: string
   ) {
-    this.encodedMsg = encodedMsg
+    this.decodedMsg = decodedMsg
     this.scriptRunCount = scriptRunCount
     this.fragmentId = fragmentId
   }
+}
+
+interface ForwardMsgCacheOptions {
+  enableDevInstrumentation?: boolean
 }
 
 /**
@@ -49,11 +62,19 @@ class CacheEntry {
 export class ForwardMsgCache {
   private readonly messages = new Map<string, CacheEntry>()
 
+  private readonly instrumentation: ForwardMsgCacheInstrumentation
+
   /**
    * A counter that tracks the number of times the underlying script
    * has been run. We use this to expire our cache entries.
    */
   private scriptRunCount = 0
+
+  constructor(options: ForwardMsgCacheOptions = {}) {
+    this.instrumentation = createForwardMsgCacheInstrumentation(
+      options.enableDevInstrumentation
+    )
+  }
 
   /**
    * Increment our scriptRunCount, and remove all entries from the cache
@@ -107,6 +128,13 @@ export class ForwardMsgCache {
   }
 
   /**
+   * Return development stats for cache hit-rate and payload identity reuse.
+   */
+  public getStats(): Readonly<ForwardMsgCacheStats> {
+    return this.instrumentation.getStats()
+  }
+
+  /**
    * Process a ForwardMsg, "de-referencing" it if it's a reference to
    * a cached message.
    *
@@ -128,8 +156,10 @@ export class ForwardMsgCache {
 
     const newMsg = this.getCachedMessage(msg.refHash as string, true)
     if (notNullOrUndefined(newMsg)) {
+      this.instrumentation.recordCacheRefHit()
       LOG.info(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
     } else {
+      this.instrumentation.recordCacheRefMiss()
       throw new Error(
         `Cached ForwardMsg MISS [hash=${msg.refHash}]. This is not expected to happen. Please [report this bug](https://github.com/streamlit/streamlit/issues).`
       )
@@ -142,8 +172,11 @@ export class ForwardMsgCache {
       )
     }
 
-    newMsg.metadata = ForwardMsg.decode(encodedMsg).metadata
-    return newMsg
+    this.instrumentation.recordPayloadIdentityReused()
+
+    // Return a per-delivery wrapper so payload refs stay canonical while
+    // metadata remains specific to this message delivery.
+    return this.createMessageWithMetadata(newMsg, msg.metadata)
   }
 
   /**
@@ -182,21 +215,25 @@ export class ForwardMsgCache {
     }
 
     LOG.info(`Caching ForwardMsg [hash=${msg.hash}]`)
+    const canonicalPayload = ForwardMsg.decode(encodedMsg)
+    freezeForwardMsgPayload(canonicalPayload)
+
     this.messages.set(
       msg.hash,
 
       new CacheEntry(
-        encodedMsg,
+        canonicalPayload,
         this.scriptRunCount,
         // Only delta messages have an associated fragment ID:
         msg.delta?.fragmentId ?? undefined
       )
     )
+    this.instrumentation.recordCachedMessage()
   }
 
   /**
-   * Return a new copy of the ForwardMsg with the given hash
-   * from the cache, or undefined if no such message exists.
+   * Return the canonical cached ForwardMsg with the given hash,
+   * or undefined if no such message exists.
    *
    * If the message's entry exists, its scriptRunCount will be
    * updated to the current value.
@@ -213,6 +250,31 @@ export class ForwardMsgCache {
     if (updateScriptRunCount) {
       cached.scriptRunCount = this.scriptRunCount
     }
-    return ForwardMsg.decode(cached.encodedMsg)
+    return cached.decodedMsg
+  }
+
+  /**
+   * Create a per-delivery `ForwardMsg` wrapper that reuses the canonical
+   * payload object graph while replacing only `metadata`.
+   *
+   * This preserves referential stability for heavy nested payload fields
+   * (`delta`, `newSession`, etc.) and avoids mutating cached canonical
+   * messages.
+   *
+   * @param payload Canonical cached message payload to structurally share.
+   * @param metadata Delivery-specific metadata from the current message.
+   * @returns A shallow wrapper with shared payload references and new metadata.
+   */
+  private createMessageWithMetadata(
+    payload: ForwardMsg,
+    metadata: ForwardMsg["metadata"]
+  ): ForwardMsg {
+    const messageWithMetadata = Object.assign(
+      Object.create(Object.getPrototypeOf(payload)) as ForwardMsg,
+      payload,
+      { metadata }
+    )
+
+    return messageWithMetadata
   }
 }
