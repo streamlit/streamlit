@@ -78,6 +78,7 @@ if TYPE_CHECKING:
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
+    from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
     from streamlit.proto.Radio_pb2 import Radio as RadioProto
     from streamlit.proto.Selectbox_pb2 import Selectbox as SelectboxProto
     from streamlit.proto.Space_pb2 import Space as SpaceProto
@@ -879,6 +880,43 @@ class Feedback(Widget):
 
     def set_value(self, v: int | None) -> Feedback:
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
+        self._value = v
+        return self
+
+
+@dataclass(repr=False)
+class Pagination(Widget):
+    """A representation of ``st.pagination``."""
+
+    _value: int | InitialValue
+
+    proto: PaginationProto = field(repr=False)
+    form_id: str
+
+    def __init__(self, proto: PaginationProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = InitialValue()
+        self.type = "pagination"
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        ws = WidgetState()
+        ws.id = self.id
+        ws.int_value = self.value
+        return ws
+
+    @property
+    def value(self) -> int:
+        """The currently selected page number. (int)"""  # noqa: D400
+        if not isinstance(self._value, InitialValue):
+            return self._value
+        state = self.root.session_state
+        assert state
+        return cast("int", state[self.id])
+
+    def set_value(self, v: int) -> Pagination:
+        """Set the selected page number. (int)"""  # noqa: D400
         self._value = v
         return self
 
@@ -2071,6 +2109,10 @@ class Block:
         return WidgetList(self.get("number_input"))  # type: ignore
 
     @property
+    def pagination(self) -> WidgetList[Pagination]:
+        return WidgetList(self.get("pagination"))  # type: ignore
+
+    @property
     def radio(self) -> WidgetList[Radio[Any]]:
         return WidgetList(self.get("radio"))  # type: ignore
 
@@ -2528,6 +2570,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Multiselect(elt.multiselect, root=root)
             elif ty == "number_input":
                 new_node = NumberInput(elt.number_input, root=root)
+            elif ty == "pagination":
+                new_node = Pagination(elt.pagination, root=root)
             elif ty == "radio":
                 new_node = Radio(elt.radio, root=root)
             elif ty == "selectbox":

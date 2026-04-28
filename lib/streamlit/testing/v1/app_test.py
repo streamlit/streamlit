@@ -68,6 +68,7 @@ from streamlit.testing.v1.element_tree import (
     Multiselect,
     Node,
     NumberInput,
+    Pagination,
     Radio,
     Selectbox,
     SelectSlider,
@@ -894,6 +895,20 @@ class AppTest:
             ``at.number_input(key="my_key")`` for a widget with a given key.
         """
         return self._tree.number_input
+
+    @property
+    def pagination(self) -> WidgetList[Pagination]:
+        """Sequence of all ``st.pagination`` widgets.
+
+        Returns
+        -------
+        WidgetList of Pagination
+            Sequence of all ``st.pagination`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.pagination[0]`` for the first widget or
+            ``at.pagination(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.pagination
 
     @property
     def radio(self) -> WidgetList[Radio[Any]]:

@@ -108,7 +108,7 @@ def _normalize_icon_position(
             f'The argument passed was "{icon_position}".'
         )
 
-    return cast("IconPosition", icon_position)  # type: ignore[redundant-cast]
+    return cast("IconPosition", icon_position)
 
 
 def _icon_position_to_proto(

@@ -1034,6 +1034,24 @@ def test_feedback_element():
     assert "Feedback" in result
 
 
+def test_pagination_element():
+    """Test Pagination widget used by st.pagination."""
+
+    def script():
+        import streamlit as st
+
+        st.pagination(10, key="page")
+
+    at = AppTest.from_function(script).run()
+    assert at.pagination[0].value == 1
+
+    at.pagination[0].set_value(4).run()
+    assert at.pagination[0].value == 4
+
+    result = repr(at.pagination[0])
+    assert "Pagination" in result
+
+
 def test_unknown_element():
     """Test UnknownElement handles new/unrecognized element types gracefully."""
 
