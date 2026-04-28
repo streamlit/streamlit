@@ -102,7 +102,8 @@ class ParallelFragmentCoordinator:
         poll_interval: float = 0.1,
     ) -> None:
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
-        self._futures: list[Future] = []
+        self._outstanding = 0  # tracks in-flight work units (inc on submit, dec on completion)
+        self._outstanding_lock = threading.Lock()
         self._stop_event = threading.Event()
         self._worker_exception: RerunException | StopException | None = None
         self._exception_lock = threading.Lock()
@@ -113,11 +114,26 @@ class ParallelFragmentCoordinator:
         self,
         fn: Callable[..., Any],
         *args: Any,
-    ) -> Future:
-        """Submit a fragment to the thread pool."""
-        future = self._executor.submit(fn, *args)
-        self._futures.append(future)
-        return future
+    ) -> None:
+        """Submit a fragment to the thread pool. Can be called from any
+        thread (main thread or worker threads for nested fragments)."""
+        with self._outstanding_lock:
+            self._outstanding += 1
+
+        def tracked() -> None:
+            # Wraps fn so the counter decrements when the work completes.
+            # The decrement is in `finally` so it runs even if fn raises.
+            # For nested fragments, fn's body calls submit() (incrementing
+            # the counter) before returning, so a parent's decrement always
+            # happens after its children's increments — the counter never
+            # hits 0 prematurely.
+            try:
+                fn(*args)
+            finally:
+                with self._outstanding_lock:
+                    self._outstanding -= 1
+
+        self._executor.submit(tracked)
 
     def request_stop(self) -> None:
         """A worker called st.stop(). First writer wins."""
@@ -142,9 +158,14 @@ class ParallelFragmentCoordinator:
         return self._worker_exception
 
     def join(self) -> None:
-        """Happy-path join. Responsive to external requests (via yield_check)
-        and worker-initiated cancellation (via worker_exception)."""
-        while not all(f.done() for f in self._futures):
+        """Happy-path join. Blocks until all submitted work completes,
+        including work submitted by workers (nested parallel fragments).
+        Responsive to external requests (via yield_check) and
+        worker-initiated cancellation (via worker_exception)."""
+        while True:
+            with self._outstanding_lock:
+                if self._outstanding == 0:
+                    break
             self._yield_check()
             if self._worker_exception is not None:
                 raise self._worker_exception
