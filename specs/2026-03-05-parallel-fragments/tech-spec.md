@@ -258,6 +258,12 @@ def _run_parallel_fragment(
     parent_context: contextvars.Context,
 ) -> None:
     def run_fragment() -> None:
+        # Set per-thread state inside parent_context.run() so it's
+        # scoped to this context copy, not the pool thread's default
+        _thread_state.set(FragmentThreadState(
+            fragment_id=fragment_id,
+            is_parallel_worker=True,
+        ))
         while True:
             try:
                 wrapped_fragment()
@@ -615,8 +621,8 @@ class ScriptRunContext:
     # 3. Shared mutable run state — new abstraction
     shared: SharedRunState
 
-    # 4. Per-thread fragment state — new abstraction
-    thread_state: FragmentThreadState
+    # 4. Per-thread fragment state — via ContextVar
+    #    See _thread_state ContextVar below.
 
     def __post_init__(self):
         self._main_thread_ident = threading.get_ident()
@@ -629,7 +635,7 @@ class ScriptRunContext:
                 "reset() must only be called from the main script thread"
             )
         self.shared.reset(...)
-        self.thread_state.reset(...)
+        _thread_state.set(FragmentThreadState())
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=self._yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
@@ -642,9 +648,9 @@ class ScriptRunContext:
 ```
 
 Adding a new field forces an explicit decision: does it go on `FragmentThreadState`
-(per-thread, no sync needed), `SharedRunState` (shared, sync built-in), one of the
-externally thread-safe objects, or the immutable config? The following sections describe
-each category.
+(per-thread via `ContextVar`, no sync needed), `SharedRunState` (shared, sync built-in),
+one of the externally thread-safe objects, or the immutable config? The following sections
+describe each category.
 
 #### Immutable config
 
@@ -833,11 +839,14 @@ land with the thread-safe shared sets work.
 
 #### `FragmentThreadState` — per-thread fragment state
 
-Bundles per-thread fields into a dataclass. Each worker thread gets a fresh
-instance created by `_dispatch_parallel_fragment`; the main thread reuses a
-single instance across the run.
+Bundles per-thread fields into a dataclass, stored in a `ContextVar` so that each
+thread gets automatic isolation via `copy_context()`:
 
 ```python
+_thread_state: ContextVar[FragmentThreadState] = ContextVar(
+    "thread_state", default=FragmentThreadState(),
+)
+
 @dataclass
 class FragmentThreadState:
     """Per-thread state for a fragment execution."""
@@ -845,15 +854,22 @@ class FragmentThreadState:
     delta_path: tuple[int, ...] | None = None
     in_fragment_callback: bool = False
     active_script_hash: str = ""
+    is_parallel_worker: bool = False
 ```
 
-`in_cached_function` remains a `ContextVar` (it's also used outside fragments). The
-other per-thread fields move here, making `_dispatch_parallel_fragment` explicit:
-create a `FragmentThreadState`, pass it to the worker thread, done.
+This uses the same `ContextVar` + `copy_context()` mechanism already used for
+`context_dg_stack` and `in_cached_function`. When `_dispatch_parallel_fragment`
+calls `contextvars.copy_context()`, the snapshot includes the current
+`_thread_state` binding. The worker then sets a fresh instance via
+`_thread_state.set(FragmentThreadState(...))` inside `parent_context.run()`,
+which is scoped to that thread's context — the main thread's binding is unaffected.
+
+`in_cached_function` remains a separate `ContextVar` (it's also used outside
+fragments and predates this design).
 
 Callers change from bare field access (e.g. `ctx.widget_ids_this_run.add()`,
-`ctx.current_fragment_id`) to the namespaced equivalents (`ctx.shared.add_widget_id()`,
-`ctx.thread_state.fragment_id`).
+`ctx.current_fragment_id`) to `ctx.shared.add_widget_id()` for shared state
+and `_thread_state.get().fragment_id` for per-thread state.
 
 ### API restrictions during parallel execution
 
@@ -868,17 +884,12 @@ that are disruptive or nonsensical during concurrent execution and cannot be add
 by locking alone. All follow the same pattern: **prohibited during the parallel batch**
 (worker threads), **allowed during sequential fragment reruns** (single-threaded).
 
-Detection uses a flag on `FragmentThreadState`, set once by
-`_dispatch_parallel_fragment` at thread creation:
+Detection uses the `is_parallel_worker` flag on `FragmentThreadState`, set in
+`_run_parallel_fragment` when the worker's context is initialized:
 
 ```python
-@dataclass
-class FragmentThreadState:
-    ...
-    is_parallel_worker: bool = False  # True only on worker threads
-
-def _check_not_parallel_worker(ctx: ScriptRunContext, api_name: str) -> None:
-    if ctx.thread_state.is_parallel_worker:
+def _check_not_parallel_worker(api_name: str) -> None:
+    if _thread_state.get().is_parallel_worker:
         raise StreamlitAPIException(
             f"{api_name} cannot be called from a parallel fragment."
         )
@@ -909,7 +920,7 @@ in a dashboard card opens a detail dialog). Blocking this would be overly restri
 def _check_dialog_guard(should_open: bool) -> None:
     ctx = get_script_run_ctx()
     if should_open and ctx:
-        _check_not_parallel_worker(ctx, "@st.dialog")
+        _check_not_parallel_worker("@st.dialog")
         # Existing one-dialog-per-rerun check (unchanged, only runs
         # during sequential execution so no synchronization needed)
         if ctx.has_dialog_opened:
@@ -935,6 +946,6 @@ During a sequential fragment rerun, `st.switch_page` is a valid and common patte
 def switch_page(page: str | Path | StreamlitPage, ...) -> NoReturn:
     ctx = get_script_run_ctx()
     if ctx:
-        _check_not_parallel_worker(ctx, "st.switch_page")
+        _check_not_parallel_worker("st.switch_page")
     # ... existing implementation
 ```
