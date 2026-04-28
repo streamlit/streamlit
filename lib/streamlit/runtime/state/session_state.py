@@ -1047,7 +1047,7 @@ class SessionState:
         #
         # Programmatic set (user_key in _new_session_state): sync URL when the
         # resolved value differs from the backend query snapshot, so reloads
-        # stay consistent (see gh-14670).
+        # stay consistent (see issue #14670).
         #
         # Default collapsing: remove stale params the frontend already cleared.
         # The backend's _query_params is not refreshed on same-page reruns, so

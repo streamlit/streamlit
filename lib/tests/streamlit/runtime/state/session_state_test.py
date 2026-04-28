@@ -1578,7 +1578,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
 
 
 class RegisterWidgetQueryParamProgrammaticSyncTest(DeltaGeneratorTestCase):
-    """Programmatic session_state updates sync bound widgets to the URL (gh-14670)."""
+    """Programmatic session_state updates sync bound widgets to the URL (issue #14670)."""
 
     def setUp(self) -> None:
         super().setUp()
@@ -2008,7 +2008,7 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         return_value=MockScriptRunCtx(),
     )
     def test_syncs_url_when_session_state_set(self, mock_ctx: MagicMock) -> None:
-        """Programmatic st.session_state set this run syncs to URL (gh-14670)."""
+        """Programmatic st.session_state set this run syncs to URL (issue #14670)."""
         metadata = self._setup_remount_state("old_value")
         self.session_state._new_session_state["my_widget"] = "programmatic_value"
 
