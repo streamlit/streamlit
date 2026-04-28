@@ -159,7 +159,6 @@ def text_input(
 **Frontend:**
 - When `debounce` is set, use a timer that resets on each keystroke
 - After the debounce period with no input, call `commitWidgetValue()` to trigger rerun
-- Visual indicator (subtle spinner or border change) could show pending update
 
 **Recommended usage:**
 - `debounce=True` is the simplest option for most live search/validation use cases
@@ -244,8 +243,6 @@ if email:
   debounce (waiting for pause). Could add `throttle` parameter if needed.
 - **Cancel/abort pattern**: Mechanism to cancel in-flight computations when new input arrives.
   Users can implement this with `st.session_state` flags.
-- **Visual feedback**: Spinner or indicator showing "updating..." during debounce period.
-  Could be added as `show_pending=True` parameter.
 
 ## Checklist
 
