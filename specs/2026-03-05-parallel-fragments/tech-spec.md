@@ -269,7 +269,7 @@ if rerun_data.fragment_id_queue:
 **When `st.rerun()` or `st.stop()` is called from within a parallel fragment:**
 
 The exception is caught in `_run_parallel_fragment`, which is the thread entry point.
-It runs `wrapped_fragment` inside the copied context and handles three cases:
+It runs `wrapped_fragment` inside the copied context and handles control flow exceptions:
 
 ```python
 def _run_parallel_fragment(
@@ -285,35 +285,39 @@ def _run_parallel_fragment(
             fragment_id=fragment_id,
             is_parallel_worker=True,
         ))
-        while True:
-            try:
-                wrapped_fragment()
-                break
-            except RerunException as e:
-                if e.rerun_data.fragment_id_queue:
-                    # st.rerun(scope="fragment") — re-execute in this thread,
-                    # siblings are unaffected
-                    continue
-                else:
-                    # st.rerun(scope="app") — signal sibling threads to stop
-                    # and preserve the RerunException for the main thread
-                    coordinator.request_rerun(e)
-                    break
-            except StopException:
-                # st.stop() — signal sibling threads to stop
-                coordinator.request_stop()
-                break
-            except FragmentHandledException:
-                break  # error already rendered in the fragment's container
-                       # by wrapped_fragment() — existing behavior
-            except Exception:
-                _LOGGER.exception(
-                    "Parallel fragment %s failed", _short_id(fragment_id)
-                )
-                break
+        try:
+            wrapped_fragment()
+        except RerunException as e:
+            # st.rerun(scope="app") — signal sibling threads to stop
+            # and preserve the RerunException for the main thread.
+            #
+            # Note: st.rerun(scope="fragment") raises StreamlitAPIException
+            # before reaching this point (the existing guard in
+            # _new_fragment_id_queue rejects fragment-scoped reruns during
+            # full-app runs, and parallel fragments only run in threads
+            # during full-app runs). See "Prohibited / error cases" below.
+            coordinator.request_rerun(e)
+        except StopException:
+            # st.stop() — signal sibling threads to stop
+            coordinator.request_stop()
+        except FragmentHandledException:
+            pass  # error already rendered in the fragment's container
+                  # by wrapped_fragment() — existing behavior
+        except Exception:
+            _LOGGER.exception(
+                "Parallel fragment %s failed", _short_id(fragment_id)
+            )
 
     parent_context.run(run_fragment)
 ```
+
+**`st.rerun(scope="fragment")` during the initial full-app run:** The existing guard
+in `_new_fragment_id_queue()` raises `StreamlitAPIException` when
+`fragment_ids_this_run` is empty (which it is during full-app runs). This behavior
+is preserved for parallel fragments — the guard fires before a `RerunException` is
+ever raised, so `_run_parallel_fragment` never sees it. During fragment reruns,
+parallel fragments run sequentially (see above), so the existing while loop in
+`wrapped_fragment()` handles `st.rerun(scope="fragment")` as it does today.
 
 **When an external full-app rerun arrives** (e.g., widget interaction while fragments
 are still running):
@@ -394,7 +398,7 @@ between blocking operations to improve cancellation responsiveness (see
 | Scenario | Trigger | Calling thread | Siblings + main thread | Outcome |
 |----------|---------|---------------|----------------------|---------|
 | Happy path | — | — | — | All threads complete → `join()` returns → `scriptFinished` |
-| `st.rerun(scope="fragment")` | Thread A | Caught → `continue` → re-executes `wrapped_fragment()` in same thread | Unaffected | Thread A reruns locally |
+| `st.rerun(scope="fragment")` | Thread A | `StreamlitAPIException` — same as sequential fragments during full-app runs | Unaffected | Error rendered in fragment container |
 | `st.stop()` | Thread A | Caught → `request_stop()` → exits | See `should_stop()` at next yield point → `StopException` → exit | Main thread raises `StopException` → run ends |
 | `st.rerun(scope="app")` | Thread A | Caught → `request_rerun(e)` → exits | See `should_stop()` at next yield point → `StopException` → exit | Main thread raises `RerunException` (with rerun data) → `_run_script` restarts |
 | External rerun during `exec()` | Frontend | Main thread: `RerunException` at next `st.*` call → `except` block → `drain()` | See `should_stop()` at next yield point → exit | `_run_script` restarts |
@@ -846,11 +850,11 @@ class SharedRunState:
         self._tracked_commands_counter: Counter[str] = Counter()
 
     def add_widget_id(self, widget_id: str) -> bool:
-        """Add widget ID. Returns True if already present (duplicate)."""
+        """Atomically add widget ID. Returns True if the value was new."""
         with self._lock:
-            was_present = widget_id in self._widget_ids
+            is_new = widget_id not in self._widget_ids
             self._widget_ids.add(widget_id)
-            return was_present
+            return is_new
     # ... similar methods for other fields
 ```
 
