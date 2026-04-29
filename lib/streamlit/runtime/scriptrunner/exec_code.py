@@ -24,6 +24,7 @@ from streamlit.delta_generator_singletons import (
 )
 from streamlit.error_util import (
     handle_uncaught_app_exception,
+    invoke_script_error_handler,
     show_uncaught_app_exception,
 )
 from streamlit.errors import FragmentHandledException
@@ -167,21 +168,7 @@ def exec_func_with_error_handling(
         handle_uncaught_app_exception(ex, show_in_ui=False)
 
         # Call the custom error handler if one is set
-        suppress_ui_display = False
-        if ctx.on_script_error is not None:
-            try:
-                handler_result = ctx.on_script_error(ex)
-                if handler_result is True:
-                    suppress_ui_display = True
-            except (StopException, RerunException):
-                # StopException/RerunException raised inside the handler should not
-                # crash the script runner thread. Log and fall back to default UI.
-                _LOGGER.exception("on_script_error handler raised an exception")
-            except Exception:
-                # Log any handler errors and fall back to showing the original
-                # exception. We catch Exception to let KeyboardInterrupt and SystemExit
-                # propagate normally.
-                _LOGGER.exception("on_script_error handler raised an exception")
+        suppress_ui_display = invoke_script_error_handler(ex, ctx.on_script_error)
 
         # Show exception in UI unless the handler suppressed it
         if not suppress_ui_display:

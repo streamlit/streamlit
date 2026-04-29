@@ -198,7 +198,7 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         handler.assert_called_once()
         mock_show.assert_called_once_with(test_exception)
 
-    @patch("streamlit.runtime.scriptrunner.exec_code._LOGGER")
+    @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
     @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
     def test_handler_exception_logged_and_ui_shown(
@@ -275,7 +275,7 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_handle.assert_not_called()
         mock_show.assert_not_called()
 
-    @patch("streamlit.runtime.scriptrunner.exec_code._LOGGER")
+    @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
     @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
     def test_handler_raising_stop_exception_is_logged(
@@ -301,7 +301,7 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         # The original exception should still be shown in the UI
         mock_show.assert_called_once_with(test_exception)
 
-    @patch("streamlit.runtime.scriptrunner.exec_code._LOGGER")
+    @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
     @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
     def test_handler_raising_rerun_exception_is_logged(

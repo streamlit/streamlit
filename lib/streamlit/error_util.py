@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import streamlit
 from streamlit import config
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements import exception
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -121,3 +124,49 @@ def handle_uncaught_app_exception(
 
     if show_in_ui:
         show_uncaught_app_exception(ex)
+
+
+def invoke_script_error_handler(
+    ex: Exception,
+    on_script_error: Callable[[Exception], bool | None] | None,
+) -> bool:
+    """Invoke the on_script_error handler if set.
+
+    This function centralizes the logic for invoking the custom error handler,
+    handling any exceptions raised by the handler itself, and determining whether
+    to suppress the default UI display.
+
+    Parameters
+    ----------
+    ex
+        The original exception that occurred.
+    on_script_error
+        The custom error handler callback, if any.
+
+    Returns
+    -------
+    bool
+        True if the handler suppressed the UI display, False otherwise.
+    """
+    # Import here to avoid circular dependency
+    from streamlit.runtime.scriptrunner_utils.exceptions import (
+        RerunException,
+        StopException,
+    )
+
+    suppress_ui_display = False
+    if on_script_error is not None:
+        try:
+            handler_result = on_script_error(ex)
+            if handler_result is True:
+                suppress_ui_display = True
+        except (StopException, RerunException):
+            # StopException/RerunException raised inside the handler should not
+            # crash the script runner thread. Log and fall back to default UI.
+            _LOGGER.exception("on_script_error handler raised an exception")
+        except Exception:
+            # Log any handler errors and fall back to showing the original
+            # exception. We catch Exception to let KeyboardInterrupt and SystemExit
+            # propagate normally.
+            _LOGGER.exception("on_script_error handler raised an exception")
+    return suppress_ui_display

@@ -24,6 +24,7 @@ from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, overload
 
 from streamlit.error_util import (
     handle_uncaught_app_exception,
+    invoke_script_error_handler,
     show_uncaught_app_exception,
 )
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
@@ -253,17 +254,9 @@ def _fragment(
                             handle_uncaught_app_exception(e, show_in_ui=False)
 
                             # Call the custom error handler if one is set
-                            suppress_ui_display = False
-                            if ctx.on_script_error is not None:
-                                try:
-                                    handler_result = ctx.on_script_error(e)
-                                    if handler_result is True:
-                                        suppress_ui_display = True
-                                except Exception:
-                                    # Log handler errors and fall back to default UI
-                                    _LOGGER.exception(
-                                        "on_script_error handler raised an exception"
-                                    )
+                            suppress_ui_display = invoke_script_error_handler(
+                                e, ctx.on_script_error
+                            )
 
                             # Show exception in UI unless the handler suppressed it
                             # Render error here so that the delta path is correct
