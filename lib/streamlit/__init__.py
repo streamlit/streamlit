@@ -230,6 +230,7 @@ metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
 page_link = _main.page_link
+pagination = _main.pagination
 pdf = _main.pdf
 pills = _main.pills
 plotly_chart = _main.plotly_chart
