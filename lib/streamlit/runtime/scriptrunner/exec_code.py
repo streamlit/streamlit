@@ -173,7 +173,9 @@ def exec_func_with_error_handling(
                 handler_result = ctx.on_script_error(ex)
                 if handler_result is True:
                     suppress_ui_display = True
-            except Exception:
+            except (StopException, RerunException):
+                raise
+            except BaseException:
                 _LOGGER.exception("on_script_error handler raised an exception")
 
         # Show exception in UI unless the handler suppressed it

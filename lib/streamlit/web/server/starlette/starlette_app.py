@@ -75,9 +75,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+    )
     from streamlit.runtime.secrets import SecretsValue
-
-    OnScriptErrorHandler = Callable[[Exception], bool | None]
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
@@ -340,7 +341,12 @@ class App:
     >>> from streamlit.web.server.starlette import App
     >>>
     >>> sentry_sdk.init(dsn="...")
-    >>> app = App("main.py", on_script_error=sentry_sdk.capture_exception)
+    >>>
+    >>> def log_to_sentry(exc):
+    ...     sentry_sdk.capture_exception(exc)
+    ...     return None  # Show default exception display
+    >>>
+    >>> app = App("main.py", on_script_error=log_to_sentry)
 
     With custom error UI:
 

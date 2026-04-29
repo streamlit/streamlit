@@ -42,10 +42,11 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-
-    OnScriptErrorHandler = Callable[[Exception], bool | None]
 
 _LOGGER: Final = get_logger(__name__)
 

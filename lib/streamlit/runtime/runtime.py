@@ -56,16 +56,17 @@ from streamlit.runtime.stats import (
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import Awaitable
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
     from streamlit.runtime.media_file_storage import MediaFileStorage
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
-
-    OnScriptErrorHandler = Callable[[Exception], bool | None]
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60

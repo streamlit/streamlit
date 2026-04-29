@@ -58,12 +58,13 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.state import SessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.source_util import PageHash, PageInfo
-
-    OnScriptErrorHandler = Callable[[Exception], bool | None]
 
 _LOGGER: Final = get_logger(__name__)
 
