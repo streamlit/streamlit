@@ -40,35 +40,35 @@ stuck waiting while the cache refreshes.
 
 ### API
 
-Add a `refresh` parameter to both `st.cache_data` and `st.cache_resource`:
+Add a `refresh_type` parameter to both `st.cache_data` and `st.cache_resource`:
 
 ```python
 st.cache_data(
     ...,
-    refresh: Literal["foreground", "background"] = "foreground",
+    refresh_type: Literal["foreground", "background"] = "foreground",
 )
 
 st.cache_resource(
     ...,
-    refresh: Literal["foreground", "background"] = "foreground",
+    refresh_type: Literal["foreground", "background"] = "foreground",
 )
 ```
 
 ### Parameter
 
-| Parameter | Type                                     | Default        | Description                                                   |
-|-----------|------------------------------------------|----------------|---------------------------------------------------------------|
-| `refresh` | `Literal["foreground", "background"]`    | `"foreground"` | How to handle cache refresh when TTL expires                  |
+| Parameter      | Type                                     | Default        | Description                                                   |
+|----------------|------------------------------------------|----------------|---------------------------------------------------------------|
+| `refresh_type` | `Literal["foreground", "background"]`    | `"foreground"` | How to handle cache refresh when TTL expires                  |
 
 ### Behavior
 
-**`refresh="foreground"` (default, current behavior):**
+**`refresh_type="foreground"` (default, current behavior):**
 
 1. TTL expires -> entry is treated as expired on the next access
 2. Next call detects the expiration and blocks while the function re-executes
 3. New value is cached and returned
 
-**`refresh="background"` (lazy background refresh):**
+**`refresh_type="background"` (lazy background refresh):**
 
 1. TTL expires -> entry remains in cache (stale but valid)
 2. Next call detects expiration:
@@ -122,17 +122,17 @@ Time=1h+2s    : Next call:
 
 ```python
 # Valid:
-@st.cache_data(ttl="1h", refresh="background")  # Background refresh at TTL
-@st.cache_data(ttl="1h", refresh="foreground")  # Explicit foreground
-@st.cache_data(ttl="1h")                        # Defaults to foreground
-@st.cache_data()                                # No TTL, no refresh needed
+@st.cache_data(ttl="1h", refresh_type="background")  # Background refresh at TTL
+@st.cache_data(ttl="1h", refresh_type="foreground")  # Explicit foreground
+@st.cache_data(ttl="1h")                             # Defaults to foreground
+@st.cache_data()                                     # No TTL, no refresh needed
 
 # Invalid:
-@st.cache_data(refresh="background")            # ERROR: requires ttl
-@st.cache_data(ttl=None, refresh="background")  # ERROR: requires ttl
+@st.cache_data(refresh_type="background")            # ERROR: requires ttl
+@st.cache_data(ttl=None, refresh_type="background")  # ERROR: requires ttl
 ```
 
-The `refresh="background"` option requires a `ttl` parameter since background refresh
+The `refresh_type="background"` option requires a `ttl` parameter since background refresh
 only makes sense when entries can expire. Using it without `ttl` raises a
 `StreamlitAPIException`.
 
@@ -140,7 +140,7 @@ only makes sense when entries can expire. Using it without `ttl` raises a
 
 When `persist="disk"` (or `persist=True`) is used with `st.cache_data`, entries are
 stored on disk and currently do not respect `ttl` for eviction. Using
-`refresh="background"` with `persist` mode will raise a `StreamlitAPIException` since
+`refresh_type="background"` with `persist` mode will raise a `StreamlitAPIException` since
 background refresh requires TTL-based expiration. Users needing both persistence and
 background refresh should use `persist=False` (the default) with `refresh="background"`.
 
@@ -151,7 +151,7 @@ background refresh should use `persist=False` (the default) with `refresh="backg
 ```python
 import streamlit as st
 
-@st.cache_data(ttl="1h", refresh="background")
+@st.cache_data(ttl="1h", refresh_type="background")
 def fetch_stock_prices(symbol: str):
     """Fetch stock prices - users never wait after first call."""
     return expensive_api_call(symbol)
@@ -166,7 +166,7 @@ prices = fetch_stock_prices("AAPL")
 **Database connection:**
 
 ```python
-@st.cache_resource(ttl="30m", refresh="background")
+@st.cache_resource(ttl="30m", refresh_type="background")
 def get_database_connection():
     """Connection refreshed in background to avoid stale connections."""
     return psycopg2.connect(host="localhost", database="mydb")
@@ -179,7 +179,7 @@ conn = get_database_connection()
 ```python
 import streamlit as st
 
-@st.cache_data(ttl="6h", refresh="background")
+@st.cache_data(ttl="6h", refresh_type="background")
 def fetch_daily_report():
     """
     Data updates at 6am daily. Background refresh ensures users
@@ -202,7 +202,7 @@ def slow_query_foreground():
     return fetch_data()
 
 # Users never wait (after first call)
-@st.cache_data(ttl="1h", refresh="background")
+@st.cache_data(ttl="1h", refresh_type="background")
 def slow_query_background():
     time.sleep(5)  # Runs in background
     return fetch_data()
@@ -210,7 +210,25 @@ def slow_query_background():
 
 ## API Alternatives
 
-### Option A: `refresh` parameter with string literal (Recommended)
+### Parameter Name Alternatives
+
+#### Option A: `refresh_type` (Recommended)
+
+```python
+@st.cache_data(ttl="1h", refresh_type="background")
+```
+
+**Pros:**
+
+- Clear, explicit naming that describes what's being configured
+- Consistent with other `*_type` parameters in Python APIs
+- Extensible for future modes
+
+**Cons:**
+
+- Slightly more verbose than `refresh`
+
+#### Option B: `refresh`
 
 ```python
 @st.cache_data(ttl="1h", refresh="background")
@@ -218,15 +236,15 @@ def slow_query_background():
 
 **Pros:**
 
-- Clear, explicit naming
-- Extensible for future modes (e.g., `"lazy"`, `"eager"`, `"scheduled"`)
-- Consistent with Streamlit's preference for string literals over booleans
+- More concise
+- Reads naturally ("refresh in background")
 
 **Cons:**
 
-- Slightly more verbose than boolean
+- Could be confused with a verb/action rather than a configuration
+- Less explicit about what's being configured
 
-### Option B: Boolean parameter
+#### Option C: Boolean parameter
 
 ```python
 @st.cache_data(ttl="1h", background_refresh=True)
@@ -243,7 +261,7 @@ def slow_query_background():
 - Not extensible if we want to add more refresh strategies
 - `async` could be confused with Python's `async`/`await`
 
-### Option C: `on_expire` parameter
+#### Option D: `on_expire` parameter
 
 ```python
 @st.cache_data(ttl="1h", on_expire="refresh")  # vs default "evict"
@@ -258,8 +276,21 @@ def slow_query_background():
 - Doesn't clearly convey foreground vs background distinction
 - Less intuitive naming
 
-**Recommendation:** Option A (`refresh` parameter) provides the best balance of clarity and
-extensibility.
+**Recommendation:** Option A (`refresh_type`) provides the best balance of clarity and
+explicitness.
+
+### Value Alternatives
+
+The proposed values are `"foreground"` and `"background"`. Alternative value names considered:
+
+| Proposed       | Alternative | Notes                                                    |
+|----------------|-------------|----------------------------------------------------------|
+| `"background"` | `"lazy"`    | Describes the on-access trigger pattern; less clear about threading |
+| `"foreground"` | `"blocking"`| More explicit about UX impact; less consistent with `"background"` |
+| `"foreground"` | `"sync"`    | Technical but could confuse with Python async/await      |
+
+**Recommendation:** `"foreground"` / `"background"` are clear, user-friendly, and form a
+natural pair.
 
 ## Alternative Solutions
 
@@ -317,7 +348,7 @@ day, call this function").
 - Significantly more complex (requires cron parsing, background scheduler)
 - Unclear interaction with TTL
 - Can be achieved with external schedulers (cron, Celery, Airflow, Starlette background tasks)
-  calling a warmup endpoint
+  that call the cached function directly
 - Out of scope for MVP; could be follow-up work
 
 ### Cache Warming API
@@ -354,4 +385,4 @@ fetch_stock_prices.warm("AAPL", "GOOGL", "MSFT")
 | No new dependencies        | ✅ Uses stdlib `concurrent.futures`                                  |
 | Metrics collected          | ✅ Parameter usage tracked via the `gather_metrics` decorator        |
 | Any security/legal impact? | ✅ No new security concerns                                          |
-| Any docs changes needed?   | ✅ Document `refresh` param, note about `st.*` calls not replaying   |
+| Any docs changes needed?   | ✅ Document `refresh_type` param, note about `st.*` calls not replaying |
