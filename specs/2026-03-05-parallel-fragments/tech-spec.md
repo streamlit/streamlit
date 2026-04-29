@@ -543,7 +543,7 @@ frontend:
 **`ForwardMsgQueue` — already safe via event loop serialization:** The queue is
 not internally thread-safe (`threading.Lock` was [removed in
 PR #4568](https://github.com/streamlit/streamlit/pull/4568)), but all access
-is serialized through `call_soon_threadsafe` onto the Tornado event loop thread.
+is serialized through `call_soon_threadsafe` onto the server's asyncio event loop thread.
 No changes are needed for parallel fragments.
 
 The enqueue path is the same for both the main script thread and parallel
@@ -562,7 +562,7 @@ st.text("hello")                               (on script thread or worker threa
 
 The key hop is `call_soon_threadsafe`: it pushes a callback onto the event
 loop's queue and returns immediately — the calling thread never blocks. The
-event loop thread (Tornado) processes callbacks one at a time, so
+server's asyncio event loop thread processes callbacks one at a time, so
 `_browser_queue.enqueue()` is only ever called from a single thread.
 
 ```python
