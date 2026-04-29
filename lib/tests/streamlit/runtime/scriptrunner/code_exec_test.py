@@ -274,3 +274,55 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         handler.assert_not_called()
         mock_handle.assert_not_called()
         mock_show.assert_not_called()
+
+    @patch("streamlit.runtime.scriptrunner.exec_code._LOGGER")
+    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_handler_raising_stop_exception_is_logged(
+        self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
+    ):
+        """Test that StopException from handler is logged and default UI is shown."""
+
+        def handler_that_stops(exc: Exception) -> bool | None:
+            raise StopException()
+
+        self.ctx.on_script_error = handler_that_stops
+        test_exception = ValueError("original error")
+
+        def test_func():
+            raise test_exception
+
+        exec_func_with_error_handling(test_func, self.ctx)
+
+        # The handler error should be logged
+        mock_logger.exception.assert_called_once_with(
+            "on_script_error handler raised an exception"
+        )
+        # The original exception should still be shown in the UI
+        mock_show.assert_called_once_with(test_exception)
+
+    @patch("streamlit.runtime.scriptrunner.exec_code._LOGGER")
+    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
+    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    def test_handler_raising_rerun_exception_is_logged(
+        self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
+    ):
+        """Test that RerunException from handler is logged and default UI is shown."""
+
+        def handler_that_reruns(exc: Exception) -> bool | None:
+            raise RerunException(RerunData())
+
+        self.ctx.on_script_error = handler_that_reruns
+        test_exception = ValueError("original error")
+
+        def test_func():
+            raise test_exception
+
+        exec_func_with_error_handling(test_func, self.ctx)
+
+        # The handler error should be logged
+        mock_logger.exception.assert_called_once_with(
+            "on_script_error handler raised an exception"
+        )
+        # The original exception should still be shown in the UI
+        mock_show.assert_called_once_with(test_exception)

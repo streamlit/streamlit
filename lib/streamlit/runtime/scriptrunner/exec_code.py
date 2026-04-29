@@ -174,8 +174,13 @@ def exec_func_with_error_handling(
                 if handler_result is True:
                     suppress_ui_display = True
             except (StopException, RerunException):
-                raise
-            except BaseException:
+                # StopException/RerunException raised inside the handler should not
+                # crash the script runner thread. Log and fall back to default UI.
+                _LOGGER.exception("on_script_error handler raised an exception")
+            except Exception:
+                # Log any handler errors and fall back to showing the original
+                # exception. We catch Exception to let KeyboardInterrupt and SystemExit
+                # propagate normally.
                 _LOGGER.exception("on_script_error handler raised an exception")
 
         # Show exception in UI unless the handler suppressed it

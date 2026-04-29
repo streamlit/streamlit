@@ -92,6 +92,7 @@ class MockSessionManager(SessionManager):
                 message_enqueued_callback=self._message_enqueued_callback,
                 user_info=user_info,
                 session_id_override=session_id_override,
+                on_script_error=self._on_script_error,
             )
 
         assert session.id not in self._session_info_by_id, (

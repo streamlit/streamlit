@@ -279,11 +279,24 @@ class App:
         Middleware stack to apply to all requests. User middleware runs before
         Streamlit's internal middleware.
     on_script_error : Callable[[Exception], bool | None] | None
-        Callback invoked when an uncaught exception occurs in the Streamlit script.
-        The callback receives the exception and can optionally return ``True`` to
-        suppress the default exception display in the UI, allowing custom error UI
-        to be shown instead. Returns ``False`` or ``None`` to show the exception
-        normally. Useful for integrating with error monitoring services like Sentry.
+        Callback invoked when an uncaught exception occurs in the Streamlit script
+        or inside a ``@st.fragment``-decorated function. The callback receives the
+        exception and can optionally return ``True`` to suppress the default exception
+        display in the UI, allowing custom error UI to be shown instead. Returns
+        ``False`` or ``None`` to show the exception normally. Useful for integrating
+        with error monitoring services like Sentry.
+
+        The handler is invoked for:
+
+        - Uncaught exceptions in the main script
+        - Exceptions in ``@st.fragment``-decorated functions
+        - Exceptions in widget callbacks (``on_change``, ``on_click``, etc.)
+
+        The handler is NOT invoked for:
+
+        - ``st.stop()`` / ``st.rerun()`` (control flow, not errors)
+        - Syntax/compile errors in the script
+        - ``KeyboardInterrupt`` / ``SystemExit``
     exception_handlers : Mapping[Any, ExceptionHandler] | None
         Custom exception handlers for HTTP routes (not script errors).
     debug : bool

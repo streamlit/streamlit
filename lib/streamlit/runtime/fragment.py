@@ -20,10 +20,14 @@ from abc import abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, overload
 
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import (
+    handle_uncaught_app_exception,
+    show_uncaught_app_exception,
+)
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
@@ -38,6 +42,8 @@ from streamlit.util import calc_hash
 if TYPE_CHECKING:
     from datetime import timedelta
 
+
+_LOGGER: Final = get_logger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
@@ -243,13 +249,29 @@ def _fragment(
                             # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
-                            # render error here so that the delta path is correct
-                            # for full app runs, the error will be displayed by the
-                            # main code handler
-                            # if not is_full_app_run:
-                            handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
+                            # Log the exception to console (always happens first)
+                            handle_uncaught_app_exception(e, show_in_ui=False)
+
+                            # Call the custom error handler if one is set
+                            suppress_ui_display = False
+                            if ctx.on_script_error is not None:
+                                try:
+                                    handler_result = ctx.on_script_error(e)
+                                    if handler_result is True:
+                                        suppress_ui_display = True
+                                except Exception:
+                                    # Log handler errors and fall back to default UI
+                                    _LOGGER.exception(
+                                        "on_script_error handler raised an exception"
+                                    )
+
+                            # Show exception in UI unless the handler suppressed it
+                            # Render error here so that the delta path is correct
+                            if not suppress_ui_display:
+                                show_uncaught_app_exception(e)
+
+                            # Raise FragmentHandledException to signal that the error
+                            # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
             finally:
