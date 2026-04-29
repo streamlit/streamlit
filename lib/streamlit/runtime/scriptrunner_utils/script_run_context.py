@@ -47,6 +47,9 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+    OnScriptErrorHandler = Callable[[Exception], bool | None]
+
 _LOGGER: Final = get_logger(__name__)
 
 UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
@@ -83,6 +86,7 @@ class ScriptRunContext:
     user_info: UserInfoType
     fragment_storage: FragmentStorage
     pages_manager: PagesManager
+    on_script_error: OnScriptErrorHandler | None = None
 
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: set[str] = field(default_factory=set)

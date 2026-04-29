@@ -24,8 +24,8 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import build_app_url
-from e2e_playwright.shared.app_utils import get_button, get_text_input
+from e2e_playwright.conftest import build_app_url, wait_for_app_run
+from e2e_playwright.shared.app_utils import get_button, get_checkbox, get_text_input
 
 if TYPE_CHECKING:
     from playwright.sync_api import Page
@@ -118,3 +118,68 @@ def test_advanced_app_scenario(app: Page, app_base_url: str) -> None:
 
     # Verify nested secrets via attribute access
     expect(app.get_by_text("Auth Client ID: my-client-id")).to_be_visible()
+
+
+def test_on_script_error_handler(app: Page) -> None:
+    """Test on_script_error handler for uncaught exceptions in user script.
+
+    This test verifies:
+    - Default exception display when handler returns None
+    - Suppressed display when handler returns True (with custom error UI)
+    - Handler receives different exception types correctly
+    """
+    expect(app.get_by_text("Advanced st.App Test")).to_be_visible()
+    expect(app.get_by_text("Script Error Handler Test")).to_be_visible()
+    expect(app.get_by_text("Suppress display: False")).to_be_visible()
+
+    # No exception should be displayed initially
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # === Test 1: Default display (handler returns None) ===
+    raise_button = get_button(app, "Raise exception")
+    raise_button.click()
+    wait_for_app_run(app)
+
+    # The default exception display should be shown
+    expect(app.get_by_test_id("stException")).to_have_count(1)
+    expect(app.get_by_text("ValueError: Test error from user script")).to_be_visible()
+
+    # The custom error UI should NOT be shown (handler returned None)
+    expect(app.get_by_text("Custom error UI:")).to_have_count(0)
+
+    # Reload to reset state
+    app.reload()
+    wait_for_app_run(app)
+
+    # === Test 2: Suppressed display (handler returns True) ===
+    suppress_checkbox = get_checkbox(app, "Suppress error display")
+    suppress_checkbox.click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Suppress display: True")).to_be_visible()
+
+    raise_button = get_button(app, "Raise exception")
+    raise_button.click()
+    wait_for_app_run(app)
+
+    # The default exception display should NOT be shown
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # The custom error UI should be shown
+    expect(
+        app.get_by_text("Custom error UI: Test error from user script")
+    ).to_be_visible()
+
+    # Reload to reset state
+    app.reload()
+    wait_for_app_run(app)
+
+    # === Test 3: Different exception types ===
+    runtime_button = get_button(app, "Raise RuntimeError")
+    runtime_button.click()
+    wait_for_app_run(app)
+
+    # The default exception display should be shown with RuntimeError
+    expect(app.get_by_test_id("stException")).to_have_count(1)
+    expect(
+        app.get_by_text("RuntimeError: Runtime error from user script")
+    ).to_be_visible()

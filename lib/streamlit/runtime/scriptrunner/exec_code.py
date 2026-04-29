@@ -15,15 +15,19 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from streamlit import util
 from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack_value,
 )
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import (
+    handle_uncaught_app_exception,
+    show_uncaught_app_exception,
+)
 from streamlit.errors import FragmentHandledException
+from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -35,6 +39,8 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
+
+_LOGGER: Final = get_logger(__name__)
 
 
 class modified_sys_path:  # noqa: N801
@@ -155,8 +161,24 @@ def exec_func_with_error_handling(
     except Exception as ex:
         run_without_errors = False
         premature_stop = True
-        handle_uncaught_app_exception(ex)
         uncaught_exception = ex
+
+        # Log the exception to console (always happens first)
+        handle_uncaught_app_exception(ex, show_in_ui=False)
+
+        # Call the custom error handler if one is set
+        suppress_ui_display = False
+        if ctx.on_script_error is not None:
+            try:
+                handler_result = ctx.on_script_error(ex)
+                if handler_result is True:
+                    suppress_ui_display = True
+            except Exception:
+                _LOGGER.exception("on_script_error handler raised an exception")
+
+        # Show exception in UI unless the handler suppressed it
+        if not suppress_ui_display:
+            show_uncaught_app_exception(ex)
 
     return (
         result,

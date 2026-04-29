@@ -63,6 +63,8 @@ if TYPE_CHECKING:
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.source_util import PageHash, PageInfo
 
+    OnScriptErrorHandler = Callable[[Exception], bool | None]
+
 _LOGGER: Final = get_logger(__name__)
 
 
@@ -97,6 +99,7 @@ class AppSession:
         message_enqueued_callback: Callable[[], None] | None,
         user_info: UserInfoType,
         session_id_override: str | None = None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -131,6 +134,11 @@ class AppSession:
             The ID to assign to this session. Setting this can be useful when the
             service that a Streamlit Runtime is running in wants to tie the lifecycle of
             a Streamlit session to some other session-like object that it manages.
+
+        on_script_error
+            Callback to invoke when an uncaught exception occurs in user script code.
+            Returns True to suppress the default exception display, or False/None
+            to show the exception normally.
         """
 
         # Each AppSession has a unique string ID.
@@ -140,6 +148,7 @@ class AppSession:
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
+        self._on_script_error = on_script_error
         self._pages_manager = PagesManager(
             script_data.main_script_path, self._script_cache
         )
@@ -472,6 +481,7 @@ class AppSession:
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
+            on_script_error=self._on_script_error,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()

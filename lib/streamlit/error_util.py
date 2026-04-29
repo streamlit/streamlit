@@ -76,18 +76,28 @@ def _print_rich_exception(e: BaseException) -> None:
     )
 
 
-def _show_exception(ex: BaseException) -> None:
+def show_uncaught_app_exception(ex: BaseException) -> None:
     """Show the exception on the frontend."""
     main_delta_generator = get_dg_singleton_instance().main_dg
     exception._exception(main_delta_generator, ex, is_uncaught_app_exception=True)
 
 
-def handle_uncaught_app_exception(ex: BaseException) -> None:
+def handle_uncaught_app_exception(
+    ex: BaseException, *, show_in_ui: bool = True
+) -> None:
     """Handle an exception that originated from a user app.
 
     By default, we show exceptions directly in the browser. However,
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
+
+    Parameters
+    ----------
+    ex
+        The exception to handle.
+    show_in_ui
+        If True (default), display the exception in the Streamlit UI after logging.
+        If False, only log the exception to the console.
     """
 
     error_logged = False
@@ -109,4 +119,5 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
         # Only log error to console if not already logged by rich
         _LOGGER.error("Uncaught app execution", exc_info=ex)
 
-    _show_exception(ex)
+    if show_in_ui:
+        show_uncaught_app_exception(ex)

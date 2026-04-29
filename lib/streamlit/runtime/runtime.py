@@ -56,7 +56,7 @@ from streamlit.runtime.stats import (
 from streamlit.runtime.websocket_session_manager import WebsocketSessionManager
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable
+    from collections.abc import Awaitable, Callable
 
     from streamlit.components.types.base_component_registry import BaseComponentRegistry
     from streamlit.proto.BackMsg_pb2 import BackMsg
@@ -64,6 +64,8 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_storage import MediaFileStorage
     from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+    OnScriptErrorHandler = Callable[[Exception], bool | None]
 
 # Wait for the script run result for 60s and if no result is available give up
 SCRIPT_RUN_CHECK_TIMEOUT: Final = 60
@@ -115,6 +117,9 @@ class RuntimeConfig:
 
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
+
+    # Callback to invoke when an uncaught exception occurs in user script code.
+    on_script_error: OnScriptErrorHandler | None = None
 
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
     # creating a new Streamlit Runtime to configure the FragmentStorage instances
@@ -221,6 +226,7 @@ class Runtime:
             uploaded_file_manager=self._uploaded_file_mgr,
             script_cache=self._script_cache,
             message_enqueued_callback=self._enqueued_some_message,
+            on_script_error=config.on_script_error,
         )
 
         self._stats_mgr = StatsManager()
