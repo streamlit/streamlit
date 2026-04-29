@@ -551,7 +551,8 @@ describe("NumberColumn", () => {
     const mockColumn = getNumberColumn(MOCK_DURATION_ARROW_TYPE)
     const cell = mockColumn.getCell(60_000_000_000)
     expect(cell.contentAlign).toEqual("left")
-    expect((cell as NumberCell).displayData).toEqual("a minute")
+    // Use regex to avoid coupling to moment.js's exact humanize output.
+    expect((cell as NumberCell).displayData).toMatch(/minute/i)
   })
 
   it("uses configured number format instead of arrow formatting when format is set", () => {

@@ -755,8 +755,9 @@ describe("useTableSizer hook", () => {
       expect(result.current.maxHeight).toEqual(EXPECTED_CONTENT_HEIGHT)
     })
 
-    it("caps content height at 10,000 pixels", () => {
-      // 1000 rows would exceed the 10,000px cap (cap is reached at ~285 rows).
+    it("caps content height by row count derived from 10,000px threshold", () => {
+      // The cap is row-based: Math.ceil(10000 / rowHeight). With 1000 rows
+      // and a 35px row height, the cap kicks in at ~286 rows.
       const NUMBER_OF_ROWS = 1000
       const heightConfig = new streamlit.HeightConfig({ useContent: true })
 

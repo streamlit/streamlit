@@ -32,6 +32,8 @@ import {
   Utf8,
   vectorFromArray,
 } from "apache-arrow"
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
 
 import { Quiver } from "~lib/dataframes/Quiver"
 import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
@@ -486,6 +488,9 @@ describe("format", () => {
     // Provide a pandas.interval extension marker but invalid JSON metadata,
     // which causes JSON.parse to throw inside formatInterval and triggers the
     // top-level catch in format().
+    const LOG = getLogger("arrowFormatUtils")
+    const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+
     const meta = new Map<string, string>([
       ["ARROW:extension:name", "pandas.interval"],
       ["ARROW:extension:metadata", "{not-valid-json"],
@@ -507,6 +512,11 @@ describe("format", () => {
       },
     })
     expect(result).toBe(String(row))
+    // Verify the top-level catch handler ran by checking LOG.warn was called.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Unexpected error")
+    )
+    warnSpy.mockRestore()
   })
 })
 

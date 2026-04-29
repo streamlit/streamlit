@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import { MutableRefObject, ReactNode, RefObject } from "react"
+import type { MutableRefObject, RefObject } from "react"
+import { ReactNode } from "react"
 
 import { renderHook } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"

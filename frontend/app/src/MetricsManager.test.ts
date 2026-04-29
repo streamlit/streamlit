@@ -511,8 +511,7 @@ describe("getAnonymousId reuse", () => {
   it("reuses an existing anonymousId cookie and persists it to localStorage", async () => {
     setCookie("ajs_anonymous_id", "existing-cookie-id")
 
-    // eslint-disable-next-line no-proto
-    const setItemSpy = vi.spyOn(window.localStorage.__proto__, "setItem")
+    const setItemSpy = vi.spyOn(window.localStorage, "setItem")
 
     const mm = getMetricsManager()
     await mm.initialize({ gatherUsageStats: true })
@@ -522,6 +521,7 @@ describe("getAnonymousId reuse", () => {
       "ajs_anonymous_id",
       "existing-cookie-id"
     )
+    setItemSpy.mockRestore()
   })
 
   it("reuses a JSON-stringified legacy anonymousId from localStorage", async () => {
