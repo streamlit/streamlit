@@ -26,6 +26,7 @@ from pathlib import Path
 from unittest import mock
 from unittest.mock import MagicMock, patch
 
+import click
 import pytest
 import requests
 import requests_mock
@@ -141,6 +142,7 @@ class CliTest(unittest.TestCase):
         result = self.runner.invoke(cli, ["run", "file_name.doc"])
 
         assert result.exit_code != 0
+        # Known non-Python extensions like .doc should give the original extension error
         assert "Streamlit requires raw Python (.py) files, not .doc." in result.output
 
     @tempdir()
@@ -690,6 +692,178 @@ class CliTest(unittest.TestCase):
         mock_run.assert_called_once()
         mock_run_asgi.assert_not_called()
         assert result.exit_code == 0
+
+
+class ModuleResolutionTest(CliTest):
+    """Tests for Python module resolution in streamlit run."""
+
+    @parameterized.expand(
+        [
+            ("app.py", True),
+            ("path/to/app.py", True),
+            ("/absolute/path/app.py", True),
+            ("app.py3", True),
+            ("mypackage", False),
+            ("mypackage.app", False),
+            ("app.txt", False),
+            ("app.doc", False),
+        ]
+    )
+    def test_has_py_extension(self, path: str, expected: bool):
+        """Test _has_py_extension returns correct result for various paths."""
+        assert cli._has_py_extension(path) is expected
+
+    def test_resolve_module_finds_module(self):
+        """Test _resolve_module finds a valid module and returns its path."""
+        result = cli._resolve_module("streamlit.hello.streamlit_app")
+        assert result.endswith("streamlit_app.py")
+        assert os.path.exists(result)
+
+    def test_resolve_module_not_found(self):
+        """Test _resolve_module raises error for non-existent module."""
+        with pytest.raises(click.exceptions.BadParameter) as exc_info:
+            cli._resolve_module("nonexistent_module_12345")
+        assert "No module named" in str(exc_info.value)
+
+    def test_resolve_module_package_with_main(self):
+        """Test _resolve_module resolves package with __main__.py."""
+        result = cli._resolve_module("streamlit")
+        assert result.endswith("__main__.py")
+        assert os.path.exists(result)
+
+    def test_resolve_module_package_with_streamlit_app(self):
+        """Test _resolve_module falls back to streamlit_app.py when no __main__.py."""
+        # streamlit.hello has streamlit_app.py but no __main__.py
+        result = cli._resolve_module("streamlit.hello")
+        assert result.endswith("streamlit_app.py")
+        assert os.path.exists(result)
+
+    def test_resolve_module_invalid_name(self):
+        """Test _resolve_module raises error for invalid module names."""
+        with pytest.raises(click.exceptions.BadParameter):
+            cli._resolve_module("")
+
+    def test_resolve_module_spec_none(self):
+        """Test _resolve_module raises error when find_spec returns None."""
+        with patch("importlib.util.find_spec", return_value=None):
+            with pytest.raises(click.exceptions.BadParameter) as exc_info:
+                cli._resolve_module("some_module")
+            assert "No module named" in str(exc_info.value)
+
+    def test_run_module_resolution_fallback(self):
+        """Test that module resolution is used when target doesn't exist as file."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run") as mock_main_run,
+            patch("streamlit.web.cli._resolve_module") as mock_resolve,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("pathlib.Path.is_dir", return_value=False),
+        ):
+            mock_resolve.return_value = "/path/to/resolved/module.py"
+            result = self.runner.invoke(cli, ["run", "mypackage.app"])
+
+        mock_resolve.assert_called_once_with("mypackage.app")
+        mock_main_run.assert_called_once()
+        positional_args = mock_main_run.call_args[0]
+        assert positional_args[0] == "/path/to/resolved/module.py"
+        assert result.exit_code == 0
+
+    def test_run_directory_priority_over_module(self):
+        """Test that existing directory takes priority over module resolution."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run") as mock_main_run,
+            patch("streamlit.web.cli._resolve_module") as mock_resolve,
+            patch("pathlib.Path.exists", return_value=True),
+            patch("pathlib.Path.is_dir", return_value=True),
+        ):
+            result = self.runner.invoke(cli, ["run", "mypackage"])
+
+        mock_resolve.assert_not_called()
+        mock_main_run.assert_called_once()
+        positional_args = mock_main_run.call_args[0]
+        assert positional_args[0] == "mypackage/streamlit_app.py"
+        assert result.exit_code == 0
+
+    def test_run_file_without_extension_fails(self):
+        """Test that file without extension fails validation."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run") as mock_main_run,
+            patch("streamlit.web.cli._resolve_module") as mock_resolve,
+            patch("pathlib.Path.exists", return_value=True),
+            patch("pathlib.Path.is_dir", return_value=False),
+        ):
+            result = self.runner.invoke(cli, ["run", "mypackage"])
+
+        mock_resolve.assert_not_called()
+        mock_main_run.assert_not_called()
+        assert result.exit_code != 0
+        assert "Streamlit requires raw Python" in result.output
+
+    def test_run_py_file_no_module_fallback(self):
+        """Test that .py files that don't exist fail without module fallback."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.cli._resolve_module") as mock_resolve,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("pathlib.Path.is_dir", return_value=False),
+        ):
+            result = self.runner.invoke(cli, ["run", "nonexistent.py"])
+
+        mock_resolve.assert_not_called()
+        assert result.exit_code != 0
+        assert "File does not exist" in result.output
+
+    def test_run_path_with_separator_no_module_fallback(self):
+        """Test that paths with separators fail without module fallback."""
+        with (
+            patch("streamlit.url_util.is_url", return_value=False),
+            patch("streamlit.web.cli._main_run"),
+            patch("streamlit.web.cli._resolve_module") as mock_resolve,
+            patch("pathlib.Path.exists", return_value=False),
+            patch("pathlib.Path.is_dir", return_value=False),
+        ):
+            result = self.runner.invoke(cli, ["run", "path/to/script"])
+
+        mock_resolve.assert_not_called()
+        assert result.exit_code != 0
+        assert "File does not exist" in result.output
+
+    def test_resolve_module_relative_import_error(self):
+        """Test _resolve_module raises error for relative module names."""
+        with pytest.raises(click.exceptions.BadParameter) as exc_info:
+            cli._resolve_module(".relative_module")
+        assert "Invalid module name" in str(exc_info.value)
+
+    def test_resolve_module_builtin(self):
+        """Test _resolve_module raises error for built-in/frozen modules."""
+        with (
+            patch("importlib.util.find_spec") as mock_find_spec,
+        ):
+            mock_spec = MagicMock()
+            mock_spec.submodule_search_locations = None
+            mock_spec.origin = "built-in"
+            mock_find_spec.return_value = mock_spec
+
+            with pytest.raises(click.exceptions.BadParameter) as exc_info:
+                cli._resolve_module("test_module")
+            assert "has no associated file" in str(exc_info.value)
+
+    def test_resolve_module_non_python_extension(self):
+        """Test _resolve_module raises error for modules resolving to non-Python files."""
+        with (
+            patch("importlib.util.find_spec") as mock_find_spec,
+        ):
+            mock_spec = MagicMock()
+            mock_spec.submodule_search_locations = None
+            mock_spec.origin = "/path/to/extension.so"
+            mock_find_spec.return_value = mock_spec
+
+            with pytest.raises(click.exceptions.BadParameter) as exc_info:
+                cli._resolve_module("test_module")
+            assert "not a Python source file" in str(exc_info.value)
 
 
 class HTTPServerIntegrationTest(unittest.TestCase):
