@@ -169,6 +169,12 @@ class Cursor:
     def transient_index(self) -> int:
         return 0 if self._transient_index is None else self._transient_index
 
+    def lock_element(self, **props: Any) -> LockedCursor:
+        raise NotImplementedError()
+
+    def open_block(self) -> RunningCursor:
+        raise NotImplementedError()
+
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         raise NotImplementedError()
 
@@ -364,6 +370,12 @@ class LockedCursor(Cursor):
     def lock_element(self, **props: Any) -> LockedCursor:
         self._props = props
         return self
+
+    def open_block(self) -> RunningCursor:
+        return RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
+        )
 
     def get_locked_cursor(self, **props: Any) -> LockedCursor:
         return self.lock_element(**props)
