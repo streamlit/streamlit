@@ -268,7 +268,7 @@ The widget should follow Streamlit's design language:
 
 - Match the styling of other Streamlit widgets (borders, colors, spacing)
 - Support light and dark themes
-- Page buttons should have consistent sizing
+- Page buttons and ellipsis indicators use identical fixed widths (sized for 3-digit numbers) to prevent layout shift during navigation
 - Selected page uses primary color highlighting
 - Disabled state grays out all elements
 
