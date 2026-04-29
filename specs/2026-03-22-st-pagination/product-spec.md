@@ -110,7 +110,7 @@ page change.
 ```
 
 - Previous (`<`) and next (`>`) arrow buttons are always displayed at the ends
-- When `max_visible_pages <= 0`, only the arrows are shown (no numbered pages)
+- When `max_visible_pages == 0`, only the arrows are shown (no numbered pages)
 - When `max_visible_pages == 1`, only the current page number is shown between the arrows
 - When `max_visible_pages == 2`, the current page and last page are shown (if current is the last page, first and last are shown instead)
 - When `max_visible_pages >= 3`, the first page (1) and last page are always included along with the current page
