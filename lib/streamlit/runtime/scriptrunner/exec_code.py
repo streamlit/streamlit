@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from streamlit import util
 from streamlit.delta_generator_singletons import (
@@ -28,7 +28,6 @@ from streamlit.error_util import (
     show_uncaught_app_exception,
 )
 from streamlit.errors import FragmentHandledException
-from streamlit.logger import get_logger
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -40,8 +39,6 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
     from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
-
-_LOGGER: Final = get_logger(__name__)
 
 
 class modified_sys_path:  # noqa: N801

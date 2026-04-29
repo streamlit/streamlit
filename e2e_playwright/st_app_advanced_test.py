@@ -183,3 +183,6 @@ def test_on_script_error_handler(app: Page) -> None:
     expect(
         app.get_by_text("RuntimeError: Runtime error from user script")
     ).to_be_visible()
+
+    # Negative assertion: custom error UI should NOT be shown (handler returned None)
+    expect(app.get_by_text("Custom error UI:")).to_have_count(0)

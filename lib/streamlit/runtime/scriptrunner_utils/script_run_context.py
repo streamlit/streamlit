@@ -48,7 +48,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
-    OnScriptErrorHandler = Callable[[Exception], bool | None]
+    OnScriptErrorHandler: TypeAlias = Callable[[Exception], bool | None]
 
 _LOGGER: Final = get_logger(__name__)
 
