@@ -117,6 +117,10 @@ Time=1h+2s    : Next call:
 - **No st.* replay**: `st.*` element calls inside cached functions won't replay after
   background refresh since there's no `ScriptRunContext` in background threads. This is
   consistent with current behavior when calling cached functions from non-script contexts.
+- **Spinner behavior**: When `refresh_type="background"` and the cached entry is stale,
+  the stale value is returned immediately without showing a spinner, since there's no
+  blocking wait. The `show_spinner` parameter only applies to foreground execution (cache
+  miss or foreground refresh mode).
 
 ### Validation
 
@@ -142,7 +146,7 @@ When `persist="disk"` (or `persist=True`) is used with `st.cache_data`, entries 
 stored on disk and currently do not respect `ttl` for eviction. Using
 `refresh_type="background"` with `persist` mode will raise a `StreamlitAPIException` since
 background refresh requires TTL-based expiration. Users needing both persistence and
-background refresh should use `persist=False` (the default) with `refresh="background"`.
+background refresh should use `persist=False` (the default) with `refresh_type="background"`.
 
 ### Examples
 
