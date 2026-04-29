@@ -58,9 +58,9 @@ st.pagination(
     num_pages: int,
     *,
     default: int = 1,
-    key: Key | None = None,
     max_visible_pages: int | None = 7,
     width: Literal["content", "stretch"] | int = "content",
+    key: Key | None = None,
     on_change: WidgetCallback | None = None,
     args: WidgetArgs | None = None,
     kwargs: WidgetKwargs | None = None,
@@ -74,9 +74,9 @@ st.pagination(
 | ------------------- | -------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `num_pages`         | `int`                                  | required    | Total number of pages. Must be ≥ 1.                                                                                                                     |
 | `default`           | `int`                                  | `1`         | Initial selected page (1-indexed). Must be between 1 and `num_pages`.                                                                                   |
-| `key`               | `str \| int \| None`                   | `None`      | Unique key for the widget.                                                                                                                              |
 | `max_visible_pages` | `int \| None`                          | `7`         | Maximum number of page buttons to display (excluding prev/next arrows). The widget auto-adapts to available width and may show fewer pages to prevent wrapping. Set to `None` to remove the explicit page-count cap (all pages are eligible to be shown; responsive auto-adaptation may still hide some). Set to 0 to show only prev/next arrows. |
 | `width`             | `Literal["content", "stretch"] \| int` | `"content"` | Widget width. `"content"`: fit to content. `"stretch"`: expand to container width (buttons remain centered). `int`: fixed pixel width.                  |
+| `key`               | `str \| int \| None`                   | `None`      | Unique key for the widget.                                                                                                                              |
 | `on_change`         | `Callable \| None`                     | `None`      | Callback function executed when page changes.                                                                                                           |
 | `args`              | `list \| tuple \| None`                | `None`      | Arguments to pass to the callback.                                                                                                                      |
 | `kwargs`            | `dict \| None`                         | `None`      | Keyword arguments to pass to the callback.                                                                                                              |
