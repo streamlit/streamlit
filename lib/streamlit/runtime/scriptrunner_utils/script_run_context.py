@@ -74,6 +74,40 @@ is_parallel_worker: contextvars.ContextVar[bool] = contextvars.ContextVar(
 )
 
 
+class ThreadSafeSet:
+    """A thread-safe set wrapper that exposes only atomic operations.
+
+    Callers cannot access the underlying set directly — they interact through
+    lock-protected methods (check_and_add, __contains__, snapshot, clear).
+    This makes duplicate detection safe for concurrent access from parallel
+    fragment worker threads.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._data: set[str] = set()
+
+    def check_and_add(self, value: str) -> bool:
+        """Atomically check membership and add. Returns True if value was new."""
+        with self._lock:
+            is_new = value not in self._data
+            self._data.add(value)
+            return is_new
+
+    def __contains__(self, value: object) -> bool:
+        with self._lock:
+            return value in self._data
+
+    def clear(self) -> None:
+        with self._lock:
+            self._data.clear()
+
+    def snapshot(self) -> frozenset[str]:
+        """Return an immutable copy for read-only consumers."""
+        with self._lock:
+            return frozenset(self._data)
+
+
 @dataclass
 class ScriptRunContext:
     """A context object that contains data for a "script run" - that is,
@@ -109,9 +143,9 @@ class ScriptRunContext:
         default_factory=collections.Counter
     )
     _has_script_started: bool = False
-    widget_ids_this_run: set[str] = field(default_factory=set)
-    widget_user_keys_this_run: set[str] = field(default_factory=set)
-    form_ids_this_run: set[str] = field(default_factory=set)
+    widget_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
+    widget_user_keys_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
+    form_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
@@ -161,9 +195,9 @@ class ScriptRunContext:
         is_same_page = self.page_script_hash == page_script_hash
 
         self.cursors = {}
-        self.widget_ids_this_run = set()
-        self.widget_user_keys_this_run = set()
-        self.form_ids_this_run = set()
+        self.widget_ids_this_run = ThreadSafeSet()
+        self.widget_user_keys_this_run = ThreadSafeSet()
+        self.form_ids_this_run = ThreadSafeSet()
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)

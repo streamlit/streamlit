@@ -15,7 +15,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import Iterable, Iterator, Mapping, MutableMapping, Set
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, cast
@@ -768,7 +768,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def remove_stale_bindings(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: Set[str],
         fragment_ids_this_run: list[str] | None = None,
         widget_metadata: dict[str, Any] | None = None,
     ) -> None:

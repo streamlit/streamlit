@@ -23,6 +23,7 @@ import pytest
 
 from streamlit.components.v2.presentation import make_bidi_component_presenter
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadSafeSet
 from streamlit.runtime.state import SessionState
 
 
@@ -114,8 +115,10 @@ def test_setitem_disallows_setting_created_widget():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = {"test_component_id"}
-    mock_ctx.form_ids_this_run = set()
+    widget_ids = ThreadSafeSet()
+    widget_ids.check_and_add("test_component_id")
+    mock_ctx.widget_ids_this_run = widget_ids
+    mock_ctx.form_ids_this_run = ThreadSafeSet()
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -146,8 +149,10 @@ def test_delitem_disallows_deleting_from_created_widget():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = {"test_component_id"}
-    mock_ctx.form_ids_this_run = set()
+    widget_ids = ThreadSafeSet()
+    widget_ids.check_and_add("test_component_id")
+    mock_ctx.widget_ids_this_run = widget_ids
+    mock_ctx.form_ids_this_run = ThreadSafeSet()
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -178,8 +183,10 @@ def test_setitem_disallows_setting_widget_in_form():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = set()
-    mock_ctx.form_ids_this_run = {"test_key"}
+    mock_ctx.widget_ids_this_run = ThreadSafeSet()
+    form_ids = ThreadSafeSet()
+    form_ids.check_and_add("test_key")
+    mock_ctx.form_ids_this_run = form_ids
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",
@@ -210,8 +217,8 @@ def test_setitem_allows_setting_before_widget_creation():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = set()
-    mock_ctx.form_ids_this_run = set()
+    mock_ctx.widget_ids_this_run = ThreadSafeSet()
+    mock_ctx.form_ids_this_run = ThreadSafeSet()
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",

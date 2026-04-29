@@ -236,6 +236,8 @@ class RunningCursor(Cursor):
         for k, v in self.__dict__.items():
             if k == "_owner_lock":
                 object.__setattr__(result, k, threading.Lock())
+            elif k == "_owner_ident":
+                object.__setattr__(result, k, None)
             else:
                 object.__setattr__(result, k, copy.deepcopy(v, memo))
         return result
@@ -244,10 +246,11 @@ class RunningCursor(Cursor):
         """Enforce single-thread ownership via lazy claiming.
 
         The first thread to call ``lock_element()`` or ``open_block()`` becomes
-        the owner. Any subsequent call from a different thread raises
-        ``RuntimeError``.  Using ``threading.get_ident()`` (an int) rather than
-        ``threading.current_thread()`` avoids a dictionary lookup on every
-        ``st.*`` call.
+        the owner. During parallel execution (parallel_coordinator is active),
+        access from a different thread raises ``RuntimeError``. In sequential
+        mode (no parallel coordinator), a thread mismatch simply re-claims the
+        cursor — this handles legitimate cross-run reuse such as callbacks
+        referencing DGs from a prior run in AppTest, or fragment reruns.
 
         The check-and-claim is protected by ``_owner_lock`` to prevent a TOCTOU
         race where two threads both read ``_owner_ident`` as ``None`` and both
@@ -258,7 +261,16 @@ class RunningCursor(Cursor):
             if self._owner_ident is None:
                 self._owner_ident = current_ident
             elif self._owner_ident != current_ident:
-                raise RuntimeError("Cursor accessed from a thread that doesn't own it")
+                from streamlit.runtime.scriptrunner_utils.script_run_context import (
+                    get_script_run_ctx,
+                )
+
+                ctx = get_script_run_ctx(suppress_warning=True)
+                if ctx is not None and ctx.parallel_coordinator is not None:
+                    raise RuntimeError(
+                        "Cursor accessed from a thread that doesn't own it"
+                    )
+                self._owner_ident = current_ident
 
     def _advance(self) -> None:
         self._index += 1
