@@ -66,6 +66,12 @@ with st.container(key="width_container"):
 
 # In a form
 st.subheader("In Form")
+# Track the number of full app reruns to verify form doesn't trigger rerun
+if "form_rerun_counter" not in st.session_state:
+    st.session_state.form_rerun_counter = 0
+st.session_state.form_rerun_counter += 1
+st.write(f"form-rerun-count: {st.session_state.form_rerun_counter}")
+
 with st.form(key="my_form"):
     form_page = st.pagination(10, key="form_pagination")
     submitted = st.form_submit_button("Submit")

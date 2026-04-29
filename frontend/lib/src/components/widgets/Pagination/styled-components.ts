@@ -17,14 +17,14 @@
 import styled from "@emotion/styled"
 
 interface StyledPaginationContainerProps {
-  containerWidth: boolean
+  shouldStretch: boolean
 }
 
 export const StyledPaginationContainer =
-  styled.div<StyledPaginationContainerProps>(({ containerWidth }) => ({
+  styled.div<StyledPaginationContainerProps>(({ shouldStretch }) => ({
     display: "flex",
-    justifyContent: containerWidth ? "center" : "flex-start",
-    width: containerWidth ? "100%" : "fit-content",
+    justifyContent: shouldStretch ? "center" : "flex-start",
+    width: shouldStretch ? "100%" : "fit-content",
   }))
 
 export const StyledPaginationButtonGroup = styled.div(({ theme }) => ({
@@ -35,12 +35,11 @@ export const StyledPaginationButtonGroup = styled.div(({ theme }) => ({
 
 interface StyledPaginationButtonProps {
   isSelected?: boolean
-  isEllipsis?: boolean
 }
 
 export const StyledPaginationButton =
   styled.button<StyledPaginationButtonProps>(
-    ({ theme, isSelected, isEllipsis, disabled }) => ({
+    ({ theme, isSelected, disabled }) => ({
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -48,12 +47,12 @@ export const StyledPaginationButton =
       height: theme.spacing.threeXL,
       padding: `0 ${theme.spacing.sm}`,
       border: isSelected
-        ? `1px solid ${theme.colors.borderColor}`
-        : "1px solid transparent",
+        ? `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`
+        : `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
       borderRadius: theme.radii.default,
       backgroundColor: theme.colors.transparent,
       color: disabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-      cursor: isEllipsis || disabled ? "default" : "pointer",
+      cursor: disabled ? "not-allowed" : "pointer",
       fontSize: theme.fontSizes.sm,
       fontFamily: theme.fonts.sansSerif,
       fontWeight: isSelected
@@ -62,13 +61,9 @@ export const StyledPaginationButton =
       transition: "border-color 0.15s ease, background-color 0.15s ease",
       lineHeight: theme.lineHeights.none,
 
-      "&:hover:not(:disabled)": isEllipsis
-        ? {
-            cursor: "default",
-          }
-        : {
-            backgroundColor: theme.colors.darkenedBgMix25,
-          },
+      "&:hover:not(:disabled)": {
+        backgroundColor: theme.colors.darkenedBgMix25,
+      },
 
       "&:focus-visible": {
         outline: "none",
@@ -81,6 +76,27 @@ export const StyledPaginationButton =
       },
     })
   )
+
+/**
+ * Non-interactive ellipsis indicator styled like a page button but using
+ * a span element since it's not a button.
+ */
+export const StyledEllipsis = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: theme.spacing.threeXL,
+  height: theme.spacing.threeXL,
+  padding: `0 ${theme.spacing.sm}`,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
+  borderRadius: theme.radii.default,
+  backgroundColor: theme.colors.transparent,
+  color: theme.colors.fadedText40,
+  fontSize: theme.fontSizes.sm,
+  fontFamily: theme.fonts.sansSerif,
+  fontWeight: theme.fontWeights.normal,
+  lineHeight: theme.lineHeights.none,
+}))
 
 export const StyledArrowButton = styled.button(({ theme, disabled }) => ({
   display: "flex",

@@ -140,7 +140,9 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
         """Test that negative max_visible_pages raises exception."""
         with pytest.raises(StreamlitAPIException) as e:
             st.pagination(10, max_visible_pages=-1)
-        assert "`max_visible_pages` must be at least 0 or None" in str(e.value)
+        assert "`max_visible_pages` must be a non-negative integer or None" in str(
+            e.value
+        )
 
 
 class TestPaginationWidthConfig(DeltaGeneratorTestCase):

@@ -14,15 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react"
+import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { Pagination as PaginationProto, streamlit } from "@streamlit/protobuf"
 
@@ -32,10 +24,12 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useResizeObserver } from "~lib/hooks/useResizeObserver"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
   StyledArrowButton,
+  StyledEllipsis,
   StyledPaginationButton,
   StyledPaginationButtonGroup,
   StyledPaginationContainer,
@@ -48,6 +42,23 @@ export interface Props {
   fragmentId?: string
   widthConfig: streamlit.IWidthConfig | undefined | null
 }
+
+/**
+ * Button width derived from theme.spacing.threeXL (32px) + theme.spacing.twoXS (4px gap).
+ * Each page button is minWidth=32px plus 4px gap between buttons = 36px effective width.
+ */
+const BUTTON_WIDTH_PX = 36
+
+/**
+ * Width occupied by the two arrow buttons: 2 * theme.spacing.threeXL (32px) = 64px.
+ */
+const ARROWS_WIDTH_PX = 64
+
+/**
+ * Default cap when max_visible_pages=None from Python to prevent rendering
+ * a huge number of buttons on first paint before responsive sizing kicks in.
+ */
+const DEFAULT_MAX_VISIBLE_FALLBACK = 50
 
 type PageItem =
   | { type: "page"; page: number }
@@ -81,17 +92,18 @@ function calculateVisiblePages(
     return [pageItem(currentPage)]
   }
 
+  // All pages fit - no ellipsis needed (must be checked before maxVisible=2/3 special cases)
+  if (numPages <= maxVisible) {
+    return Array.from({ length: numPages }, (_, i) => pageItem(i + 1))
+  }
+
   // Show current and last (or first and last if current is at edge)
   if (maxVisible === 2) {
     if (currentPage === 1) {
-      return numPages > 1
-        ? [pageItem(1), ellipsisItem("end"), pageItem(numPages)]
-        : [pageItem(1)]
+      return [pageItem(1), ellipsisItem("end"), pageItem(numPages)]
     }
     if (currentPage === numPages) {
-      return numPages > 1
-        ? [pageItem(1), ellipsisItem("start"), pageItem(numPages)]
-        : [pageItem(1)]
+      return [pageItem(1), ellipsisItem("start"), pageItem(numPages)]
     }
     // Current is in middle - show current and last
     return [pageItem(currentPage), ellipsisItem("end"), pageItem(numPages)]
@@ -127,11 +139,6 @@ function calculateVisiblePages(
       ellipsisItem("end"),
       pageItem(numPages),
     ]
-  }
-
-  // All pages fit
-  if (numPages <= maxVisible) {
-    return Array.from({ length: numPages }, (_, i) => pageItem(i + 1))
   }
 
   // For maxVisible >= 3: always show first, last, and current page
@@ -242,8 +249,9 @@ function Pagination(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { numPages } = element
   // When max_visible_pages=None from Python, the proto field is unset.
-  // In that case, fall back to numPages to show all pages (no explicit cap).
-  const maxVisiblePages = element.maxVisiblePages ?? numPages
+  // Use a bounded fallback to prevent rendering a huge number of buttons on first paint.
+  const maxVisiblePages =
+    element.maxVisiblePages ?? Math.min(numPages, DEFAULT_MAX_VISIBLE_FALLBACK)
 
   const [hookValue, setValueWithSource] = useBasicWidgetState<
     number,
@@ -259,41 +267,31 @@ function Pagination(props: Readonly<Props>): ReactElement {
     formClearBehavior: "resetValueOnly",
   })
 
-  // Use element.value as source of truth when set_value is true
-  // Clamp to at least 1 to guard against proto3 default of 0
-  const currentPage = element.setValue ? Math.max(1, element.value) : hookValue
+  // Use element.value as source of truth when set_value is true.
+  // Clamp to valid bounds [1, numPages] to handle cases where num_pages changed.
+  const rawPage = element.setValue ? element.value : hookValue
+  const currentPage = Math.min(numPages, Math.max(1, rawPage))
 
-  const containerWidth = shouldWidthStretch(widthConfig)
+  const shouldStretch = shouldWidthStretch(widthConfig)
 
-  // Responsive behavior: track container width and reduce visible pages if needed
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [effectiveMaxVisible, setEffectiveMaxVisible] =
-    useState(maxVisiblePages)
+  // Responsive behavior: track container width and derive effective max visible pages
+  const { values: containerDimensions, elementRef: containerRef } =
+    useResizeObserver<HTMLDivElement>(["width"])
+  const containerWidth = containerDimensions[0] ?? 0
 
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
-
-    const observer = new ResizeObserver(entries => {
-      const entry = entries[0]
-      if (!entry) return
-
-      const availableWidth = entry.contentRect.width
-      // Each button is roughly 32px + 4px gap = 36px
-      // Arrows take 2 * 32px = 64px
-      const buttonWidth = 36
-      const arrowsWidth = 64
-      const availableForPages = availableWidth - arrowsWidth
-      const maxFittable = Math.max(
-        0,
-        Math.floor(availableForPages / buttonWidth)
-      )
-      setEffectiveMaxVisible(Math.min(maxVisiblePages, maxFittable))
-    })
-
-    observer.observe(container)
-    return () => observer.disconnect()
-  }, [maxVisiblePages])
+  // Derive effective max visible pages from container width and maxVisiblePages
+  const effectiveMaxVisible = useMemo(() => {
+    if (containerWidth === 0) {
+      // Initial render before measurement - use bounded fallback
+      return Math.min(maxVisiblePages, DEFAULT_MAX_VISIBLE_FALLBACK)
+    }
+    const availableForPages = containerWidth - ARROWS_WIDTH_PX
+    const maxFittable = Math.max(
+      0,
+      Math.floor(availableForPages / BUTTON_WIDTH_PX)
+    )
+    return Math.min(maxVisiblePages, maxFittable)
+  }, [containerWidth, maxVisiblePages])
 
   const visiblePages = useMemo(
     () => calculateVisiblePages(currentPage, numPages, effectiveMaxVisible),
@@ -329,7 +327,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
       ref={containerRef}
       className="stPagination"
       data-testid="stPagination"
-      containerWidth={containerWidth}
+      shouldStretch={shouldStretch}
     >
       <StyledPaginationButtonGroup role="navigation" aria-label="Pagination">
         {/* Previous button */}
@@ -347,17 +345,13 @@ function Pagination(props: Readonly<Props>): ReactElement {
         {visiblePages.map(item => {
           if (item.type === "ellipsis") {
             return (
-              <StyledPaginationButton
+              <StyledEllipsis
                 key={`ellipsis-${item.position}`}
-                type="button"
-                isEllipsis
-                disabled
                 aria-hidden="true"
-                tabIndex={-1}
                 data-testid="stPaginationEllipsis"
               >
                 &hellip;
-              </StyledPaginationButton>
+              </StyledEllipsis>
             )
           }
 
