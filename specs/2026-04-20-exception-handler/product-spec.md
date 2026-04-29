@@ -244,7 +244,12 @@ app = st.App(
 ```python
 def handler(exc: Exception) -> bool | None:
     """
-    Called when an uncaught exception occurs in user script code.
+    Called when an uncaught exception occurs while executing the
+    Streamlit script for a user session, including widget callbacks
+    and fragments.
+
+    This does not handle HTTP route errors, ASGI middleware errors,
+    websocket failures, or broader session lifecycle errors.
 
     Parameters
     ----------
