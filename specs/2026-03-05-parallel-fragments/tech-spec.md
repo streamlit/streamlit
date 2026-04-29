@@ -482,7 +482,7 @@ calls `open_block()` (containers). `get_locked_cursor()` is a purely internal AP
 calls `st.container()` before dispatching. This calls `open_block()` on the main
 thread's cursor, which advances it past the fragment's slot and creates a child
 `RunningCursor` for the container. The container delta reaches the frontend
-immediately (enabling the loading skeleton). The child cursor starts with
+immediately. The child cursor starts with
 `_owner_thread = None` — it hasn't been used yet.
 
 **3. Lazy thread ownership.** When the worker thread runs and calls `lock_element()`
