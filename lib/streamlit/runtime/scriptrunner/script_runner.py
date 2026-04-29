@@ -545,7 +545,7 @@ class ScriptRunner:
                     qp.set_initial_query_params_from_current()
 
                 # Now safe to do normal cleanup - filtering already done
-                self._session_state.on_script_finished(widget_ids)
+                self._session_state.on_script_finished(frozenset(widget_ids))
 
             fragment_ids_this_run: list[str] | None = (
                 rerun_data.fragment_id_queue or None
@@ -754,7 +754,7 @@ class ScriptRunner:
         """
         # Tell session_state to update itself in response
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run)
+            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)

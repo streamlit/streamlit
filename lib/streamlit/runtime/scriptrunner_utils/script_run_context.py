@@ -33,6 +33,7 @@ from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
 )
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -94,9 +95,9 @@ class ScriptRunContext:
         default_factory=collections.Counter
     )
     _has_script_started: bool = False
-    widget_ids_this_run: set[str] = field(default_factory=set)
-    widget_user_keys_this_run: set[str] = field(default_factory=set)
-    form_ids_this_run: set[str] = field(default_factory=set)
+    widget_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
+    widget_user_keys_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
+    form_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
@@ -145,9 +146,9 @@ class ScriptRunContext:
         is_same_page = self.page_script_hash == page_script_hash
 
         self.cursors = {}
-        self.widget_ids_this_run = set()
-        self.widget_user_keys_this_run = set()
-        self.form_ids_this_run = set()
+        self.widget_ids_this_run = ThreadSafeSet()
+        self.widget_user_keys_this_run = ThreadSafeSet()
+        self.form_ids_this_run = ThreadSafeSet()
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
