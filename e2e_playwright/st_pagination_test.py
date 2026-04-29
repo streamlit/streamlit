@@ -127,13 +127,17 @@ def test_pagination_in_form(app: Page):
     pagination = get_pagination(app, "form_pagination")
     expect(pagination).to_be_visible()
 
-    # Navigate in the form
-    get_next_button(pagination).click()
-    wait_for_app_run(app)
-    get_next_button(pagination).click()
-    wait_for_app_run(app)
+    # Verify initial state - page should start at 1 (form not submitted)
+    expect_markdown(app, "Form submitted with page: 1")
 
-    # Submit the form
+    # Navigate in the form - clicks should NOT trigger an app rerun yet
+    get_next_button(pagination).click()
+    get_next_button(pagination).click()
+
+    # Verify the displayed text hasn't changed (no rerun happened)
+    expect_markdown(app, "Form submitted with page: 1")
+
+    # Submit the form - this should trigger the rerun with the new page value
     click_form_button(app, "Submit")
     wait_for_app_run(app)
 

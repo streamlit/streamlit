@@ -104,7 +104,8 @@ describe("Pagination widget", () => {
     })
 
     it("shows ellipsis for large page counts", () => {
-      const props = getProps({ numPages: 20, default: 10 })
+      // Set maxVisiblePages to trigger truncation with ellipsis
+      const props = getProps({ numPages: 20, default: 10, maxVisiblePages: 7 })
       render(<Pagination {...props} />)
 
       const ellipses = screen.queryAllByTestId("stPaginationEllipsis")

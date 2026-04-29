@@ -69,10 +69,9 @@ st.subheader("In Form")
 with st.form(key="my_form"):
     form_page = st.pagination(10, key="form_pagination")
     submitted = st.form_submit_button("Submit")
-    if submitted:
-        st.write(f"Form submitted with page: {form_page}")
 
-st.write(f"form-page: {form_page}")
+# Always display the form page value (to verify no rerun happens before submit)
+st.write(f"Form submitted with page: {form_page}")
 
 
 # In a fragment

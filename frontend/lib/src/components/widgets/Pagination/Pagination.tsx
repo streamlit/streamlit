@@ -241,7 +241,9 @@ function updateWidgetMgrState(
 function Pagination(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { numPages } = element
-  const maxVisiblePages = element.maxVisiblePages ?? 7
+  // When max_visible_pages=None from Python, the proto field is unset.
+  // In that case, fall back to numPages to show all pages (no explicit cap).
+  const maxVisiblePages = element.maxVisiblePages ?? numPages
 
   const [hookValue, setValueWithSource] = useBasicWidgetState<
     number,
@@ -258,7 +260,8 @@ function Pagination(props: Readonly<Props>): ReactElement {
   })
 
   // Use element.value as source of truth when set_value is true
-  const currentPage = element.setValue ? element.value : hookValue
+  // Clamp to at least 1 to guard against proto3 default of 0
+  const currentPage = element.setValue ? Math.max(1, element.value) : hookValue
 
   const containerWidth = shouldWidthStretch(widthConfig)
 
@@ -348,7 +351,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
                 key={`ellipsis-${item.position}`}
                 type="button"
                 isEllipsis
-                disabled={disabled}
+                disabled
                 aria-hidden="true"
                 tabIndex={-1}
                 data-testid="stPaginationEllipsis"

@@ -271,8 +271,14 @@ class PaginationMixin:
 
         current_value = widget_state.value
 
-        # Handle case where num_pages decreased below current page
-        if current_value > num_pages:
+        # Guard against invalid session_state-controlled values that can bypass
+        # PaginationSerde.deserialize via register_widget.
+        is_valid_current_value = (
+            isinstance(current_value, int)
+            and not isinstance(current_value, bool)
+            and 1 <= current_value <= num_pages
+        )
+        if not is_valid_current_value:
             current_value = default
             if key is not None:
                 get_session_state().reset_state_value(key, current_value)
