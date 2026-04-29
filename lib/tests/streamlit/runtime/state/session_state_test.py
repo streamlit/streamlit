@@ -35,10 +35,10 @@ from streamlit.errors import (
     StreamlitAPIException,
     UnserializableSessionStateError,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadSafeSet
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadSafeSet
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
 from streamlit.runtime.state.session_state import (
