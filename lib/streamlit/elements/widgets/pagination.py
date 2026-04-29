@@ -90,7 +90,9 @@ class PaginationMixin:
             The default is ``1``.
 
         max_visible_pages : int or None
-            Maximum number of page buttons to display (excluding prev/next arrows).
+            Target number of page buttons to display (excluding prev/next arrows).
+            The actual number may be slightly higher in certain edge cases to ensure
+            the first and last pages are always visible for navigation context.
             The widget auto-adapts to available width and may show fewer pages to
             prevent wrapping. The default is ``7``.
 

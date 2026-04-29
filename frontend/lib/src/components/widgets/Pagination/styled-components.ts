@@ -72,7 +72,7 @@ export const StyledPaginationButton =
 
       "&:focus-visible": {
         outline: "none",
-        boxShadow: `0 0 0 2px ${theme.colors.primary}`,
+        boxShadow: theme.shadows.focusRing,
       },
 
       "&:disabled": {
@@ -102,7 +102,7 @@ export const StyledArrowButton = styled.button(({ theme, disabled }) => ({
 
   "&:focus-visible": {
     outline: "none",
-    boxShadow: `0 0 0 2px ${theme.colors.primary}`,
+    boxShadow: theme.shadows.focusRing,
   },
 
   "&:disabled": {
