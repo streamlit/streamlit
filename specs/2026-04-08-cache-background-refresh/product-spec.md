@@ -244,7 +244,22 @@ def slow_query_background():
 - Could be confused with a verb/action rather than a configuration
 - Less explicit about what's being configured
 
-#### Option C: Boolean parameter
+#### Option C: `refresh_mode`
+
+```python
+@st.cache_data(ttl="1h", refresh_mode="background")
+```
+
+**Pros:**
+
+- Clear naming with `*_mode` suffix
+- Consistent with parameters like `selection_mode` in other Streamlit APIs
+
+**Cons:**
+
+- `mode` typically implies switching between operational modes rather than strategies
+
+#### Option D: Boolean parameter
 
 ```python
 @st.cache_data(ttl="1h", background_refresh=True)
@@ -261,7 +276,7 @@ def slow_query_background():
 - Not extensible if we want to add more refresh strategies
 - `async` could be confused with Python's `async`/`await`
 
-#### Option D: `on_expire` parameter
+#### Option E: `on_expire` parameter
 
 ```python
 @st.cache_data(ttl="1h", on_expire="refresh")  # vs default "evict"
