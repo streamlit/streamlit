@@ -73,16 +73,11 @@ Wait for the subagent to complete and verify the implementation plan exists befo
 
 ### Phase 3: Implement and test
 
-Run this phase in a **foreground subagent**. Provide the subagent with:
-
-- The full spec content (paste the text, not just a path)
-- The full implementation plan content from Phase 2
-- Any relevant API docstrings or interface files identified in the plan
-- Clear instruction to implement the feature end-to-end
+Run this phase in a **foreground subagent**. Provide all relevant context needed to implement the feature, including the full spec content, the implementation plan from Phase 2, and any key API signatures or patterns identified during research.
 
 The subagent should:
-- Read the provided spec and implementation plan
-- Implement the feature based on the plan. Read `wiki/new-feature-guide.md` for tips.
+- Implement the feature based on the spec and plan. Read `wiki/new-feature-guide.md` for tips.
+- Do additional research if anything is unclear or missing from the provided context
 - Run `make protobuf` after any protobuf changes
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
 - Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
