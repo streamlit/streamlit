@@ -155,6 +155,10 @@ def test_on_script_error_handler(app: Page) -> None:
     # Custom error UI should NOT be shown (handler returned None)
     expect(app.get_by_text("Custom error UI:")).to_have_count(0)
 
+    # Reload to reset state - after an exception, subsequent elements don't render
+    app.reload()
+    wait_for_app_loaded(app)
+
     # Test 2: RuntimeError (different exception type)
     runtime_button = get_button(app, "Raise RuntimeError")
     runtime_button.click()
@@ -167,6 +171,10 @@ def test_on_script_error_handler(app: Page) -> None:
     ).to_be_visible()
     # Custom error UI should NOT be shown
     expect(app.get_by_text("Custom error UI:")).to_have_count(0)
+
+    # Reload to reset state - after an exception, subsequent elements don't render
+    app.reload()
+    wait_for_app_loaded(app)
 
     # Test 3: Exception from widget callback (on_click)
     callback_button = get_button(app, "Raise in callback")
