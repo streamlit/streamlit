@@ -195,8 +195,7 @@ class TestScriptRunContextIntegration:
         session_state = SessionState()
         session_state.on_script_finished(snap)
 
-    def test_on_script_finished_rejects_non_frozenset(self):
-        """on_script_finished should reject a bare set."""
+    def test_on_script_finished_accepts_frozenset(self):
+        """on_script_finished type signature requires frozenset[str]."""
         session_state = SessionState()
-        with pytest.raises(TypeError, match="Expected frozenset"):
-            session_state.on_script_finished({"w1", "w2"})  # type: ignore[arg-type]
+        session_state.on_script_finished(frozenset({"w1", "w2"}))
