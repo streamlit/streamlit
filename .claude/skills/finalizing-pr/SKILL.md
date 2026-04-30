@@ -130,27 +130,28 @@ gh pr edit --add-label "ai-review"
 
 **Checking AI review verdict:**
 
-The AI review posts results as a PR comment from the `github-actions` bot. These comments contain a hidden marker:
+The AI review posts results as a PR review from the `github-actions` bot. These reviews contain a hidden marker:
 
 ```html
 <!-- streamlit-ai-review run_id="..." timestamp="..." -->
 ```
 
-To find the latest AI review comment and extract the verdict:
+To find the latest AI review and extract the verdict:
 
 ```bash
-# Get PR number
+# Get PR number and repo
 PR_NUM=$(gh pr view --json number -q '.number')
+REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
 
-# Get the verdict line from the latest AI review comment
-gh api "repos/streamlit/streamlit/issues/${PR_NUM}/comments" \
+# Get the verdict line from the latest AI review (uses pulls reviews API, not issues comments)
+gh api --paginate "repos/${REPO}/pulls/${PR_NUM}/reviews" \
   --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | last | .body' \
-  | grep -A1 "## Verdict"
+  | grep -A2 "## Verdict"
 ```
 
 The verdict section contains a bold keyword indicating the result:
 - **`**APPROVED**`** → exit loop, PR is ready
-- **`**CHANGES REQUESTED**`** → continue iterating, address the feedback
+- **`**CHANGES_REQUESTED**`** → continue iterating, address the feedback
 
 **Important:** After each `fixing-pr` run, re-check if changes were made. If changes were pushed, the AI review will be stale and needs re-triggering. Continue iterating until the review verdict is "approved" or max iterations reached.
 

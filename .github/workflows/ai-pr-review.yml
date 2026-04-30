@@ -445,6 +445,12 @@ jobs:
           REPOSITORY: ${{ github.repository }}
           RUN_ID: ${{ github.run_id }}
         run: |
+          # Verify review file exists before modifying
+          if [ ! -f review.md ]; then
+            echo "Error: review.md not found"
+            exit 1
+          fi
+
           # Add hidden marker at the end of the review for programmatic detection
           # Format: <!-- streamlit-ai-review run_id="..." timestamp="..." -->
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -454,12 +460,6 @@ jobs:
           # changes on a PR. The verdict is still written to verdict.txt and used for
           # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
           EVENT="COMMENT"
-
-          # Verify review file exists
-          if [ ! -f review.md ]; then
-            echo "Error: review.md not found"
-            exit 1
-          fi
 
           # Get head SHA for review API
           HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
