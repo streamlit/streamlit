@@ -52,7 +52,7 @@ class ThreadSafeSet:
         with self._lock:
             return frozenset(self._data)
 
-    def __deepcopy__(self, memo: dict) -> ThreadSafeSet:
+    def __deepcopy__(self, memo: dict[int, object]) -> ThreadSafeSet:
         new = ThreadSafeSet()
         with self._lock:
             new._data = copy.deepcopy(self._data, memo)
