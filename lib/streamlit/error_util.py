@@ -166,11 +166,13 @@ def invoke_script_error_handler(
             # so use warning-level logging without full traceback.
             _LOGGER.warning(
                 "on_script_error handler raised a control-flow exception "
-                "(st.stop/st.rerun); falling back to default error UI"
+                "(st.stop/st.rerun); falling back to default error UI",
+                exc_info=True,
             )
         except Exception:
             # Log any handler errors and fall back to showing the original
-            # exception. We catch Exception to let KeyboardInterrupt and SystemExit
-            # propagate normally.
+            # exception. We catch Exception (not BaseException) so that
+            # KeyboardInterrupt/SystemExit propagate and StopException/RerunException
+            # (handled above) continue their control flow.
             _LOGGER.exception("on_script_error handler raised an exception")
     return suppress_ui_display

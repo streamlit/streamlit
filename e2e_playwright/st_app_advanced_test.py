@@ -131,6 +131,7 @@ def test_on_script_error_handler(app: Page) -> None:
     - Default exception display when handler returns None
     - Suppressed display when handler returns True (with custom error UI)
     - Handler receives different exception types correctly
+    - Handler is invoked for exceptions in widget callbacks
     """
     expect(app.get_by_text("Advanced st.App Test")).to_be_visible()
     expect(app.get_by_text("Script Error Handler Test")).to_be_visible()
@@ -139,23 +140,48 @@ def test_on_script_error_handler(app: Page) -> None:
     # No exception should be displayed initially
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
-    # === Test 1: Default display (handler returns None) ===
+    # === Test default display path (handler returns None) ===
+    # Tests 1, 3, and 4 all exercise the same code path (no suppression),
+    # so we run them in sequence without reloading between them.
+
+    # Test 1: ValueError from button click
     raise_button = get_button(app, "Raise exception")
     raise_button.click()
     wait_for_app_run(app)
 
-    # The default exception display should be shown
-    expect(app.get_by_test_id("stException")).to_have_count(1)
+    # The default exception display should be shown (positive assertion first)
+    expect(app.get_by_test_id("stException")).to_be_visible()
     expect(app.get_by_text("ValueError: Test error from user script")).to_be_visible()
-
-    # The custom error UI should NOT be shown (handler returned None)
+    # Custom error UI should NOT be shown (handler returned None)
     expect(app.get_by_text("Custom error UI:")).to_have_count(0)
 
-    # Reload to reset state - use wait_for_app_loaded after reload for stability
+    # Test 2: RuntimeError (different exception type)
+    runtime_button = get_button(app, "Raise RuntimeError")
+    runtime_button.click()
+    wait_for_app_run(app)
+
+    # The default exception display should be shown with RuntimeError
+    expect(app.get_by_test_id("stException")).to_be_visible()
+    expect(
+        app.get_by_text("RuntimeError: Runtime error from user script")
+    ).to_be_visible()
+    # Custom error UI should NOT be shown
+    expect(app.get_by_text("Custom error UI:")).to_have_count(0)
+
+    # Test 3: Exception from widget callback (on_click)
+    callback_button = get_button(app, "Raise in callback")
+    callback_button.click()
+    wait_for_app_run(app)
+
+    # The default exception display should be shown (positive assertion first)
+    expect(app.get_by_test_id("stException")).to_be_visible()
+    expect(app.get_by_text("ValueError: Error from on_click callback")).to_be_visible()
+
+    # Reload to reset state for suppress mode test
     app.reload()
     wait_for_app_loaded(app)
 
-    # === Test 2: Suppressed display (handler returns True) ===
+    # === Test suppressed display (handler returns True) ===
     suppress_checkbox = get_checkbox(app, "Suppress error display")
     suppress_checkbox.click()
     wait_for_app_run(app)
@@ -165,42 +191,9 @@ def test_on_script_error_handler(app: Page) -> None:
     raise_button.click()
     wait_for_app_run(app)
 
-    # The default exception display should NOT be shown
-    expect(app.get_by_test_id("stException")).to_have_count(0)
-
-    # The custom error UI should be shown
+    # The custom error UI should be shown (positive assertion first)
     expect(
         app.get_by_text("Custom error UI: Test error from user script")
     ).to_be_visible()
-
-    # Reload to reset state - use wait_for_app_loaded after reload for stability
-    app.reload()
-    wait_for_app_loaded(app)
-
-    # === Test 3: Different exception types ===
-    runtime_button = get_button(app, "Raise RuntimeError")
-    runtime_button.click()
-    wait_for_app_run(app)
-
-    # The default exception display should be shown with RuntimeError
-    expect(app.get_by_test_id("stException")).to_have_count(1)
-    expect(
-        app.get_by_text("RuntimeError: Runtime error from user script")
-    ).to_be_visible()
-
-    # Negative assertion: custom error UI should NOT be shown (handler returned None)
-    expect(app.get_by_text("Custom error UI:")).to_have_count(0)
-
-    # Reload to reset state for the callback test
-    app.reload()
-    wait_for_app_loaded(app)
-
-    # === Test 4: Exception from widget callback (on_click) ===
-    # This verifies that on_script_error is invoked for exceptions in widget callbacks
-    callback_button = get_button(app, "Raise in callback")
-    callback_button.click()
-    wait_for_app_run(app)
-
-    # The default exception display should be shown
-    expect(app.get_by_test_id("stException")).to_have_count(1)
-    expect(app.get_by_text("ValueError: Error from on_click callback")).to_be_visible()
+    # The default exception display should NOT be shown
+    expect(app.get_by_test_id("stException")).to_have_count(0)
