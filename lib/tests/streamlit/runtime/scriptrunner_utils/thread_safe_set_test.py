@@ -91,6 +91,10 @@ class TestThreadSafeSetEncapsulation:
 
 
 class TestThreadSafeSetConcurrency:
+    # NOTE: Under standard CPython with the GIL, these tests verify the API contract
+    # but cannot actually trigger race conditions (the GIL serializes bytecode ops).
+    # They become load-bearing under free-threaded Python (--disable-gil / PEP 703).
+
     def test_concurrent_check_and_add_exactly_one_winner_per_key(self):
         """N threads calling check_and_add with overlapping keys.
         Exactly one thread should get True (new) per key.
