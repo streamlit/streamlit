@@ -60,8 +60,11 @@ def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) 
     """Hash data, mimetype, and an optional filename to generate a stable file ID.
 
     For large files (>1MB), uses partial hashing (length + head + tail) for
-    performance. This provides ~50-100x speedup while maintaining collision
-    resistance for real media files.
+    performance. This provides ~50-100x speedup for large files. Note that for
+    files above the threshold, this is a fingerprint, not a cryptographic hash:
+    two files with identical length, head, and tail but different middle bytes
+    will produce the same ID. This tradeoff is acceptable for media file caching
+    where such collisions are extremely rare in practice.
 
     Parameters
     ----------
@@ -74,10 +77,13 @@ def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) 
     """
     filehash = hashlib.new("sha224", usedforsecurity=False)
 
+    # Always include length prefix to prevent cross-class collisions between
+    # small files and large files that happen to have matching content patterns.
+    filehash.update(f"{len(data)}:".encode())
+
     if len(data) > _PARTIAL_HASH_THRESHOLD:
         # For large files, hash length + first 64KB + last 16KB.
-        # This provides collision resistance while avoiding hashing multi-MB payloads.
-        filehash.update(f"{len(data)}:".encode())
+        # This avoids hashing multi-MB payloads while still detecting most changes.
         filehash.update(data[:_PARTIAL_HASH_HEAD])
         filehash.update(data[-_PARTIAL_HASH_TAIL:])
     else:

@@ -25,6 +25,8 @@ from parameterized import parameterized
 
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
+    _PARTIAL_HASH_HEAD,
+    _PARTIAL_HASH_TAIL,
     _PARTIAL_HASH_THRESHOLD,
     MemoryFile,
     MemoryMediaFileStorage,
@@ -235,18 +237,18 @@ class CalculateFileIdTest(unittest.TestCase):
         """Files below the threshold should produce a valid SHA-224 hash."""
         small_data = b"x" * (_PARTIAL_HASH_THRESHOLD - 1)
         file_id = _calculate_file_id(small_data, "image/png")
-        # Verify it produces a valid hash
-        assert len(file_id) == 56  # SHA-224 produces 56 hex chars
-        assert file_id.isalnum()
+        # Verify it produces a valid SHA-224 hex digest (56 lowercase hex chars)
+        assert len(file_id) == 56
+        int(file_id, 16)  # Raises ValueError if not valid hex
 
     def test_files_at_threshold_use_full_hash(self):
         """Files exactly at the threshold should use full hash, not partial."""
         threshold_data = b"x" * _PARTIAL_HASH_THRESHOLD
         # Verify these produce different IDs (full hash includes middle bytes)
         data_with_different_middle = (
-            b"x" * 65536
-            + b"y" * (_PARTIAL_HASH_THRESHOLD - 65536 - 16384)
-            + b"x" * 16384
+            b"x" * _PARTIAL_HASH_HEAD
+            + b"y" * (_PARTIAL_HASH_THRESHOLD - _PARTIAL_HASH_HEAD - _PARTIAL_HASH_TAIL)
+            + b"x" * _PARTIAL_HASH_TAIL
         )
         file_id1 = _calculate_file_id(threshold_data, "image/png")
         file_id2 = _calculate_file_id(data_with_different_middle, "image/png")
@@ -256,8 +258,13 @@ class CalculateFileIdTest(unittest.TestCase):
     def test_large_files_use_partial_hash(self):
         """Files above threshold should use partial hashing (length + head + tail)."""
         # Create two large files with same head and tail but different middle
-        data1 = b"H" * 65536 + b"A" * (_LARGE_FILE_SIZE - 65536 - 16384) + b"T" * 16384
-        data2 = b"H" * 65536 + b"B" * (_LARGE_FILE_SIZE - 65536 - 16384) + b"T" * 16384
+        middle_size = _LARGE_FILE_SIZE - _PARTIAL_HASH_HEAD - _PARTIAL_HASH_TAIL
+        data1 = (
+            b"H" * _PARTIAL_HASH_HEAD + b"A" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+        )
+        data2 = (
+            b"H" * _PARTIAL_HASH_HEAD + b"B" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+        )
 
         # With partial hashing, same length + head + tail = same ID (theoretical collision)
         file_id1 = _calculate_file_id(data1, "image/png")
