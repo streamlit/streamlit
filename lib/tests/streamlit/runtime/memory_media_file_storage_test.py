@@ -25,8 +25,7 @@ from parameterized import parameterized
 
 from streamlit.runtime.media_file_storage import MediaFileKind, MediaFileStorageError
 from streamlit.runtime.memory_media_file_storage import (
-    _PARTIAL_HASH_HEAD,
-    _PARTIAL_HASH_TAIL,
+    _PARTIAL_HASH_SAMPLE_SIZE,
     _PARTIAL_HASH_THRESHOLD,
     MemoryFile,
     MemoryMediaFileStorage,
@@ -35,7 +34,7 @@ from streamlit.runtime.memory_media_file_storage import (
 )
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 
-# Size used in partial hash tests: threshold + 100KB
+# Size used in partial hash tests: threshold + 100 KiB
 _LARGE_FILE_SIZE = _PARTIAL_HASH_THRESHOLD + 100_000
 
 
@@ -186,21 +185,33 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         self.storage.delete_file("mock_file_id")
 
     def test_large_files_with_colliding_fingerprint_dedupe_to_first_file(self):
-        """Large files with matching fingerprint (same length, head, tail) dedupe.
+        """Large files with matching fingerprint (same length, head, middle, tail) dedupe.
 
         This documents the storage-layer consequence of the partial hashing
         optimization: when two distinct large files share the same length,
-        first 64KB, and last 16KB, they produce the same file_id and the
+        head, middle, and tail samples, they produce the same file_id and the
         second file's bytes are dropped. Subsequent get_file() returns the
         first file's content.
         """
-        # Create two large files with same length, head, and tail but different middle
-        middle_size = _LARGE_FILE_SIZE - _PARTIAL_HASH_HEAD - _PARTIAL_HASH_TAIL
+        # Create two large files with same length, head, middle, and tail
+        # but different bytes between head/middle and middle/tail gaps.
+        # Structure: [head 64K][gap1][middle 64K][gap2][tail 64K]
+        # We need a file large enough that sampling doesn't overlap.
+        # With 64K samples and threshold+100K size, we have enough room.
+        gap_size = (_LARGE_FILE_SIZE - 3 * _PARTIAL_HASH_SAMPLE_SIZE) // 2
         data1 = (
-            b"H" * _PARTIAL_HASH_HEAD + b"A" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"A" * gap_size
+            + b"M" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"A" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
         )
         data2 = (
-            b"H" * _PARTIAL_HASH_HEAD + b"B" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"B" * gap_size
+            + b"M" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"B" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
         )
 
         # Store first file
@@ -276,35 +287,66 @@ class CalculateFileIdTest(unittest.TestCase):
         assert len(file_id) == 32
         int(file_id, 16)  # Raises ValueError if not valid hex
 
-    def test_files_at_threshold_hash_middle_bytes(self):
-        """Files exactly at the threshold should hash full content, including middle bytes."""
+    def test_files_at_threshold_hash_full_content(self):
+        """Files exactly at the threshold should hash full content."""
         threshold_data = b"x" * _PARTIAL_HASH_THRESHOLD
-        # Verify these produce different IDs (full hash includes middle bytes)
+        # Verify these produce different IDs (full hash includes all bytes)
         data_with_different_middle = (
-            b"x" * _PARTIAL_HASH_HEAD
-            + b"y" * (_PARTIAL_HASH_THRESHOLD - _PARTIAL_HASH_HEAD - _PARTIAL_HASH_TAIL)
-            + b"x" * _PARTIAL_HASH_TAIL
+            b"x" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"y" * (_PARTIAL_HASH_THRESHOLD - 2 * _PARTIAL_HASH_SAMPLE_SIZE)
+            + b"x" * _PARTIAL_HASH_SAMPLE_SIZE
         )
         file_id1 = _calculate_file_id(threshold_data, "image/png")
         file_id2 = _calculate_file_id(data_with_different_middle, "image/png")
-        # With full hashing, different middle = different ID
+        # With full hashing (at threshold), different content = different ID
         assert file_id1 != file_id2
 
     def test_large_files_use_partial_hash(self):
-        """Files above threshold should use partial hashing (length + head + tail)."""
-        # Create two large files with same head and tail but different middle
-        middle_size = _LARGE_FILE_SIZE - _PARTIAL_HASH_HEAD - _PARTIAL_HASH_TAIL
+        """Files above threshold should use partial hashing (length + head + middle + tail)."""
+        # Create two large files with same head, middle, and tail but different gaps
+        gap_size = (_LARGE_FILE_SIZE - 3 * _PARTIAL_HASH_SAMPLE_SIZE) // 2
         data1 = (
-            b"H" * _PARTIAL_HASH_HEAD + b"A" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"A" * gap_size
+            + b"M" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"A" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
         )
         data2 = (
-            b"H" * _PARTIAL_HASH_HEAD + b"B" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"B" * gap_size
+            + b"M" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"B" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
         )
 
-        # With partial hashing, same length + head + tail = same ID (theoretical collision)
+        # With partial hashing, same length + head + middle + tail = same ID
         file_id1 = _calculate_file_id(data1, "image/png")
         file_id2 = _calculate_file_id(data2, "image/png")
         assert file_id1 == file_id2
+
+    def test_large_files_different_middle_produce_different_ids(self):
+        """Large files with different middle samples should produce different IDs."""
+        # Create two files with same head and tail but different middle
+        gap_size = (_LARGE_FILE_SIZE - 3 * _PARTIAL_HASH_SAMPLE_SIZE) // 2
+        data1 = (
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"x" * gap_size
+            + b"A" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"x" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
+        )
+        data2 = (
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"x" * gap_size
+            + b"B" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"x" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
+        )
+
+        file_id1 = _calculate_file_id(data1, "image/png")
+        file_id2 = _calculate_file_id(data2, "image/png")
+        assert file_id1 != file_id2
 
     def test_large_files_different_length_produce_different_ids(self):
         """Large files with different lengths should produce different IDs."""
@@ -317,7 +359,7 @@ class CalculateFileIdTest(unittest.TestCase):
         assert file_id1 != file_id2
 
     def test_large_files_different_head_produce_different_ids(self):
-        """Large files with different first 64KB should produce different IDs."""
+        """Large files with different first 64 KiB should produce different IDs."""
         data1 = b"A" + b"x" * (_LARGE_FILE_SIZE - 1)
         data2 = b"B" + b"x" * (_LARGE_FILE_SIZE - 1)
 
@@ -326,7 +368,7 @@ class CalculateFileIdTest(unittest.TestCase):
         assert file_id1 != file_id2
 
     def test_large_files_different_tail_produce_different_ids(self):
-        """Large files with different last 16KB should produce different IDs."""
+        """Large files with different last 64 KiB should produce different IDs."""
         data1 = b"x" * (_LARGE_FILE_SIZE - 1) + b"A"
         data2 = b"x" * (_LARGE_FILE_SIZE - 1) + b"B"
 
