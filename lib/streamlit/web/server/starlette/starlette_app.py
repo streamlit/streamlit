@@ -279,17 +279,15 @@ class App:
         Middleware stack to apply to all requests. User middleware runs before
         Streamlit's internal middleware.
     on_script_error : Callable[[Exception], bool | None] | None
-        Callback invoked when an uncaught exception occurs in the Streamlit script
-        or inside a ``@st.fragment``-decorated function. The callback receives the
-        exception and can optionally return ``True`` to suppress the default exception
-        display in the UI, allowing custom error UI to be shown instead. Returns
-        ``False`` or ``None`` to show the exception normally. Useful for integrating
-        with error monitoring services like Sentry.
+        Callback invoked when an uncaught exception occurs during script execution.
+        The callback receives the exception and can optionally return ``True`` to
+        suppress the default exception display in the UI, allowing custom error UI
+        to be shown instead. Returns ``False`` or ``None`` to show the exception
+        normally. Useful for integrating with error monitoring services like Sentry.
 
         The handler is invoked for:
 
-        - Uncaught exceptions in the main script
-        - Exceptions in ``@st.fragment``-decorated functions
+        - Uncaught exceptions in the full app script
         - Exceptions in widget callbacks (``on_change``, ``on_click``, etc.)
 
         The handler is NOT invoked for:
@@ -298,7 +296,12 @@ class App:
         - Syntax/compile errors in the script
         - ``KeyboardInterrupt`` / ``SystemExit``
     exception_handlers : Mapping[Any, ExceptionHandler] | None
-        Custom exception handlers for HTTP routes (not script errors).
+        A mapping of either integer status codes, or exception class types onto
+        callables which handle the exceptions. Exception handler callables should
+        be of the form ``handler(request, exc) -> response`` and may be either
+        standard functions, or async functions. This is only for exception handling
+        on the network layer. Use ``on_script_error`` for customized handling of
+        uncaught exceptions from the app script.
     debug : bool
         Enable debug mode for the underlying Starlette application.
 
