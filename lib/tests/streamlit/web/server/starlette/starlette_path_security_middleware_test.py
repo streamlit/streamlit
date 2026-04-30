@@ -65,6 +65,39 @@ def _create_websocket_app() -> Starlette:
     return app
 
 
+async def _call_asgi_with_path(app: Starlette, path: str) -> tuple[int | None, bytes]:
+    """Call an ASGI app with a raw HTTP scope for the given path.
+
+    This bypasses URL parsing that would interpret // as authority, allowing
+    us to test raw path handling.
+    """
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": path,
+        "query_string": b"",
+        "headers": [],
+        "server": ("localhost", 8000),
+        "asgi": {"version": "3.0"},
+    }
+
+    response_status: int | None = None
+    response_body = b""
+
+    async def receive():
+        return {"type": "http.request", "body": b""}
+
+    async def send(message):
+        nonlocal response_status, response_body
+        if message["type"] == "http.response.start":
+            response_status = message["status"]
+        elif message["type"] == "http.response.body":
+            response_body += message.get("body", b"")
+
+    await app(scope, receive, send)
+    return response_status, response_body
+
+
 class TestPathSecurityMiddleware:
     """Tests for PathSecurityMiddleware."""
 
@@ -207,34 +240,9 @@ class TestDoubleSlashBypass:
         We use raw ASGI scope to simulate an attacker sending a malicious request
         directly, bypassing URL parsing that would interpret // as authority.
         """
-        # Build the app with middleware
         app = _create_test_app()
 
-        # Construct a raw ASGI scope with the malicious path
-        scope = {
-            "type": "http",
-            "method": "GET",
-            "path": unc_path,
-            "query_string": b"",
-            "headers": [],
-            "server": ("localhost", 8000),
-            "asgi": {"version": "3.0"},
-        }
-
-        response_status: int | None = None
-        response_body = b""
-
-        async def receive():
-            return {"type": "http.request", "body": b""}
-
-        async def send(message):
-            nonlocal response_status, response_body
-            if message["type"] == "http.response.start":
-                response_status = message["status"]
-            elif message["type"] == "http.response.body":
-                response_body += message.get("body", b"")
-
-        await app(scope, receive, send)
+        response_status, response_body = await _call_asgi_with_path(app, unc_path)
 
         # These MUST be blocked - if they return 200, we have a security bypass
         assert response_status == 400, (
@@ -328,3 +336,77 @@ class TestMiddlewarePosition:
         assert response.status_code == 400
         assert response.text == "Bad Request"
         assert handler_called is False  # Key assertion: handler was never called
+
+
+class TestSafePathFastPath:
+    """Tests for the safe path fast-path optimization.
+
+    These tests verify that known-safe routes skip the is_unsafe_path_pattern()
+    check for performance, while still being protected by the double-slash check.
+    """
+
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_prefixes_pass_through(self, safe_path: str) -> None:
+        """Test that known-safe route prefixes pass through without full validation."""
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(safe_path)
+
+        # These routes should reach the handler (200), not be blocked (400)
+        assert response.status_code == 200
+
+    @pytest.mark.anyio
+    async def test_safe_paths_still_check_double_slash(self) -> None:
+        """Test that safe prefixes still get the double-slash UNC check.
+
+        Even though /_stcore/health is a safe prefix, a request to
+        //_stcore/health (note the double slash) should still be blocked.
+        """
+        app = _create_test_app()
+
+        response_status, _ = await _call_asgi_with_path(app, "//_stcore/health")
+
+        # Double-slash must still be blocked even with safe prefix
+        assert response_status == 400
+
+    @pytest.mark.parametrize(
+        "unsafe_route",
+        [
+            "/media/..\\..\\etc\\passwd",
+            "/component/..\\..\\etc\\passwd",
+            "/_stcore/bidi-components/..\\..\\etc\\passwd",
+            "/app/static/..\\..\\etc\\passwd",
+        ],
+        ids=[
+            "media-traversal",
+            "component-traversal",
+            "bidi-component-traversal",
+            "app-static-traversal",
+        ],
+    )
+    def test_non_safe_routes_still_validated(self, unsafe_route: str) -> None:
+        """Test that routes NOT in the safe prefix list are still validated."""
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(unsafe_route)
+
+        # These routes should be blocked by the middleware
+        assert response.status_code == 400
