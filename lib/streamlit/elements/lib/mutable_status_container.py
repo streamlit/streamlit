@@ -28,6 +28,7 @@ from streamlit.elements.lib.layout_utils import (
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
 
 if TYPE_CHECKING:
@@ -83,11 +84,9 @@ class StatusContainer(DeltaGenerator):
         status_container._current_proto = block_proto
         status_container._current_state = state
 
-        # We need to sleep here for a very short time to prevent issues when
-        # the status is updated too quickly. If an .update() directly follows the
-        # the initialization, sometimes only the latest update is applied.
-        # Adding a short timeout here allows the frontend to render the update before.
-        time.sleep(0.05)
+        # Ensure the initial message is flushed before any immediate .update() call,
+        # so both messages are sent in separate flush cycles.
+        time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
 
         return status_container
 
@@ -181,12 +180,9 @@ class StatusContainer(DeltaGenerator):
     ) -> Literal[False]:
         # Only update if the current state is running
         if self._current_state == "running":
-            # We need to sleep here for a very short time to prevent issues when
-            # the status is updated too quickly. If an .update() is directly followed
-            # by the exit of the context manager, sometimes only the last update
-            # (to complete) is applied. Adding a short timeout here allows the frontend
-            # to render the update before.
-            time.sleep(0.05)
+            # Ensure any preceding .update() is flushed before the final state change,
+            # so both messages are sent in separate flush cycles.
+            time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
             if exc_type is not None:
                 # If an exception was raised in the context,
                 # we want to update the status to error.
