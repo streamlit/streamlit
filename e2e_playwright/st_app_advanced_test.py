@@ -184,6 +184,8 @@ def test_on_script_error_handler(app: Page) -> None:
     # The default exception display should be shown (positive assertion first)
     expect(app.get_by_test_id("stException")).to_be_visible()
     expect(app.get_by_text("ValueError: Error from on_click callback")).to_be_visible()
+    # Custom error UI should NOT be shown (handler returned None)
+    expect(app.get_by_text("Custom error UI:")).to_have_count(0)
 
     # Reload to reset state for suppress mode test
     app.reload()
@@ -202,6 +204,28 @@ def test_on_script_error_handler(app: Page) -> None:
     # The custom error UI should be shown (positive assertion first)
     expect(
         app.get_by_text("Custom error UI: Test error from user script")
+    ).to_be_visible()
+    # The default exception display should NOT be shown
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # Reload to reset state for callback exception with suppression test
+    app.reload()
+    wait_for_app_loaded(app)
+
+    # Test 5: Widget callback exception with suppression enabled
+    # This verifies the handler works correctly for callback exceptions too
+    suppress_checkbox = get_checkbox(app, "Suppress error display")
+    suppress_checkbox.click()
+    wait_for_app_run(app)
+    expect(app.get_by_text("Suppress display: True")).to_be_visible()
+
+    callback_button = get_button(app, "Raise in callback")
+    callback_button.click()
+    wait_for_app_run(app)
+
+    # The custom error UI should be shown (positive assertion first)
+    expect(
+        app.get_by_text("Custom error UI: Error from on_click callback")
     ).to_be_visible()
     # The default exception display should NOT be shown
     expect(app.get_by_test_id("stException")).to_have_count(0)
