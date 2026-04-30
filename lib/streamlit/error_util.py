@@ -96,9 +96,9 @@ def handle_uncaught_app_exception(
 
     Parameters
     ----------
-    ex
+    ex : BaseException
         The exception to handle.
-    show_in_ui
+    show_in_ui : bool
         If True (default), display the exception in the Streamlit UI after logging.
         If False, only log the exception to the console.
     """
@@ -138,9 +138,9 @@ def invoke_script_error_handler(
 
     Parameters
     ----------
-    ex
+    ex : Exception
         The original exception that occurred.
-    on_script_error
+    on_script_error : Callable[[Exception], bool | None] | None
         The custom error handler callback, if any.
 
     Returns
@@ -162,8 +162,12 @@ def invoke_script_error_handler(
                 suppress_ui_display = True
         except (StopException, RerunException):
             # StopException/RerunException raised inside the handler should not
-            # crash the script runner thread. Log and fall back to default UI.
-            _LOGGER.exception("on_script_error handler raised an exception")
+            # crash the script runner thread. These are internal control-flow signals,
+            # so use warning-level logging without full traceback.
+            _LOGGER.warning(
+                "on_script_error handler raised a control-flow exception "
+                "(st.stop/st.rerun); falling back to default error UI"
+            )
         except Exception:
             # Log any handler errors and fall back to showing the original
             # exception. We catch Exception to let KeyboardInterrupt and SystemExit
