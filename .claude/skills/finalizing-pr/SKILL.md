@@ -130,34 +130,21 @@ gh pr edit --add-label "ai-review"
 
 **Checking AI review verdict:**
 
-The AI review posts results as either a PR review or a PR comment (fallback) from the `github-actions` bot. These contain a hidden marker:
+The AI review posts results as a PR review from the `github-actions` bot. These contain a hidden marker:
 
 ```html
 <!-- streamlit-ai-review run_id="..." timestamp="..." -->
 ```
 
-To find the latest AI review and extract the verdict, check both endpoints:
+To find the latest AI review and extract the verdict:
 
 ```bash
 PR_NUM=$(gh pr view --json number -q '.number')
 
-# Check PR reviews first (primary), then PR comments (fallback)
-# The workflow posts via Reviews API but falls back to comments if that fails
-VERDICT=$(
-  gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
-    | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
-    | grep -A2 "## Verdict" 2>/dev/null
-)
-
-if [ -z "$VERDICT" ]; then
-  VERDICT=$(
-    gh api --paginate "repos/streamlit/streamlit/issues/${PR_NUM}/comments" \
-      | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.created_at) | last | .body' \
-      | grep -A2 "## Verdict" 2>/dev/null
-  )
-fi
-
-echo "$VERDICT"
+# Get the verdict from the latest AI review
+gh api --paginate "repos/streamlit/streamlit/pulls/${PR_NUM}/reviews" \
+  | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
+  | grep -A2 "## Verdict"
 ```
 
 The verdict section contains a bold keyword indicating the result:
