@@ -234,11 +234,11 @@ class CalculateFileIdTest(unittest.TestCase):
     """Unit tests for _calculate_file_id partial hashing optimization."""
 
     def test_small_files_use_full_hash(self):
-        """Files below the threshold should produce a valid SHA-224 hash."""
+        """Files below the threshold should produce a valid BLAKE2b hash."""
         small_data = b"x" * (_PARTIAL_HASH_THRESHOLD - 1)
         file_id = _calculate_file_id(small_data, "image/png")
-        # Verify it produces a valid SHA-224 hex digest (56 lowercase hex chars)
-        assert len(file_id) == 56
+        # Verify it produces a valid BLAKE2b hex digest (32 lowercase hex chars)
+        assert len(file_id) == 32
         int(file_id, 16)  # Raises ValueError if not valid hex
 
     def test_files_at_threshold_use_full_hash(self):

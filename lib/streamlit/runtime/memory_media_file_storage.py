@@ -17,7 +17,6 @@
 from __future__ import annotations
 
 import contextlib
-import hashlib
 import mimetypes
 import os.path
 from typing import TYPE_CHECKING, Final, NamedTuple
@@ -34,6 +33,7 @@ from streamlit.runtime.stats import (
     StatsProvider,
     group_cache_stats,
 )
+from streamlit.util import create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -75,7 +75,7 @@ def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) 
     filename
         Any string. Will be converted to bytes and used to compute a hash.
     """
-    filehash = hashlib.new("sha224", usedforsecurity=False)
+    filehash = create_fast_hasher()
 
     # Always include length prefix to prevent cross-class collisions between
     # small files and large files that happen to have matching content patterns.
