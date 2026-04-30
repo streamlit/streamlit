@@ -429,13 +429,12 @@ class ScriptRunner:
         cancelled when one fragment calls st.stop() or st.rerun(scope="app").
         """
         if not self._is_in_script_thread():
-            # Worker thread — check coordinator cancel event for cooperative
-            # cancellation of parallel fragments.
+            # Worker thread — check coordinator for cooperative cancellation.
             ctx = get_script_run_ctx(suppress_warning=True)
             if (
                 ctx is not None
                 and ctx.parallel_coordinator is not None
-                and ctx.parallel_coordinator.is_cancelled()
+                and ctx.parallel_coordinator.should_stop()
             ):
                 raise StopException()
             return
@@ -447,15 +446,13 @@ class ScriptRunner:
             # enqueues a new ForwardEvent
             return
 
-        # Check if a parallel fragment has requested cancellation (e.g. via
-        # st.stop() or st.rerun(scope="app") inside a parallel fragment).
+        # Check if a worker requested cancellation — raise the stored exception
+        # to preserve its type (RerunException vs StopException).
         ctx = get_script_run_ctx(suppress_warning=True)
-        if (
-            ctx is not None
-            and ctx.parallel_coordinator is not None
-            and ctx.parallel_coordinator.is_cancelled()
-        ):
-            raise StopException()
+        if ctx is not None and ctx.parallel_coordinator is not None:
+            exc = ctx.parallel_coordinator.worker_exception
+            if exc is not None:
+                raise exc
 
         request = self._requests.on_scriptrunner_yield()
         if request is None:
@@ -708,6 +705,7 @@ class ScriptRunner:
 
                         ctx.parallel_coordinator = ParallelFragmentCoordinator(
                             yield_check=self._maybe_handle_execution_control_request,
+                            max_workers=config.get_option("runner.parallelMaxWorkers"),
                         )
                         try:
                             if PagesManager.uses_pages_directory:
@@ -716,8 +714,7 @@ class ScriptRunner:
                                 exec(code, module.__dict__)  # noqa: S102
                             ctx.parallel_coordinator.join()
                         except (RerunException, StopException):
-                            ctx.parallel_coordinator.cancel()
-                            ctx.parallel_coordinator.join(check_requests=False)
+                            ctx.parallel_coordinator.drain()
                             raise
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.new_fragment_ids

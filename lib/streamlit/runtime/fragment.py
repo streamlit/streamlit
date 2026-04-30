@@ -35,11 +35,11 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
     ScriptRunContext,
+    _thread_state,
     add_script_run_ctx,
     get_script_run_ctx,
-    is_parallel_worker,
-    parallel_fragment_id,
 )
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
@@ -145,7 +145,7 @@ class MemoryFragmentStorage(FragmentStorage):
 
 
 class ParallelFragmentCoordinator:
-    """Manages parallel fragment thread lifecycle: registration, joining, cancellation.
+    """Manages parallel fragment worker lifecycle using a ThreadPoolExecutor.
 
     Created per full-app script run by ScriptRunner and stored on ScriptRunContext.
     The yield_check callback is ScriptRunner._maybe_handle_execution_control_request,
@@ -155,38 +155,79 @@ class ParallelFragmentCoordinator:
     def __init__(
         self,
         yield_check: Callable[[], None],
+        max_workers: int | None = None,
         poll_interval: float = 0.1,
     ) -> None:
-        self._threads: list[threading.Thread] = []
-        self._cancel_event = threading.Event()
+        from concurrent.futures import ThreadPoolExecutor
+
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._outstanding = 0
+        self._outstanding_lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._worker_exception: RerunException | StopException | None = None
+        self._exception_lock = threading.Lock()
         self._yield_check = yield_check
         self._poll_interval = poll_interval
-        self._lock = threading.Lock()
 
-    def register(self, thread: threading.Thread) -> None:
-        with self._lock:
-            self._threads.append(thread)
+    def submit(self, fn: Callable[..., Any], *args: Any) -> None:
+        """Submit a worker function to the thread pool."""
+        with self._outstanding_lock:
+            self._outstanding += 1
 
-    def cancel(self) -> None:
-        self._cancel_event.set()
+        def tracked() -> None:
+            try:
+                fn(*args)
+            finally:
+                with self._outstanding_lock:
+                    self._outstanding -= 1
 
-    def is_cancelled(self) -> bool:
-        return self._cancel_event.is_set()
+        self._executor.submit(tracked)
 
-    def join(self, *, check_requests: bool = True) -> None:
-        """Block until all registered threads complete.
+    def request_stop(self) -> None:
+        """Signal all workers to stop (first-writer-wins)."""
+        with self._exception_lock:
+            if self._worker_exception is None:
+                self._worker_exception = StopException()
+        self._stop_event.set()
 
-        When check_requests is True (the default), the yield_check callback is
-        called on each poll interval — this allows the script runner to detect
-        incoming RERUN/STOP requests and raise an exception to interrupt the wait.
-        Set check_requests=False during cancellation cleanup to avoid re-raising.
+    def request_rerun(self, exc: RerunException) -> None:
+        """Signal all workers to stop with a rerun (first-writer-wins)."""
+        with self._exception_lock:
+            if self._worker_exception is None:
+                self._worker_exception = exc
+        self._stop_event.set()
+
+    def should_stop(self) -> bool:
+        """Return True if workers should cooperatively exit."""
+        return self._stop_event.is_set()
+
+    @property
+    def worker_exception(self) -> RerunException | StopException | None:
+        """The exception stored by the first worker to request stop/rerun."""
+        return self._worker_exception
+
+    def join(self) -> None:
+        """Block until all outstanding workers complete.
+
+        Calls yield_check on each poll interval to allow the script runner to
+        detect incoming requests. Raises worker_exception if one was stored.
         """
-        while any(t.is_alive() for t in self._threads):
-            if check_requests and not self._cancel_event.is_set():
-                self._yield_check()
+        while True:
+            with self._outstanding_lock:
+                if self._outstanding == 0:
+                    break
+            self._yield_check()
+            if self._worker_exception is not None:
+                raise self._worker_exception
             time.sleep(self._poll_interval)
-        for thread in self._threads:
-            thread.join()
+        if self._worker_exception is not None:
+            raise self._worker_exception
+        self._executor.shutdown(wait=False)
+
+    def drain(self) -> None:
+        """Cancel pending futures and wait for running workers to finish."""
+        self._stop_event.set()
+        self._executor.shutdown(wait=True, cancel_futures=True)
 
 
 def _check_not_parallel_worker(api_name: str) -> None:
@@ -197,7 +238,7 @@ def _check_not_parallel_worker(api_name: str) -> None:
     They remain allowed during sequential fragment reruns even when the fragment
     was declared with ``parallel=True``.
     """
-    if is_parallel_worker.get():
+    if _thread_state.get().is_parallel_worker:
         from streamlit.errors import StreamlitAPIException
 
         raise StreamlitAPIException(
@@ -212,7 +253,7 @@ def _dispatch_parallel_fragment(
     wrapped_fragment: Callable[[], Any],
 ) -> None:
     """Pre-create the fragment container on the main thread, then dispatch
-    ``wrapped_fragment`` to a worker thread.
+    ``wrapped_fragment`` to a worker thread via the coordinator's thread pool.
 
     The container Block is created on the main thread so that:
     1. delta_path ordering is preserved (the frontend requires sequential
@@ -228,8 +269,9 @@ def _dispatch_parallel_fragment(
     from streamlit.delta_generator_singletons import context_dg_stack
     from streamlit.proto.Block_pb2 import Block as Block_pb2
 
-    prev_fragment_id = ctx.current_fragment_id
-    ctx.current_fragment_id = fragment_id
+    ts = _thread_state.get()
+    prev_fragment_id = ts.fragment_id
+    ts.fragment_id = fragment_id
     ctx.new_fragment_ids.add(fragment_id)
 
     # Pre-create the container on the main thread.  open_block() on the
@@ -244,32 +286,25 @@ def _dispatch_parallel_fragment(
     # a snapshot — the main thread's subsequent pop won't affect the copy.
     context_dg_stack.set((*context_dg_stack.get(), container_dg))
 
-    # Set ContextVars before copying so the worker thread inherits them.
-    parallel_fragment_id.set(fragment_id)
-    is_parallel_worker.set(True)
+    # Snapshot context (captures DG stack with container)
     parent_context = contextvars.copy_context()
-    parallel_fragment_id.set(None)
-    is_parallel_worker.set(False)
 
     # Pop the container DG from the main thread's stack.
     context_dg_stack.set(context_dg_stack.get()[:-1])
 
     # Restore main thread state.
-    ctx.current_fragment_id = prev_fragment_id
-    ctx.current_fragment_delta_path = []
+    ts.fragment_id = prev_fragment_id
+    ts.delta_path = []
 
     coordinator = ctx.parallel_coordinator
     if coordinator is None:
         raise RuntimeError("parallel_coordinator is not set on ScriptRunContext")
 
-    thread = threading.Thread(
-        target=_run_parallel_fragment,
-        args=(coordinator, wrapped_fragment, fragment_id, parent_context),
-        name=f"parallel_fragment_{fragment_id[:8]}",
-    )
-    add_script_run_ctx(thread, ctx)
-    coordinator.register(thread)
-    thread.start()
+    def worker() -> None:
+        add_script_run_ctx(threading.current_thread(), ctx)
+        _run_parallel_fragment(coordinator, wrapped_fragment, fragment_id, parent_context)
+
+    coordinator.submit(worker)
 
 
 def _run_parallel_fragment(
@@ -278,7 +313,7 @@ def _run_parallel_fragment(
     fragment_id: str,
     parent_context: contextvars.Context,
 ) -> None:
-    """Thread entry point for a parallel fragment.
+    """Worker entry point for a parallel fragment.
 
     Runs ``wrapped_fragment`` inside the copied context so each thread gets
     its own ``context_dg_stack`` and cursor state.  ``wrapped_fragment``
@@ -286,25 +321,20 @@ def _run_parallel_fragment(
     """
 
     def run_fragment() -> None:
-        while True:
-            if coordinator.is_cancelled():
-                break
-            try:
-                wrapped_fragment()
-                break
-            except RerunException as e:
-                if e.rerun_data.fragment_id_queue:
-                    continue
-                coordinator.cancel()
-                break
-            except StopException:
-                coordinator.cancel()
-                break
-            except FragmentHandledException:
-                break
-            except Exception:
-                _LOGGER.exception("Parallel fragment %s failed", fragment_id[:8])
-                break
+        _thread_state.set(FragmentThreadState(
+            fragment_id=fragment_id,
+            is_parallel_worker=True,
+        ))
+        try:
+            wrapped_fragment()
+        except RerunException as e:
+            coordinator.request_rerun(e)
+        except StopException:
+            coordinator.request_stop()
+        except FragmentHandledException:
+            pass
+        except Exception:
+            _LOGGER.exception("Parallel fragment %s failed", fragment_id[:8])
 
     parent_context.run(run_fragment)
 
@@ -376,13 +406,10 @@ def _fragment(
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
             ctx.new_fragment_ids.add(fragment_id)
-            # Set ctx.current_fragment_id so that elements corresponding to this
-            # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
-            # reset after the fragment function finishes running to either return to the
-            # script (outside of any fragments) or to the outer fragment this one is
-            # nested in.
-            prev_fragment_id = ctx.current_fragment_id
-            ctx.current_fragment_id = fragment_id
+
+            ts = _thread_state.get()
+            prev_fragment_id = ts.fragment_id
+            ts.fragment_id = fragment_id
 
             try:
                 # Make sure we set the active script hash to the same value
@@ -401,13 +428,13 @@ def _fragment(
                     # stack. For sequential runs, create a new container.
                     container_ctx: contextlib.AbstractContextManager[Any] = (
                         contextlib.nullcontext()
-                        if is_parallel_worker.get()
+                        if _thread_state.get().is_parallel_worker
                         else st.container()
                     )
                     with container_ctx:
                         try:
                             active_dg = context_dg_stack.get()[-1]
-                            ctx.current_fragment_delta_path = (
+                            ts.delta_path = (
                                 active_dg._cursor.delta_path
                                 if active_dg._cursor
                                 else []
@@ -423,8 +450,8 @@ def _fragment(
                             raise FragmentHandledException(e)
                     return result
             finally:
-                ctx.current_fragment_id = prev_fragment_id
-                ctx.current_fragment_delta_path = []
+                ts.fragment_id = prev_fragment_id
+                ts.delta_path = []
 
         ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 
