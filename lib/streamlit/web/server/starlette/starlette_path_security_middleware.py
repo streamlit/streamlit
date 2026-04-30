@@ -43,23 +43,21 @@ from typing import TYPE_CHECKING
 from starlette.responses import Response
 
 from streamlit.path_security import is_unsafe_path_pattern
+from streamlit.web.server.starlette.starlette_routes import (
+    BASE_ROUTE_UPLOAD_FILE,
+    ROUTE_HEALTH,
+    ROUTE_HOST_CONFIG,
+    ROUTE_METRICS,
+    ROUTE_SCRIPT_HEALTH,
+)
 
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
-# Route constants for safe endpoints (imported from starlette_routes to stay in sync).
-# These are relative paths without the leading slash.
-#
-# DO NOT add routes that serve user-controlled file paths (media, component,
-# bidi-components, app/static) - those require full is_unsafe_path_pattern validation.
-_SAFE_ROUTE_HEALTH = "_stcore/health"
-_SAFE_ROUTE_SCRIPT_HEALTH = "_stcore/script-health-check"
-_SAFE_ROUTE_METRICS = "_stcore/metrics"
-_SAFE_ROUTE_HOST_CONFIG = "_stcore/host-config"
-
 # The upload_file route uses path params as opaque lookup keys (session_id/file_id),
 # not filesystem paths, so it's safe to skip the pattern check.
-_SAFE_ROUTE_UPLOAD_PREFIX = "_stcore/upload_file/"
+# Add trailing slash to match only the upload prefix, not other routes.
+_SAFE_ROUTE_UPLOAD_PREFIX = f"{BASE_ROUTE_UPLOAD_FILE}/"
 
 
 def _build_safe_paths(base_url_path: str) -> tuple[frozenset[str], str]:
@@ -80,10 +78,10 @@ def _build_safe_paths(base_url_path: str) -> tuple[frozenset[str], str]:
     # Build full paths with base URL prefix
     safe_exact_paths = frozenset(
         {
-            make_url_path(base_url_path, _SAFE_ROUTE_HEALTH),
-            make_url_path(base_url_path, _SAFE_ROUTE_SCRIPT_HEALTH),
-            make_url_path(base_url_path, _SAFE_ROUTE_METRICS),
-            make_url_path(base_url_path, _SAFE_ROUTE_HOST_CONFIG),
+            make_url_path(base_url_path, ROUTE_HEALTH),
+            make_url_path(base_url_path, ROUTE_SCRIPT_HEALTH),
+            make_url_path(base_url_path, ROUTE_METRICS),
+            make_url_path(base_url_path, ROUTE_HOST_CONFIG),
         }
     )
 
