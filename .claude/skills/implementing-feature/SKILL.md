@@ -86,7 +86,6 @@ The subagent should:
 - Run `make protobuf` after any protobuf changes
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
 - Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
-- Commit incrementally with logical commits as implementation progresses
 
 Wait for the subagent to complete before proceeding to verification.
 
