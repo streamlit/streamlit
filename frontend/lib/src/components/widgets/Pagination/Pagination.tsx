@@ -24,7 +24,9 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
+import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useResizeObserver } from "~lib/hooks/useResizeObserver"
+import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
@@ -42,17 +44,6 @@ export interface Props {
   fragmentId?: string
   widthConfig: streamlit.IWidthConfig | undefined | null
 }
-
-/**
- * Button width derived from theme.spacing.threeXL (32px) + theme.spacing.twoXS (4px gap).
- * Each page button is minWidth=32px plus 4px gap between buttons = 36px effective width.
- */
-const BUTTON_WIDTH_PX = 36
-
-/**
- * Width occupied by the two arrow buttons: 2 * theme.spacing.threeXL (32px) = 64px.
- */
-const ARROWS_WIDTH_PX = 64
 
 /**
  * Default cap when max_visible_pages=None from Python to prevent rendering
@@ -253,6 +244,24 @@ function Pagination(props: Readonly<Props>): ReactElement {
   // The responsive sizing will still constrain based on container width.
   const maxVisiblePages = element.maxVisiblePages ?? numPages
 
+  const theme = useEmotionTheme()
+
+  // Derive pixel constants from theme for accurate responsive sizing under custom rem/zoom
+  // Button width: theme.spacing.threeXL (32px) + theme.spacing.twoXS (4px gap) = 36px effective
+  // Arrow width: 2 * theme.spacing.threeXL (32px) + theme.spacing.twoXS (4px gap) = 68px
+  const buttonWidthPx = useMemo(
+    () =>
+      convertRemToPx(theme.spacing.threeXL) +
+      convertRemToPx(theme.spacing.twoXS),
+    [theme.spacing.threeXL, theme.spacing.twoXS]
+  )
+  const arrowsWidthPx = useMemo(
+    () =>
+      2 * convertRemToPx(theme.spacing.threeXL) +
+      convertRemToPx(theme.spacing.twoXS),
+    [theme.spacing.threeXL, theme.spacing.twoXS]
+  )
+
   const [hookValue, setValueWithSource] = useBasicWidgetState<
     number,
     PaginationProto
@@ -287,13 +296,26 @@ function Pagination(props: Readonly<Props>): ReactElement {
       // Initial render before measurement - use bounded fallback
       return Math.min(maxVisiblePages, DEFAULT_MAX_VISIBLE_FALLBACK)
     }
-    const availableForPages = containerWidth - ARROWS_WIDTH_PX
+    const availableForPages = containerWidth - arrowsWidthPx
     const maxFittable = Math.max(
       0,
-      Math.floor(availableForPages / BUTTON_WIDTH_PX)
+      Math.floor(availableForPages / buttonWidthPx)
     )
-    return Math.min(maxVisiblePages, maxFittable)
-  }, [containerWidth, maxVisiblePages])
+    const capped = Math.min(maxVisiblePages, maxFittable)
+
+    // For small maxFittable values (3 or 4), the calculateVisiblePages algorithm
+    // may return 5 items due to the maxVisible=3 special case (first/last/current
+    // plus ellipses). Map these to safe values to prevent overflow/wrapping.
+    if (capped >= 5) {
+      return capped
+    }
+    // maxFittable 3 or 4: use maxVisible=2 which shows 3 items (current/last + ellipsis)
+    if (capped >= 3) {
+      return 2
+    }
+    // maxFittable 1 or 2: show only current page or nothing
+    return capped >= 1 ? 1 : 0
+  }, [containerWidth, maxVisiblePages, arrowsWidthPx, buttonWidthPx])
 
   const visiblePages = useMemo(
     () => calculateVisiblePages(currentPage, numPages, effectiveMaxVisible),

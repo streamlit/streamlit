@@ -120,11 +120,11 @@ class TestPaginationValidation(DeltaGeneratorTestCase):
         """Test that num_pages must be >= 1."""
         with pytest.raises(StreamlitAPIException) as e:
             st.pagination(0)
-        assert "`num_pages` must be at least 1" in str(e.value)
+        assert "`num_pages` must be an integer of at least 1" in str(e.value)
 
         with pytest.raises(StreamlitAPIException) as e:
             st.pagination(-5)
-        assert "`num_pages` must be at least 1" in str(e.value)
+        assert "`num_pages` must be an integer of at least 1" in str(e.value)
 
     def test_default_must_be_in_range(self):
         """Test that default must be between 1 and num_pages."""
@@ -255,9 +255,10 @@ class TestPaginationStableId(DeltaGeneratorTestCase):
             proto1 = self.get_delta_from_queue().new_element.pagination
             id1 = proto1.id
 
-            # Second render with different non-key params
+            # Second render with different non-key params including num_pages
+            # Since key_as_main_identity=True, num_pages should not affect the ID
             st.pagination(
-                10,
+                20,
                 key="pagination_key",
                 default=5,
                 max_visible_pages=5,

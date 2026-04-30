@@ -83,7 +83,7 @@ class PaginationMixin:
         Parameters
         ----------
         num_pages : int
-            Total number of pages. Must be ≥ 1.
+            Total number of pages. Must be at least 1.
 
         default : int
             Initial selected page (1-indexed). Must be between 1 and ``num_pages``.
@@ -216,13 +216,22 @@ class PaginationMixin:
         key = to_key(key)
 
         # Validate num_pages
-        if num_pages < 1:
+        if (
+            not isinstance(num_pages, int)
+            or isinstance(num_pages, bool)
+            or num_pages < 1
+        ):
             raise StreamlitAPIException(
-                f"`num_pages` must be at least 1. Got {num_pages}."
+                f"`num_pages` must be an integer of at least 1. Got {num_pages}."
             )
 
         # Validate default
-        if default < 1 or default > num_pages:
+        if (
+            not isinstance(default, int)
+            or isinstance(default, bool)
+            or default < 1
+            or default > num_pages
+        ):
             raise StreamlitAPIException(
                 f"`default` must be between 1 and `num_pages` ({num_pages}). "
                 f"Got {default}."
