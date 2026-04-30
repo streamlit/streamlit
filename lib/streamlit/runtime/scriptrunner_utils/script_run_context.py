@@ -18,6 +18,7 @@ import collections
 import contextlib
 import contextvars
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -35,7 +36,7 @@ from streamlit.runtime.forward_msg_cache import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Generator
     from pathlib import Path
 
     from streamlit.cursor import RunningCursor
@@ -48,7 +49,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
-    OnScriptErrorHandler: TypeAlias = Callable[[Exception], bool | None]
+OnScriptErrorHandler: TypeAlias = Callable[[Exception], bool | None]
 
 _LOGGER: Final = get_logger(__name__)
 
