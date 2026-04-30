@@ -29,8 +29,9 @@ _LOGGER: Final = getLogger(__name__)
 
 # The interval (in seconds) between message flush cycles in the runtime event loop.
 # This value is also used by execution_control.py to ensure messages are delivered
-# before triggering a rerun.
-MESSAGE_FLUSH_INTERVAL_SECS: Final = 0.001
+# before triggering a rerun. Note: message batching is enforced at the queue level
+# (flush_browser_queue), not via this sleep interval.
+MESSAGE_FLUSH_INTERVAL_SECS: Final[float] = 0.001
 
 
 class MessageSizeError(MarkdownFormattedException):
