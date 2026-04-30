@@ -116,7 +116,7 @@ Iterate through AI review and fixes until the review passes (max 5 iterations):
 ```
 for iteration 1 to 5:
     1. Trigger AI review by applying the "ai-review" label
-    2. Run the `fixing-pr` subagent to wait for CI, fix failures, and address review comments
+    2. Run the `fixing-pr` subagent in foreground to wait for CI, fix failures, and address review comments
     3. Check AI review verdict in the latest github-actions bot comment
     4. If verdict is "approved" → exit loop
     5. Otherwise → continue to next iteration
