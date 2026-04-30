@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Path security middleware for blocking unsafe path patterns.
+r"""Path security middleware for blocking unsafe path patterns.
 
 This middleware implements the "Swiss Cheese" defense model - it provides
 an additional layer of protection that catches dangerous path patterns even
@@ -30,6 +30,24 @@ Each layer has potential "holes" (ways it could fail):
 - Route handlers: Developer could forget to add checks to new routes
 
 By keeping both layers, an attack only succeeds if BOTH fail simultaneously.
+
+Fast-Path Optimization
+----------------------
+For performance, certain known-safe routes skip the is_unsafe_path_pattern()
+validation. This is a **performance optimization only**, not a security boundary.
+
+IMPORTANT: The check order in __call__ is security-critical:
+1. Double-slash UNC check (//server, \\\\server) runs FIRST on all requests
+2. Fast-path bypass runs SECOND, only after UNC check passes
+3. Full is_unsafe_path_pattern() validation runs on remaining requests
+
+Never reorder these checks - the UNC check must always run before the fast-path.
+
+Why upload_file/ is safe to skip:
+The /_stcore/upload_file/{session_id}/{file_id} route uses session_id and file_id
+as opaque dictionary keys in MemoryUploadedFileManager, never as filesystem paths.
+Even a malicious session_id like "../../../etc/passwd" is just a failed dict lookup,
+not a path traversal - the values are never passed to open() or os.path functions.
 
 See Also
 --------
