@@ -141,8 +141,9 @@ def test_on_script_error_handler(app: Page) -> None:
     expect(app.get_by_test_id("stException")).to_have_count(0)
 
     # === Test default display path (handler returns None) ===
-    # Tests 1, 3, and 4 all exercise the same code path (no suppression),
-    # so we run them in sequence without reloading between them.
+    # Tests 1-3 exercise the default path (handler returns None, so exception displays).
+    # Each test requires a reload because once an exception is raised, subsequent
+    # script body elements don't render.
 
     # Test 1: ValueError from button click
     raise_button = get_button(app, "Raise exception")

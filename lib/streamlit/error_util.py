@@ -172,7 +172,7 @@ def invoke_script_error_handler(
         except Exception:
             # Log any handler errors and fall back to showing the original
             # exception. We catch Exception (not BaseException) so that
-            # KeyboardInterrupt/SystemExit propagate and StopException/RerunException
-            # (handled above) continue their control flow.
+            # KeyboardInterrupt/SystemExit propagate unchanged. StopException and
+            # RerunException (BaseException subclasses) are caught explicitly above.
             _LOGGER.exception("on_script_error handler raised an exception")
     return suppress_ui_display
