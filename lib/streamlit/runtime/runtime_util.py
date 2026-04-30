@@ -27,6 +27,11 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = getLogger(__name__)
 
+# The interval (in seconds) between message flush cycles in the runtime event loop.
+# This value is also used by execution_control.py to ensure messages are delivered
+# before triggering a rerun.
+MESSAGE_FLUSH_INTERVAL_SECS: Final = 0.001
+
 
 class MessageSizeError(MarkdownFormattedException):
     """Exception raised when a websocket message is larger than the configured limit."""
