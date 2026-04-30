@@ -185,6 +185,41 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         """deleting a file that doesn't exist doesn't raise an error."""
         self.storage.delete_file("mock_file_id")
 
+    def test_large_files_with_colliding_fingerprint_dedupe_to_first_file(self):
+        """Large files with matching fingerprint (same length, head, tail) dedupe.
+
+        This documents the storage-layer consequence of the partial hashing
+        optimization: when two distinct large files share the same length,
+        first 64KB, and last 16KB, they produce the same file_id and the
+        second file's bytes are dropped. Subsequent get_file() returns the
+        first file's content.
+        """
+        # Create two large files with same length, head, and tail but different middle
+        middle_size = _LARGE_FILE_SIZE - _PARTIAL_HASH_HEAD - _PARTIAL_HASH_TAIL
+        data1 = (
+            b"H" * _PARTIAL_HASH_HEAD + b"A" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+        )
+        data2 = (
+            b"H" * _PARTIAL_HASH_HEAD + b"B" * middle_size + b"T" * _PARTIAL_HASH_TAIL
+        )
+
+        # Store first file
+        file_id1 = self.storage.load_and_get_id(
+            data1, mimetype="video/mp4", kind=MediaFileKind.MEDIA
+        )
+        # Store second file - it will get the same ID due to fingerprint collision
+        file_id2 = self.storage.load_and_get_id(
+            data2, mimetype="video/mp4", kind=MediaFileKind.MEDIA
+        )
+
+        # Both operations return the same file_id
+        assert file_id1 == file_id2
+
+        # Crucially: get_file returns the FIRST file's content, not the second
+        stored_file = self.storage.get_file(file_id1)
+        assert stored_file.content == data1
+        assert stored_file.content != data2
+
     def test_cache_stats(self):
         """Test our StatsProvider implementation."""
         assert self.storage.get_stats() == {}
@@ -241,8 +276,8 @@ class CalculateFileIdTest(unittest.TestCase):
         assert len(file_id) == 32
         int(file_id, 16)  # Raises ValueError if not valid hex
 
-    def test_files_at_threshold_use_full_hash(self):
-        """Files exactly at the threshold should use full hash, not partial."""
+    def test_files_at_threshold_hash_middle_bytes(self):
+        """Files exactly at the threshold should hash full content, including middle bytes."""
         threshold_data = b"x" * _PARTIAL_HASH_THRESHOLD
         # Verify these produce different IDs (full hash includes middle bytes)
         data_with_different_middle = (

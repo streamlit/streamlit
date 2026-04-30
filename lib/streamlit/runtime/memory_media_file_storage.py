@@ -42,7 +42,7 @@ _LOGGER: Final = get_logger(__name__)
 
 # Threshold for partial hashing. Files larger than this use head+tail fingerprinting
 # instead of hashing the entire content, providing ~50-100x speedup for large files.
-_PARTIAL_HASH_THRESHOLD: Final = 1_048_576  # 1MB
+_PARTIAL_HASH_THRESHOLD: Final = 1_048_576  # 1 MiB
 _PARTIAL_HASH_HEAD: Final = 65_536  # 64KB
 _PARTIAL_HASH_TAIL: Final = 16_384  # 16KB
 
@@ -59,7 +59,7 @@ PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
 def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) -> str:
     """Hash data, mimetype, and an optional filename to generate a stable file ID.
 
-    For large files (>1MB), uses partial hashing (length + head + tail) for
+    For large files (>1 MiB), uses partial hashing (length + head + tail) for
     performance. This provides ~50-100x speedup for large files. Note that for
     files above the threshold, this is a fingerprint, not a cryptographic hash:
     two files with identical length, head, and tail but different middle bytes
