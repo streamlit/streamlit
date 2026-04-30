@@ -75,8 +75,8 @@ Wait for the subagent to complete and verify the implementation plan exists befo
 
 Run this phase in a **foreground subagent**. Provide the subagent with:
 
-- Path to the original spec (folder, URL, or issue)
-- Path to the implementation plan created in Phase 2
+- The full spec content (paste the text, not just a path)
+- The full implementation plan content from Phase 2
 - Any relevant API docstrings or interface files identified in the plan
 - Clear instruction to implement the feature end-to-end
 
