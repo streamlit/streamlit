@@ -249,9 +249,9 @@ function Pagination(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { numPages } = element
   // When max_visible_pages=None from Python, the proto field is unset.
-  // Use a bounded fallback to prevent rendering a huge number of buttons on first paint.
-  const maxVisiblePages =
-    element.maxVisiblePages ?? Math.min(numPages, DEFAULT_MAX_VISIBLE_FALLBACK)
+  // Use numPages as the target so all pages are eligible to be shown.
+  // The responsive sizing will still constrain based on container width.
+  const maxVisiblePages = element.maxVisiblePages ?? numPages
 
   const [hookValue, setValueWithSource] = useBasicWidgetState<
     number,
@@ -275,8 +275,10 @@ function Pagination(props: Readonly<Props>): ReactElement {
   const shouldStretch = shouldWidthStretch(widthConfig)
 
   // Responsive behavior: track container width and derive effective max visible pages
+  // Memoize the properties array to prevent useResizeObserver from re-running on every render
+  const widthProperties = useMemo<["width"]>(() => ["width"], [])
   const { values: containerDimensions, elementRef: containerRef } =
-    useResizeObserver<HTMLDivElement>(["width"])
+    useResizeObserver<HTMLDivElement>(widthProperties)
   const containerWidth = containerDimensions[0] ?? 0
 
   // Derive effective max visible pages from container width and maxVisiblePages
