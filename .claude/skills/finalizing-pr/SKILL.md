@@ -144,8 +144,9 @@ PR_NUM=$(gh pr view --json number -q '.number')
 REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
 
 # Get the verdict line from the latest AI review (uses pulls reviews API, not issues comments)
+# Note: Use jq -s to slurp all pages into single array, then sort by submitted_at to get chronologically latest
 gh api --paginate "repos/${REPO}/pulls/${PR_NUM}/reviews" \
-  --jq '[.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | last | .body' \
+  | jq -s '[.[][] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- streamlit-ai-review")))] | sort_by(.submitted_at) | last | .body' \
   | grep -A2 "## Verdict"
 ```
 
