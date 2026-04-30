@@ -31,6 +31,7 @@ from streamlit.auth_util import (
     get_origin_from_redirect_uri,
     get_redirect_uri,
     get_secrets_auth_section,
+    get_tokens_to_store,
     get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
@@ -218,12 +219,13 @@ async def _set_auth_cookie(
         USER_COOKIE_NAME,
         user_info,
     )
-    set_cookie_with_chunks(
-        set_single_cookie,
-        _create_signed_value_wrapper,
-        TOKENS_COOKIE_NAME,
-        tokens,
-    )
+    if tokens:
+        set_cookie_with_chunks(
+            set_single_cookie,
+            _create_signed_value_wrapper,
+            TOKENS_COOKIE_NAME,
+            tokens,
+        )
 
 
 def _set_single_cookie(
@@ -546,7 +548,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     response = await _redirect_to_base(base_url)
 
     cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
-    tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
+    tokens = get_tokens_to_store(token)
     if user:
         await _set_auth_cookie(response, cookie_value, tokens)
     else:  # pragma: no cover - error path

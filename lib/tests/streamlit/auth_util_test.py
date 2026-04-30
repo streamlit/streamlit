@@ -34,6 +34,7 @@ from streamlit.auth_util import (
     get_expose_tokens_config,
     get_redirect_uri,
     get_signing_secret,
+    get_tokens_to_store,
     is_authlib_installed,
     set_cookie_with_chunks,
     validate_auth_credentials,
@@ -233,6 +234,52 @@ class ExposeTokensConfigTest(unittest.TestCase):
                 "Invalid expose_tokens configuration. Only 'id' and 'access' are allowed."
                 in str(exc_info.value)
             )
+
+
+class TokensToStoreTest(unittest.TestCase):
+    """Test token selection for auth cookies."""
+
+    @patch(
+        "streamlit.auth_util.secrets_singleton",
+        MagicMock(
+            load_if_toml_exists=MagicMock(return_value=True),
+            get=MagicMock(
+                return_value={
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "test_cookie_secret",
+                }
+            ),
+        ),
+    )
+    def test_default_configuration_keeps_only_id_token(self):
+        """Test that access tokens are dropped unless explicitly exposed."""
+        result = get_tokens_to_store(
+            {"id_token": "test-id-token", "access_token": "test-access-token"}
+        )
+        assert result == {"id_token": "test-id-token"}
+
+    @patch(
+        "streamlit.auth_util.secrets_singleton",
+        MagicMock(
+            load_if_toml_exists=MagicMock(return_value=True),
+            get=MagicMock(
+                return_value={
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "test_cookie_secret",
+                    "expose_tokens": ["access"],
+                }
+            ),
+        ),
+    )
+    def test_access_token_is_kept_when_explicitly_exposed(self):
+        """Test that access tokens are retained when requested in config."""
+        result = get_tokens_to_store(
+            {"id_token": "test-id-token", "access_token": "test-access-token"}
+        )
+        assert result == {
+            "id_token": "test-id-token",
+            "access_token": "test-access-token",
+        }
 
 
 class CookieChunkingTest(unittest.TestCase):

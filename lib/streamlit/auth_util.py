@@ -299,6 +299,26 @@ def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
     return default_provider_section
 
 
+def get_tokens_to_store(token_payload: Mapping[str, Any]) -> dict[str, str]:
+    """Select which OAuth tokens should be persisted in auth cookies.
+
+    The ID token is always retained to support RP-initiated logout.
+    The access token is only persisted when explicitly exposed in auth config.
+    """
+    stored_tokens: dict[str, str] = {}
+
+    id_token = token_payload.get("id_token")
+    if isinstance(id_token, str):
+        stored_tokens["id_token"] = id_token
+
+    if "access" in get_expose_tokens_config():
+        access_token = token_payload.get("access_token")
+        if isinstance(access_token, str):
+            stored_tokens["access_token"] = access_token
+
+    return stored_tokens
+
+
 def set_cookie_with_chunks(
     set_single_cookie_fn: Callable[[str, str], None],
     create_signed_value_fn: Callable[[str, str], bytes],

@@ -119,7 +119,11 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
     """Test that successful OAuth callback sets a signed auth cookie."""
 
     async def _dummy_authorize_access_token(self, request: Any) -> dict[str, Any]:
-        return {"userinfo": {"email": "user@example.com"}}
+        return {
+            "userinfo": {"email": "user@example.com"},
+            "id_token": "test-id-token",
+            "access_token": "test-access-token",
+        }
 
     class _DummyClient:
         async def authorize_access_token(self, request: Any) -> dict[str, Any]:
@@ -147,8 +151,11 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
         assert response.status_code == 302
         assert response.headers["location"].endswith("/")
 
+        set_cookie_headers = response.headers.get_list("set-cookie")
+
         cookies = SimpleCookie()
-        cookies.load(response.headers["set-cookie"])
+        for header in set_cookie_headers:
+            cookies.load(header)
         signed_value = cookies["_streamlit_user"].value
         decoded = starlette_app_utils.decode_signed_value(
             "test-secret", "_streamlit_user", signed_value
@@ -157,6 +164,27 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
         payload = decoded.decode("utf-8")
         assert "user@example.com" in payload
         assert '"is_logged_in": true' in payload.lower()
+
+        tokens_cookie_header = next(
+            (
+                h
+                for h in set_cookie_headers
+                if h.startswith(f"{TOKENS_COOKIE_NAME}=")
+            ),
+            None,
+        )
+        assert tokens_cookie_header is not None, "Tokens cookie not found"
+
+        cookies = SimpleCookie()
+        cookies.load(tokens_cookie_header)
+        signed_tokens_value = cookies[TOKENS_COOKIE_NAME].value
+        decoded_tokens = starlette_app_utils.decode_signed_value(
+            "test-secret", TOKENS_COOKIE_NAME, signed_tokens_value
+        )
+        assert decoded_tokens is not None
+        tokens_payload = decoded_tokens.decode("utf-8")
+        assert "test-id-token" in tokens_payload
+        assert "test-access-token" not in tokens_payload
 
 
 def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
