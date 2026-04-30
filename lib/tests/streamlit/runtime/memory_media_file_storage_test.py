@@ -184,20 +184,17 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         """deleting a file that doesn't exist doesn't raise an error."""
         self.storage.delete_file("mock_file_id")
 
-    def test_large_files_with_colliding_fingerprint_dedupe_to_first_file(self):
-        """Large files with matching fingerprint (same length, head, middle, tail) dedupe.
+    def test_large_files_with_colliding_fingerprint_get_unique_ids(self):
+        """Large files with matching fingerprint still get unique IDs via fallback.
 
-        This documents the storage-layer consequence of the partial hashing
-        optimization: when two distinct large files share the same length,
-        head, middle, and tail samples, they produce the same file_id and the
-        second file's bytes are dropped. Subsequent get_file() returns the
-        first file's content.
+        When two distinct large files share the same partial hash fingerprint
+        (same length, head, middle, and tail samples), the storage detects the
+        collision and falls back to full content hashing for the second file,
+        ensuring both files are stored with unique IDs.
         """
         # Create two large files with same length, head, middle, and tail
         # but different bytes between head/middle and middle/tail gaps.
         # Structure: [head 64K][gap1][middle 64K][gap2][tail 64K]
-        # We need a file large enough that sampling doesn't overlap.
-        # With 64K samples and threshold+100K size, we have enough room.
         gap_size = (_LARGE_FILE_SIZE - 3 * _PARTIAL_HASH_SAMPLE_SIZE) // 2
         data1 = (
             b"H" * _PARTIAL_HASH_SAMPLE_SIZE
@@ -218,18 +215,17 @@ class MemoryMediaFileStorageTest(unittest.TestCase):
         file_id1 = self.storage.load_and_get_id(
             data1, mimetype="video/mp4", kind=MediaFileKind.MEDIA
         )
-        # Store second file - it will get the same ID due to fingerprint collision
+        # Store second file - collision detected, falls back to full hash
         file_id2 = self.storage.load_and_get_id(
             data2, mimetype="video/mp4", kind=MediaFileKind.MEDIA
         )
 
-        # Both operations return the same file_id
-        assert file_id1 == file_id2
+        # Files get different IDs due to collision fallback
+        assert file_id1 != file_id2
 
-        # Crucially: get_file returns the FIRST file's content, not the second
-        stored_file = self.storage.get_file(file_id1)
-        assert stored_file.content == data1
-        assert stored_file.content != data2
+        # Both files are stored correctly with their own content
+        assert self.storage.get_file(file_id1).content == data1
+        assert self.storage.get_file(file_id2).content == data2
 
     def test_cache_stats(self):
         """Test our StatsProvider implementation."""
@@ -324,6 +320,29 @@ class CalculateFileIdTest(unittest.TestCase):
         file_id1 = _calculate_file_id(data1, "image/png")
         file_id2 = _calculate_file_id(data2, "image/png")
         assert file_id1 == file_id2
+
+    def test_use_full_hash_forces_full_content_hash(self):
+        """use_full_hash=True should hash full content even for large files."""
+        gap_size = (_LARGE_FILE_SIZE - 3 * _PARTIAL_HASH_SAMPLE_SIZE) // 2
+        data1 = (
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"A" * gap_size
+            + b"M" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"A" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
+        )
+        data2 = (
+            b"H" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"B" * gap_size
+            + b"M" * _PARTIAL_HASH_SAMPLE_SIZE
+            + b"B" * gap_size
+            + b"T" * _PARTIAL_HASH_SAMPLE_SIZE
+        )
+
+        # With use_full_hash=True, different content = different ID
+        file_id1 = _calculate_file_id(data1, "image/png", use_full_hash=True)
+        file_id2 = _calculate_file_id(data2, "image/png", use_full_hash=True)
+        assert file_id1 != file_id2
 
     def test_large_files_different_middle_produce_different_ids(self):
         """Large files with different middle samples should produce different IDs."""
