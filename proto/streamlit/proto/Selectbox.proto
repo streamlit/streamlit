@@ -35,7 +35,9 @@ message Selectbox {
   // If set, widget value is bound to this query parameter key
   optional string query_param_key = 14;
   streamlit.SelectWidgetFilterMode filter_mode = 15;
+  // True when st.selectbox was called with index=None (empty selection allowed).
+  optional bool supports_empty_selection = 16;
 
   reserved 7;
-  // Next: 16
+  // Next: 17
 }

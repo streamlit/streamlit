@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
@@ -15,18 +16,31 @@
  */
 
 import {
-  KeyboardEventHandler,
   memo,
   MouseEventHandler,
   ReactElement,
+  KeyboardEvent as ReactKeyboardEvent,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
-import { StatefulMenu } from "baseui/menu"
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import { css } from "@emotion/react"
+import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
@@ -49,6 +63,7 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import useTimeout from "~lib/hooks/useTimeout"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -71,39 +86,21 @@ interface MenuOptionProps {
   $isHighlighted?: boolean
   onClick?: MouseEventHandler<HTMLLIElement>
   onMouseEnter?: MouseEventHandler<HTMLLIElement>
-  onKeyDown?: KeyboardEventHandler<HTMLLIElement>
-  /** BaseUI internal props that are destructured but not forwarded to DOM. */
-  $disabled?: boolean
-  $isFocused?: boolean
-  $size?: string
-  resetMenu?: () => void
-  renderAll?: boolean
-  [key: string]: unknown
 }
 
-/** Menu option component for BaseUI StatefulMenu override. */
+/** Menu option row with optional leading material icon extracted from the label. */
 const MenuOption = memo(function MenuOption({
   item,
   $isHighlighted,
   onClick,
   onMouseEnter,
-  onKeyDown,
-  // Filter out BaseUI internal props that shouldn't be passed to DOM
-  $disabled: _$disabled,
-  $isFocused: _$isFocused,
-  $size: _$size,
-  resetMenu: _resetMenu,
-  renderAll: _renderAll,
-  ...restProps
 }: MenuOptionProps): ReactElement {
   const { icon, text } = extractLeadingMaterialIcon(item.label)
   return (
     <StyledMenuItem
-      {...restProps}
       role="menuitem"
       onClick={onClick}
       onMouseEnter={onMouseEnter}
-      onKeyDown={onKeyDown}
     >
       <StyledHighlightWrapper $isHighlighted={$isHighlighted}>
         <StyledMenuOptionLabel>
@@ -132,11 +129,25 @@ export interface Props {
   fragmentId?: string
 }
 
+const TYPEAHEAD_CLEAR_MS = 500
+
 function MenuButton(props: Props): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const [isOpen, setIsOpen] = useState(false)
+  const [highlightedIndex, setHighlightedIndex] = useState(0)
   const isInSidebar = useContext(IsSidebarContext)
   const theme = useEmotionTheme()
+  const menuListRef = useRef<HTMLUListElement>(null)
+  const typeaheadBufferRef = useRef("")
+
+  const { clear: clearTypeaheadTimer, restart: restartTypeaheadClear } =
+    useTimeout(
+      () => {
+        typeaheadBufferRef.current = ""
+      },
+      null,
+      { autoStart: false }
+    )
 
   const kind = BUTTON_TYPE_TO_KIND[element.type] ?? BaseButtonKind.SECONDARY
 
@@ -167,99 +178,228 @@ function MenuButton(props: Props): ReactElement {
     [buttonDisabled, element, widgetMgr, fragmentId]
   )
 
+  const { refs, floatingStyles, context } = useFloating({
+    open: isOpen && !buttonDisabled,
+    onOpenChange: next => {
+      if (!next) {
+        setIsOpen(false)
+      }
+    },
+    placement: "bottom-start",
+    strategy: "fixed",
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(convertRemToPx(theme.spacing.twoXS)),
+      flip({
+        boundary: isInSidebar ? document.documentElement : undefined,
+      }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
+    ],
+  })
+
+  const dismiss = useDismiss(context, {
+    outsidePress: true,
+    escapeKey: true,
+  })
+
+  const role = useRole(context, { role: "menu" })
+
+  const { getFloatingProps } = useInteractions([dismiss, role])
+
+  useEffect(() => {
+    if (isOpen && menuItems.length > 0) {
+      setHighlightedIndex(0)
+      typeaheadBufferRef.current = ""
+      requestAnimationFrame(() => {
+        menuListRef.current?.focus()
+      })
+    }
+  }, [isOpen, menuItems.length])
+
+  const applyTypeahead = useCallback(
+    (char: string) => {
+      clearTypeaheadTimer()
+      typeaheadBufferRef.current += char
+      restartTypeaheadClear(TYPEAHEAD_CLEAR_MS)
+
+      const buffer = typeaheadBufferRef.current.toLowerCase()
+      const matchIdx = menuItems.findIndex(it => {
+        const { text } = extractLeadingMaterialIcon(it.label)
+        const visible = text.toLowerCase()
+        const full = it.label.toLowerCase()
+        const value = it.value.toLowerCase()
+        return (
+          visible.startsWith(buffer) ||
+          full.startsWith(buffer) ||
+          value.startsWith(buffer)
+        )
+      })
+      if (matchIdx >= 0) {
+        setHighlightedIndex(matchIdx)
+      }
+    },
+    [clearTypeaheadTimer, menuItems, restartTypeaheadClear]
+  )
+
+  const onMenuKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLUListElement>) => {
+      if (menuItems.length === 0) {
+        return
+      }
+
+      const maxIdx = menuItems.length - 1
+
+      switch (e.key) {
+        case "ArrowDown": {
+          e.preventDefault()
+          setHighlightedIndex(i => Math.min(i + 1, maxIdx))
+          return
+        }
+        case "ArrowUp": {
+          e.preventDefault()
+          setHighlightedIndex(i => Math.max(i - 1, 0))
+          return
+        }
+        case "Home": {
+          e.preventDefault()
+          setHighlightedIndex(0)
+          return
+        }
+        case "End": {
+          e.preventDefault()
+          setHighlightedIndex(maxIdx)
+          return
+        }
+        case "Enter": {
+          e.preventDefault()
+          const item = menuItems[highlightedIndex]
+          if (item) {
+            handleItemSelect({ item })
+          }
+          return
+        }
+        default: {
+          if (
+            e.key.length === 1 &&
+            !e.ctrlKey &&
+            !e.metaKey &&
+            !e.altKey &&
+            !e.nativeEvent.isComposing
+          ) {
+            e.preventDefault()
+            applyTypeahead(e.key)
+          }
+        }
+      }
+    },
+    [applyTypeahead, handleItemSelect, highlightedIndex, menuItems]
+  )
+
+  const menuBodyCss = useMemo(
+    () =>
+      css({
+        zIndex: theme.zIndices.popup,
+        boxSizing: "border-box",
+        ...getPopoverContainerStyle(theme),
+
+        borderTopLeftRadius: theme.radii.xl,
+        borderTopRightRadius: theme.radii.xl,
+        borderBottomRightRadius: theme.radii.xl,
+        borderBottomLeftRadius: theme.radii.xl,
+
+        marginRight: theme.spacing.lg,
+        marginBottom: theme.spacing.lg,
+        maxHeight: "70vh",
+        overflow: "auto",
+      }),
+    [theme]
+  )
+
+  const menuListStyle = useMemo(
+    () => ({
+      backgroundColor: theme.colors.bgColor,
+      paddingTop: theme.spacing.threeXS,
+      paddingBottom: theme.spacing.threeXS,
+      paddingLeft: theme.spacing.xs,
+      paddingRight: theme.spacing.xs,
+      boxShadow: "none",
+      outline: "none",
+      margin: 0,
+      listStyle: "none",
+    }),
+    [theme]
+  )
+
   return (
     <Box className="stMenuButton" data-testid="stMenuButton">
-      <UIPopover
-        triggerType={TRIGGER_TYPE.click}
-        placement={PLACEMENT.bottomLeft}
-        isOpen={isOpen}
-        onClickOutside={() => setIsOpen(false)}
-        onEsc={() => setIsOpen(false)}
-        ignoreBoundary={isInSidebar}
-        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-        renderAll={true}
-        content={() => (
-          <StatefulMenu
-            items={menuItems}
-            onItemSelect={handleItemSelect}
-            overrides={{
-              List: {
-                props: {
-                  role: "menu",
-                },
-                style: {
-                  backgroundColor: theme.colors.bgColor,
-                  paddingTop: theme.spacing.threeXS,
-                  paddingBottom: theme.spacing.threeXS,
-                  paddingLeft: theme.spacing.xs,
-                  paddingRight: theme.spacing.xs,
-                  boxShadow: "none",
-                  outline: "none",
-                },
-              },
-              Option: {
-                component: MenuOption,
-              },
-            }}
-          />
-        )}
-        overrides={{
-          Body: {
-            props: {
-              "data-testid": "stMenuButtonBody",
-            },
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
-
-              // Use xl border radius instead of the default
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              marginRight: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-              maxHeight: "70vh",
-              overflow: "auto",
-            }),
-          },
-        }}
-      >
-        {/* Wrapped in div for BaseUI Popover anchor positioning */}
-        <div>
-          <BaseButtonTooltip help={element.help} containerWidth={true}>
-            <BaseButton
-              data-testid="stMenuButtonButton"
-              kind={kind}
-              size={BaseButtonSize.SMALL}
-              disabled={buttonDisabled}
-              containerWidth={true}
-              onClick={() => setIsOpen(!isOpen)}
-              aria-haspopup="menu"
-              aria-expanded={isOpen}
+      <div ref={refs.setReference}>
+        <BaseButtonTooltip help={element.help} containerWidth={true}>
+          <BaseButton
+            data-testid="stMenuButtonButton"
+            kind={kind}
+            size={BaseButtonSize.SMALL}
+            disabled={buttonDisabled}
+            containerWidth={true}
+            onClick={() => setIsOpen(o => !o)}
+            aria-haspopup="menu"
+            aria-expanded={isOpen}
+          >
+            <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
+              <DynamicButtonLabel icon={element.icon} label={element.label} />
+              {!hideChevron && (
+                <StyledMenuButtonExpansionIcon aria-hidden="true">
+                  <DynamicIcon
+                    iconValue={
+                      isOpen
+                        ? ":material/expand_less:"
+                        : ":material/expand_more:"
+                    }
+                    size="lg"
+                  />
+                </StyledMenuButtonExpansionIcon>
+              )}
+            </StyledMenuButtonLabelContainer>
+          </BaseButton>
+        </BaseButtonTooltip>
+      </div>
+      {isOpen && !buttonDisabled && (
+        <FloatingPortal>
+          <FloatingFocusManager
+            context={context}
+            modal={false}
+            initialFocus={-1}
+            returnFocus
+            guards={false}
+          >
+            <div
+              // eslint-disable-next-line react-hooks/refs -- @floating-ui floating ref setter
+              ref={refs.setFloating}
+              data-testid="stMenuButtonBody"
+              css={menuBodyCss}
+              style={floatingStyles}
+              {...getFloatingProps()}
             >
-              <StyledMenuButtonLabelContainer $hideChevron={hideChevron}>
-                <DynamicButtonLabel
-                  icon={element.icon}
-                  label={element.label}
-                />
-                {!hideChevron && (
-                  <StyledMenuButtonExpansionIcon aria-hidden="true">
-                    <DynamicIcon
-                      iconValue={
-                        isOpen
-                          ? ":material/expand_less:"
-                          : ":material/expand_more:"
-                      }
-                      size="lg"
-                    />
-                  </StyledMenuButtonExpansionIcon>
-                )}
-              </StyledMenuButtonLabelContainer>
-            </BaseButton>
-          </BaseButtonTooltip>
-        </div>
-      </UIPopover>
+              <ul
+                ref={menuListRef}
+                role="menu"
+                tabIndex={-1}
+                onKeyDown={onMenuKeyDown}
+                style={menuListStyle}
+              >
+                {menuItems.map((item, idx) => (
+                  <MenuOption
+                    key={item.value}
+                    item={item}
+                    $isHighlighted={idx === highlightedIndex}
+                    onClick={() => handleItemSelect({ item })}
+                    onMouseEnter={() => setHighlightedIndex(idx)}
+                  />
+                ))}
+              </ul>
+            </div>
+          </FloatingFocusManager>
+        </FloatingPortal>
+      )}
     </Box>
   )
 }

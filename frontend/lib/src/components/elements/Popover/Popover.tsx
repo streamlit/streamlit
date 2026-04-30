@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 /**
  * Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
  *
@@ -14,9 +15,30 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useContext, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
-import { PLACEMENT, TRIGGER_TYPE, Popover as UIPopover } from "baseui/popover"
+import { css, type SerializedStyles } from "@emotion/react"
+import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -40,6 +62,7 @@ import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
+import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -58,6 +81,42 @@ export interface PopoverProps {
   /** Block-level ID for CSS key styling and passive persistence. */
   blockId?: string
   fragmentId?: string
+}
+
+function getPopoverBodyStyles(
+  theme: EmotionTheme,
+  stretchWidth: boolean,
+  calculatedWidth: number
+): SerializedStyles {
+  return css({
+    zIndex: theme.zIndices.popup,
+    boxSizing: "border-box",
+    ...getPopoverContainerStyle(theme),
+
+    borderTopLeftRadius: theme.radii.xl,
+    borderTopRightRadius: theme.radii.xl,
+    borderBottomRightRadius: theme.radii.xl,
+    borderBottomLeftRadius: theme.radii.xl,
+
+    marginRight: theme.spacing.lg,
+    marginBottom: theme.spacing.lg,
+
+    maxHeight: "70vh",
+    overflow: "auto",
+    maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
+    minWidth: stretchWidth
+      ? `${Math.max(calculatedWidth, 160)}px`
+      : theme.sizes.minPopupWidth,
+
+    [`@media (max-width: ${theme.breakpoints.sm})`]: {
+      maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
+    },
+
+    paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+    paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
+  })
 }
 
 const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
@@ -109,27 +168,11 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // can remove the need for this as part of the BaseWeb migration.
   const { width: calculatedWidth, elementRef } = useCalculatedDimensions()
 
-  // Handle popover toggle with optimistic updates
-  const handleToggle = useCallback((): void => {
-    const newOpen = !open
+  const handleCloseRef = useRef<() => void>(() => {})
+  /** Portal into this node so `stPopoverBody` stays under `stPopover` (e2e + query scoping). */
+  const portalRootRef = useRef<HTMLDivElement>(null)
 
-    setOpen(newOpen)
-
-    if (widgetId) {
-      widgetMgr?.setBoolValue(
-        { id: widgetId },
-        newOpen,
-        { fromUi: true },
-        fragmentId
-      )
-    } else if (isPassivelyKeyed) {
-      setStoredOpen(newOpen)
-    }
-  }, [open, widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
-
-  const handleClose = useCallback((): void => {
-    setOpen(false)
-
+  const persistCloseState = useCallback((): void => {
     if (widgetId) {
       widgetMgr?.setBoolValue(
         { id: widgetId },
@@ -142,6 +185,105 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
     }
   }, [widgetMgr, widgetId, fragmentId, isPassivelyKeyed, setStoredOpen])
 
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: next => {
+      if (!next) {
+        handleCloseRef.current()
+      }
+    },
+    placement: "bottom-start",
+    strategy: "fixed",
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(convertRemToPx(theme.spacing.twoXS)),
+      flip({
+        boundary: isInSidebar ? document.documentElement : undefined,
+      }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
+    ],
+  })
+
+  const handleClose = useCallback((): void => {
+    const floatEl = refs.floating.current
+    const active = document.activeElement
+    if (
+      floatEl &&
+      active &&
+      floatEl.contains(active) &&
+      active instanceof HTMLElement
+    ) {
+      active.blur()
+    }
+
+    // Close in the same task as blur() so `open` stays true until after native blur runs.
+    // Deferring with setTimeout(0) could hide the body (visibility) before Base Web inputs
+    // finish onBlur, dropping the last committed widget value (e2e popover + text_input).
+    setOpen(false)
+    persistCloseState()
+  }, [refs.floating, persistCloseState])
+
+  useEffect(() => {
+    handleCloseRef.current = handleClose
+  }, [handleClose])
+
+  // Handle popover toggle with optimistic updates (after useFloating so refs exist).
+  const handleToggle = useCallback((): void => {
+    const newOpen = !open
+
+    if (!newOpen) {
+      const floatEl = refs.floating.current
+      const active = document.activeElement
+      if (
+        floatEl &&
+        active &&
+        floatEl.contains(active) &&
+        active instanceof HTMLElement
+      ) {
+        active.blur()
+      }
+      setOpen(false)
+      persistCloseState()
+      return
+    }
+
+    setOpen(true)
+
+    if (widgetId) {
+      widgetMgr?.setBoolValue(
+        { id: widgetId },
+        true,
+        { fromUi: true },
+        fragmentId
+      )
+    } else if (isPassivelyKeyed) {
+      setStoredOpen(true)
+    }
+  }, [
+    open,
+    widgetMgr,
+    widgetId,
+    fragmentId,
+    isPassivelyKeyed,
+    setStoredOpen,
+    refs.floating,
+    persistCloseState,
+  ])
+
+  const dismiss = useDismiss(context, {
+    outsidePress: true,
+    escapeKey: true,
+  })
+
+  const role = useRole(context, { role: "dialog" })
+
+  const { getFloatingProps } = useInteractions([dismiss, role])
+
+  const bodyCss = useMemo(
+    () => getPopoverBodyStyles(theme, stretchWidth, calculatedWidth),
+    [theme, stretchWidth, calculatedWidth]
+  )
+
   let kind = BaseButtonKind.SECONDARY
   if (element.type === "primary") {
     kind = BaseButtonKind.PRIMARY
@@ -153,95 +295,78 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
   return (
-    <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
-      <UIPopover
-        triggerType={TRIGGER_TYPE.click}
-        placement={PLACEMENT.bottomLeft}
-        content={() => children}
-        isOpen={open}
-        onClickOutside={handleClose}
-        // We need to handle the click here as well to allow closing the
-        // popover when the user clicks next to the button in the available
-        // width in the surrounding container.
-        onClick={() => (open ? handleClose() : undefined)}
-        onEsc={handleClose}
-        ignoreBoundary={isInSidebar}
-        popoverMargin={convertRemToPx(theme.spacing.twoXS)}
-        // TODO(lukasmasuch): We currently use renderAll to have a consistent
-        // width during the first and subsequent opens of the popover. Once we ,
-        // support setting an explicit width we should reconsider turning this to
-        // false for a better performance.
-        renderAll={true}
-        overrides={{
-          Body: {
-            props: {
-              "data-testid": "stPopoverBody",
-            },
-            style: () => ({
-              ...getPopoverContainerStyle(theme),
-
-              // Override radii — st.popover uses xl instead of default
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
-              borderBottomRightRadius: theme.radii.xl,
-              borderBottomLeftRadius: theme.radii.xl,
-
-              marginRight: theme.spacing.lg,
-              marginBottom: theme.spacing.lg,
-
-              maxHeight: "70vh",
-              overflow: "auto",
-              maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2*${theme.spacing.lg})`,
-              minWidth: stretchWidth
-                ? // If width="stretch", we use the container width as minimum:
-                  `${Math.max(calculatedWidth, 160)}px` // 10rem ~= 160px
-                : theme.sizes.minPopupWidth,
-              [`@media (max-width: ${theme.breakpoints.sm})`]: {
-                maxWidth: `calc(100% - ${theme.spacing.threeXL})`,
-              },
-
-              paddingRight: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`, // 1px to account for border.
-              paddingLeft: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingBottom: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-              paddingTop: `calc(${theme.spacing.twoXL} - ${theme.sizes.borderWidth})`,
-            }),
-          },
+    <Box
+      data-testid="stPopover"
+      className="stPopover"
+      ref={elementRef}
+      style={{ position: "relative" }}
+    >
+      <div ref={refs.setReference}>
+        <BaseButtonTooltip help={element.help} containerWidth={true}>
+          <BaseButton
+            data-testid="stPopoverButton"
+            kind={kind}
+            size={BaseButtonSize.SMALL}
+            disabled={(empty && !widgetId) || element.disabled}
+            containerWidth={true}
+            onClick={handleToggle}
+            aria-expanded={open}
+          >
+            <StyledPopoverLabelContainer $hideChevron={hideChevron}>
+              <DynamicButtonLabel icon={element.icon} label={element.label} />
+              {!hideChevron && (
+                <StyledPopoverExpansionIcon aria-hidden="true">
+                  <DynamicIcon
+                    iconValue={
+                      open
+                        ? ":material/expand_less:"
+                        : ":material/expand_more:"
+                    }
+                    size="lg"
+                  />
+                </StyledPopoverExpansionIcon>
+              )}
+            </StyledPopoverLabelContainer>
+          </BaseButton>
+        </BaseButtonTooltip>
+      </div>
+      <div
+        ref={portalRootRef}
+        style={{
+          position: "absolute",
+          width: 0,
+          height: 0,
+          overflow: "hidden",
         }}
-      >
-        {/* This needs to be wrapped into a div, otherwise
-        the BaseWeb popover implementation will not work correctly. */}
-        <div>
-          <BaseButtonTooltip help={element.help} containerWidth={true}>
-            <BaseButton
-              data-testid="stPopoverButton"
-              kind={kind}
-              size={BaseButtonSize.SMALL}
-              disabled={(empty && !widgetId) || element.disabled}
-              containerWidth={true}
-              onClick={handleToggle}
-            >
-              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
-                <DynamicButtonLabel
-                  icon={element.icon}
-                  label={element.label}
-                />
-                {!hideChevron && (
-                  <StyledPopoverExpansionIcon aria-hidden="true">
-                    <DynamicIcon
-                      iconValue={
-                        open
-                          ? ":material/expand_less:"
-                          : ":material/expand_more:"
-                      }
-                      size="lg"
-                    />
-                  </StyledPopoverExpansionIcon>
-                )}
-              </StyledPopoverLabelContainer>
-            </BaseButton>
-          </BaseButtonTooltip>
-        </div>
-      </UIPopover>
+      />
+      {/* Always mount body (BaseWeb renderAll): keep widgets in the tree on close so blur commits. */}
+      <FloatingPortal root={portalRootRef}>
+        <FloatingFocusManager
+          context={context}
+          modal={false}
+          initialFocus={-1}
+          returnFocus={false}
+          guards={false}
+          disabled={!open}
+        >
+          <div
+            // eslint-disable-next-line react-hooks/refs -- @floating-ui floating ref setter
+            ref={refs.setFloating}
+            data-testid="stPopoverBody"
+            css={bodyCss}
+            style={{
+              ...floatingStyles,
+              ...(!open && {
+                visibility: "hidden",
+                pointerEvents: "none",
+              }),
+            }}
+            {...getFloatingProps()}
+          >
+            {children}
+          </div>
+        </FloatingFocusManager>
+      </FloatingPortal>
     </Box>
   )
 }

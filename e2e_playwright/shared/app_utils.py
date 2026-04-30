@@ -531,8 +531,10 @@ def open_popover(locator: Locator | Page, label: str | re.Pattern[str]) -> Locat
     Locator
         The popover container.
     """
-    get_popover(locator, label).get_by_role("button").first.click()
-    popover_container = locator.get_by_test_id("stPopoverBody")
+    popover_el = get_popover(locator, label)
+    popover_el.get_by_role("button").first.click()
+    # Body is portaled under each `stPopover` so we must not match other popovers' bodies.
+    popover_container = popover_el.get_by_test_id("stPopoverBody")
     expect(popover_container).to_be_visible()
     return popover_container
 

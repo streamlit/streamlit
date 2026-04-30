@@ -14,19 +14,49 @@
  * limitations under the License.
  */
 
+/* eslint-disable @typescript-eslint/no-use-before-define -- Styled components are declared after the main component; reordering would be a large churn. */
+
 import {
   memo,
   ReactElement,
   useCallback,
   useContext,
+  useEffect,
+  useId,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
+import styled from "@emotion/styled"
 import { ErrorOutline } from "@emotion-icons/material-outlined"
-import { DENSITY, Datepicker as UIDatePicker } from "baseui/datepicker"
-import { PLACEMENT } from "baseui/popover"
-import { format } from "date-fns"
+import {
+  autoUpdate,
+  flip,
+  FloatingFocusManager,
+  FloatingPortal,
+  offset,
+  shift,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react"
+import {
+  addDays,
+  addMonths,
+  eachDayOfInterval,
+  endOfMonth,
+  endOfWeek,
+  format,
+  isAfter,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  startOfMonth,
+  startOfWeek,
+} from "date-fns"
+import type { Locale as DateFnsLocale } from "date-fns"
 import moment from "moment"
 
 import { DateInput as DateInputProto } from "@streamlit/protobuf"
@@ -67,9 +97,17 @@ export interface Props {
 // Date format for protobuf communication (ISO 8601)
 const DATE_FORMAT = "YYYY-MM-DD"
 
+const RANGE_SEP_DISPLAY = " – "
+
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => moment(val, DATE_FORMAT).toDate())
+  return strings.map(val => {
+    const m = moment(val, DATE_FORMAT, true)
+    if (m.isValid()) {
+      return normalizeToStartOfDay(new Date(m.year(), m.month(), m.date()))
+    }
+    return normalizeToStartOfDay(moment(val, DATE_FORMAT).toDate())
+  })
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -77,13 +115,87 @@ function datesToStrings(dates: Date[]): string[] {
   if (!dates) {
     return []
   }
-  return dates.map((value: Date) => moment(value).format(DATE_FORMAT))
+  return dates.map(value => {
+    const y = value.getFullYear()
+    const mo = value.getMonth() + 1
+    const d = value.getDate()
+    return `${String(y).padStart(4, "0")}-${String(mo).padStart(2, "0")}-${String(d).padStart(2, "0")}`
+  })
 }
 
 // Types for date validation
 type ValidationResult = {
   errorType: "Start" | "End" | null
   newDates: Date[]
+}
+
+/** BaseWeb-style day cell aria (English labels + localized date phrase). */
+function buildDayAriaLabel(
+  day: Date,
+  opts: {
+    disabled: boolean
+    selected: boolean
+    localeForFormat: DateFnsLocale
+  }
+): string {
+  const datePhrase = format(day, "EEEE, MMMM do yyyy", {
+    locale: opts.localeForFormat,
+  })
+  if (opts.disabled) {
+    return `Not available. ${datePhrase}. `
+  }
+  if (opts.selected) {
+    return `Selected. ${datePhrase}. It's available.`
+  }
+  return `Choose ${datePhrase}. It's available.`
+}
+
+function formatValueForInput(
+  dates: Date[],
+  elementFormat: string,
+  isRange: boolean
+): string {
+  if (!dates?.length) {
+    return ""
+  }
+  if (!isRange) {
+    return moment(dates[0]).format(elementFormat)
+  }
+  const a = dates[0] ? moment(dates[0]).format(elementFormat) : ""
+  const b = dates[1] ? moment(dates[1]).format(elementFormat) : ""
+  if (!a && !b) {
+    return ""
+  }
+  return `${a}${RANGE_SEP_DISPLAY}${b}`
+}
+
+function tryParseInputToDates(
+  raw: string,
+  elementFormat: string,
+  isRange: boolean
+): Date[] | null {
+  const trimmed = raw.trim()
+  if (!trimmed) {
+    return []
+  }
+  if (!isRange) {
+    const d = moment(trimmed, elementFormat, true)
+    return d.isValid()
+      ? [normalizeToStartOfDay(new Date(d.year(), d.month(), d.date()))]
+      : null
+  }
+  const parts = trimmed.split(/\s*[–-]\s*/)
+  if (parts.length !== 2) {
+    return null
+  }
+  const d0 = moment(parts[0].trim(), elementFormat, true)
+  const d1 = moment(parts[1].trim(), elementFormat, true)
+  if (!d0.isValid() || !d1.isValid()) {
+    return null
+  }
+  const a = normalizeToStartOfDay(new Date(d0.year(), d0.month(), d0.date()))
+  const b = normalizeToStartOfDay(new Date(d1.year(), d1.month(), d1.date()))
+  return a <= b ? [a, b] : [b, a]
 }
 
 function DateInput({
@@ -96,6 +208,15 @@ function DateInput({
   const isInSidebar = useContext(IsSidebarContext)
   const [isEmpty, setIsEmpty] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
+  const inputRef = useRef<HTMLInputElement | null>(null)
+
+  const [viewMonth, setViewMonth] = useState(() => startOfMonth(new Date()))
+  const [highlightedDay, setHighlightedDay] = useState<Date | null>(null)
+  const [rangeAnchor, setRangeAnchor] = useState<Date | null>(null)
+  const [inputFocused, setInputFocused] = useState(false)
+  const [draftInput, setDraftInput] = useState("")
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false)
 
   const resetError = useCallback(() => {
     setError(null)
@@ -106,10 +227,6 @@ function DateInput({
     setIsEmpty(false)
   }, [resetError])
 
-  /**
-   * An array with start and end date specified by the user via the UI. If the user
-   * didn't touch this widget's UI, the default value is used. End date is optional.
-   */
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
@@ -135,16 +252,6 @@ function DateInput({
     onFormCleared: handleFormCleared,
   })
 
-  const {
-    colors,
-    fontSizes,
-    fontWeights,
-    lineHeights,
-    spacing,
-    sizes,
-    zIndices,
-  } = useEmotionTheme()
-
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
 
@@ -159,36 +266,17 @@ function DateInput({
     if (!element.isRange) {
       return false
     }
-
-    // Since quick select allows to select ranges up to the past 2 years,
-    // we should only enable it if the min date is older than 2 years ago.
     const twoYearsAgo = moment().subtract(2, "years").toDate()
     return minDate < twoYearsAgo
   }, [element.isRange, minDate])
 
   const clearable = element.default.length === 0 && !disabled
 
-  // We need to extract the mask and format (date-fns notation) from the provided format string
-  // The user configured date format is based on the momentJS notation and is only allowed to contain
-  // one of YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY" and can also use a period (.) or hyphen (-) as separators.
-  // We need to convert the provided format into a mask supported by the Baseweb datepicker
-  // Thereby, we need to replace all letters with 9s which refers to any number.
-  // (Using useMemo to avoid recomputing every time for now reason)
-  const dateMask = useMemo(
-    () => element.format.replaceAll(/[a-zA-Z]/g, "9"),
-    [element.format]
-  )
-
-  // The Baseweb datepicker supports the date-fns notation for date formatting which is
-  // slightly different from the momentJS notation. Therefore, we need to
-  // convert the provided format into the date-fns notation:
-  // (Using useMemo to avoid recomputing every time for now reason)
   const dateFormat = useMemo(
     () => element.format.replaceAll("Y", "y").replaceAll("D", "d"),
     [element.format]
   )
 
-  // Date strings used for error messages
   const minDateString = useMemo(
     () => format(minDate, dateFormat, { locale: loadedLocale }),
     [minDate, dateFormat, loadedLocale]
@@ -200,10 +288,11 @@ function DateInput({
     [maxDate, dateFormat, loadedLocale]
   )
 
-  // Create tooltip error message based on validation error
   const createErrorMessage = useCallback(
     (errorType: string | null): string | null => {
-      if (!errorType) return null
+      if (!errorType) {
+        return null
+      }
 
       if (element.isRange) {
         const messageEnding =
@@ -233,13 +322,6 @@ function DateInput({
         return
       }
 
-      /**
-       * Normalize selected dates to start of day (00:00) to avoid time
-       * component inconsistencies. Specifically, BaseWeb quick select uses
-       * 12:00 for the selected date, which can cause validation errors.
-       *
-       * @see https://github.com/streamlit/streamlit/issues/12293
-       */
       const normalizedDateInput: DateOrEmpty[] | DateOrEmpty = Array.isArray(
         date
       )
@@ -248,7 +330,6 @@ function DateInput({
             .map(d => normalizeToStartOfDay(d))
         : normalizeToStartOfDay(date)
 
-      // Handles FE date validation
       const { errorType, newDates } = validateDates(
         normalizedDateInput,
         minDate,
@@ -258,7 +339,7 @@ function DateInput({
         setError(createErrorMessage(errorType))
       }
       setValueWithSource({ value: newDates, fromUi: true })
-      setIsEmpty(!newDates)
+      setIsEmpty(!newDates.length)
     },
     [
       createErrorMessage,
@@ -271,12 +352,303 @@ function DateInput({
   )
 
   const handleClose = useCallback((): void => {
-    if (!isEmpty) return
+    if (!isEmpty) {
+      return
+    }
 
     const newValue = stringsToDates(element.default)
     setValueWithSource({ value: newValue, fromUi: true })
-    setIsEmpty(!newValue)
+    setIsEmpty(!newValue.length)
   }, [isEmpty, element, setValueWithSource])
+
+  const { refs, floatingStyles, context } = useFloating({
+    open,
+    onOpenChange: nextOpen => {
+      setOpen(nextOpen)
+      if (!nextOpen) {
+        inputRef.current?.focus()
+        handleClose()
+      }
+    },
+    placement: "bottom-start",
+    strategy: "fixed",
+    whileElementsMounted: autoUpdate,
+    middleware: [
+      offset(convertRemToPx(theme.spacing.twoXS)),
+      flip({
+        boundary: isInSidebar ? document.documentElement : undefined,
+      }),
+      shift({ padding: convertRemToPx(theme.spacing.sm) }),
+    ],
+  })
+
+  const dismiss = useDismiss(context, {
+    outsidePress: true,
+    escapeKey: true,
+  })
+  const role = useRole(context, { role: "dialog" })
+
+  const { getFloatingProps } = useInteractions([dismiss, role])
+
+  const inputId = useId()
+
+  useEffect(() => {
+    if (value.length && value[0]) {
+      setViewMonth(startOfMonth(value[0]))
+    }
+  }, [value])
+
+  useEffect(() => {
+    if (open && value[0]) {
+      setHighlightedDay(normalizeToStartOfDay(value[0]))
+    } else if (open) {
+      setHighlightedDay(normalizeToStartOfDay(viewMonth))
+    }
+  }, [open, value, viewMonth])
+
+  const commitParsed = useCallback(
+    (parsed: Date[] | null) => {
+      if (parsed === null) {
+        return
+      }
+      handleChange({ date: parsed.length ? parsed : null })
+    },
+    [handleChange]
+  )
+
+  const committedInput = useMemo(
+    () => formatValueForInput(value, element.format, element.isRange),
+    [value, element.format, element.isRange]
+  )
+
+  useEffect(() => {
+    setDraftInput(committedInput)
+  }, [committedInput])
+
+  const setReferenceMerged = useCallback(
+    (node: HTMLInputElement | null) => {
+      inputRef.current = node
+      refs.setReference(node)
+    },
+    [refs]
+  )
+
+  const onInputChange = useCallback(
+    (ev: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = String(ev.target.value ?? "")
+      setDraftInput(raw)
+      if (raw === "") {
+        handleChange({ date: null })
+        return
+      }
+      const parsed = tryParseInputToDates(raw, element.format, element.isRange)
+      if (parsed !== null) {
+        commitParsed(parsed)
+      }
+    },
+    [commitParsed, element.format, element.isRange, handleChange]
+  )
+
+  const onInputBlur = useCallback(() => {
+    setInputFocused(false)
+    const raw = String(inputRef.current?.value ?? "")
+    if (raw === "") {
+      // Single date: snap back to default when the field is cleared (BaseWeb parity).
+      // Range: keep an empty range; resetting here would restore element.default dates.
+      if (!element.isRange) {
+        handleClose()
+      }
+    } else {
+      setDraftInput(committedInput)
+    }
+  }, [committedInput, element.isRange, handleClose])
+
+  const onCalendarKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (!highlightedDay) {
+        return
+      }
+      if (e.key === "Escape") {
+        setOpen(false)
+        inputRef.current?.focus()
+        e.preventDefault()
+        return
+      }
+      if (e.key === "Enter") {
+        if (element.isRange) {
+          if (!rangeAnchor) {
+            setRangeAnchor(highlightedDay)
+            handleChange({
+              date: [normalizeToStartOfDay(highlightedDay)],
+            })
+          } else {
+            const start = rangeAnchor
+            const end = highlightedDay
+            const lo = isBefore(start, end) ? start : end
+            const hi = isAfter(start, end) ? start : end
+            handleChange({ date: [lo, hi] })
+            setRangeAnchor(null)
+            setOpen(false)
+            inputRef.current?.focus()
+          }
+        } else {
+          handleChange({ date: normalizeToStartOfDay(highlightedDay) })
+          setOpen(false)
+          inputRef.current?.focus()
+        }
+        e.preventDefault()
+        return
+      }
+      let next = highlightedDay
+      if (e.key === "ArrowRight") {
+        next = addDays(highlightedDay, 1)
+      } else if (e.key === "ArrowLeft") {
+        next = addDays(highlightedDay, -1)
+      } else if (e.key === "ArrowDown") {
+        next = addDays(highlightedDay, 7)
+      } else if (e.key === "ArrowUp") {
+        next = addDays(highlightedDay, -7)
+      } else {
+        return
+      }
+      e.preventDefault()
+      setHighlightedDay(next)
+      if (!isSameMonth(next, viewMonth)) {
+        setViewMonth(startOfMonth(next))
+      }
+    },
+    [element.isRange, handleChange, highlightedDay, rangeAnchor, viewMonth]
+  )
+
+  const calendarDays = useMemo(() => {
+    const monthStart = startOfMonth(viewMonth)
+    const monthEnd = endOfMonth(viewMonth)
+    const gridStart = startOfWeek(monthStart, {
+      weekStartsOn: loadedLocale.options?.weekStartsOn as
+        | 0
+        | 1
+        | 2
+        | 3
+        | 4
+        | 5
+        | 6,
+    })
+    const gridEnd = endOfWeek(monthEnd, {
+      weekStartsOn: loadedLocale.options?.weekStartsOn as
+        | 0
+        | 1
+        | 2
+        | 3
+        | 4
+        | 5
+        | 6,
+    })
+    return eachDayOfInterval({ start: gridStart, end: gridEnd })
+  }, [viewMonth, loadedLocale.options?.weekStartsOn])
+
+  const weekdayLabels = useMemo(() => {
+    const refMonday = new Date(2024, 0, 8)
+    const start = startOfWeek(refMonday, {
+      weekStartsOn: loadedLocale.options?.weekStartsOn as
+        | 0
+        | 1
+        | 2
+        | 3
+        | 4
+        | 5
+        | 6,
+    })
+    return Array.from({ length: 7 }, (_, i) => {
+      const label = format(addDays(start, i), "EEE", {
+        locale: loadedLocale,
+      })
+      return label.replace(/\./g, "").slice(0, 2)
+    })
+  }, [loadedLocale])
+
+  useEffect(() => {
+    if (open) {
+      setRangeAnchor(null)
+    }
+  }, [open])
+
+  const isDayDisabled = useCallback(
+    (d: Date): boolean => {
+      const day = normalizeToStartOfDay(d)
+      if (day < normalizeToStartOfDay(minDate)) {
+        return true
+      }
+      if (maxDate && day > normalizeToStartOfDay(maxDate)) {
+        return true
+      }
+      return false
+    },
+    [maxDate, minDate]
+  )
+
+  const isDaySelected = useCallback(
+    (d: Date): boolean => {
+      if (!element.isRange) {
+        return value.length > 0 && isSameDay(d, value[0])
+      }
+      if (value.length >= 2 && value[0] && value[1]) {
+        const lo = normalizeToStartOfDay(value[0])
+        const hi = normalizeToStartOfDay(value[1])
+        const day = normalizeToStartOfDay(d)
+        return (isSameDay(day, lo) || isSameDay(day, hi)) && !isDayDisabled(d)
+      }
+      return value.length > 0 && value[0] && isSameDay(d, value[0])
+    },
+    [element.isRange, isDayDisabled, value]
+  )
+
+  const inRangeHighlight = useCallback(
+    (d: Date): boolean => {
+      if (!element.isRange || value.length < 2 || !value[0] || !value[1]) {
+        return false
+      }
+      const lo = normalizeToStartOfDay(value[0])
+      const hi = normalizeToStartOfDay(value[1])
+      const day = normalizeToStartOfDay(d)
+      return !isDayDisabled(d) && day >= lo && day <= hi
+    },
+    [element.isRange, isDayDisabled, value]
+  )
+
+  const quickSelectOptions = useMemo(() => {
+    const NOW = moment()
+      .hours(12)
+      .minutes(0)
+      .seconds(0)
+      .milliseconds(0)
+      .toDate()
+    return [
+      { id: "Past Week", begin: moment(NOW).subtract(1, "week").toDate() },
+      { id: "Past Month", begin: moment(NOW).subtract(1, "month").toDate() },
+      {
+        id: "Past 3 Months",
+        begin: moment(NOW).subtract(3, "month").toDate(),
+      },
+      {
+        id: "Past 6 Months",
+        begin: moment(NOW).subtract(6, "month").toDate(),
+      },
+      { id: "Past Year", begin: moment(NOW).subtract(1, "year").toDate() },
+      { id: "Past 2 Years", begin: moment(NOW).subtract(2, "year").toDate() },
+    ]
+  }, [])
+
+  const displayValue = inputFocused ? draftInput : committedInput
+
+  const popoverStyle = useMemo(
+    () => ({
+      ...getPopoverContainerStyle(theme),
+      ...(hasLightBackgroundColor(theme) && {
+        borderWidth: theme.spacing.none,
+      }),
+    }),
+    [theme]
+  )
 
   return (
     <div className="stDateInput" data-testid="stDateInput">
@@ -291,260 +663,493 @@ function DateInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UIDatePicker
-        locale={loadedLocale}
-        density={DENSITY.high}
-        formatString={dateFormat}
-        mask={element.isRange ? `${dateMask} – ${dateMask}` : dateMask}
-        placeholder={
-          element.isRange
-            ? `${element.format} – ${element.format}`
-            : element.format
-        }
-        disabled={disabled}
-        onChange={handleChange}
-        onClose={handleClose}
-        quickSelect={enableQuickSelect}
-        overrides={{
-          Popover: {
-            props: {
-              ignoreBoundary: isInSidebar,
-              placement: PLACEMENT.bottomLeft,
-              popoverMargin: convertRemToPx(theme.spacing.twoXS),
-              overrides: {
-                Body: {
-                  style: {
-                    ...getPopoverContainerStyle(theme),
-                    // Override: zero border in light mode because the
-                    // calendar header's shaded background conflicts with
-                    // the background-color border trick.
-                    ...(hasLightBackgroundColor(theme) && {
-                      borderWidth: theme.spacing.none,
-                    }),
-                  },
-                },
-              },
-            },
-          },
-          CalendarContainer: {
-            style: {
-              fontSize: fontSizes.sm,
-              paddingRight: spacing.sm,
-              paddingLeft: spacing.sm,
-              paddingBottom: spacing.sm,
-              paddingTop: spacing.sm,
-              // Remove default border
-              borderWidth: theme.spacing.none,
-            },
-          },
-          Week: {
-            style: {
-              fontSize: fontSizes.sm,
-            },
-          },
-          Day: {
-            style: ({
-              // Due to a bug in BaseWeb, where the range selection defaults to mono300 and can't be changed, we need to override the background colors for all these shared props:
-              // $pseudoHighlighted: Styles the range selection when you click an initial date, and hover over the end one, but NOT click it.
-              // $pseudoSelected: Styles when a range was selected, click outide, and click the calendar again.
-              // $selected: Styles the background below the red circle from the start and end dates.
-              // $isHovered: Styles the background below the end date when hovered.
-              $pseudoHighlighted,
-              $pseudoSelected,
-              $selected,
-              $isHovered,
-            }) => ({
-              fontSize: fontSizes.sm,
-              lineHeight: lineHeights.base,
 
-              "::before": {
-                backgroundColor:
-                  $selected ||
-                  $pseudoSelected ||
-                  $pseudoHighlighted ||
-                  $isHovered
-                    ? `${colors.darkenedBgMix15} !important`
-                    : colors.transparent,
-              },
-
-              "::after": {
-                borderColor: colors.transparent,
-              },
-              //Apply background color only when hovering over a date in the range in light theme
-              ...(hasLightBackgroundColor(theme) &&
-              $isHovered &&
-              $pseudoSelected &&
-              !$selected
-                ? {
-                    color: colors.secondaryBg,
+      <InputRoot>
+        <StyledInputContainer
+          $hasError={Boolean(error)}
+          $isFocused={open}
+          theme={theme}
+        >
+          <StyledInputWrapper>
+            <StyledNativeInput
+              ref={setReferenceMerged}
+              id={inputId}
+              data-testid="stDateInputField"
+              aria-label={
+                element.isRange ? "Select a date range." : "Select a date."
+              }
+              $hasError={Boolean(error)}
+              disabled={disabled}
+              value={displayValue}
+              placeholder={
+                element.isRange
+                  ? `${element.format}${RANGE_SEP_DISPLAY}${element.format}`
+                  : element.format
+              }
+              onChange={onInputChange}
+              onBlur={onInputBlur}
+              onClick={() => {
+                if (!disabled) {
+                  setOpen(true)
+                }
+              }}
+              onFocus={e => {
+                setInputFocused(true)
+                setDraftInput(committedInput)
+                try {
+                  e.currentTarget.select()
+                } catch {
+                  // select() unsupported for some input modes
+                }
+              }}
+              onKeyDown={e => {
+                if (e.key === "ArrowDown" && !disabled) {
+                  setOpen(true)
+                }
+                if (e.key === "Escape") {
+                  if (open) {
+                    setOpen(false)
+                    e.preventDefault()
+                    return
                   }
-                : {}),
-            }),
-          },
-          PrevButton: {
-            style: () => ({
-              // Align icon to the center of the button.
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Remove primary-color click effect.
-              ":active": {
-                backgroundColor: colors.transparent,
-              },
-              ":focus": {
-                backgroundColor: colors.transparent,
-                outline: 0,
-              },
-            }),
-          },
-          NextButton: {
-            style: {
-              // Align icon to the center of the button.
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              // Remove primary-color click effect.
-              ":active": {
-                backgroundColor: colors.transparent,
-              },
-              ":focus": {
-                backgroundColor: colors.transparent,
-                outline: 0,
-              },
-            },
-          },
-          Input: {
-            props: {
-              // The default maskChar ` ` causes empty dates to display as ` / / `
-              // Clearing the maskChar so empty dates will not display
-              maskChar: null,
-
-              // Passes error icon/tooltip to underlying input in error state
-              // otherwise no end enhancer is shown
-              endEnhancer: error && (
-                <Tooltip
-                  content={
-                    <StreamlitMarkdown source={error} allowHTML={false} />
+                  if (
+                    clearable &&
+                    !disabled &&
+                    (value.length > 0 || displayValue)
+                  ) {
+                    e.preventDefault()
+                    handleChange({ date: null })
                   }
-                  placement={Placement.TOP_RIGHT}
-                  error
-                >
-                  <Icon content={ErrorOutline} size="lg" />
-                </Tooltip>
-              ),
+                }
+              }}
+            />
+          </StyledInputWrapper>
+          {error && (
+            <EndEnhancer>
+              <Tooltip
+                content={
+                  <StreamlitMarkdown source={error} allowHTML={false} />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon content={ErrorOutline} size="lg" />
+              </Tooltip>
+            </EndEnhancer>
+          )}
+          {clearable && displayValue && !disabled && (
+            <ClearButton
+              type="button"
+              aria-label="Clear"
+              onClick={() => handleChange({ date: null })}
+            >
+              ×
+            </ClearButton>
+          )}
+        </StyledInputContainer>
+      </InputRoot>
 
-              overrides: {
-                EndEnhancer: {
-                  style: {
-                    // Match text color with st.error in light and dark mode
-                    color: colors.redTextColor,
-                    backgroundColor: colors.transparent,
-                  },
-                },
-                Root: {
-                  style: ({ $isFocused }: { $isFocused: boolean }) => {
-                    const borderColor = getBorderColor(colors, $isFocused)
-                    return {
-                      // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                      borderLeftWidth: sizes.borderWidth,
-                      borderRightWidth: sizes.borderWidth,
-                      borderTopWidth: sizes.borderWidth,
-                      borderBottomWidth: sizes.borderWidth,
-                      paddingRight: spacing.twoXS,
+      {open && (
+        <FloatingPortal>
+          <FloatingFocusManager
+            context={context}
+            modal={false}
+            initialFocus={-1}
+          >
+            <CalendarPopover
+              // eslint-disable-next-line react-hooks/refs -- Floating UI setFloating ref callback
+              ref={refs.setFloating}
+              style={{ ...floatingStyles, zIndex: theme.zIndices.popup }}
+              {...getFloatingProps()}
+            >
+              <CalendarPanel
+                data-testid="stDateInputCalendar"
+                role="application"
+                aria-label="Calendar."
+                tabIndex={-1}
+                onKeyDown={onCalendarKeyDown}
+                style={popoverStyle}
+              >
+                <NavRow>
+                  <NavButton
+                    type="button"
+                    aria-label="Previous month."
+                    onClick={() => setViewMonth(m => addMonths(m, -1))}
+                  >
+                    ‹
+                  </NavButton>
+                  <MonthTitle>
+                    {format(viewMonth, "MMMM yyyy", { locale: loadedLocale })}
+                  </MonthTitle>
+                  <NavButton
+                    type="button"
+                    aria-label="Next month."
+                    onClick={() => setViewMonth(m => addMonths(m, 1))}
+                  >
+                    ›
+                  </NavButton>
+                </NavRow>
 
-                      borderTopColor: borderColor,
-                      borderRightColor: borderColor,
-                      borderBottomColor: borderColor,
-                      borderLeftColor: borderColor,
+                <WeekdayPresentation role="presentation">
+                  {weekdayLabels.map(w => (
+                    <span key={w}>{w}</span>
+                  ))}
+                </WeekdayPresentation>
 
-                      // Baseweb has an error prop for the input, but its coloring doesn't reconcile
-                      // with our dark theme - we handle error state coloring manually here
-                      ...(error && {
-                        backgroundColor: colors.redBackgroundColor,
-                      }),
-                    }
-                  },
-                },
-                ClearIcon: {
-                  props: {
-                    overrides: {
-                      Svg: {
-                        style: {
-                          color: colors.grayTextColor,
-                          // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                          padding: spacing.threeXS,
-                          height: sizes.clearIconSize,
-                          width: sizes.clearIconSize,
-                          ":hover": {
-                            fill: colors.bodyText,
-                          },
-                        },
-                      },
-                    },
-                  },
-                },
-                InputContainer: {
-                  style: {
-                    // Explicitly specified so error background renders correctly
-                    backgroundColor: "transparent",
-                  },
-                },
-                Input: {
-                  style: {
-                    // Input overlays Placeholder - position relative + zIndex ensures
-                    // input is clickable above the absolutely positioned placeholder
-                    position: "relative",
-                    zIndex: zIndices.priority,
-                    fontWeight: fontWeights.normal,
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    paddingRight: spacing.sm,
-                    paddingLeft: `calc(${spacing.sm} + ${sizes.tagMarginInsideBorder})`,
-                    paddingBottom: spacing.sm,
-                    paddingTop: spacing.sm,
-                    lineHeight: lineHeights.inputWidget,
+                <DayGrid role="grid">
+                  {calendarDays.map(day => {
+                    const outside = !isSameMonth(day, viewMonth)
+                    const dis = isDayDisabled(day)
+                    const sel = isDaySelected(day)
+                    const inRange = inRangeHighlight(day)
+                    const label = buildDayAriaLabel(day, {
+                      disabled: dis,
+                      selected: sel,
+                      localeForFormat: loadedLocale,
+                    })
+                    return (
+                      <DayCell
+                        key={day.toISOString()}
+                        role="gridcell"
+                        aria-label={outside ? undefined : label}
+                        tabIndex={
+                          highlightedDay && isSameDay(day, highlightedDay)
+                            ? 0
+                            : -1
+                        }
+                        $outside={outside}
+                        $disabled={dis}
+                        $selected={sel}
+                        $inRange={inRange}
+                        $pseudoSelected={inRange && !sel}
+                        onClick={() => {
+                          if (dis || outside) {
+                            return
+                          }
+                          if (element.isRange) {
+                            if (!rangeAnchor) {
+                              setRangeAnchor(day)
+                              handleChange({
+                                date: [normalizeToStartOfDay(day)],
+                              })
+                            } else {
+                              const a = rangeAnchor
+                              const lo = isBefore(a, day) ? a : day
+                              const hi = isAfter(a, day) ? a : day
+                              handleChange({
+                                date: [
+                                  normalizeToStartOfDay(lo),
+                                  normalizeToStartOfDay(hi),
+                                ],
+                              })
+                              setRangeAnchor(null)
+                              setOpen(false)
+                              inputRef.current?.focus()
+                            }
+                          } else {
+                            handleChange({ date: normalizeToStartOfDay(day) })
+                            setOpen(false)
+                            inputRef.current?.focus()
+                          }
+                        }}
+                        onMouseEnter={() => {
+                          if (!dis && !outside) {
+                            setHighlightedDay(day)
+                          }
+                        }}
+                      >
+                        <DayNum>{format(day, "d")}</DayNum>
+                      </DayCell>
+                    )
+                  })}
+                </DayGrid>
 
-                    "::placeholder": {
-                      color: colors.fadedText60,
-                    },
-
-                    // Change input value text color in error state - matches st.error in light and dark mode
-                    ...(error && {
-                      color: colors.redTextColor,
-                    }),
-                  },
-                  props: {
-                    "data-testid": "stDateInputField",
-                  },
-                },
-              },
-            },
-          },
-          QuickSelect: {
-            props: {
-              overrides: {
-                ControlContainer: {
-                  style: {
-                    height: sizes.minElementHeight,
-                    // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                    borderLeftWidth: sizes.borderWidth,
-                    borderRightWidth: sizes.borderWidth,
-                    borderTopWidth: sizes.borderWidth,
-                    borderBottomWidth: sizes.borderWidth,
-                  },
-                },
-              },
-            },
-          },
-        }}
-        value={value}
-        minDate={minDate}
-        maxDate={maxDate}
-        range={element.isRange}
-        clearable={clearable}
-      />
+                {enableQuickSelect && (
+                  <QuickSelectRow>
+                    <QuickSelectLabel id={`${inputId}-qsl`}>
+                      Choose a date range
+                    </QuickSelectLabel>
+                    <QuickSelectComboboxWrap data-testid="stDateInputQuickSelect">
+                      <QuickSelectComboButton
+                        type="button"
+                        id={`${inputId}-qs`}
+                        aria-label="Choose a date range"
+                        role="combobox"
+                        aria-expanded={quickMenuOpen}
+                        aria-haspopup="listbox"
+                        aria-labelledby={`${inputId}-qsl`}
+                        onClick={() => setQuickMenuOpen(o => !o)}
+                      >
+                        None
+                      </QuickSelectComboButton>
+                      {quickMenuOpen && (
+                        <QuickSelectListbox
+                          role="listbox"
+                          aria-label="Choose a date range"
+                        >
+                          {quickSelectOptions.map(o => (
+                            <QuickSelectOption
+                              key={o.id}
+                              type="button"
+                              role="option"
+                              onClick={() => {
+                                const end = normalizeToStartOfDay(new Date())
+                                const start = normalizeToStartOfDay(o.begin)
+                                handleChange({ date: [start, end] })
+                                setQuickMenuOpen(false)
+                              }}
+                            >
+                              {o.id}
+                            </QuickSelectOption>
+                          ))}
+                        </QuickSelectListbox>
+                      )}
+                    </QuickSelectComboboxWrap>
+                  </QuickSelectRow>
+                )}
+              </CalendarPanel>
+            </CalendarPopover>
+          </FloatingFocusManager>
+        </FloatingPortal>
+      )}
     </div>
   )
 }
+
+const InputRoot = styled.div({
+  width: "100%",
+})
+
+const StyledInputContainer = styled.div<{
+  $hasError: boolean
+  $isFocused: boolean
+  theme: ReturnType<typeof useEmotionTheme>
+}>(({ $hasError, $isFocused, theme }) => {
+  const borderColor = getBorderColor(theme.colors, $isFocused)
+  return {
+    display: "flex",
+    alignItems: "center",
+    flexDirection: "row",
+    borderLeftWidth: theme.sizes.borderWidth,
+    borderRightWidth: theme.sizes.borderWidth,
+    borderTopWidth: theme.sizes.borderWidth,
+    borderBottomWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    borderTopColor: borderColor,
+    borderRightColor: borderColor,
+    borderBottomColor: borderColor,
+    borderLeftColor: borderColor,
+    borderRadius: theme.radii.default,
+    paddingRight: theme.spacing.twoXS,
+    backgroundColor: $hasError ? theme.colors.redBackgroundColor : undefined,
+  }
+})
+
+const StyledInputWrapper = styled.div({
+  flex: 1,
+  minWidth: 0,
+  backgroundColor: "transparent",
+})
+
+const StyledNativeInput = styled.input<{ $hasError: boolean }>(
+  ({ theme, $hasError }) => ({
+    width: "100%",
+    border: "none",
+    outline: "none",
+    background: "transparent",
+    boxSizing: "border-box",
+    position: "relative",
+    zIndex: theme.zIndices.priority,
+    fontWeight: theme.fontWeights.normal,
+    paddingRight: theme.spacing.sm,
+    paddingLeft: `calc(${theme.spacing.sm} + ${theme.sizes.tagMarginInsideBorder})`,
+    paddingBottom: theme.spacing.sm,
+    paddingTop: theme.spacing.sm,
+    lineHeight: theme.lineHeights.inputWidget,
+    fontSize: theme.fontSizes.md,
+    color: $hasError ? theme.colors.redTextColor : "inherit",
+    "::placeholder": {
+      color: theme.colors.fadedText60,
+    },
+  })
+)
+
+const EndEnhancer = styled.div(({ theme }) => ({
+  color: theme.colors.redTextColor,
+  backgroundColor: theme.colors.transparent,
+  display: "flex",
+  alignItems: "center",
+}))
+
+const ClearButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  color: theme.colors.grayTextColor,
+  padding: theme.spacing.threeXS,
+  height: theme.sizes.clearIconSize,
+  width: theme.sizes.clearIconSize,
+  lineHeight: theme.lineHeights.none,
+  "&:hover": {
+    color: theme.colors.bodyText,
+  },
+}))
+
+const CalendarPopover = styled.div({})
+
+const CalendarPanel = styled.div(({ theme }) => ({
+  fontSize: theme.fontSizes.sm,
+  paddingRight: theme.spacing.sm,
+  paddingLeft: theme.spacing.sm,
+  paddingBottom: theme.spacing.sm,
+  paddingTop: theme.spacing.sm,
+  borderWidth: theme.spacing.none,
+  minWidth: theme.sizes.toastWidth,
+}))
+
+const QuickSelectRow = styled.div(({ theme }) => ({
+  marginTop: theme.spacing.sm,
+  marginBottom: theme.spacing.sm,
+}))
+
+const QuickSelectLabel = styled.label(({ theme }) => ({
+  display: "block",
+  marginBottom: theme.spacing.threeXS,
+}))
+
+const QuickSelectComboboxWrap = styled.div({
+  position: "relative",
+  width: "100%",
+})
+
+const QuickSelectComboButton = styled.button(({ theme }) => ({
+  width: "100%",
+  height: theme.sizes.minElementHeight,
+  textAlign: "left",
+  cursor: "pointer",
+  borderLeftWidth: theme.sizes.borderWidth,
+  borderRightWidth: theme.sizes.borderWidth,
+  borderTopWidth: theme.sizes.borderWidth,
+  borderBottomWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
+  backgroundColor: theme.colors.secondaryBg ?? theme.colors.bgColor,
+  borderRadius: theme.radii.default,
+  paddingLeft: theme.spacing.sm,
+  paddingRight: theme.spacing.sm,
+}))
+
+const QuickSelectListbox = styled.div(({ theme }) => ({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  top: "100%",
+  zIndex: theme.zIndices.priority,
+  marginTop: theme.spacing.threeXS,
+  maxHeight: theme.sizes.maxDropdownHeight,
+  overflowY: "auto",
+  backgroundColor: theme.colors.bgColor,
+  borderWidth: theme.sizes.borderWidth,
+  borderStyle: "solid",
+  borderColor: theme.colors.borderColor,
+  borderRadius: theme.radii.default,
+  boxShadow: theme.shadows.popover,
+}))
+
+const QuickSelectOption = styled.button(({ theme }) => ({
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  padding: theme.spacing.sm,
+  fontSize: theme.fontSizes.sm,
+  ":hover": {
+    backgroundColor: theme.colors.darkenedBgMix15,
+  },
+}))
+
+const NavRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  marginBottom: theme.spacing.sm,
+}))
+
+const NavButton = styled.button(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  border: "none",
+  background: "transparent",
+  cursor: "pointer",
+  fontSize: theme.fontSizes.lg,
+  ":active": { backgroundColor: theme.colors.transparent },
+  ":focus": {
+    backgroundColor: theme.colors.transparent,
+    outline: 0,
+  },
+}))
+
+const MonthTitle = styled.div(({ theme }) => ({
+  fontWeight: theme.fontWeights.bold,
+  textAlign: "center",
+  flex: 1,
+}))
+
+const WeekdayPresentation = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginBottom: theme.spacing.twoXS,
+}))
+
+const DayGrid = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "repeat(7, 1fr)",
+  gap: theme.spacing.threeXS,
+}))
+
+const DayNum = styled.span(({ theme }) => ({
+  position: "relative",
+  zIndex: theme.zIndices.priority,
+}))
+
+const DayCell = styled.div<{
+  $outside: boolean
+  $disabled: boolean
+  $selected: boolean
+  $inRange: boolean
+  $pseudoSelected: boolean
+}>(({ theme, $outside, $disabled, $selected, $inRange, $pseudoSelected }) => ({
+  position: "relative",
+  fontSize: theme.fontSizes.sm,
+  lineHeight: theme.lineHeights.base,
+  textAlign: "center",
+  padding: theme.spacing.twoXS,
+  cursor: $disabled || $outside ? "default" : "pointer",
+  opacity: $outside ? 0.35 : 1,
+  color: $selected
+    ? theme.colors.bodyText
+    : hasLightBackgroundColor(theme) && $pseudoSelected && !$selected
+      ? theme.colors.secondaryBg
+      : undefined,
+  "::before": {
+    content: '""',
+    position: "absolute",
+    inset: 0,
+    borderRadius: theme.radii.full,
+    zIndex: 0,
+    backgroundColor:
+      $selected || $inRange || $pseudoSelected
+        ? `${theme.colors.darkenedBgMix15} !important`
+        : theme.colors.transparent,
+  },
+}))
 
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
@@ -575,7 +1180,6 @@ function updateWidgetMgrState(
   const maxDate = getMaxDate(element)
   let isValid = true
 
-  // Check if date(s) outside of allowed min/max
   const normalizedStateValues = (vws.value || []).map(d =>
     normalizeToStartOfDay(d)
   )
@@ -584,7 +1188,6 @@ function updateWidgetMgrState(
     isValid = false
   }
 
-  // Only update widget state if date(s) valid
   if (isValid) {
     widgetMgr.setStringArrayValue(
       element,

@@ -90,11 +90,16 @@ const Selectbox: FC<Props> = ({
     filterMode,
   } = element
 
+  // `supports_empty_selection` is set by Python when `index=None`. Fall back to
+  // `default == null` for older protobuf payloads.
+  const supportsEmptySelection =
+    element.supportsEmptySelection ?? isNullOrUndefined(element.default)
+
   const queryParamBinding = element.queryParamKey
     ? {
         paramKey: element.queryParamKey,
         valueType: "string_value" as const,
-        clearable: isNullOrUndefined(element.default),
+        clearable: supportsEmptySelection,
       }
     : undefined
 
@@ -120,7 +125,7 @@ const Selectbox: FC<Props> = ({
     [setValueWithSource]
   )
 
-  const clearable = isNullOrUndefined(element.default) && !disabled
+  const clearable = Boolean(supportsEmptySelection) && !disabled
 
   return (
     <UISelectbox

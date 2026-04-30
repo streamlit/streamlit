@@ -34,6 +34,7 @@ const getProps = (
     id: "1",
     label: "Label",
     default: 0,
+    supportsEmptySelection: false,
     options: ["a", "b", "c"],
     ...elementProps,
   }),
@@ -225,7 +226,11 @@ describe("Selectbox query param binding", () => {
   })
 
   it("registers with clearable=true when no default", () => {
-    const props = getProps({ queryParamKey: "my_select", default: null })
+    const props = getProps({
+      queryParamKey: "my_select",
+      default: null,
+      supportsEmptySelection: true,
+    })
     vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
 
     render(<Selectbox {...props} />)
