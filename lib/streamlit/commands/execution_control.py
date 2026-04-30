@@ -322,10 +322,11 @@ def switch_page(  # type: ignore[misc]
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
 
-    # Additional safeguard to ensure the query params are sent out to the
-    # frontend before the new rerun might clear outstanding messages.
-    # Sleep is placed after the with block to release the session state lock first.
-    time.sleep(MESSAGE_FLUSH_INTERVAL_SECS)
+    # Safeguard: sleep longer than the flush interval to ensure at least one
+    # complete flush cycle delivers the query params before the rerun clears
+    # outstanding messages. Sleep is placed after the with block to release
+    # the session state lock first.
+    time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
 
     ctx.script_requests.request_rerun(
         RerunData(
