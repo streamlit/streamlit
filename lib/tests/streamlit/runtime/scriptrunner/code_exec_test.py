@@ -294,10 +294,11 @@ class TestOnScriptErrorHandler(unittest.TestCase):
 
         exec_func_with_error_handling(test_func, self.ctx)
 
-        # Control-flow exceptions use warning-level logging without traceback
+        # Control-flow exceptions use warning-level logging with exc_info for debugging
         mock_logger.warning.assert_called_once_with(
             "on_script_error handler raised a control-flow exception "
-            "(st.stop/st.rerun); falling back to default error UI"
+            "(st.stop/st.rerun); falling back to default error UI",
+            exc_info=True,
         )
         # The original exception should still be shown in the UI
         mock_show.assert_called_once_with(test_exception)
@@ -321,10 +322,11 @@ class TestOnScriptErrorHandler(unittest.TestCase):
 
         exec_func_with_error_handling(test_func, self.ctx)
 
-        # Control-flow exceptions use warning-level logging without traceback
+        # Control-flow exceptions use warning-level logging with exc_info for debugging
         mock_logger.warning.assert_called_once_with(
             "on_script_error handler raised a control-flow exception "
-            "(st.stop/st.rerun); falling back to default error UI"
+            "(st.stop/st.rerun); falling back to default error UI",
+            exc_info=True,
         )
         # The original exception should still be shown in the UI
         mock_show.assert_called_once_with(test_exception)
