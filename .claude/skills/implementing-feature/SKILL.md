@@ -58,8 +58,8 @@ Progress:
 Run this phase in a **foreground subagent**. The subagent should:
 
 - Search for similar existing features to follow patterns
-- Use the /understanding-streamlit-architecture skill to understand relevant internals
-- **Always write a tech-spec / implementation plan** to `work-tmp/<feature-name>-implementation-plan.md`
+- Use the `/understanding-streamlit-architecture` skill to understand relevant internals
+- **Always write an implementation plan** to `work-tmp/<feature-name>-implementation-plan.md`, where `<feature-name>` is derived from the branch name (e.g., `git branch --show-current | sed 's|.*/||'`) or, if on a detached HEAD, the spec folder basename
 
 The implementation plan must include:
 - Summary of the feature requirements (from spec)
@@ -80,9 +80,8 @@ The subagent should:
 - Do additional research if anything is unclear or missing from the provided context
 - Run `make protobuf` after any protobuf changes
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
-- Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
-
-Wait for the subagent to complete before proceeding to verification.
+- Use the `/debugging-streamlit` skill to test and debug backend, frontend, and UI
+- Return a summary of key implementation decisions and any spec divergences
 
 ### Phase 4: Verify against spec
 
@@ -94,13 +93,13 @@ Wait for the subagent to complete before proceeding to verification.
 
 ### Phase 5: Finalize for merge
 
-- Run /finalizing-pr skill to execute quality checks, create the PR, and make it merge-ready
+- Run `/finalizing-pr` skill to execute quality checks, create the PR, and make it merge-ready
 - Follow all steps until the PR is merge-ready
 
 ## Important notes
 
 - **Be fully autonomous** - Do NOT stop or pause to ask for confirmation. You are tasked to go from spec to merge-ready PR without human intervention. Note any open questions or ambiguities in the PR description rather than blocking on them.
-- **Use foreground subagents** - Phases 2 and 3 must run as foreground (blocking) subagents. Wait for each to complete before proceeding. This preserves main context while delegating intensive research and implementation work.
+- **Use foreground subagents** - Phases 2 and 3 run as foreground (blocking) subagents to preserve main context while delegating intensive research and implementation work.
 - **Follow Streamlit patterns** - Check existing similar features for conventions
 - **Reference the spec in PR** - Include spec link in PR description
-- **Test thoroughly** - Use /debugging-streamlit before finalizing
+- **Test thoroughly** - Use `/debugging-streamlit` before finalizing
