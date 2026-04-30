@@ -47,23 +47,27 @@ from streamlit.path_security import is_unsafe_path_pattern
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
-# Paths that are known-safe and can skip the is_unsafe_path_pattern() check.
-# These endpoints either:
-# 1. Have no user-controlled path segments (health, metrics, host-config), or
-# 2. Use path params as lookup keys, not file paths (upload_file uses session_id/file_id UUIDs)
+# Exact paths that are known-safe and can skip the is_unsafe_path_pattern() check.
+# These endpoints have no user-controlled path segments.
 #
 # DO NOT add routes that serve user-controlled file paths:
 # - /media/{file_id:path}
 # - /component/{path:path}
 # - /_stcore/bidi-components/{path:path}
 # - /app/static/{path:path}
-_SAFE_PATH_PREFIXES: Final[tuple[str, ...]] = (
-    "/_stcore/health",
-    "/_stcore/script-health-check",
-    "/_stcore/metrics",
-    "/_stcore/host-config",
-    "/_stcore/upload_file/",
+_SAFE_EXACT_PATHS: Final[frozenset[str]] = frozenset(
+    {
+        "/_stcore/health",
+        "/_stcore/script-health-check",
+        "/_stcore/metrics",
+        "/_stcore/host-config",
+    }
 )
+
+# Prefix for paths that can skip the is_unsafe_path_pattern() check.
+# The upload_file route uses path params as opaque lookup keys (session_id/file_id),
+# not filesystem paths, so it's safe to skip the pattern check.
+_SAFE_PATH_PREFIX: Final[str] = "/_stcore/upload_file/"
 
 
 class PathSecurityMiddleware:
@@ -105,7 +109,8 @@ class PathSecurityMiddleware:
 
         # Fast-path: Skip validation for known-safe routes that don't serve
         # user-controlled file paths (health checks, metrics, upload endpoints).
-        if path.startswith(_SAFE_PATH_PREFIXES):
+        # Use exact match for fixed endpoints to avoid over-matching future routes.
+        if path in _SAFE_EXACT_PATHS or path.startswith(_SAFE_PATH_PREFIX):
             await self.app(scope, receive, send)
             return
 

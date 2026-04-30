@@ -372,19 +372,118 @@ class TestSafePathFastPath:
         # These routes should reach the handler (200), not be blocked (400)
         assert response.status_code == 200
 
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_paths_skip_unsafe_pattern_check(
+        self, safe_path: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that safe paths skip the is_unsafe_path_pattern() check.
+
+        This verifies the fast-path optimization is actually working by
+        monkeypatching is_unsafe_path_pattern to raise if called.
+        """
+        from streamlit.web.server.starlette import starlette_path_security_middleware
+
+        def _raise_if_called(path: str) -> bool:
+            raise AssertionError(
+                f"is_unsafe_path_pattern() was called for {safe_path!r} "
+                "but should have been skipped by the fast-path"
+            )
+
+        monkeypatch.setattr(
+            starlette_path_security_middleware,
+            "is_unsafe_path_pattern",
+            _raise_if_called,
+        )
+
+        app = _create_test_app()
+        client = TestClient(app)
+
+        # Should not raise - fast-path should skip is_unsafe_path_pattern
+        response = client.get(safe_path)
+        assert response.status_code == 200
+
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "//_stcore/health",
+            "//_stcore/script-health-check",
+            "//_stcore/metrics",
+            "//_stcore/host-config",
+            "//_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
     @pytest.mark.anyio
-    async def test_safe_paths_still_check_double_slash(self) -> None:
+    async def test_safe_paths_still_check_double_slash(self, safe_path: str) -> None:
         """Test that safe prefixes still get the double-slash UNC check.
 
         Even though /_stcore/health is a safe prefix, a request to
         //_stcore/health (note the double slash) should still be blocked.
+        This parametrizes over all safe paths to ensure regression protection.
         """
         app = _create_test_app()
 
-        response_status, _ = await _call_asgi_with_path(app, "//_stcore/health")
+        response_status, _ = await _call_asgi_with_path(app, safe_path)
 
         # Double-slash must still be blocked even with safe prefix
         assert response_status == 400
+
+    @pytest.mark.parametrize(
+        "traversal_path",
+        [
+            "/_stcore/health/..\\..\\etc\\passwd",
+            "/_stcore/metrics/..\\..\\etc\\passwd",
+            "/_stcore/host-config/..\\..\\etc\\passwd",
+        ],
+        ids=[
+            "health-backslash-traversal",
+            "metrics-backslash-traversal",
+            "host-config-backslash-traversal",
+        ],
+    )
+    def test_exact_paths_dont_match_traversal_suffixes(
+        self, traversal_path: str
+    ) -> None:
+        """Test that exact-match safe paths don't match paths with traversal suffixes.
+
+        This documents the defense-in-depth behavior: paths like
+        /_stcore/health/..\\..\\etc\\passwd should NOT match the safe exact path
+        /_stcore/health and should go through full validation.
+
+        Note: Forward-slash traversal (/../..) is normalized by Starlette before
+        reaching the middleware (see TestPathSecurityMiddleware.test_starlette_normalizes_paths),
+        so we only test backslash traversal here.
+        """
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(traversal_path)
+
+        # These should be blocked - they don't match exact paths and contain
+        # traversal patterns that fail is_unsafe_path_pattern()
+        assert response.status_code == 400
 
     @pytest.mark.parametrize(
         "unsafe_route",
