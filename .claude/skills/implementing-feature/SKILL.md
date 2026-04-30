@@ -55,16 +55,40 @@ Progress:
 
 ### Phase 2: Research and plan
 
+Run this phase in a **foreground subagent** using the `Agent` tool with `subagent_type: "Explore"`. The subagent should:
+
 - Search for similar existing features to follow patterns
 - Use the /understanding-streamlit-architecture skill to understand relevant internals
-- If there is technical complexity, write a tech-spec / implementation plan in `work-tmp/`
+- **Always write a tech-spec / implementation plan** to `work-tmp/<feature-name>-implementation-plan.md`
+
+The implementation plan must include:
+- Summary of the feature requirements (from spec)
+- Relevant existing patterns found in codebase
+- List of files to create or modify (backend, frontend, proto, tests)
+- Implementation steps in order
+- Key decisions and trade-offs
+- Test strategy (unit tests, E2E tests)
+
+Wait for the subagent to complete and verify the implementation plan exists before proceeding.
 
 ### Phase 3: Implement and test
 
-- Implement the feature based on the provided spec. Read `wiki/new-feature-guide.md` for tips.
+Run this phase in a **foreground subagent** using the `Agent` tool with `subagent_type: "general-purpose"`. Provide the subagent with:
+
+- Path to the original spec (folder, URL, or issue)
+- Path to the implementation plan created in Phase 2
+- Any relevant API docstrings or interface files identified in the plan
+- Clear instruction to implement the feature end-to-end
+
+The subagent should:
+- Read the provided spec and implementation plan
+- Implement the feature based on the plan. Read `wiki/new-feature-guide.md` for tips.
 - Run `make protobuf` after any protobuf changes
 - Add unit tests (Python in `lib/tests/`, frontend co-located) and E2E tests in `e2e_playwright/`
 - Use the /debugging-streamlit skill to test and debug backend, frontend, and UI
+- Commit incrementally with logical commits as implementation progresses
+
+Wait for the subagent to complete before proceeding to verification.
 
 ### Phase 4: Verify against spec
 
@@ -82,7 +106,7 @@ Progress:
 ## Important notes
 
 - **Be fully autonomous** - Do NOT stop or pause to ask for confirmation. You are tasked to go from spec to merge-ready PR without human intervention. Note any open questions or ambiguities in the PR description rather than blocking on them.
+- **Use foreground subagents** - Phases 2 and 3 must run as foreground (blocking) subagents. Wait for each to complete before proceeding. This preserves main context while delegating intensive research and implementation work.
 - **Follow Streamlit patterns** - Check existing similar features for conventions
 - **Reference the spec in PR** - Include spec link in PR description
 - **Test thoroughly** - Use /debugging-streamlit before finalizing
-- **Commit incrementally** - Make logical commits as you implement each phase
