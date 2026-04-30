@@ -200,36 +200,6 @@ def _maybe_print_static_folder_warning(main_script_path: str) -> None:
                 )
 
 
-def _should_prefetch_external_ip() -> bool:
-    """Check if external IP prefetching should be started.
-
-    Returns True only when _print_url() would actually display an External URL.
-    This avoids unnecessary outbound requests in cases where the External URL
-    is not shown (e.g., welcome message hidden, manual server address set, etc.).
-    """
-    # Must be in headless mode to show External URL
-    if not config.get_option("server.headless"):
-        return False
-
-    # Don't prefetch if welcome message is hidden (no URL printing)
-    if config.get_option("logger.hideWelcomeMessage"):
-        return False
-
-    # Don't prefetch if browser.serverAddress is manually set (takes precedence)
-    if config.is_manually_set("browser.serverAddress"):
-        return False
-
-    # Don't prefetch for unix sockets (different URL display path)
-    if server_address_is_unix_socket():
-        return False
-
-    # Don't prefetch if server.address is manually set to a specific non-wildcard address
-    return not (
-        config.is_manually_set("server.address")
-        and config.get_option("server.address") not in {"0.0.0.0", "::"}  # noqa: S104
-    )
-
-
 def _print_url(is_running_hello: bool) -> None:
     if config.get_option("logger.hideWelcomeMessage"):
         return
@@ -271,7 +241,7 @@ def _print_url(is_running_hello: bool) -> None:
             named_urls.append(("Network URL", server_util.get_url(internal_ip)))
 
         if config.get_option("server.headless"):
-            external_ip = net_util.get_external_ip_nonblocking()
+            external_ip = net_util.get_external_ip()
             if external_ip:
                 named_urls.append(("External URL", server_util.get_url(external_ip)))
 
@@ -370,11 +340,6 @@ def run_asgi_app(
     """
     from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
-    # Prefetch external IP in background to avoid blocking URL printing later.
-    # Only start the prefetch when _print_url() would actually show an External URL.
-    if _should_prefetch_external_ip():
-        net_util.start_external_ip_fetch()
-
     # Process-level setup (CLI responsibility)
     _fix_sys_path(main_script_path)
     _fix_sys_argv(main_script_path, args)
@@ -406,11 +371,6 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
-    # Prefetch external IP in background to avoid blocking URL printing later.
-    # Only start the prefetch when _print_url() would actually show an External URL.
-    if _should_prefetch_external_ip():
-        net_util.start_external_ip_fetch()
-
     _fix_sys_path(main_script_path)
     _fix_sys_argv(main_script_path, args)
     _install_config_watchers(flag_options)
