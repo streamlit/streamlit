@@ -55,7 +55,7 @@ Progress:
 
 ### Phase 2: Research and plan
 
-Run this phase in a **foreground subagent** using the `Agent` tool. The subagent should:
+Run this phase in a **foreground subagent**. The subagent should:
 
 - Search for similar existing features to follow patterns
 - Use the /understanding-streamlit-architecture skill to understand relevant internals
@@ -73,7 +73,7 @@ Wait for the subagent to complete and verify the implementation plan exists befo
 
 ### Phase 3: Implement and test
 
-Run this phase in a **foreground subagent** using the `Agent` tool. Provide the subagent with:
+Run this phase in a **foreground subagent**. Provide the subagent with:
 
 - Path to the original spec (folder, URL, or issue)
 - Path to the implementation plan created in Phase 2
