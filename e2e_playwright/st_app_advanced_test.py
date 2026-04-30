@@ -24,7 +24,11 @@ from typing import TYPE_CHECKING
 
 from playwright.sync_api import expect
 
-from e2e_playwright.conftest import build_app_url, wait_for_app_run
+from e2e_playwright.conftest import (
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import get_button, get_checkbox, get_text_input
 
 if TYPE_CHECKING:
@@ -147,9 +151,9 @@ def test_on_script_error_handler(app: Page) -> None:
     # The custom error UI should NOT be shown (handler returned None)
     expect(app.get_by_text("Custom error UI:")).to_have_count(0)
 
-    # Reload to reset state
+    # Reload to reset state - use wait_for_app_loaded after reload for stability
     app.reload()
-    wait_for_app_run(app)
+    wait_for_app_loaded(app)
 
     # === Test 2: Suppressed display (handler returns True) ===
     suppress_checkbox = get_checkbox(app, "Suppress error display")
@@ -169,9 +173,9 @@ def test_on_script_error_handler(app: Page) -> None:
         app.get_by_text("Custom error UI: Test error from user script")
     ).to_be_visible()
 
-    # Reload to reset state
+    # Reload to reset state - use wait_for_app_loaded after reload for stability
     app.reload()
-    wait_for_app_run(app)
+    wait_for_app_loaded(app)
 
     # === Test 3: Different exception types ===
     runtime_button = get_button(app, "Raise RuntimeError")
@@ -186,3 +190,17 @@ def test_on_script_error_handler(app: Page) -> None:
 
     # Negative assertion: custom error UI should NOT be shown (handler returned None)
     expect(app.get_by_text("Custom error UI:")).to_have_count(0)
+
+    # Reload to reset state for the callback test
+    app.reload()
+    wait_for_app_loaded(app)
+
+    # === Test 4: Exception from widget callback (on_click) ===
+    # This verifies that on_script_error is invoked for exceptions in widget callbacks
+    callback_button = get_button(app, "Raise in callback")
+    callback_button.click()
+    wait_for_app_run(app)
+
+    # The default exception display should be shown
+    expect(app.get_by_test_id("stException")).to_have_count(1)
+    expect(app.get_by_text("ValueError: Error from on_click callback")).to_be_visible()

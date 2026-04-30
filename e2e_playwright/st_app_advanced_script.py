@@ -107,3 +107,12 @@ if st.button("Raise exception", key="raise_error"):
 
 if st.button("Raise RuntimeError", key="raise_runtime"):
     raise RuntimeError("Runtime error from user script")
+
+
+# === Widget Callback Error Test ===
+def _on_click_error() -> None:
+    """Callback that raises an exception to test on_script_error with widget callbacks."""
+    raise ValueError("Error from on_click callback")
+
+
+st.button("Raise in callback", key="raise_in_callback", on_click=_on_click_error)
