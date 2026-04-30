@@ -45,8 +45,10 @@ def get_external_ip() -> str | None:
     if _external_ip is not None:
         return _external_ip
 
-    # Use 1s timeout to avoid long startup delays. The external IP is only
-    # used for displaying the URL in headless mode, so a timeout is acceptable.
+    # The external IP is best-effort: used for the headless External URL banner
+    # and as a fallback in the CORS / WebSocket-origin allowlist. We use a 1s
+    # timeout to avoid startup delays; misses fail closed and admins should
+    # configure browser.serverAddress / server.corsAllowedOrigins explicitly.
     response = _make_blocking_http_get(_AWS_CHECK_IP, timeout=1)
 
     if response is None:

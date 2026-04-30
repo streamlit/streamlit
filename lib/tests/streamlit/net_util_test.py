@@ -68,3 +68,27 @@ class UtilTest(unittest.TestCase):
             assert None is net_util.get_external_ip()
 
         net_util._external_ip = None
+
+
+def test_get_external_ip_uses_short_timeout(monkeypatch) -> None:
+    """Verify get_external_ip uses 1s timeout to avoid startup delays."""
+    from unittest.mock import MagicMock
+
+    # Reset cache to force new request
+    monkeypatch.setattr(net_util, "_external_ip", None)
+
+    mock_get = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "1.2.3.4"
+    mock_get.return_value = mock_response
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+    net_util.get_external_ip()
+
+    # Verify timeout=1 was passed on the HTTP call
+    mock_get.assert_called_once()
+    _, kwargs = mock_get.call_args
+    assert kwargs.get("timeout") == 1, (
+        f"Expected timeout=1, got {kwargs.get('timeout')}"
+    )
