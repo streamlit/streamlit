@@ -494,17 +494,178 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
 
+class ShouldPrefetchExternalIPTest(TestCase):
+    """Tests for _should_prefetch_external_ip gating logic."""
+
+    def test_returns_true_when_headless_and_default_config(self):
+        """Prefetch should run in headless mode with default configuration."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is True
+
+    def test_returns_false_when_not_headless(self):
+        """Prefetch should not run when not in headless mode."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is False
+
+    def test_returns_false_when_welcome_message_hidden(self):
+        """Prefetch should not run when welcome message is hidden."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": True,
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is False
+
+    def test_returns_false_when_browser_server_address_manually_set(self):
+        """Prefetch should not run when browser.serverAddress is manually set."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": True, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "browser.serverAddress": "custom.server.com",
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is False
+
+    def test_returns_false_when_unix_socket(self):
+        """Prefetch should not run when using Unix socket."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "unix:///tmp/streamlit.sock",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is False
+
+    def test_returns_false_when_server_address_manually_set_to_specific_ip(self):
+        """Prefetch should not run when server.address is a specific non-wildcard IP."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "192.168.1.100",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is False
+
+    def test_returns_true_when_server_address_is_ipv4_wildcard(self):
+        """Prefetch should run when server.address is 0.0.0.0 (IPv4 wildcard)."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "0.0.0.0",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is True
+
+    def test_returns_true_when_server_address_is_ipv6_wildcard(self):
+        """Prefetch should run when server.address is :: (IPv6 wildcard)."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": True}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "::",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            assert bootstrap._should_prefetch_external_ip() is True
+
+
 class BootstrapRunTest(IsolatedAsyncioTestCase):
     def tearDown(self):
         #  Reset the Runtime._instance for subsequent test runs. Otherwise we will get
         # a "Runtime already exists" error.
         Runtime._instance = None
 
-    def test_bootstrap_run(self):
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    def test_bootstrap_run(self, mock_start_ip_fetch):
+        """Bootstrap run starts server and exits immediately for testing."""
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
 
-    def test_bootstrap_run_in_existing_event_loop(self):
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    def test_bootstrap_run_in_existing_event_loop(self, mock_start_ip_fetch):
+        """Bootstrap run works within an existing event loop."""
         import asyncio
 
         event_loop = asyncio.new_event_loop()
@@ -516,7 +677,9 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
             event_loop.run_until_complete(_run())
 
-    def test_bootstrap_run_without_existing_event_loop(self):
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    def test_bootstrap_run_without_existing_event_loop(self, mock_start_ip_fetch):
+        """Bootstrap run creates event loop when none exists."""
         import asyncio
 
         # Remove the existing event loop
@@ -524,6 +687,74 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
 
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    def test_run_starts_external_ip_fetch_when_conditions_met(
+        self, mock_start_ip_fetch
+    ):
+        """run() should call start_external_ip_fetch when gating conditions are met."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+
+        mock_start_ip_fetch.assert_called_once()
+
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    def test_run_skips_external_ip_fetch_when_not_headless(self, mock_start_ip_fetch):
+        """run() should not call start_external_ip_fetch when not in headless mode."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+
+        mock_start_ip_fetch.assert_not_called()
+
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    def test_run_skips_external_ip_fetch_when_welcome_hidden(self, mock_start_ip_fetch):
+        """run() should not call start_external_ip_fetch when welcome message is hidden."""
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": True,
+                "server.address": "localhost",
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+        ):
+            bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
+
+        mock_start_ip_fetch.assert_not_called()
 
 
 class BootstrapUvloopTest(TestCase):
@@ -627,3 +858,87 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
                     flag_options={},
                 )
             assert "uvicorn is required" in str(cm.value)
+
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    @patch("streamlit.web.bootstrap.report_watchdog_availability")
+    @patch("streamlit.web.bootstrap._install_config_watchers")
+    @patch("streamlit.web.bootstrap._fix_sys_argv")
+    @patch("streamlit.web.bootstrap._fix_sys_path")
+    def test_run_asgi_app_starts_external_ip_fetch_when_conditions_met(
+        self,
+        mock_fix_sys_path,
+        mock_fix_sys_argv,
+        mock_install_watchers,
+        mock_report_watchdog,
+        mock_start_ip_fetch,
+    ):
+        """run_asgi_app() should call start_external_ip_fetch when gating conditions are met."""
+        import uvicorn
+
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": True,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "localhost",
+                "server.port": 8501,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+            patch.object(uvicorn, "run"),
+        ):
+            bootstrap.run_asgi_app(
+                main_script_path="/path/to/main.py",
+                app_import_string="myapp:app",
+                args=[],
+                flag_options={},
+            )
+
+        mock_start_ip_fetch.assert_called_once()
+
+    @patch("streamlit.net_util.start_external_ip_fetch")
+    @patch("streamlit.web.bootstrap.report_watchdog_availability")
+    @patch("streamlit.web.bootstrap._install_config_watchers")
+    @patch("streamlit.web.bootstrap._fix_sys_argv")
+    @patch("streamlit.web.bootstrap._fix_sys_path")
+    def test_run_asgi_app_skips_external_ip_fetch_when_not_headless(
+        self,
+        mock_fix_sys_path,
+        mock_fix_sys_argv,
+        mock_install_watchers,
+        mock_report_watchdog,
+        mock_start_ip_fetch,
+    ):
+        """run_asgi_app() should not call start_external_ip_fetch when not in headless mode."""
+        import uvicorn
+
+        mock_is_manually_set = testutil.build_mock_config_is_manually_set(
+            {"browser.serverAddress": False, "server.address": False}
+        )
+        mock_get_option = testutil.build_mock_config_get_option(
+            {
+                "server.headless": False,
+                "logger.hideWelcomeMessage": False,
+                "server.address": "localhost",
+                "server.port": 8501,
+            }
+        )
+
+        with (
+            patch.object(config, "get_option", new=mock_get_option),
+            patch.object(config, "is_manually_set", new=mock_is_manually_set),
+            patch.object(uvicorn, "run"),
+        ):
+            bootstrap.run_asgi_app(
+                main_script_path="/path/to/main.py",
+                app_import_string="myapp:app",
+                args=[],
+                flag_options={},
+            )
+
+        mock_start_ip_fetch.assert_not_called()
