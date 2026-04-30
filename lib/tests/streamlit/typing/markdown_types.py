@@ -33,9 +33,15 @@ if TYPE_CHECKING:
     assert_type(markdown("**Bold** and *italic*"), DeltaGenerator)
     assert_type(markdown("# Heading"), DeltaGenerator)
 
+    # body is SupportsStr, so non-str values should work
+    assert_type(markdown(42), DeltaGenerator)
+
     # Markdown with unsafe_allow_html parameter
     assert_type(markdown("<p>HTML content</p>", unsafe_allow_html=True), DeltaGenerator)
     assert_type(markdown("Safe text", unsafe_allow_html=False), DeltaGenerator)
+
+    # unsafe_allow_html as positional argument (it's positional-or-keyword)
+    assert_type(markdown("<p>HTML</p>", True), DeltaGenerator)
 
     # Markdown with help parameter (keyword-only)
     assert_type(markdown("Text", help="This is help text"), DeltaGenerator)
@@ -64,3 +70,16 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch", "content", "auto", or int)
+    markdown("Text", width="invalid")  # type: ignore[arg-type]
+
+    # Invalid text_alignment value (not "left", "center", "right", or "justify")
+    markdown("Text", text_alignment="start")  # type: ignore[arg-type]
+
+    # Passing help as positional argument (should be keyword-only)
+    markdown("Text", False, "help text")  # type: ignore[misc]
