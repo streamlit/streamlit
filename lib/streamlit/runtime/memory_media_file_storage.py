@@ -56,18 +56,15 @@ PREFERRED_MIMETYPE_EXTENSION_MAP: Final = {
 }
 
 
-def _calculate_file_id(
-    data: bytes,
-    mimetype: str,
-    filename: str | None = None,
-    *,
-    use_full_hash: bool = False,
-) -> str:
+def _calculate_file_id(data: bytes, mimetype: str, filename: str | None = None) -> str:
     """Hash data, mimetype, and an optional filename to generate a stable file ID.
 
     For large files (>1 MiB), uses partial hashing (length + head + middle + tail)
-    by default for performance. This provides ~50-100x speedup for large files.
-    Set use_full_hash=True to force full content hashing (used as collision fallback).
+    for performance. This provides ~50-100x speedup for large files. Note that for
+    files above the threshold, this is a fingerprint, not a cryptographic hash:
+    two files with identical length, head, middle, and tail but different bytes
+    elsewhere will produce the same ID. This tradeoff is acceptable for media file
+    caching where such collisions are extremely rare in practice.
 
     Parameters
     ----------
@@ -77,8 +74,6 @@ def _calculate_file_id(
         Any string. Will be converted to bytes and used to compute a hash.
     filename
         Any string. Will be converted to bytes and used to compute a hash.
-    use_full_hash
-        If True, always hash the full content regardless of size.
     """
     filehash = create_fast_hasher()
 
@@ -88,7 +83,7 @@ def _calculate_file_id(
     # 2. Distinguish large files with identical samples but different lengths.
     filehash.update(f"{len(data)}:".encode())
 
-    if not use_full_hash and len(data) > _PARTIAL_HASH_THRESHOLD:
+    if len(data) > _PARTIAL_HASH_THRESHOLD:
         # For large files, hash length + head + middle + tail (64 KiB each).
         # This avoids hashing multi-MB payloads while still detecting most changes.
         filehash.update(data[:_PARTIAL_HASH_SAMPLE_SIZE])
@@ -154,7 +149,7 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
         kind: MediaFileKind,
         filename: str | None = None,
     ) -> str:
-        """Add a file to the manager and return its unique ID."""
+        """Add a file to the manager and return its ID."""
         file_data: bytes
         file_data = (
             self._read_file(path_or_data)
@@ -162,23 +157,9 @@ class MemoryMediaFileStorage(MediaFileStorage, StatsProvider):
             else path_or_data
         )
 
+        # Because our file_ids are stable, if we already have a file with the
+        # given ID, we don't need to create a new one.
         file_id = _calculate_file_id(file_data, mimetype, filename)
-
-        if file_id in self._files_by_id:
-            # ID exists - verify content matches to detect partial-hash collisions.
-            # For large files, we use partial hashing which can theoretically collide
-            # if two files have the same length, head, middle, and tail but differ
-            # elsewhere. If content differs, fall back to full content hash.
-            existing_file = self._files_by_id[file_id]
-            if existing_file.content != file_data:
-                _LOGGER.debug(
-                    "Partial hash collision detected for file %s, using full hash",
-                    file_id,
-                )
-                file_id = _calculate_file_id(
-                    file_data, mimetype, filename, use_full_hash=True
-                )
-
         if file_id not in self._files_by_id:
             _LOGGER.debug("Adding media file %s", file_id)
             media_file = MemoryFile(
