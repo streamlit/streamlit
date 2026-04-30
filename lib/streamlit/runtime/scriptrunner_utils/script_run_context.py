@@ -102,7 +102,7 @@ class ScriptRunContext:
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
-    new_fragment_ids: set[str] = field(default_factory=set)
+    new_fragment_ids: ThreadSafeSet = field(default_factory=ThreadSafeSet)
     in_fragment_callback: bool = False
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
@@ -160,7 +160,7 @@ class ScriptRunContext:
         self.current_fragment_id = None
         self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
-        self.new_fragment_ids = set()
+        self.new_fragment_ids = ThreadSafeSet()
         self.has_dialog_opened = False
         self.cached_message_hashes = cached_message_hashes or set()
 

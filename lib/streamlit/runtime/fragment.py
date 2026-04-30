@@ -54,12 +54,10 @@ class FragmentStorage(Protocol):
     protocols.
     """
 
-    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
-    # with the `set` type of `new_fragments_ids`.
     @abstractmethod
     def clear(
         self,
-        new_fragment_ids: set[str] | None = None,  # ty: ignore[invalid-type-form]
+        new_fragment_ids: frozenset[str] | None = None,
     ) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
@@ -102,11 +100,9 @@ class MemoryFragmentStorage(FragmentStorage):
     def __init__(self) -> None:
         self._fragments: dict[str, Fragment] = {}
 
-    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
-    # with the `set` type of `new_fragments_ids`.
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty: ignore[invalid-type-form]
+    def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         if new_fragment_ids is None:
-            new_fragment_ids = set()
+            new_fragment_ids = frozenset()
 
         fragment_ids = list(self._fragments.keys())
 
@@ -197,7 +193,7 @@ def _fragment(
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.add(fragment_id)
+            ctx.new_fragment_ids.check_and_add(fragment_id)
             # Set ctx.current_fragment_id so that elements corresponding to this
             # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
             # reset after the fragment function finishes running to either return to the

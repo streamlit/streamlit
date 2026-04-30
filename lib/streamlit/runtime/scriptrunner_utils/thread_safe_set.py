@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import threading
 
 
@@ -50,3 +51,9 @@ class ThreadSafeSet:
         """Return an immutable copy for read-only consumers."""
         with self._lock:
             return frozenset(self._data)
+
+    def __deepcopy__(self, memo: dict) -> ThreadSafeSet:
+        new = ThreadSafeSet()
+        with self._lock:
+            new._data = copy.deepcopy(self._data, memo)
+        return new

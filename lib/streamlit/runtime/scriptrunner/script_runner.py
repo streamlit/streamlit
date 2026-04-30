@@ -688,7 +688,7 @@ class ScriptRunner:
                         else:
                             exec(code, module.__dict__)  # noqa: S102
                         self._fragment_storage.clear(
-                            new_fragment_ids=ctx.new_fragment_ids
+                            new_fragment_ids=ctx.new_fragment_ids.snapshot()
                         )
 
                     self._session_state.maybe_check_serializable()
