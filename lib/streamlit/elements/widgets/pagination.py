@@ -229,7 +229,11 @@ class PaginationMixin:
             )
 
         # Validate max_visible_pages
-        if max_visible_pages is not None and max_visible_pages < 0:
+        if max_visible_pages is not None and (
+            not isinstance(max_visible_pages, int)
+            or isinstance(max_visible_pages, bool)
+            or max_visible_pages < 0
+        ):
             raise StreamlitAPIException(
                 f"`max_visible_pages` must be a non-negative integer or None. "
                 f"Got {max_visible_pages}."

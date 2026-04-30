@@ -106,8 +106,11 @@ def test_disabled_pagination(app: Page):
     pagination = get_pagination(app, "disabled")
     expect(pagination).to_be_visible()
 
+    # All navigation buttons should be disabled
     expect(get_prev_button(pagination)).to_be_disabled()
     expect(get_next_button(pagination)).to_be_disabled()
+    # Page buttons should also be disabled
+    expect(get_page_button(pagination, 1)).to_be_disabled()
 
 
 def test_single_page_pagination(app: Page):
