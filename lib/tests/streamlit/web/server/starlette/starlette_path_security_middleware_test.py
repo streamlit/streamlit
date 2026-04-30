@@ -509,3 +509,113 @@ class TestSafePathFastPath:
 
         # These routes should be blocked by the middleware
         assert response.status_code == 400
+
+
+class TestBaseUrlPathCompatibility:
+    """Tests for baseUrlPath compatibility with the safe path fast-path.
+
+    When server.baseUrlPath is configured (e.g., "/myapp"), routes are mounted
+    with that prefix, and scope["path"] includes it (e.g., "/myapp/_stcore/health").
+    The fast-path optimization must account for this prefix.
+    """
+
+    @pytest.mark.parametrize(
+        "safe_route",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_paths_with_base_url_prefix(
+        self, safe_route: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that safe paths work correctly when server.baseUrlPath is configured.
+
+        The fast-path should work for paths like /myapp/_stcore/health when
+        baseUrlPath is set to /myapp.
+        """
+        from streamlit import config
+
+        base_url = "/myapp"
+        monkeypatch.setattr(
+            config,
+            "get_option",
+            lambda key: base_url if key == "server.baseUrlPath" else None,
+        )
+
+        # Build the expected full path with base URL
+        full_path = f"{base_url}{safe_route}"
+
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(full_path)
+
+        # These routes should reach the handler (200), not be blocked (400)
+        assert response.status_code == 200
+
+    @pytest.mark.parametrize(
+        "safe_route",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_paths_with_base_url_skip_unsafe_pattern_check(
+        self, safe_route: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that safe paths with baseUrlPath skip the is_unsafe_path_pattern() check.
+
+        This verifies the fast-path optimization works with baseUrlPath by
+        monkeypatching is_unsafe_path_pattern to raise if called.
+        """
+        from streamlit import config
+        from streamlit.web.server.starlette import starlette_path_security_middleware
+
+        base_url = "/myapp"
+        monkeypatch.setattr(
+            config,
+            "get_option",
+            lambda key: base_url if key == "server.baseUrlPath" else None,
+        )
+
+        full_path = f"{base_url}{safe_route}"
+
+        def _raise_if_called(path: str) -> bool:
+            raise AssertionError(
+                f"is_unsafe_path_pattern() was called for {full_path!r} "
+                "but should have been skipped by the fast-path"
+            )
+
+        monkeypatch.setattr(
+            starlette_path_security_middleware,
+            "is_unsafe_path_pattern",
+            _raise_if_called,
+        )
+
+        app = _create_test_app()
+        client = TestClient(app)
+
+        # Should not raise - fast-path should skip is_unsafe_path_pattern
+        response = client.get(full_path)
+        assert response.status_code == 200

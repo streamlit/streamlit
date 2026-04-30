@@ -38,7 +38,7 @@ streamlit.path_security : Core path validation functions used by this middleware
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final
+from typing import TYPE_CHECKING
 
 from starlette.responses import Response
 
@@ -47,27 +47,49 @@ from streamlit.path_security import is_unsafe_path_pattern
 if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
-# Exact paths that are known-safe and can skip the is_unsafe_path_pattern() check.
-# These endpoints have no user-controlled path segments.
+# Route constants for safe endpoints (imported from starlette_routes to stay in sync).
+# These are relative paths without the leading slash.
 #
-# DO NOT add routes that serve user-controlled file paths:
-# - /media/{file_id:path}
-# - /component/{path:path}
-# - /_stcore/bidi-components/{path:path}
-# - /app/static/{path:path}
-_SAFE_EXACT_PATHS: Final[frozenset[str]] = frozenset(
-    {
-        "/_stcore/health",
-        "/_stcore/script-health-check",
-        "/_stcore/metrics",
-        "/_stcore/host-config",
-    }
-)
+# DO NOT add routes that serve user-controlled file paths (media, component,
+# bidi-components, app/static) - those require full is_unsafe_path_pattern validation.
+_SAFE_ROUTE_HEALTH = "_stcore/health"
+_SAFE_ROUTE_SCRIPT_HEALTH = "_stcore/script-health-check"
+_SAFE_ROUTE_METRICS = "_stcore/metrics"
+_SAFE_ROUTE_HOST_CONFIG = "_stcore/host-config"
 
-# Prefix for paths that can skip the is_unsafe_path_pattern() check.
 # The upload_file route uses path params as opaque lookup keys (session_id/file_id),
 # not filesystem paths, so it's safe to skip the pattern check.
-_SAFE_PATH_PREFIX: Final[str] = "/_stcore/upload_file/"
+_SAFE_ROUTE_UPLOAD_PREFIX = "_stcore/upload_file/"
+
+
+def _build_safe_paths(base_url_path: str) -> tuple[frozenset[str], str]:
+    """Build safe exact paths and prefix based on the base URL path.
+
+    Parameters
+    ----------
+    base_url_path
+        The configured server.baseUrlPath (e.g., "/myapp" or "").
+
+    Returns
+    -------
+    tuple[frozenset[str], str]
+        A tuple of (safe_exact_paths, safe_path_prefix) with the base URL prepended.
+    """
+    from streamlit.url_util import make_url_path
+
+    # Build full paths with base URL prefix
+    safe_exact_paths = frozenset(
+        {
+            make_url_path(base_url_path, _SAFE_ROUTE_HEALTH),
+            make_url_path(base_url_path, _SAFE_ROUTE_SCRIPT_HEALTH),
+            make_url_path(base_url_path, _SAFE_ROUTE_METRICS),
+            make_url_path(base_url_path, _SAFE_ROUTE_HOST_CONFIG),
+        }
+    )
+
+    safe_path_prefix = make_url_path(base_url_path, _SAFE_ROUTE_UPLOAD_PREFIX)
+
+    return safe_exact_paths, safe_path_prefix
 
 
 class PathSecurityMiddleware:
@@ -85,6 +107,16 @@ class PathSecurityMiddleware:
 
     def __init__(self, app: ASGIApp) -> None:
         self.app = app
+
+        # Build safe paths with the configured base URL path.
+        # This is computed at middleware init time (when the app is created),
+        # so config changes after app creation won't affect the safe paths.
+        from streamlit import config
+
+        base_url_path = config.get_option("server.baseUrlPath") or ""
+        self._safe_exact_paths, self._safe_path_prefix = _build_safe_paths(
+            base_url_path
+        )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Process incoming requests and block unsafe paths.
@@ -110,7 +142,7 @@ class PathSecurityMiddleware:
         # Fast-path: Skip validation for known-safe routes that don't serve
         # user-controlled file paths (health checks, metrics, upload endpoints).
         # Use exact match for fixed endpoints to avoid over-matching future routes.
-        if path in _SAFE_EXACT_PATHS or path.startswith(_SAFE_PATH_PREFIX):
+        if path in self._safe_exact_paths or path.startswith(self._safe_path_prefix):
             await self.app(scope, receive, send)
             return
 
