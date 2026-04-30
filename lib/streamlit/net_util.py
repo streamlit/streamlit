@@ -14,9 +14,12 @@
 
 from __future__ import annotations
 
-from typing import Final
+from typing import TYPE_CHECKING, Final
 
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    import threading
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -29,6 +32,36 @@ _HELP_DOC: Final = "https://docs.streamlit.io/"
 
 _external_ip: str | None = None
 _internal_ip: str | None = None
+_external_ip_fetch_started: bool = False
+_external_ip_fetch_thread: threading.Thread | None = None
+
+
+def start_external_ip_fetch() -> None:
+    """Start fetching the external IP address in a background thread.
+
+    Non-blocking; returns immediately. Call early in startup so the IP is
+    ready when needed for URL printing, avoiding main thread blocking.
+    """
+    import threading
+
+    global _external_ip_fetch_started, _external_ip_fetch_thread  # noqa: PLW0603
+
+    if _external_ip_fetch_started or _external_ip is not None:
+        return
+
+    _external_ip_fetch_started = True
+    _external_ip_fetch_thread = threading.Thread(
+        target=get_external_ip, name="external-ip-fetch", daemon=True
+    )
+    _external_ip_fetch_thread.start()
+
+
+def get_external_ip_nonblocking() -> str | None:
+    """Return the cached external IP, or None if not yet fetched.
+
+    Unlike get_external_ip(), this never makes HTTP requests or blocks.
+    """
+    return _external_ip
 
 
 def get_external_ip() -> str | None:

@@ -89,9 +89,11 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert "You can now view your Streamlit app in your browser." in out
         assert "URL: http://the-address" in out
 
-    @patch("streamlit.net_util.get_external_ip")
+    @patch("streamlit.net_util.get_external_ip_nonblocking")
     @patch("streamlit.net_util.get_internal_ip")
-    def test_print_urls_remote(self, mock_get_internal_ip, mock_get_external_ip):
+    def test_print_urls_remote(
+        self, mock_get_internal_ip, mock_get_external_ip_nonblocking
+    ):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
         )
@@ -100,7 +102,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
         mock_get_internal_ip.return_value = "internal-ip"
-        mock_get_external_ip.return_value = "external-ip"
+        mock_get_external_ip_nonblocking.return_value = "external-ip"
 
         with (
             patch.object(config, "get_option", new=mock_get_option),
@@ -113,10 +115,10 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert "Network URL: http://internal-ip" in out
         assert "External URL: http://external-ip" in out
 
-    @patch("streamlit.net_util.get_external_ip")
+    @patch("streamlit.net_util.get_external_ip_nonblocking")
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_remote_no_external(
-        self, mock_get_internal_ip, mock_get_external_ip
+        self, mock_get_internal_ip, mock_get_external_ip_nonblocking
     ):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -126,7 +128,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
         mock_get_internal_ip.return_value = "internal-ip"
-        mock_get_external_ip.return_value = None
+        mock_get_external_ip_nonblocking.return_value = None
 
         with (
             patch.object(config, "get_option", new=mock_get_option),
@@ -139,10 +141,10 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert "Network URL: http://internal-ip" in out
         assert "External URL: http://external-ip" not in out
 
-    @patch("streamlit.net_util.get_external_ip")
+    @patch("streamlit.net_util.get_external_ip_nonblocking")
     @patch("streamlit.net_util.get_internal_ip")
     def test_print_urls_remote_no_internal(
-        self, mock_get_internal_ip, mock_get_external_ip
+        self, mock_get_internal_ip, mock_get_external_ip_nonblocking
     ):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": False}
@@ -152,7 +154,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         )
 
         mock_get_internal_ip.return_value = None
-        mock_get_external_ip.return_value = "external-ip"
+        mock_get_external_ip_nonblocking.return_value = "external-ip"
 
         with (
             patch.object(config, "get_option", new=mock_get_option),

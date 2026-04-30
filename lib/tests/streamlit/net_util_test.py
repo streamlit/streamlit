@@ -68,3 +68,64 @@ class UtilTest(unittest.TestCase):
             assert None is net_util.get_external_ip()
 
         net_util._external_ip = None
+
+
+class BackgroundFetchTest(unittest.TestCase):
+    """Tests for background external IP fetch functionality."""
+
+    def setUp(self):
+        net_util._external_ip = None
+        net_util._external_ip_fetch_started = False
+        net_util._external_ip_fetch_thread = None
+
+    def tearDown(self):
+        net_util._external_ip = None
+        net_util._external_ip_fetch_started = False
+        net_util._external_ip_fetch_thread = None
+
+    def test_get_external_ip_nonblocking_returns_none_when_not_fetched(self):
+        """Returns None when external IP has not been fetched yet."""
+        assert net_util.get_external_ip_nonblocking() is None
+
+    def test_get_external_ip_nonblocking_returns_cached_value(self):
+        """Returns the cached external IP when available."""
+        net_util._external_ip = "1.2.3.4"
+        assert net_util.get_external_ip_nonblocking() == "1.2.3.4"
+
+    def test_start_external_ip_fetch_starts_background_thread(self):
+        """Starts a background thread to fetch the external IP."""
+        with requests_mock.mock() as m:
+            m.get(net_util._AWS_CHECK_IP, text="5.6.7.8")
+
+            net_util.start_external_ip_fetch()
+
+            assert net_util._external_ip_fetch_started is True
+            assert net_util._external_ip_fetch_thread is not None
+            assert net_util._external_ip_fetch_thread.name == "external-ip-fetch"
+            assert net_util._external_ip_fetch_thread.daemon is True
+
+            net_util._external_ip_fetch_thread.join(timeout=10)
+            assert net_util._external_ip == "5.6.7.8"
+
+    def test_start_external_ip_fetch_is_idempotent(self):
+        """Calling start_external_ip_fetch multiple times only starts one thread."""
+        with requests_mock.mock() as m:
+            m.get(net_util._AWS_CHECK_IP, text="1.2.3.4")
+
+            net_util.start_external_ip_fetch()
+            first_thread = net_util._external_ip_fetch_thread
+
+            net_util.start_external_ip_fetch()
+            second_thread = net_util._external_ip_fetch_thread
+
+            assert first_thread is second_thread
+            first_thread.join(timeout=10)
+
+    def test_start_external_ip_fetch_skips_if_already_cached(self):
+        """Does not start a thread if the external IP is already cached."""
+        net_util._external_ip = "already-cached"
+
+        net_util.start_external_ip_fetch()
+
+        assert net_util._external_ip_fetch_thread is None
+        assert net_util._external_ip_fetch_started is False

@@ -241,7 +241,7 @@ def _print_url(is_running_hello: bool) -> None:
             named_urls.append(("Network URL", server_util.get_url(internal_ip)))
 
         if config.get_option("server.headless"):
-            external_ip = net_util.get_external_ip()
+            external_ip = net_util.get_external_ip_nonblocking()
             if external_ip:
                 named_urls.append(("External URL", server_util.get_url(external_ip)))
 
@@ -340,6 +340,10 @@ def run_asgi_app(
     """
     from streamlit.web.server.starlette.starlette_server import UvicornRunner
 
+    # Prefetch external IP in background to avoid blocking URL printing later
+    if config.get_option("server.headless"):
+        net_util.start_external_ip_fetch()
+
     # Process-level setup (CLI responsibility)
     _fix_sys_path(main_script_path)
     _fix_sys_argv(main_script_path, args)
@@ -371,6 +375,9 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
+    # Prefetch external IP in background to avoid blocking URL printing later
+    if config.get_option("server.headless"):
+        net_util.start_external_ip_fetch()
 
     _fix_sys_path(main_script_path)
     _fix_sys_argv(main_script_path, args)
