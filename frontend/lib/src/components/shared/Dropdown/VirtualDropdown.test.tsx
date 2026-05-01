@@ -95,45 +95,83 @@ describe("VirtualDropdown element", () => {
     expect(screen.getByText("Add: abc", { exact: true })).toBeInTheDocument()
   })
 
-  /**
-   * Regression for https://github.com/streamlit/streamlit/issues/14989:
-   * with exactly 7 items the content height matches the dropdown height,
-   * so scrolling is impossible. Centering on the last item produced an
-   * initialScrollOffset that virtualized away the first item.
-   */
-  it("renders the first item when the last of 7 items is highlighted", () => {
-    // VirtualDropdown only mounts when the dropdown opens, by which point the
-    // window dimensions context already has real values. The test renders
-    // both providers and the dropdown together, so we need to short-circuit
-    // the initial windowHeight=0 state.
-    vi.spyOn(
-      WindowDimensionsContextModule,
-      "useWindowDimensionsContext"
-    ).mockReturnValue({
-      fullWidth: 1024,
-      fullHeight: 768,
-      innerWidth: 1024,
-      innerHeight: 768,
+  describe("initialScrollOffset for highlighted item", () => {
+    beforeEach(() => {
+      // VirtualDropdown only mounts when the dropdown opens, by which point
+      // the window dimensions context already has real values. The test
+      // renders both providers and the dropdown together, so we need to
+      // short-circuit the initial windowHeight=0 state.
+      vi.spyOn(
+        WindowDimensionsContextModule,
+        "useWindowDimensionsContext"
+      ).mockReturnValue({
+        fullWidth: 1024,
+        fullHeight: 768,
+        innerWidth: 1024,
+        innerHeight: 768,
+      })
     })
 
-    const items = Array.from({ length: 7 }, (_, index) => ({
-      value: String(index + 1),
-      label: String(index + 1),
-    }))
+    /**
+     * Regression for https://github.com/streamlit/streamlit/issues/14989:
+     * with exactly 7 items, the content height matches the dropdown height
+     * so scrolling is impossible. Without the fix, centering the last item
+     * produced an initialScrollOffset of 120px that virtualized away items
+     * at the top of the list (item "1" became unreachable).
+     */
+    it("renders all items when the last of 7 fitting items is highlighted", () => {
+      const items = Array.from({ length: 7 }, (_, index) => ({
+        value: String(index + 1),
+        label: String(index + 1),
+      }))
 
-    render(
-      <VirtualDropdown>
-        {items.map((item, index) => (
-          <Option
-            key={item.value}
-            item={item}
-            $isHighlighted={index === items.length - 1}
-          />
-        ))}
-      </VirtualDropdown>
-    )
+      render(
+        <VirtualDropdown>
+          {items.map((item, index) => (
+            <Option
+              key={item.value}
+              item={item}
+              $isHighlighted={index === items.length - 1}
+            />
+          ))}
+        </VirtualDropdown>
+      )
 
-    expect(screen.getByText("1", { exact: true })).toBeVisible()
-    expect(screen.getByText("7", { exact: true })).toBeVisible()
+      // Every item must render — assert the full range, not just endpoints,
+      // so the previously-virtualized-away items in the middle are pinned.
+      for (const { label } of items) {
+        expect(screen.getByText(label, { exact: true })).toBeVisible()
+      }
+    })
+
+    /**
+     * Complement to the regression test: ensure clamping doesn't break the
+     * centering branch for overflowing lists. With 20 items the content
+     * height (800px) exceeds the dropdown's max height (300px), so centering
+     * scrolls past the start; items near the top should be virtualized away
+     * while the highlighted last item remains visible.
+     */
+    it("centers the highlighted item when the list overflows", () => {
+      const items = Array.from({ length: 20 }, (_, index) => ({
+        value: `option-${index + 1}`,
+        label: `option-${index + 1}`,
+      }))
+
+      render(
+        <VirtualDropdown>
+          {items.map((item, index) => (
+            <Option
+              key={item.value}
+              item={item}
+              $isHighlighted={index === items.length - 1}
+            />
+          ))}
+        </VirtualDropdown>
+      )
+
+      expect(screen.getByText("option-20", { exact: true })).toBeVisible()
+      // First item is far above the centered window, so it must not render.
+      expect(screen.queryByText("option-1", { exact: true })).toBeNull()
+    })
   })
 })
