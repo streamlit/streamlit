@@ -576,7 +576,7 @@ function DataFrame({
           textDark: gridTheme.glideTheme.textLight,
         },
         span: [0, Math.max(columns.length - 1, 0)],
-      } as GridCell
+      }
     },
     [columns, gridTheme.glideTheme.textLight]
   )
@@ -740,9 +740,7 @@ function DataFrame({
         if (
           !isFocused &&
           !isTouchDevice &&
-          !event.currentTarget.contains(
-            event.relatedTarget as HTMLElement | null
-          ) &&
+          !event.currentTarget.contains(event.relatedTarget) &&
           !isCellSelectionActivated
         ) {
           // Clear cell selections, but keep row & column selections.

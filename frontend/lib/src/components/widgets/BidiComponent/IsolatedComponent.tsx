@@ -48,7 +48,7 @@ export const IsolatedComponent: FC = memo(() => {
       // Don't try to attach a shadow root if the element already has one
       if (containerRef.current.shadowRoot) {
         shadowRootRef.current = containerRef.current.shadowRoot
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
+
         setIsShadowRootReady(true)
         return
       }

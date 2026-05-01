@@ -458,3 +458,94 @@ it("tracks server/local debug data with mocked webdriver", async () => {
   // This test runs outside a browser so isWebdriver should be false.
   expect(trackCall.isWebdriver).toEqual(true)
 })
+
+describe("requestDefaultMetricsConfig fallback", () => {
+  const originalFetch = global.fetch
+
+  afterEach(() => {
+    global.fetch = originalFetch
+  })
+
+  it("uses cached metrics config from localStorage when present", async () => {
+    window.localStorage.setItem(
+      "stMetricsConfig",
+      "https://cached.example.com/metrics.json"
+    )
+    const fetchMock = vi.fn()
+    global.fetch = fetchMock as typeof fetch
+
+    // Pass mockRequestDefaultMetricsConfig=false to exercise the real path.
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsUrl).toEqual("https://cached.example.com/metrics.json")
+    // Cached config short-circuits the fetch entirely.
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(mm.actuallySendMetrics).toBe(true)
+  })
+
+  it("deactivates metrics when fetch returns a non-OK response", async () => {
+    global.fetch = vi.fn(() =>
+      Promise.resolve({ ok: false, status: 500 } as Response)
+    )
+
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsUrl).toBeFalsy()
+    expect(mm.actuallySendMetrics).toBe(false)
+  })
+
+  it("swallows fetch errors and leaves metrics deactivated", async () => {
+    global.fetch = vi.fn(() => Promise.reject(new Error("network down")))
+
+    const mm = getMetricsManager(undefined, "", false)
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.metricsUrl).toBeFalsy()
+    expect(mm.actuallySendMetrics).toBe(false)
+  })
+})
+
+describe("getAnonymousId reuse", () => {
+  it("reuses an existing anonymousId cookie and persists it to localStorage", async () => {
+    setCookie("ajs_anonymous_id", "existing-cookie-id")
+
+    const setItemSpy = vi.spyOn(window.localStorage, "setItem")
+
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.anonymousId).toEqual("existing-cookie-id")
+    expect(setItemSpy).toHaveBeenCalledWith(
+      "ajs_anonymous_id",
+      "existing-cookie-id"
+    )
+    setItemSpy.mockRestore()
+  })
+
+  it("reuses a JSON-stringified legacy anonymousId from localStorage", async () => {
+    // Legacy values were JSON.stringify'd, so they include surrounding quotes.
+    window.localStorage.setItem(
+      "ajs_anonymous_id",
+      JSON.stringify("legacy-stored-id")
+    )
+
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.anonymousId).toEqual("legacy-stored-id")
+    expect(document.cookie).toContain("ajs_anonymous_id=legacy-stored-id")
+  })
+
+  it("falls back to the raw localStorage value when JSON.parse fails", async () => {
+    // A non-JSON value triggers the catch block.
+    window.localStorage.setItem("ajs_anonymous_id", "raw-stored-id")
+
+    const mm = getMetricsManager()
+    await mm.initialize({ gatherUsageStats: true })
+
+    expect(mm.anonymousId).toEqual("raw-stored-id")
+    expect(document.cookie).toContain("ajs_anonymous_id=raw-stored-id")
+  })
+})
