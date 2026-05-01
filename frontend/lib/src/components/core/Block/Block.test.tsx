@@ -260,6 +260,16 @@ describe("FlexBoxContainer layout props", () => {
       { gapConfig: { gapSize: streamlit.GapSize.NONE } },
       "gap: 0;",
     ],
+    [
+      "gap: pixel value",
+      {
+        gapConfig: streamlit.GapConfig.create({
+          gapPixels: 9,
+          gapSpec: "gapPixels",
+        }),
+      },
+      "gap: 9px;",
+    ],
   ])("should apply %s", (_desc, flexContainer, expectedStyle) => {
     const block: BlockNode = makeVerticalBlock([], {
       flexContainer,

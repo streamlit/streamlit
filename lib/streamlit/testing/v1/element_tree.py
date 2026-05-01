@@ -2253,7 +2253,7 @@ class Column(Block):
     type: str = field(repr=False)
     proto: BlockProto.Column = field(repr=False)
     weight: float
-    gap: str | None
+    gap: str | int | None
 
     # Mapping from GapSize enum to string
     _GAP_SIZE_TO_STRING: ClassVar[dict[int, str | None]] = {
@@ -2277,7 +2277,13 @@ class Column(Block):
         self.root = root
         self.type = "column"
         self.weight = proto.weight
-        self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
+        gap_spec = proto.gap_config.WhichOneof("gap_spec")
+        if gap_spec == "gap_pixels":
+            self.gap = proto.gap_config.gap_pixels
+        elif gap_spec == "gap_size":
+            self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
+        else:
+            self.gap = "small"
 
 
 @dataclass(repr=False)

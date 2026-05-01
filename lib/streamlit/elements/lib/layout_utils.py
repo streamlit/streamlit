@@ -26,7 +26,7 @@ from streamlit.errors import (
     StreamlitInvalidWidthError,
 )
 from streamlit.proto.Block_pb2 import Block
-from streamlit.proto.GapSize_pb2 import GapSize
+from streamlit.proto.GapSize_pb2 import GapConfig, GapSize
 from streamlit.proto.HeightConfig_pb2 import HeightConfig
 from streamlit.proto.TextAlignmentConfig_pb2 import TextAlignmentConfig
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
@@ -305,6 +305,41 @@ def get_gap_size(gap: str | None, element_type: str) -> GapSize.ValueType:
         return GapSize.NONE
 
     raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+
+
+def build_gap_config(gap: Gap | int | None, element_type: str) -> GapConfig:
+    """Build a ``GapConfig`` from the public ``gap`` API (sizes, ``None``, or pixels).
+
+    Parameters
+    ----------
+    gap
+        A named size key, ``None`` for no gap, or a positive ``int`` for a fixed
+        gap in pixels. Boolean values are rejected (``bool`` is a subclass of
+        ``int``). Floating-point numbers are rejected; use ``int`` only.
+    element_type
+        ``\"st.container\"`` or ``\"st.columns\"`` for error messages.
+
+    Returns
+    -------
+    GapConfig
+        Proto message with either ``gap_size`` or ``gap_pixels`` set.
+    """
+    config = GapConfig()
+    if gap is None:
+        config.gap_size = GapSize.NONE
+        return config
+    if isinstance(gap, bool):
+        raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+    if isinstance(gap, int):
+        if gap <= 0:
+            raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+        config.gap_pixels = gap
+        return config
+    if isinstance(gap, float):
+        raise StreamlitInvalidColumnGapError(gap=gap, element_type=element_type)
+
+    config.gap_size = get_gap_size(gap, element_type)
+    return config
 
 
 def validate_horizontal_alignment(horizontal_alignment: HorizontalAlignment) -> None:

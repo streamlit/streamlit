@@ -184,13 +184,34 @@ export function getKeyFromId(
   return userKey === "None" ? undefined : userKey
 }
 
-export function getColumnGapSize(
-  columnProto: BlockProto.IColumn
-): streamlit.GapSize {
-  if (columnProto.gapConfig?.gapSize) {
-    return columnProto.gapConfig.gapSize
+/** Resolved gap for a column: either a theme gap size or a pixel value. */
+export interface FlexColumnGap {
+  gapSize: streamlit.GapSize | undefined
+  gapPixels: number | undefined
+}
+
+export function getFlexColumnGap(columnProto: BlockProto.IColumn): FlexColumnGap {
+  const gc = columnProto.gapConfig
+  if (gc?.gapSpec === "gapPixels") {
+    return {
+      gapSize: undefined,
+      gapPixels: gc.gapPixels ?? undefined,
+    }
   }
-  return streamlit.GapSize.SMALL
+  const gapSize = gc?.gapSize
+  if (
+    gapSize == null ||
+    gapSize === streamlit.GapSize.GAP_UNDEFINED
+  ) {
+    return {
+      gapSize: streamlit.GapSize.SMALL,
+      gapPixels: undefined,
+    }
+  }
+  return {
+    gapSize,
+    gapPixels: undefined,
+  }
 }
 
 export function checkFlexContainerBackwardsCompatibile(

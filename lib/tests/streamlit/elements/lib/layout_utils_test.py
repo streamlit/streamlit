@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 from streamlit.elements.lib.layout_utils import (
     SpaceSize,
+    build_gap_config,
     get_align,
     get_gap_size,
     get_height_config,
@@ -220,6 +221,26 @@ class LayoutUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitInvalidColumnGapError):
             get_gap_size("tiny", "st.columns")
+
+    def test_build_gap_config_pixel_gap(self):
+        """build_gap_config sets gap_pixels for positive int."""
+        config = build_gap_config(7, "st.columns")
+        assert config.WhichOneof("gap_spec") == "gap_pixels"
+        assert config.gap_pixels == 7
+
+    def test_build_gap_config_rejects_non_positive_int(self):
+        """build_gap_config raises for zero or negative pixel gaps."""
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            build_gap_config(0, "st.container")
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            build_gap_config(-2, "st.columns")
+
+    def test_build_gap_config_rejects_bool_and_float(self):
+        """build_gap_config rejects bool and float (API is int or named sizes)."""
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            build_gap_config(True, "st.columns")
+        with pytest.raises(StreamlitInvalidColumnGapError):
+            build_gap_config(1.5, "st.container")
 
     @parameterized.expand(
         [

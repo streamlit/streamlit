@@ -32,7 +32,7 @@ import {
   checkFlexContainerBackwardsCompatibile,
   convertKeyToClassName,
   getBorderBackwardsCompatible,
-  getColumnGapSize,
+  getFlexColumnGap,
   getKeyFromId,
   isElementStale,
   shouldActivateScrollToBottom,
@@ -180,14 +180,17 @@ describe("getKeyFromId", () => {
   })
 })
 
-describe("getColumnGapSize", () => {
+describe("getFlexColumnGap", () => {
   it("returns gapSize when it exists", () => {
     const columnProto = {
       gapConfig: {
         gapSize: streamlit.GapSize.MEDIUM,
       },
     }
-    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.MEDIUM)
+    expect(getFlexColumnGap(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.MEDIUM,
+      gapPixels: undefined,
+    })
   })
 
   it("returns default gapSize when gapSize is undefined", () => {
@@ -196,12 +199,31 @@ describe("getColumnGapSize", () => {
         gapSize: streamlit.GapSize.GAP_UNDEFINED,
       },
     }
-    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
+    expect(getFlexColumnGap(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.SMALL,
+      gapPixels: undefined,
+    })
   })
 
   it("returns GapSize.SMALL when gapConfig does not exist", () => {
     const columnProto = {}
-    expect(getColumnGapSize(columnProto)).toBe(streamlit.GapSize.SMALL)
+    expect(getFlexColumnGap(columnProto)).toEqual({
+      gapSize: streamlit.GapSize.SMALL,
+      gapPixels: undefined,
+    })
+  })
+
+  it("returns gapPixels when gapSpec is gapPixels", () => {
+    const columnProto = {
+      gapConfig: streamlit.GapConfig.create({
+        gapPixels: 11,
+        gapSpec: "gapPixels",
+      }),
+    }
+    expect(getFlexColumnGap(columnProto)).toEqual({
+      gapSize: undefined,
+      gapPixels: 11,
+    })
   })
 })
 

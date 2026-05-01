@@ -265,12 +265,33 @@ class ColumnsTest(DeltaGeneratorTestCase):
             )
             assert col_block.add_block.column.gap_config.gap_size == GapSize.NONE
 
+    def test_columns_with_pixel_gap(self):
+        """Positive integer gap sets gap_pixels on flex container and columns."""
+        st.columns(3, gap=12)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        horizontal_container = all_deltas[0]
+        columns_blocks = all_deltas[1:4]
+
+        assert len(all_deltas) == 4
+        hgc = horizontal_container.add_block.flex_container.gap_config
+        assert hgc.WhichOneof("gap_spec") == "gap_pixels"
+        assert hgc.gap_pixels == 12
+
+        for col_block in columns_blocks:
+            cgc = col_block.add_block.column.gap_config
+            assert cgc.WhichOneof("gap_spec") == "gap_pixels"
+            assert cgc.gap_pixels == 12
+
     @parameterized.expand(
         [
             "invalid",
-            5,
             "5rem",
             "10px",
+            0,
+            -3,
+            3.14,
+            True,
         ]
     )
     def test_columns_with_invalid_gap(self, invalid_gap):
@@ -797,19 +818,25 @@ class ContainerTest(DeltaGeneratorTestCase):
 
     @parameterized.expand(
         [
-            ("small", GapSize.SMALL),
-            ("medium", GapSize.MEDIUM),
-            ("large", GapSize.LARGE),
-            (None, GapSize.NONE),
+            ("small", "gap_size", GapSize.SMALL, None),
+            ("medium", "gap_size", GapSize.MEDIUM, None),
+            ("large", "gap_size", GapSize.LARGE, None),
+            (None, "gap_size", GapSize.NONE, None),
+            (8, "gap_pixels", None, 8),
         ],
     )
-    def test_container_gap(self, gap, expected_gap) -> None:
+    def test_container_gap(
+        self, gap, expected_spec: str, expected_gap_size, expected_pixels
+    ) -> None:
         """Test that st.container sets the gap property correctly."""
         st.container(gap=gap)
         container_block = self.get_delta_from_queue()
-        assert (
-            container_block.add_block.flex_container.gap_config.gap_size == expected_gap
-        )
+        gc = container_block.add_block.flex_container.gap_config
+        assert gc.WhichOneof("gap_spec") == expected_spec
+        if expected_spec == "gap_size":
+            assert gc.gap_size == expected_gap_size
+        else:
+            assert gc.gap_pixels == expected_pixels
 
     @parameterized.expand(
         [

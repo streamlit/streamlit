@@ -59,7 +59,7 @@ import {
   convertKeyToClassName,
   getBorderBackwardsCompatible,
   getClassnamePrefix,
-  getColumnGapSize,
+  getFlexColumnGap,
   getKeyFromId,
   isComponentStale,
   shouldActivateScrollToBottom,
@@ -168,12 +168,25 @@ export const FlexBoxContainer = (
     subElement: getLayoutSubElement(props.node.deltaBlock),
   })
 
+  const flexGapConfig = props.node.deltaBlock.flexContainer?.gapConfig
+  let flexGap: streamlit.GapSize | undefined
+  let flexGapPixels: number | undefined
+  if (flexGapConfig?.gapSpec === "gapPixels") {
+    flexGapPixels = flexGapConfig.gapPixels ?? undefined
+    flexGap = undefined
+  } else {
+    // Backwards compatible with old proto messages since previously
+    // the gap size was defaulted to small.
+    const gs = flexGapConfig?.gapSize
+    flexGap =
+      gs == null || gs === streamlit.GapSize.GAP_UNDEFINED
+        ? streamlit.GapSize.SMALL
+        : gs
+  }
+
   const styles = {
-    gap:
-      // This is backwards compatible with old proto messages since previously
-      // the gap size was defaulted to small.
-      props.node.deltaBlock.flexContainer?.gapConfig?.gapSize ??
-      streamlit.GapSize.SMALL,
+    gap: flexGap,
+    gapPixels: flexGapPixels,
     direction: direction,
     // This is also backwards compatible since previously wrap was not added
     // to the flex container.
@@ -382,10 +395,12 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.column) {
+    const { gapSize, gapPixels } = getFlexColumnGap(node.deltaBlock.column)
     return (
       <StyledColumn
         weight={node.deltaBlock.column.weight ?? 0}
-        gap={getColumnGapSize(node.deltaBlock.column)}
+        gap={gapSize}
+        gapPixels={gapPixels}
         verticalAlignment={
           node.deltaBlock.column.verticalAlignment ?? undefined
         }
