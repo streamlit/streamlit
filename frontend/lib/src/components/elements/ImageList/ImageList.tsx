@@ -42,6 +42,16 @@ import {
 
 const LOG = getLogger("ImageList")
 
+const SVG_DATA_URI_PREFIX = "data:image/svg+xml"
+
+/** Returns true if the URL refers to an SVG image. */
+function isSvgUrl(url: string | null | undefined): boolean {
+  return (
+    url?.startsWith(SVG_DATA_URI_PREFIX) === true ||
+    url?.endsWith(".svg") === true
+  )
+}
+
 export interface ImageListProps {
   endpoints: StreamlitEndpoints
   element: ImageListProto
@@ -161,9 +171,16 @@ function ImageList({
   // The width of the container element, not necessarily the image.
   const containerWidth = width || 0
 
-  const imageWidth = getImageWidth(widthConfig, containerWidth)
+  const hasSvgImages = element.imgs.some(img => isSvgUrl(img.url))
+  // SVGs with no explicit pixel width may have no intrinsic size (e.g. width="100%")
+  // and collapse to 0×0 in auto-width containers. Apply container-width stretch instead.
+  const svgNeedsStretch = hasSvgImages && !widthConfig?.pixelWidth
 
-  const shouldStretch = widthConfig?.useStretch ?? false
+  const imageWidth = svgNeedsStretch
+    ? containerWidth
+    : getImageWidth(widthConfig, containerWidth)
+
+  const shouldStretch = (widthConfig?.useStretch ?? false) || svgNeedsStretch
 
   const imgStyle: CSSProperties = {}
 

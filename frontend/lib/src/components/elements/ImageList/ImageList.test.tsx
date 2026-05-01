@@ -178,6 +178,61 @@ describe("ImageList Element", () => {
     })
   })
 
+  describe("SVG width behavior", () => {
+    // SVG encoded as a data URI (as the backend produces)
+    const SVG_URL = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgdmlld0JveD0iMCAwIDEwMCAxMDAiLz4="
+
+    it("stretches SVG to container width when no widthConfig is provided", () => {
+      const props = getProps({ imgs: [{ caption: "svg", url: SVG_URL }] })
+      render(<ImageList {...props} />)
+
+      // Container width is 250px (from useResizeObserver mock)
+      const image = screen.getByRole("img")
+      expect(image).toHaveStyle("width: 250px")
+    })
+
+    it("stretches SVG to container width with useContent config", () => {
+      const props = getProps(
+        { imgs: [{ caption: "svg", url: SVG_URL }] },
+        { useContent: true }
+      )
+      render(<ImageList {...props} />)
+
+      const image = screen.getByRole("img")
+      expect(image).toHaveStyle("width: 250px")
+    })
+
+    it("respects explicit pixel width for SVG images", () => {
+      const props = getProps(
+        { imgs: [{ caption: "svg", url: SVG_URL }] },
+        { pixelWidth: 400 }
+      )
+      render(<ImageList {...props} />)
+
+      const image = screen.getByRole("img")
+      expect(image).toHaveStyle("width: 400px")
+      expect(image).not.toHaveStyle("width: 250px")
+    })
+
+    it("stretches SVG images served from .svg URLs", () => {
+      const props = getProps({ imgs: [{ caption: "svg", url: "/media/chart.svg" }] })
+      render(<ImageList {...props} />)
+
+      const image = screen.getByRole("img")
+      expect(image).toHaveStyle("width: 250px")
+    })
+
+    it("does not apply SVG stretch behavior to non-SVG images", () => {
+      const props = getProps({ imgs: [{ url: "/media/mockImage1.jpeg" }] })
+      render(<ImageList {...props} />)
+
+      const image = screen.getByRole("img")
+      // Non-SVG images in content mode get 100% (auto fallback), not containerWidth
+      expect(image).toHaveStyle("width: 100%")
+      expect(image).not.toHaveStyle("width: 250px")
+    })
+  })
+
   describe("Fallback behavior", () => {
     it("defaults to content behavior when no widthConfig is provided", () => {
       const props = getProps()
