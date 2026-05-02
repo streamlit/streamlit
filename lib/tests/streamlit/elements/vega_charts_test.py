@@ -1666,6 +1666,57 @@ ST_CHART_ARGS = [
 class BuiltInChartTest(DeltaGeneratorTestCase):
     """Test our built-in chart commands."""
 
+    def test_compare_chart_is_exposed_on_streamlit(self):
+        """Test that the compare_chart API is publicly exposed."""
+        assert callable(st.compare_chart)
+
+    def test_compare_chart_with_default_arguments(self):
+        """Test that compare_chart accepts defaults with two simple DataFrames."""
+        before_df = pd.DataFrame({"x": [1, 2], "y": [10, 20]})
+        after_df = pd.DataFrame({"x": [1, 2], "y": [15, 25]})
+
+        st.compare_chart(before_df, after_df)
+
+        deltas = self.get_all_deltas_from_queue()
+        vega_chart_deltas = [
+            delta for delta in deltas if delta.new_element.HasField("vega_lite_chart")
+        ]
+
+        assert len(vega_chart_deltas) == 2
+
+    def test_compare_chart_accepts_explicit_default_values(self):
+        """Test compare_chart accepts explicit Task 1 default values."""
+        before_df = pd.DataFrame({"x": [1, 2], "y": [10, 20]})
+        after_df = pd.DataFrame({"x": [1, 2], "y": [15, 25]})
+
+        st.compare_chart(
+            data_before=before_df,
+            data_after=after_df,
+            x=None,
+            y=None,
+            chart_type="line",
+            mode="side_by_side",
+            labels=("Before", "After"),
+            width=None,
+            height=None,
+        )
+
+        deltas = self.get_all_deltas_from_queue()
+        vega_chart_deltas = [
+            delta for delta in deltas if delta.new_element.HasField("vega_lite_chart")
+        ]
+
+        assert len(vega_chart_deltas) == 2
+
+    @parameterized.expand(["overlay", "difference", "ratio"])
+    def test_compare_chart_unsupported_modes_raise_error(self, mode: str):
+        """Test unsupported compare_chart modes raise a clear error."""
+        before_df = pd.DataFrame({"x": [1, 2], "y": [10, 20]})
+        after_df = pd.DataFrame({"x": [1, 2], "y": [15, 25]})
+
+        with pytest.raises(StreamlitAPIException, match='Only "side_by_side"'):
+            st.compare_chart(before_df, after_df, mode=mode)
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
         """Test arrow chart with no arguments."""

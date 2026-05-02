@@ -222,6 +222,7 @@ info = _main.info
 json = _main.json
 latex = _main.latex
 line_chart = _main.line_chart
+compare_chart = _main.compare_chart
 link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown

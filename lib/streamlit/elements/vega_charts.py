@@ -1750,6 +1750,69 @@ class VegaChartsMixin:
             ),
         )
 
+    @gather_metrics("compare_chart")
+    def compare_chart(
+        self,
+        data_before: Data = None,
+        data_after: Data = None,
+        x: str | None = None,
+        y: str | Sequence[str] | None = None,
+        chart_type: str = "line",
+        mode: str = "side_by_side",
+        labels: tuple[str, str] = ("Before", "After"),
+        width: Width | None = None,
+        height: Height | None = None,
+    ) -> tuple[DeltaGenerator, DeltaGenerator]:
+        """Display two charts for comparing data.
+
+        This initial implementation only supports ``mode="side_by_side"`` and
+        uses Streamlit's existing built-in chart APIs.
+        """
+        if mode != "side_by_side":
+            raise StreamlitAPIException(
+                'Invalid value for mode parameter. Only "side_by_side" is currently supported.'
+            )
+
+        if chart_type not in {"line", "bar", "area"}:
+            raise StreamlitAPIException(
+                "Invalid value for chart_type parameter. "
+                'chart_type must be one of "line", "bar" or "area".'
+            )
+
+        if len(labels) != 2:
+            raise StreamlitAPIException(
+                "Invalid value for labels parameter. labels must be a tuple of two strings."
+            )
+
+        resolved_width: Width = "stretch" if width is None else width
+        resolved_height: Height = "content" if height is None else height
+
+        left_col, right_col = self.columns(2)
+
+        left_col.caption(labels[0])
+        right_col.caption(labels[1])
+
+        chart_method_name = f"{chart_type}_chart"
+        left_chart_method = cast("Any", getattr(left_col, chart_method_name))
+        right_chart_method = cast("Any", getattr(right_col, chart_method_name))
+
+        left_chart = left_chart_method(
+            data_before,
+            x=x,
+            y=y,
+            width=resolved_width,
+            height=resolved_height,
+        )
+        right_chart = right_chart_method(
+            data_after,
+            x=x,
+            y=y,
+            width=resolved_width,
+            height=resolved_height,
+        )
+
+        return left_chart, right_chart
+
     # When on_select=Ignore, return DeltaGenerator.
     @overload
     def altair_chart(
