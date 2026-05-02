@@ -162,8 +162,8 @@ describe("MarkdownCell renderer", () => {
   describe("provideEditor", () => {
     it("returns an editor configuration", () => {
       const mockCell = createMarkdownCell("# Test", "Test")
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion, @typescript-eslint/no-explicit-any -- Test assertion
-      const editorConfig = renderer.provideEditor!(mockCell as any)
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
+      const editorConfig = renderer.provideEditor!(mockCell)
 
       expect(editorConfig).toBeDefined()
       expect(
