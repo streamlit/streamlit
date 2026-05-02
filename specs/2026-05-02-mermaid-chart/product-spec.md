@@ -282,6 +282,32 @@ Mermaid to render richer label styling where supported while maintaining securit
   browser, so the initial JavaScript bundle loaded on app startup remains unchanged until a
   Mermaid diagram is actually rendered.
 
+## Backwards Compatibility
+
+### Markdown Fence Behavior Change
+
+Today, `st.markdown("```mermaid\n...\n```")` renders as a plain fenced code block showing
+the Mermaid source. After this change, it will render as a diagram instead.
+
+**Decision:** This is an intentional behavior change that aligns Streamlit with GitHub, GitLab,
+Notion, Obsidian, and other platforms where mermaid fences render automatically. This
+consistency is a feature, not a bug — users can copy markdown between platforms without
+modification.
+
+**Escape hatch for displaying Mermaid source:** Users who want to display Mermaid syntax
+as code (tutorials, documentation viewers, AI transcript tools) should use:
+
+```python
+st.code(mermaid_source, language="mermaid")
+```
+
+This provides syntax highlighting while explicitly preventing rendering.
+
+**Impact assessment:** Apps intentionally displaying Mermaid source as code are rare edge
+cases. The vast majority of users who include mermaid fences in markdown expect them to
+render (matching GitHub behavior). The migration path (`st.markdown` → `st.code`) is
+straightforward and well-documented.
+
 ## Out of Scope (Future Work)
 
 The following are explicitly not included in this initial release:
@@ -320,7 +346,7 @@ may not know about the markdown syntax.
 | Item                         | ✅ or comment |
 |------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | ✅ Client-side rendering, no server dependencies |
-| No breaking API changes      | ✅ New additive feature only |
+| No breaking API changes      | ⚠️ Markdown mermaid fences now render instead of showing source (see Backwards Compatibility) |
 | No new dependencies          | ✅ No new backend (Python) dependencies. mermaid.js is a new frontend dependency (lazy-loaded) |
 | Metrics collected            | ✅ `st.mermaid_chart` tracked via `gather_metrics`. Markdown-based usage tracked via frontend telemetry when mermaid code blocks are rendered |
 | Any security/legal impact?   | ✅ No — mermaid.js is MIT licensed; strict security mode used |
