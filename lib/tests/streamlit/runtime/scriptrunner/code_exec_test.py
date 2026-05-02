@@ -140,8 +140,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         )
         return super().setUp()
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_called_with_exception(
         self, mock_handle: MagicMock, mock_show: MagicMock
     ):
@@ -159,8 +159,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_handle.assert_called_once_with(test_exception, show_in_ui=False)
         mock_show.assert_called_once_with(test_exception)
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_returns_true_suppresses_ui_display(
         self, mock_handle: MagicMock, mock_show: MagicMock
     ):
@@ -180,8 +180,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
     @parameterized.expand(
         [(False,), (None,)], name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}"
     )
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_returns_non_true_shows_ui_display(
         self, return_value: bool | None, mock_handle: MagicMock, mock_show: MagicMock
     ):
@@ -199,8 +199,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_show.assert_called_once_with(test_exception)
 
     @patch("streamlit.error_util._LOGGER")
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_exception_logged_and_ui_shown(
         self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
     ):
@@ -222,8 +222,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         )
         mock_show.assert_called_once_with(test_exception)
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_no_handler_shows_ui_display(
         self, mock_handle: MagicMock, mock_show: MagicMock
     ):
@@ -239,8 +239,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_handle.assert_called_once_with(test_exception, show_in_ui=False)
         mock_show.assert_called_once_with(test_exception)
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_not_called_for_stop_exception(
         self, mock_handle: MagicMock, mock_show: MagicMock
     ):
@@ -257,8 +257,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_handle.assert_not_called()
         mock_show.assert_not_called()
 
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_not_called_for_rerun_exception(
         self, mock_handle: MagicMock, mock_show: MagicMock
     ):
@@ -276,8 +276,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_show.assert_not_called()
 
     @patch("streamlit.error_util._LOGGER")
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_raising_stop_exception_is_logged(
         self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
     ):
@@ -304,8 +304,8 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_show.assert_called_once_with(test_exception)
 
     @patch("streamlit.error_util._LOGGER")
-    @patch("streamlit.runtime.scriptrunner.exec_code.show_uncaught_app_exception")
-    @patch("streamlit.runtime.scriptrunner.exec_code.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     def test_handler_raising_rerun_exception_is_logged(
         self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
     ):
