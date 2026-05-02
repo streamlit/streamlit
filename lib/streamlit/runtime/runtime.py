@@ -36,6 +36,7 @@ from streamlit.runtime.caching.storage.local_disk_cache_storage import (
 )
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_session_storage import MemorySessionStorage
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.script_data import ScriptData
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.session_manager import (
@@ -668,9 +669,8 @@ class Runtime:
                             # Yield for a tick after sending a message.
                             await asyncio.sleep(0)
 
-                    # Yield for a few milliseconds between session message
-                    # flushing.
-                    await asyncio.sleep(0.01)
+                    # Yield briefly between session message flushing cycles.
+                    await asyncio.sleep(MESSAGE_FLUSH_INTERVAL_SECS)
                 else:
                     # Break out of the thread loop if we encounter any other state.
                     break

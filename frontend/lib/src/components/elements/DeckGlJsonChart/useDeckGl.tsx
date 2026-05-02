@@ -533,7 +533,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     delete jsonCopy?.views // We are not using views. This avoids a console warning.
 
-    return jsonConverter.convert(jsonCopy)
+    return jsonConverter.convert(jsonCopy) as DeckObject
   }, [
     data.selection.indices,
     isLightTheme,

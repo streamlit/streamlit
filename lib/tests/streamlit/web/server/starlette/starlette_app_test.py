@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
@@ -2091,3 +2092,195 @@ class TestAppAutoStart:
         assert auto_start_call_count == 1
         assert app._auto_started is True
         assert config._server_mode == "asgi-mounted"
+
+
+# --- Tests for App secrets parameter ---
+
+
+class TestAppSecrets:
+    """Tests for App programmatic secrets parameter."""
+
+    @pytest.fixture(autouse=True)
+    def _reset_runtime(self, reset_runtime: None) -> None:
+        """Auto-use the reset_runtime fixture for all tests in this class."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_static_dir(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Mock the static directory for all tests in this class."""
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>test</html>")
+        monkeypatch.setattr(file_util, "get_static_dir", lambda: str(static_dir))
+
+    @pytest.fixture(autouse=True)
+    def _reset_secrets(self) -> Iterator[None]:
+        """Reset secrets singleton and restore os.environ before and after each test."""
+        from streamlit.runtime.secrets import secrets_singleton
+
+        # Save current environ to restore after test (secrets can promote to environ)
+        prev_environ = dict(os.environ)
+
+        secrets_singleton._reset()
+        yield
+        secrets_singleton._reset()
+
+        # Restore original environ
+        os.environ.clear()
+        os.environ.update(prev_environ)
+
+    def test_stores_secrets(self, simple_script: Path) -> None:
+        """App stores the secrets parameter for later use."""
+        secrets = {"api_key": "secret123", "nested": {"value": 42}}
+        app = App(simple_script, secrets=secrets)
+
+        assert app._programmatic_secrets is not None
+        assert app._programmatic_secrets["api_key"] == "secret123"
+        assert app._programmatic_secrets["nested"]["value"] == 42
+
+    def test_accepts_none_secrets(self, simple_script: Path) -> None:
+        """App accepts None for secrets parameter."""
+        app = App(simple_script, secrets=None)
+        assert app._programmatic_secrets is None
+
+    @pytest.mark.parametrize(
+        ("secrets", "expected_match"),
+        [
+            pytest.param({"bad": [1, 2, 3]}, "Unsupported type 'list'", id="list"),
+            pytest.param(
+                {"outer": {"inner": [1, 2]}}, r"at 'outer\.inner'", id="nested_list"
+            ),
+            pytest.param(
+                {1: "value"}, r"Dictionary keys.*must be strings", id="int_key"
+            ),
+        ],
+    )
+    def test_validates_secrets_types_at_construction(
+        self, simple_script: Path, secrets: dict[str, Any], expected_match: str
+    ) -> None:
+        """Invalid secret types raise TypeError at construction."""
+        with pytest.raises(TypeError, match=expected_match):
+            App(simple_script, secrets=secrets)
+
+    @pytest.mark.parametrize(
+        "non_mapping",
+        [
+            pytest.param(["a", "b"], id="list"),
+            pytest.param("string", id="str"),
+            pytest.param(42, id="int"),
+        ],
+    )
+    def test_rejects_non_mapping_secrets(
+        self, simple_script: Path, non_mapping: Any
+    ) -> None:
+        """Non-mapping secrets types raise TypeError."""
+        with pytest.raises(TypeError, match=r"secrets must be a mapping"):
+            App(simple_script, secrets=non_mapping)
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_available_in_st_secrets(self, simple_script: Path) -> None:
+        """Programmatic secrets are available via st.secrets after startup."""
+        from streamlit.runtime.secrets import secrets_singleton
+
+        app = App(
+            simple_script,
+            secrets={
+                "api_key": "secret123",
+                "database": {"host": "localhost", "port": 5432},
+            },
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+
+            assert secrets_singleton["api_key"] == "secret123"
+            assert secrets_singleton["database"]["host"] == "localhost"
+            assert secrets_singleton["database"]["port"] == 5432
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_promoted_to_environ(self, simple_script: Path) -> None:
+        """Top-level str/int/float secrets are promoted to os.environ."""
+        import os
+
+        app = App(
+            simple_script,
+            secrets={"str_key": "value", "int_key": 42, "float_key": 3.14},
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+
+            # Lowercase keys test that secrets API preserves key casing
+            assert os.environ.get("str_key") == "value"  # noqa: SIM112
+            assert os.environ.get("int_key") == "42"  # noqa: SIM112
+            assert os.environ.get("float_key") == "3.14"  # noqa: SIM112
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_with_lifespan(self, simple_script: Path) -> None:
+        """Secrets work correctly with user-provided lifespan."""
+        from streamlit.runtime.secrets import secrets_singleton
+
+        startup_called = False
+
+        @asynccontextmanager
+        async def lifespan(app: App) -> AsyncIterator[dict[str, Any]]:
+            nonlocal startup_called
+            startup_called = True
+            yield {"loaded": True}
+
+        app = App(
+            simple_script,
+            secrets={"from_lifespan_test": "works"},
+            lifespan=lifespan,
+        )
+
+        with TestClient(app) as client:
+            response = client.get("/_stcore/health")
+            assert response.status_code == 200
+
+            assert startup_called
+            assert secrets_singleton["from_lifespan_test"] == "works"
+
+    @patch_config_options(
+        {
+            "server.baseUrlPath": "",
+            "global.developmentMode": False,
+            "server.enableXsrfProtection": False,
+        }
+    )
+    def test_secrets_with_auto_start(self, simple_script: Path) -> None:
+        """Secrets work correctly when auto-starting mounted apps."""
+        from starlette.applications import Starlette
+
+        from streamlit.runtime.secrets import secrets_singleton
+
+        app = App(simple_script, secrets={"auto_start_secret": "value"})
+
+        # Mount without using lifespan() - triggers auto-start
+        wrapper = Starlette()
+        wrapper.mount("/streamlit", app)
+
+        with TestClient(wrapper) as client:
+            response = client.get("/streamlit/_stcore/health")
+            assert response.status_code == 200
+
+            assert secrets_singleton["auto_start_secret"] == "value"

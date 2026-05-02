@@ -87,6 +87,29 @@ class DataframeUtilTest(unittest.TestCase):
         col_type = result_table.schema.field("col").type
         assert col_type in {pa.string(), pa.large_string()}
 
+    def test_convert_arrow_table_to_arrow_bytes_downcasts_large_list(self):
+        """Test that convert_arrow_table_to_arrow_bytes downcasts large_list to list."""
+        table = pa.table(
+            {
+                "list_col": pa.array(
+                    [[1, 2], [3, 4, 5]], type=pa.large_list(pa.int64())
+                ),
+                "str_col": pa.array(["a", "b"], type=pa.large_string()),
+            }
+        )
+
+        result_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(table)
+        result_table = pa.ipc.open_stream(result_bytes).read_all()
+
+        # large_list should be downcast to list
+        list_field = result_table.schema.field("list_col")
+        assert pa.types.is_list(list_field.type)
+        assert not pa.types.is_large_list(list_field.type)
+
+        # large_string should be preserved (Arrow JS supports it)
+        str_field = result_table.schema.field("str_col")
+        assert pa.types.is_large_string(str_field.type)
+
     @parameterized.expand(
         SHARED_TEST_CASES,
     )
@@ -1400,3 +1423,218 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue(-2).new_element
         assert "due to data size limitations" in el.markdown.body
         assert el.markdown.element_type == MarkdownProto.Type.CAPTION
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_dataframe() -> None:
+    """Direct Polars DataFrame to Arrow IPC produces valid bytes with correct schema."""
+    import polars as pl
+
+    df = pl.DataFrame(
+        {
+            "int_col": [1, 2, 3],
+            "str_col": ["hello", "world", "test"],
+            "float_col": [1.5, 2.5, 3.5],
+        }
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.num_columns == 3
+    assert table.column_names == ["int_col", "str_col", "float_col"]
+    # Polars uses large_string by default
+    assert table.schema.field("str_col").type == pa.large_string()
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_series() -> None:
+    """Direct Polars Series to Arrow IPC produces valid single-column bytes."""
+    import polars as pl
+
+    series = pl.Series("values", ["a", "b", "c"])
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(series)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.num_columns == 1
+    assert "values" in table.column_names
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_with_limit() -> None:
+    """Direct Polars LazyFrame to Arrow IPC respects row limits and shows warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(100)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        mock_info.assert_called_once()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 50
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_various_types() -> None:
+    """Direct Polars conversion handles various data types correctly."""
+    from datetime import date, datetime
+
+    import polars as pl
+
+    df = pl.DataFrame(
+        {
+            "int8": pl.Series([1, 2, 3], dtype=pl.Int8),
+            "int64": pl.Series([10, 20, 30], dtype=pl.Int64),
+            "float64": pl.Series([1.1, 2.2, 3.3], dtype=pl.Float64),
+            "bool": pl.Series([True, False, True], dtype=pl.Boolean),
+            "date": pl.Series([date(2020, 1, 1), date(2020, 1, 2), date(2020, 1, 3)]),
+            "datetime": pl.Series(
+                [datetime(2020, 1, 1, 12, 0), datetime(2020, 1, 2, 12, 0), None]
+            ),
+            "string": pl.Series(["a", "b", "c"], dtype=pl.Utf8),
+            "list": pl.Series([[1, 2], [3, 4], [5, 6]]),
+        }
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.num_columns == 8
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_with_nulls() -> None:
+    """Direct Polars conversion handles null values correctly."""
+    import polars as pl
+
+    df = pl.DataFrame(
+        {
+            "with_null": [1, None, 3],
+            "all_null": [None, None, None],
+            "str_null": ["a", None, "c"],
+        }
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+    assert table.column("with_null").null_count == 1
+    assert table.column("all_null").null_count == 3
+    assert table.column("str_null").null_count == 1
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_downcasts_large_list() -> None:
+    """Direct Polars path downcasts large_list to list for Arrow JS compatibility."""
+    import polars as pl
+
+    df = pl.DataFrame(
+        {"list_col": [[1, 2], [3, 4, 5], [6]], "str_col": ["a", "b", "c"]}
+    )
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3
+
+    # large_list should be downcast to list (Arrow JS doesn't support large_list)
+    list_field = table.schema.field("list_col")
+    assert pa.types.is_list(list_field.type), f"Expected list, got {list_field.type}"
+    assert not pa.types.is_large_list(list_field.type)
+
+    # large_string should be preserved (Arrow JS supports it)
+    str_field = table.schema.field("str_col")
+    assert pa.types.is_large_string(str_field.type)
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_empty_dataframe() -> None:
+    """Direct Polars path handles empty DataFrames correctly."""
+    import polars as pl
+
+    df = pl.DataFrame({"col": []}).cast({"col": pl.Int64})
+
+    result = dataframe_util.convert_anything_to_arrow_bytes(df)
+    assert isinstance(result, bytes)
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 0
+    assert table.num_columns == 1
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_no_warning_when_within_limit() -> None:
+    """LazyFrame with fewer rows than limit should not show warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(30)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        mock_info.assert_not_called()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 30
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_lazyframe_exact_row_count_no_warning() -> None:
+    """LazyFrame with exactly max_unevaluated_rows should not show false positive warning."""
+    import polars as pl
+
+    lf = pl.LazyFrame({"x": range(50)})
+
+    with patch.object(dataframe_util, "_show_data_information") as mock_info:
+        result = dataframe_util.convert_anything_to_arrow_bytes(
+            lf, max_unevaluated_rows=50
+        )
+        # No warning because the LazyFrame has exactly 50 rows, not more
+        mock_info.assert_not_called()
+
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 50
+
+
+@pytest.mark.require_integration
+def test_direct_polars_to_arrow_bytes_fallback_on_error() -> None:
+    """Polars fast path falls back to Pandas path when conversion fails."""
+    import polars as pl
+
+    df = pl.DataFrame({"x": [1, 2, 3]})
+
+    with patch.object(
+        dataframe_util,
+        "_convert_polars_to_arrow_bytes",
+        side_effect=RuntimeError("boom"),
+    ):
+        # Should still succeed via the Pandas fallback path
+        result = dataframe_util.convert_anything_to_arrow_bytes(df)
+
+    assert isinstance(result, bytes)
+    reader = pa.RecordBatchStreamReader(result)
+    table = reader.read_all()
+    assert table.num_rows == 3

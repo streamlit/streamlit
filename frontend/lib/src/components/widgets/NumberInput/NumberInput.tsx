@@ -181,7 +181,6 @@ const NumberInput: React.FC<Props> = ({
   // This is the recommended pattern for syncing with external systems per React docs.
   useEffect(() => {
     if (!dirty) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external backend value
       setFormattedValue(formatCurrentValue(value))
     }
   }, [value, dirty, formatCurrentValue])

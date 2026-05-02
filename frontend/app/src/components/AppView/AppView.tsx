@@ -19,6 +19,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from "react"
 
@@ -35,16 +36,19 @@ import {
 } from "@streamlit/app/src/components/Sidebar/utils"
 import { StreamlitEndpoints } from "@streamlit/connection"
 import {
+  AppNode,
   AppRoot,
   BlockNode,
   ComponentRegistry,
   ContainerContentsWrapper,
+  ElementNode,
   FileUploadClient,
   IGuestToHostMessage,
   NavigationContext,
   Profiler,
   SidebarConfigContext,
   ThemeContext,
+  TransientNode,
   useExecuteWhenChanged,
   useWindowDimensionsContext,
   WidgetStateManager,
@@ -65,6 +69,33 @@ import {
   StyledSidebarBlockContainer,
   StyledStickyBottomContainer,
 } from "./styled-components"
+
+/**
+ * Recursively checks if the given node contains a chat input element.
+ */
+function containsChatInput(node: AppNode): boolean {
+  if (node instanceof ElementNode) {
+    return node.element.type === "chatInput"
+  }
+
+  if (node instanceof BlockNode) {
+    return node.children.some(containsChatInput)
+  }
+
+  if (node instanceof TransientNode) {
+    const anchorHasChatInput = node.anchor
+      ? containsChatInput(node.anchor)
+      : false
+    const transientHasChatInput = node.transientNodes.some(
+      el => el.element.type === "chatInput"
+    )
+    return anchorHasChatInput || transientHasChatInput
+  }
+
+  // Unknown AppNode subtypes are assumed to not contain a chat input.
+  // Update this function if a new node type is added that could contain one.
+  return false
+}
 
 export interface AppViewProps {
   elements: AppRoot
@@ -165,7 +196,6 @@ function AppView(props: AppViewProps): ReactElement {
   useEffect(() => {
     // Handle sidebar flicker/unmount with MPA & hideSidebarNav
     if (showSidebar && hideSidebarNav && !showSidebarOverride) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setShowSidebarOverride(true)
     }
   }, [showSidebar, hideSidebarNav, showSidebarOverride])
@@ -188,8 +218,12 @@ function AppView(props: AppViewProps): ReactElement {
     removeScriptFinishedHandler,
   ])
 
-  // Activate scroll to bottom whenever there are bottom elements:
-  const Component = hasBottomElements
+  // Activate scroll to bottom only when there's a chat input in the bottom container:
+  const hasBottomChatInput = useMemo(
+    () => hasBottomElements && containsChatInput(elements.bottom),
+    [hasBottomElements, elements.bottom]
+  )
+  const Component = hasBottomChatInput
     ? ScrollToBottomContainer
     : StyledAppViewMain
 

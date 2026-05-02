@@ -16,17 +16,39 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+from unittest import mock
 from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
 
 from streamlit.elements.lib.image_utils import (
+    _4d_to_list_3d,
     _clip_image,
     _validate_image_format_string,
     _verify_np_shape,
+    image_to_url,
+    marshall_images,
 )
+from streamlit.elements.lib.layout_utils import LayoutConfig
 from streamlit.errors import StreamlitAPIException
+from streamlit.proto.Image_pb2 import ImageList as ImageListProto
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
+    from pathlib import Path
+
+_DEFAULT_LAYOUT = LayoutConfig(width="stretch")
+
+
+@pytest.fixture
+def no_runtime() -> Iterator[None]:
+    """Pretend no Streamlit runtime is active so ``image_to_url`` returns ``""``."""
+    with mock.patch(
+        "streamlit.elements.lib.image_utils.runtime.exists", return_value=False
+    ):
+        yield
 
 
 @pytest.mark.parametrize(
@@ -148,3 +170,130 @@ def test_clip_image_invalid_without_clamp(array: np.ndarray, error_substr: str) 
     with pytest.raises(RuntimeError) as exc:
         _clip_image(array, clamp=False)
     assert error_substr in str(exc.value)
+
+
+def test_4d_to_list_3d_splits_along_first_axis() -> None:
+    """``_4d_to_list_3d`` splits a 4D array along its first axis into a list of 3D arrays."""
+    array = np.arange(2 * 3 * 4 * 3).reshape(2, 3, 4, 3)
+    result = _4d_to_list_3d(array)
+
+    assert len(result) == 2
+    np.testing.assert_array_equal(result[0], array[0])
+    np.testing.assert_array_equal(result[1], array[1])
+
+
+def test_image_to_url_reads_local_svg_file(tmp_path: Path) -> None:
+    """``image_to_url`` reads a local ``.svg`` file and returns a base64 data URI."""
+    svg_path = tmp_path / "shape.svg"
+    svg_path.write_text(
+        '<svg xmlns="http://www.w3.org/2000/svg"><rect/></svg>', encoding="utf-8"
+    )
+
+    result = image_to_url(
+        str(svg_path),
+        layout_config=_DEFAULT_LAYOUT,
+        clamp=False,
+        channels="RGB",
+        output_format="auto",
+        image_id="test-svg",
+    )
+
+    assert result.startswith("data:image/svg+xml;base64,")
+
+
+def test_image_to_url_bgr_with_invalid_channel_count_raises() -> None:
+    """``image_to_url`` raises when ``channels="BGR"`` is used with a non-3-channel image."""
+    grayscale_array = np.zeros((10, 10), dtype=np.uint8)
+    with pytest.raises(StreamlitAPIException, match="exactly 3 color channels"):
+        image_to_url(
+            grayscale_array,
+            layout_config=_DEFAULT_LAYOUT,
+            clamp=False,
+            channels="BGR",
+            output_format="auto",
+            image_id="test-bgr",
+        )
+
+
+def test_image_to_url_bgr_accepts_3_channel_image(no_runtime: None) -> None:
+    """``image_to_url`` accepts a 3-channel BGR image without raising."""
+    bgr_array = np.zeros((10, 10, 3), dtype=np.uint8)
+    bgr_array[..., 0] = 255
+
+    result = image_to_url(
+        bgr_array,
+        layout_config=_DEFAULT_LAYOUT,
+        clamp=False,
+        channels="BGR",
+        output_format="auto",
+        image_id="test-bgr-3ch",
+    )
+
+    assert result == ""
+
+
+def test_image_to_url_returns_empty_when_runtime_unavailable(no_runtime: None) -> None:
+    """``image_to_url`` returns an empty string when no runtime is available."""
+    img_array = np.zeros((10, 10, 3), dtype=np.uint8)
+
+    result = image_to_url(
+        img_array,
+        layout_config=_DEFAULT_LAYOUT,
+        clamp=False,
+        channels="RGB",
+        output_format="auto",
+        image_id="test-no-runtime",
+    )
+
+    assert result == ""
+
+
+def test_marshall_images_splits_4d_ndarray_into_list(no_runtime: None) -> None:
+    """``marshall_images`` splits a 4D numpy array into a list of 3D images."""
+    proto = ImageListProto()
+
+    marshall_images(
+        coordinates="0",
+        image=np.zeros((3, 4, 4, 3), dtype=np.uint8),
+        caption=["a", "b", "c"],
+        layout_config=_DEFAULT_LAYOUT,
+        proto_imgs=proto,
+        clamp=False,
+    )
+
+    assert [img.caption for img in proto.imgs] == ["a", "b", "c"]
+
+
+def test_marshall_images_caption_from_1d_ndarray(no_runtime: None) -> None:
+    """A 1D numpy array of captions is converted via ``tolist`` (one caption per image)."""
+    images = [np.zeros((4, 4, 3), dtype=np.uint8) for _ in range(2)]
+    proto = ImageListProto()
+
+    marshall_images(
+        coordinates="0",
+        image=images,
+        caption=np.array(["first", "second"]),
+        layout_config=_DEFAULT_LAYOUT,
+        proto_imgs=proto,
+        clamp=False,
+    )
+
+    assert [img.caption for img in proto.imgs] == ["first", "second"]
+
+
+def test_marshall_images_non_string_non_list_caption_is_stringified(
+    no_runtime: None,
+) -> None:
+    """A non-string, non-list, non-None caption is coerced to a single-element list of ``str``."""
+    proto = ImageListProto()
+
+    marshall_images(
+        coordinates="0",
+        image=np.zeros((4, 4, 3), dtype=np.uint8),
+        caption=42,  # type: ignore[arg-type]
+        layout_config=_DEFAULT_LAYOUT,
+        proto_imgs=proto,
+        clamp=False,
+    )
+
+    assert [img.caption for img in proto.imgs] == ["42"]

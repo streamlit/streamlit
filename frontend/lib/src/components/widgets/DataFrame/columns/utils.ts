@@ -210,7 +210,7 @@ export function getEmptyCell(missingCell = false): LoadingCell {
     kind: GridCellKind.Loading,
     allowOverlay: false,
     copyData: "",
-  } as LoadingCell
+  }
 }
 
 /**
@@ -230,7 +230,7 @@ export function getTextCell(readonly: boolean, faded: boolean): TextCell {
     allowOverlay: true,
     readonly,
     style,
-  } as TextCell
+  }
 }
 
 /**
@@ -253,7 +253,7 @@ export function toGlideColumn(column: BaseColumn): GridColumn {
     ...(column.width && {
       width: column.width,
     }),
-  } as GridColumn
+  }
 }
 
 /**

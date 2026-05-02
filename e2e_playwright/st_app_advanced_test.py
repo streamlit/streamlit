@@ -14,8 +14,8 @@
 
 """E2E tests for st.App with advanced configurations.
 
-Tests verify that custom routes, middleware, lifespan hooks, and exception
-handlers work correctly when using st.App.
+Tests verify that custom routes, middleware, lifespan hooks, exception
+handlers, and programmatic secrets work correctly when using st.App.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ if TYPE_CHECKING:
 
 
 def test_advanced_app_scenario(app: Page, app_base_url: str) -> None:
-    """Test Streamlit UI, widgets, custom routes, middleware, lifespan, and WebSocket.
+    """Test Streamlit UI, widgets, custom routes, middleware, lifespan, WebSocket, and secrets.
 
     This aggregated scenario test verifies:
     - Streamlit UI renders with advanced App config
@@ -40,6 +40,7 @@ def test_advanced_app_scenario(app: Page, app_base_url: str) -> None:
     - Custom routes and middleware function properly
     - Lifespan hooks and exception handlers work
     - WebSocket communication functions with custom middleware
+    - Programmatic secrets are accessible via st.secrets
     """
     # === Part 1: Streamlit UI and widget interaction ===
     # Verify initial UI renders correctly
@@ -105,3 +106,15 @@ def test_advanced_app_scenario(app: Page, app_base_url: str) -> None:
         expect(app.get_by_text(f"Counter: {i}", exact=True)).to_be_visible()
 
     expect(app.get_by_text("Counter: 4", exact=True)).to_be_visible()
+
+    # === Part 4: Programmatic secrets ===
+    # Verify programmatic secrets are available via st.secrets
+    expect(app.get_by_text("API Key: test-api-key-12345")).to_be_visible()
+    expect(app.get_by_text("Database Host: localhost")).to_be_visible()
+    expect(app.get_by_text("Database Port: 5432")).to_be_visible()
+
+    # Verify top-level secrets are promoted to os.environ
+    expect(app.get_by_text("API Key from environ: test-api-key-12345")).to_be_visible()
+
+    # Verify nested secrets via attribute access
+    expect(app.get_by_text("Auth Client ID: my-client-id")).to_be_visible()
