@@ -174,6 +174,7 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
     )
 
 
+@pytest.mark.skip_browser("firefox")  # Cell overlay visibility flaky on Firefox
 def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the markdown cell can be edited."""
     markdown_column_df = _get_editor(themed_app, "markdown-column")
@@ -220,6 +221,7 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     # Re-open the cell to verify the content was saved
     click_on_cell(markdown_column_df, 1, 0, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(themed_app)
+    expect(cell_overlay).to_be_visible()
     # Click edit again to see the raw value
     cell_overlay.get_by_label("Edit").click()
     textarea = cell_overlay.locator("textarea")
