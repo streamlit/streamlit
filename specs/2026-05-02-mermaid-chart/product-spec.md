@@ -100,16 +100,16 @@ between both approaches while avoiding parsing issues.
 designed as a simple, focused API for diagrams. Users who need layout control can use
 `st.markdown` directly with appropriate parameters.
 
-````python
+`````python
 # These are functionally equivalent for basic usage:
 st.mermaid_chart("graph TD; A-->B")
 
 st.markdown("""
-```mermaid
+````mermaid
 graph TD; A-->B
-```
-""")
 ````
+""")
+`````
 
 **Toolbar Scope:** When a mermaid code block appears within mixed `st.markdown` content (e.g.,
 alongside headings or paragraphs), the toolbar actions (fullscreen, download, copy) apply only
