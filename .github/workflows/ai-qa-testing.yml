@@ -130,18 +130,12 @@ jobs:
 
           ## Task
 
-          Perform comprehensive QA testing on this PR following the instructions below.
+          Run the /qa-testing-feature subagent to perform comprehensive QA testing on this PR.
 
           Do not ask for confirmation. Execute tests and document all findings.
 
-          ## QA Testing Instructions
-
-          $(cat .claude/agents/qa-testing-feature.md)
-
-          ## Output Requirements
-
-          1. Write the final QA report to 'work-tmp/qa-report.md'.
-          2. Write exactly one of PASS, FAIL, or BLOCKED (no formatting, just the word) to 'work-tmp/verdict.txt'.
+          Write the final QA report to 'work-tmp/qa-report.md'.
+          Write exactly one of PASS, FAIL, or BLOCKED (no formatting, just the word) to 'work-tmp/verdict.txt'.
           "
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
 
