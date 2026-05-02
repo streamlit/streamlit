@@ -26,7 +26,7 @@ import {
 } from "@glideapps/glide-data-grid"
 import { Check, Edit2, X } from "react-feather"
 
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { removeLineBreaks } from "~lib/components/widgets/DataFrame/columns/utils"
 
 interface MarkdownCellProps {
