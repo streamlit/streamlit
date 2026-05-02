@@ -18,7 +18,7 @@ import { FC, memo, useCallback } from "react"
 
 import { Selectbox as SelectboxProto } from "@streamlit/protobuf"
 
-import UISelectbox from "~lib/components/shared/Dropdown"
+import UISelectbox from "~lib/components/shared/Dropdown/Selectbox"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -87,6 +87,7 @@ const Selectbox: FC<Props> = ({
     labelVisibility,
     placeholder,
     acceptNewOptions,
+    filterMode,
   } = element
 
   const queryParamBinding = element.queryParamKey
@@ -133,6 +134,7 @@ const Selectbox: FC<Props> = ({
       placeholder={placeholder}
       clearable={clearable}
       acceptNewOptions={acceptNewOptions ?? false}
+      filterMode={filterMode}
     />
   )
 }

@@ -260,3 +260,12 @@ st.image(img800, width="content", caption="Large image with width='content'")
 # Stretch width - full container width
 st.image(img, width="stretch", caption="Small image with width='stretch'")
 st.image(img800, width="stretch", caption="Large image with width='stretch'")
+
+st.header("link parameter")
+
+st.image(
+    img,
+    width=100,
+    caption="Image with link.",
+    link="https://streamlit.io",
+)

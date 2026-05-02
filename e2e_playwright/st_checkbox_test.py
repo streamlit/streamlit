@@ -33,7 +33,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-CHECKBOX_ELEMENTS = 19
+CHECKBOX_ELEMENTS = 20
 
 
 def test_checkbox_widget_display(
@@ -267,3 +267,23 @@ def test_checkbox_query_param_invalid_value(page: Page, app_base_url: str):
     # Checkbox should use default (False), and invalid param should be cleared
     expect_prefixed_markdown(page, "bound checkbox value:", "False")
     expect(page).not_to_have_url(re.compile(r"bound_checkbox"))
+
+
+def test_checkbox_unbind_clears_url_param(page: Page, app_base_url: str):
+    """Test that removing bind='query-params' clears the URL param."""
+    page.goto(build_app_url(app_base_url, query={"unbindable": "true"}))
+    wait_for_app_loaded(page)
+
+    expect_prefixed_markdown(page, "unbindable value:", "True")
+    expect_prefixed_markdown(page, "bind active:", "True")
+    expect(page).to_have_url(re.compile(r"unbindable=true"))
+
+    # Remove the binding by clicking the button
+    page.get_by_role("button", name="Remove binding").click()
+    wait_for_app_run(page)
+
+    # URL should no longer contain the query param
+    expect(page).not_to_have_url(re.compile(r"unbindable"))
+    # Widget value should still be True (preserved in session state)
+    expect_prefixed_markdown(page, "unbindable value:", "True")
+    expect_prefixed_markdown(page, "bind active:", "False")

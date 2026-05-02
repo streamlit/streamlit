@@ -283,8 +283,7 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
     const dateInput = screen.getByTestId("stDateInputField")
 
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent.change needed to set value to null (userEvent.clear sets to empty string, not null)
     fireEvent.change(dateInput, {
       target: { value: newDateDisplay },
     })
@@ -292,8 +291,7 @@ describe("DateInput widget", () => {
     expect(dateInput).toHaveValue(newDateDisplay)
 
     // Simulating clearing the date input
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
+    // eslint-disable-next-line testing-library/prefer-user-event -- fireEvent.change needed to set value to null (userEvent.clear sets to empty string, not null)
     fireEvent.change(dateInput, {
       target: { value: null },
     })
@@ -368,7 +366,8 @@ describe("DateInput widget", () => {
     ).toBeTruthy()
   })
 
-  it("resets its value when form is cleared", () => {
+  it("resets its value when form is cleared", async () => {
+    const user = userEvent.setup()
     // Create a widget in a clearOnSubmit form
     const props = getProps({ formId: "form" })
     props.widgetMgr.setFormSubmitBehaviors("form", true)
@@ -378,11 +377,8 @@ describe("DateInput widget", () => {
     render(<DateInput {...props} />)
 
     const dateInput = screen.getByTestId("stDateInputField")
-    // TODO: Utilize user-event instead of fireEvent
-    // eslint-disable-next-line testing-library/prefer-user-event
-    fireEvent.change(dateInput, {
-      target: { value: newDateDisplay },
-    })
+    await user.clear(dateInput)
+    await user.type(dateInput, newDateDisplay)
 
     expect(dateInput).toHaveValue(newDateDisplay)
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledWith(
@@ -600,8 +596,8 @@ describe("DateInput widget", () => {
         // Freeze both Date and moment.now so BaseWeb quick select and our code
         // agree on "now"
         const MockDate = class extends RealDate {
-          // @ts-expect-error Mocked constructor
           constructor(...args: unknown[]) {
+            super()
             // If no args, return fixed date instance
             if (args.length === 0) {
               return new RealDate(STATIC_NOW)
@@ -623,7 +619,7 @@ describe("DateInput widget", () => {
 
       afterEach(() => {
         spy.mockRestore()
-        globalThis.Date = RealDate as never
+        globalThis.Date = RealDate
       })
 
       it("commits quick select range ending today within max without error", async () => {
@@ -684,7 +680,6 @@ describe("DateInput query param binding", () => {
       "string_array_value",
       expect.any(Array),
       false,
-      undefined,
       undefined
     )
   })
@@ -727,7 +722,6 @@ describe("DateInput query param binding", () => {
       "string_array_value",
       expect.any(Array),
       true,
-      undefined,
       undefined
     )
   })
@@ -748,8 +742,7 @@ describe("DateInput query param binding", () => {
       "string_array_value",
       expect.any(Array),
       false,
-      "repeated",
-      undefined
+      "repeated"
     )
   })
 

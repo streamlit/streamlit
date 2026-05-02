@@ -33,6 +33,49 @@ from streamlit.logger import get_logger
 
 _LOGGER: Final = get_logger(__name__)
 
+# Type alias for programmatic secrets values.
+# Supported types: str, int, float, bool, and nested dicts.
+SecretsValue = str | int | float | bool | dict[str, "SecretsValue"]
+
+# Allowed scalar types for secrets values
+_ALLOWED_SCALAR_TYPES: Final[frozenset[type]] = frozenset({str, int, float, bool})
+
+
+def _validate_secrets_value(value: Any, path: str = "") -> None:
+    """Validate that a secrets value has an allowed type.
+
+    Parameters
+    ----------
+    value
+        The value to validate.
+    path
+        The dotted path to this value (for error messages).
+
+    Raises
+    ------
+    TypeError
+        If the value has an unsupported type.
+    """
+    if isinstance(value, dict):
+        for key, nested_value in value.items():
+            if not isinstance(key, str):
+                key_path = f"in '{path}'" if path else "at top level"
+                raise TypeError(
+                    f"Dictionary keys in secrets must be strings, "
+                    f"got {type(key).__name__!r} {key_path}."
+                )
+            nested_path = f"{path}.{key}" if path else key
+            _validate_secrets_value(nested_value, nested_path)
+    # Use type() instead of isinstance() because bool is a subclass of int,
+    # and we need to distinguish them for os.environ promotion (bool excluded).
+    elif type(value) not in _ALLOWED_SCALAR_TYPES:
+        type_name = type(value).__name__
+        path_info = f" at '{path}'" if path else ""
+        raise TypeError(
+            f"Unsupported type '{type_name}'{path_info} in secrets. "
+            f"Allowed types are: str, int, float, bool, and nested dicts."
+        )
+
 
 class SecretErrorMessages:
     """SecretErrorMessages stores all error messages we use for secrets to allow customization
@@ -202,6 +245,8 @@ class Secrets(Mapping[str, Any]):
         self._secrets: Mapping[str, Any] | None = None
         self._lock = threading.RLock()
         self._file_watchers_installed = False
+        # Store programmatic secrets separately so they survive file-change reloads
+        self._programmatic_secrets: Mapping[str, SecretsValue] | None = None
 
         self.file_change_listener = Signal(
             doc="Emitted when a `secrets.toml` file has been changed."
@@ -335,12 +380,6 @@ class Secrets(Mapping[str, Any]):
         """Parse our secrets.toml files if they're not already parsed.
         This function is safe to call from multiple threads.
 
-        Parameters
-        ----------
-        print_exceptions : bool
-            If True, then exceptions will be printed with `st.error` before
-            being re-raised.
-
         Raises
         ------
             StreamlitSecretNotFoundError
@@ -389,6 +428,71 @@ class Secrets(Mapping[str, Any]):
         secrets = self._parse()
         return _convert_to_dict(secrets)
 
+    def merge_programmatic_secrets(
+        self, programmatic_secrets: Mapping[str, SecretsValue]
+    ) -> None:
+        """Merge programmatic secrets into the secrets store.
+
+        Programmatic secrets are shallow-merged with file-based secrets at the
+        top level: entire top-level keys are replaced, not individual nested keys.
+
+        Parameters
+        ----------
+        programmatic_secrets
+            A dictionary of secrets to merge. Supported value types are:
+            ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+
+        Raises
+        ------
+        TypeError
+            If any value in the dictionary has an unsupported type.
+
+        Notes
+        -----
+        This method is intended to be called once during application startup,
+        after file-based secrets have been loaded. It is thread-safe.
+
+        Top-level ``str``, ``int``, and ``float`` values are promoted to
+        ``os.environ`` (as strings), matching the behavior of file-based secrets.
+        """
+        # Validate all keys are strings and values have allowed types
+        _validate_secrets_value(dict(programmatic_secrets))
+
+        with self._lock:
+            # Store programmatic secrets so they survive file-change reloads
+            self._programmatic_secrets = programmatic_secrets
+            self._apply_programmatic_secrets(programmatic_secrets)
+
+    def _apply_programmatic_secrets(
+        self, programmatic_secrets: Mapping[str, SecretsValue]
+    ) -> None:
+        """Apply programmatic secrets to the secrets store.
+
+        This is an internal helper that merges the given programmatic secrets
+        into `self._secrets`. It does NOT store them in `_programmatic_secrets`
+        (that is the caller's responsibility).
+
+        Must be called with `self._lock` held.
+        """
+        # Create a mutable copy of current secrets
+        current_secrets: dict[str, Any] = (
+            dict(self._secrets) if self._secrets is not None else {}
+        )
+
+        for key, value in programmatic_secrets.items():
+            # Remove old environment variable if the key existed
+            if key in current_secrets:
+                self._maybe_delete_environment_variable(key, current_secrets[key])
+
+            # Shallow-merge: replace entire top-level key (deep copy to prevent
+            # external mutation)
+            current_secrets[key] = deepcopy(value)
+
+            # Promote to os.environ if appropriate
+            self._maybe_set_environment_variable(key, value)
+
+        self._secrets = current_secrets
+
     @staticmethod
     def _maybe_set_environment_variable(k: Any, v: Any) -> None:
         """Add the given key/value pair to os.environ if the value
@@ -404,7 +508,8 @@ class Secrets(Mapping[str, Any]):
         is a string, int, or float.
         """
         value_type = type(v)
-        if value_type in {str, int, float} and os.environ.get(k) == v:
+        # Compare with str(v) since os.environ values are always strings
+        if value_type in {str, int, float} and os.environ.get(k) == str(v):
             del os.environ[k]
 
     def _maybe_install_file_watchers(self) -> None:
@@ -442,6 +547,9 @@ class Secrets(Mapping[str, Any]):
             _LOGGER.debug("Secret path %s changed, reloading", changed_file_path)
             self._reset()
             self._parse()
+            # Re-apply programmatic secrets so they survive file-change reloads
+            if self._programmatic_secrets:
+                self._apply_programmatic_secrets(self._programmatic_secrets)
 
         # Emit a signal to notify receivers that the `secrets.toml` file
         # has been changed.
@@ -484,6 +592,7 @@ class Secrets(Mapping[str, Any]):
             "_lock",
             "_file_watchers_installed",
             "_suppress_print_error_on_exception",
+            "_programmatic_secrets",
             "file_change_listener",
             "load_if_toml_exists",
         }:

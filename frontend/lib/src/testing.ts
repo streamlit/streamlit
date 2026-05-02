@@ -23,12 +23,7 @@
  * components in tests.
  */
 
-export {
-  TestAppWrapper,
-  mockWindowLocation,
-  render,
-  renderWithContexts,
-} from "./test_util"
+export { mockWindowLocation, render, renderWithContexts } from "./test_util"
 
 export type {
   RenderWithContextsOptions,

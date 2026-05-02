@@ -30,9 +30,8 @@ from typing import (
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     WidthWithoutContent,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -487,6 +486,17 @@ class TimeInputSerde:
         return time.strftime(v, "%H:%M")
 
 
+def _to_date(v: date) -> date:
+    """Convert datetime to date for comparison.
+
+    st.date_input can receive datetime values from session_state. Since datetime
+    is a subclass of date, isinstance(v, date) returns True, but datetime and date
+    objects cannot be directly compared with < or >. This helper normalizes the
+    value for safe comparison with date bounds.
+    """
+    return v.date() if isinstance(v, datetime) else v
+
+
 def _validate_date_value(
     current_value: DateWidgetReturn,
     parsed_values: _DateInputValues,
@@ -532,11 +542,17 @@ def _validate_date_value(
         non_empty_value = cast("tuple[date, ...]", current_value)
         start_date = non_empty_value[0]
         end_date = non_empty_value[-1] if len(non_empty_value) > 1 else start_date
-        if start_date < parsed_values.min or end_date > parsed_values.max:
+        if (
+            _to_date(start_date) < parsed_values.min
+            or _to_date(end_date) > parsed_values.max
+        ):
             value_needs_reset = True
     elif not parsed_values.is_range and isinstance(current_value, date):
-        # For single date mode
-        if current_value < parsed_values.min or current_value > parsed_values.max:
+        # For single date mode. Use _to_date to handle datetime values from session_state.
+        if (
+            _to_date(current_value) < parsed_values.min
+            or _to_date(current_value) > parsed_values.max
+        ):
             value_needs_reset = True
     else:
         # Type mismatch: widget mode doesn't match current value type (e.g., range mode
@@ -707,9 +723,9 @@ class TimeWidgetsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -734,10 +750,24 @@ class TimeWidgetsMixin:
             - ``None``: The widget initializes with no time and returns
               ``None`` until the user selects a time.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``step`` resets the widget even when a key is
+               provided, because it constrains valid values.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -783,13 +813,24 @@ class TimeWidgetsMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Times use HH:MM format in the URL. URL
-            values that cannot be parsed are ignored, reverting the widget to
-            its default value. Requires a ``key`` to be set, which will be
-            used as the query parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Times use HH:MM format in the URL. Invalid query parameter
+            values are ignored and removed from the URL. If ``value``
+            is ``None``, an empty query parameter (e.g., ``?my_key=``)
+            clears the widget.
 
         Returns
         -------
@@ -797,8 +838,8 @@ class TimeWidgetsMixin:
             The current value of the time input widget or ``None`` if no time has been
             selected.
 
-        Example
-        -------
+        Examples
+        --------
         **Example 1: Basic usage**
 
         >>> import datetime
@@ -939,8 +980,7 @@ class TimeWidgetsMixin:
                 time_input_proto.value = serialized_value
             time_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue("time_input", time_input_proto, layout_config=layout_config)
         return widget_state.value
@@ -1019,9 +1059,9 @@ class TimeWidgetsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -1065,10 +1105,24 @@ class TimeWidgetsMixin:
             ten years after the initial value. If no initial value is set, the
             maximum selectable datetime is ten years after today at 23:59.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``format`` or ``step`` resets the widget even
+               when a key is provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -1119,14 +1173,24 @@ class TimeWidgetsMixin:
               parent container, the widget matches the container width.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Datetimes use ISO 8601 format
-            (YYYY-MM-DDThh:mm) in the URL. Out-of-range or unparseable URL
-            values are ignored, reverting the widget to its default value.
-            Requires a ``key`` to be set, which will be used as the query
-            parameter name. The default is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Datetimes use ISO 8601 format (YYYY-MM-DDThh:mm) in the URL.
+            Invalid query parameter values are ignored and removed from
+            the URL. If ``value`` is ``None``, an empty query parameter
+            (e.g., ``?my_key=``) clears the widget.
 
         Returns
         -------
@@ -1343,8 +1407,7 @@ class TimeWidgetsMixin:
             date_time_input_proto.value[:] = serde.serialize(current_value)
             date_time_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
             "date_time_input", date_time_input_proto, layout_config=layout_config
@@ -1448,9 +1511,9 @@ class TimeWidgetsMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -1500,10 +1563,24 @@ class TimeWidgetsMixin:
             interval. If no initial value is set, the maximum selectable date
             is ten years after today.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``format`` resets the widget even when a key is
+               provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -1549,15 +1626,26 @@ class TimeWidgetsMixin:
               of the parent container.
 
         bind : "query-params" or None
-            If set to ``"query-params"``, the widget's value will be synced
-            with a URL query parameter. When the widget value changes, the URL
-            is updated; when the page loads with a query parameter, the widget
-            is initialized from it. Out-of-range URL values (outside
-            ``min_value``/``max_value``) are ignored, reverting the widget to
-            its default value. Date ranges use repeated parameters
-            (e.g., ``?key=2025-01-01&key=2025-01-31``). Requires a ``key`` to
-            be set, which will be used as the query parameter name. The default
-            is ``None``.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Dates use ISO 8601 format (YYYY-MM-DD) in the URL. Invalid
+            query parameter values are ignored and removed from the URL.
+            If ``value`` is ``None``, an empty query parameter (e.g.,
+            ``?vacation=``) clears the widget. Date ranges use repeated
+            parameters (e.g.,
+            ``?vacation=2025-01-01&vacation=2025-01-31``).
 
         Returns
         -------
@@ -1807,8 +1895,7 @@ class TimeWidgetsMixin:
             date_input_proto.value[:] = serde.serialize(current_value)
             date_input_proto.set_value = True
 
-        validate_width(width)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width)
 
         self.dg._enqueue("date_input", date_input_proto, layout_config=layout_config)
         return current_value

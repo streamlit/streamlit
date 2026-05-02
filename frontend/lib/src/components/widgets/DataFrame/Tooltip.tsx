@@ -21,7 +21,7 @@ import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledTooltipContentWrapper } from "~lib/components/shared/Tooltip/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 export interface TooltipProps {
   // The top position of the tooltip.

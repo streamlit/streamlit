@@ -22,9 +22,18 @@ skills/*
 !skills/discovering-make-commands/
 !skills/finalizing-pr/
 !skills/fixing-streamlit-ci/
-!skills/implementing-new-features/
 !skills/addressing-pr-review-comments/
+!skills/understanding-streamlit-architecture/
 !skills/creating-pull-requests/
+!skills/updating-internal-docs/
+!skills/writing-spec/
+!skills/assessing-external-test-risk/
+!skills/fixing-flaky-e2e-tests/
+!skills/implementing-feature/
+!skills/sharing-pr-agent-artifacts/
+!skills/generating-changelog/
+!skills/improving-frontend-coverage/
+!skills/improving-python-coverage/
 
 # Allow agents
 !agents/
@@ -32,6 +41,7 @@ agents/*
 !agents/reviewing-local-changes.md
 !agents/simplifying-local-changes.md
 !agents/fixing-pr.md
+!agents/qa-testing-feature.md
 
 # Allow commands
 !commands/
@@ -39,3 +49,4 @@ commands/*
 !commands/simplifying-local-changes.md
 !commands/reviewing-local-changes.md
 !commands/fixing-pr.md
+!commands/qa-testing-feature.md

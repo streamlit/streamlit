@@ -22,9 +22,8 @@ from typing_extensions import Never
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     create_mappings,
@@ -233,9 +232,9 @@ class RadioMixin:
             the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -253,8 +252,7 @@ class RadioMixin:
             ``options`` is dataframe-like, the first column will be used. Each
             label will be cast to ``str`` internally by default.
 
-            Labels can include markdown as described in the ``label`` parameter
-            and will be cast to str internally by default.
+            Labels can include markdown as described in the ``label`` parameter.
 
         index : int or None
             The index of the preselected option on first render. If ``None``,
@@ -267,10 +265,20 @@ class RadioMixin:
             shown for that option. This has no impact on the return value of
             the radio.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -323,12 +331,23 @@ class RadioMixin:
               of the parent container.
 
         bind : "query-params" or None
-            Enables two-way binding between the widget value and the URL
-            query string. When set to ``"query-params"``, the widget's
-            ``key`` is used as the URL parameter name. Requires ``key``
-            to be set. The URL displays the formatted option string
-            (e.g., ``?color=Red``). Invalid URL values are reset to the
-            default option and removed from the URL.
+            Binding mode for syncing the widget's value with a URL query
+            parameter. If this is ``None`` (default), the widget's value
+            is not synced to the URL. When this is set to
+            ``"query-params"``, changes to the widget update the URL, and
+            the widget can be initialized or updated through a query
+            parameter in the URL. This requires ``key`` to be set. The
+            key is used as the query parameter name.
+
+            When the widget's value equals its default, the query
+            parameter is removed from the URL to keep it clean. A bound
+            query parameter can't be set or deleted through
+            ``st.query_params``; it can only be programmatically changed
+            through ``st.session_state``.
+
+            Invalid query parameter values are ignored and removed
+            from the URL. If ``index`` is ``None``, an empty query
+            parameter (e.g., ``?my_key=``) clears the widget.
 
         Returns
         -------
@@ -337,8 +356,8 @@ class RadioMixin:
 
             This is a copy of the selected option, not the original.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> genre = st.radio(
@@ -427,8 +446,7 @@ class RadioMixin:
         )
         maybe_raise_label_warnings(label, label_visibility)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         opt = convert_anything_to_list(options)
         check_python_comparable(opt)
@@ -531,7 +549,7 @@ class RadioMixin:
         # Cast to T | None since radio doesn't support accept_new_options,
         # so string values that aren't in options will be reset to default.
         current_value, value_needs_reset = validate_and_sync_value_with_options(
-            cast("T | None", widget_state.value), opt, index, key
+            cast("T | None", widget_state.value), opt, index, key, format_func
         )
 
         if value_needs_reset or widget_state.value_changed:

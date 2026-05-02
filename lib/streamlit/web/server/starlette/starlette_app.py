@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import copy
+from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -26,10 +28,17 @@ from streamlit.web.server.starlette.starlette_app_utils import (
     generate_random_hex_string,
 )
 from streamlit.web.server.starlette.starlette_auth_routes import create_auth_routes
+from streamlit.web.server.starlette.starlette_gzip_middleware import (
+    SelectiveGZipMiddleware,
+)
+from streamlit.web.server.starlette.starlette_path_security_middleware import (
+    PathSecurityMiddleware,
+)
 from streamlit.web.server.starlette.starlette_routes import (
     BASE_ROUTE_COMPONENT,
     BASE_ROUTE_CORE,
     BASE_ROUTE_MEDIA,
+    BASE_ROUTE_STATIC,
     BASE_ROUTE_UPLOAD_FILE,
     create_app_static_serving_routes,
     create_bidi_component_routes,
@@ -42,6 +51,7 @@ from streamlit.web.server.starlette.starlette_routes import (
     create_upload_routes,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    ANYIO_STATIC_FILE_THREAD_TOKENS,
     GZIP_COMPRESSLEVEL,
     GZIP_MINIMUM_SIZE,
     SESSION_COOKIE_NAME,
@@ -52,6 +62,7 @@ from streamlit.web.server.starlette.starlette_static_routes import (
 from streamlit.web.server.starlette.starlette_websocket import create_websocket_routes
 
 if TYPE_CHECKING:
+    import asyncio
     from collections.abc import AsyncIterator, Callable, Mapping, Sequence
     from contextlib import AbstractAsyncContextManager
 
@@ -64,13 +75,24 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+    from streamlit.runtime.secrets import SecretsValue
 
-# Reserved route prefixes that users cannot override
+# Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
-    f"/{BASE_ROUTE_CORE}/",
-    f"/{BASE_ROUTE_MEDIA}/",
-    f"/{BASE_ROUTE_COMPONENT}/",
+    f"/{BASE_ROUTE_CORE}/",  # Core API endpoints (health, upload, stream, etc.)
+    f"/{BASE_ROUTE_MEDIA}/",  # Media file serving
+    f"/{BASE_ROUTE_COMPONENT}/",  # Custom component serving
+    f"/{BASE_ROUTE_STATIC}/",  # Frontend assets (JS/CSS bundles)
 )
+
+
+def _set_anyio_thread_limiter() -> None:
+    """Apply the measured AnyIO thread limit for Starlette file serving."""
+    from anyio import to_thread
+
+    to_thread.current_default_thread_limiter().total_tokens = (
+        ANYIO_STATIC_FILE_THREAD_TOKENS
+    )
 
 
 def create_streamlit_routes(runtime: Runtime) -> list[BaseRoute]:
@@ -150,13 +172,6 @@ def create_streamlit_middleware() -> list[Middleware]:
     from starlette.middleware import Middleware
     from starlette.middleware.sessions import SessionMiddleware
 
-    from streamlit.web.server.starlette.starlette_gzip_middleware import (
-        MediaAwareGZipMiddleware,
-    )
-    from streamlit.web.server.starlette.starlette_path_security_middleware import (
-        PathSecurityMiddleware,
-    )
-
     middleware: list[Middleware] = []
 
     # FIRST: Path security middleware to block dangerous paths before any other processing.
@@ -165,7 +180,7 @@ def create_streamlit_middleware() -> list[Middleware]:
     # Add session middleware
     middleware.append(
         Middleware(
-            SessionMiddleware,  # ty: ignore[invalid-argument-type]
+            SessionMiddleware,
             secret_key=get_cookie_secret() or generate_random_hex_string(),
             same_site="lax",
             https_only=bool(config.get_option("server.sslCertFile")),
@@ -173,15 +188,12 @@ def create_streamlit_middleware() -> list[Middleware]:
         )
     )
 
-    # Add GZip compression middleware.
-    # We use a custom MediaAwareGZipMiddleware that excludes audio/video content
-    # from compression. Compressing binary media content breaks playback in browsers,
-    # especially with range requests. Using a custom middleware instead of setting
-    # Content-Encoding: identity provides better browser compatibility, as some
-    # browsers (especially WebKit) have issues with explicit identity encoding.
+    # Keep static asset responses out of the gzip middleware. Local load testing
+    # showed that bypassing gzip on these paths materially improves initial load
+    # times and peak RSS, while a session-only bypass regressed.
     middleware.append(
         Middleware(
-            MediaAwareGZipMiddleware,
+            SelectiveGZipMiddleware,
             minimum_size=GZIP_MINIMUM_SIZE,
             compresslevel=GZIP_COMPRESSLEVEL,
         )
@@ -209,13 +221,13 @@ def create_starlette_app(runtime: Runtime) -> Starlette:
         from starlette.applications import Starlette
     except ModuleNotFoundError as exc:  # pragma: no cover - import guard
         raise RuntimeError(
-            "Starlette is not installed. Run `pip install streamlit[starlette]` "
-            "or disable `server.useStarlette`."
+            "Starlette is not installed. Please reinstall Streamlit."
         ) from exc
 
     # Define lifespan context manager for startup/shutdown events
     @asynccontextmanager
     async def _lifespan(_app: Starlette) -> AsyncIterator[None]:
+        _set_anyio_thread_limiter()
         # Startup
         await runtime.start()
         yield
@@ -247,6 +259,12 @@ class App:
         paths are resolved based on context: when started via ``streamlit run``,
         they resolve relative to the main script; when started directly via uvicorn
         or another ASGI server, they resolve relative to the current working directory.
+    secrets : Mapping[str, SecretsValue] | None
+        A dictionary of secrets to make available via ``st.secrets``. Supported
+        value types are: ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+        When provided, these secrets are shallow-merged with file-based secrets
+        (programmatic secrets override file-based secrets at the top level).
+        Unsupported types raise ``TypeError`` at construction.
     lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         Async context manager for startup/shutdown logic. The context manager
         receives the App instance and can yield a dictionary of state that will
@@ -292,12 +310,28 @@ class App:
     ...     return JSONResponse({"status": "ok"})
     >>>
     >>> app = App("main.py", routes=[Route("/health", health)])
+
+    With programmatic secrets:
+
+    >>> import os
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> app = App(
+    ...     "main.py",
+    ...     secrets={
+    ...         "database": {
+    ...             "host": os.environ["DB_HOST"],
+    ...             "password": os.environ["DB_PASSWORD"],
+    ...         }
+    ...     },
+    ... )
     """
 
     def __init__(
         self,
         script_path: str | Path,
         *,
+        secrets: Mapping[str, SecretsValue] | None = None,
         lifespan: (
             Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         ) = None,
@@ -306,6 +340,8 @@ class App:
         exception_handlers: Mapping[Any, ExceptionHandler] | None = None,
         debug: bool = False,
     ) -> None:
+        from streamlit.runtime.secrets import _validate_secrets_value
+
         self._script_path = Path(script_path)
         self._user_lifespan = lifespan
         self._user_routes = list(routes) if routes else []
@@ -315,10 +351,26 @@ class App:
         )
         self._debug = debug
 
+        # Validate and store programmatic secrets (deep copy to prevent external mutation)
+        if secrets is not None:
+            if not isinstance(secrets, MappingABC):
+                raise TypeError(
+                    f"secrets must be a mapping (dict), got {type(secrets).__name__!r}."
+                )
+            # Validate all keys are strings and values have allowed types
+            _validate_secrets_value(dict(secrets))
+        self._programmatic_secrets = (
+            copy.deepcopy(secrets) if secrets is not None else None
+        )
+        self._secrets_applied: bool = False
+
         self._runtime: Runtime | None = None
         self._starlette_app: Starlette | None = None
         self._state: dict[str, Any] = {}
         self._external_lifespan: bool = False
+        # Track if runtime was auto-started (for mounted apps without explicit lifespan)
+        self._auto_started: bool = False
+        self._startup_lock: asyncio.Lock | None = None
 
         # Validate user routes don't conflict with reserved routes
         self._validate_routes()
@@ -464,6 +516,16 @@ class App:
         # Use resolved path to ensure correct directory for static folder check
         prepare_streamlit_environment(str(self._resolve_script_path()))
 
+        # Merge programmatic secrets (after file-based secrets are loaded)
+        # Only apply once to prevent re-entry issues with test harnesses or restarts
+        if self._programmatic_secrets and not self._secrets_applied:
+            from streamlit.runtime.secrets import secrets_singleton
+
+            secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+            self._secrets_applied = True
+
+        _set_anyio_thread_limiter()
+
         # Start runtime (enables full cache support)
         await self._runtime.start()
 
@@ -531,11 +593,109 @@ class App:
         )
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        """ASGI interface."""
+        """ASGI interface.
+
+        When mounted on another ASGI framework without using the lifespan() method,
+        the runtime will be auto-started on the first HTTP/WebSocket request.
+        """
+        import asyncio as _asyncio
+
+        from streamlit.runtime import RuntimeState
+
         if self._starlette_app is None:
             self._starlette_app = self._build_starlette_app()
 
+        # Auto-start runtime for mounted apps that didn't use lifespan().
+        # This handles the common pattern: Mount("/st", App("main.py"))
+        # The lifespan scope is only sent to the root app, not mounted apps,
+        # so we need to start the runtime lazily on the first real request.
+        if (
+            scope["type"] in {"http", "websocket"}
+            and self._runtime is not None
+            and self._runtime.state == RuntimeState.INITIAL
+        ):
+            # Use a lock to prevent concurrent startup attempts
+            if self._startup_lock is None:
+                self._startup_lock = _asyncio.Lock()
+
+            async with self._startup_lock:
+                # Double-check after acquiring lock in case another request
+                # already started the runtime while we were waiting.
+                if (
+                    self._runtime.state == RuntimeState.INITIAL
+                    and not self._auto_started
+                ):
+                    await self._auto_start_runtime()
+
         await self._starlette_app(scope, receive, send)
+
+    async def _auto_start_runtime(self) -> None:
+        """Auto-start the runtime for mounted apps without explicit lifespan.
+
+        This is called when the app is mounted on another ASGI framework without
+        using the lifespan() method. The runtime will be started on the first
+        HTTP/WebSocket request.
+
+        Note: This assumes the ASGI server implements the lifespan protocol. All
+        major ASGI servers (uvicorn, hypercorn, daphne) support it, so standalone
+        apps using lifespan() will work correctly. If an ASGI server does not
+        implement lifespan, a standalone app would also trigger this auto-start
+        path and be labelled as "asgi-mounted" in metrics.
+        """
+        import atexit
+
+        from streamlit.logger import get_logger
+        from streamlit.web.bootstrap import prepare_streamlit_environment
+
+        logger = get_logger(__name__)
+
+        if self._runtime is None:
+            return
+
+        # Warn if user provided a lifespan but it's being skipped due to auto-start.
+        # This helps users catch the misconfiguration where they pass lifespan to
+        # App.__init__ but then mount without calling app.lifespan().
+        if self._user_lifespan is not None:
+            logger.warning(
+                "Auto-starting runtime, but a user-provided lifespan was configured. "
+                "The lifespan hooks will be skipped. To use your lifespan, mount the "
+                "app using: FastAPI(lifespan=streamlit_app.lifespan())"
+            )
+
+        # Set server mode for metrics tracking. Only set to "asgi-mounted" when
+        # the app is actually mounted (external lifespan not used means direct mount).
+        # Do not override an explicit mode set by the embedding environment.
+        if config._server_mode is None:
+            config._server_mode = "asgi-mounted"
+
+        # Prepare the Streamlit environment
+        prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        # Merge programmatic secrets (after file-based secrets are loaded)
+        if self._programmatic_secrets and not self._secrets_applied:
+            from streamlit.runtime.secrets import secrets_singleton
+
+            secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+            self._secrets_applied = True
+
+        _set_anyio_thread_limiter()
+
+        # Start runtime
+        await self._runtime.start()
+        self._auto_started = True
+
+        # Register cleanup on process exit
+        def _cleanup() -> None:
+            if self._runtime is not None and self._auto_started:
+                try:
+                    self._runtime.stop()
+                except RuntimeError:
+                    # During process shutdown, the event loop may already be closed.
+                    # Runtime.stop() uses call_soon_threadsafe which raises RuntimeError
+                    # if the loop is closed. Silently ignore this since we're exiting.
+                    pass
+
+        atexit.register(_cleanup)
 
 
 __all__ = ["App", "create_starlette_app"]

@@ -26,6 +26,7 @@ vi.mock("@streamlit/utils", async () => {
 })
 
 import { zip } from "lodash-es"
+import { MockInstance } from "vitest"
 import { default as WS } from "vitest-websocket-mock"
 
 import { BackMsg } from "@streamlit/protobuf"
@@ -1074,8 +1075,13 @@ describe("WebsocketConnection", () => {
 
     const msg = BackMsg.create(TEST_BACK_MSG)
     const buffer = BackMsg.encode(msg).finish()
+    const encodedMessage = new Uint8Array(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.byteLength
+    )
 
-    expect(sendSpy).toHaveBeenCalledWith(buffer)
+    expect(sendSpy).toHaveBeenCalledWith(encodedMessage)
   })
 
   describe("getBaseUriParts", () => {
@@ -1099,8 +1105,7 @@ describe("WebsocketConnection auth token handling", () => {
 
   let websocketSpy: (url: string, protocols?: string | string[]) => void
   let originalWebSocket: typeof WebSocket
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let pingServerSpy: any
+  let pingServerSpy: MockInstance
 
   class MockWebSocket {
     public url: string
@@ -1150,8 +1155,13 @@ describe("WebsocketConnection auth token handling", () => {
     // Prevent the internal ping loop from scheduling timers or websockets
     // for these auth-only tests.
     pingServerSpy = vi
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      .spyOn(WebsocketConnection.prototype as any, "pingServer")
+      .spyOn(
+        WebsocketConnection.prototype as unknown as Record<
+          string,
+          () => Promise<void>
+        >,
+        "pingServer"
+      )
       .mockResolvedValue(undefined)
   })
 
@@ -1456,11 +1466,11 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     globalThis.fetch = vi
       .fn()
       // First two calls are for background ping (health + host-config)
-      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
-      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(backgroundPingPromise)
+      .mockReturnValueOnce(backgroundPingPromise)
       // Next two calls are for foreground ping after transition
-      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
-      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(foregroundPingPromise)
+      .mockReturnValueOnce(foregroundPingPromise)
 
     const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)

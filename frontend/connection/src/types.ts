@@ -20,12 +20,13 @@
  * Returns a promise with the index of the URI that worked.
  */
 
-import { IAppPage } from "@streamlit/protobuf"
+import type { AxiosProgressEvent } from "axios"
+
+import { ForwardMsg, IAppPage } from "@streamlit/protobuf"
 
 import { ConnectionState } from "./ConnectionState"
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-export type OnMessage = (ForwardMsg: any) => void
+export type OnMessage = (ForwardMsg: ForwardMsg) => void
 
 export interface ErrorDetails {
   message: string
@@ -156,8 +157,7 @@ export interface StreamlitEndpoints {
     fileUploadUrl: string,
     file: File,
     sessionId: string,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    onUploadProgress?: (progressEvent: any) => void,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void,
     signal?: AbortSignal
   ): Promise<void>
 

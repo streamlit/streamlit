@@ -2,6 +2,8 @@
 applyTo: "lib/streamlit/**/*.py"
 ---
 
+<!-- Generated from lib/streamlit/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Streamlit Lib Python Guide
 
 Tips and guidelines specific to the development of the Streamlit Python library,
@@ -22,12 +24,13 @@ _LOGGER: Final = get_logger(__name__)
 
 We use the unit tests to cover internal behavior that can work without the web / backend
 counterpart and the e2e tests to test the entire system. We aim for high unit test
-coverage (90% or higher) of our Python code in `lib/streamlit`.
+coverage (95% or higher) of our Python code in `lib/streamlit`.
 
 - Under `lib/tests/streamlit`, add a new test file
 - Preferably in the mirrored directory structure as the non-test files.
 - Naming: `my_example_test.py`
 - Anti-regression checks: Where practical, go beyond the happy path by covering a plausible failure mode or edge case (invalid input, boundary condition, absent side effect). Do **not** add assertions that are logically implied by an earlier assertion — e.g., if you assert `x is True`, asserting `x is not False` is a tautology and adds no value. See `lib/tests/AGENTS.md` for detailed guidance and examples.
+- Coverage exclusions: Use `# pragma: no cover` for code that cannot reasonably be tested, such as import fallbacks for optional dependencies, "should never happen" defensive checks, or platform-specific unreachable paths. Include a brief reason, e.g., `# pragma: no cover - optional dep` or `# pragma: no cover - defensive`.
 
 ### Typing Tests
 
@@ -67,13 +70,22 @@ reStructuredText directives. Follow these guidelines:
   (see existing docstrings for the pattern).
 - **Examples**: Use `.. code-block:: python` for examples. Where possible, make the examples fully
   executable (beginning with import statements), label the filename, and end with `.. output::` directive
-  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`).
+  and a URL with a reasonable name (e.g., `https://doc-<example-description>.streamlit.app/`). The output
+  directive should include a height of at least 200px. Adjust the height to avoid scrolling where reasonable.
+  Try to keep examples shorter than 600px. Always include a full empty line after an RST directive.
 
   ```
   .. code-block:: python
      :filename: streamlit_app.py
 
      import streamlit as st
+  ```
+
+  ```
+  .. output::
+     https://doc-example.streamlit.app
+     height: 200px
+
   ```
 
 ## Theming and Layout

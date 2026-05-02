@@ -26,7 +26,7 @@ function sanitizeHtmlString(html: string): string {
   return dompurify.sanitize(html, SANITIZE_HTML_BASE_OPTIONS)
 }
 
-export interface SanitizedHtmlProps {
+interface SanitizedHtmlProps {
   body: string
 }
 function SanitizedHtml({
@@ -41,7 +41,7 @@ function SanitizedHtml({
   return (
     <HtmlContainer
       // Note: This is an expected usage of dangerouslySetInnerHTML.
-      // eslint-disable-next-line @eslint-react/dom/no-dangerously-set-innerhtml
+      // eslint-disable-next-line @eslint-react/dom-no-dangerously-set-innerhtml
       dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
     />
   )

@@ -140,8 +140,7 @@ function parseHeaderName(name: string, numLevels: number): string[] {
     return JSON.parse(
       name.trim().replace(/^\(/, "[").replace(/\)$/, "]").replace(/'/g, '"')
     )
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (e) {
+  } catch {
     // Add empty strings for the missing levels
     return [...Array(numLevels - 1).fill(""), name]
   }

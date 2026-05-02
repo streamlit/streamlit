@@ -205,6 +205,34 @@ def test_page_titles_support_markdown(app: Page):
     expect(code_link.locator("code")).to_have_text("11")
 
 
+def test_section_headers_support_markdown(app: Page):
+    """Test that section headers render markdown formatting."""
+    click_checkbox(app, "Test Markdown Section Headers")
+    wait_for_app_run(app)
+
+    nav = app.get_by_test_id("stSidebarNav")
+
+    # Verify bold rendering for "**Bold** Section"
+    bold_section = nav.get_by_test_id("stNavSectionHeader").filter(
+        has_text="Bold Section"
+    )
+    expect(bold_section.locator("strong")).to_have_text("Bold")
+
+    # Verify italic rendering for "*Italic* Section"
+    italic_section = nav.get_by_test_id("stNavSectionHeader").filter(
+        has_text="Italic Section"
+    )
+    expect(italic_section.locator("em")).to_have_text("Italic")
+
+    # Verify material icon rendering for ":material/settings: Icon Section"
+    icon_section = nav.get_by_test_id("stNavSectionHeader").filter(
+        has_text="Icon Section"
+    )
+    # The StreamlitMarkdown component renders material icons as <span role="img">
+    # with aria-label containing the icon name
+    expect(icon_section.get_by_role("img", name="settings icon")).to_be_visible()
+
+
 def test_dynamic_pages(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that dynamic pages are defined."""
     check_field(themed_app, dynamic_pages=True)
@@ -415,20 +443,31 @@ def test_removes_query_params_with_st_switch_page(app: Page, app_base_url: str):
 
     # Trigger st.switch_page
     click_button(app, "page 5")
+    # Use Playwright's wait_for_url - page_5 without any query params
+    # Note: The URL should NOT have query params after navigation
+    app.wait_for_url("**/page_5", timeout=15000)
 
-    # Check that query params don't persist
-    expect(app).to_have_url(build_app_url(app_base_url, path="/page_5"))
+    # Verify the URL doesn't have the old query params
+    assert "foo=bar" not in app.url, f"URL still has old query params: {app.url}"
+
+    # Now verify the page content loaded correctly
+    expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
+    # Check page_5 specific query params display shows empty (unique prefix)
+    expect_prefixed_markdown(app, "Page 5 Query Params:", "{}")
 
 
-def test_switch_page_with_query_params(app: Page, app_base_url: str):
+def test_switch_page_with_query_params(app: Page):
     """Test that st.switch_page applies provided query params."""
 
     click_button(app, "Navigate with query params")
+    # Use Playwright's wait_for_url which is optimized for URL navigation detection
+    # Wait for URL to contain the path and query params (glob pattern)
+    app.wait_for_url("**/page_5?team=streamlit", timeout=15000)
 
-    expect(app).to_have_url(
-        build_app_url(app_base_url, path="/page_5", query="team=streamlit")
-    )
-    expect_prefixed_markdown(app, "Query Params:", "{'team': 'streamlit'}")
+    # Now verify the page content loaded correctly
+    expect(app.get_by_role("heading", name="Page 5")).to_be_visible()
+    # Check page_5 specific query params display (unique prefix to avoid collision)
+    expect_prefixed_markdown(app, "Page 5 Query Params:", "{'team': 'streamlit'}")
 
 
 def test_removes_query_params_when_clicking_link(app: Page, app_base_url: str):
@@ -753,7 +792,8 @@ def test_widget_state_reset_on_page_switch(app: Page):
     # Regression test for GH issue 7338 for MPAv2
 
     slider = app.locator('.stSlider [role="slider"]')
-    slider.click()
+    # Use force=True to ensure click completes before keypress on webkit
+    slider.click(force=True)
     slider.press("ArrowRight")
     wait_for_app_run(app, wait_delay=500)
     expect(app.get_by_text("x is 1")).to_be_attached()

@@ -36,4 +36,7 @@ message Markdown {
   Type element_type = 4;
 
   string help = 5;
+
+  // Enables frontend unterminated markdown completion (via remend) during streaming.
+  bool unterminated_parsing = 6;
 }

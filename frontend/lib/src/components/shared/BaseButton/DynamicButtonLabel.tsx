@@ -16,10 +16,10 @@
 
 import { useMemo } from "react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 import { isFromMac } from "~lib/util/utils"
 
 import {

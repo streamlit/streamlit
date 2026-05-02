@@ -19,6 +19,7 @@ import { Dispatch, SetStateAction, useCallback, useMemo } from "react"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 
 import { updateColumnConfigTypeProps } from "./columnConfigUtils"
+import { ColumnConfigProps } from "./useColumnLoader"
 
 type ColumnPinningReturn = {
   // The number of columns to freeze.
@@ -51,8 +52,7 @@ function useColumnPinning(
   minColumnWidth: number,
   clearSelection: (keepRows?: boolean, keepColumns?: boolean) => void,
   setColumnConfigMapping: Dispatch<
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    SetStateAction<Map<string, any>>
+    SetStateAction<Map<string, ColumnConfigProps>>
   >
 ): ColumnPinningReturn {
   // This is a simple heuristic to prevent the pinned columns

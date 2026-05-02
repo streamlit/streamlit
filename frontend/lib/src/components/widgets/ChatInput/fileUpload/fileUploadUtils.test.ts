@@ -17,12 +17,12 @@
 import { describe, expect, it } from "vitest"
 
 import { createTestFile } from "~lib/test_util"
+import { isFileTypeAllowed } from "~lib/util/FileHelper"
 import { AcceptFileValue } from "~lib/util/utils"
 
 import {
   configureFileInputProps,
   getUploadDescription,
-  isFileTypeAllowed,
   validateFileType,
 } from "./fileUploadUtils"
 
@@ -97,6 +97,62 @@ describe("fileUploadUtils", () => {
       expect(isFileTypeAllowed(file, [""])).toBe(true)
       expect(isFileTypeAllowed(file, ["."])).toBe(true)
     })
+
+    // MIME type tests
+    it("correctly matches exact MIME types", () => {
+      const jpegFile = createTestFile("photo.jpg", "content", "image/jpeg")
+      expect(isFileTypeAllowed(jpegFile, ["image/jpeg"])).toBe(true)
+      expect(isFileTypeAllowed(jpegFile, ["image/png"])).toBe(false)
+      expect(isFileTypeAllowed(jpegFile, ["image/jpeg", "image/png"])).toBe(
+        true
+      )
+    })
+
+    it("correctly matches MIME type wildcards", () => {
+      const jpegFile = createTestFile("photo.jpg", "content", "image/jpeg")
+      const pngFile = createTestFile("photo.png", "content", "image/png")
+      const audioFile = createTestFile("song.mp3", "content", "audio/mpeg")
+
+      expect(isFileTypeAllowed(jpegFile, ["image/*"])).toBe(true)
+      expect(isFileTypeAllowed(pngFile, ["image/*"])).toBe(true)
+      expect(isFileTypeAllowed(audioFile, ["image/*"])).toBe(false)
+      expect(isFileTypeAllowed(audioFile, ["audio/*"])).toBe(true)
+    })
+
+    it("handles mixed MIME types and extensions", () => {
+      const jpegFile = createTestFile("photo.jpg", "content", "image/jpeg")
+      const jsonFile = createTestFile(
+        "data.json",
+        "content",
+        "application/json"
+      )
+
+      // MIME type matches
+      expect(isFileTypeAllowed(jpegFile, ["image/*", ".json"])).toBe(true)
+      // Extension matches
+      expect(isFileTypeAllowed(jsonFile, ["image/*", ".json"])).toBe(true)
+    })
+
+    it("is case insensitive for MIME types", () => {
+      const jpegFile = createTestFile("photo.jpg", "content", "image/jpeg")
+      expect(isFileTypeAllowed(jpegFile, ["IMAGE/JPEG"])).toBe(true)
+      expect(isFileTypeAllowed(jpegFile, ["Image/Jpeg"])).toBe(true)
+      expect(isFileTypeAllowed(jpegFile, ["IMAGE/*"])).toBe(true)
+    })
+
+    it("rejects files with non-matching MIME type when only MIME types specified", () => {
+      // File has application/octet-stream MIME type (default for unknown extensions)
+      const file = createTestFile("unknown.xyz")
+      // Doesn't match image/* so should be rejected
+      expect(isFileTypeAllowed(file, ["image/*"])).toBe(false)
+    })
+
+    it("validates extension when MIME not available but extensions specified", () => {
+      const pngFile = createTestFile("image.png", "content", "")
+      const txtFile = createTestFile("doc.txt", "content", "")
+      expect(isFileTypeAllowed(pngFile, [".png"])).toBe(true)
+      expect(isFileTypeAllowed(txtFile, [".png"])).toBe(false)
+    })
   })
 
   describe("validateFileType", () => {
@@ -122,22 +178,13 @@ describe("fileUploadUtils", () => {
   })
 
   describe("getUploadDescription", () => {
-    it("returns correct description for single file", () => {
-      expect(getUploadDescription(AcceptFileValue.Single)).toBe("a file")
-    })
-
-    it("returns correct description for multiple files", () => {
-      expect(getUploadDescription(AcceptFileValue.Multiple)).toBe("files")
-    })
-
-    it("returns correct description for directory", () => {
-      expect(getUploadDescription(AcceptFileValue.Directory)).toBe(
-        "a directory"
-      )
-    })
-
-    it("returns correct description for none", () => {
-      expect(getUploadDescription(AcceptFileValue.None)).toBe("a file")
+    it.each([
+      [AcceptFileValue.Single, "a file"],
+      [AcceptFileValue.Multiple, "files"],
+      [AcceptFileValue.Directory, "a directory"],
+      [AcceptFileValue.None, "a file"],
+    ])("returns correct description for %s", (acceptFile, expected) => {
+      expect(getUploadDescription(acceptFile)).toBe(expected)
     })
   })
 

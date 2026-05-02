@@ -1,0 +1,17 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "tags": ["-lintignore"],
+  "ignoreUnresolved": ["^\\./proto(?:\\.js)?$"],
+  "ignoreIssues": {
+    "component-lib/src/ArrowTable.ts": ["exports", "types"],
+    "app/src/util/reactUidCompat.ts": ["files"]
+  },
+  "rules": {
+    "devDependencies": "off",
+    "dependencies": "off",
+    "unlisted": "off"
+  },
+  "workspaces": {
+    ".": {}
+  }
+}

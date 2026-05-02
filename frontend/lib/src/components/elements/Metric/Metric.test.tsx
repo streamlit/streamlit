@@ -198,13 +198,13 @@ describe("Metric element", () => {
 
   // Metric value font styling tests
   describe("Metric value font styling", () => {
-    it("does not set font-weight when theme does not specify metricValueFontWeight", () => {
+    it("applies default font-weight when theme does not specify metricValueFontWeight", () => {
       const props = getProps({ body: "123" })
       render(<Metric {...props} />)
 
-      // fontWeight should inherit from parent when not configured
-      expect(screen.getByTestId("stMetricValue")).not.toHaveStyle(
-        "font-weight: 600"
+      // Default fontWeight should be 400 (normal) from theme fontWeights
+      expect(screen.getByTestId("stMetricValue")).toHaveStyle(
+        "font-weight: 400"
       )
     })
 
@@ -212,7 +212,7 @@ describe("Metric element", () => {
       const props = getProps({ body: "123" })
       render(<Metric {...props} />)
 
-      // Default font-size should be threeXL (2.25rem) when theme doesn't specify metricValueFontSize
+      // Default font-size should be metricValueFontSize (2.25rem) from theme fontSizes
       expect(screen.getByTestId("stMetricValue")).toHaveStyle(
         "font-size: 2.25rem"
       )

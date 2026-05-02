@@ -14,33 +14,52 @@
 
 from __future__ import annotations
 
+import builtins
 import contextlib
 import datetime
+import inspect
+import sys
 import unittest
 from collections import Counter
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, mock_open, patch
 
 import pandas as pd
+import pytest
 from parameterized import parameterized
 
 import streamlit as st
 import streamlit.components.v1 as components
+from streamlit import config
+from streamlit.components.v1.custom_component import CustomComponent
 from streamlit.connections import SnowparkConnection, SQLConnection
 from streamlit.runtime import metrics_util
 from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
+from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.testutil import create_pep649_function
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
+    from pathlib import Path
 
 MAC = "mac"
 UUID = "uuid"
 FILENAME = "/some/id/file"
 mock_get_path = MagicMock(return_value=FILENAME)
+
+
+def _mock_script_run_ctx() -> MagicMock:
+    """Build a script run context for ``gather_metrics`` tests."""
+    ctx = MagicMock()
+    ctx.gather_usage_stats = True
+    ctx.command_tracking_deactivated = False
+    ctx.tracked_commands = []
+    ctx.tracked_commands_counter = Counter()
+    ctx.fragment_ids_this_run = []
+    return ctx
 
 
 class MetricsUtilTest(unittest.TestCase):
@@ -325,7 +344,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 cache_resource_api.ResourceCache.write_result,
                 "_cache_resource_object",
             ),
-            (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
             (st.query_params.__setattr__, "query_params.set_attr"),
@@ -368,6 +386,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "context",
             "login",
             "logout",
+            # st.App is a class for creating ASGI applications, not a tracked command
+            "App",
         }
 
         # Create a list of all public API names in the `st` module (minus
@@ -479,3 +499,544 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             [command.name for command in ctx.tracked_commands]
         ).most_common()
         assert command_counts[0][1] <= metrics_util._MAX_TRACKED_PER_COMMAND
+
+
+def test_get_arg_keywords_includes_positional_only_params() -> None:
+    """Include positional-only and positional-or-keyword names like ``getfullargspec().args``."""
+
+    def func_with_posonly(a: int, b: str, /, c: float, d: bool) -> None:
+        pass
+
+    def func_without_posonly(a: int, b: str, c: float, d: bool) -> None:
+        pass
+
+    expected = ["a", "b", "c", "d"]
+    assert metrics_util._get_arg_keywords(func_with_posonly) == expected
+    assert metrics_util._get_arg_keywords(func_without_posonly) == expected
+
+
+def test_get_arg_keywords_caches_results_and_handles_bound_methods() -> None:
+    """Verify caching works and bound methods include 'self' for backwards compatibility."""
+    metrics_util._get_arg_keywords_cached.cache_clear()
+    try:
+
+        def simple_func(a: int, b: str) -> None:
+            pass
+
+        class MyClass:
+            def my_method(self, x: int, y: str) -> None:
+                pass
+
+        # Test regular function caching
+        result1 = metrics_util._get_arg_keywords(simple_func)
+        result2 = metrics_util._get_arg_keywords(simple_func)
+        assert result1 == ["a", "b"]
+        assert result1 == result2
+        cache_info = metrics_util._get_arg_keywords_cached.cache_info()
+        assert cache_info.hits >= 1, "Cache should have hits for repeated calls"
+
+        # Test bound method includes 'self' (backwards compatibility)
+        obj = MyClass()
+        bound_result = metrics_util._get_arg_keywords(obj.my_method)
+        assert bound_result == ["self", "x", "y"], "Bound methods must include 'self'"
+
+        # Test different bound instances share cache via __func__
+        obj2 = MyClass()
+        hits_before = metrics_util._get_arg_keywords_cached.cache_info().hits
+        metrics_util._get_arg_keywords(obj2.my_method)
+        hits_after = metrics_util._get_arg_keywords_cached.cache_info().hits
+        assert hits_after > hits_before, (
+            "Different instances should share cache via __func__"
+        )
+    finally:
+        metrics_util._get_arg_keywords_cached.cache_clear()
+
+
+def test_get_arg_keywords_classmethod_returns_cls() -> None:
+    """Verify classmethod returns actual first parameter name 'cls', not 'self'."""
+
+    class MyClass:
+        @classmethod
+        def class_method(cls, x: int) -> None:
+            pass
+
+    result = metrics_util._get_arg_keywords(MyClass.class_method)
+    assert result == ["cls", "x"]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_get_arg_keywords_handles_pep649_annotations() -> None:
+    """Collect argument names when PEP 649 annotations reference undefined types.
+
+    On Python 3.14+, ``getfullargspec`` may fail on such callables; ``_get_arg_keywords``
+    uses string annotations instead. See https://github.com/streamlit/streamlit/issues/14324.
+    """
+
+    def base_func(items: object, count: int) -> None:
+        pass
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "count": "int", "return": "None"}
+    )
+
+    with pytest.raises((NameError, TypeError)):
+        inspect.getfullargspec(func)
+
+    assert metrics_util._get_arg_keywords(func) == ["items", "count"]
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_gather_metrics_decorator_handles_pep649_annotations() -> None:
+    """Decorate callables whose annotations break plain ``inspect.signature``.
+
+    On Python 3.14+, undefined deferred annotations can raise ``NameError``; the
+    decorator still wraps the callable. See https://github.com/streamlit/streamlit/issues/14324.
+    """
+
+    def base_func(items: object) -> str:
+        return "result"
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "str"}
+    )
+
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    decorated = metrics_util.gather_metrics("test_command", func)
+    assert decorated.__name__ == "base_func"
+    assert decorated("test_items") == "result"
+
+
+def test_installation_repr() -> None:
+    """``Installation.__repr__`` delegates to ``util.repr_``."""
+    inst = object.__new__(metrics_util.Installation)
+    inst.installation_id_v3 = "test-v3"
+    inst.installation_id_v4 = "test-v4"
+    assert (
+        repr(inst)
+        == "Installation(installation_id_v3='test-v3', installation_id_v4='test-v4')"
+    )
+
+
+class _TypeUsesNameOnly:
+    """Marker type; ``hasattr`` is patched to hide ``__qualname__`` in the test."""
+
+
+def test_get_type_name_falls_back_to_name_without_qualname() -> None:
+    """Use ``__name__`` when the type has no ``__qualname__`` (via patched ``hasattr``)."""
+    real_hasattr = builtins.hasattr
+
+    def selective_hasattr(obj: object, name: str) -> bool:
+        if obj is _TypeUsesNameOnly and name == "__qualname__":
+            return False
+        return real_hasattr(obj, name)
+
+    with patch("builtins.hasattr", side_effect=selective_hasattr):
+        assert metrics_util._get_type_name(_TypeUsesNameOnly()) == (
+            f"{_TypeUsesNameOnly.__module__}.{_TypeUsesNameOnly.__name__}"
+        )
+
+
+def test_get_type_name_returns_failed_when_type_introspection_raises() -> None:
+    """Return ``failed`` when introspection raises (telemetry must not assume types are well-behaved)."""
+    with patch(
+        "streamlit.runtime.metrics_util.inspect.isclass",
+        side_effect=RuntimeError("broken inspect"),
+    ):
+        assert metrics_util._get_type_name(object()) == "failed"
+
+
+@pytest.mark.parametrize(
+    "fake_module",
+    [
+        None,
+        MagicMock(__name__=""),
+    ],
+    ids=["no_module", "empty_module_name"],
+)
+def test_get_top_level_module_returns_unknown_without_module_name(
+    fake_module: object,
+) -> None:
+    """Return ``unknown`` when ``inspect.getmodule`` is missing or has no ``__name__``."""
+    with patch(
+        "streamlit.runtime.metrics_util.inspect.getmodule", return_value=fake_module
+    ):
+
+        def sample_func() -> None:
+            pass
+
+        assert metrics_util._get_top_level_module(sample_func) == "unknown"
+
+
+def test_get_command_telemetry_maps_create_instance_to_component_name() -> None:
+    """``create_instance`` telemetry uses ``component:<name>`` when ``self`` exposes ``name``."""
+    self_arg = MagicMock()
+    self_arg.name = "my_component"
+    cmd = metrics_util._get_command_telemetry(
+        CustomComponent.create_instance,
+        "create_instance",
+        self_arg,
+        key="k",
+    )
+    assert cmd.name == "component:my_component"
+
+
+def test_gather_metrics_empty_name_logs_warning_and_tracks_as_undefined() -> None:
+    """Empty decorator name logs a warning and is normalized to ``undefined`` for tracking."""
+    ctx = _mock_script_run_ctx()
+
+    with (
+        patch.object(metrics_util._LOGGER, "warning") as mock_warning,
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        patch.object(metrics_util, "_get_top_level_module", return_value="streamlit"),
+    ):
+
+        @metrics_util.gather_metrics("")
+        def tracked() -> str:
+            return "x"
+
+        assert tracked() == "x"
+
+    mock_warning.assert_called_once_with("gather_metrics: name is empty")
+    assert len(ctx.tracked_commands) == 1
+    assert ctx.tracked_commands[0].name == "undefined"
+
+
+def test_gather_metrics_swallows_command_telemetry_errors() -> None:
+    """Failures in ``_get_command_telemetry`` are logged and do not break the wrapped call."""
+    ctx = _mock_script_run_ctx()
+
+    with (
+        patch.object(metrics_util._LOGGER, "debug") as mock_debug,
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        patch.object(
+            metrics_util,
+            "_get_command_telemetry",
+            side_effect=RuntimeError("telemetry failed"),
+        ),
+    ):
+
+        @metrics_util.gather_metrics("ok_name")
+        def inner() -> int:
+            return 42
+
+        assert inner() == 42
+
+    mock_debug.assert_called_once()
+    assert mock_debug.call_args[0][0] == "Failed to collect command telemetry"
+    assert ctx.tracked_commands == []
+
+
+def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:
+    """``RerunException`` still records elapsed time on the active command telemetry."""
+    ctx = _mock_script_run_ctx()
+
+    timer_calls = iter([0.0, 0.25])
+    with (
+        patch("streamlit.runtime.metrics_util.get_script_run_ctx", return_value=ctx),
+        # Patch the global timeit.default_timer because gather_metrics imports it
+        # locally inside the function (not at module level).
+        patch("timeit.default_timer", side_effect=lambda: next(timer_calls)),
+    ):
+
+        @metrics_util.gather_metrics("raises_rerun")
+        def raises_rerun() -> None:
+            raise RerunException(None)
+
+        with pytest.raises(RerunException):
+            raises_rerun()
+
+    assert len(ctx.tracked_commands) == 1
+    assert ctx.tracked_commands[0].time == metrics_util.to_microseconds(0.25)
+
+
+@pytest.mark.parametrize("server_mode", ["tornado", "starlette-app"])
+def test_create_page_profile_message_sets_server_mode(server_mode: str) -> None:
+    """``server_mode`` is copied from ``config._server_mode`` when it is set."""
+    with patch.object(config, "_server_mode", server_mode):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+        assert msg.page_profile.server_mode == server_mode
+
+
+def test_create_page_profile_message_sets_uncaught_exception() -> None:
+    """``uncaught_exception`` is forwarded into the page profile proto when provided."""
+    exc_text = "ValueError: boom"
+    msg = metrics_util.create_page_profile_message(
+        [], 0, 0, uncaught_exception=exc_text
+    )
+    assert msg.page_profile.uncaught_exception == exc_text
+
+
+def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
+    """Create a ``<skill_name>/SKILL.md`` marker under ``base/harness_dir``."""
+    skill_dir = base / harness_dir / skill_name
+    skill_dir.mkdir(parents=True)
+    marker = skill_dir / "SKILL.md"
+    marker.write_text(f"---\nname: {skill_name}\n---\n")
+    return marker
+
+
+@pytest.fixture(autouse=True)
+def _clear_skills_cache() -> Iterator[None]:
+    """Reset the skill-detection cache around each test in this module section."""
+    metrics_util._detect_installed_skills_cached.cache_clear()
+    metrics_util._detect_installed_agents_cached.cache_clear()
+    yield
+    metrics_util._detect_installed_skills_cached.cache_clear()
+    metrics_util._detect_installed_agents_cached.cache_clear()
+
+
+@pytest.mark.parametrize("location", ["home", "app", "repo"])
+@pytest.mark.parametrize(
+    ("harness", "project_dir", "home_dir"),
+    [
+        ("agents", ".agents/skills", ".agents/skills"),
+        ("claude", ".claude/skills", ".claude/skills"),
+        ("codex", ".codex/skills", ".codex/skills"),
+        ("cortex", ".cortex/skills", ".snowflake/cortex/skills"),
+        ("cursor", ".cursor/skills", ".cursor/skills"),
+        ("gemini", ".gemini/skills", ".gemini/skills"),
+        ("opencode", ".opencode/skills", ".config/opencode/skills"),
+    ],
+)
+@pytest.mark.parametrize(
+    "skill",
+    ["developing-with-streamlit", "finding-streamlit-skills"],
+)
+def test_detect_installed_skills_emits_expected_token(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    location: str,
+    harness: str,
+    project_dir: str,
+    home_dir: str,
+    skill: str,
+) -> None:
+    """Each ``location:harness:skill`` combination is detected and emitted as a token."""
+    home = tmp_path / "home"
+    app = tmp_path / "repo" / "app"
+    repo = tmp_path / "repo"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+
+    roots = {"home": home, "app": app, "repo": repo}
+    harness_dir = home_dir if location == "home" else project_dir
+    _make_skill_dir(roots[location], harness_dir, skill)
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert f"{location}:{harness}:{skill}" in tokens
+
+
+def test_detect_installed_skills_empty_when_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Returns an empty list when no skills markers exist anywhere."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_skills(str(app)) == []
+
+
+def test_detect_installed_skills_ignores_unrelated_skill_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Skills with names outside ``_STREAMLIT_SKILL_NAMES`` must not trigger detection."""
+    home = tmp_path / "home"
+    home.mkdir()
+    _make_skill_dir(home, ".claude/skills", "some-other-skill")
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
+
+
+def test_detect_installed_skills_skips_repo_when_same_as_app(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When the app lives directly at the git root, ``repo`` tokens are deduped against ``app``."""
+    home = tmp_path / "home"
+    app_and_repo = tmp_path / "proj"
+    home.mkdir()
+    app_and_repo.mkdir()
+    (app_and_repo / ".git").mkdir()
+    _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app_and_repo))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
+
+
+def test_detect_installed_skills_walks_up_to_repo_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Skills planted at the git-root ancestor show up under ``repo:``, not ``app:``."""
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "nested" / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["repo:agents:finding-streamlit-skills"]
+
+
+def test_detect_installed_skills_returns_sorted_deduped_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multiple hits across locations are returned sorted and without duplicates."""
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
+    _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == [
+        "app:agents:finding-streamlit-skills",
+        "home:cursor:developing-with-streamlit",
+        "repo:claude:developing-with-streamlit",
+    ]
+
+
+def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Project-level skills are detected even when the user has no harness installed at home.
+
+    Guards against an over-broad short-circuit that would skip app/repo
+    harness checks when the corresponding home directory doesn't exist.
+    """
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    # Note: no ``~/.claude`` directory is created — the user has never run
+    # Claude Code. But the project ships skills under its own .claude dir.
+    _make_skill_dir(app, ".claude/skills", "developing-with-streamlit")
+    _make_skill_dir(repo, ".claude/skills", "finding-streamlit-skills")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == [
+        "app:claude:developing-with-streamlit",
+        "repo:claude:finding-streamlit-skills",
+    ]
+
+
+@pytest.mark.parametrize(
+    "detected",
+    [[], ["home:claude:developing-with-streamlit"]],
+)
+def test_create_page_profile_message_sets_installed_skills(
+    detected: list[str],
+) -> None:
+    """``installed_skills`` is populated from the detection helper."""
+    with patch(
+        "streamlit.runtime.metrics_util._detect_installed_skills",
+        return_value=detected,
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+    assert list(msg.page_profile.installed_skills) == detected
+
+
+@pytest.mark.parametrize(
+    ("harness", "marker_dir"),
+    [
+        ("agents", ".agents"),
+        ("claude", ".claude"),
+        ("codex", ".codex"),
+        ("cortex", ".snowflake/cortex"),
+        ("cursor", ".cursor"),
+        ("gemini", ".gemini"),
+        ("opencode", ".config/opencode"),
+    ],
+)
+def test_detect_installed_agents_finds_each_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    marker_dir: str,
+) -> None:
+    """Each harness is detected when its home-level marker directory exists."""
+    home = tmp_path / "home"
+    (home / marker_dir).mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == [harness]
+
+
+def test_detect_installed_agents_empty_when_no_harnesses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Returns an empty list when no harness marker directories exist."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == []
+
+
+def test_detect_installed_agents_ignores_plain_snowflake(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``.snowflake`` without a ``cortex`` subdirectory must not count as cortex."""
+    home = tmp_path / "home"
+    (home / ".snowflake").mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == []
+
+
+def test_detect_installed_agents_returns_sorted_deduped_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multiple harnesses are returned sorted and without duplicates."""
+    home = tmp_path / "home"
+    (home / ".cursor").mkdir(parents=True)
+    (home / ".claude").mkdir(parents=True)
+    (home / ".config/opencode").mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+
+
+@pytest.mark.parametrize(
+    "detected",
+    [[], ["claude", "codex"]],
+)
+def test_create_page_profile_message_sets_installed_agents(
+    detected: list[str],
+) -> None:
+    """``installed_agents`` is populated from the detection helper."""
+    with patch(
+        "streamlit.runtime.metrics_util._detect_installed_agents",
+        return_value=detected,
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+    assert list(msg.page_profile.installed_agents) == detected

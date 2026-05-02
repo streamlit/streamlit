@@ -28,7 +28,7 @@ from streamlit.components.v2.bidi_component.serialization import (
     serialize_mixed_data,
 )
 from streamlit.components.v2.bidi_component.state import (
-    BidiComponentResult,
+    ComponentResult,
     unwrap_component_state,
 )
 from streamlit.components.v2.presentation import make_bidi_component_presenter
@@ -58,7 +58,7 @@ from streamlit.proto.BidiComponent_pb2 import MixedData as MixedDataProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import register_widget
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from streamlit.components.v2.types import (
@@ -147,7 +147,7 @@ class BidiComponentMixin:
         """
 
         canonical = self._canonicalize_json_for_identity(payload)
-        return calc_md5(canonical)
+        return calc_hash(canonical)
 
     def _build_bidi_identity_kwargs(
         self,
@@ -230,7 +230,7 @@ class BidiComponentMixin:
             if data is not None:
                 try:
                     canonical = json.dumps(data, sort_keys=True)
-                    canonical_digest = calc_md5(canonical)
+                    canonical_digest = calc_hash(canonical)
                 except (TypeError, ValueError):
                     # Fallback to existing logic if direct dump fails
                     pass
@@ -242,12 +242,12 @@ class BidiComponentMixin:
         elif data_field == "arrow_data":
             # Hash large payloads instead of shoving raw bytes through the ID
             # hasher for performance.
-            identity["arrow_data"] = calc_md5(proto.arrow_data.data)
+            identity["arrow_data"] = calc_hash(proto.arrow_data.data)
         elif data_field == "bytes":
             # Same story for arbitrary bytes payloads: content-address the data
             # so identity changes track real mutations without re-hashing the
             # whole blob every run.
-            identity["bytes"] = calc_md5(proto.bytes)
+            identity["bytes"] = calc_hash(proto.bytes)
         elif data_field == "mixed":
             mixed: MixedDataProto = proto.mixed
             # Add the JSON content of the MixedData to the identity.
@@ -256,7 +256,7 @@ class BidiComponentMixin:
             )
             # Add the sorted content-addressed ref IDs of the Arrow blobs to the identity.
             # Unlike other data types where we include actual bytes, here we only include
-            # the blob keys. This is sufficient because keys are MD5 hashes of the blob
+            # the blob keys. This is sufficient because keys are content hashes of the blob
             # content (content-addressed), so identical content produces identical keys.
             identity["mixed_arrow_blobs"] = ",".join(sorted(mixed.arrow_blobs.keys()))
         else:
@@ -277,7 +277,7 @@ class BidiComponentMixin:
         width: Width = "stretch",
         height: Height = "content",
         **kwargs: WidgetCallback | None,
-    ) -> BidiComponentResult:
+    ) -> ComponentResult:
         """Add a bidirectional component instance to the app.
 
         This method uses a component that has already been registered with the
@@ -317,7 +317,7 @@ class BidiComponentMixin:
 
         Returns
         -------
-        BidiComponentResult
+        ComponentResult
             A dictionary-like object that holds the component's state and
             trigger values.
 
@@ -337,7 +337,7 @@ class BidiComponentMixin:
 
         if ctx is None:
             # Create an empty state with the default value and return it
-            return BidiComponentResult({}, {})
+            return ComponentResult({}, {})
 
         # Get the component definition from the registry
         from streamlit.runtime import Runtime
@@ -529,7 +529,7 @@ class BidiComponentMixin:
 
         state_vals = unwrap_component_state(component_state.value)
 
-        return BidiComponentResult(state_vals, trigger_vals)
+        return ComponentResult(state_vals, trigger_vals)
 
     @property
     def dg(self) -> DeltaGenerator:

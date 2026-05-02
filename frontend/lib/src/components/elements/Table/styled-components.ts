@@ -19,7 +19,7 @@ import styled, { CSSObject } from "@emotion/styled"
 import { Table } from "@streamlit/protobuf"
 
 import { StyledStreamlitMarkdown } from "~lib/components/shared/StreamlitMarkdown/styled-components"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export const StyledTableContainer = styled.div(({ theme }) => ({
   fontSize: theme.fontSizes.md,

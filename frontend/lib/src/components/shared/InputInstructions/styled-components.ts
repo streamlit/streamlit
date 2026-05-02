@@ -23,7 +23,7 @@ const blink = keyframes`
   }
 `
 
-export interface StyledMessageProps {
+interface StyledMessageProps {
   includeDot: boolean
   shouldBlink: boolean
 }

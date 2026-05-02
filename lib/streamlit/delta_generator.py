@@ -94,6 +94,7 @@ from streamlit.elements.widgets.color_picker import ColorPickerMixin
 from streamlit.elements.widgets.data_editor import DataEditorMixin
 from streamlit.elements.widgets.feedback import FeedbackMixin
 from streamlit.elements.widgets.file_uploader import FileUploaderMixin
+from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
 from streamlit.elements.widgets.radio import RadioMixin
@@ -205,6 +206,7 @@ class DeltaGenerator(
     MapMixin,
     MediaMixin,
     MetricMixin,
+    MenuButtonMixin,
     MultiSelectMixin,
     NumberInputMixin,
     PdfMixin,
@@ -436,7 +438,7 @@ class DeltaGenerator(
         return self._provided_cursor is None
 
     @property
-    def id(self) -> str:
+    def _id(self) -> str:
         return str(id(self))
 
     def _get_transient_cursor(self) -> cursor.Cursor:
@@ -557,9 +559,9 @@ class DeltaGenerator(
         caching.save_element_message(
             delta_type,
             element_proto,
-            invoked_dg_id=self.id,
-            used_dg_id=dg.id,
-            returned_dg_id=output_dg.id,
+            invoked_dg_id=self._id,
+            used_dg_id=dg._id,
+            returned_dg_id=output_dg._id,
             layout_config=layout_config,
         )
 
@@ -618,9 +620,9 @@ class DeltaGenerator(
 
         caching.save_block_message(
             block_proto,
-            invoked_dg_id=self.id,
-            used_dg_id=dg.id,
-            returned_dg_id=block_dg.id,
+            invoked_dg_id=self._id,
+            used_dg_id=dg._id,
+            returned_dg_id=block_dg._id,
         )
 
         return block_dg

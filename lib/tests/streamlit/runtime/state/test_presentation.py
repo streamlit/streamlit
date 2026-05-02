@@ -81,6 +81,17 @@ def test_apply_presenter_swallows_presenter_errors() -> None:
     assert out is base
 
 
+def test_apply_presenter_non_callable_presenter() -> None:
+    """Return base value unchanged when presenter is not callable."""
+    ss = _FakeSession()
+    ss._new_widget_state.widget_metadata["wid"] = SimpleNamespace(
+        presenter="not-callable"
+    )
+    base = {"value": 42}
+    out = apply_presenter(ss, "wid", base)
+    assert out is base
+
+
 def test_presenter_applied_once_via_getitem_and_filtered_state() -> None:
     """Presenter must be applied exactly once for both __getitem__ and filtered_state.
 
@@ -328,7 +339,7 @@ def test_bidi_presenter_state_overrides_duplicate_keys() -> None:
     """State must override trigger values on duplicate keys.
 
     This verifies the merge precedence documented in the presenter and in
-    BidiComponentResult: triggers are surfaced first, but persistent state
+    ComponentResult: triggers are surfaced first, but persistent state
     wins for duplicate keys.
     """
 

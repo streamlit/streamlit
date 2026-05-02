@@ -129,17 +129,12 @@ def prepare_secrets_file(app_base_url: str, oidc_server_port: int):
 
 
 @pytest.fixture(scope="module")
-def app_server_extra_args(
-    prepare_secrets_file: str, request: pytest.FixtureRequest
-) -> list[str]:
+def app_server_extra_args(prepare_secrets_file: str) -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    args = [
+    return [
         "--secrets.files",
         prepare_secrets_file,
     ]
-    if request.config.getoption("--use-starlette"):
-        args.extend(["--server.useStarlette", "true"])
-    return args
 
 
 def _click_and_wait_for_oauth_redirect(

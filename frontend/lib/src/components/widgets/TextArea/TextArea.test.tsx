@@ -439,7 +439,6 @@ describe("TextArea query param binding", () => {
       "string_value",
       props.element.default,
       true,
-      undefined,
       undefined
     )
   })
@@ -487,7 +486,6 @@ describe("TextArea query param binding", () => {
       "string_value",
       "initial bio",
       true,
-      undefined,
       undefined
     )
   })

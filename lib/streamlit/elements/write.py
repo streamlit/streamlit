@@ -119,8 +119,8 @@ class WriteMixin:
             is a string. Otherwise, this is a list of all the streamed objects.
             The return value is fully compatible as input for ``st.write``.
 
-        Example
-        -------
+        Examples
+        --------
         You can pass an OpenAI stream as shown in our tutorial, `Build a \
         basic LLM chat app <https://docs.streamlit.io/develop/tutorials/llms\
         /build-conversational-apps#build-a-chatgpt-like-app>`_. Alternatively,
@@ -227,7 +227,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute]
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
@@ -248,8 +248,11 @@ class WriteMixin:
                     first_text = True
                 streamed_response += chunk
                 # Only add the streaming symbol on the second text chunk
-                stream_container.markdown(
+                # Use _markdown with unterminated_parsing=True to complete
+                # unclosed markdown syntax (e.g., **bold) during streaming.
+                stream_container._markdown(
                     streamed_response + ("" if first_text else cursor_str),
+                    unterminated_parsing=True,
                 )
             elif callable(chunk):
                 flush_stream_response()
@@ -341,11 +344,6 @@ class WriteMixin:
                 If you only want to insert HTML or CSS without Markdown text,
                 we recommend using ``st.html`` instead.
 
-
-        Returns
-        -------
-        None
-
         Examples
         --------
         Its basic use case is to draw Markdown-formatted text, whenever the
@@ -357,7 +355,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write1.streamlit.app/
-            height: 150px
+            height: 200px
 
         As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
@@ -515,6 +513,7 @@ class WriteMixin:
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
                 or type_util.is_pydantic_model(arg)
+                or type_util.is_sequence_of_pydantic_models(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)

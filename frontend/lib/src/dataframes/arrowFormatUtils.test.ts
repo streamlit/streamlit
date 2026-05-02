@@ -18,30 +18,34 @@ import {
   Binary,
   Bool,
   DateDay,
+  Decimal,
+  DecimalBuilder,
   Field,
   Float64,
   Int64,
   List,
+  Struct,
+  Time,
   Timestamp,
   TimeUnit,
   Uint64,
   Utf8,
   vectorFromArray,
 } from "apache-arrow"
+import { getLogger } from "loglevel"
+import { vi } from "vitest"
 
 import { Quiver } from "~lib/dataframes/Quiver"
-import {
-  DECIMAL,
-  DICTIONARY,
-  INT64,
-  INTERVAL_DATETIME64,
-  INTERVAL_FLOAT64,
-  INTERVAL_INT64,
-  INTERVAL_UINT64,
-  PERIOD,
-  TIMEDELTA,
-  UINT64,
-} from "~lib/mocks/arrow"
+import { DECIMAL } from "~lib/mocks/arrow/types/decimal"
+import { DICTIONARY } from "~lib/mocks/arrow/types/dictionary"
+import { INT64 } from "~lib/mocks/arrow/types/int64"
+import { INTERVAL_DATETIME64 } from "~lib/mocks/arrow/types/intervalDatetime64"
+import { INTERVAL_FLOAT64 } from "~lib/mocks/arrow/types/intervalFloat64"
+import { INTERVAL_INT64 } from "~lib/mocks/arrow/types/intervalInt64"
+import { INTERVAL_UINT64 } from "~lib/mocks/arrow/types/intervalUint64"
+import { PERIOD } from "~lib/mocks/arrow/types/period"
+import { TIMEDELTA } from "~lib/mocks/arrow/types/timedelta"
+import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 
 import {
   convertTimeToDate,
@@ -322,9 +326,206 @@ describe("format", () => {
       })
     ).toEqual('["foo","bar","baz"]')
   })
+
+  it("time as bigint with sub-second precision uses fractional format", () => {
+    expect(
+      format(BigInt(1500), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("t", new Time(TimeUnit.MILLISECOND, 64), true),
+        pandasType: {
+          field_name: "t",
+          name: "t",
+          pandas_type: "time",
+          numpy_type: "time",
+          metadata: null,
+        },
+      })
+    ).toEqual("00:00:01.500")
+  })
+
+  it("timedelta via pandas metadata uses nanosecond unit when arrow field has no unit", () => {
+    expect(
+      format(BigInt(86_400_000_000_000), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("td", new Int64(), true),
+        pandasType: {
+          field_name: "td",
+          name: "td",
+          pandas_type: "object",
+          numpy_type: "timedelta64[ns]",
+          metadata: null,
+        },
+      })
+    ).toEqual("a day")
+  })
+
+  it("decimal with scale 0 returns integer string", () => {
+    const builder = new DecimalBuilder({
+      type: new Decimal(0, 10),
+      nullValues: null,
+    })
+    builder.append(new Uint32Array([42, 0, 0, 0]))
+    const value = builder.finish().toVector().get(0)
+    const arrowType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("c", new Decimal(0, 10), true),
+      pandasType: {
+        field_name: "c",
+        name: "c",
+        pandas_type: "decimal",
+        numpy_type: "object",
+        metadata: null,
+      },
+    }
+    expect(format(value, arrowType)).toEqual("42")
+  })
+
+  it("list JSON coerces bigint with Number() for serialization", () => {
+    expect(
+      format([{ x: BigInt("9007199254740993") }] as never, {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field(
+          "test",
+          new List(new Field("item", new Utf8(), true)),
+          true
+        ),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "object",
+          numpy_type: "list[object]",
+          metadata: null,
+        },
+      })
+    ).toEqual('[{"x":9007199254740992}]')
+  })
+
+  it("interval without pandas extension metadata falls back to string", () => {
+    const intervalStruct = new Struct([
+      new Field("left", new Float64(), true),
+      new Field("right", new Float64(), true),
+    ])
+    const row = vectorFromArray([{ left: 0, right: 1 }], intervalStruct).get(0)
+    const result = format(row, {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("iv", intervalStruct, true),
+      pandasType: {
+        field_name: "iv",
+        name: "iv",
+        pandas_type: "object",
+        numpy_type: "interval[float64, float64]",
+        metadata: null,
+      },
+    })
+    expect(result).toBe(String(row))
+  })
+
+  it("period column with missing arrow extension metadata returns raw duration", () => {
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true),
+        pandasType: {
+          field_name: "p",
+          name: "p",
+          pandas_type: "object",
+          numpy_type: "period[D]",
+          metadata: null,
+        },
+      })
+    ).toEqual("5")
+  })
+
+  it("period column with wrong extension name returns raw duration", () => {
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "notpandas.period"],
+      ["ARROW:extension:metadata", JSON.stringify({ freq: "D" })],
+    ])
+    expect(
+      format(BigInt(5), {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("p", new Int64(), true, meta),
+        pandasType: {
+          field_name: "p",
+          name: "p",
+          pandas_type: "object",
+          numpy_type: "period[D]",
+          metadata: null,
+        },
+      })
+    ).toEqual("5")
+  })
+
+  it("non-finite float falls through to string coercion", () => {
+    const floatType = {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("f", new Float64(), true),
+      pandasType: undefined,
+    }
+    expect(format(Number.NaN, floatType)).toEqual("NaN")
+    expect(format(Number.POSITIVE_INFINITY, floatType)).toEqual("Infinity")
+  })
+
+  it("returns String(x) when an unsupported type is encountered", () => {
+    // A boolean type does not match any explicit branch in format(), so the
+    // function should return String(x) at the end (post-try block).
+    expect(
+      format(false, {
+        type: DataFrameCellType.DATA,
+        arrowField: new Field("test", new Bool(), true),
+        pandasType: {
+          field_name: "test",
+          name: "test",
+          pandas_type: "bool",
+          numpy_type: "bool",
+          metadata: null,
+        },
+      })
+    ).toEqual("false")
+  })
+
+  it("falls back to string coercion when interval metadata fails to parse", () => {
+    // Provide a pandas.interval extension marker but invalid JSON metadata,
+    // which causes JSON.parse to throw inside formatInterval and triggers the
+    // top-level catch in format().
+    const LOG = getLogger("arrowFormatUtils")
+    const warnSpy = vi.spyOn(LOG, "warn").mockImplementation(() => {})
+
+    const meta = new Map<string, string>([
+      ["ARROW:extension:name", "pandas.interval"],
+      ["ARROW:extension:metadata", "{not-valid-json"],
+    ])
+    const intervalStruct = new Struct([
+      new Field("left", new Float64(), true),
+      new Field("right", new Float64(), true),
+    ])
+    const row = vectorFromArray([{ left: 0, right: 1 }], intervalStruct).get(0)
+    const result = format(row, {
+      type: DataFrameCellType.DATA,
+      arrowField: new Field("iv", intervalStruct, true, meta),
+      pandasType: {
+        field_name: "iv",
+        name: "iv",
+        pandas_type: "object",
+        numpy_type: "interval[float64, float64]",
+        metadata: null,
+      },
+    })
+    expect(result).toBe(String(row))
+    // Verify the top-level catch handler ran by checking LOG.warn was called.
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Unexpected error")
+    )
+    warnSpy.mockRestore()
+  })
 })
 
 describe("formatPeriodFromFreq", () => {
+  it("returns string for period value outside safe integer range", () => {
+    const huge = BigInt(Number.MAX_SAFE_INTEGER) + BigInt(2)
+    expect(formatPeriodFromFreq(huge, "D")).toEqual(String(huge))
+  })
+
   it.each([
     // Basic frequencies
     [1, "Y", "1971"],
@@ -347,12 +548,16 @@ describe("formatPeriodFromFreq", () => {
     [1, "W", "1"],
     [1, "W-INVALID", "1"],
   ])("formats %s with frequency %s to %s", (value, freq, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    expect(formatPeriodFromFreq(value, freq as any)).toEqual(expected)
+    expect(
+      formatPeriodFromFreq(
+        value,
+        freq as Parameters<typeof formatPeriodFromFreq>[1]
+      )
+    ).toEqual(expected)
   })
 })
 
-describe("convertTimestampToDate", () => {
+describe("convertTimeToDate", () => {
   it.each([
     // [timestamp, unit, expected date string]
     [1000, TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
@@ -362,6 +567,11 @@ describe("convertTimestampToDate", () => {
     // Test with BigInt values
     [BigInt(1000), TimeUnit.SECOND, "1970-01-01T00:16:40.000Z"],
     [BigInt(1000), TimeUnit.MILLISECOND, "1970-01-01T00:00:01.000Z"],
+    [
+      BigInt(10368000) * BigInt(1000000000) + BigInt(500),
+      TimeUnit.NANOSECOND,
+      "1970-05-01T00:00:00.000Z",
+    ],
     // Test with undefined field (should default to SECOND)
     [1000, undefined, "1970-01-01T00:16:40.000Z"],
     // Test with large timestamps

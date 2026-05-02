@@ -73,7 +73,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -338,8 +338,20 @@ def _assign_row_values(
     This avoids numpy attempting to coerce nested sequences (e.g. lists) into
     multi-dimensional arrays when a column legitimately stores list values.
     """
+    import warnings
 
-    df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
+    # Suppress pandas FutureWarning about dtype inference during concatenation.
+    # When assigning to a new row via .loc[], pandas internally performs concat
+    # and warns (in pandas 2.1-2.x) about changing how it handles empty/NA columns.
+    # The warning is not actionable by users and was removed in pandas 3.x.
+    # See: https://github.com/streamlit/streamlit/issues/14321
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message="The behavior of DataFrame concatenation with empty or all-NA entries is deprecated",
+            category=FutureWarning,
+        )
+        df.loc[row_label] = dict(zip(df.columns, row_values, strict=True))
 
 
 def _apply_row_additions(
@@ -768,6 +780,13 @@ class DataEditorMixin:
             ``column_order`` does not accept positional column indices and
             can't move the index column(s).
 
+            .. note::
+                Columns omitted from ``column_order`` are hidden by default
+                but can still be shown by the user via the column visibility
+                menu in the table toolbar. If a column contains sensitive data
+                that should not be exposed to the user, remove it from the
+                data before passing it to the function.
+
         column_config : dict or None
             Configuration to customize how columns are displayed. If this is
             ``None`` (default), columns are styled based on the underlying data
@@ -779,7 +798,8 @@ class DataEditorMixin:
             positional column indices (integers), and the values are one of the
             following:
 
-            - ``None`` to hide the column.
+            - ``None`` to hide the column. Hidden columns can still be shown
+              by the user via the table toolbar.
             - A string to set the display label of the column.
             - One of the column types defined under ``st.column_config``. For
               example, to show a column as dollar amounts, use
@@ -817,10 +837,19 @@ class DataEditorMixin:
             column name, or use a positional column index where ``0`` refers to
             the first index column.
 
-        key : str
-            An optional string to use as the unique key for this widget. If this
-            is omitted, a key will be generated for the widget based on its
-            content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string to use as the unique key for this widget.
+            If this is ``None`` (default), a key will be generated for
+            the widget based on the values of the other parameters. No
+            two widgets may have the same key.
+
+            A key lets you access the widget's value via
+            ``st.session_state[key]`` (read-only). For more details, see
+            `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         on_change : callable
             An optional callback invoked when this data_editor's value changes.
@@ -1009,7 +1038,7 @@ class DataEditorMixin:
 
         # Deactivate editing for columns that are not compatible with arrow
         for column_name, column_data in data_df.items():
-            if dataframe_util.is_colum_type_arrow_incompatible(column_data):
+            if dataframe_util.determine_arrow_column_fix(column_data) is not None:
                 update_column_config(
                     column_config_mapping, str(column_name), {"disabled": True}
                 )
@@ -1122,7 +1151,7 @@ class DataEditorMixin:
 
         if dataframe_util.is_pandas_styler(data):
             # Pandas styler will only work for non-editable/disabled columns.
-            # Get first 10 chars of md5 hash of the key or delta path as styler uuid
+            # Get first 10 chars of content hash of the key or delta path as styler uuid
             # and set it as styler uuid.
             # We are only using the first 10 chars to keep the uuid short since
             # it will be used for all the cells in the dataframe. Therefore, this
@@ -1130,7 +1159,7 @@ class DataEditorMixin:
             # should be good enough to avoid  potential collisions in this case.
             # Even on collisions, there should not be a big issue with the
             # rendering in the data editor.
-            styler_uuid = calc_md5(key or self.dg._get_delta_path_str())[:10]
+            styler_uuid = calc_hash(key or self.dg._get_delta_path_str())[:10]
             data.set_uuid(styler_uuid)  # ty: ignore[call-non-callable, unresolved-attribute]
             marshall_styler(proto.arrow_data, data, styler_uuid)
 

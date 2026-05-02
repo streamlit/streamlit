@@ -65,3 +65,26 @@ if TYPE_CHECKING:
         segmented_control("foo", options, selection_mode="multi", bind="query-params"),
         list[int],
     )
+
+    # Check required parameter with type narrowing
+    assert_type(
+        segmented_control("foo", options, required=False),
+        int | None,
+    )
+    assert_type(
+        segmented_control("foo", options, default=1, required=True),
+        int,  # Guaranteed non-None because required=True with default set
+    )
+    assert_type(
+        segmented_control("foo", options, required=True),
+        int | None,  # Can still be None initially (no default set)
+    )
+    assert_type(
+        segmented_control("foo", options, default=None, required=True),
+        int | None,  # Explicitly None default still returns V | None
+    )
+
+    # Note: required=True with selection_mode="multi" is invalid and raises
+    # StreamlitAPIException at runtime. This combination cannot be caught at
+    # type-check time because the overload fallback accepts it. The validation
+    # is enforced in _internal_button_group() at runtime.

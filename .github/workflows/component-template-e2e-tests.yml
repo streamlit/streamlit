@@ -9,7 +9,6 @@ on:
     paths-ignore:
       # Don't run CI if changes are only in documentation/spec folders:
       - "specs/**"
-      - "agent-knowledge/**"
       - "wiki/**"
 
 jobs:
@@ -31,7 +30,7 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: "yarn"
-          cache-dependency-path: "component-lib/yarn.lock"
+          cache-dependency-path: "frontend/yarn.lock"
 
       - name: Set Python version vars
         uses: ./.github/actions/build_info
@@ -59,17 +58,17 @@ jobs:
           echo "output_file=${streamlit_wheel}" >> $GITHUB_OUTPUT
 
       - name: Install node dependencies for streamlit-component-lib
-        working-directory: component-lib
+        working-directory: frontend/component-lib
         shell: bash
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Build streamlit-component-lib package
-        working-directory: component-lib
+        working-directory: frontend/component-lib
         shell: bash
         run: yarn run build && npm pack
 
       - name: Return path to Component Library
-        working-directory: component-lib
+        working-directory: frontend/component-lib
         id: component_library
         shell: bash
         run: |
@@ -83,6 +82,14 @@ jobs:
           persist-credentials: false
           repository: streamlit/component-template
           path: ./component-template
+
+      # The component-template repo uses `python -m build` which requires pip.
+      # uv venvs don't include pip by default, and build 1.4.1+ requires pip
+      # to be available via `python -m pip` for isolated builds.
+      # This must be placed AFTER `make package` because uv sync removes pip.
+      # See: https://github.com/pypa/build/issues/1004
+      - name: Install pip in venv for build compatibility
+        run: python -m ensurepip --upgrade
 
       - name: Build components wheels
         uses: ./component-template/.github/actions/build_component_wheels

@@ -19,22 +19,24 @@ import { getLogger } from "loglevel"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
+  IArrowTable,
   ISpecialArg,
   SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
-import { EmotionTheme, toExportedTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
+import { toExportedTheme } from "~lib/theme/utils"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { Source, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { ComponentMessageType, StreamlitMessageType } from "./enums"
 
 // The custom component's value posted from the iFrame has one of the three types as defined
-// in component-lib/
-export type ValueType = "bytes" | "dataframe" | "json"
+// in frontend/component-lib/
+type ValueType = "bytes" | "dataframe" | "json"
 
 // Define types for messages being sent from the custom component
-// The types are also defined in the component-lib/ module, and we can
+// The types are also defined in the frontend/component-lib module, and we can
 // replace these here when we have a shared module. Until then,
 // the typing is hopefully at least a little bit helpful for devs.
 type ReadyMessage = {
@@ -42,8 +44,7 @@ type ReadyMessage = {
 }
 type ComponentValueMessage = {
   /* the value sent from the custom component can be anything */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  value: any
+  value: unknown
   dataType: ValueType
 }
 type FrameHeightMessage = {
@@ -65,13 +66,11 @@ export interface IframeMessageHandlerProps {
 }
 
 export interface Args {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [name: string]: any
+  [name: string]: unknown
 }
 export interface DataframeArg {
   key: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  value: any
+  value: unknown
 }
 
 /**
@@ -162,7 +161,7 @@ export function createIframeMessageHandler(
           )
         } else {
           frameHeightCallback(
-            tryGetValue(data as FrameHeightMessage, "height")
+            tryGetValue(data, "height") as number | undefined
           )
         }
         break
@@ -289,8 +288,7 @@ export function sendRenderMessage(
  * @returns undefined
  */
 function handleSetComponentValue(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  value: any, // we do not know what data the custom component is sending us, so we use 'any' here
+  value: unknown, // we do not know what data the custom component is sending us
   dataType: ValueType,
   source: Source,
   element: ComponentInstanceProto,
@@ -304,10 +302,15 @@ function handleSetComponentValue(
 
   switch (dataType) {
     case "dataframe":
-      widgetMgr.setArrowValue(element, value, source, fragmentId)
+      widgetMgr.setArrowValue(
+        element,
+        value as IArrowTable,
+        source,
+        fragmentId
+      )
       break
     case "bytes":
-      widgetMgr.setBytesValue(element, value, source, fragmentId)
+      widgetMgr.setBytesValue(element, value as Uint8Array, source, fragmentId)
       break
     default:
       widgetMgr.setJsonValue(element, value, source, fragmentId)
@@ -316,12 +319,11 @@ function handleSetComponentValue(
 
 /** Return the property with the given name, if it exists. */
 function tryGetValue(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  obj: any,
+  obj: object,
   name: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  defaultValue: any = undefined
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-): any {
-  return Object.hasOwn(obj, name) ? obj[name] : defaultValue
+  defaultValue: unknown = undefined
+): unknown {
+  return Object.hasOwn(obj, name)
+    ? (obj as Record<string, unknown>)[name]
+    : defaultValue
 }

@@ -22,10 +22,10 @@ import threading
 import time
 import uuid
 from collections.abc import Callable, Sized
-from functools import wraps
+from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
-from streamlit import config, file_util, util
+from streamlit import config, file_util, type_util, util
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.PageProfile_pb2 import Argument, Command
@@ -44,13 +44,18 @@ _MAX_TRACKED_PER_COMMAND: Final = 25
 # A mapping to convert from the actual name to preferred/shorter representations
 _OBJECT_NAME_MAPPING: Final = {
     "streamlit.delta_generator.DeltaGenerator": "DG",
+    # pandas 2.x paths
     "pandas.core.frame.DataFrame": "DataFrame",
+    "pandas.core.indexes.base.Index": "PandasIndex",
+    "pandas.core.series.Series": "PandasSeries",
+    # pandas 3.x paths (module changed from pandas.core.* to pandas.*)
+    "pandas.DataFrame": "DataFrame",
+    "pandas.Index": "PandasIndex",
+    "pandas.Series": "PandasSeries",
     "plotly.graph_objs._figure.Figure": "PlotlyFigure",
     "bokeh.plotting.figure.Figure": "BokehFigure",
     "matplotlib.figure.Figure": "MatplotlibFigure",
     "pandas.io.formats.style.Styler": "PandasStyler",
-    "pandas.core.indexes.base.Index": "PandasIndex",
-    "pandas.core.series.Series": "PandasSeries",
     "streamlit.connections.snowpark_connection.SnowparkConnection": "SnowparkConnection",
     "streamlit.connections.sql_connection.SQLConnection": "SQLConnection",
 }
@@ -87,7 +92,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "pyspark",
     "cudf",
     "xarray",
-    "ray",
     "geopandas",
     "mars",
     "tables",
@@ -240,6 +244,127 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
 _ETC_MACHINE_ID_PATH = "/etc/machine-id"
 _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
+_STREAMLIT_SKILL_NAMES: Final = (
+    "developing-with-streamlit",
+    "finding-streamlit-skills",
+)
+_SKILL_MARKER_FILENAME: Final = "SKILL.md"
+# (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs
+# are checked for the SKILL.md marker; agent_home_dir is checked for existence
+# to detect the harness itself independent of Streamlit skills.
+_HARNESSES: Final = (
+    ("agents", ".agents/skills", ".agents/skills", ".agents"),
+    ("claude", ".claude/skills", ".claude/skills", ".claude"),
+    ("codex", ".codex/skills", ".codex/skills", ".codex"),
+    ("cortex", ".cortex/skills", ".snowflake/cortex/skills", ".snowflake/cortex"),
+    ("cursor", ".cursor/skills", ".cursor/skills", ".cursor"),
+    ("gemini", ".gemini/skills", ".gemini/skills", ".gemini"),
+    ("opencode", ".opencode/skills", ".config/opencode/skills", ".config/opencode"),
+)
+# Max directory levels to walk when searching for a ``.git`` ancestor. Bounded
+# to avoid scanning the entire filesystem on pathological layouts.
+_MAX_REPO_ROOT_WALK_DEPTH: Final = 20
+
+
+def _find_git_root(start: str) -> str | None:
+    """Return the nearest ancestor of ``start`` containing a ``.git`` entry, or ``None``.
+
+    Uses a bounded stdlib ancestor walk rather than ``git.Repo(...)`` from
+    GitPython. GitPython's cold import adds ~170ms on first call, which shows
+    up on every hosted-app startup via the ``create_page_profile_message``
+    code path — for a signal that almost always resolves to ``None`` in those
+    environments. The stdlib walk is ~1ms cold and returns the same path we
+    need.
+    """
+    current = os.path.abspath(start)
+    for _ in range(_MAX_REPO_ROOT_WALK_DEPTH):
+        if os.path.exists(os.path.join(current, ".git")):
+            return current
+        parent = os.path.dirname(current)
+        if parent == current:
+            return None
+        current = parent
+    return None
+
+
+def _detect_installed_skills(app_dir: str | None) -> list[str]:
+    """Detect Streamlit-shipped agent skills in well-known locations.
+
+    Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
+    tokens. ``location`` is ``home``, ``app``, or ``repo``; ``harness`` is one
+    of ``agents``, ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``,
+    or ``opencode``; ``skill`` is one of ``_STREAMLIT_SKILL_NAMES``.
+    Never raises: filesystem errors are swallowed and produce an empty list.
+
+    The result is cached per ``app_dir`` for the lifetime of the process.
+    """
+    return list(_detect_installed_skills_cached(app_dir))
+
+
+@lru_cache(maxsize=1)
+def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        app = os.path.abspath(app_dir) if app_dir else os.getcwd()
+        repo = _find_git_root(app)
+
+        roots: dict[str, str] = {"home": home, "app": app}
+        # Skip ``repo`` when it matches ``app`` to avoid double-counting the
+        # common case where the app script lives at the repo root. ``normcase``
+        # handles case-insensitive filesystems (Windows, default macOS).
+        if repo is not None and os.path.normcase(repo) != os.path.normcase(app):
+            roots["repo"] = repo
+
+        tokens: set[str] = set()
+        for location, root in roots.items():
+            for harness, project_dir, home_skills_dir, agent_home_dir in _HARNESSES:
+                # At home level, skip harnesses that aren't installed at all
+                # (saves 2 isfile calls per absent harness — common on hosted
+                # apps where no skills or harnesses exist).
+                if location == "home" and not os.path.isdir(
+                    os.path.join(root, agent_home_dir)
+                ):
+                    continue
+                harness_dir = home_skills_dir if location == "home" else project_dir
+                for skill in _STREAMLIT_SKILL_NAMES:
+                    marker = os.path.join(
+                        root, harness_dir, skill, _SKILL_MARKER_FILENAME
+                    )
+                    if os.path.isfile(marker):
+                        tokens.add(f"{location}:{harness}:{skill}")
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed Streamlit skills", exc_info=ex)
+        return ()
+
+
+def _detect_installed_agents() -> list[str]:
+    """Detect agent harnesses installed under the user's home directory.
+
+    Returns a sorted, deduplicated list of harness name tokens (``agents``,
+    ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
+    for each harness whose home-level config directory exists. Independent
+    of whether Streamlit-specific skills are installed for that harness.
+
+    The result is cached for the lifetime of the process. Never raises:
+    filesystem errors are swallowed and produce an empty list.
+    """
+    return list(_detect_installed_agents_cached())
+
+
+@lru_cache(maxsize=1)
+def _detect_installed_agents_cached() -> tuple[str, ...]:
+    try:
+        home = os.path.expanduser("~")
+        tokens: set[str] = set()
+        for harness, _project_dir, _home_skills_dir, agent_home_dir in _HARNESSES:
+            if os.path.isdir(os.path.join(home, agent_home_dir)):
+                tokens.add(harness)
+        return tuple(sorted(tokens))
+    except Exception as ex:  # pragma: no cover - defensive
+        _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
+        return ()
+
 
 def _get_machine_id_v3() -> str:
     """Get the machine ID.
@@ -366,11 +491,56 @@ def _get_arg_metadata(arg: object) -> str | None:
     return None
 
 
+@lru_cache(maxsize=256)
+def _get_arg_keywords_cached(func: Callable[..., Any]) -> tuple[str, ...]:
+    """Return POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameter names as an immutable tuple.
+
+    Results are cached by function identity. Callers must pass ``func.__func__``
+    for bound methods — this function operates on unbound callables only.
+
+    On Python 3.14+, PEP 649 causes annotation evaluation to be deferred until
+    accessed. This can fail with NameError when annotations reference types
+    imported under TYPE_CHECKING. Since we only need parameter names (not
+    annotations), we use ``annotation_format=Format.STRING`` to avoid evaluation.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    params = type_util.get_func_parameters(func)
+    return tuple(
+        p.name
+        for p in params
+        if p.kind
+        in {inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD}
+    )
+
+
+def _get_arg_keywords(func: Callable[..., Any]) -> list[str]:
+    """Return argument names from a function's signature.
+
+    This returns argument names matching the behavior of getfullargspec().args:
+    - Both POSITIONAL_ONLY and POSITIONAL_OR_KEYWORD parameters (not keyword-only)
+    - Includes 'self' for bound methods
+
+    Uses caching to avoid repeated expensive inspect.signature() calls.
+
+    Note: The underlying LRU cache holds strong references to function objects.
+    This is fine for typical Streamlit usage with module-level functions, but
+    dynamically created callables (e.g., closures, partials) may be retained
+    until evicted from the cache.
+    """
+    # For bound methods, use __func__ as cache key: this ensures cache hits
+    # across different bound instances of the same method, and
+    # get_func_parameters(__func__) already includes 'self'.
+    if inspect.ismethod(func):
+        return list(_get_arg_keywords_cached(func.__func__))
+    return list(_get_arg_keywords_cached(func))
+
+
 def _get_command_telemetry(
     _command_func: Callable[..., Any], _command_name: str, *args: Any, **kwargs: Any
 ) -> Command:
     """Get telemetry information for the given callable and its arguments."""
-    arg_keywords = inspect.getfullargspec(_command_func).args
+    arg_keywords = _get_arg_keywords(_command_func)
     self_arg: Any | None = None
     arguments: list[Argument] = []
     is_method = inspect.ismethod(_command_func)
@@ -450,19 +620,15 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
     Parameters
     ----------
-    func : callable
-    The function to track for telemetry.
+    name : str
+        The name to use for telemetry tracking.
+    func : callable or None
+        The function to track for telemetry. If ``None`` (default), returns a
+        decorator that can be applied to a function.
 
-    name : str or None
-    Overwrite the function name with a custom name that is used for telemetry tracking.
-
-    Example
-    -------
-    >>> @st.gather_metrics
-    ... def my_command(url):
-    ...     return url
-
-    >>> @st.gather_metrics(name="custom_name")
+    Examples
+    --------
+    >>> @st.gather_metrics("my_command")
     ... def my_command(url):
     ...     return url
     """
@@ -549,9 +715,11 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
         return result
 
-    with contextlib.suppress(AttributeError):
+    with contextlib.suppress(AttributeError, NameError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports in inspect.signature()
         wrapped_func.__dict__.update(non_optional_func.__dict__)
         wrapped_func.__signature__ = inspect.signature(non_optional_func)  # type: ignore
     return cast("F", wrapped_func)
@@ -606,7 +774,13 @@ def create_page_profile_message(
     if uncaught_exception:
         page_profile.uncaught_exception = uncaught_exception
 
+    app_dir: str | None = None
     if ctx := get_script_run_ctx():
         page_profile.is_fragment_run = bool(ctx.fragment_ids_this_run)
+        if ctx.main_script_path:
+            app_dir = os.path.dirname(ctx.main_script_path)
+
+    page_profile.installed_skills.extend(_detect_installed_skills(app_dir))
+    page_profile.installed_agents.extend(_detect_installed_agents())
 
     return msg

@@ -16,13 +16,47 @@
 
 import { Accept } from "react-dropzone"
 
-// Before we support official MIME types, using the custom "application/streamlit" as a wild card
-// to allow file types defined in acceptedExtensions.
+import { isMimeType } from "~lib/util/FileHelper"
+
+/**
+ * Custom MIME type for file extensions that don't have a standard MIME type mapping.
+ * This acts as a fallback to allow any file with matching extensions.
+ */
 export const STREAMLIT_MIME_TYPE = "application/streamlit"
 
-export function getAccept(acceptedExtensions: string[]): Accept | undefined {
-  const accept: Accept = {}
-  accept[STREAMLIT_MIME_TYPE] = acceptedExtensions
+/**
+ * Build the accept configuration for react-dropzone from a list of file types.
+ *
+ * Accepts:
+ * - MIME types: "image/jpeg", "application/pdf" (used as accept keys)
+ * - MIME wildcards: "image/*", "audio/*" (used as accept keys)
+ * - Extensions: ".jpg", ".pdf" (grouped under fallback MIME type)
+ *
+ * Returns undefined if no types are specified (accept all files).
+ */
+export function getAccept(acceptedTypes: string[]): Accept | undefined {
+  if (!acceptedTypes.length) {
+    return undefined
+  }
 
-  return acceptedExtensions.length ? accept : undefined
+  const accept: Accept = {}
+  const extensions: string[] = []
+
+  for (const type of acceptedTypes) {
+    if (isMimeType(type)) {
+      // MIME types and wildcards are used directly as accept keys.
+      // react-dropzone uses these to filter the file picker.
+      accept[type] = []
+    } else {
+      // Extensions are collected and grouped under the fallback MIME type.
+      extensions.push(type)
+    }
+  }
+
+  // Add extensions under the fallback MIME type if any exist
+  if (extensions.length > 0) {
+    accept[STREAMLIT_MIME_TYPE] = extensions
+  }
+
+  return accept
 }

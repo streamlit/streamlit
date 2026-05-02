@@ -119,8 +119,8 @@ describe("TooltipIcon element", () => {
         theme={mockTheme.emotion}
         baseuiTheme={mockTheme.basewebTheme}
       >
-        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- Intentionally bypass types to validate runtime safety. */}
-        <TooltipIcon content="Help text" ariaLabel={"" as any} />
+        {/* Passing an empty string to validate runtime safety for ariaLabel fallback. */}
+        <TooltipIcon content="Help text" ariaLabel="" />
       </ThemeProvider>
     )
 

@@ -33,7 +33,7 @@ import { TransientNode } from "./TransientNode"
 import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 
-// prettier-ignore
+// oxfmt-ignore
 const BLOCK = block([
   text("1"),
   block([

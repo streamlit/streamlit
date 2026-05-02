@@ -25,12 +25,12 @@ import {
 import { LOG } from "~lib/components/widgets/BidiComponent/utils/logger"
 import { parseBidiComponentData } from "~lib/components/widgets/BidiComponent/utils/parseBidiComponentData"
 import { extractComponentsV2Theme } from "~lib/components/widgets/BidiComponent/utils/theme"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { ensureError } from "~lib/util/ErrorHandling"
 import { WidgetInfo, WidgetStateManager } from "~lib/WidgetStateManager"
 
-export type BidiComponentContextProviderProps = PropsWithChildren<{
+type BidiComponentContextProviderProps = PropsWithChildren<{
   element: BidiComponentProto
   widgetMgr: WidgetStateManager
   fragmentId: string | undefined

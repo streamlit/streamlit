@@ -20,11 +20,6 @@ import useScrollAnimation from "./useScrollAnimation"
 import useScrollSpy from "./useScrollSpy"
 import useStateRef from "./useStateRef"
 
-export interface ScrollToBottomOptions {
-  bottomThreshold?: number
-  debounceMs?: number
-}
-
 const DEFAULT_BOTTOM_THRESHOLD = 1
 const SCROLL_DECISION_DURATION = 34 // 2 frames
 const MIN_CHECK_INTERVAL = 17 // 1 frame
@@ -35,7 +30,7 @@ function setImmediateInterval(fn: () => void, ms: number): NodeJS.Timeout {
   return setInterval(fn, ms)
 }
 
-function isAtBottom({
+export function isAtBottom({
   scrollHeight,
   offsetHeight,
   scrollTop,
@@ -213,6 +208,7 @@ export function useScrollToBottom<T extends HTMLElement>(
 
       return () => clearInterval(timeout)
     }
+    return undefined
   }, [
     scrollableRef,
     isSticky,
@@ -250,12 +246,11 @@ export function useScrollToBottom<T extends HTMLElement>(
         target.removeEventListener("focus", handleFocus, { capture: true })
       }
     }
+    return undefined
   }, [scrollableRef, active])
 
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   useScrollSpy(scrollableRef.current, handleScroll, active)
   useScrollAnimation(
-    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
     scrollableRef.current,
     handleScrollToBottomFinished,
     isAnimating,
@@ -264,5 +259,3 @@ export function useScrollToBottom<T extends HTMLElement>(
 
   return scrollableRef
 }
-
-export default useScrollToBottom

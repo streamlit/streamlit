@@ -1,12 +1,12 @@
 # TypeScript Development Guide
 
-- TypeScript: v5
-- Linter: eslint v9
-- Formatter: prettier v3
+- TypeScript: v6
+- Linters: oxlint v1 + eslint v9
+- Formatter: oxfmt v0.x
 - Framework: React v18
 - Styling: @emotion/styled v11
-- Build tool: vite v7
-- Testing: vitest v3 & react testing library v16
+- Build tool: vite v8
+- Testing: vitest v4 & react testing library v16
 - Package manager: yarn v4 with workspaces
 
 ## Key TypeScript Principles
@@ -18,6 +18,8 @@
 - Ensure functions have explicit return types.
 - **Omit trivially inferred types**: Do not add type annotations when TypeScript can trivially infer them (e.g., `const count = 0` not `const count: number = 0`). Add explicit types only when they improve clarity or are required.
 - **Prefer optional chaining**: Use optional chaining (`?.`) instead of `&&` chains for property access. This is enforced by the `@typescript-eslint/prefer-optional-chain` rule.
+- **Prefer JSDoc over regular comments**: When documenting functions, types, interfaces, classes, or their members, use JSDoc (`/** ... */`) instead of regular comments (`//` or `/* */`). JSDoc enables IDE tooltips, auto-completion hints, and better documentation generation.
+- **No barrel files**: Do not create `index.ts`/`index.tsx` barrel files that only re-export from sibling modules. Import directly from the source file instead (e.g., `import Foo from "./Foo/Foo"` not `import Foo from "./Foo"`). The only exceptions are package entry points (`app/src/index.tsx`, `lib/src/index.ts`, `connection/src/index.ts`, `utils/src/index.ts`) and `component-v2-lib/src/index.ts` (shipped as an npm library). Files named `index.ts` that contain actual logic (e.g., `DataFrame/columns/index.ts`, `WindowDimensions/index.ts`, emotion theme files) are fine — the rule applies only to files whose sole purpose is re-exporting.
 
 ## Key Frontend Principles
 
@@ -30,11 +32,16 @@
   - ❌ `const input = useRef<HTMLInputElement>(null)`
 - **Updater functions must be pure**: `setState(prev => newState)` updaters must not mutate `prev` or have side effects—return a new object. See [useState](https://react.dev/reference/react/useState#setstate-parameters).
 - Prefix event handlers with "handle" (e.g., handleClick, handleSubmit).
+
+## Theming and Styling
+
+- **Use theme properties**: Always strongly prefer theme properties from `useEmotionTheme()` instead of hardcoded values: `theme.colors`, `theme.spacing`, `theme.sizes`, `theme.radii`, `theme.fontSizes`, `theme.fontWeights`, `theme.fonts`, `theme.lineHeights`, `theme.shadows`, `theme.iconSizes`, `theme.breakpoints`, `theme.zIndices`. See `frontend/lib/src/theme/` to find out more about theming.
 - **Avoid inline `style` props**: Prefer `@emotion/styled` components over inline `style` attributes. Move styled components to `styled-components.ts` when possible.
 - Leverage object style notation in Emotion.
+- **Avoid complex/deeply nested CSS selectors**: Prefer flat, simple selectors in styled components. Deeply nested selectors (e.g., `& > div > span > button`) are fragile, hard to maintain, and often indicate a need to refactor into smaller styled components.
 - All styled components begin with the word `Styled` to indicate it's a styled component.
 - Utilize props in styled components to display elements that may have some interactivity.
-  - Avoid the need to target other components.
+- Avoid the need to target other components.
 - When using BaseWeb, be sure to import our theme via `useEmotionTheme` and use those values in overrides.
 - Use the following pattern for naming custom CSS classes and test IDs: `stComponentSubcomponent`, for example: `stTextInputIcon`.
 - Avoid using pixel sizes for styling, always use rem, em, percentage, or other relative units.
@@ -108,12 +115,14 @@ function getAlignment(config: AlignmentConfig) {
 - Project Structure: Monorepo managed with Yarn Workspaces.
 - Packages:
   - `app` - Main application UI.
+  - `component-lib` - Library for building Streamlit custom components v1.
+  - `component-v2-lib` - Support library for Streamlit Components v2.
   - `connection` - WebSocket handling
+  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
   - `lib` - Shared UI components.
-  - `utils` - Shared TypeScript utilities.
   - `protobuf` - Generated Protocol definitions.
   - `typescript-config` - Configuration for TypeScript.
-  - `eslint-plugin-streamlit-custom` - ESLint plugin with custom rules.
+  - `utils` - Shared TypeScript utilities.
 - Package-specific scripts are executed within their respective directories.
 
 ## Relevant `make` commands
@@ -122,9 +131,10 @@ Run from the repo root (requires Node major version from `.nvmrc`):
 
 - `make frontend-fast`: Build the frontend (vite).
 - `make frontend-dev`: Start the frontend development server (hot-reload).
-- `make frontend-lint`: Lint and check formatting of frontend files (eslint).
+- `make frontend-lint`: Lint and check formatting of frontend files (oxlint + eslint).
+- `make frontend-knip`: Run Knip dependency analysis.
 - `make frontend-types`: Run the TypeScript type checker (tsc).
-- `make frontend-format`: Format frontend files (eslint).
+- `make frontend-format`: Format frontend files (oxfmt).
 - `make frontend-tests`: Run all frontend unit tests (vitest).
 
 ## TypeScript Test Guide

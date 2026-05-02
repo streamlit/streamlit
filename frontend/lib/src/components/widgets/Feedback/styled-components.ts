@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledFeedbackContainerProps {
+interface StyledFeedbackContainerProps {
   containerWidth: boolean
 }
 
@@ -36,7 +36,7 @@ export const StyledFeedbackButtonGroup = styled.div(({ theme }) => ({
   minWidth: "fit-content",
 }))
 
-export interface StyledFeedbackButtonProps {
+interface StyledFeedbackButtonProps {
   isSelected: boolean
 }
 

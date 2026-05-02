@@ -24,13 +24,13 @@ def test_main_menu_images(themed_app: Page, assert_snapshot: ImageCompareFunctio
     themed_app.get_by_test_id("stMainMenu").click()
 
     # Replace version with placeholder so snapshots don't change across versions.
-    menu = themed_app.get_by_role("menu", name="Main menu")
-    menu.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
+    # The version footer lives outside role="menu" (inside the popover wrapper).
+    popover = themed_app.get_by_test_id("stMainMenuPopover")
+    popover.get_by_text(re.compile(r"^Made with Streamlit v")).evaluate(
         "el => (el.textContent = 'Made with Streamlit vX.XX.X')"
     )
 
-    element = themed_app.get_by_test_id("stMainMenuPopover")
-    assert_snapshot(element, name="main_menu")
+    assert_snapshot(popover, name="main_menu")
 
 
 def test_main_menu_closes_on_escape(app: Page):
@@ -172,10 +172,11 @@ def test_focus_returns_to_menu_button_after_close(app: Page):
 
 
 def test_tab_closes_menu(app: Page):
-    """Test that pressing Tab inside the menu closes it without returning focus to trigger.
+    """Test that pressing Tab from the menu eventually closes the popover.
 
-    Per WAI-ARIA menu-button pattern, Tab/Shift+Tab should close the menu and
-    allow focus to advance rather than snapping back to the trigger button.
+    The first Tab moves focus from the menu items to the version CopyButton
+    (which lives outside role="menu" but inside the popover's focus-lock).
+    The second Tab closes the popover and advances focus.
     """
     menu_button = app.get_by_test_id("stMainMenuButton")
     menu_button.focus()
@@ -184,6 +185,11 @@ def test_tab_closes_menu(app: Page):
     popover = app.get_by_test_id("stMainMenuPopover")
     expect(popover).to_be_visible()
 
+    # First Tab: focus moves from the menu to the CopyButton in the footer.
+    app.keyboard.press("Tab")
+    expect(popover).to_be_visible()
+
+    # Second Tab: closes the popover (forward Tab from the CopyButton).
     app.keyboard.press("Tab")
     expect(popover).not_to_be_visible()
 
@@ -326,15 +332,16 @@ def test_rerun_visible_in_dev_mode(app: Page):
 
 
 def test_main_menu_version_footer_visible(app: Page):
-    """Test that the Made with Streamlit version footer is visible in the menu."""
+    """Test that the Made with Streamlit version footer is visible in the popover."""
     app.get_by_test_id("stMainMenu").click()
-    menu = app.get_by_role("menu", name="Main menu")
-    expect(menu).to_be_visible()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
 
-    version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
+    # The version footer lives outside role="menu" but inside the popover.
+    version_text = popover.get_by_text(re.compile(r"^Made with Streamlit v"))
     expect(version_text).to_be_visible()
 
-    copy_button = menu.get_by_role("button", name="Copy version to clipboard")
+    copy_button = popover.get_by_role("button", name="Copy version to clipboard")
     expect(copy_button).to_have_css("pointer-events", "none")
     expect(copy_button).to_have_attribute("data-copy-state", "idle")
 
@@ -343,11 +350,12 @@ def test_main_menu_version_footer_visible(app: Page):
 def test_main_menu_version_footer_copies_version(app: Page):
     """Test that the copy button in the menu footer copies the version string."""
     app.get_by_test_id("stMainMenu").click()
-    menu = app.get_by_role("menu", name="Main menu")
-    expect(menu).to_be_visible()
+    popover = app.get_by_test_id("stMainMenuPopover")
+    expect(popover).to_be_visible()
 
-    version_text = menu.get_by_text(re.compile(r"^Made with Streamlit v"))
-    copy_button = menu.get_by_role("button", name="Copy version to clipboard")
+    # The version footer lives outside role="menu" but inside the popover.
+    version_text = popover.get_by_text(re.compile(r"^Made with Streamlit v"))
+    copy_button = popover.get_by_role("button", name="Copy version to clipboard")
 
     # The copy button starts hidden (opacity: 0, pointer-events: none) until hover.
     expect(copy_button).to_have_css("pointer-events", "none")

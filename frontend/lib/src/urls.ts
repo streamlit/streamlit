@@ -14,10 +14,6 @@
  * limitations under the License.
  */
 
-export const STREAMLIT_HOME_URL = "https://streamlit.io"
-export const DEPLOY_URL = "https://share.streamlit.io/deploy"
-export const STREAMLIT_CLOUD_URL = "https://streamlit.io/cloud"
-export const ONLINE_DOCS_URL = "https://docs.streamlit.io"
 export const COMMUNITY_URL = "https://discuss.streamlit.io"
 
 /** The URL customers are directed to for troubleshooting components. */
@@ -27,11 +23,6 @@ export const COMPONENT_DEVELOPER_URL =
 /** The URL customers are directed to for troubleshooting camera permissions. */
 export const CAMERA_PERMISSION_URL =
   "https://docs.streamlit.io/knowledge-base/using-streamlit/enable-camera"
-
-export const STREAMLIT_COMMUNITY_CLOUD_DOCS_URL =
-  "https://docs.streamlit.io/deploy/streamlit-community-cloud/get-started"
-export const STREAMLIT_DEPLOY_TUTORIAL_URL =
-  "https://docs.streamlit.io/deploy/tutorials"
 
 export const ENABLE_PERIPHERALS_DOCS_URL =
   "https://docs.streamlit.io/end-users/enable-peripherals"

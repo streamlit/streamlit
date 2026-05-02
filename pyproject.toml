@@ -34,6 +34,15 @@ dependencies = []
 [tool.uv]
 # Minimum uv version required for this project
 required-version = ">=0.9.0"
+# Exclude packages published in the last 24 hours to lower risk from supply chain attacks
+exclude-newer = "24 hours"
+# Explicit pandas version constraints by Python version:
+# - Python 3.10: use pandas 2.x (pandas 3.x requires Python >= 3.11)
+# - Python 3.11+: use pandas 3.x
+override-dependencies = [
+  "pandas>=1.4.0,<3; python_version < '3.11'",
+  "pandas>=3.0.0,<4; python_version >= '3.11'",
+]
 
 [tool.uv.sources]
 streamlit = { path = "lib", editable = true }
@@ -49,12 +58,12 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.17",
+  "ty==0.0.32",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.2",
+  "ruff==0.15.12",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy>=1.16.1,<1.20",
+  "mypy>=1.16.1,<1.21",
   "mypy-protobuf>=3.2",
   "semver>=3",
   "setuptools>=65.5.1",
@@ -103,12 +112,6 @@ test = [
   "rich>=10.14.0",
   # Used by vega-lite / altair e2e tests:
   "vega_datasets",
-  # Required for Starlette support:
-  "starlette>=0.40.0",
-  "uvicorn>=0.30.0",
-  "python-multipart>=0.0.10",
-  "websockets>=12.0.0",
-  "itsdangerous>=2.1.2",
   # Only for unit tests:
   "httpx>=0.24.1",
   # Playwright and E2E test dependencies:
@@ -120,7 +123,8 @@ test = [
   # pytest-rerunfailures 16.0 is breaking our CI:
   # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
   "pytest-rerunfailures>=15.0,!=16.0",
-  "pytest-github-actions-annotate-failures",
+  # pytest-github-actions-annotate-failures 0.4 has compatibility issues:
+  "pytest-github-actions-annotate-failures>=0.3.0,<0.4.0",
   "pytest-benchmark>=5.1.0",
   "pytest-repeat>=0.9.3",
   "pytest-timeout>=2.3.1",
@@ -143,10 +147,6 @@ integration = [
   "polars",
   "xarray",
   "dask",
-  # Pin Ray to avoid initialization hangs in CI. Ray versions can have different
-  # initialization behaviors, and newer versions are prone to hanging during
-  # resource detection in CI environments.
-  "ray>=2.9.0,<2.44",
   "duckdb",
   # Used for testing of st.connection:
   "sqlalchemy[mypy]>=2.0.0",
@@ -154,6 +154,8 @@ integration = [
   "scipy>=1.7.3",
   # Used to ensure pydantic is supported:
   "pydantic>=2.0.0",
+  # Used by type_util tests:
+  "sympy",
 ]
 
 # =============================================================================
@@ -202,7 +204,11 @@ ignore = [
   "SLF", # Checks unexpected for private member access.
   "BLE", # Checks for blind except statements.
   "CPY", # Checks for copyright statement.
-  "DOC", # Checks for correct docstring format.
+  # DOC rules for enforcing docstring completeness (too noisy):
+  "DOC201", # Checks for missing return documentation.
+  "DOC402", # Checks for missing yield documentation.
+  "DOC501", # Checks for missing exception documentation.
+  "DOC502", # Checks for extraneous exception documentation.
   # Ignored rules:
   "A002",    # Checks if function argument shadows a Python builtin.
   "ANN401",  # Checks that `any` is not used as an annotation.
@@ -268,6 +274,7 @@ extend-safe-fixes = ["TC002", "TC003"]
 # files, use the noqa ignore comment on top of the given file.
 "e2e_playwright/**" = [
   "B018",   # Allow useless expressions (e.g., for side effects in tests).
+  "DOC",    # Ignore docstring correctness rules.
   "N999",   # Allow invalid module names (test files use descriptive names).
   "NPY002", # Allow legacy numpy random generation.
   "PD",     # Ignore pandas-vet rules (test data manipulation patterns).
@@ -280,7 +287,8 @@ extend-safe-fixes = ["TC002", "TC003"]
 "lib/tests/**" = [
   "ANN",     # Ignore annotation rules (test functions don't need full typing).
   "ARG",     # Allow unused arguments (common in test fixtures and mocks).
-  "D",       # Ignore docstring rules (tests are self-documenting via names).
+  "D",       # Ignore docstring rules.
+  "DOC",     # Ignore docstring correctness rules.
   "FURB118", # Allow all operators (tests may use operator module intentionally).
   "FURB189", # Allow subclassing of builtin types (for test mocking).
   "INP",     # Allow implicit namespace packages (test directories).
@@ -295,6 +303,11 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
+"lib/streamlit/.agents/**" = [
+  # Each template is a standalone app, not a package. Adding __init__.py would
+  # misrepresent them as importable modules.
+  "INP",
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
@@ -305,6 +318,9 @@ known-first-party = ["streamlit", "shared", "tests", "e2e_playwright"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "numpy"
+
+[tool.ruff.lint.pydoclint]
+ignore-one-line-docstrings = true
 
 [tool.ruff.lint.pycodestyle]
 # Allow lines (e.g. comments) up to 120 characters instead of 88,
@@ -400,6 +416,10 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
+  # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
+  "yfinance.*",
+  # SQLAlchemy is optional and its stubs are only installed with integration extras
+  "sqlalchemy.*",
   # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10
   "tomllib",
   "tomli",

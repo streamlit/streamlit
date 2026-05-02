@@ -16,7 +16,7 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledColorPickerProps {
+interface StyledColorPickerProps {
   disabled: boolean
 }
 
@@ -66,7 +66,7 @@ export const StyledChromePicker = styled.div(({ theme }) => ({
   },
 }))
 
-export interface StyledColorPreviewProps {
+interface StyledColorPreviewProps {
   disabled: boolean
 }
 
@@ -87,7 +87,7 @@ export const StyledColorPreview = styled.div<StyledColorPreviewProps>(
   })
 )
 
-export interface StyledColorBlockProps {
+interface StyledColorBlockProps {
   disabled: boolean
   backgroundColor: string
 }

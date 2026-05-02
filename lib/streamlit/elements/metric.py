@@ -19,13 +19,7 @@ from textwrap import dedent
 from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit.dataframe_util import OptionSequence, convert_anything_to_list
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.policies import maybe_raise_label_warnings
 from streamlit.elements.lib.utils import (
     LabelVisibility,
@@ -39,6 +33,7 @@ from streamlit.string_util import AnyNumber, clean_text, from_number
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.column_types import NumberFormat
+    from streamlit.elements.lib.layout_utils import Height, Width
 
 
 Value: TypeAlias = AnyNumber | str | None
@@ -125,9 +120,9 @@ class MetricMixin:
             icons, with a max height equal to the font height.
 
             Unsupported Markdown elements are unwrapped so only their children
-            (text contents) render. Display unsupported elements as literal
-            characters by backslash-escaping them. E.g.,
-            ``"1\. Not an ordered list"``.
+            (text contents) render. Common block-level Markdown (headings,
+            lists, blockquotes) is automatically escaped and displays as
+            literal text in labels.
 
             See the ``body`` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
@@ -272,7 +267,7 @@ class MetricMixin:
 
         delta_description : str or None
             A short description displayed next to the delta value, such as
-            "month over month" or "vs. last quarter". If this is ``None``
+            ``"month over month"`` or ``"vs. last quarter"``. If this is ``None``
             (default), no description is shown. The description is displayed
             in a smaller, muted font style similar to ``st.caption``.
 
@@ -418,9 +413,12 @@ class MetricMixin:
         if delta_description is not None:
             metric_proto.delta_description = delta_description
 
-        validate_height(height, allow_content=True)
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width, height=height)
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         return self.dg._enqueue("metric", metric_proto, layout_config=layout_config)
 

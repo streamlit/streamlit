@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import hashlib
 from datetime import date, datetime, time, timedelta
 from typing import (
     TYPE_CHECKING,
@@ -27,7 +26,7 @@ from typing import (
 
 from google.protobuf.message import Message
 
-from streamlit import config
+from streamlit import config, util
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.proto.ChatInput_pb2 import ChatInput
@@ -166,7 +165,7 @@ def _compute_element_id(
     use it to be distinct. The element ID includes an easily identified prefix, and the
     user_key as a suffix, to make it easy to identify it and know if a key maps to it.
     """
-    h = hashlib.new("md5", usedforsecurity=False)
+    h = util.create_fast_hasher()
     h.update(element_type.encode("utf-8"))
     if user_key:
         # Adding this to the hash isn't necessary for uniqueness since the

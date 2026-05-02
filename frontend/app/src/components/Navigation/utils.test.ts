@@ -20,8 +20,10 @@ import { IAppPage } from "@streamlit/protobuf"
 
 import {
   filterVisiblePages,
+  getExternalPageUrl,
   groupPagesBySection,
   hasNonEmptySections,
+  isExternalPage,
   processNavigationStructure,
   shouldShowNavigation,
 } from "./utils"
@@ -486,5 +488,39 @@ describe("filterVisiblePages", () => {
 
     expect(result).toHaveLength(expectedLength)
     expect(result.map(p => p.pageName)).toEqual(expectedNames)
+  })
+})
+
+describe("external destination helpers", () => {
+  it("detects external pages and returns their destination URL", () => {
+    const page: IAppPage = {
+      pageName: "docs",
+      pageScriptHash: "hash",
+      externalUrl: "https://docs.streamlit.io",
+    }
+
+    expect(isExternalPage(page)).toBe(true)
+    expect(getExternalPageUrl(page)).toBe("https://docs.streamlit.io")
+  })
+
+  it("treats pages with an empty external URL as external", () => {
+    const page: IAppPage = {
+      pageName: "docs",
+      pageScriptHash: "hash",
+      externalUrl: "",
+    }
+
+    expect(isExternalPage(page)).toBe(true)
+    expect(getExternalPageUrl(page)).toBe("")
+  })
+
+  it("treats internal pages as non-external with no URL", () => {
+    const page: IAppPage = {
+      pageName: "internal",
+      pageScriptHash: "hash",
+    }
+
+    expect(isExternalPage(page)).toBe(false)
+    expect(getExternalPageUrl(page)).toBeUndefined()
   })
 })

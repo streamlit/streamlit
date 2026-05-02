@@ -20,6 +20,7 @@ from __future__ import annotations
 
 __all__ = [
     "AreaChartColumn",
+    "AudioColumn",
     "BarChartColumn",
     "CheckboxColumn",
     "Column",
@@ -37,11 +38,13 @@ __all__ = [
     "SelectboxColumn",
     "TextColumn",
     "TimeColumn",
+    "VideoColumn",
 ]
 
 
 from streamlit.elements.lib.column_types import (
     AreaChartColumn,
+    AudioColumn,
     BarChartColumn,
     CheckboxColumn,
     Column,
@@ -59,4 +62,5 @@ from streamlit.elements.lib.column_types import (
     SelectboxColumn,
     TextColumn,
     TimeColumn,
+    VideoColumn,
 )

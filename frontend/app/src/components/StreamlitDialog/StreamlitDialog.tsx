@@ -29,7 +29,7 @@ import {
 } from "@streamlit/lib"
 import { IException } from "@streamlit/protobuf"
 
-import { DeployDialog, DeployDialogProps } from "./DeployDialog"
+import { DeployDialog, DeployDialogProps } from "./DeployDialog/DeployDialog"
 import { StyledDeployErrorContent } from "./styled-components"
 
 export type PlainEventHandler = () => void

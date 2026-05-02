@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import contextlib
 import functools
-import hashlib
 import inspect
 import threading
 import time
@@ -39,7 +38,7 @@ from typing import (
 
 from typing_extensions import ParamSpec
 
-from streamlit import type_util
+from streamlit import type_util, util
 from streamlit.dataframe_util import is_unevaluated_data_object
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.errors import StreamlitAPIException
@@ -409,7 +408,7 @@ class CachedFunc(Generic[P, R]):
                     ) from ex
                 raise UnserializableReturnValueError(
                     return_value=computed_value, func=self._info.func
-                )
+                ) from ex
 
     @overload
     def clear(self) -> None: ...
@@ -435,8 +434,8 @@ class CachedFunc(Generic[P, R]):
         **kwargs: Any
             Keyword arguments of the cached function.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>> import time
         >>>
@@ -505,7 +504,7 @@ def _make_value_key(
     # Create the hash from each arg value, except for those args whose name
     # starts with "_". (Underscore-prefixed args are deliberately excluded from
     # hashing.)
-    args_hasher = hashlib.new("md5", usedforsecurity=False)
+    args_hasher = util.create_fast_hasher()
     for arg_name, arg_value in arg_pairs:
         if arg_name is not None and arg_name.startswith("_"):
             _LOGGER.debug("Not hashing %s because it starts with _", arg_name)
@@ -543,7 +542,7 @@ def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     A function's key is stable across reruns of the app, and changes when
     the function's source code changes.
     """
-    func_hasher = hashlib.new("md5", usedforsecurity=False)
+    func_hasher = util.create_fast_hasher()
     func = cast("FunctionType", func)
 
     # Include the function's __module__ and __qualname__ strings in the hash.
@@ -563,7 +562,7 @@ def _make_function_key(cache_type: CacheType, func: Callable[..., Any]) -> str:
     source_code: str | bytes
     try:
         source_code = inspect.getsource(func)
-    except (OSError, TypeError) as ex:
+    except (OSError, TypeError) as ex:  # pragma: no cover - defensive
         _LOGGER.debug(
             "Failed to retrieve function's source code when building its key; "
             "falling back to bytecode.",
@@ -588,7 +587,7 @@ def _get_positional_arg_name(func: Callable[..., Any], arg_index: int) -> str | 
     if arg_index < 0:
         return None
 
-    params: list[inspect.Parameter] = list(inspect.signature(func).parameters.values())
+    params = type_util.get_func_parameters(func)
     if arg_index >= len(params):
         return None
 

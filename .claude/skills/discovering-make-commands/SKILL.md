@@ -33,6 +33,7 @@ frontend-lint             Lint and check formatting of frontend files.
 frontend-types            Run the frontend type checker.
 frontend-format           Format frontend files.
 frontend-tests            Run frontend unit tests and generate coverage report.
+frontend-knip             Run Knip with default reporter.
 frontend-typesync         Check for unsynced frontend types.
 update-frontend-typesync  Installs missing typescript typings for dependencies.
 update-snapshots          Update e2e playwright snapshots based on the latest completed CI run.

@@ -61,6 +61,7 @@ _os.environ["MPLBACKEND"] = "Agg"
 from streamlit import logger as _logger
 from streamlit import config as _config
 from streamlit.version import STREAMLIT_VERSION_STRING as _STREAMLIT_VERSION_STRING
+from typing import cast as _cast
 
 # Give the package a version.
 __version__ = _STREAMLIT_VERSION_STRING
@@ -99,7 +100,23 @@ _dg_singleton = _DeltaGeneratorSingleton(
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg
 _event: _DeltaGenerator = _dg_singleton._event_dg
-_bottom: _DeltaGenerator = _dg_singleton._bottom_dg
+
+from streamlit.elements.bottom import BottomContainerProxy as _BottomContainerProxy
+
+# The internal _bottom_dg is used by both the public `bottom` and the deprecated `_bottom`
+_bottom_dg_internal: _DeltaGenerator = _dg_singleton._bottom_dg
+# Use cast to DeltaGenerator for static analysis so type checkers see all DeltaGenerator methods.
+# At runtime, bottom is a BottomContainerProxy that validates the execution context.
+bottom: _DeltaGenerator = _cast(
+    "_DeltaGenerator", _BottomContainerProxy(_bottom_dg_internal)
+)
+
+# Deprecated: use `st.bottom` instead
+from streamlit.deprecation_util import deprecate_obj_name as _deprecate_obj_name
+
+_bottom: _DeltaGenerator = _deprecate_obj_name(
+    _bottom_dg_internal, "_bottom", "bottom", "2026-07-01"
+)
 
 
 from streamlit.elements.dialog_decorator import dialog_decorator as _dialog_decorator
@@ -151,7 +168,7 @@ from streamlit.commands.execution_control import (
 def _update_logger() -> None:
     _logger.set_log_level(_config.get_option("logger.level").upper())
     _logger.update_formatter()
-    _logger.init_tornado_logs()
+    _logger.init_uvicorn_logs()
 
 
 # Make this file only depend on config option in an asynchronous manner. This
@@ -199,6 +216,7 @@ graphviz_chart = _main.graphviz_chart
 header = _main.header
 help = _main.help
 html = _main.html
+iframe = _main.iframe
 image = _main.image
 info = _main.info
 json = _main.json
@@ -207,6 +225,7 @@ line_chart = _main.line_chart
 link_button = _main.link_button
 map = _main.map
 markdown = _main.markdown
+menu_button = _main.menu_button
 metric = _main.metric
 multiselect = _main.multiselect
 number_input = _main.number_input
@@ -283,6 +302,9 @@ logout = _logout
 
 # User
 user = _UserInfoProxy()
+
+# Starlette integration
+from streamlit.starlette import App as App
 
 # make it possible to call streamlit.components.v1.html etc. by importing it here
 # import in the very end to avoid partially-initialized module import errors, because

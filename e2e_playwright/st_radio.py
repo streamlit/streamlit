@@ -202,3 +202,38 @@ v_bound_clear = st.radio(
     bind="query-params",
 )
 st.write("bound radio clear value:", v_bound_clear)
+
+# --- Regression test for gh-14814 ---
+
+
+class Gh14814Option:
+    """Custom option type for gh-14814 (stable __eq__ / __hash__, no __str__)."""
+
+    __slots__ = ("label", "value")
+
+    def __init__(self, label: str, value: int) -> None:
+        self.label = label
+        self.value = value
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, Gh14814Option):
+            return False
+        return self.value == other.value
+
+    def __hash__(self) -> int:
+        return hash(self.value)
+
+
+_gh14814_options = [
+    Gh14814Option("Option A", 1),
+    Gh14814Option("Option B", 2),
+    Gh14814Option("Option C", 3),
+]
+
+v15 = st.radio(
+    "radio 15 (custom class format_func, gh-14814)",
+    options=_gh14814_options,
+    format_func=lambda x: x.label,
+    key="radio_gh14814",
+)
+st.write("value 15:", v15.value)

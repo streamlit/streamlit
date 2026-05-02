@@ -168,16 +168,14 @@ describe("DateTimeColumn", () => {
     ["1671951600", "2022-12-25T07:00:00.000"],
   ])(
     "supports datetime-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: string | null) => {
+    (input: unknown, value: string | null) => {
       const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: any) => {
+  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
     const mockColumn = DateTimeColumn(MOCK_DATETIME_COLUMN_TEMPLATE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
@@ -277,10 +275,9 @@ describe("DateTimeColumn", () => {
       arrowType: {
         ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType,
         pandasType: {
-          ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType.pandasType,
+          ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType.pandasType!,
           metadata: { timezone: "+05:00" },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        } as any,
+        },
       },
     }
 
@@ -301,10 +298,9 @@ describe("DateTimeColumn", () => {
       arrowType: {
         ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType,
         pandasType: {
-          ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType.pandasType,
+          ...MOCK_DATETIME_COLUMN_TEMPLATE.arrowType.pandasType!,
           metadata: { timezone: "America/New_York" },
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        } as any,
+        },
       },
     }
 
@@ -488,16 +484,14 @@ describe("DateColumn", () => {
     ["1671951600", "2022-12-25"],
   ])(
     "supports date-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: string | null) => {
+    (input: unknown, value: string | null) => {
       const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: any) => {
+  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
     const mockColumn = DateColumn(MOCK_DATE_COLUMN_TEMPLATE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
@@ -681,16 +675,14 @@ describe("TimeColumn", () => {
     ["1671951600", "07:00:00.000"],
   ])(
     "supports time-compatible value (%p parsed as %p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, value: string | null) => {
+    (input: unknown, value: string | null) => {
       const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
       const cell = mockColumn.getCell(input)
       expect(mockColumn.getCellValue(cell)).toEqual(value)
     }
   )
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  it.each([[NaN], ["foo"]])("%p results in error cell", (input: any) => {
+  it.each([[NaN], ["foo"]])("%p results in error cell", (input: unknown) => {
     const mockColumn = TimeColumn(MOCK_TIME_COLUMN_TEMPLATE)
     const cell = mockColumn.getCell(input)
     expect(isErrorCell(cell)).toEqual(true)
