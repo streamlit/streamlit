@@ -54,7 +54,9 @@ making it a natural fit for Streamlit's user base.
 
 #### Markdown Code Blocks (Primary Interface)
 
-Users can embed Mermaid diagrams directly in markdown using fenced code blocks:
+Users can embed Mermaid diagrams directly in `st.markdown` using fenced code blocks. This
+support is limited to `st.markdown` calls only and does not extend to other markdown-bearing
+surfaces (tooltips, help text, table cells, chat messages, widget labels, etc.).
 
 ````python
 import streamlit as st
@@ -88,11 +90,18 @@ st.mermaid_chart(
 |-----------|------|-------------|
 | `body` | `str` | The Mermaid diagram definition using Mermaid syntax |
 
-**Implementation Note:** `st.mermaid_chart` is a thin wrapper that generates a markdown code
-fence and delegates to `st.markdown`. This ensures consistent behavior between both approaches.
+**Implementation Note:** `st.mermaid_chart` internally calls `st.markdown` with the diagram
+wrapped in a code fence. The fence uses four backticks (````) to safely handle diagrams that
+may contain triple backticks in node labels or comments. This ensures consistent behavior
+between both approaches while avoiding parsing issues.
+
+**Intentional Simplicity:** `st.mermaid_chart` accepts only `body` and does not expose
+`st.markdown`'s additional parameters (like `width`). This is intentional — the command is
+designed as a simple, focused API for diagrams. Users who need layout control can use
+`st.markdown` directly with appropriate parameters.
 
 ````python
-# These are equivalent:
+# These are functionally equivalent for basic usage:
 st.mermaid_chart("graph TD; A-->B")
 
 st.markdown("""
@@ -284,6 +293,28 @@ The following are explicitly not included in this initial release:
 - **Custom themes** — Users cannot override the automatic Streamlit theming
 - **Server-side rendering** — Diagrams are rendered client-side only
 
+## Alternatives Considered
+
+**Option 1: Markdown-only (no dedicated command)**
+
+- Pros: Zero new API surface, follows GitHub/GitLab pattern exactly
+- Cons: Poor discoverability, users must know the syntax exists, no IDE autocomplete
+
+**Option 2: Dedicated command only (no markdown support)**
+
+- Pros: Clear API, easy to discover, metrics tracking straightforward
+- Cons: Breaks portability with GitHub/GitLab markdown, forces users to learn new syntax
+
+**Option 3: Both markdown and dedicated command** (CHOSEN)
+
+- Pros: Best of both worlds — discoverability via `st.mermaid_chart`, portability via markdown
+- Cons: Two ways to do the same thing, but the tradeoff is acceptable given the different
+  use cases (quick exploration vs. copy-paste from documentation)
+
+The markdown approach is designated as "primary" because it aligns with industry standards and
+enables content portability. The dedicated command serves as a discovery helper for users who
+may not know about the markdown syntax.
+
 ## Checklist
 
 | Item                         | ✅ or comment |
@@ -291,6 +322,6 @@ The following are explicitly not included in this initial release:
 | Works on SiS, Cloud, etc?    | ✅ Client-side rendering, no server dependencies |
 | No breaking API changes      | ✅ New additive feature only |
 | No new dependencies          | ✅ No new backend (Python) dependencies. mermaid.js is a new frontend dependency (lazy-loaded) |
-| Metrics collected            | ✅ `mermaid_chart` command tracked via `gather_metrics` |
+| Metrics collected            | ✅ `st.mermaid_chart` tracked via `gather_metrics`. Markdown-based usage tracked via frontend telemetry when mermaid code blocks are rendered |
 | Any security/legal impact?   | ✅ No — mermaid.js is MIT licensed; strict security mode used |
 | Any docs changes needed?     | ✅ API reference docs and tutorial page |
