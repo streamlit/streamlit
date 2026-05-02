@@ -19,17 +19,17 @@
     "typesync": "typesync"
   },
   "devDependencies": {
-    "@typescript-eslint/rule-tester": "^8.57.2",
-    "@typescript-eslint/types": "^8.57.2",
-    "@typescript-eslint/utils": "^8.57.2",
+    "@typescript-eslint/rule-tester": "^8.58.2",
+    "@typescript-eslint/types": "^8.58.2",
+    "@typescript-eslint/utils": "^8.58.2",
     "@vitest/coverage-v8": "^4.1.5",
-    "eslint": "^9.39.2",
+    "eslint": "^10.2.0",
     "typescript": "^6.0.3",
     "typesync": "^0.14.3",
     "vitest": "^4.1.5"
   },
   "peerDependencies": {
-    "@typescript-eslint/utils": "^8.57.2",
-    "eslint": "^9.0.0"
+    "@typescript-eslint/utils": "^8.58.2",
+    "eslint": "^10.0.0"
   }
 }

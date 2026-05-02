@@ -547,7 +547,7 @@ describe("DefaultStreamlitEndpoints", () => {
       // Create a mock for axios.request that will be used by the dynamic import
       mockRequest = vi
         .fn<typeof axios.request>()
-        .mockResolvedValue({ data: {} } as never)
+        .mockResolvedValue({ data: {} })
       vi.spyOn(axios, "request").mockImplementation(mockRequest)
     })
 

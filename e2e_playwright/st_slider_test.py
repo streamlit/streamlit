@@ -268,6 +268,9 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     reset_hovering(app)
     reset_focus(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
+    # Wait for the tick bar (min/max labels) to fully fade out (300ms 200ms delay)
+    # so the snapshot is stable and not captured mid-transition.
+    expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
     assert_snapshot(slider, name="st_slider-float_formatting")
 
 
@@ -354,6 +357,9 @@ def test_dynamic_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Updated slider value:", "50")
 
     dynamic_slider.scroll_into_view_if_needed()
+    # Move the mouse away to hide the slider tick bar (shown on hover)
+    # which can cause snapshot flakiness if the slider re-renders under the cursor.
+    reset_hovering(app)
     assert_snapshot(dynamic_slider, name="st_slider-dynamic_updated")
 
     # Check that the help tooltip is correct:

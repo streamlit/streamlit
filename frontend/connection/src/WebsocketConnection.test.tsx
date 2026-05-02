@@ -1466,11 +1466,11 @@ describe("WebsocketConnection FSM fast-path behavior", () => {
     globalThis.fetch = vi
       .fn()
       // First two calls are for background ping (health + host-config)
-      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
-      .mockReturnValueOnce(backgroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(backgroundPingPromise)
+      .mockReturnValueOnce(backgroundPingPromise)
       // Next two calls are for foreground ping after transition
-      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
-      .mockReturnValueOnce(foregroundPingPromise as Promise<Response>)
+      .mockReturnValueOnce(foregroundPingPromise)
+      .mockReturnValueOnce(foregroundPingPromise)
 
     const args = createMockArgs({ enableBypass: true })
     const ws = new WebsocketConnection(args)

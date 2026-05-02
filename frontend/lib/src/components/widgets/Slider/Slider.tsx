@@ -213,7 +213,7 @@ function Slider({
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
   useEffect(() => {
-    setUiValue(value)
+    setUiValue(value) // eslint-disable-line react-hooks/no-deriving-state-in-effects -- Syncs widget manager value to local UI state on form reset
   }, [value])
 
   // For select_slider: when options change, recompute indices from WidgetStateManager.

@@ -358,7 +358,7 @@ describe("useDetailsAnimation", () => {
         bottom: 0,
         left: 0,
         toJSON: () => ({}),
-      } as DOMRect)
+      })
     }
 
     /** Assert that the ResizeObserver was constructed and fire its callback. */

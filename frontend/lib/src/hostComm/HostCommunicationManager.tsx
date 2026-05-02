@@ -163,7 +163,7 @@ export default class HostCommunicationManager {
       {
         stCommVersion: HOST_COMM_VERSION,
         ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
+      },
       window.location.origin
     )
   }
@@ -176,7 +176,7 @@ export default class HostCommunicationManager {
       {
         stCommVersion: HOST_COMM_VERSION,
         ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
+      },
       "*"
     )
   }

@@ -330,8 +330,8 @@ jobs:
           3. **Resolve conflicts** - use your judgment or own verification to determine the correct assessment when reviewers disagree
           4. **Track missing reviews** - if any expected models are missing from the reviews above, note them as 'failed to complete review'
           5. **Determine final verdict**:
-             - APPROVED: Only if the majority of available reviews approve AND there are no critical issues raised by any reviewer
-             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/blocking issues
+             - APPROVED: If the majority of available reviews approve AND there are no critical/merge-blocking issues raised by any reviewer. Minor suggestions or optional improvements should not block approval — those can be addressed in follow-up PRs.
+             - CHANGES_REQUESTED: If majority request changes OR any reviewer raised critical/merge-blocking issues (bugs, security vulnerabilities, breaking changes, missing required tests). Optional improvements, style preferences, and "nice to have" suggestions should NOT result in CHANGES_REQUESTED.
 
           __CONSOLIDATION_INSTRUCTIONS__
 
@@ -443,17 +443,23 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
         run: |
-          # Always post as COMMENT — the bot should never formally approve or request
-          # changes on a PR. The verdict is still written to verdict.txt and used for
-          # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
-          EVENT="COMMENT"
-
-          # Verify review file exists
+          # Verify review file exists before modifying
           if [ ! -f review.md ]; then
             echo "Error: review.md not found"
             exit 1
           fi
+
+          # Add hidden marker at the end of the review for programmatic detection
+          # Format: <!-- streamlit-ai-review run_id="..." timestamp="..." -->
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          echo "" >> review.md
+          echo "<!-- streamlit-ai-review run_id=\"$RUN_ID\" timestamp=\"$TIMESTAMP\" -->" >> review.md
+          # Always post as COMMENT — the bot should never formally approve or request
+          # changes on a PR. The verdict is still written to verdict.txt and used for
+          # labeling (e.g. do-not-merge), but the GitHub review event is always COMMENT.
+          EVENT="COMMENT"
 
           # Get head SHA for review API
           HEAD_SHA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV" --jq '.head.sha')
