@@ -253,9 +253,6 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
-      // New rules in ESLint 10 recommended — disable until existing violations are addressed
-      "no-useless-assignment": "off",
-      "preserve-caught-error": "off",
       // We do want to discourage the usage of flushSync
       "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
@@ -272,15 +269,8 @@ export default defineConfig([
       "@eslint-react/no-missing-context-display-name": "error",
       // New rules in @eslint-react v4 — disable until existing violations are addressed
       "@eslint-react/component-hook-factories": "off",
-      "@eslint-react/error-boundaries": "off",
       "@eslint-react/exhaustive-deps": "off",
       "@eslint-react/jsx-no-children-prop": "off",
-      "@eslint-react/jsx-no-children-prop-with-children": "off",
-      "@eslint-react/purity": "off",
-      "@eslint-react/use-memo": "off",
-      "@eslint-react/no-use-context": "off",
-      "@eslint-react/no-context-provider": "off",
-      "@eslint-react/no-forward-ref": "off",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules
       // for it to be realistic right now. Over time, we should fix these.
@@ -289,8 +279,6 @@ export default defineConfig([
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/no-unsafe-return": "off",
-      // Stricter in typescript-eslint v8.58 — disable until existing violations are addressed
-      "@typescript-eslint/no-base-to-string": "off",
       "@typescript-eslint/unbound-method": "off",
       // Some of these are being caught erroneously
       "@typescript-eslint/camelcase": "off",
@@ -445,20 +433,9 @@ export default defineConfig([
       // New React Compiler rules in react-hooks v7.1 — disable until existing
       // violations are addressed. Only rules-of-hooks and exhaustive-deps were
       // previously enforced.
-      "react-hooks/static-components": "off",
-      "react-hooks/use-memo": "off",
       "react-hooks/preserve-manual-memoization": "off",
-      "react-hooks/incompatible-library": "off",
-      "react-hooks/immutability": "off",
-      "react-hooks/globals": "off",
       "react-hooks/refs": "off",
       "react-hooks/set-state-in-effect": "off",
-      "react-hooks/error-boundaries": "off",
-      "react-hooks/purity": "off",
-      "react-hooks/set-state-in-render": "off",
-      "react-hooks/unsupported-syntax": "off",
-      "react-hooks/config": "off",
-      "react-hooks/gating": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules

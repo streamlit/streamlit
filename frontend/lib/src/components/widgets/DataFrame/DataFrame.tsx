@@ -203,6 +203,7 @@ function DataFrame({
   // would still work. Those messages don't have the
   // editingMode field defined.
   if (isNullOrUndefined(element.editingMode)) {
+    // eslint-disable-next-line react-hooks/immutability -- backwards-compat defaulting of proto field
     element.editingMode = DataframeProto.EditingMode.READ_ONLY
   }
 
@@ -442,6 +443,7 @@ function DataFrame({
     }
 
     const selectionState = element.selectionState
+    // eslint-disable-next-line react-hooks/immutability -- consuming programmatic selection from proto
     element.selectionState = null
 
     const programmaticSelection = getProgrammaticSelectionState({
@@ -1259,6 +1261,7 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
         )}
     </StyledResizableContainer>

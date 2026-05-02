@@ -135,8 +135,9 @@ describe("DataFrame FormattingMenu", () => {
 
   it("renders children as trigger element", async () => {
     const triggerText = "Custom Trigger"
+    const { children: _, ...propsWithoutChildren } = defaultProps
     await renderAndWaitForPopover(
-      <FormattingMenu {...defaultProps}>
+      <FormattingMenu {...propsWithoutChildren}>
         <div>{triggerText}</div>
       </FormattingMenu>
     )
