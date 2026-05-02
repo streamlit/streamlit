@@ -130,34 +130,30 @@ jobs:
 
           ## Task
 
-          Run the /qa-testing-feature subagent to perform comprehensive QA testing on this PR.
+          Perform comprehensive QA testing on this PR following the instructions below.
 
           Do not ask for confirmation. Execute tests and document all findings.
 
-          Write the final QA report to 'work-tmp/qa-report.md'.
+          ## QA Testing Instructions
+
+          $(cat .claude/agents/qa-testing-feature.md)
+
+          ## Output Requirements
+
+          1. Write the final QA report to 'work-tmp/qa-report.md'.
+          2. Write exactly one of PASS, FAIL, or BLOCKED (no formatting, just the word) to 'work-tmp/verdict.txt'.
           "
           cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
 
-          # Ensure report exists (fallback if cursor-agent fails)
+          # Ensure report and verdict files exist (fallback if cursor-agent fails)
           mkdir -p work-tmp
           if [ ! -f work-tmp/qa-report.md ]; then
             echo "# QA Testing Report" > work-tmp/qa-report.md
             echo "" >> work-tmp/qa-report.md
             echo "QA testing did not produce a report." >> work-tmp/qa-report.md
-            echo "" >> work-tmp/qa-report.md
-            echo "## Verdict" >> work-tmp/qa-report.md
-            echo "**UNKNOWN**" >> work-tmp/qa-report.md
           fi
 
-          # Extract verdict for labeling from the Verdict section only
-          VERDICT_SECTION=$(sed -n '/^## Verdict/,/^## /p' work-tmp/qa-report.md | head -5)
-          if echo "$VERDICT_SECTION" | grep -qF "**FAIL**"; then
-            echo "FAIL" > work-tmp/verdict.txt
-          elif echo "$VERDICT_SECTION" | grep -qF "**NEEDS_WORK**"; then
-            echo "NEEDS_WORK" > work-tmp/verdict.txt
-          elif echo "$VERDICT_SECTION" | grep -qF "**PASS**"; then
-            echo "PASS" > work-tmp/verdict.txt
-          else
+          if [ ! -f work-tmp/verdict.txt ]; then
             echo "UNKNOWN" > work-tmp/verdict.txt
           fi
 
@@ -174,6 +170,7 @@ jobs:
     needs: [check-secrets, ai-qa-testing]
     if: always() && needs.check-secrets.result != 'skipped'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pull-requests: write
@@ -234,7 +231,7 @@ jobs:
           else
             gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI QA Testing completed but no report was generated.**
 
-            Please check the [workflow run](https://github.com/$REPOSITORY/actions/runs/${{ github.run_id }}) for details." --repo "$REPOSITORY"
+            Please check the [workflow run](https://github.com/${REPOSITORY}/actions/runs/${RUN_ID}) for details." --repo "$REPOSITORY"
           fi
 
       - name: Post failure notice
