@@ -61,6 +61,7 @@ from typing import TYPE_CHECKING
 from starlette.responses import Response
 
 from streamlit.path_security import is_unsafe_path_pattern
+from streamlit.url_util import make_url_path
 from streamlit.web.server.starlette.starlette_routes import (
     BASE_ROUTE_UPLOAD_FILE,
     ROUTE_HEALTH,
@@ -91,7 +92,6 @@ def _build_safe_paths(base_url_path: str) -> tuple[frozenset[str], str]:
     tuple[frozenset[str], str]
         A tuple of (safe_exact_paths, safe_path_prefix) with the base URL prepended.
     """
-    from streamlit.url_util import make_url_path
 
     # Build full paths with base URL prefix
     safe_exact_paths = frozenset(

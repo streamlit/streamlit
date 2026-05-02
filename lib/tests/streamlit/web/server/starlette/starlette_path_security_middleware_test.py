@@ -363,7 +363,10 @@ class TestSafePathFastPath:
         ],
     )
     def test_safe_prefixes_pass_through(self, safe_path: str) -> None:
-        """Test that known-safe route prefixes pass through without full validation."""
+        """Test that known-safe route prefixes pass through without full validation.
+
+        Smoke test: verifies fast-path doesn't accidentally block these routes.
+        """
         app = _create_test_app()
         client = TestClient(app)
 
