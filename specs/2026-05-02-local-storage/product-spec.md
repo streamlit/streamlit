@@ -44,7 +44,7 @@ cases need more storage capacity.
 | Feature         | Cookies                       | localStorage               |
 |-----------------|-------------------------------|----------------------------|
 | Size limit      | ~4KB per cookie               | ~5-10MB total              |
-| Sent to server  | Yes (every request)           | No (client-only)           |
+| Sent to server  | Yes (every HTTP request)      | Yes (snapshot synced to Streamlit backend on session connect) |
 | Expiration      | Configurable                  | Persistent until cleared   |
 | HTTP-only       | Yes                           | No (always JS-accessible)  |
 | Best for        | Auth tokens, session IDs      | Larger user data, prefs    |
@@ -92,7 +92,8 @@ import streamlit as st
 scores = st.local_storage.get("scores")
 scores = st.local_storage["scores"]  # KeyError if not found
 
-# Write (auto-serializes to JSON, available on next rerun)
+# Write (auto-serializes to JSON, persisted to browser localStorage)
+# Note: Values are readable only after a full page reload (see Timing section)
 st.local_storage["scores"] = {"level1": 100, "level2": 85}
 st.local_storage["theme"] = "dark"
 
@@ -125,6 +126,13 @@ def set(
 **Expiration behavior:** If `expires_in` is set, the value is stored with a timestamp.
 On read, if expired, returns `None` (or raises `KeyError`) and queues deletion. This is
 implemented in Python, not a browser feature.
+
+**Multi-tab behavior:** `localStorage` is shared across all browser tabs for the same
+origin. If a user has the same app open in multiple tabs, each tab has its own WebSocket
+session with its own server-side snapshot. A write in Tab A updates the browser's
+localStorage, but Tab B's server-side snapshot won't reflect it until Tab B reconnects
+or reloads. This is a known limitation; apps requiring real-time cross-tab sync should
+use explicit polling or document this behavior to users.
 
 ### Behavior
 
@@ -165,27 +173,36 @@ st_ls_{app_id}_{key}
 Where `app_id` is derived from the app's URL path (e.g., a hash of the path). This
 prevents one app from reading/overwriting another app's data on the same domain.
 
+**Note:** If an app is redeployed at a different URL path, previously stored keys become
+inaccessible (orphaned). This is a known limitation. Future work may add an `app_id`
+override option for migration scenarios.
+
 **Size limits:**
 
 - Individual values: Hard limit ~1MB per JSON-serialized value (writes raise
   `StreamlitAPIException` if exceeded)
 - Total storage: ~5-10MB (browser-dependent)
-- Browser quota failures (`QuotaExceededError` / `DOMException`) are re-raised as-is
+- Browser quota failures (`QuotaExceededError` / `DOMException`) are caught in the
+  frontend, serialized over WebSocket, and re-raised as `StreamlitAPIException` with the
+  original browser error message included for debugging
 
 ### Examples
 
 **Track user progress:**
 
 ```python
-progress = st.local_storage.get("quiz_progress", {"score": 0, "level": 1})
+# Load from local storage only on initial page load
+if "progress" not in st.session_state:
+    st.session_state.progress = st.local_storage.get("quiz_progress", {"score": 0, "level": 1})
 
+progress = st.session_state.progress
 st.write(f"Level {progress['level']}, Score: {progress['score']}")
 
 if st.button("Complete level"):
-    progress["score"] += 10
-    progress["level"] += 1
-    st.local_storage["quiz_progress"] = progress
-    st.rerun()
+    st.session_state.progress["score"] += 10
+    st.session_state.progress["level"] += 1
+    # Persist to local storage for next page load
+    st.local_storage["quiz_progress"] = st.session_state.progress
 ```
 
 **Remember UI settings:**
@@ -212,15 +229,21 @@ if theme != settings["theme"] or cols != settings["columns"]:
 ```python
 draft = st.local_storage.get("document_draft", "")
 
+# Use session_state to track the last saved value to avoid infinite save loops
+if "last_saved_draft" not in st.session_state:
+    st.session_state.last_saved_draft = draft
+
 content = st.text_area("Document", value=draft, height=400)
 
-# Auto-save on change
-if content != draft:
+# Auto-save on change, comparing against session-tracked value
+if content != st.session_state.last_saved_draft:
     st.local_storage["document_draft"] = content
+    st.session_state.last_saved_draft = content
 
 if st.button("Publish"):
     publish(content)
     st.local_storage.delete("document_draft")
+    st.session_state.last_saved_draft = ""
     st.success("Published!")
 ```
 
@@ -229,7 +252,7 @@ if st.button("Publish"):
 | Scenario                        | Behavior                                       |
 |---------------------------------|------------------------------------------------|
 | Value exceeds 1MB               | Raises `StreamlitAPIException`                 |
-| Browser quota exceeded          | Raises `QuotaExceededError` (from browser)     |
+| Browser quota exceeded          | Raises `StreamlitAPIException` (translated from browser error) |
 | Key not found (subscript)       | Raises `KeyError`                              |
 | Key not found (`.get()`)        | Returns default value (or `None`)              |
 | Non-JSON-serializable value     | Raises `TypeError`                             |
@@ -280,5 +303,5 @@ feature that can be implemented alongside or after the direct API.
 | No breaking API changes      | ✅ Additive only                                           |
 | No new dependencies          | ✅ Uses browser localStorage API                           |
 | Metrics collected            | Track `get`, `set`, `delete`, `clear` calls                |
-| Any security/legal impact?   | Privacy: client-only, no GDPR concerns for essential use   |
+| Any security/legal impact?   | Privacy: data synced to backend; GDPR/privacy review may be needed depending on what apps store |
 | Any docs changes needed?     | New guide: "Client-Side Storage" covering cookies + localStorage |
