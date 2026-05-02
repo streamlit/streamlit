@@ -1270,13 +1270,13 @@ export class WidgetStateManager {
 
     switch (binding.valueType) {
       case "bool_value":
-        return String(value as boolean)
+        return String(value)
 
       case "double_value":
-        return String(value as number)
+        return String(value)
 
       case "int_value":
-        return String(value as number)
+        return String(value)
 
       case "string_value":
         return value as string
@@ -1344,7 +1344,7 @@ export class WidgetStateManager {
     if (Array.isArray(urlValue)) {
       return this.isDefaultArrayValue(urlValue, binding)
     }
-    return this.isDefaultValue(urlValue as string, binding)
+    return this.isDefaultValue(urlValue, binding)
   }
 
   /**
@@ -1538,7 +1538,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
+    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
     `value ${value} cannot be converted to number without a loss of precision!`
   )
 }

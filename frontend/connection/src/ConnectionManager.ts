@@ -134,8 +134,9 @@ export class ConnectionManager {
       this.websocketConnection.sendMessage(obj)
     } else {
       // Don't need to make a big deal out of this. Just print to console.
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      LOG.error(`Cannot send message when server is disconnected: ${obj}`)
+      LOG.error(
+        `Cannot send message when server is disconnected: ${String(obj)}`
+      )
     }
   }
 

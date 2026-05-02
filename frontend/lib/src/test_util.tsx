@@ -315,7 +315,7 @@ export const renderWithContexts = (
     // Build the actual sidebar config with the ref if needed
     // Note: We intentionally don't use useMemo here because rerenderWithContexts
     // needs to update the context value on each rerender when currentSidebarConfigContextProps changes.
-    // eslint-disable-next-line react/jsx-no-constructed-context-values
+    // eslint-disable-next-line @eslint-react/no-unstable-context-value
     const sidebarConfigValue: SidebarConfigContextProps = {
       ...currentSidebarConfigContextProps,
       ...(shouldCreateAppRoot && { appRootRef }),

@@ -121,7 +121,7 @@ describe("useHandleHtmlAndCssContent", () => {
         throw new Error("boom")
       }
       return range
-    }) as unknown as typeof document.createRange
+    })
 
     try {
       renderUseHandleHtmlAndCssContent({
@@ -206,7 +206,7 @@ describe("useHandleHtmlAndCssContent", () => {
   it("returns early without crashing when containerRef is empty", () => {
     const { result } = renderUseHandleHtmlAndCssContent({
       context: buildContextValue({ htmlContent: "<p>noop</p>" }),
-      containerRef: { current: null } as RefObject<HTMLElement>,
+      containerRef: { current: null },
       setError,
     })
 

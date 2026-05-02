@@ -1344,7 +1344,7 @@ describe("getIFrameEnclosingApp", () => {
     Object.defineProperty(iframe, "contentWindow", {
       value:
         options.contentWindow === undefined
-          ? ({ document: innerDoc } as Window)
+          ? { document: innerDoc }
           : options.contentWindow,
       configurable: true,
     })

@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.56.0",
+  "version": "1.57.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -40,7 +40,7 @@
     "@types/lodash-es": "^4.17.12",
     "axios-mock-adapter": "^2.1.0",
     "typesync": "^0.14.3",
-    "vite": "^8.0.7",
+    "vite": "^8.0.9",
     "vite-plugin-dts": "^4.5.4",
     "vite-plugin-svgr": "^5.2.0",
     "vite-tsconfig-paths": "^6.1.0",

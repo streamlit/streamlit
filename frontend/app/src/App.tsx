@@ -914,7 +914,7 @@ export class App extends PureComponent<Props, State> {
       // The setState will be applied in the expected render cycle in this case.
       this.setState({ connectionState: newState })
     } else {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * We are using `flushSync` here because there is code that expects every
        * state to be observed. With React batched updates, it is possible that
        * multiple `connectionState` changes are applied in 1 render cycle, leading
@@ -2093,7 +2093,7 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
+      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
       LOG.error(`Not connected. Cannot send back message: ${msg}`)
     }
   }

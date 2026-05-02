@@ -454,7 +454,7 @@ describe("st.tabs", () => {
         observe = vi.fn()
         disconnect = vi.fn()
         unobserve = vi.fn()
-      } as unknown as typeof ResizeObserver
+      }
 
       render(<Tabs {...getProps()} />)
       const tablist = screen.getByRole("tablist")

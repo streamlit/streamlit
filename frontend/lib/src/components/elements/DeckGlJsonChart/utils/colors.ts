@@ -106,9 +106,10 @@ const getOriginalColor = ({
   if (typeof originalColor === "string" && originalColor.startsWith("@@=")) {
     // @see https://deck.gl/docs/api-reference/json/conversion-reference#functions-and-using-the--prefix
 
-    const evaluated = jsonConverter
-      .convert({ originalColor })
-      .originalColor(object)
+    const converted = jsonConverter.convert({ originalColor }) as {
+      originalColor: (obj: unknown) => number[]
+    }
+    const evaluated = converted.originalColor(object)
 
     return [
       evaluated[0] || 0,
