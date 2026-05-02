@@ -344,7 +344,7 @@ function ChatInput({
   )
 
   const addFiles = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setFiles is a stable setter
     (filesToAdd: UploadFileInfo[]): void =>
       setFiles(currentFiles => [...currentFiles, ...filesToAdd]),
     []
@@ -373,7 +373,7 @@ function ChatInput({
   )
 
   const deleteFile = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setFiles and setDropzoneResetCounter are stable setters
     (fileId: number): void => {
       setFiles(prevFiles => {
         const file = getFile(fileId, prevFiles)
@@ -529,7 +529,7 @@ function ChatInput({
   })
 
   const submitChatInput = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef is a ref; setFiles/setValue/setIsStacked/setDropzoneResetCounter are stable setters
     (audioInfo?: UploadedFileInfoProto): void => {
       // We want the chat input to always be in focus
       // even if the user clicks the submit button
@@ -586,7 +586,7 @@ function ChatInput({
 
   // Handle audio approval and upload
   const handleAudioApprove = useCallback(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
@@ -648,7 +648,7 @@ function ChatInput({
 
   // Memoize events to ensure fresh closures when dependencies change
   const controllerEvents = useMemo(
-    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setRecordingError is a stable setter
     () => ({
       onApprove: handleAudioApprove,
       onPermissionDenied: () => {
