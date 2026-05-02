@@ -22,11 +22,7 @@ from streamlit.delta_generator_singletons import (
     context_dg_stack,
     get_default_dg_stack_value,
 )
-from streamlit.error_util import (
-    handle_uncaught_app_exception,
-    invoke_script_error_handler,
-    show_uncaught_app_exception,
-)
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
@@ -160,16 +156,7 @@ def exec_func_with_error_handling(
         run_without_errors = False
         premature_stop = True
         uncaught_exception = ex
-
-        # Log the exception to console (always happens first)
-        handle_uncaught_app_exception(ex, show_in_ui=False)
-
-        # Call the custom error handler if one is set
-        suppress_ui_display = invoke_script_error_handler(ex, ctx.on_script_error)
-
-        # Show exception in UI unless the handler suppressed it
-        if not suppress_ui_display:
-            show_uncaught_app_exception(ex)
+        handle_user_script_exception(ex, ctx.on_script_error)
 
     return (
         result,

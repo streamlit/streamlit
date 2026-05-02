@@ -176,3 +176,29 @@ def invoke_script_error_handler(
             # RerunException (BaseException subclasses) are caught explicitly above.
             _LOGGER.exception("on_script_error handler raised an exception")
     return suppress_ui_display
+
+
+def handle_user_script_exception(
+    ex: Exception,
+    on_script_error: Callable[[Exception], bool | None] | None,
+) -> None:
+    """Handle an uncaught exception from user script code.
+
+    This performs the standard error handling flow for exceptions that occur
+    during script execution:
+
+    1. Log the exception to the console
+    2. Invoke the custom on_script_error handler if set
+    3. Show the exception in the UI (unless suppressed by the handler)
+
+    Parameters
+    ----------
+    ex : Exception
+        The exception that occurred.
+    on_script_error : Callable[[Exception], bool | None] | None
+        The custom error handler callback, if any.
+    """
+    handle_uncaught_app_exception(ex, show_in_ui=False)
+    suppress_ui_display = invoke_script_error_handler(ex, on_script_error)
+    if not suppress_ui_display:
+        show_uncaught_app_exception(ex)

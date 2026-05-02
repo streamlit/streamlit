@@ -418,8 +418,8 @@ class FragmentTest(unittest.TestCase):
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
 
-    @patch("streamlit.runtime.fragment.show_uncaught_app_exception")
-    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_on_script_error_handler_called_with_exception(
         self,
@@ -447,8 +447,8 @@ class FragmentTest(unittest.TestCase):
         mock_handle.assert_called_once_with(test_exception, show_in_ui=False)
         mock_show.assert_called_once_with(test_exception)
 
-    @patch("streamlit.runtime.fragment.show_uncaught_app_exception")
-    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_on_script_error_handler_returns_true_suppresses_ui(
         self,
@@ -475,8 +475,8 @@ class FragmentTest(unittest.TestCase):
         mock_show.assert_not_called()
 
     @patch("streamlit.error_util._LOGGER")
-    @patch("streamlit.runtime.fragment.show_uncaught_app_exception")
-    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util.handle_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_on_script_error_handler_exception_logged_and_ui_shown(
         self,
