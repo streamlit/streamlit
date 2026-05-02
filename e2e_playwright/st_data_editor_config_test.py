@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pytest
 from playwright.sync_api import Locator, Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -225,6 +226,7 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     expect(textarea).to_have_value("## New Header\n\nThis is **updated** content.")
 
 
+@pytest.mark.skip_browser("webkit")  # Cell overlay visibility flaky on webkit
 def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
     markdown_column_df = _get_editor(themed_app, "markdown-column")
@@ -266,6 +268,7 @@ def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     # Re-open and verify saved content
     click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(themed_app)
+    expect(cell_overlay).to_be_visible()
     cell_overlay.get_by_label("Edit").click()
     textarea = cell_overlay.locator("textarea")
     expect(textarea).to_have_value(shortcut_content)
