@@ -102,6 +102,11 @@ graph TD; A-->B
 """)
 ````
 
+**Toolbar Scope:** When a mermaid code block appears within mixed `st.markdown` content (e.g.,
+alongside headings or paragraphs), the toolbar actions (fullscreen, download, copy) apply only
+to the rendered diagram, not the entire markdown element. The toolbar overlays the diagram
+portion and operates on the diagram content independently.
+
 ### Behavior
 
 #### Supported Diagram Types
@@ -248,8 +253,10 @@ Diagrams are rendered with security in mind:
 - **Mermaid Security Level**: Uses `securityLevel: "strict"` to prevent XSS
 - **SVG Sandboxing**: Rendered SVGs are loaded via blob URLs in `<img>` tags, providing
   browser-enforced sandboxing (no script execution possible)
-- **No HTML Labels**: Uses `htmlLabels: false` to generate native SVG text elements,
-  avoiding foreignObject which could contain HTML
+
+Note: `securityLevel: "strict"` already disables HTML labels and strips `foreignObject`
+elements, so no additional `htmlLabels: false` configuration is needed. This allows
+Mermaid to render richer label styling where supported while maintaining security.
 
 ### Accessibility
 
@@ -260,9 +267,11 @@ Diagrams are rendered with security in mind:
 
 ## Tradeoffs
 
-- **Wheel size increase**: Adding mermaid.js increases the overall Streamlit wheel size by ~7%
-  due to bundled frontend assets. This is a one-time cost that affects all users, regardless of
-  whether they use Mermaid diagrams.
+- **Wheel size increase**: Adding mermaid.js increases the Streamlit Python wheel size (on disk)
+  by ~7% due to bundled frontend assets. This is a one-time cost that affects all users,
+  regardless of whether they use Mermaid diagrams. However, mermaid.js is lazy-loaded in the
+  browser, so the initial JavaScript bundle loaded on app startup remains unchanged until a
+  Mermaid diagram is actually rendered.
 
 ## Out of Scope (Future Work)
 
@@ -281,7 +290,7 @@ The following are explicitly not included in this initial release:
 |------------------------------|---------------|
 | Works on SiS, Cloud, etc?    | ✅ Client-side rendering, no server dependencies |
 | No breaking API changes      | ✅ New additive feature only |
-| No new dependencies          | ✅ Backend; mermaid.js added to frontend (lazy-loaded) |
+| No new dependencies          | ✅ No new backend (Python) dependencies. mermaid.js is a new frontend dependency (lazy-loaded) |
 | Metrics collected            | ✅ `mermaid_chart` command tracked via `gather_metrics` |
 | Any security/legal impact?   | ✅ No — mermaid.js is MIT licensed; strict security mode used |
 | Any docs changes needed?     | ✅ API reference docs and tutorial page |
