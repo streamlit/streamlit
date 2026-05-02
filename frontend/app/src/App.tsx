@@ -2094,7 +2094,7 @@ export class App extends PureComponent<Props, State> {
       this.connectionManager.sendMessage(msg)
     } else {
       LOG.error(
-        `Not connected. Cannot send back message: ${JSON.stringify(msg)}`
+        `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
       )
     }
   }

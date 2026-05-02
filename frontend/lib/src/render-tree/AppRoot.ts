@@ -181,7 +181,7 @@ export class AppRoot {
       isNullOrUndefined(this.event) ||
       isNullOrUndefined(this.bottom)
     ) {
-      throw new Error(`Invalid root node children! ${JSON.stringify(root)}`)
+      throw new Error(`Invalid root node children! ${root.debug()}`)
     }
   }
 
