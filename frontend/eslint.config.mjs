@@ -268,9 +268,7 @@ export default defineConfig([
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
       // New rules in @eslint-react v4 — disable until existing violations are addressed
-      "@eslint-react/component-hook-factories": "off",
       "@eslint-react/exhaustive-deps": "off",
-      "@eslint-react/jsx-no-children-prop": "off",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules
       // for it to be realistic right now. Over time, we should fix these.
@@ -433,7 +431,6 @@ export default defineConfig([
       // New React Compiler rules in react-hooks v7.1 — disable until existing
       // violations are addressed. Only rules-of-hooks and exhaustive-deps were
       // previously enforced.
-      "react-hooks/preserve-manual-memoization": "off",
       "react-hooks/refs": "off",
       "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects

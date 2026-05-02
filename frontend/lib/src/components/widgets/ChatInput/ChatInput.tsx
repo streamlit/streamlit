@@ -344,6 +344,7 @@ function ChatInput({
   )
 
   const addFiles = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (filesToAdd: UploadFileInfo[]): void =>
       setFiles(currentFiles => [...currentFiles, ...filesToAdd]),
     []
@@ -372,6 +373,7 @@ function ChatInput({
   )
 
   const deleteFile = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (fileId: number): void => {
       setFiles(prevFiles => {
         const file = getFile(fileId, prevFiles)
@@ -400,6 +402,7 @@ function ChatInput({
     ((acceptedFiles: File[], rejectedFiles: never[]) => void) | null
   >(null)
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- dropHandlerRef is a ref, setFiles is a stable setter
   const handleRetry = useCallback((fileInfo: UploadFileInfo): void => {
     if (!fileInfo.file || fileInfo.status.type !== "error") {
       return
@@ -526,6 +529,7 @@ function ChatInput({
   })
 
   const submitChatInput = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     (audioInfo?: UploadedFileInfoProto): void => {
       // We want the chat input to always be in focus
       // even if the user clicks the submit button
@@ -582,6 +586,7 @@ function ChatInput({
 
   // Handle audio approval and upload
   const handleAudioApprove = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     async (wav: Blob): Promise<void> => {
       // Convert blob to File
       const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
@@ -643,6 +648,7 @@ function ChatInput({
 
   // Memoize events to ensure fresh closures when dependencies change
   const controllerEvents = useMemo(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
     () => ({
       onApprove: handleAudioApprove,
       onPermissionDenied: () => {
