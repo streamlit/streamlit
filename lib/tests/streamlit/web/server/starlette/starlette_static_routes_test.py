@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import TYPE_CHECKING
 
 import pytest
@@ -134,6 +135,10 @@ class TestStreamlitStaticFiles:
 class TestSymlinkedAssets:
     """Tests that symlinked bundled assets are served as their real content."""
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="Creating symlinks on Windows requires elevated privileges",
+    )
     def test_symlinked_js_file_is_served(self, tmp_path: Path) -> None:
         """A JS file reached via symlink should serve its real bytes, not fall
         back to index.html. Regression for installs (e.g. uv with cache on a
