@@ -131,6 +131,36 @@ class TestStreamlitStaticFiles:
         assert response.headers["Cache-Control"] == "no-cache"
 
 
+class TestSymlinkedAssets:
+    """Tests that symlinked bundled assets are served as their real content."""
+
+    def test_symlinked_js_file_is_served(self, tmp_path: Path) -> None:
+        """A JS file reached via symlink should serve its real bytes, not fall
+        back to index.html. Regression for installs (e.g. uv with cache on a
+        different filesystem) that symlink the streamlit wheel into the venv.
+        """
+        real_dir = tmp_path / "real"
+        real_dir.mkdir()
+        (real_dir / "app.abc123.js").write_text("console.log('real')")
+
+        static_dir = tmp_path / "static"
+        static_dir.mkdir()
+        (static_dir / "index.html").write_text("<html>Home</html>")
+        (static_dir / "app.abc123.js").symlink_to(real_dir / "app.abc123.js")
+
+        static_files = create_streamlit_static_handler(
+            directory=str(static_dir), base_url=None
+        )
+        app = Starlette(routes=[Mount("/", app=static_files)])
+
+        with TestClient(app) as client:
+            response = client.get("/app.abc123.js")
+
+            assert response.status_code == 200
+            assert response.text == "console.log('real')"
+            assert "<html>" not in response.text
+
+
 class TestReservedPaths:
     """Tests for reserved path handling."""
 

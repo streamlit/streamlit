@@ -63,7 +63,13 @@ def create_streamlit_static_handler(
 
     class _StreamlitStaticFiles(StaticFiles):
         def __init__(self, directory: str, base_url: str | None) -> None:
-            super().__init__(directory=directory, html=True)
+            # follow_symlink=True is safe here because we serve our own
+            # package-bundled frontend assets, not user-supplied content.
+            # Without it, installs that symlink the streamlit wheel into the
+            # venv (e.g. uv with cache and venv on different filesystems)
+            # serve the SPA index.html for every /static/js/*.js request,
+            # producing a blank page with no errors.
+            super().__init__(directory=directory, html=True, follow_symlink=True)
             self._base_url = (base_url or "").strip("/")
             self._index_path = os.path.join(directory, "index.html")
 
