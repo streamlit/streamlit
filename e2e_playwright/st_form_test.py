@@ -380,7 +380,9 @@ def test_form_submit_button_displays_shortcut(app: Page):
 
 # Firefox has some issues with sub-pixel flakiness
 # but functional everything is working fine with firefox.
+# Webkit keyboard shortcuts are unreliable with Playwright 1.59+
 @pytest.mark.skip_browser("firefox")
+@pytest.mark.skip_browser("webkit")
 def test_form_submit_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the form submit button."""
     shortcut_button = get_element_by_key(app, "shortcut_submit_button")

@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -267,6 +268,7 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
+@pytest.mark.skip_browser("webkit")
 def test_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the button."""
     shortcut_button = get_element_by_key(app, "shortcut_button")
