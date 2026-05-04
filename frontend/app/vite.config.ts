@@ -197,6 +197,24 @@ export default defineConfig(({ command }) => ({
     manifest: true,
     rolldownOptions: {
       output: {
+        // Extract large sync dependencies from entry to reduce initial load.
+        // Rolldown rc.16+ changed code splitting, causing larger entry chunks.
+        manualChunks(id) {
+          if (id.includes("/protobuf/proto.")) return "streamlit-proto"
+          if (
+            id.includes("node_modules/baseui/") ||
+            id.includes("node_modules/styletron")
+          )
+            return "vendor-baseui"
+          if (id.includes("node_modules/apache-arrow/")) return "vendor-arrow"
+          if (
+            id.includes("node_modules/micromark") ||
+            id.includes("node_modules/remark") ||
+            id.includes("node_modules/rehype") ||
+            id.includes("node_modules/unified")
+          )
+            return "vendor-markdown"
+        },
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
         chunkFileNames: `static/js/[name]${HASH}.js`,
         entryFileNames: `static/js/[name]${HASH}.js`,
