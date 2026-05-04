@@ -303,10 +303,8 @@ def _run_parallel_fragment(
         except FragmentHandledException:
             pass  # error already rendered in the fragment's container
                   # by wrapped_fragment() — existing behavior
-        except Exception:
-            _LOGGER.exception(
-                "Parallel fragment %s failed", _short_id(fragment_id)
-            )
+        except Exception as e:
+            handle_uncaught_app_exception(e)
 
     parent_context.run(run_fragment)
 ```
@@ -1037,9 +1035,3 @@ fragment path, and all indices must match at each position.
 During sequential fragment reruns (`is_parallel_worker` is False), the existing
 behavior is unchanged: non-widget elements are allowed in external containers, widgets
 are blocked by `check_fragment_path_policy`.
-
-**Follow-up:** if user demand emerges for cross-container output from parallel
-fragments, a dedicated `st.fragment_output()` API could collect results with defined
-ordering semantics (e.g., dispatch order) and render them after the join barrier. This
-would avoid the cursor ownership and ordering problems by design. See project notes
-for alternatives considered.
