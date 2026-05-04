@@ -17,7 +17,6 @@
 // Private members use _.
 
 import { Field, Vector } from "apache-arrow"
-import { immerable } from "immer"
 
 import { ArrowData, IArrowData } from "@streamlit/protobuf"
 
@@ -103,14 +102,6 @@ export interface DataFrameCell {
  * (which is more useful for our frontend display code than Arrow's columnar format).
  */
 export class Quiver {
-  /**
-   * Plain objects (objects without a prototype), arrays, Maps and Sets are always drafted by Immer.
-   * Every other object must use the immerable symbol to mark itself as compatible with Immer.
-   * When one of these objects is mutated within a producer, its prototype is preserved between copies.
-   * Source: https://immerjs.github.io/immer/complex-objects/
-   */
-  [immerable] = true
-
   /** Index & data column names (matrix of column names to support multi-level headers). */
   private readonly _columnNames: ColumnNames
 
