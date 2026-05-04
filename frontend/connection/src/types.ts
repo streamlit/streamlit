@@ -176,11 +176,27 @@ export interface StreamlitEndpoints {
   setFileUploadClientConfig?(config: FileUploadClientConfig): void
 }
 
-// Re-export base config types from @streamlit/utils for backward compatibility
-// These types are now defined in the utils package to avoid duplication
-export type {
-  AppConfig,
-  IHostConfigProperties,
-  LibConfig,
-  MetricsConfig,
-} from "@streamlit/utils"
+// Compatibility re-exports for host config typing used by the connection layer.
+// These mirror the shared utils package types so typecheck does not depend on
+// package-level type-only export resolution across workspaces.
+export type LibConfig = {
+  mapboxToken?: string
+  disableFullscreenMode?: boolean
+  enforceDownloadInNewTab?: boolean
+  resourceCrossOriginMode?: undefined | "anonymous" | "use-credentials"
+  setAnonymousCrossOriginPropertyOnMediaElements?: boolean
+}
+
+export type AppConfig = {
+  allowedOrigins?: string[]
+  useExternalAuthToken?: boolean
+  enableCustomParentMessages?: boolean
+  blockErrorDialogs?: boolean
+}
+
+export type MetricsConfig = {
+  // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
+  metricsUrl?: string | "postMessage" | "off"
+}
+
+export type IHostConfigProperties = LibConfig & AppConfig & MetricsConfig

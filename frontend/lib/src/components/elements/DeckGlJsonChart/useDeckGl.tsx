@@ -342,7 +342,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         ?.height || theme.sizes.defaultMapHeight,
   })
 
-  const initialViewStateRef = useRef<Record<string, unknown> | null>(null)
+  const initialViewStateRef = useRef<DeckObject["initialViewState"] | null>(
+    null
+  )
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -546,7 +548,6 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       const diff = Object.keys(deck.initialViewState).reduce<
         Record<string, unknown>
       >((diffArg, key): Record<string, unknown> => {
-        // @ts-expect-error
         if (
           deck.initialViewState[key] === initialViewStateRef.current?.[key]
         ) {
@@ -555,7 +556,6 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
         return {
           ...diffArg,
-          // @ts-expect-error
           [key]: deck.initialViewState[key],
         }
       }, {})
