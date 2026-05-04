@@ -68,6 +68,7 @@ if TYPE_CHECKING:
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+    from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -178,7 +179,7 @@ class ScriptRunner:
         user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
-        on_script_run_start: Callable[[], None] | None = None,
+        local_sources_watcher: LocalSourcesWatcher | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -218,8 +219,9 @@ class ScriptRunner:
         fragment_storage
             The AppSession's FragmentStorage instance.
 
-        on_script_run_start
-            If set, invoked at the start of each script run (on the script thread)
+        local_sources_watcher
+            The session's file watcher, if any.  Its ``on_script_run`` hook is
+            called at the start of each script run (on the script thread)
             before any user code executes.
         """
         self._session_id = session_id
@@ -233,7 +235,7 @@ class ScriptRunner:
         self._fragment_storage = fragment_storage
 
         self._pages_manager = pages_manager
-        self._on_script_run_start = on_script_run_start
+        self._local_sources_watcher = local_sources_watcher
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -490,8 +492,8 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
-            if self._on_script_run_start is not None:
-                self._on_script_run_start()
+            if self._local_sources_watcher is not None:
+                self._local_sources_watcher.on_script_run()
 
             _LOGGER.debug("Running script")
             start_time: float = timer()

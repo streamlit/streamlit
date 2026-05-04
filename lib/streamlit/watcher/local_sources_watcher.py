@@ -171,6 +171,15 @@ class LocalSourcesWatcher:
         for cb in self._on_path_changed:
             cb(filepath)
 
+    def on_script_run(self) -> None:
+        """Hook called by ``ScriptRunner`` at the start of each script run.
+
+        Runs on the script thread before any user code executes.  Currently
+        flushes deferred ``sys.modules`` evictions so that the watcher thread
+        never mutates ``sys.modules`` while user code is running.
+        """
+        self.flush_pending_evictions()
+
     def flush_pending_evictions(self) -> None:
         """Remove pending watched modules from ``sys.modules``.
 

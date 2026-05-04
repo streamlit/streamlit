@@ -472,11 +472,7 @@ class AppSession:
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
-            on_script_run_start=(
-                self._local_sources_watcher.flush_pending_evictions
-                if self._local_sources_watcher is not None
-                else None
-            ),
+            local_sources_watcher=self._local_sources_watcher,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
