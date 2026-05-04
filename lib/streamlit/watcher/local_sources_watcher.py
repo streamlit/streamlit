@@ -17,7 +17,7 @@ from __future__ import annotations
 import os
 import sys
 import threading
-from typing import TYPE_CHECKING, Any, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, cast
 
 from streamlit import config, file_util
 from streamlit.logger import get_logger
@@ -291,7 +291,9 @@ def get_module_paths(module: ModuleType) -> set[str]:
         # __file__ is the pathname of the file from which the module was loaded
         # if it was loaded from a file.
         # The __file__ attribute may be missing for certain types of modules
-        lambda m: [m.__file__] if hasattr(m, "__file__") else [],
+        lambda m: (
+            [m.__file__] if hasattr(m, "__file__") else cast("list[str | None]", [])
+        ),
         # https://docs.python.org/3/reference/import.html#__spec__
         # The __spec__ attribute is set to the module spec that was used
         # when importing the module. one exception is __main__,
@@ -304,20 +306,20 @@ def get_module_paths(module: ModuleType) -> set[str]:
         lambda m: (
             [m.__spec__.origin]
             if hasattr(m, "__spec__") and m.__spec__ is not None
-            else []
+            else cast("list[str | None]", [])
         ),
         # https://www.python.org/dev/peps/pep-0420/
         # Handling of "namespace packages" in which the __path__ attribute
         # is a _NamespacePath object with a _path attribute containing
         # the various paths of the package.
         lambda m: (
-            list(m.__path__._path)
+            cast("list[str | None]", list(m.__path__._path))  # ty: ignore[invalid-argument-type]
             if hasattr(m, "__path__")
             # This check prevents issues with torch classes:
             # https://github.com/streamlit/streamlit/issues/10992
             and type(m.__path__).__name__ == "_NamespacePath"
             and hasattr(m.__path__, "_path")
-            else []
+            else cast("list[str | None]", [])
         ),
     ]
 
