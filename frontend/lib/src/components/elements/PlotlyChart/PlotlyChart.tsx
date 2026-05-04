@@ -21,6 +21,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -134,6 +135,12 @@ export function PlotlyChart({
     return applyTheming(initialFigureSpec, element.theme, theme)
   })
 
+  // Ref to track the latest Plotly figure state, including user interactions
+  // like zoom/pan. This ref is updated on every onUpdate callback and is used
+  // as the source-of-truth for dimension/theme updates to avoid stale state
+  // issues when React state is not updated for performance reasons.
+  const latestFigureRef = useRef<PlotlyFigureType>(plotlyFigure)
+
   const isSelectionActivated = element.selectionMode.length > 0 && !disabled
   const isLassoSelectionActivated =
     isSelectionActivated &&
@@ -216,10 +223,16 @@ export function PlotlyChart({
   ])
 
   useEffect(() => {
-    // If the theme changes, we need to reapply the theming to the figure
-    setPlotlyFigure((prevState: PlotlyFigureType) => {
-      return applyTheming(prevState, element.theme, theme)
-    })
+    // If the theme changes, we need to reapply the theming to the figure.
+    // Use latestFigureRef to preserve user interactions (zoom/pan) that
+    // may not be in React state for non-selection charts.
+    const themedFigure = applyTheming(
+      latestFigureRef.current,
+      element.theme,
+      theme
+    )
+    latestFigureRef.current = themedFigure
+    setPlotlyFigure(themedFigure)
   }, [element.id, theme, element.theme])
 
   useEffect(() => {
@@ -270,26 +283,28 @@ export function PlotlyChart({
       }
     }
 
-    setPlotlyFigure((prevState: PlotlyFigureType) => {
-      if (
-        prevState.layout.clickmode === updatedClickMode &&
-        prevState.layout.hovermode === updatedHoverMode &&
-        prevState.layout.dragmode === updatedDragMode
-      ) {
-        // Nothing has changed, just return the previous state
-        return prevState
-      }
+    // Use the ref to get the latest figure state, then update both ref and state
+    const prevState = latestFigureRef.current
+    if (
+      prevState.layout.clickmode === updatedClickMode &&
+      prevState.layout.hovermode === updatedHoverMode &&
+      prevState.layout.dragmode === updatedDragMode
+    ) {
+      // Nothing has changed, return early
+      return
+    }
 
-      return {
-        ...prevState,
-        layout: {
-          ...prevState.layout,
-          clickmode: updatedClickMode,
-          hovermode: updatedHoverMode,
-          dragmode: updatedDragMode,
-        },
-      }
-    })
+    const updatedFigure = {
+      ...prevState,
+      layout: {
+        ...prevState.layout,
+        clickmode: updatedClickMode,
+        hovermode: updatedHoverMode,
+        dragmode: updatedDragMode,
+      },
+    }
+    latestFigureRef.current = updatedFigure
+    setPlotlyFigure(updatedFigure)
     // We want to reload these options whenever the element id changes
     // or the selection modes change.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
@@ -307,7 +322,7 @@ export function PlotlyChart({
       ? // In some situations - e.g. initial loading of tabs - the width is set to -1
         // before its able to determine the real width. We want to keep the previous
         // width in this case.
-        plotlyFigure.layout?.width
+        latestFigureRef.current.layout?.width
       : Math.max(
           width,
           // Apply a min width to prevent the chart running into issues with negative
@@ -318,7 +333,7 @@ export function PlotlyChart({
   let calculatedHeight =
     chartContainerHeight > 0
       ? chartContainerHeight
-      : (plotlyFigure.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
+      : (latestFigureRef.current.layout?.height ?? DEFAULT_PLOTLY_HEIGHT)
 
   if (isFullScreen) {
     calculatedWidth = width
@@ -326,20 +341,22 @@ export function PlotlyChart({
   }
 
   if (
-    plotlyFigure.layout.height !== calculatedHeight ||
-    plotlyFigure.layout.width !== calculatedWidth
+    latestFigureRef.current.layout.height !== calculatedHeight ||
+    latestFigureRef.current.layout.width !== calculatedWidth
   ) {
-    // Update the figure with the new height and width (if they have changed)
-    setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-      return {
-        ...prevFigure,
-        layout: {
-          ...prevFigure.layout,
-          height: calculatedHeight,
-          width: calculatedWidth,
-        },
-      }
-    })
+    // Update the figure with the new height and width (if they have changed).
+    // Use latestFigureRef to preserve user interactions (zoom/pan) that
+    // may not be in React state for non-selection charts.
+    const updatedFigure = {
+      ...latestFigureRef.current,
+      layout: {
+        ...latestFigureRef.current.layout,
+        height: calculatedHeight,
+        width: calculatedWidth,
+      },
+    }
+    latestFigureRef.current = updatedFigure
+    setPlotlyFigure(updatedFigure)
   }
 
   /**
@@ -370,25 +387,26 @@ export function PlotlyChart({
 
   const { restart: restartResetSelectionTimeout } = useTimeout(
     () => {
-      // Reset the selection info within the plotly figure
-      setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-        return {
-          ...prevFigure,
-          data: prevFigure.data.map((trace: Plotly.Data) => {
-            return {
-              ...trace,
-              // Set to null to clear the selection an empty
-              // array here would still show everything as opaque
-              selectedpoints: null,
-            } as Plotly.Data
-          }),
-          layout: {
-            ...prevFigure.layout,
-            // selections is not part of the plotly typing:
-            selections: [],
-          } as PlotlyFigureType["layout"],
-        }
-      })
+      // Reset the selection info within the plotly figure.
+      // Use latestFigureRef to preserve user interactions (zoom/pan).
+      const resetFigure = {
+        ...latestFigureRef.current,
+        data: latestFigureRef.current.data.map((trace: Plotly.Data) => {
+          return {
+            ...trace,
+            // Set to null to clear the selection an empty
+            // array here would still show everything as opaque
+            selectedpoints: null,
+          } as Plotly.Data
+        }),
+        layout: {
+          ...latestFigureRef.current.layout,
+          // selections is not part of the plotly typing:
+          selections: [],
+        } as PlotlyFigureType["layout"],
+      }
+      latestFigureRef.current = resetFigure
+      setPlotlyFigure(resetFigure)
     },
     RESET_SELECTION_TIMEOUT_MS,
     { autoStart: false }
@@ -453,8 +471,8 @@ export function PlotlyChart({
     // if the dragmode is set to select or lasso.
     let clickmode: "event+select" | "event" | "none"
     if (
-      plotlyFigure.layout?.dragmode === "select" ||
-      plotlyFigure.layout?.dragmode === "lasso"
+      latestFigureRef.current.layout?.dragmode === "select" ||
+      latestFigureRef.current.layout?.dragmode === "lasso"
     ) {
       clickmode = "event"
     } else {
@@ -463,16 +481,16 @@ export function PlotlyChart({
       clickmode = isPointsSelectionActivated ? "event+select" : "none"
     }
 
-    if (plotlyFigure.layout?.clickmode !== clickmode) {
-      setPlotlyFigure((prevFigure: PlotlyFigureType) => {
-        return {
-          ...prevFigure,
-          layout: {
-            ...prevFigure.layout,
-            clickmode: clickmode,
-          },
-        }
-      })
+    if (latestFigureRef.current.layout?.clickmode !== clickmode) {
+      const updatedFigure = {
+        ...latestFigureRef.current,
+        layout: {
+          ...latestFigureRef.current.layout,
+          clickmode: clickmode,
+        },
+      }
+      latestFigureRef.current = updatedFigure
+      setPlotlyFigure(updatedFigure)
     }
     // We only want to trigger this effect if the dragmode changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
@@ -519,9 +537,15 @@ export function PlotlyChart({
             : undefined
         }
         onInitialized={figure => {
+          latestFigureRef.current = figure
           widgetMgr.setElementState(element.id, "figure", figure)
         }}
         onUpdate={figure => {
+          // Always update the ref with the latest figure state from Plotly,
+          // including user interactions like zoom/pan. This ensures the ref
+          // is always current, even when we skip React state updates for
+          // performance reasons.
+          latestFigureRef.current = figure
           // Save the updated figure state to allow it to be recovered
           widgetMgr.setElementState(element.id, "figure", figure)
           // Only update React state when selection is activated, as the selection
