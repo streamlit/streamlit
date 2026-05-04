@@ -546,6 +546,8 @@ export default defineConfig([
   globalIgnores([
     "eslint.config.mjs",
     "app/eslint.config.mjs",
+    // TODO(vite-tsconfig): vite.config.ts files are not in tsconfig include paths,
+    // so typescript-eslint can't parse them. Add to tsconfig or keep ignored.
     "**/vite.config.ts",
     "vitest.config.ts",
     "vitest.setup.ts",

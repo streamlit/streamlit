@@ -199,7 +199,7 @@ export default defineConfig(({ command }) => ({
       output: {
         // Extract large sync dependencies from entry to reduce initial load.
         // Rolldown rc.16+ changed code splitting, causing larger entry chunks.
-        manualChunks(id) {
+        manualChunks(id: string): string | undefined {
           if (id.includes("/protobuf/proto.")) return "streamlit-proto"
           if (
             id.includes("node_modules/baseui/") ||
