@@ -56,7 +56,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
     bodyObject = JSON.parse(element.body)
   } catch (e) {
     const error = ensureError(e)
-    // eslint-disable-next-line @eslint-react/error-boundaries -- JSON parsing, not catching render errors
+
     try {
       bodyObject = JSON5.parse(element.body)
     } catch {
