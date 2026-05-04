@@ -46,59 +46,41 @@ def get_page_button(pagination: Locator, page_number: int) -> Locator:
     return pagination.get_by_role("button", name=f"Page {page_number}", exact=True)
 
 
-def test_basic_pagination_renders(app: Page):
-    """Test that basic pagination renders correctly."""
+def test_basic_pagination_renders_and_navigates(app: Page):
+    """Test basic pagination rendering and navigation via next/page buttons."""
     pagination = get_pagination(app, "basic")
     expect(pagination).to_be_visible()
 
+    # Verify initial state
     expect_markdown(app, "Current page: 1")
-
-    # Verify prev is disabled on first page
     expect(get_prev_button(pagination)).to_be_disabled()
     expect(get_next_button(pagination)).not_to_be_disabled()
 
+    # Navigate via next button
+    get_next_button(pagination).click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Current page: 2")
 
-def test_pagination_with_default_page(app: Page):
-    """Test pagination starts on the specified default page."""
+    # Navigate via page button (page 5 is always visible with default max_visible)
+    get_page_button(pagination, 5).click()
+    wait_for_app_run(app)
+    expect_markdown(app, "Current page: 5")
+
+
+def test_pagination_with_default_page_and_prev_navigation(app: Page):
+    """Test pagination with default page and navigation via prev button."""
     pagination = get_pagination(app, "with_default")
     expect(pagination).to_be_visible()
 
+    # Verify initial state (default=5)
     expect_markdown(app, "Default page: 5")
-
-    # Both prev and next should be enabled on middle page
     expect(get_prev_button(pagination)).not_to_be_disabled()
     expect(get_next_button(pagination)).not_to_be_disabled()
 
-
-def test_navigation_via_next_button(app: Page):
-    """Test navigation using the next button."""
-    pagination = get_pagination(app, "basic")
-
-    get_next_button(pagination).click()
-    wait_for_app_run(app)
-
-    expect_markdown(app, "Current page: 2")
-
-
-def test_navigation_via_prev_button(app: Page):
-    """Test navigation using the previous button."""
-    pagination = get_pagination(app, "with_default")
-
+    # Navigate via prev button
     get_prev_button(pagination).click()
     wait_for_app_run(app)
-
     expect_markdown(app, "Default page: 4")
-
-
-def test_navigation_via_page_button(app: Page):
-    """Test navigation by clicking a specific page button."""
-    pagination = get_pagination(app, "basic")
-
-    # Use page 2 which is always visible regardless of responsive behavior
-    get_page_button(pagination, 2).click()
-    wait_for_app_run(app)
-
-    expect_markdown(app, "Current page: 2")
 
 
 def test_disabled_pagination(app: Page):
