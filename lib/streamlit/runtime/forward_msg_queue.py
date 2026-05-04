@@ -184,11 +184,10 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
         # Non-delta messages are never composable.
         return False
 
-    # We never compose add_rows messages in Python, because the add_rows
-    # operation can raise errors, and we don't have a good way of handling
-    # those errors in the message queue.
+    # new_transient deltas are not composable because they represent
+    # temporary UI elements like spinners that need to be processed individually.
     delta_type = msg.delta.WhichOneof("type")
-    return delta_type not in {"add_rows", "arrow_add_rows", "new_transient"}
+    return delta_type != "new_transient"
 
 
 def _maybe_compose_delta_msgs(

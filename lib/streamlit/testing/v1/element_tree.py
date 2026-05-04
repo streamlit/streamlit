@@ -2568,7 +2568,7 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
             else:
                 new_node = Block(proto=block, root=root)
         else:
-            # add_rows
+            # new_transient (e.g. spinner) - skip these in the element tree
             continue
 
         current_node: Block = root

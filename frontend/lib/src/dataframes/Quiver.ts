@@ -17,13 +17,12 @@
 // Private members use _.
 
 import { Field, Vector } from "apache-arrow"
-import { immerable, produce } from "immer"
+import { immerable } from "immer"
 
 import { ArrowData, IArrowData } from "@streamlit/protobuf"
 
 import { hashString } from "~lib/util/utils"
 
-import { concat } from "./arrowConcatUtils"
 import {
   ColumnNames,
   Data,
@@ -119,10 +118,10 @@ export class Quiver {
    *
    * Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  private _pandasIndexColumnTypes: ArrowType[]
+  private readonly _pandasIndexColumnTypes: ArrowType[]
 
   /** Column type information for the data columns. */
-  private _dataColumnTypes: ArrowType[]
+  private readonly _dataColumnTypes: ArrowType[]
 
   /** Column type information for all columns.
    *
@@ -130,16 +129,16 @@ export class Quiver {
    * and needs to be updated whenever the index or data columns
    * change.
    */
-  private _columnTypes: ArrowType[]
+  private readonly _columnTypes: ArrowType[]
 
   /** Cell values of the (Pandas) index columns.
    *
    *  Index columns only exist if the DataFrame was created based on a Pandas DataFrame.
    */
-  private _pandasIndexData: IndexData
+  private readonly _pandasIndexData: IndexData
 
   /** Cell values of the data columns. */
-  private _data: Data
+  private readonly _data: Data
 
   /** [optional] Pandas Styler data. This will be defined if the user styled the dataframe. */
   private readonly _styler?: PandasStylerData
@@ -223,9 +222,7 @@ export class Quiver {
    * but is not 100% guaranteed to be unique.
    */
   public get hash(): string {
-    // Its important to calculate this at runtime
-    // since some of the data can change when `add_rows` is
-    // used.
+    // Its important to calculate this at runtime.
     const valuesToHash = [
       this.dimensions.numColumns,
       this.dimensions.numDataColumns,
@@ -295,62 +292,6 @@ export class Quiver {
   /** Get the raw value of a data cell. */
   private getDataValue(rowIndex: number, columnIndex: number): DataType {
     return this._data.getChildAt(columnIndex)?.get(rowIndex)
-  }
-
-  /**
-   * Add the contents of another table (data + indexes) to this table.
-   * Extra columns will not be created.
-   */
-  public addRows(other: Quiver): Quiver {
-    if (this.styler || other.styler) {
-      throw new Error(`
-Unsupported operation. \`add_rows()\` does not support Pandas Styler objects.
-
-If you do not need the Styler's styles, try passing the \`.data\` attribute of
-the Styler object instead to concatenate just the underlying dataframe.
-
-For example:
-\`\`\`
-st.add_rows(my_styler.data)
-\`\`\`
-`)
-    }
-
-    // Don't do anything if the incoming DataFrame is empty.
-    if (other.dimensions.numDataRows === 0) {
-      return produce(this, (draft: Quiver) => draft)
-    }
-
-    // We need to handle this separately, as columns need to be reassigned.
-    // We don't concatenate columns in the general case.
-    if (this.dimensions.numDataRows === 0) {
-      return produce(other, (draft: Quiver) => draft)
-    }
-
-    const {
-      index: newIndex,
-      data: newData,
-      indexTypes: newIndexTypes,
-      dataTypes: newDataTypes,
-    } = concat(
-      this._dataColumnTypes,
-      this._pandasIndexColumnTypes,
-      this._pandasIndexData,
-      this._data,
-      other._dataColumnTypes,
-      other._pandasIndexColumnTypes,
-      other._pandasIndexData,
-      other._data
-    )
-
-    // If we get here, then we had no concatenation errors.
-    return produce(this, (draft: Quiver) => {
-      draft._pandasIndexData = newIndex
-      draft._data = newData
-      draft._pandasIndexColumnTypes = newIndexTypes
-      draft._dataColumnTypes = newDataTypes
-      draft._columnTypes = newIndexTypes.concat(newDataTypes)
-    })
   }
 }
 

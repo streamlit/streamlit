@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-import { produce } from "immer"
-
 import {
-  ArrowNamedDataSet,
   Dataframe as DataframeProto,
   Element,
   ForwardMsgMetadata,
@@ -124,80 +121,6 @@ export class ElementNode implements AppNode {
     return toReturn
   }
 
-  public arrowAddRows(
-    namedDataSet: ArrowNamedDataSet,
-    scriptRunId: string
-  ): ElementNode {
-    const elementType = this.element.type
-    const newNode = new ElementNode(
-      this.element,
-      this.metadata,
-      scriptRunId,
-      this.activeScriptHash,
-      this.fragmentId
-    )
-
-    switch (elementType) {
-      case "table":
-      case "dataframe": {
-        newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
-          this.quiverElement,
-          namedDataSet
-        )
-        break
-      }
-      case "vegaLiteChart": {
-        newNode.lazyVegaLiteChartElement =
-          ElementNode.vegaLiteChartAddRowsHelper(
-            this.vegaLiteChartElement,
-            namedDataSet
-          )
-        break
-      }
-      default: {
-        // This should never happen!
-        throw new Error(
-          `elementType '${this.element.type}' is not a valid arrowAddRows target!`
-        )
-      }
-    }
-
-    return newNode
-  }
-
-  private static quiverAddRowsHelper(
-    element: Quiver,
-    namedDataSet: ArrowNamedDataSet
-  ): Quiver {
-    if (namedDataSet.hasName) {
-      throw new Error(
-        "Add rows cannot be used with a named dataset for this element."
-      )
-    }
-
-    const newQuiver = new Quiver(namedDataSet.data as IArrowData)
-    return element.addRows(newQuiver)
-  }
-
-  private static vegaLiteChartAddRowsHelper(
-    element: VegaLiteChartElement,
-    namedDataSet: ArrowNamedDataSet
-  ): VegaLiteChartElement {
-    const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
-    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrowData)
-
-    return produce(element, (draft: VegaLiteChartElement) => {
-      const existingDataSet = getNamedDataSet(draft.datasets, newDataSetName)
-      if (existingDataSet) {
-        existingDataSet.data = existingDataSet.data.addRows(newDataSetQuiver)
-      } else {
-        draft.data = draft.data
-          ? draft.data.addRows(newDataSetQuiver)
-          : newDataSetQuiver
-      }
-    })
-  }
-
   /**
    * Accept a visitor.
    * @param visitor - The visitor to accept.
@@ -256,24 +179,6 @@ export class ElementNode implements AppNode {
       node.deltaMsgReceivedAt
     )
   }
-}
-
-/**
- * If there is only one NamedDataSet, return it.
- * If there is a NamedDataset that matches the given name, return it.
- * Otherwise, return `undefined`.
- */
-function getNamedDataSet(
-  namedDataSets: WrappedNamedDataset[],
-  name: string | null
-): WrappedNamedDataset | undefined {
-  if (namedDataSets.length === 1) {
-    return namedDataSets[0]
-  }
-
-  return namedDataSets.find(
-    (dataset: WrappedNamedDataset) => dataset.hasName && dataset.name === name
-  )
 }
 
 /** Iterates over datasets and converts data to Quiver. */

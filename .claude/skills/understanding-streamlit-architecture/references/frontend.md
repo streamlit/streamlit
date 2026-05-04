@@ -88,7 +88,6 @@ Immutable root with 4 top-level containers:
 - Leaf node for UI elements
 - Contains `Element` protobuf message
 - Lazy-loads processed data (Quiver for dataframes)
-- Handles `arrowAddRows` for incremental updates
 
 **TransientNode** (`TransientNode.ts`):
 - Holds transient elements (currently used for spinners) at a delta path position

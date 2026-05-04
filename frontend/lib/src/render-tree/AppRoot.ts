@@ -15,7 +15,6 @@
  */
 
 import {
-  ArrowNamedDataSet,
   Block as BlockProto,
   Delta,
   Element,
@@ -24,13 +23,11 @@ import {
   Transient as TransientProto,
 } from "@streamlit/protobuf"
 
-import { ensureError } from "~lib/util/ErrorHandling"
 import {
   getLoadingScreenType,
   isNullOrUndefined,
   LoadingScreenType,
   makeAppSkeletonElement,
-  makeElementWithErrorText,
   makeElementWithInfoText,
 } from "~lib/util/utils"
 
@@ -259,27 +256,6 @@ export class AppRoot {
           activeScriptHash,
           delta.fragmentId
         )
-      }
-
-      case "arrowAddRows": {
-        try {
-          return this.arrowAddRows(
-            deltaPath,
-            delta.arrowAddRows as ArrowNamedDataSet,
-            scriptRunId
-          )
-        } catch (error) {
-          const errorElement = makeElementWithErrorText(
-            ensureError(error).message
-          )
-          return this.addElement(
-            deltaPath,
-            scriptRunId,
-            errorElement,
-            metadata,
-            activeScriptHash
-          )
-        }
       }
 
       default: {
@@ -519,36 +495,6 @@ export class AppRoot {
         this.root,
         deltaPath,
         transientNode,
-        scriptRunId
-      ) as BlockNode,
-      this.appLogo
-    )
-  }
-
-  private arrowAddRows(
-    deltaPath: number[],
-    namedDataSet: ArrowNamedDataSet,
-    scriptRunId: string
-  ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
-      this.root,
-      deltaPath
-    )
-    if (
-      isNullOrUndefined(existingNode) ||
-      !(existingNode instanceof ElementNode)
-    ) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
-    }
-
-    const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(
-      this.mainScriptHash,
-      SetNodeByDeltaPathVisitor.setNodeAtPath(
-        this.root,
-        deltaPath,
-        elementNode,
         scriptRunId
       ) as BlockNode,
       this.appLogo

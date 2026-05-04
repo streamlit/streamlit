@@ -37,7 +37,7 @@ _LOGGER: Final = get_logger(__name__)
 # Limit the number of commands to keep the page profile message small
 _MAX_TRACKED_COMMANDS: Final = 200
 # Only track a maximum of 25 uses per unique command since some apps use
-# commands excessively (e.g. calling add_rows thousands of times in one rerun)
+# commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
 
