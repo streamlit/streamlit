@@ -14,11 +14,11 @@
 
 import streamlit as st
 
-st.balloons()
-
 # --- Button-triggered balloons (element hash memo regression test) ---
 if "balloons_count" not in st.session_state:
     st.session_state.balloons_count = 0
+    # Initial balloons on first load
+    st.balloons()
 
 if st.button("Show more balloons"):
     st.session_state.balloons_count += 1
