@@ -52,6 +52,11 @@ type ElementType = NonNullable<Element["type"]>
  * Element types that are unsafe for payload reuse, even if hashes match.
  * These types either mutate their protobuf payload, depend on per-run/mount
  * identity, or have one-shot behaviors not covered by the generic setValue guard.
+ *
+ * When adding a new element type, check whether it:
+ * - Has mutable lazy caches (like arrowAddRows mutations in table/vegaLiteChart)
+ * - Has one-shot fields other than setValue (extend hasOneShotPayload if so)
+ * - Depends on per-run or per-mount identity (add to this list)
  */
 const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
   // Needs frontend cleanup before payload reuse can be enabled.
@@ -80,6 +85,11 @@ const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
  * Check if the element has a one-shot payload field that requires using the
  * fresh protobuf object. This guards against reusing payloads that carry
  * one-shot backend commands (like setValue) that need to be delivered.
+ *
+ * Currently covers the `setValue` boolean field used by widgets (Slider,
+ * TextInput, NumberInput, etc.) to indicate that the frontend should set
+ * the widget value programmatically. When adding new element types with
+ * similar one-shot semantics, extend this function accordingly.
  */
 function hasOneShotPayload(element: Element): boolean {
   if (element.type === undefined) {
@@ -88,7 +98,9 @@ function hasOneShotPayload(element: Element): boolean {
 
   const subElement = element[element.type as keyof Element]
   if (subElement && typeof subElement === "object") {
-    return (subElement as { setValue?: boolean }).setValue === true
+    const maybeSetValue = (subElement as { setValue?: unknown }).setValue
+    // Guard with typeof check to fail closed on unexpected schemas
+    return typeof maybeSetValue === "boolean" && maybeSetValue === true
   }
   return false
 }

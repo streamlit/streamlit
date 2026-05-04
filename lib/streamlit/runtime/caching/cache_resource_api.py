@@ -26,7 +26,6 @@ from typing import (
     Final,
     TypeAlias,
     TypeVar,
-    cast,
     overload,
 )
 
@@ -674,7 +673,8 @@ class ResourceCache(Cache[R]):
     @property
     def ttl_seconds(self) -> float:
         # Cast is needed for types-cachetools 7.0.0+ where .ttl returns Any
-        return cast("float", self._mem_cache.ttl)  # type: ignore[redundant-cast,unused-ignore]
+        ttl: float = self._mem_cache.ttl
+        return ttl
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.
