@@ -3630,7 +3630,7 @@ __metadata:
     "@streamlit/lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^14.8.0"
+    "@swc/plugin-emotion": "npm:^14.9.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"
     "@testing-library/react": "npm:^16.3.2"
@@ -3686,7 +3686,7 @@ __metadata:
     util: "npm:^0.12.5"
     uuid: "npm:^14.0.0"
     vite: "npm:^8.0.9"
-    vite-bundle-analyzer: "npm:^1.3.7"
+    vite-bundle-analyzer: "npm:^1.3.8"
     vite-plugin-svgr: "npm:^5.2.0"
     vite-plugin-terminal: "npm:^1.4.0"
     vite-tsconfig-paths: "npm:^6.1.0"
@@ -3761,7 +3761,7 @@ __metadata:
     "@streamlit/component-v2-lib": "workspace:^"
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
-    "@swc/plugin-emotion": "npm:^14.8.0"
+    "@swc/plugin-emotion": "npm:^14.9.0"
     "@testing-library/dom": "npm:^10.4.1"
     "@testing-library/jest-dom": "npm:^6.9.1"
     "@testing-library/react": "npm:^16.3.2"
@@ -4152,12 +4152,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/plugin-emotion@npm:^14.8.0":
-  version: 14.8.0
-  resolution: "@swc/plugin-emotion@npm:14.8.0"
+"@swc/plugin-emotion@npm:^14.9.0":
+  version: 14.9.0
+  resolution: "@swc/plugin-emotion@npm:14.9.0"
   dependencies:
     "@swc/counter": "npm:^0.1.3"
-  checksum: 10c0/909f377326a17ad13fe88059f89d28b92d8e9b710163b12c43736c20793fd3d459c5265f94cc3990ab883757e9ee65442a4906b7743e5153f22e4a8e42ada253
+  checksum: 10c0/0d0eb6fc7ba2282d91197f6053bf0470cd4503966963496eafb893ced71751fd5a4aa679cb8f6cc0193309c97d3cf9e4167f4f9a7e14196c069ef42a8bae68bd
   languageName: node
   linkType: hard
 
@@ -19411,12 +19411,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite-bundle-analyzer@npm:^1.3.7":
-  version: 1.3.7
-  resolution: "vite-bundle-analyzer@npm:1.3.7"
+"vite-bundle-analyzer@npm:^1.3.8":
+  version: 1.3.8
+  resolution: "vite-bundle-analyzer@npm:1.3.8"
   bin:
     analyze: dist/bin.js
-  checksum: 10c0/47184a0482284c8415fae0861e7ef2292036ef25ac5d115c325f1fc7819fc17a8be591bf6817789dc339c22031f6b47a7a3c1b5bf3922e6a325b0daecefe597a
+  checksum: 10c0/86baa1ac5c258e565edb0963e8d53c35867e3a5fa3c0a82b2824d6cd4dd46e21578a755be803ab92768e06172eb06c6daf71346e1f23fb66a95f565bee3ad011
   languageName: node
   linkType: hard
 
