@@ -1753,6 +1753,51 @@ class RegisterWidgetQueryParamProgrammaticSyncTest(DeltaGeneratorTestCase):
 
         assert self._page_info_msg_count() == 0
 
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_initial_load_preseeding_does_not_sync_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Session state pre-seeded before first register must not push to URL.
+
+        The widget_id is absent from _old_state (never compacted), so
+        the programmatic-sync branch must not fire on first render.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state._new_session_state["my_widget"] = "preseed_value"
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_url_seeded_initial_load_does_not_trigger_programmatic_sync(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """URL-seeded initial load must not emit a redundant page_info_changed.
+
+        _seed_widget_from_url writes the URL value into _new_session_state,
+        so the not url_value_seeded guard in Branch 1b is the only protection.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("my_widget=url_value")
+        self.clear_queue()
+
+        with patch.object(self.query_params, "set_corrected_value") as mock_set:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set.assert_not_called()
+
+        assert self._page_info_msg_count() == 0
+
 
 class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
     """Tests for register_widget cleaning up stale bindings when bind is removed."""

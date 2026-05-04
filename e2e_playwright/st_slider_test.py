@@ -631,8 +631,8 @@ def test_slider_url_value_wins_over_session_state_on_initial_load(
 def test_slider_session_state_wins_when_no_url_value(app: Page):
     """Without URL value, session_state pre-set (30) wins over widget default (0)."""
     expect_prefixed_markdown(app, "Bound ss value:", "30")
-    # Programmatic session_state pre-set syncs to URL
-    expect(app).to_have_url(re.compile(r"bound_ss=30"))
+    # Session-state pre-set doesn't push to URL without user interaction
+    expect(app).not_to_have_url(re.compile(r"bound_ss="))
 
 
 def test_slider_ui_value_wins_on_rerun_and_syncs_url(page: Page, app_base_url: str):
