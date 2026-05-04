@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import pandas as pd
+
 import streamlit as st
 
 # Basic pagination
@@ -101,6 +103,30 @@ def on_change():
 
 
 st.pagination(10, key="callback_pagination", on_change=on_change)
+
+# Dataframe with pagination example
+st.subheader("Dataframe with Pagination")
+
+# Create sample data
+df = pd.DataFrame({"Name": [f"Item {i}" for i in range(1, 51)], "Value": range(1, 51)})
+
+# Pagination settings
+rows_per_page = 10
+total_pages = (len(df) + rows_per_page - 1) // rows_per_page
+
+# Get current page from pagination widget
+df_page = st.session_state.get("df_pagination", 1)
+
+# Calculate slice for current page
+start_idx = (df_page - 1) * rows_per_page
+end_idx = start_idx + rows_per_page
+
+# Display dataframe slice on top
+st.dataframe(df.iloc[start_idx:end_idx])
+
+# Right-aligned pagination below the dataframe
+with st.container(horizontal_alignment="right"):
+    st.pagination(total_pages, key="df_pagination")
 
 # Session state control
 st.subheader("Session State Control")
