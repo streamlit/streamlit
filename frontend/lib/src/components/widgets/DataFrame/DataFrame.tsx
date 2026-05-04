@@ -202,9 +202,8 @@ function DataFrame({
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
   // editingMode field defined.
-  if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = DataframeProto.EditingMode.READ_ONLY
-  }
+  const editingMode =
+    element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
 
   const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
     DataframeProto.EditingMode
@@ -220,7 +219,7 @@ function DataFrame({
     // We don't show empty state for modes that allow adding rows
     // with a table that has data columns defined.
     !(
-      (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
+      (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
       dataDimensions.numDataColumns > 0
     )
 
@@ -231,19 +230,19 @@ function DataFrame({
   const isSortingEnabled =
     !isLargeTable &&
     !isEmptyTable &&
-    element.editingMode !== DYNAMIC &&
-    element.editingMode !== ADD_ONLY
+    editingMode !== DYNAMIC &&
+    editingMode !== ADD_ONLY
 
   // Check if the editing mode allows adding rows (DYNAMIC or ADD_ONLY)
   const canAddRows =
     !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
+    (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
     !disabled
 
   // Check if the editing mode allows deleting rows (DYNAMIC or DELETE_ONLY)
   const canDeleteRows =
     !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === DELETE_ONLY) &&
+    (editingMode === DYNAMIC || editingMode === DELETE_ONLY) &&
     !disabled
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -442,6 +441,7 @@ function DataFrame({
     }
 
     const selectionState = element.selectionState
+    // eslint-disable-next-line react-hooks/immutability -- consuming programmatic selection from proto
     element.selectionState = null
 
     const programmaticSelection = getProgrammaticSelectionState({
@@ -1126,7 +1126,7 @@ function DataFrame({
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
-            element.editingMode !== READ_ONLY &&
+            editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
               fillHandle: !isTouchDevice,
@@ -1259,6 +1259,7 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
         )}
     </StyledResizableContainer>

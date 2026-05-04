@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit import config, file_util
@@ -72,6 +73,8 @@ class LocalSourcesWatcher:
 
         self._watched_modules: dict[str, WatchedModule] = {}
         self._watched_pages: set[str] = set()
+        self._pending_evictions: set[str] = set()
+        self._pending_evictions_lock = threading.Lock()
 
         self.update_watched_pages()
 
@@ -162,24 +165,51 @@ class LocalSourcesWatcher:
             if wm.module_name is not None and wm.module_name in sys.modules
         }
         if modules_to_evict:
-            prefixes = tuple(f"{name}." for name in modules_to_evict)
-            all_to_evict = modules_to_evict.copy()
-            for key in list(sys.modules.keys()):
-                if key.startswith(prefixes):
-                    all_to_evict.add(key)
-
-            for name in all_to_evict:
-                if name in sys.modules:
-                    del sys.modules[name]
+            with self._pending_evictions_lock:
+                self._pending_evictions.update(modules_to_evict)
 
         for cb in self._on_path_changed:
             cb(filepath)
+
+    def on_script_run(self) -> None:
+        """Hook called by ``ScriptRunner`` at the start of each script run.
+
+        Runs on the script thread before any user code executes.  Currently
+        flushes deferred ``sys.modules`` evictions so that the watcher thread
+        never mutates ``sys.modules`` while user code is running.
+        """
+        self.flush_pending_evictions()
+
+    def flush_pending_evictions(self) -> None:
+        """Remove pending watched modules from ``sys.modules``.
+
+        Called at the start of each script run on the script thread so that
+        ``sys.modules`` is not mutated from the file watcher thread while user
+        code (or cache serialization) is executing.
+        """
+        with self._pending_evictions_lock:
+            pending = self._pending_evictions
+            self._pending_evictions = set()
+
+        if not pending:
+            return
+
+        prefixes = tuple(f"{name}." for name in pending)
+        all_to_evict = set(pending)
+        for key in list(sys.modules.keys()):
+            if key.startswith(prefixes):
+                all_to_evict.add(key)
+
+        for name in all_to_evict:
+            sys.modules.pop(name, None)
 
     def close(self) -> None:
         for wm in self._watched_modules.values():
             wm.watcher.close()
         self._watched_modules = {}
         self._watched_pages = set()
+        with self._pending_evictions_lock:
+            self._pending_evictions.clear()
         self._is_closed = True
 
     def _register_watcher(

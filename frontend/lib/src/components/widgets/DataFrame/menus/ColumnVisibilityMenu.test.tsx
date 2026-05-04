@@ -121,13 +121,14 @@ const MOCK_COLUMNS: BaseColumn[] = [
 ]
 
 describe("DataFrame ColumnVisibilityMenu", () => {
-  const defaultProps: ColumnVisibilityMenuProps = {
+  const defaultChildren = <button type="button">Toggle Visibility</button>
+
+  const defaultProps: Omit<ColumnVisibilityMenuProps, "children"> = {
     columns: MOCK_COLUMNS,
     columnOrder: [],
     setColumnOrder: vi.fn(),
     hideColumn: vi.fn(),
     showColumn: vi.fn(),
-    children: <button type="button">Toggle Visibility</button>,
     isOpen: true,
     onClose: vi.fn(),
   }
@@ -137,7 +138,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   })
 
   it("renders the visibility menu with all columns", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     expect(screen.getByTestId("stDataFrameColumnVisibilityMenu")).toBeVisible()
     expect(screen.getByText("Column 1")).toBeVisible()
@@ -147,7 +152,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   })
 
   it("shows correct checkbox states based on column visibility", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     const checkboxes = screen.getAllByRole("checkbox")
     expect(checkboxes[0]).not.toBeChecked() // Select All (visible but indeterminate)
@@ -157,27 +166,43 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   })
 
   it("calls hideColumn when unchecking a visible column", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Column 1"))
     expect(defaultProps.hideColumn).toHaveBeenCalledWith("_column-1")
   })
 
   it("calls showColumn when checking a hidden column", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Column 2"))
     expect(defaultProps.showColumn).toHaveBeenCalledWith("_column-2")
   })
 
   it("renders children component", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     expect(screen.getByText("Toggle Visibility")).toBeInTheDocument()
   })
 
   it("doesn't render menu content when closed", () => {
-    render(<ColumnVisibilityMenu {...defaultProps} isOpen={false} />)
+    render(
+      <ColumnVisibilityMenu {...defaultProps} isOpen={false}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     expect(
       screen.queryByTestId("stDataFrameColumnVisibilityMenu")
@@ -191,7 +216,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     }
 
     await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...propsWithColumnOrder} />
+      <ColumnVisibilityMenu {...propsWithColumnOrder}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     const checkboxes = screen.getAllByRole("checkbox")
@@ -208,7 +235,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     }
 
     await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...propsWithColumnOrder} />
+      <ColumnVisibilityMenu {...propsWithColumnOrder}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     await userEvent.click(screen.getByLabelText("Column 1"))
@@ -223,7 +252,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     }
 
     await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...propsWithColumnOrder} />
+      <ColumnVisibilityMenu {...propsWithColumnOrder}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     await userEvent.click(screen.getByLabelText("Column 2"))
@@ -232,7 +263,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
   })
 
   it("calls showColumn on all columns when selecting an indeterminate select all", async () => {
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...defaultProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Select all")) // (Indeterminate, column 2 is hidden)
     expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
@@ -246,7 +281,11 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       columns: MOCK_COLUMNS.map(c => ({ ...c, isHidden: true })),
     }
 
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...allHiddenProps} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...allHiddenProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
+    )
 
     await userEvent.click(screen.getByLabelText("Select all"))
     expect(defaultProps.showColumn).toHaveBeenCalledWith("index-0")
@@ -261,7 +300,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
     }
 
     await renderAndWaitForPopover(
-      <ColumnVisibilityMenu {...allVisibleProps} />
+      <ColumnVisibilityMenu {...allVisibleProps}>
+        {defaultChildren}
+      </ColumnVisibilityMenu>
     )
 
     await userEvent.click(screen.getByLabelText("Select all"))
@@ -277,7 +318,9 @@ describe("DataFrame ColumnVisibilityMenu", () => {
       columnOrder: ["index-0", "_column-1"], // exclude _column-2 via order
     }
 
-    await renderAndWaitForPopover(<ColumnVisibilityMenu {...props} />)
+    await renderAndWaitForPopover(
+      <ColumnVisibilityMenu {...props}>{defaultChildren}</ColumnVisibilityMenu>
+    )
 
     const selectAll = screen.getByLabelText("Select all")
     expect(selectAll).not.toBeChecked()

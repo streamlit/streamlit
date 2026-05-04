@@ -109,6 +109,7 @@ export default function useScrollAnimation(
           if (toNumber === nextValue) {
             onEnd()
           } else {
+            // eslint-disable-next-line react-hooks/immutability -- recursive requestAnimationFrame callback
             animate(from, index + 1, start)
           }
         }

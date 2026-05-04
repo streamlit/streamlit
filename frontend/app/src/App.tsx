@@ -2093,8 +2093,9 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      LOG.error(`Not connected. Cannot send back message: ${msg}`)
+      LOG.error(
+        `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
+      )
     }
   }
 

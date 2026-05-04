@@ -1270,12 +1270,9 @@ export class WidgetStateManager {
 
     switch (binding.valueType) {
       case "bool_value":
-        return String(value)
-
       case "double_value":
-        return String(value)
-
       case "int_value":
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string -- value is a primitive (boolean/number) here
         return String(value)
 
       case "string_value":
@@ -1538,7 +1535,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
-    // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-    `value ${value} cannot be converted to number without a loss of precision!`
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Long has a toString() method
+    `value ${value.toString()} cannot be converted to number without a loss of precision!`
   )
 }

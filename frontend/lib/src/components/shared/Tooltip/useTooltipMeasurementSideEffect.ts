@@ -50,7 +50,7 @@ export function useTooltipMeasurementSideEffect(
     const handleMeasurement = async (): Promise<void> => {
       // Implement a retry mechanism to ensure we get valid coordinates
       const getMeasurements = (): DOMRect | null => {
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access, react-hooks/immutability -- DOM measurement in effect
         const rect = parentElement.getBoundingClientRect()
         // Check if we have valid non-zero coordinates
         if (rect.x !== 0 || rect.y !== 0) {

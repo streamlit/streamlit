@@ -483,6 +483,7 @@ class AppSession:
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
             on_script_error=self._on_script_error,
+            local_sources_watcher=self._local_sources_watcher,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
