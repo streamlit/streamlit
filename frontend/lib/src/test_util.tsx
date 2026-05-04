@@ -308,6 +308,7 @@ export const renderWithContexts = (
     ...options.downloadContext,
   }
 
+  // eslint-disable-next-line @eslint-react/component-hook-factories -- Intentional: test utility factory function that creates context wrapper components with closure over mutable context values for rerenderWithContexts
   const Wrapper: FC<PropsWithChildren> = ({ children }) => {
     // Create ref for app root if needed
     const appRootRef = useRef<HTMLDivElement>(null)

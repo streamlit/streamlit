@@ -41,14 +41,15 @@ async function renderAndWaitForPopover(
 }
 
 describe("DataFrame FormattingMenu", () => {
-  const defaultProps: FormattingMenuProps = {
+  const defaultChildren = <div>Trigger</div>
+
+  const defaultProps: Omit<FormattingMenuProps, "children"> = {
     columnKind: "number",
     isOpen: true,
     onMouseEnter: vi.fn(),
     onMouseLeave: vi.fn(),
     onChangeFormat: vi.fn(),
     onCloseMenu: vi.fn(),
-    children: <div>Trigger</div>,
   }
 
   beforeEach(() => {
@@ -56,7 +57,9 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("renders number format options when columnKind is number", async () => {
-    await renderAndWaitForPopover(<FormattingMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
+    )
 
     // Check for presence of number-specific formats
     expect(screen.getByText("Automatic")).toBeInTheDocument()
@@ -70,7 +73,9 @@ describe("DataFrame FormattingMenu", () => {
 
   it("renders datetime format options when columnKind is datetime", async () => {
     await renderAndWaitForPopover(
-      <FormattingMenu {...defaultProps} columnKind="datetime" />
+      <FormattingMenu {...defaultProps} columnKind="datetime">
+        {defaultChildren}
+      </FormattingMenu>
     )
 
     // Check for presence of datetime-specific formats
@@ -86,7 +91,9 @@ describe("DataFrame FormattingMenu", () => {
 
   it("renders date format options when columnKind is date", async () => {
     await renderAndWaitForPopover(
-      <FormattingMenu {...defaultProps} columnKind="date" />
+      <FormattingMenu {...defaultProps} columnKind="date">
+        {defaultChildren}
+      </FormattingMenu>
     )
 
     // Check for presence of date-specific formats
@@ -100,7 +107,9 @@ describe("DataFrame FormattingMenu", () => {
 
   it("renders time format options when columnKind is time", async () => {
     await renderAndWaitForPopover(
-      <FormattingMenu {...defaultProps} columnKind="time" />
+      <FormattingMenu {...defaultProps} columnKind="time">
+        {defaultChildren}
+      </FormattingMenu>
     )
 
     // Check for presence of time-specific formats
@@ -115,7 +124,11 @@ describe("DataFrame FormattingMenu", () => {
   it("renders no format options for unknown column kind", () => {
     // When columnKind is unknown, the component returns an empty fragment
     // and there's no popover to wait for
-    render(<FormattingMenu {...defaultProps} columnKind="unknown" />)
+    render(
+      <FormattingMenu {...defaultProps} columnKind="unknown">
+        {defaultChildren}
+      </FormattingMenu>
+    )
 
     // Menu should be empty for unknown column types
     expect(screen.queryByText("Automatic")).not.toBeInTheDocument()
@@ -123,7 +136,9 @@ describe("DataFrame FormattingMenu", () => {
   })
 
   it("calls onChangeFormat and onCloseMenu when clicking a format option", async () => {
-    await renderAndWaitForPopover(<FormattingMenu {...defaultProps} />)
+    await renderAndWaitForPopover(
+      <FormattingMenu {...defaultProps}>{defaultChildren}</FormattingMenu>
+    )
 
     // Click the "Dollar" format option
     await userEvent.click(screen.getByText("Dollar"))
@@ -135,9 +150,8 @@ describe("DataFrame FormattingMenu", () => {
 
   it("renders children as trigger element", async () => {
     const triggerText = "Custom Trigger"
-    const { children: _, ...propsWithoutChildren } = defaultProps
     await renderAndWaitForPopover(
-      <FormattingMenu {...propsWithoutChildren}>
+      <FormattingMenu {...defaultProps}>
         <div>{triggerText}</div>
       </FormattingMenu>
     )

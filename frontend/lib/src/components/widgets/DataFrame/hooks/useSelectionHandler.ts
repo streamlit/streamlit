@@ -137,6 +137,7 @@ function useSelectionHandler(
    * trigger a sync of the state with the widget state
    */
   const processSelectionChange = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setGridSelection is a stable setter
     (
       newSelection: GridSelection,
       options: {

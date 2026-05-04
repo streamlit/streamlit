@@ -28,6 +28,7 @@ function withFlexContextProvider(
   direction: Direction,
   isInContentWidthContainer: boolean = false
 ) {
+  // eslint-disable-next-line @eslint-react/component-hook-factories -- Intentional: wrapper factory that creates renderHook wrapper components parameterized by direction
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <FlexContextProvider
