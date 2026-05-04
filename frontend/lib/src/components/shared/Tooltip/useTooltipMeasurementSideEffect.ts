@@ -14,28 +14,9 @@
  * limitations under the License.
  */
 
-import { type MutableRefObject, useEffect } from "react"
+import { useEffect } from "react"
 
 import { useWindowDimensionsContext } from "@streamlit/lib"
-
-type TooltipElementOrRef =
-  | HTMLDivElement
-  | MutableRefObject<HTMLDivElement | null>
-  | null
-
-function resolveTooltipElement(
-  tooltipElementOrRef: TooltipElementOrRef
-): HTMLDivElement | null {
-  if (
-    tooltipElementOrRef &&
-    typeof tooltipElementOrRef === "object" &&
-    "current" in tooltipElementOrRef
-  ) {
-    return tooltipElementOrRef.current
-  }
-
-  return tooltipElementOrRef
-}
 
 /**
  * A hook that handles tooltip positioning and measurement with retry logic to
@@ -48,20 +29,19 @@ function resolveTooltipElement(
  *
  * When we move off of BaseWeb we should delete this hook!
  *
- * @param tooltipElementOrRef The tooltip element or ref
+ * @param tooltipElement The tooltip element ref
  * @param isOpen Whether the tooltip is currently open
  *
  * @deprecated This is not a pattern we should use. Only here so until we move
  * off of BaseWeb.
  */
 export function useTooltipMeasurementSideEffect(
-  tooltipElementOrRef: TooltipElementOrRef,
+  tooltipElement: HTMLDivElement | null,
   isOpen: boolean
 ): void {
   const { innerWidth } = useWindowDimensionsContext()
 
   useEffect(() => {
-    const tooltipElement = resolveTooltipElement(tooltipElementOrRef)
     const parentElement = tooltipElement?.parentElement
     if (!parentElement) {
       return
@@ -70,7 +50,7 @@ export function useTooltipMeasurementSideEffect(
     const handleMeasurement = async (): Promise<void> => {
       // Implement a retry mechanism to ensure we get valid coordinates
       const getMeasurements = (): DOMRect | null => {
-        // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- DOM measurement in effect
+        // eslint-disable-next-line streamlit-custom/no-force-reflow-access, react-hooks/immutability -- DOM measurement in effect
         const rect = parentElement.getBoundingClientRect()
         // Check if we have valid non-zero coordinates
         if (rect.x !== 0 || rect.y !== 0) {
@@ -126,5 +106,5 @@ export function useTooltipMeasurementSideEffect(
     }
 
     void handleMeasurement()
-  }, [tooltipElementOrRef, isOpen, innerWidth])
+  }, [tooltipElement, isOpen, innerWidth])
 }
