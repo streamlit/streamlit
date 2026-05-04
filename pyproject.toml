@@ -64,7 +64,7 @@ dev = [
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.21",
-  "mypy-protobuf>=3.2",
+  "mypy-protobuf>=5.1.0",
   "semver>=3",
   "setuptools>=65.5.1",
   "build",
