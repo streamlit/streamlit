@@ -273,10 +273,11 @@ def test_button_shortcut_triggers(app: Page):
     expect(shortcut_button).to_be_visible()
 
     # Ensure shortcut labels are rendered for buttons.
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
+    # Use regex to accept both Windows (Ctrl) and macOS (⌘) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(re.compile(r"(Ctrl|⌘) \+ J"))
 
     # Press hotkey to trigger the button:
-    app.keyboard.press("Control+J")
+    app.keyboard.press("ControlOrMeta+J")
     wait_for_app_run(app)
     expect_markdown(app, "Shortcut button pressed!")
 
