@@ -118,15 +118,20 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
     return defaultTabIndex
   })
-  const initialActiveTabName = (() => {
+  const activeTabNameRef = useRef<string | undefined>(undefined)
+  if (activeTabNameRef.current === undefined) {
     if (isPassivelyKeyed) {
       const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
-      if (persisted) return persisted.label
+      if (persisted) {
+        activeTabNameRef.current = persisted.label
+      }
     }
-    const tab = node.children[defaultTabIndex] as BlockNode
-    return tab?.deltaBlock?.tab?.label ?? "0"
-  })()
-  const activeTabNameRef = useRef<string>(initialActiveTabName)
+
+    if (activeTabNameRef.current === undefined) {
+      const tab = node.children[defaultTabIndex] as BlockNode
+      activeTabNameRef.current = tab?.deltaBlock?.tab?.label ?? "0"
+    }
+  }
 
   const tabListRef = useRef<HTMLUListElement>(null)
   const theme = useEmotionTheme()
@@ -195,7 +200,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
     }
 
-    const newTabKey = allTabLabels.indexOf(activeTabNameRef.current)
+    const newTabKey = allTabLabels.indexOf(activeTabNameRef.current ?? "0")
     if (newTabKey === -1) {
       const fallbackLabel = allTabLabels[defaultTabIndex]
       setActiveTabKey(defaultTabIndex)
@@ -242,7 +247,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
     }
 
-    const newTabKey = allTabLabels.indexOf(activeTabNameRef.current)
+    const newTabKey = allTabLabels.indexOf(activeTabNameRef.current ?? "0")
     if (newTabKey !== -1) {
       setActiveTabKey(newTabKey)
       activeTabNameRef.current = allTabLabels[newTabKey]

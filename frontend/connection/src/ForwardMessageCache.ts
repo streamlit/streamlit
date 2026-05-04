@@ -141,8 +141,7 @@ export class ForwardMsgCache {
       )
     }
 
-    const decodedMsg = ForwardMsg.decode(encodedMsg)
-    cachedMessage.metadata = decodedMsg.metadata
+    cachedMessage.metadata = msg.metadata
     return cachedMessage
   }
 
