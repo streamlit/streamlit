@@ -8847,14 +8847,14 @@ __metadata:
   linkType: hard
 
 "dompurify@npm:^3.2.4":
-  version: 3.4.0
-  resolution: "dompurify@npm:3.4.0"
+  version: 3.4.2
+  resolution: "dompurify@npm:3.4.2"
   dependencies:
     "@types/trusted-types": "npm:^2.0.7"
   dependenciesMeta:
     "@types/trusted-types":
       optional: true
-  checksum: 10c0/5593ac44ee20b9aa521c2120884effc98927fb9128c548183c75e79e0a04357c62ee913a049a267c8f396cb8c9d520ecf72562826c5524c46d4fe03c12063638
+  checksum: 10c0/23ab3ab079480a49e1426c4ee7279e393913fa7f2193c4142a5be54d4163dbdd969558675876c6b8bbcbf2ad5d1bc3e00bf902acf142fff12e50274a65ae95b3
   languageName: node
   linkType: hard
 
