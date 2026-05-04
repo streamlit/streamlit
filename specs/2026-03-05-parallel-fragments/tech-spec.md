@@ -974,3 +974,72 @@ def switch_page(page: str | Path | StreamlitPage, ...) -> NoReturn:
         _check_not_parallel_worker("st.switch_page")
     # ... existing implementation
 ```
+
+#### External container writes
+
+Non-parallel fragments can write non-widget elements to containers outside the
+fragment's delta path (e.g., a parent-scoped `st.container()` or `st.sidebar`
+entered via `with`). These writes are allowed but accumulate across fragment reruns
+until the next full app rerun — a documented caveat.
+
+During parallel execution, external container writes introduce three problems that
+cannot be solved by the existing cursor ownership model alone:
+
+1. **Cursor races.** External containers share a `RunningCursor` with the main thread
+   (or other workers). `_check_owner()` would crash with `RuntimeError` if a second
+   thread touches the same cursor — a correct safety net, but the error message is
+   opaque and unhelpful to users.
+
+2. **Non-deterministic ordering.** Even if cursor access were serialized (e.g., via a
+   per-cursor lock), the order of elements written by different workers depends on
+   thread scheduling. The UI layout would vary between runs with identical inputs.
+
+3. **Amplified accumulation.** The existing accumulation behavior (elements pile up
+   until a full rerun) is already surprising for sequential fragments. With concurrent
+   writers producing interleaved, duplicated content in unpredictable order, the
+   external container becomes unusable.
+
+**Implementation:** extend the existing `check_fragment_path_policy` pattern to block
+all element writes (not just widgets) when the writer is a parallel worker. Add a
+check in `_enqueue` (`lib/streamlit/delta_generator.py`) that compares the target
+cursor's `delta_path` against `current_fragment_delta_path` when
+`_thread_state.get().is_parallel_worker` is True:
+
+```python
+def _enqueue(self, ...):
+    dg = self._active_dg
+
+    ctx = get_script_run_ctx()
+
+    # Existing sidebar guard (unchanged)
+    if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
+        raise StreamlitAPIException(...)
+
+    # Block all external container writes from parallel workers
+    if ctx and _thread_state.get().is_parallel_worker:
+        fragment_path = ctx.current_fragment_delta_path
+        cursor_path = dg._cursor.delta_path if dg._cursor else []
+        if not _is_inside_fragment_path(cursor_path, fragment_path):
+            raise StreamlitAPIException(
+                "Writing to containers outside the fragment is not supported "
+                "during parallel execution. Move the element inside the "
+                "fragment body, or write to the external container during a "
+                "sequential fragment rerun."
+            )
+
+    # ... rest of _enqueue
+```
+
+The `_is_inside_fragment_path` helper applies the same prefix-matching logic as
+`check_fragment_path_policy`: the cursor's delta path must be at least as long as the
+fragment path, and all indices must match at each position.
+
+During sequential fragment reruns (`is_parallel_worker` is False), the existing
+behavior is unchanged: non-widget elements are allowed in external containers, widgets
+are blocked by `check_fragment_path_policy`.
+
+**Follow-up:** if user demand emerges for cross-container output from parallel
+fragments, a dedicated `st.fragment_output()` API could collect results with defined
+ordering semantics (e.g., dispatch order) and render them after the join barrier. This
+would avoid the cursor ownership and ordering problems by design. See project notes
+for alternatives considered.
