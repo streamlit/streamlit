@@ -840,6 +840,8 @@ describe("AppRoot", () => {
           { dataframe: { arrowData: { data: new Uint8Array() } } },
         ],
         ["chatInput", { chatInput: { placeholder: "Chat" } }],
+        ["table", { table: { arrowData: { data: new Uint8Array() } } }],
+        ["vegaLiteChart", { vegaLiteChart: { spec: "{}" } }],
         ["spinner", { spinner: { text: "Loading..." } }],
         ["balloons", { balloons: { show: true } }],
         ["snow", { snow: { show: true } }],
