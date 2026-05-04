@@ -136,6 +136,7 @@ def test_spinner_time_updates_on_rerun(app: Page):
 
     # The time display should be present and updating
     new_spinner_text = spinner.text_content()
+    assert new_spinner_text is not None, "Spinner should have text content"
     assert "seconds" in new_spinner_text, "Spinner should show time"
 
     # Wait and verify it's still updating (not frozen from previous run)
