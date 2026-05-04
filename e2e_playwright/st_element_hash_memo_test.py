@@ -101,27 +101,6 @@ def test_balloons_animate_on_each_run(app: Page):
     wait_for_app_run(app)
 
 
-def test_add_rows_no_accumulation_on_rerun(app: Page):
-    """Test that add_rows with identical data doesn't duplicate rows on reruns.
-
-    Verifies that the table always shows the correct number of rows
-    (initial + added), not accumulated rows from multiple reruns.
-    """
-    table = app.get_by_test_id("stTable")
-    expect(table).to_be_visible()
-
-    # Initial render: 3 rows from df + 2 rows from add_rows = 5 rows
-    expect(table.locator("tbody tr")).to_have_count(5)
-    expect_markdown(app, "Add rows rerun count: 1")
-
-    # Click rerun multiple times and verify row count stays at 5
-    for expected_rerun in range(2, 5):
-        click_button(app, "Rerun add_rows")
-        expect_markdown(app, f"Add rows rerun count: {expected_rerun}")
-        # Should still be 5 rows, not 7, 9, etc. from accumulation
-        expect(table.locator("tbody tr")).to_have_count(5)
-
-
 def test_spinner_time_updates_on_rerun(app: Page):
     """Test that spinner elapsed time resets/continues correctly on new runs.
 

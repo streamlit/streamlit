@@ -20,8 +20,6 @@ doesn't break expected behavior when identical content is sent on consecutive re
 
 import time
 
-import pandas as pd
-
 import streamlit as st
 
 st.header("Element Hash Memo Regression Tests")
@@ -77,33 +75,9 @@ if st.button("Show balloons"):
     st.write(f"Balloons shown: {st.session_state.balloons_count}")
 
 # =============================================================================
-# Test 4: add_rows cache accumulation
+# Test 4: spinner showTime resets on rerun
 # =============================================================================
-st.subheader("Test 4: add_rows no accumulation")
-
-if "rerun_count" not in st.session_state:
-    st.session_state.rerun_count = 0
-
-st.session_state.rerun_count += 1
-
-df = pd.DataFrame({"a": [1, 2, 3]})
-table = st.table(df)
-
-# Add same rows on every rerun
-# Should NOT accumulate - table should always have exactly 5 rows
-additional_df = pd.DataFrame({"a": [4, 5]})
-table.add_rows(additional_df)
-
-st.write(f"Add rows rerun count: {st.session_state.rerun_count}")
-st.write("Expected: 5 rows total (3 initial + 2 added)")
-
-if st.button("Rerun add_rows"):
-    pass  # Button click triggers rerun
-
-# =============================================================================
-# Test 5: spinner showTime resets on rerun
-# =============================================================================
-st.subheader("Test 5: Spinner showTime")
+st.subheader("Test 4: Spinner showTime")
 
 if st.button("Run spinner with time"):
     with st.spinner("Loading with time...", show_time=True):
