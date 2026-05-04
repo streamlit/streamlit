@@ -46,6 +46,73 @@ import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElem
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
+type ElementType = NonNullable<Element["type"]>
+
+/**
+ * Element types that are unsafe for payload reuse, even if hashes match.
+ * These types either mutate their protobuf payload, depend on per-run/mount
+ * identity, or have one-shot behaviors not covered by the generic setValue guard.
+ */
+const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
+  // Needs frontend cleanup before payload reuse can be enabled.
+  // Mutates editingMode for backwards compatibility and clears selectionState.
+  "dataframe",
+  // Has a custom setValue path that uses an element-reference reset effect.
+  "chatInput",
+
+  // Run- or mount-identity-sensitive UI elements.
+  // Intentionally receives node.scriptRunId, so it is per-run by design.
+  "balloons",
+  "snow",
+  // Tracks elapsed time from component mount when showTime is enabled.
+  "spinner",
+  // Uses key={node.scriptRunId} so each run can create a distinct toast event.
+  "toast",
+])
+
+/**
+ * Check if the element has a one-shot payload field that requires using the
+ * fresh protobuf object. This guards against reusing payloads that carry
+ * one-shot backend commands (like setValue) that need to be delivered.
+ */
+function hasOneShotPayload(element: Element): boolean {
+  if (element.type === undefined) {
+    return false
+  }
+
+  const subElement = element[element.type as keyof Element]
+  if (subElement && typeof subElement === "object") {
+    return (subElement as { setValue?: boolean }).setValue === true
+  }
+  return false
+}
+
+/**
+ * Determine if we can reuse the element payload from an existing node.
+ * Returns true only when:
+ * - elementHash is non-empty and matches the existing node's hash
+ * - The element type matches
+ * - The element type is not in the unsafe list
+ * - The incoming payload doesn't have a one-shot command field (setValue)
+ */
+function canReuseElementPayload(
+  existingNode: AppNode | undefined,
+  elementHash: string | undefined,
+  nextElement: Element
+): existingNode is ElementNode {
+  const elementType = nextElement.type
+
+  return (
+    Boolean(elementHash) &&
+    elementType !== undefined &&
+    existingNode instanceof ElementNode &&
+    existingNode.elementHash === elementHash &&
+    existingNode.element.type === elementType &&
+    !hasOneShotPayload(nextElement) &&
+    !PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES.has(elementType)
+  )
+}
+
 interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
@@ -219,21 +286,36 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    elementHash?: string
   ): AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
     switch (delta.type) {
       case "newElement": {
-        const element = delta.newElement as Element
+        const nextElement = delta.newElement as Element
+        const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          this.root,
+          deltaPath
+        )
+
+        // Check if we can reuse the payload (and derived caches) from an existing node
+        const canReuse = canReuseElementPayload(
+          existingNode,
+          elementHash,
+          nextElement
+        )
+
         return this.addElement(
           deltaPath,
           scriptRunId,
-          element,
+          canReuse ? existingNode.element : nextElement,
           metadata,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          elementHash,
+          canReuse ? existingNode : undefined
         )
       }
 
@@ -405,15 +487,28 @@ export class AppRoot {
     element: Element,
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string,
+    existingNodeForDerivations?: ElementNode
   ): AppRoot {
-    const elementNode = new ElementNode(
-      element,
-      metadata,
-      scriptRunId,
-      activeScriptHash,
-      fragmentId
-    )
+    // If we have an existing node to preserve derivations from, use its helper method
+    // to create a new node with updated lifecycle metadata but preserved lazy caches
+    const elementNode = existingNodeForDerivations
+      ? existingNodeForDerivations.withPreservedDerivations(
+          metadata,
+          scriptRunId,
+          activeScriptHash,
+          fragmentId,
+          elementHash
+        )
+      : new ElementNode(
+          element,
+          metadata,
+          scriptRunId,
+          activeScriptHash,
+          fragmentId,
+          elementHash
+        )
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(

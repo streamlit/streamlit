@@ -14,7 +14,11 @@
  * limitations under the License.
  */
 
-import { ArrowNamedDataSet, IVegaLiteChart } from "@streamlit/protobuf"
+import {
+  ArrowNamedDataSet,
+  ForwardMsgMetadata,
+  IVegaLiteChart,
+} from "@streamlit/protobuf"
 
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
@@ -490,5 +494,84 @@ describe("ElementNode.replaceTransientNodeWithSelf", () => {
     expect(result.transientNodes).toEqual([keep])
     expect(result.scriptRunId).toBe(runId)
     expect(result.deltaMsgReceivedAt).toBe(42)
+  })
+})
+
+describe("ElementNode.elementHash", () => {
+  it("stores the elementHash when provided", () => {
+    const node = text("test", NO_SCRIPT_RUN_ID, "hash123")
+    expect(node.elementHash).toBe("hash123")
+  })
+
+  it("is undefined when not provided", () => {
+    const node = text("test")
+    expect(node.elementHash).toBeUndefined()
+  })
+})
+
+describe("ElementNode.withPreservedDerivations", () => {
+  it("creates a new node with updated metadata but same element reference", () => {
+    const originalNode = text("test", "old_run_id", "hash123")
+    const newMetadata = ForwardMsgMetadata.create({ deltaPath: [0, 1] })
+
+    const newNode = originalNode.withPreservedDerivations(
+      newMetadata,
+      "new_run_id",
+      "new_script_hash",
+      "new_fragment_id",
+      "new_hash"
+    )
+
+    // Should be a new node instance
+    expect(newNode).not.toBe(originalNode)
+
+    // Element reference should be the same
+    expect(newNode.element).toBe(originalNode.element)
+
+    // Lifecycle metadata should be updated
+    expect(newNode.scriptRunId).toBe("new_run_id")
+    expect(newNode.activeScriptHash).toBe("new_script_hash")
+    expect(newNode.fragmentId).toBe("new_fragment_id")
+    expect(newNode.elementHash).toBe("new_hash")
+  })
+
+  it("preserves lazy quiverElement cache", () => {
+    const node = table(NO_SCRIPT_RUN_ID, "hash123")
+    // Access the lazy property to initialize the cache
+    const originalQuiver = node.quiverElement
+
+    const newNode = node.withPreservedDerivations(
+      ForwardMsgMetadata.create(),
+      "new_run_id",
+      "new_script_hash",
+      undefined,
+      "hash123"
+    )
+
+    // quiverElement should be the same instance (preserved from cache)
+    expect(newNode.quiverElement).toBe(originalQuiver)
+  })
+
+  it("preserves lazy vegaLiteChartElement cache", () => {
+    const mockVegaLiteChart = {
+      spec: JSON.stringify({ mark: "circle" }),
+      data: { data: new Uint8Array() },
+      datasets: [],
+      useContainerWidth: true,
+    }
+    const node = vegaLiteChart(mockVegaLiteChart, NO_SCRIPT_RUN_ID, "hash123")
+    // Access the lazy property to initialize the cache
+    const originalVegaLite = node.vegaLiteChartElement
+
+    const newNode = node.withPreservedDerivations(
+      ForwardMsgMetadata.create(),
+      "new_run_id",
+      "new_script_hash",
+      undefined,
+      "hash123"
+    )
+
+    // vegaLiteChartElement should be the same instance (preserved from cache)
+    expect(newNode.vegaLiteChartElement).toBe(originalVegaLite)
   })
 })

@@ -57,19 +57,52 @@ export class ElementNode implements AppNode {
   // The hash of the script that created this element.
   public readonly activeScriptHash: string
 
+  /**
+   * The backend-computed hash of the ForwardMsg that delivered this element.
+   * Used for hash-based payload reuse optimization.
+   */
+  public readonly elementHash?: string
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
     scriptRunId: string,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
+    this.elementHash = elementHash
+  }
+
+  /**
+   * Create a new ElementNode with updated lifecycle metadata but preserving
+   * the element payload and derived caches (lazyQuiverElement, lazyVegaLiteChartElement).
+   * This is used for hash-based payload reuse optimization.
+   */
+  public withPreservedDerivations(
+    metadata: ForwardMsgMetadata,
+    scriptRunId: string,
+    activeScriptHash: string,
+    fragmentId?: string,
+    elementHash?: string
+  ): ElementNode {
+    const node = new ElementNode(
+      this.element,
+      metadata,
+      scriptRunId,
+      activeScriptHash,
+      fragmentId,
+      elementHash
+    )
+    node.lazyQuiverElement = this.lazyQuiverElement
+    node.lazyVegaLiteChartElement = this.lazyVegaLiteChartElement
+    return node
   }
 
   public get quiverElement(): Quiver {
@@ -134,7 +167,8 @@ export class ElementNode implements AppNode {
       this.metadata,
       scriptRunId,
       this.activeScriptHash,
-      this.fragmentId
+      this.fragmentId,
+      this.elementHash
     )
 
     switch (elementType) {
