@@ -530,9 +530,7 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                dg._cursor.get_locked_cursor(delta_type=delta_type)
-                if dg._cursor is not None
-                else None
+                dg._cursor.get_locked_cursor() if dg._cursor is not None else None
             )
 
             output_dg = DeltaGenerator(

@@ -245,7 +245,6 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert c1._root_container == c2._root_container
         assert c1._index == c2._index
         assert c1._parent_path == c2._parent_path
-        assert c1._props == c2._props
 
     def test_enqueue_null(self):
         # Test "Null" Delta generators
