@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   type DeckProps,
@@ -342,10 +342,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         ?.height || theme.sizes.defaultMapHeight,
   })
 
-  const [initialViewState, setInitialViewState] = useState<Record<
-    string,
-    unknown
-  > | null>(null)
+  const initialViewStateRef = useRef<Record<string, unknown> | null>(null)
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -545,12 +542,14 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   useEffect(() => {
     // If the ViewState on the server has changed, apply the diff to the current state
-    if (!isEqual(deck.initialViewState, initialViewState)) {
+    if (!isEqual(deck.initialViewState, initialViewStateRef.current)) {
       const diff = Object.keys(deck.initialViewState).reduce<
         Record<string, unknown>
       >((diffArg, key): Record<string, unknown> => {
         // @ts-expect-error
-        if (deck.initialViewState[key] === initialViewState?.[key]) {
+        if (
+          deck.initialViewState[key] === initialViewStateRef.current?.[key]
+        ) {
           return diffArg
         }
 
@@ -562,9 +561,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
       }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
-      setInitialViewState(deck.initialViewState)
+      initialViewStateRef.current = deck.initialViewState
     }
-  }, [deck.initialViewState, initialViewState, viewState])
+  }, [deck.initialViewState])
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {

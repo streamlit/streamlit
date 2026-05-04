@@ -129,9 +129,7 @@ function Tooltip({
   const theme = useEmotionTheme()
 
   // This section of code is to work around a timing issue with BaseWeb's Tooltip component
-  const [tooltipElement, setTooltipElement] = useState<HTMLDivElement | null>(
-    null
-  )
+  const tooltipElementRef = useRef<HTMLDivElement | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const closeRef = useRef<(() => void) | null>(null)
 
@@ -176,10 +174,16 @@ function Tooltip({
     [isOpen]
   )
 
-  useTooltipMeasurementSideEffect(tooltipElement, isOpen)
+  useTooltipMeasurementSideEffect(tooltipElementRef, isOpen)
 
   const tooltipOverrides = generateDefaultTooltipOverrides(theme, overrides)
   const TooltipTargetTag = inline ? "span" : "div"
+  const handleTooltipElementRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      tooltipElementRef.current = node
+    },
+    []
+  )
 
   const renderContent = useCallback(
     ({ close }: { close: () => void }) => {
@@ -188,13 +192,13 @@ function Tooltip({
         <StyledTooltipContentWrapper
           className={error ? "stTooltipErrorContent" : "stTooltipContent"}
           data-testid={error ? "stTooltipErrorContent" : "stTooltipContent"}
-          ref={setTooltipElement}
+          ref={handleTooltipElementRef}
         >
           {content}
         </StyledTooltipContentWrapper>
       )
     },
-    [content, error, setTooltipElement]
+    [content, error, handleTooltipElementRef]
   )
 
   return (

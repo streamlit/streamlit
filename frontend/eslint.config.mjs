@@ -267,7 +267,7 @@ export default defineConfig([
       "@eslint-react/no-unstable-context-value": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
-      // New rules in @eslint-react v4 — disable until existing violations are addressed
+      // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
       "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules

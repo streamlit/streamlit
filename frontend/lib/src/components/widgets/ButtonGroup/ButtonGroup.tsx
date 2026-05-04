@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  forwardRef,
-  memo,
-  ReactElement,
-  Ref,
-  useCallback,
-  useMemo,
-} from "react"
+import { forwardRef, memo, ReactElement, useCallback, useMemo } from "react"
 
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
@@ -161,6 +154,45 @@ function getSingleSelection(currentSelection: number[]): number {
  */
 type ButtonGroupValue = string[]
 
+interface ButtonGroupOptionProps extends Partial<BaseButtonProps> {
+  option: ButtonGroupProto.IOption
+  index: number
+  selected: number[]
+  style?: ButtonGroupProto.Style
+  containerWidth: boolean
+}
+
+// BaseWeb's ButtonGroup passes refs to each child button, so the option renderer
+// needs to be a stable forwardRef component rather than a render-time factory.
+const ButtonGroupOption = memo(
+  forwardRef<HTMLButtonElement, ButtonGroupOptionProps>(
+    function ButtonGroupOption(
+      { option, index, selected, style, containerWidth, ...props },
+      ref
+    ): ReactElement {
+      const isSelected = selected.includes(index)
+      const { element, kind, size } = getContentElement(
+        option.content ?? "",
+        option.contentIcon ?? undefined,
+        style
+      )
+      const buttonKind = getButtonKindAndSize(isSelected, kind)
+
+      return (
+        <BaseButton
+          {...props}
+          ref={ref}
+          size={size}
+          kind={buttonKind}
+          containerWidth={containerWidth}
+        >
+          {element}
+        </BaseButton>
+      )
+    }
+  )
+)
+
 function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
@@ -275,42 +307,6 @@ function getButtonGroupOverridesStyle(
   }
 }
 
-function createOptionChild(
-  option: ButtonGroupProto.IOption,
-  index: number,
-  selected: number[],
-  style: ButtonGroupProto.Style,
-  containerWidth: boolean
-): React.FunctionComponent {
-  const isSelected = selected.includes(index)
-
-  // We have to use forwardRef here because BasewebButtonGroup passes the ref down to
-  // its children and we see a console.error otherwise.
-  // eslint-disable-next-line @eslint-react/component-hook-factories -- Intentional: per-option forwardRef factory required by BasewebButtonGroup
-  return forwardRef(function BaseButtonGroup(
-    // Accept only the props compatible with BaseButton to improve type safety
-    props: Partial<BaseButtonProps>,
-    _: Ref<BasewebButtonGroup>
-  ): ReactElement {
-    const { element, kind, size } = getContentElement(
-      option.content ?? "",
-      option.contentIcon ?? undefined,
-      style
-    )
-    const buttonKind = getButtonKindAndSize(isSelected, kind)
-    return (
-      <BaseButton
-        {...props}
-        size={size}
-        kind={buttonKind}
-        containerWidth={containerWidth}
-      >
-        {element}
-      </BaseButton>
-    )
-  })
-}
-
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
   const { clickMode, options, style, label, labelVisibility, help, required } =
@@ -375,16 +371,17 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const optionElements = useMemo(
     () =>
       options.map((option, index) => {
-        const Element = createOptionChild(
-          option,
-          index,
-          selectedIndices,
-          style,
-          containerWidth
+        const optionKey = `${option.content}-${index}`
+        return (
+          <ButtonGroupOption
+            key={optionKey}
+            option={option}
+            index={index}
+            selected={selectedIndices}
+            style={style}
+            containerWidth={containerWidth}
+          />
         )
-        // TODO: Update to match React best practices
-        // eslint-disable-next-line @eslint-react/no-array-index-key
-        return <Element key={`${option.content}-${index}`} />
       }),
     [options, style, selectedIndices, containerWidth]
   )
