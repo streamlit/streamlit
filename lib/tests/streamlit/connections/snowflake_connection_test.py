@@ -319,6 +319,45 @@ class TestSnowflakeConnectionClose:
             assert conn._raw_instance is None
 
 
+@pytest.mark.require_integration
+class TestSnowflakeConnectionConnect:
+    """Tests for SnowflakeConnection._connect() (no live Snowflake required)."""
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._secrets",
+        PropertyMock(return_value=AttrDict({})),
+    )
+    @patch("snowflake.connector.connect")
+    def test_passes_connection_name_to_connector(
+        self, patched_connect: MagicMock
+    ) -> None:
+        """Tests that the Streamlit connection name is forwarded to the Snowflake connector.
+
+        When no Streamlit secrets are configured and the connection name is not
+        the reserved ``"snowflake"`` default, ``snowflake.connector.connect()``
+        must receive ``connection_name`` so it can look up the named entry in
+        ``~/.snowflake/connections.toml``.
+        """
+        SnowflakeConnection("my_connection")
+        patched_connect.assert_called_once_with(connection_name="my_connection")
+
+    @patch(
+        "streamlit.connections.snowflake_connection.SnowflakeConnection._secrets",
+        PropertyMock(return_value=AttrDict({})),
+    )
+    @patch("snowflake.connector.connect")
+    def test_kwargs_can_override_connection_name(
+        self, patched_connect: MagicMock
+    ) -> None:
+        """Tests that an explicit connection_name kwarg overrides the default one.
+
+        If the caller supplies ``connection_name`` explicitly via ``st.connection()``,
+        that value should take precedence over the Streamlit connection name.
+        """
+        SnowflakeConnection("my_connection", connection_name="other_connection")
+        patched_connect.assert_called_once_with(connection_name="other_connection")
+
+
 class TestSnowflakeCallersRightsConnection:
     def test_get_connection_params_errors_on_missing_env(self):
         """Tests that _get_connection_params handles missing environment variables."""
