@@ -27,7 +27,6 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunCon
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from streamlit.runtime.state import SafeSessionState, SessionState
 
-
 # --- Basics ---
 
 
