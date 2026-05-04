@@ -59,6 +59,12 @@ const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
   "dataframe",
   // Has a custom setValue path that uses an element-reference reset effect.
   "chatInput",
+  // The lazy caches (lazyQuiverElement) can be mutated by arrowAddRows,
+  // which would cause stale data accumulation if reused across script runs.
+  "table",
+  // The lazy caches (lazyVegaLiteChartElement) can be mutated by arrowAddRows,
+  // which would cause stale data accumulation if reused across script runs.
+  "vegaLiteChart",
 
   // Run- or mount-identity-sensitive UI elements.
   // Intentionally receives node.scriptRunId, so it is per-run by design.
