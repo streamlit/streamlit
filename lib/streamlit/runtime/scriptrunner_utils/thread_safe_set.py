@@ -24,7 +24,9 @@ class ThreadSafeSet:
     This replaces bare ``set[str]`` fields where callers previously did non-atomic
     check-then-add operations. The underlying set is never exposed directly —
     callers interact only through ``check_and_add``, ``__contains__``, ``snapshot``,
-    and ``clear``.
+    and ``clear``. The ``snapshot`` method returns an immutable ``frozenset``,
+    enforcing the expectation that these sets are read-only once handed off to
+    downstream consumers (e.g. ``SessionState.on_script_finished``).
     """
 
     def __init__(self) -> None:
@@ -54,6 +56,7 @@ class ThreadSafeSet:
 
     def __deepcopy__(self, memo: dict[int, object]) -> ThreadSafeSet:
         new = ThreadSafeSet()
+        memo[id(self)] = new
         with self._lock:
             new._data = copy.deepcopy(self._data, memo)
         return new
