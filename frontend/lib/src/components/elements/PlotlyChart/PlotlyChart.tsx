@@ -521,11 +521,16 @@ export function PlotlyChart({
         onInitialized={figure => {
           widgetMgr.setElementState(element.id, "figure", figure)
         }}
-        // Update the figure state on every change to the figure itself:
         onUpdate={figure => {
           // Save the updated figure state to allow it to be recovered
           widgetMgr.setElementState(element.id, "figure", figure)
-          setPlotlyFigure(figure)
+          // Only update React state when selection is activated, as the selection
+          // path depends on plotlyFigure.layout.dragmode. For non-selection charts,
+          // Plotly manages its own internal state, so triggering React re-renders
+          // on every onUpdate is unnecessary and causes performance issues.
+          if (isSelectionActivated) {
+            setPlotlyFigure(figure)
+          }
         }}
       />
     </StyledPlotlyChartContainer>
