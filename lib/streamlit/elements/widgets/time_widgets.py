@@ -652,7 +652,7 @@ class DateInputSerde:
             return []
 
         to_serialize = list(v) if isinstance(v, Sequence) else [v]
-        return [date.strftime(v, "%Y-%m-%d") for v in to_serialize]
+        return [date.strftime(d, "%Y-%m-%d") for d in to_serialize]  # ty: ignore[invalid-argument-type]
 
 
 class TimeWidgetsMixin:
