@@ -33,7 +33,7 @@ dependencies = []
 
 [tool.uv]
 # Minimum uv version required for this project
-required-version = ">=0.9.0"
+required-version = ">=0.9.17"
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
