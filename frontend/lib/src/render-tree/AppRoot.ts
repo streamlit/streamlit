@@ -59,9 +59,6 @@ type ElementType = NonNullable<Element["type"]>
  * - Depends on per-run or per-mount identity (add to this list)
  */
 const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
-  // Needs frontend cleanup before payload reuse can be enabled.
-  // Mutates editingMode for backwards compatibility and clears selectionState.
-  "dataframe",
   // Has a custom setValue path that uses an element-reference reset effect.
   "chatInput",
   // The lazy caches (lazyQuiverElement) can be mutated by arrowAddRows,
@@ -86,10 +83,13 @@ const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
  * fresh protobuf object. This guards against reusing payloads that carry
  * one-shot backend commands (like setValue) that need to be delivered.
  *
- * Currently covers the `setValue` boolean field used by widgets (Slider,
- * TextInput, NumberInput, etc.) to indicate that the frontend should set
- * the widget value programmatically. When adding new element types with
- * similar one-shot semantics, extend this function accordingly.
+ * Currently covers:
+ * - `setValue` boolean field used by widgets (Slider, TextInput, NumberInput, etc.)
+ *   to indicate that the frontend should set the widget value programmatically.
+ * - `selectionState` string field used by dataframe to set programmatic selection.
+ *
+ * When adding new element types with similar one-shot semantics, extend this
+ * function accordingly.
  */
 function hasOneShotPayload(element: Element): boolean {
   if (element.type === undefined) {
@@ -98,9 +98,25 @@ function hasOneShotPayload(element: Element): boolean {
 
   const subElement = element[element.type as keyof Element]
   if (subElement && typeof subElement === "object") {
-    const maybeSetValue = (subElement as { setValue?: unknown }).setValue
-    // Guard with typeof check to fail closed on unexpected schemas
-    return typeof maybeSetValue === "boolean" && maybeSetValue === true
+    const typedSubElement = subElement as {
+      setValue?: unknown
+      selectionState?: unknown
+    }
+
+    // Check setValue (used by most widgets)
+    const maybeSetValue = typedSubElement.setValue
+    if (typeof maybeSetValue === "boolean" && maybeSetValue === true) {
+      return true
+    }
+
+    // Check selectionState (used by dataframe for programmatic selection)
+    const maybeSelectionState = typedSubElement.selectionState
+    if (
+      typeof maybeSelectionState === "string" &&
+      maybeSelectionState.length > 0
+    ) {
+      return true
+    }
   }
   return false
 }

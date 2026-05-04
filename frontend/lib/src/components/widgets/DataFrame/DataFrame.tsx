@@ -293,6 +293,10 @@ function DataFrame({
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
 
+  // Ref to track the last processed selectionState to avoid proto mutation.
+  // Used to detect when a new programmatic selection arrives from the backend.
+  const processedSelectionStateRef = useRef<string | null>(null)
+
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
   // This is done here because it needs the output from useColumnSort.
   const innerSyncSelectionState = useMemo(
@@ -433,16 +437,21 @@ function DataFrame({
   /**
    * Apply programmatic selection changes set via st.session_state.
    * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed); we clear it after consuming.
+   * the rerun where the value changed). We track processed values via ref
+   * to avoid mutating the proto object.
    */
   useEffect(() => {
-    if (!element.selectionState) {
+    // Skip if no selectionState or we've already processed this exact value
+    if (
+      !element.selectionState ||
+      element.selectionState === processedSelectionStateRef.current
+    ) {
       return
     }
 
     const selectionState = element.selectionState
-    // eslint-disable-next-line react-hooks/immutability -- consuming programmatic selection from proto
-    element.selectionState = null
+    // Mark as processed (using ref instead of proto mutation)
+    processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
       selectionState,
@@ -457,9 +466,6 @@ function DataFrame({
     if (programmaticSelection) {
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
-    // We depend on `element.selectionState` instead of `element` for stability;
-    // `element` is only referenced to clear the one-shot signal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.selectionState,
     columns,

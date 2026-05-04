@@ -835,10 +835,6 @@ describe("AppRoot", () => {
       })
 
       it.each([
-        [
-          "dataframe",
-          { dataframe: { arrowData: { data: new Uint8Array() } } },
-        ],
         ["chatInput", { chatInput: { placeholder: "Chat" } }],
         ["table", { table: { arrowData: { data: new Uint8Array() } } }],
         ["vegaLiteChart", { vegaLiteChart: { spec: "{}" } }],
@@ -969,6 +965,92 @@ describe("AppRoot", () => {
         ) as ElementNode
 
         // setValue=false allows reuse
+        expect(node2.element).toBe(node1.element)
+      })
+
+      it("creates fresh payload when dataframe has selectionState (one-shot guard)", () => {
+        const hash = "same_hash_123"
+        const delta1 = makeProto(DeltaProto, {
+          newElement: {
+            dataframe: {
+              arrowData: { data: new Uint8Array() },
+              selectionState: '{"selection":{"rows":[0]}}',
+            },
+          },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        const delta2 = makeProto(DeltaProto, {
+          newElement: {
+            dataframe: {
+              arrowData: { data: new Uint8Array() },
+              selectionState: '{"selection":{"rows":[0]}}',
+            },
+          },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // selectionState present means no reuse (one-shot command)
+        expect(node2.element).not.toBe(node1.element)
+      })
+
+      it("reuses dataframe payload when no selectionState present", () => {
+        const hash = "same_hash_123"
+        const delta1 = makeProto(DeltaProto, {
+          newElement: {
+            dataframe: {
+              arrowData: { data: new Uint8Array() },
+            },
+          },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        const delta2 = makeProto(DeltaProto, {
+          newElement: {
+            dataframe: {
+              arrowData: { data: new Uint8Array() },
+            },
+          },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // No selectionState allows reuse
         expect(node2.element).toBe(node1.element)
       })
 
