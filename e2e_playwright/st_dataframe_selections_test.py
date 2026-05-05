@@ -588,11 +588,9 @@ def test_multi_row_and_multi_column_select_snapshot(
     assert_snapshot(canvas, name="st_dataframe-multi_row_multi_column_selection")
 
 
-# Skip firefox since it takes a snapshot with a slightly different size
-# compared to the one in the test_multi_row_and_multi_column_select_snapshot test
-# Skip webkit due to canvas rendering inconsistencies with Playwright 1.59+
-@pytest.mark.skip_browser("firefox")
-@pytest.mark.skip_browser("webkit")
+# Only run on chromium - firefox has slightly different snapshot sizes,
+# webkit has canvas rendering inconsistencies with Playwright 1.59+
+@pytest.mark.only_browser("chromium")
 def test_selection_state_remains_after_unmounting(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
