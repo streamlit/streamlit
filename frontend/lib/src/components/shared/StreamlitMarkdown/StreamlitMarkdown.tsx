@@ -154,11 +154,6 @@ export interface Props {
   boldLabel?: boolean
 
   /**
-   * Checkbox labels have larger font sizing
-   */
-  largerLabel?: boolean
-
-  /**
    * Does not allow links
    */
   disableLinks?: boolean
@@ -1259,7 +1254,6 @@ const StreamlitMarkdown: FC<Props> = ({
   isCaption,
   isLabel,
   boldLabel,
-  largerLabel,
   disableLinks,
   isToast,
   inheritFont,
@@ -1276,7 +1270,6 @@ const StreamlitMarkdown: FC<Props> = ({
       isLabel={isLabel}
       inheritFont={inheritFont}
       boldLabel={boldLabel}
-      largerLabel={largerLabel}
       isToast={isToast}
       truncate={truncate}
       style={style}

@@ -78,7 +78,6 @@ function AlertElement({
                     source={title}
                     allowHTML={false}
                     isLabel
-                    largerLabel
                   />
                 </StyledAlertTitle>
               </StyledAlertHeader>

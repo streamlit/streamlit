@@ -39,7 +39,6 @@ interface StyledStreamlitMarkdownProps {
   isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
-  largerLabel?: boolean
   isToast?: boolean
   truncate?: boolean
 }
@@ -203,14 +202,13 @@ export const StyledStreamlitMarkdown =
       isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
-      largerLabel,
       isToast,
       truncate,
     }) => {
-      // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
-      // Toasts also have smaller font size as well as pills and segmented controls.
-      const useSmallerFontSize =
-        (isLabel && !largerLabel) || isToast || isCaption
+      // All widget labels use smaller font size (14px). Only normal markdown text and
+      // alert elements (st.warning etc.) stay at 16px, as they render with isLabel=false.
+      // Toasts and captions also use smaller font size.
+      const useSmallerFontSize = isLabel || isToast || isCaption
 
       return {
         fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,

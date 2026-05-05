@@ -845,31 +845,10 @@ describe("StreamlitMarkdown", () => {
     expect(markdownContainer).toHaveStyle("font-size: 0.875rem")
   })
 
-  it("renders regular text sizing when largerLabel is true", () => {
-    const source = "Here is some checkbox label text"
-    render(
-      <StreamlitMarkdown
-        source={source}
-        allowHTML={false}
-        isLabel
-        largerLabel
-      />
-    )
-
-    const textTag = screen.getByText("Here is some checkbox label text")
-    expect(textTag).toHaveStyle("font-size: inherit")
-  })
-
   it("renders bold label text when boldLabel is true", () => {
     const source = "Here is some checkbox label text"
     render(
-      <StreamlitMarkdown
-        source={source}
-        allowHTML={false}
-        isLabel
-        boldLabel
-        largerLabel
-      />
+      <StreamlitMarkdown source={source} allowHTML={false} isLabel boldLabel />
     )
 
     const textTag = screen.getByText("Here is some checkbox label text")
