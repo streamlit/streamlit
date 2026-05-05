@@ -26,7 +26,9 @@ export const StyledSpinner = styled.div<StyledSpinnerProps>(
       ? {
           // Keep in sync with marginBottom in Block/styled-components.ts
           paddingBottom: theme.spacing.threeXL,
-          background: `linear-gradient(to bottom, ${theme.colors.bgColor} 0%, ${theme.colors.bgColor} 80%, transparent 100%)`,
+          // Top is slightly transparent so the previous element's text descenders
+          // (e.g. the "g" in a progress bar label) are not clipped by this overlay.
+          background: `linear-gradient(to bottom, transparent 0%, ${theme.colors.bgColor} 15%, ${theme.colors.bgColor} 80%, transparent 100%)`,
         }
       : null),
   })
