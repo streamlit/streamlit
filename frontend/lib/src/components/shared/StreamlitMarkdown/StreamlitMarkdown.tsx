@@ -467,7 +467,7 @@ export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
 
 /**
  * Renders code tag with highlighting based on requested language.
- * Mermaid code blocks are rendered as diagrams.
+ * Mermaid code blocks are rendered as diagrams (unless streaming is in progress).
  */
 export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   inline,
@@ -476,6 +476,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   ...props
 }) => {
   const match = /language-(\w+)/.exec(className || "")
+  const isStreaming = useContext(StreamingContext)
 
   const codeText = String(children ?? "")
     .replace(/^\n/, "")
@@ -483,8 +484,10 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
 
   const language = match?.[1] || ""
 
-  // Handle mermaid code blocks specially (case-insensitive)
-  if (!inline && language.toLowerCase() === "mermaid") {
+  // Handle mermaid code blocks specially (case-insensitive).
+  // During streaming, show syntax-highlighted code to avoid flickering/errors
+  // from partial diagram source. After streaming completes, render the diagram.
+  if (!inline && language.toLowerCase() === "mermaid" && !isStreaming) {
     return (
       <ErrorBoundary>
         <Suspense
@@ -553,6 +556,14 @@ export const CustomMediaTag: FC<
 
 const HelpTextContext = createContext<string | undefined>(undefined)
 HelpTextContext.displayName = "HelpTextContext"
+
+/**
+ * Context to indicate if markdown is being streamed (unterminatedParsing mode).
+ * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
+ * This prevents flickering and error states from partial/incomplete diagram source.
+ */
+const StreamingContext = createContext<boolean>(false)
+StreamingContext.displayName = "StreamingContext"
 
 interface CustomHelpIconProps {
   children?: string
@@ -1255,21 +1266,23 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }
 
   return (
-    <HelpTextContext.Provider value={helpText}>
-      <ErrorBoundary>
-        <ReactMarkdown
-          remarkPlugins={remarkPlugins}
-          rehypePlugins={rehypePlugins}
-          components={renderers}
-          urlTransform={transformLinkUri}
-          disallowedElements={disallowed}
-          // unwrap and render children from invalid markdown
-          unwrapDisallowed={true}
-        >
-          {processedSource}
-        </ReactMarkdown>
-      </ErrorBoundary>
-    </HelpTextContext.Provider>
+    <StreamingContext.Provider value={Boolean(unterminatedParsing)}>
+      <HelpTextContext.Provider value={helpText}>
+        <ErrorBoundary>
+          <ReactMarkdown
+            remarkPlugins={remarkPlugins}
+            rehypePlugins={rehypePlugins}
+            components={renderers}
+            urlTransform={transformLinkUri}
+            disallowedElements={disallowed}
+            // unwrap and render children from invalid markdown
+            unwrapDisallowed={true}
+          >
+            {processedSource}
+          </ReactMarkdown>
+        </ErrorBoundary>
+      </HelpTextContext.Provider>
+    </StreamingContext.Provider>
   )
 })
 
