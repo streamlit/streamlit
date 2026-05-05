@@ -30,7 +30,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Pagination_pb2 import Pagination as PaginationProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
-from streamlit.runtime.state import get_session_state, register_widget
+from streamlit.runtime.state import BindOption, get_session_state, register_widget
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -73,6 +73,7 @@ class PaginationMixin:
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
         disabled: bool = False,
+        bind: BindOption = None,
     ) -> int:
         r"""Display a pagination widget for navigating through pages of content.
 
@@ -140,6 +141,14 @@ class PaginationMixin:
             An optional boolean that disables the pagination widget if set
             to ``True``. The default is ``False``.
 
+        bind : "query-params" or None
+            Bind the widget's value to ``st.query_params`` so that the widget's
+            value is synced to the URL query string. If this is ``"query-params"``
+            (default is ``None``), the widget's value will be read from and
+            written to the URL using the ``key`` parameter as the query
+            parameter name. This enables shareable URLs that preserve the
+            widget's state. If ``bind`` is set, ``key`` is required.
+
         Returns
         -------
         int
@@ -198,6 +207,7 @@ class PaginationMixin:
             args=args,
             kwargs=kwargs,
             disabled=disabled,
+            bind=bind,
             ctx=ctx,
         )
 
@@ -213,6 +223,7 @@ class PaginationMixin:
         args: WidgetArgs | None,
         kwargs: WidgetKwargs | None,
         disabled: bool,
+        bind: BindOption,
         ctx: ScriptRunContext | None,
     ) -> int:
 
@@ -274,6 +285,10 @@ class PaginationMixin:
         proto.disabled = disabled
         proto.form_id = current_form_id(self.dg)
 
+        # Set query param key if bound
+        if bind == "query-params" and key is not None:
+            proto.query_param_key = str(key)
+
         serde = PaginationSerde(default=default, num_pages=num_pages)
 
         widget_state = register_widget(
@@ -285,6 +300,9 @@ class PaginationMixin:
             serializer=serde.serialize,
             ctx=ctx,
             value_type="int_value",
+            bind=bind,
+            # Pagination always has a valid page (1 to num_pages), never empty
+            clearable=False,
         )
 
         current_value = widget_state.value

@@ -22,7 +22,7 @@ import pytest
 
 import streamlit as st
 from streamlit.elements.widgets.pagination import PaginationSerde
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.runtime.state.session_state import get_script_run_ctx
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -281,3 +281,39 @@ class TestPaginationDuplicateId(DeltaGeneratorTestCase):
 
         # Make sure the correct name is used in the error message
         assert "pagination" in str(exception.value)
+
+
+class TestPaginationBindQueryParams(DeltaGeneratorTestCase):
+    """Tests for st.pagination bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.pagination(10, key="my_key", bind="query-params")
+
+        proto = self.get_delta_from_queue().new_element.pagination
+        assert proto.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.pagination(10, bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.pagination(10, key="my_key")
+
+        proto = self.get_delta_from_queue().new_element.pagination
+        assert proto.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.pagination(10, key="my_key", bind="invalid-value")
+
+    def test_bind_with_custom_default(self):
+        """Test that bind works with custom default page."""
+        st.pagination(10, default=5, key="my_key", bind="query-params")
+
+        proto = self.get_delta_from_queue().new_element.pagination
+        assert proto.query_param_key == "my_key"
+        assert proto.default == 5

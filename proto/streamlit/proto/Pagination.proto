@@ -25,5 +25,6 @@ message Pagination {
   string form_id = 6;
   uint32 value = 7;
   bool set_value = 8;
-  // next id: 9
+  optional string query_param_key = 9;
+  // next id: 10
 }

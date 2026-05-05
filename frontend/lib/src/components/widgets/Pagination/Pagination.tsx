@@ -262,6 +262,15 @@ function Pagination(props: Readonly<Props>): ReactElement {
     [theme.spacing.threeXL, theme.spacing.twoXS]
   )
 
+  // Query param binding for URL synchronization
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "int_value" as const,
+        clearable: false,
+      }
+    : undefined
+
   const [hookValue, setValueWithSource] = useBasicWidgetState<
     number,
     PaginationProto
@@ -274,6 +283,7 @@ function Pagination(props: Readonly<Props>): ReactElement {
     widgetMgr,
     fragmentId,
     formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // Use element.value as source of truth when set_value is true.
