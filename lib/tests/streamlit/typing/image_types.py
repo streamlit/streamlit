@@ -86,3 +86,29 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "content", "stretch", or int)
+    image("image.png", width="invalid")  # type: ignore[arg-type]
+
+    # Invalid channels value (not "RGB" or "BGR")
+    image("image.png", channels="RGBA")  # type: ignore[arg-type]
+
+    # Invalid output_format value (not "JPEG", "PNG", "GIF", or "auto")
+    image("image.png", output_format="WEBP")  # type: ignore[arg-type]
+
+    # Passing link as positional argument (should be keyword-only)
+    image(
+        "image.png",
+        None,
+        "stretch",
+        None,
+        False,
+        "RGB",
+        "auto",
+        None,
+        "https://example.com",
+    )  # type: ignore[misc]

@@ -88,3 +88,16 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch" or int)
+    audio("audio.wav", width="content")  # type: ignore[arg-type]
+
+    # Passing sample_rate as positional argument (should be keyword-only)
+    audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[misc]
+
+    # Passing end_time as positional argument (should be keyword-only)
+    audio("audio.wav", "audio/wav", 0, None, 60)  # type: ignore[misc]
