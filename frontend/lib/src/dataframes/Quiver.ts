@@ -100,6 +100,9 @@ export interface DataFrameCell {
 /**
  * Parses data from an Arrow table, and stores it in a row-major format
  * (which is more useful for our frontend display code than Arrow's columnar format).
+ *
+ * Quiver instances are immutable. Do not pass them to Immer's `produce()` function
+ * as they are not marked as draftable.
  */
 export class Quiver {
   /** Index & data column names (matrix of column names to support multi-level headers). */

@@ -184,8 +184,10 @@ def _is_composable_message(msg: ForwardMsg) -> bool:
         # Non-delta messages are never composable.
         return False
 
-    # new_transient deltas are not composable because they represent
-    # temporary UI elements like spinners that need to be processed individually.
+    # new_transient is the only delta type that must NOT be coalesced, even when
+    # its delta_path matches an existing entry. This is because transient elements
+    # (e.g. spinners) represent temporary UI state that needs to be processed
+    # individually rather than merged with prior deltas at the same path.
     delta_type = msg.delta.WhichOneof("type")
     return delta_type != "new_transient"
 
