@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Unit tests U5–U15 and U11–U12 from the parallel fragments testing plan."""
+"""Unit tests U5-U15 and U11-U12 from the parallel fragments testing plan."""
 
 from __future__ import annotations
 
@@ -24,17 +24,21 @@ from collections import Counter
 import pytest
 
 from streamlit.cursor import RunningCursor, make_delta_path
+from streamlit.elements.lib.utils import _register_element_id
 from streamlit.errors import StreamlitAPIException, StreamlitDuplicateElementKey
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import ParallelFragmentCoordinator, _check_not_parallel_worker
+from streamlit.runtime.fragment import (
+    ParallelFragmentCoordinator,
+    _check_not_parallel_worker,
+)
 from streamlit.runtime.scriptrunner import add_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
     ThreadSafeSet,
-    parallel_fragment_id,
+    _thread_state,
 )
-from streamlit.elements.lib.utils import _register_element_id
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX
 from tests.testutil import create_mock_script_run_ctx
 
@@ -159,9 +163,7 @@ def test_u9_forward_msg_queue_concurrent_enqueue_is_safe() -> None:
         for i in range(100):
             msg = copy.deepcopy(_TEXT_BASE)
             msg.delta.new_element.text.body = f"t{wid}-{i}"
-            msg.metadata.delta_path[:] = make_delta_path(
-                RootContainer.MAIN, (wid,), i
-            )
+            msg.metadata.delta_path[:] = make_delta_path(RootContainer.MAIN, (wid,), i)
             fmq.enqueue(msg)
 
     threads = [threading.Thread(target=worker, args=(k,)) for k in range(10)]
@@ -261,17 +263,15 @@ def test_u12_session_state_increment_is_not_atomic() -> None:
 
 
 def test_u13_parallel_fragment_id_is_isolated_per_context() -> None:
-    """U13: parallel_fragment_id contextvar is not shared across logical workers."""
+    """U13: fragment_id in _thread_state contextvar is not shared across logical workers."""
     observed: list[str | None] = []
     lock = threading.Lock()
 
     def record(fid: str) -> None:
-        token = parallel_fragment_id.set(fid)
-        try:
-            with lock:
-                observed.append(parallel_fragment_id.get())
-        finally:
-            parallel_fragment_id.reset(token)
+        _thread_state.set(FragmentThreadState(fragment_id=fid))
+        time.sleep(0.01)
+        with lock:
+            observed.append(_thread_state.get().fragment_id)
 
     t1 = threading.Thread(target=record, args=("frag-a",))
     t2 = threading.Thread(target=record, args=("frag-b",))
@@ -285,28 +285,20 @@ def test_u13_parallel_fragment_id_is_isolated_per_context() -> None:
 
 def test_u14_is_parallel_worker_default_false_on_main_thread() -> None:
     """U14: is_parallel_worker is False unless set for a worker context."""
-    from streamlit.runtime.scriptrunner_utils.script_run_context import (
-        is_parallel_worker,
-    )
+    assert _thread_state.get().is_parallel_worker is False
 
-    assert is_parallel_worker.get() is False
-
-    token = is_parallel_worker.set(True)
+    token = _thread_state.set(FragmentThreadState(is_parallel_worker=True))
     try:
-        assert is_parallel_worker.get() is True
+        assert _thread_state.get().is_parallel_worker is True
     finally:
-        is_parallel_worker.reset(token)
+        _thread_state.reset(token)
 
 
 def test_u15_check_not_parallel_worker_raises_in_worker_context() -> None:
     """U15: gated APIs raise when is_parallel_worker is True."""
-    from streamlit.runtime.scriptrunner_utils.script_run_context import (
-        is_parallel_worker,
-    )
-
-    token = is_parallel_worker.set(True)
+    token = _thread_state.set(FragmentThreadState(is_parallel_worker=True))
     try:
         with pytest.raises(StreamlitAPIException, match="cannot be called from"):
             _check_not_parallel_worker("st.switch_page")
     finally:
-        is_parallel_worker.reset(token)
+        _thread_state.reset(token)

@@ -18,15 +18,21 @@ from __future__ import annotations
 
 import threading
 import time
-from collections.abc import Iterator
+from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 
 import pytest
-import streamlit as st
 
-from streamlit.delta_generator_singletons import context_dg_stack, get_dg_singleton_instance
+import streamlit as st
+from streamlit.delta_generator_singletons import (
+    context_dg_stack,
+    get_dg_singleton_instance,
+)
 from streamlit.runtime import Runtime
-from streamlit.runtime.fragment import ParallelFragmentCoordinator, _dispatch_parallel_fragment
+from streamlit.runtime.fragment import (
+    ParallelFragmentCoordinator,
+    _dispatch_parallel_fragment,
+)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import ScriptRunnerEvent, add_script_run_ctx
@@ -37,6 +43,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
 )
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.runtime.scriptrunner.script_runner_test import TestScriptRunner
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 
 @pytest.fixture
@@ -91,7 +100,9 @@ class NestedParallelFragmentTests(DeltaGeneratorTestCase):
         assert len(inner_ident) == 1
         assert outer_ident[0] != threading.get_ident(), "outer ran on a worker thread"
         assert inner_ident[0] != threading.get_ident(), "inner ran on a worker thread"
-        assert outer_ident[0] != inner_ident[0], "inner ran on a different thread than outer"
+        assert outer_ident[0] != inner_ident[0], (
+            "inner ran on a different thread than outer"
+        )
 
     def test_u24_nested_regular_fragment_shares_outer_worker_thread(self) -> None:
         """U24: A regular (non-parallel) fragment nested inside a parallel

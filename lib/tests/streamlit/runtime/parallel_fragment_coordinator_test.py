@@ -14,14 +14,16 @@
 
 from __future__ import annotations
 
+import contextvars
 import threading
 import time
 
 import pytest
 
-import contextvars
-
-from streamlit.runtime.fragment import ParallelFragmentCoordinator, _run_parallel_fragment
+from streamlit.runtime.fragment import (
+    ParallelFragmentCoordinator,
+    _run_parallel_fragment,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
