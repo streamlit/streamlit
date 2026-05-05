@@ -201,9 +201,7 @@ class ScriptRunContextTest(unittest.TestCase):
             fake_enqueue_result["msg"] = msg
 
         _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
-        ctx = _create_script_run_context(
-            fake_enqueue, fragment_id="my_fragment_id"
-        )
+        ctx = _create_script_run_context(fake_enqueue, fragment_id="my_fragment_id")
         add_script_run_ctx(ctx=ctx)
         msg = ForwardMsg()
         msg.delta.new_element.markdown.body = "foo"

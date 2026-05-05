@@ -217,11 +217,13 @@ class ParallelFragmentCoordinator:
                 if self._outstanding == 0:
                     break
             self._yield_check()
-            if self._worker_exception is not None:
-                raise self._worker_exception
+            exc = self._worker_exception
+            if exc is not None:
+                raise exc
             time.sleep(self._poll_interval)
-        if self._worker_exception is not None:
-            raise self._worker_exception
+        exc = self._worker_exception
+        if exc is not None:
+            raise exc
         self._executor.shutdown(wait=False)
 
     def drain(self) -> None:
@@ -302,7 +304,9 @@ def _dispatch_parallel_fragment(
 
     def worker() -> None:
         add_script_run_ctx(threading.current_thread(), ctx)
-        _run_parallel_fragment(coordinator, wrapped_fragment, fragment_id, parent_context)
+        _run_parallel_fragment(
+            coordinator, wrapped_fragment, fragment_id, parent_context
+        )
 
     coordinator.submit(worker)
 
@@ -321,10 +325,12 @@ def _run_parallel_fragment(
     """
 
     def run_fragment() -> None:
-        _thread_state.set(FragmentThreadState(
-            fragment_id=fragment_id,
-            is_parallel_worker=True,
-        ))
+        _thread_state.set(
+            FragmentThreadState(
+                fragment_id=fragment_id,
+                is_parallel_worker=True,
+            )
+        )
         try:
             wrapped_fragment()
         except RerunException as e:
@@ -332,7 +338,7 @@ def _run_parallel_fragment(
         except StopException:
             coordinator.request_stop()
         except FragmentHandledException:
-            pass
+            pass  # Already rendered as an error in the fragment container.
         except Exception:
             _LOGGER.exception("Parallel fragment %s failed", fragment_id[:8])
 

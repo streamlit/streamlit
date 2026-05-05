@@ -74,7 +74,8 @@ class FragmentThreadState:
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
-    "thread_state", default=FragmentThreadState()  # noqa: B039
+    "thread_state",
+    default=FragmentThreadState(),  # noqa: B039
 )
 
 
@@ -196,7 +197,9 @@ class ScriptRunContext:
         context_info: ContextInfo | None = None,
     ) -> None:
         if threading.get_ident() != self._main_thread_ident:
-            raise RuntimeError("reset() must only be called from the main script thread")
+            raise RuntimeError(
+                "reset() must only be called from the main script thread"
+            )
 
         # Check if this is a same-page rerun BEFORE updating page_script_hash
         is_same_page = self.page_script_hash == page_script_hash
@@ -218,9 +221,11 @@ class ScriptRunContext:
         self.parallel_coordinator = None
         self.cached_message_hashes = cached_message_hashes or set()
 
-        _thread_state.set(FragmentThreadState(
-            active_script_hash=self.pages_manager.main_script_hash,
-        ))
+        _thread_state.set(
+            FragmentThreadState(
+                active_script_hash=self.pages_manager.main_script_hash,
+            )
+        )
         in_cached_function.set(False)
 
         with self.session_state.query_params() as qp:

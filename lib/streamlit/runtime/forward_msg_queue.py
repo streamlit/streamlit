@@ -130,9 +130,7 @@ class ForwardMsgQueue:
             self._queue = []
         else:
             self._queue = [
-                _update_script_finished_message(
-                    msg, fragment_ids_this_run is not None
-                )
+                _update_script_finished_message(msg, fragment_ids_this_run is not None)
                 for msg in self._queue
                 if msg.WhichOneof("type")
                 in {
@@ -155,8 +153,7 @@ class ForwardMsgQueue:
                             msg.delta is not None
                             and (
                                 msg.delta.fragment_id is None
-                                or msg.delta.fragment_id
-                                not in fragment_ids_this_run
+                                or msg.delta.fragment_id not in fragment_ids_this_run
                             )
                         )
                     )
