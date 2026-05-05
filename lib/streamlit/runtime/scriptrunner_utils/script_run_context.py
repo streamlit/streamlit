@@ -187,6 +187,11 @@ class ScriptRunContext:
 
     def __post_init__(self) -> None:
         self._main_thread_ident = threading.get_ident()
+        _thread_state.set(
+            FragmentThreadState(
+                active_script_hash=self.pages_manager.main_script_hash,
+            )
+        )
 
     def reset(
         self,
