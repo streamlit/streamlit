@@ -29,7 +29,7 @@ st.subheader("E10: st.stop()")
 def stopping_fragment():
     st.write("e10_partial_content")
     st.stop()
-    st.write("e10_should_not_appear")
+    st.write("e10_should_not_appear")  # type: ignore[unreachable]
 
 
 @st.fragment(parallel=True)
