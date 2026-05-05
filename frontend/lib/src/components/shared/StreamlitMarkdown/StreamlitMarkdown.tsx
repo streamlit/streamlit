@@ -462,6 +462,14 @@ interface RenderedMarkdownProps {
   unterminatedParsing?: boolean
 }
 
+/**
+ * Context to indicate if markdown is being streamed (unterminatedParsing mode).
+ * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
+ * This prevents flickering and error states from partial/incomplete diagram source.
+ */
+const StreamingContext = createContext<boolean>(false)
+StreamingContext.displayName = "StreamingContext"
+
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
   ReactMarkdownProps & { inline?: boolean }
 
@@ -556,14 +564,6 @@ export const CustomMediaTag: FC<
 
 const HelpTextContext = createContext<string | undefined>(undefined)
 HelpTextContext.displayName = "HelpTextContext"
-
-/**
- * Context to indicate if markdown is being streamed (unterminatedParsing mode).
- * When true, mermaid code blocks render as syntax-highlighted code instead of diagrams.
- * This prevents flickering and error states from partial/incomplete diagram source.
- */
-const StreamingContext = createContext<boolean>(false)
-StreamingContext.displayName = "StreamingContext"
 
 interface CustomHelpIconProps {
   children?: string
