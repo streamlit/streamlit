@@ -111,7 +111,8 @@ updates:
     cooldown:
       default-days: 5
 
-    # Use widen strategy to expand version ranges instead of pinning
+    # uv treats this as an "app" setup by default, which uses the "increase"
+    # strategy. We want "widen" to expand version ranges instead of pinning.
     versioning-strategy: widen
 
     labels:
@@ -138,9 +139,6 @@ updates:
 
     cooldown:
       default-days: 5
-
-    # Use widen strategy to expand version ranges instead of pinning
-    versioning-strategy: widen
 
     labels:
       - "change:chore"
