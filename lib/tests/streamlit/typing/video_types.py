@@ -59,7 +59,7 @@ if TYPE_CHECKING:
     assert_type(
         video("video.mp4", subtitles=b"WEBVTT\n\n00:00:01.000..."), DeltaGenerator
     )
-    bytes_io: io.BytesIO = io.BytesIO(b"WEBVTT")
+    bytes_io = io.BytesIO(b"WEBVTT")
     assert_type(video("video.mp4", subtitles=bytes_io), DeltaGenerator)
     assert_type(
         video(
@@ -108,3 +108,13 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "stretch" or int - "content" is not valid for video)
+    video("video.mp4", width="content")  # type: ignore[arg-type]
+
+    # Passing subtitles as positional argument (should be keyword-only)
+    video("video.mp4", "video/mp4", 0, "subtitles.vtt")  # type: ignore[misc]

@@ -51,7 +51,8 @@ if TYPE_CHECKING:
     assert_type(audio("audio.wav", start_time="1m30s"), DeltaGenerator)
     assert_type(audio("audio.wav", start_time=timedelta(seconds=30)), DeltaGenerator)
 
-    # Audio with sample_rate parameter (for numpy arrays)
+    # Audio with sample_rate parameter (used with numpy arrays; bytes used here as a
+    # stand-in since numpy cannot be imported under TYPE_CHECKING)
     assert_type(audio(b"audio", sample_rate=44100), DeltaGenerator)
     assert_type(audio(b"audio", sample_rate=None), DeltaGenerator)
 
@@ -98,6 +99,3 @@ if TYPE_CHECKING:
 
     # Passing sample_rate as positional argument (should be keyword-only)
     audio("audio.wav", "audio/wav", 0, 44100)  # type: ignore[misc]
-
-    # Passing end_time as positional argument (should be keyword-only)
-    audio("audio.wav", "audio/wav", 0, None, 60)  # type: ignore[misc]

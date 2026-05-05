@@ -57,15 +57,24 @@ if TYPE_CHECKING:
     assert_type(image("image.png", channels="RGB"), DeltaGenerator)
     assert_type(image("image.png", channels="BGR"), DeltaGenerator)
 
-    # Image with output_format parameter - "JPEG", "PNG", or "auto"
+    # Image with output_format parameter - "JPEG", "PNG", "GIF", or "auto"
     assert_type(image("image.png", output_format="JPEG"), DeltaGenerator)
     assert_type(image("image.png", output_format="PNG"), DeltaGenerator)
+    assert_type(image("image.png", output_format="GIF"), DeltaGenerator)
     assert_type(image("image.png", output_format="auto"), DeltaGenerator)
 
     # Image with use_container_width parameter (deprecated but still supported)
     assert_type(image("image.png", use_container_width=True), DeltaGenerator)
     assert_type(image("image.png", use_container_width=False), DeltaGenerator)
     assert_type(image("image.png", use_container_width=None), DeltaGenerator)
+
+    # Image with use_column_width parameter (deprecated but still supported)
+    assert_type(image("image.png", use_column_width=True), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=False), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="auto"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="always"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width="never"), DeltaGenerator)
+    assert_type(image("image.png", use_column_width=None), DeltaGenerator)
 
     # Image with link parameter
     assert_type(image("image.png", link="https://streamlit.io"), DeltaGenerator)
