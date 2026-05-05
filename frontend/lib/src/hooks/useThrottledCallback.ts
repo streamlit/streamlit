@@ -56,6 +56,12 @@ export function useThrottledCallback<A extends unknown[]>(
   const pendingArgsRef = useRef<A | null>(null)
   const isThrottledRef = useRef(false)
   const callbackRef = useRef(callback)
+  /**
+   * Holds the restart function from useTimeout. Populated by the effect below
+   * after the first render. The optional chaining in onTimeoutComplete is
+   * defensive but effectively unreachable since the timer can only fire after
+   * the effect that sets this ref has run.
+   */
   const restartRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
@@ -77,7 +83,7 @@ export function useThrottledCallback<A extends unknown[]>(
     autoStart: false,
   })
 
-  // Keep restart ref in sync
+  /** Keep restart ref in sync with the latest useTimeout reference. */
   useEffect(() => {
     restartRef.current = restart
   }, [restart])

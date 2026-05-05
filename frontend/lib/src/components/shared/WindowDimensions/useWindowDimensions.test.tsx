@@ -124,8 +124,11 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
+    const callCountBeforeUnmount = clearTimeoutSpy.mock.calls.length
     unmount()
 
-    expect(clearTimeoutSpy).toHaveBeenCalled()
+    expect(clearTimeoutSpy.mock.calls.length).toBeGreaterThan(
+      callCountBeforeUnmount
+    )
   })
 })

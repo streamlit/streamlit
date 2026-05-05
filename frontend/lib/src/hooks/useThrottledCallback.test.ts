@@ -131,6 +131,31 @@ describe("useThrottledCallback", () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
+  it("should allow immediate execution after cancel resets throttle state", () => {
+    const callback = vi.fn()
+    const { result } = renderHook(() => useThrottledCallback(callback, 100))
+
+    // First call - starts throttle
+    act(() => {
+      result.current.throttledCallback("first")
+    })
+
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    // Cancel should reset isThrottledRef, allowing immediate execution
+    act(() => {
+      result.current.cancel()
+    })
+
+    // Next call should fire immediately (not be throttled)
+    act(() => {
+      result.current.throttledCallback("second")
+    })
+
+    expect(callback).toHaveBeenCalledTimes(2)
+    expect(callback).toHaveBeenLastCalledWith("second")
+  })
+
   it("should use latest callback reference", () => {
     const callback1 = vi.fn()
     const callback2 = vi.fn()
