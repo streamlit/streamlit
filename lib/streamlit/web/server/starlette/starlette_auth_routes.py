@@ -310,13 +310,18 @@ def _get_provider_by_state(
         # We have some unit tests that will fail in case the formats gets changed in
         # an authlib update.
         #
-        # Note: This split assumes no underscores in provider names or state codes.
-        # This is safe because: (1) provider names with underscores are explicitly
-        # blocked in validate_auth_credentials() in auth_util.py, and (2) Authlib's
-        # generate_token() uses only alphanumeric characters (a-zA-Z0-9) for state
-        # codes. See auth_util.py for the underscore validation.
+        # Filter by the "_state_" prefix first to avoid false positives from other
+        # session data that might happen to have 4 underscore-separated parts.
+        if not key.startswith("_state_"):
+            continue
+        #
+        # Note: Using maxsplit=3 makes the parse greedy on the last segment, which is
+        # safer if the state code ever contains underscores. While Authlib's
+        # generate_token() currently uses only alphanumeric characters (a-zA-Z0-9),
+        # this is defensive against upstream changes. Provider names with underscores
+        # are explicitly blocked in validate_auth_credentials() in auth_util.py.
         try:
-            _, _, recorded_provider, code = key.split("_")
+            _, _, recorded_provider, code = key.split("_", 3)
         except ValueError:
             # Skip session keys that don't match the expected 4-part format.
             continue

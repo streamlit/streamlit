@@ -437,6 +437,36 @@ class TestGetProviderByState:
         # Should return None for a state code that doesn't exist in the session
         assert _get_provider_by_state(mock_request, "nonexistentstate") is None
 
+    def test_ignores_keys_without_state_prefix(self) -> None:
+        """Test that session keys without '_state_' prefix are ignored."""
+        mock_request = MagicMock()
+        # These keys split into 4 parts but don't have the _state_ prefix
+        mock_request.session = {
+            "user_id_abcd_1234": {},  # Could be mistaken for state key
+            "other_data_xyz_5678": {},  # Another potential false positive
+            "_state_google_realstate123": {},  # Valid Authlib state key
+        }
+
+        # Only the valid _state_ prefixed key should be recognized
+        assert _get_provider_by_state(mock_request, "realstate123") == "google"
+        # The false positives should not be matched
+        assert _get_provider_by_state(mock_request, "1234") is None
+        assert _get_provider_by_state(mock_request, "5678") is None
+
+    def test_handles_state_code_with_underscores(self) -> None:
+        """Test that state codes containing underscores are parsed correctly."""
+        mock_request = MagicMock()
+        # State code contains underscores - maxsplit=3 should keep them together
+        mock_request.session = {
+            "_state_github_complex_state_with_underscores": {},
+        }
+
+        # The entire remainder after the 3rd underscore is the state code
+        assert (
+            _get_provider_by_state(mock_request, "complex_state_with_underscores")
+            == "github"
+        )
+
 
 class TestGetOriginFromSecrets:
     """Tests for _get_origin_from_secrets function."""
