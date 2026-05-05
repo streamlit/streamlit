@@ -834,47 +834,6 @@ describe("AppRoot", () => {
         expect(node2.elementHash).toBeUndefined()
       })
 
-      it.each([
-        ["chatInput", { chatInput: { placeholder: "Chat" } }],
-        ["table", { table: { arrowData: { data: new Uint8Array() } } }],
-        ["vegaLiteChart", { vegaLiteChart: { spec: "{}" } }],
-        ["spinner", { spinner: { text: "Loading..." } }],
-        ["balloons", { balloons: { show: true } }],
-        ["snow", { snow: { show: true } }],
-        ["toast", { toast: { body: "Hello" } }],
-      ])(
-        "creates fresh payload for unsafe element type (%s)",
-        (_, elementData) => {
-          const hash = "same_hash_123"
-          const delta1 = makeProto(DeltaProto, { newElement: elementData })
-          const root1 = ROOT.applyDelta(
-            "run_id_1",
-            delta1,
-            forwardMsgMetadata([0, 1, 1]),
-            hash
-          )
-          const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
-            root1.main,
-            [1, 1]
-          ) as ElementNode
-
-          const delta2 = makeProto(DeltaProto, { newElement: elementData })
-          const root2 = root1.applyDelta(
-            "run_id_2",
-            delta2,
-            forwardMsgMetadata([0, 1, 1]),
-            hash
-          )
-          const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
-            root2.main,
-            [1, 1]
-          ) as ElementNode
-
-          // Element is in the unsafe list, so no reuse even with same hash
-          expect(node2.element).not.toBe(node1.element)
-        }
-      )
-
       it("creates fresh payload when setValue is true (one-shot guard)", () => {
         const hash = "same_hash_123"
         const delta1 = makeProto(DeltaProto, {

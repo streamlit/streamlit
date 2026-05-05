@@ -46,38 +46,6 @@ import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElem
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
-type ElementType = NonNullable<Element["type"]>
-
-/**
- * Element types that are unsafe for payload reuse, even if hashes match.
- * These types either mutate their protobuf payload, depend on per-run/mount
- * identity, or have one-shot behaviors not covered by the generic setValue guard.
- *
- * When adding a new element type, check whether it:
- * - Has mutable lazy caches (like arrowAddRows mutations in table/vegaLiteChart)
- * - Has one-shot fields other than setValue (extend hasOneShotPayload if so)
- * - Depends on per-run or per-mount identity (add to this list)
- */
-const PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES = new Set<ElementType>([
-  // Has a custom setValue path that uses an element-reference reset effect.
-  "chatInput",
-  // The lazy caches (lazyQuiverElement) can be mutated by arrowAddRows,
-  // which would cause stale data accumulation if reused across script runs.
-  "table",
-  // The lazy caches (lazyVegaLiteChartElement) can be mutated by arrowAddRows,
-  // which would cause stale data accumulation if reused across script runs.
-  "vegaLiteChart",
-
-  // Run- or mount-identity-sensitive UI elements.
-  // Intentionally receives node.scriptRunId, so it is per-run by design.
-  "balloons",
-  "snow",
-  // Tracks elapsed time from component mount when showTime is enabled.
-  "spinner",
-  // Uses key={node.scriptRunId} so each run can create a distinct toast event.
-  "toast",
-])
-
 /**
  * Check if the element has a one-shot payload field that requires using the
  * fresh protobuf object. This guards against reusing payloads that carry
@@ -126,24 +94,20 @@ function hasOneShotPayload(element: Element): boolean {
  * Returns true only when:
  * - elementHash is non-empty and matches the existing node's hash
  * - The element type matches
- * - The element type is not in the unsafe list
- * - The incoming payload doesn't have a one-shot command field (setValue)
+ * - The incoming payload doesn't have a one-shot command field (setValue, selectionState)
  */
 function canReuseElementPayload(
   existingNode: AppNode | undefined,
   elementHash: string | undefined,
   nextElement: Element
 ): existingNode is ElementNode {
-  const elementType = nextElement.type
-
   return (
     Boolean(elementHash) &&
-    elementType !== undefined &&
+    nextElement.type !== undefined &&
     existingNode instanceof ElementNode &&
     existingNode.elementHash === elementHash &&
-    existingNode.element.type === elementType &&
-    !hasOneShotPayload(nextElement) &&
-    !PAYLOAD_REUSE_UNSAFE_ELEMENT_TYPES.has(elementType)
+    existingNode.element.type === nextElement.type &&
+    !hasOneShotPayload(nextElement)
   )
 }
 
