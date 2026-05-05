@@ -112,8 +112,8 @@ updates:
       default-days: 5
 
     # uv treats this as an "app" setup by default, which uses the "increase"
-    # strategy. We want "widen" to expand version ranges instead of pinning.
-    versioning-strategy: widen
+    # strategy. We want "auto" which selects "widen" for libraries.
+    versioning-strategy: auto
 
     labels:
       - "change:chore"
