@@ -28,7 +28,7 @@ class MermaidChartTest(DeltaGeneratorTestCase):
         st.mermaid_chart("graph TD\n    A --> B")
 
         element = self.get_delta_from_queue().new_element.markdown
-        assert element.body == "```mermaid\ngraph TD\n    A --> B\n```"
+        assert element.body == "````mermaid\ngraph TD\n    A --> B\n````"
 
     def test_mermaid_chart_multiline(self) -> None:
         """Test mermaid_chart with multiline diagram definition."""
@@ -41,11 +41,11 @@ graph LR
         st.mermaid_chart(diagram)
 
         element = self.get_delta_from_queue().new_element.markdown
-        assert element.body == f"```mermaid\n{diagram}\n```"
+        assert element.body == f"````mermaid\n{diagram}\n````"
 
     def test_mermaid_chart_empty_body(self) -> None:
         """Test mermaid_chart with empty body still wraps in code block."""
         st.mermaid_chart("")
 
         element = self.get_delta_from_queue().new_element.markdown
-        assert element.body == "```mermaid\n\n```"
+        assert element.body == "````mermaid\n\n````"
