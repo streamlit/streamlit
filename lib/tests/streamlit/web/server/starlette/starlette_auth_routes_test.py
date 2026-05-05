@@ -403,11 +403,8 @@ class TestGetProviderByState:
     """Tests for _get_provider_by_state function."""
 
     def test_returns_none_for_none_state(self) -> None:
-        """Test that None state returns None."""
-
-        mock_request = MagicMock()
-        mock_request.session = {}
-        assert _get_provider_by_state(mock_request, None) is None
+        """Test that None state returns None (early-return path, no session access)."""
+        assert _get_provider_by_state(MagicMock(), None) is None
 
     def test_returns_none_for_unknown_state(self) -> None:
         """Test that an unknown state code returns None."""
