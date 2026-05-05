@@ -23,11 +23,10 @@ from abc import abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Final, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
-from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
@@ -47,8 +46,6 @@ from streamlit.util import calc_md5
 
 if TYPE_CHECKING:
     from datetime import timedelta
-
-_LOGGER: Final = get_logger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 Fragment = Callable[[], Any]
