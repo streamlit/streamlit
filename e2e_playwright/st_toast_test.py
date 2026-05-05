@@ -29,10 +29,14 @@ def test_default_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(2).hover()
 
-    expect(toasts.nth(2)).to_contain_text("🐶This is a default toast message")
-    assert_snapshot(toasts.nth(2), name="toast-default")
+    # Use content-based selection instead of positional index
+    default_toast = toasts.filter(has_text="This is a default toast message")
+    expect(default_toast).to_be_visible()
+    default_toast.hover()
+
+    expect(default_toast).to_contain_text("🐶This is a default toast message")
+    assert_snapshot(default_toast, name="toast-default")
 
 
 def test_collapsed_toast_rendering(
@@ -45,13 +49,17 @@ def test_collapsed_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(1).hover()
 
-    expect(toasts.nth(1)).to_contain_text(
+    # Use content-based selection instead of positional index
+    collapsed_toast = toasts.filter(has_text="Random toast message that is a really")
+    expect(collapsed_toast).to_be_visible()
+    collapsed_toast.hover()
+
+    expect(collapsed_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going wayview moreClose"
     )
-    assert_snapshot(toasts.nth(1), name="toast-collapsed")
+    assert_snapshot(collapsed_toast, name="toast-collapsed")
 
 
 def test_expanded_toast_rendering(
@@ -64,18 +72,22 @@ def test_expanded_toast_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(1).hover()
+
+    # Use content-based selection instead of positional index
+    expandable_toast = toasts.filter(has_text="Random toast message that is a really")
+    expect(expandable_toast).to_be_visible()
+    expandable_toast.hover()
 
     expand = themed_app.get_by_text("view more")
     expect(expand).to_have_count(1)
     expand.click()
 
-    expect(toasts.nth(1)).to_contain_text(
+    expect(expandable_toast).to_contain_text(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going way past the 3 line limitview lessClose"
     )
     reset_hovering(themed_app)
-    assert_snapshot(toasts.nth(1), name="toast-expanded")
+    assert_snapshot(expandable_toast, name="toast-expanded")
 
 
 def test_toast_with_material_icon_rendering(
@@ -88,10 +100,14 @@ def test_toast_with_material_icon_rendering(
 
     toasts = themed_app.get_by_test_id("stToast")
     expect(toasts).to_have_count(3)
-    toasts.nth(0).hover()
 
-    expect(toasts.nth(0)).to_contain_text("cabinYour edited image was saved!Close")
-    assert_snapshot(toasts.nth(0), name="toast-material-icon")
+    # Use content-based selection instead of positional index
+    material_toast = toasts.filter(has_text="Your edited image was saved!")
+    expect(material_toast).to_be_visible()
+    material_toast.hover()
+
+    expect(material_toast).to_contain_text("cabinYour edited image was saved!Close")
+    assert_snapshot(material_toast, name="toast-material-icon")
 
 
 def test_toast_above_dialog(app: Page, assert_snapshot: ImageCompareFunction):
@@ -160,3 +176,23 @@ def test_toast_adjusts_for_custom_theme(
     toast.hover()
 
     assert_snapshot(toast, name="toast-custom-theme")
+
+
+def test_toast_persists_through_rerun(app: Page):
+    """Test that toasts persist through st.rerun() (issue #7740)."""
+    # Wait for initial toasts to time out
+    app.wait_for_timeout(4500)
+
+    rerun_toast = app.get_by_text("Toast before rerun")
+    expect(rerun_toast).not_to_be_visible()
+
+    # Click button that triggers toast and immediate rerun
+    click_button(app, "Toast and rerun")
+    wait_for_app_loaded(app)
+
+    # The toast should be visible despite the rerun
+    expect(rerun_toast).to_be_visible()
+
+    # Toast should still disappear after its default duration (4 seconds)
+    app.wait_for_timeout(4500)
+    expect(rerun_toast).not_to_be_visible()

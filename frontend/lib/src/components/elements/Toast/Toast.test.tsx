@@ -33,7 +33,7 @@ import ThemeProvider from "~lib/components/core/ThemeProvider"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 
-import Toast, { shortenMessage, ToastProps } from "./Toast"
+import Toast, { clearActiveToasts, shortenMessage, ToastProps } from "./Toast"
 
 // A Toaster Container is required to render Toasts
 // Don't import the actual one from EventContainer as that lives on app side
@@ -82,6 +82,8 @@ describe("Toast Component", () => {
     await act(async () => {
       toaster.clear()
     })
+    // Clear the active toasts tracking so subsequent tests can create toasts
+    clearActiveToasts()
 
     // Ensure any pending BaseWeb toast timers are executed and then cleared
     act(() => {

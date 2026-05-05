@@ -46,6 +46,22 @@ export interface ToastProps {
   element: ToastProto
 }
 
+/**
+ * Tracks active toasts by content hash to prevent duplicates.
+ * Key: content hash (body + icon + duration), Value: toaster key
+ * This allows toasts to persist through script reruns while avoiding
+ * duplicate creation during theme changes or remounts.
+ */
+const activeToasts = new Map<string, React.Key>()
+
+/**
+ * Clears the active toasts tracking. Used for testing.
+ * @internal
+ */
+export function clearActiveToasts(): void {
+  activeToasts.clear()
+}
+
 function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
   const lightBackground = hasLightBackgroundColor(theme)
   return {
@@ -163,6 +179,16 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
       return
     }
 
+    // Create a content hash to identify unique toasts
+    const contentHash = `${body}|${icon}|${duration}`
+
+    // Skip if this exact toast is already active (prevents duplicates on remount)
+    const existingKey = activeToasts.get(contentHash)
+    if (existingKey !== undefined) {
+      setToastKey(existingKey)
+      return
+    }
+
     // Uses toaster utility to create toast on mount and generate unique key
     // to reference that toast for update/removal
     const autoHideDurationMs = notNullOrUndefined(duration)
@@ -176,18 +202,21 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
       autoHideDuration: autoHideDurationMs,
     })
     setToastKey(newKey)
+    activeToasts.set(contentHash, newKey)
 
-    return () => {
-      // Disable transition so toast doesn't flicker on removal
-      toaster.update(newKey, {
-        overrides: { Body: { style: { display: "none" } } },
-      })
-      // Remove toast on unmount
-      toaster.clear(newKey)
+    // Remove from tracking when toast auto-hides (skip for duration=0 which never hides).
+    // This timeout is intentionally not cleaned up on unmount - it manages global tracking
+    // that should persist regardless of component lifecycle.
+    if (autoHideDurationMs > 0) {
+      // eslint-disable-next-line no-restricted-globals, @eslint-react/web-api/no-leaked-timeout -- Intentional: global tracking cleanup
+      setTimeout(() => {
+        activeToasts.delete(contentHash)
+      }, autoHideDurationMs)
     }
 
-    // Array must be empty to run as mount/cleanup
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    // Don't cleanup on unmount - toasts should persist until auto-hide.
+    // This fixes issue #7740 where toasts disappeared during st.rerun().
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Run only on mount
   }, [])
 
   useEffect(() => {
