@@ -80,6 +80,8 @@ describe("useWindowDimensions", () => {
   it("should coalesce multiple rapid resize events to final value", () => {
     const { result } = renderHook(() => useWindowDimensions(), { wrapper })
 
+    const initialWidth = result.current.innerWidth
+
     // Fire multiple resize events in quick succession
     act(() => {
       Object.defineProperty(window, "innerWidth", {
@@ -90,6 +92,9 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
+    // Intermediate values should not be observed (still at initial)
+    expect(result.current.innerWidth).toBe(initialWidth)
+
     act(() => {
       Object.defineProperty(window, "innerWidth", {
         writable: true,
@@ -99,6 +104,9 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
+    // Still at initial - 850 should not be observed either
+    expect(result.current.innerWidth).toBe(initialWidth)
+
     act(() => {
       Object.defineProperty(window, "innerWidth", {
         writable: true,
@@ -107,6 +115,9 @@ describe("useWindowDimensions", () => {
       })
       window.dispatchEvent(new Event("resize"))
     })
+
+    // Still at initial before debounce completes
+    expect(result.current.innerWidth).toBe(initialWidth)
 
     act(() => {
       vi.advanceTimersByTime(100)

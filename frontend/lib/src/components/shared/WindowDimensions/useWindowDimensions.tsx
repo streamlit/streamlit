@@ -20,6 +20,12 @@ import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
+/**
+ * Debounce delay for window resize events in milliseconds.
+ * This prevents excessive re-renders during active window resizing.
+ */
+const RESIZE_DEBOUNCE_MS = 100
+
 export type WindowDimensions = {
   fullWidth: number
   fullHeight: number
@@ -56,7 +62,7 @@ export const useWindowDimensions = (): WindowDimensions => {
   }, [getWindowDimensions])
 
   const { debouncedCallback: debouncedResize, cancel: cancelDebounce } =
-    useDebouncedCallback(updateWindowDimensions, 100)
+    useDebouncedCallback(updateWindowDimensions, RESIZE_DEBOUNCE_MS)
 
   useEffect(() => {
     window.addEventListener("resize", debouncedResize)
