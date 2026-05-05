@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+import sys
+import tempfile
 import unittest
 
 from parameterized import parameterized
@@ -20,7 +23,10 @@ from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner.exec_code import exec_func_with_error_handling
+from streamlit.runtime.scriptrunner.exec_code import (
+    exec_func_with_error_handling,
+    modified_sys_path,
+)
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -120,3 +126,16 @@ class TestWrapInTryAndExec(unittest.TestCase):
         assert rerun_exception_data is None
         assert premature_stop is True
         assert isinstance(uncaught_exception, exception_type)
+
+
+class TestModifiedSysPath(unittest.TestCase):
+    def test_adds_script_directory_not_script_file(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            script_path = os.path.join(tmp_dir, "app.py")
+            expected_dir = os.path.realpath(tmp_dir)
+            original_sys_path = list(sys.path)
+            try:
+                with modified_sys_path(script_path):
+                    assert sys.path[0] == expected_dir
+            finally:
+                sys.path[:] = original_sys_path

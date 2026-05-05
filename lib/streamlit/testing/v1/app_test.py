@@ -166,7 +166,7 @@ class AppTest:
         args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> None:
-        self._script_path = str(script_path)
+        self._script_path = str(Path(script_path).resolve())
         self.default_timeout = default_timeout
         session_state = SessionState()
         session_state[TESTING_KEY] = {}
@@ -316,7 +316,7 @@ class AppTest:
             stack = traceback.StackSummary.extract(traceback.walk_stack(None))
             filepath = Path(stack[1].filename)
             path = filepath.parent / script_path
-        return AppTest(path, default_timeout=default_timeout)
+        return AppTest(path.resolve(), default_timeout=default_timeout)
 
     def _run(
         self,

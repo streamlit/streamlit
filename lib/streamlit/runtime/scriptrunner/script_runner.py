@@ -641,7 +641,7 @@ class ScriptRunner:
                 rerun_data: RerunData = rerun_data,
             ) -> None:
                 with (
-                    modified_sys_path(self._main_script_path),
+                    modified_sys_path(script_path),
                     self._set_execing_flag(),
                 ):
                     # Run callbacks for widgets whose values have changed.

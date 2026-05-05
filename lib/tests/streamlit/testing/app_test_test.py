@@ -54,6 +54,28 @@ def test_from_file_path():
     script.run()
 
 
+def test_from_file_supports_src_layout_imports(tmp_path, monkeypatch):
+    app_dir = tmp_path / "src" / "myapp"
+    app_dir.mkdir(parents=True)
+    (app_dir / "helper.py").write_text(
+        "def message() -> str:\n"
+        '    return "hello from helper"\n',
+        encoding="utf-8",
+    )
+    (app_dir / "app.py").write_text(
+        "import streamlit as st\n"
+        "from helper import message\n"
+        "st.write(message())\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    at = AppTest.from_file("src/myapp/app.py").run()
+
+    assert not at.exception
+    assert at.markdown[0].value == "hello from helper"
+
+
 def test_get_query_params():
     def script():
         import streamlit as st

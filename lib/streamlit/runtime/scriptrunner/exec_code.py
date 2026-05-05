@@ -28,6 +28,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
+from streamlit.runtime.scriptrunner_utils.path_utils import script_dir_for_sys_path
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -45,15 +46,15 @@ class modified_sys_path:  # noqa: N801
     """
 
     def __init__(self, main_script_path: str) -> None:
-        self._main_script_path = main_script_path
+        self._main_script_directory = script_dir_for_sys_path(main_script_path)
         self._added_path = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
 
     def __enter__(self) -> None:
-        if self._main_script_path not in sys.path:
-            sys.path.insert(0, self._main_script_path)
+        if self._main_script_directory not in sys.path:
+            sys.path.insert(0, self._main_script_directory)
             self._added_path = True
 
     def __exit__(
@@ -64,7 +65,7 @@ class modified_sys_path:  # noqa: N801
     ) -> Literal[False]:
         if self._added_path:
             try:
-                sys.path.remove(self._main_script_path)
+                sys.path.remove(self._main_script_directory)
             except ValueError:
                 # It's already removed.
                 pass
