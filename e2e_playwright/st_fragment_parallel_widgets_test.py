@@ -17,11 +17,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
-from e2e_playwright.shared.app_utils import (
-    click_button,
-    expect_exception,
-    expect_no_exception,
-)
+from e2e_playwright.shared.app_utils import click_button, expect_exception
 
 
 def test_e4_widget_interaction_during_parallel_execution(app: Page):

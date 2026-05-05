@@ -45,7 +45,9 @@ def test_e3_source_order_layout_preservation(app: Page):
                 section_indices.append(idx)
                 break
 
-    assert len(section_indices) == 4, f"Expected 4 sections, found {len(section_indices)}"
+    assert len(section_indices) == 4, (
+        f"Expected 4 sections, found {len(section_indices)}"
+    )
     assert section_indices == sorted(section_indices), (
         f"DOM order should be A < B < C < D, got indices: {section_indices}"
     )

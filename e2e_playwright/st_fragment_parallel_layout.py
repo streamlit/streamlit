@@ -72,7 +72,7 @@ e15_start = time.perf_counter()
 for i in range(10):
 
     @st.fragment(parallel=True)
-    def e15_frag(idx=i):
+    def e15_frag(idx: int = i):
         time.sleep(0.5)
         st.write(f"e15_frag_{idx}")
 

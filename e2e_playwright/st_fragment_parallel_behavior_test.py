@@ -21,19 +21,14 @@ import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
-from e2e_playwright.shared.app_utils import (
-    click_button,
-    expect_exception,
-)
+from e2e_playwright.shared.app_utils import click_button
 
 
 def test_e7_dialog_prohibited_during_parallel_execution(app: Page):
     """E7: @st.dialog raises StreamlitAPIException from a parallel fragment."""
     wait_for_app_loaded(app)
 
-    dialog_error = app.get_by_test_id("stException").filter(
-        has_text="@st.dialog"
-    )
+    dialog_error = app.get_by_test_id("stException").filter(has_text="@st.dialog")
     expect(dialog_error).to_be_visible()
 
     expect(app.get_by_text("e7_dialog_content")).not_to_be_attached()
@@ -52,7 +47,8 @@ def test_e8_switch_page_prohibited_during_parallel_execution(app: Page):
 
 def test_e9_dialog_works_from_sequential_fragment_rerun(app: Page):
     """E9: A @st.dialog triggered by button click in a parallel fragment works
-    because the rerun is sequential."""
+    because the rerun is sequential.
+    """
     wait_for_app_loaded(app)
 
     expect(app.get_by_text("e9_fragment_loaded")).to_be_visible()
