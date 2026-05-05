@@ -672,7 +672,7 @@ class ResourceCache(Cache[R]):
 
     @property
     def ttl_seconds(self) -> float:
-        return self._mem_cache.ttl  # type: ignore[no-any-return]
+        return self._mem_cache.ttl
 
     def read_result(self, key: str) -> CachedResult[R]:
         """Read a value and associated messages from the cache.
