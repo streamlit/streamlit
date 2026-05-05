@@ -16,6 +16,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react"
 
+import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { convertRemToPx } from "~lib/theme/utils"
 
@@ -54,13 +55,17 @@ export const useWindowDimensions = (): WindowDimensions => {
     setWindowDimensions(getWindowDimensions())
   }, [getWindowDimensions])
 
+  const { debouncedCallback: debouncedResize, cancel: cancelDebounce } =
+    useDebouncedCallback(updateWindowDimensions, 100)
+
   useEffect(() => {
-    window.addEventListener("resize", updateWindowDimensions)
+    window.addEventListener("resize", debouncedResize)
 
     return () => {
-      window.removeEventListener("resize", updateWindowDimensions)
+      window.removeEventListener("resize", debouncedResize)
+      cancelDebounce()
     }
-  }, [updateWindowDimensions])
+  }, [debouncedResize, cancelDebounce])
 
   useLayoutEffect(() => {
     // Measure once on load, let resize handlers take over from there
