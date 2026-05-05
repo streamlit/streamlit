@@ -92,7 +92,7 @@ test = [
   # Testing infrastructure dependencies:
   "pytest>=8.3.5",
   "pytest-cov",
-  "hypothesis>=6.17.4",
+  "hypothesis>=6.152.4",
   "parameterized",
   "requests-mock",
   "testfixtures",
