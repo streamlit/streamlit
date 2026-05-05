@@ -19,6 +19,7 @@ from typing import TYPE_CHECKING, cast
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.scriptrunner import get_script_run_ctx
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -98,6 +99,22 @@ class EmptyMixin:
         """
         empty_proto = EmptyProto()
         return self.dg._enqueue("empty", empty_proto)
+
+    def clear(self) -> None:
+        """We are about to replace the elements in empty, so we can clear all ids
+        that belong to a (nested) delta path belonging to this empty element.
+        """
+        ctx = get_script_run_ctx()
+        if ctx is None:
+            return
+        for delta_path, ids in ctx.delta_path_to_element_ids_this_run.items():
+            delta_path_without_brackets = delta_path.replace("[", "").replace("]", "")
+            if not self.dg._cursor or not delta_path_without_brackets.startswith(
+                str(self.dg._cursor.delta_path).replace("[", "").replace("]", "")
+            ):
+                continue
+            for id in ids:
+                ctx.widget_ids_this_run.remove(id)
 
     @gather_metrics("_skeleton")
     def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:

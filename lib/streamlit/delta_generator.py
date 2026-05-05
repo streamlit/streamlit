@@ -526,7 +526,13 @@ class DeltaGenerator(
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
             msg.metadata.delta_path[:] = dg._cursor.delta_path
-
+            if ctx:
+                try:
+                    ctx.delta_path_to_element_ids_this_run[
+                        str(dg._cursor.delta_path)
+                    ] = [element_proto.id]
+                except Exception:
+                    pass
             _enqueue_message(msg)
             msg_was_enqueued = True
 
@@ -535,7 +541,8 @@ class DeltaGenerator(
             # position.
             new_cursor = (
                 dg._cursor.get_locked_cursor(
-                    delta_type=delta_type, add_rows_metadata=add_rows_metadata
+                    delta_type=delta_type,
+                    add_rows_metadata=add_rows_metadata,
                 )
                 if dg._cursor is not None
                 else None
@@ -554,7 +561,6 @@ class DeltaGenerator(
             # If the message was not enqueued, just return self since it's a
             # no-op from the point of view of the app.
             output_dg = dg
-
         # Save message for replay if we're called from within @st.cache_data or @st.cache_resource
         caching.save_element_message(
             delta_type,
