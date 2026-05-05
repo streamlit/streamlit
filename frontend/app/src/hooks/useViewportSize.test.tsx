@@ -98,7 +98,7 @@ describe("useViewportSize", () => {
     act(() => {
       innerWidthSpy.mockReturnValue(700)
       window.dispatchEvent(new Event("resize"))
-      // Advance timer to flush debounce (100ms)
+      // Advance timer to flush throttle (100ms)
       vi.advanceTimersByTime(100)
     })
 
@@ -108,7 +108,7 @@ describe("useViewportSize", () => {
     act(() => {
       innerWidthSpy.mockReturnValue(1024)
       window.dispatchEvent(new Event("resize"))
-      // Advance timer to flush debounce (100ms)
+      // Advance timer to flush throttle (100ms)
       vi.advanceTimersByTime(100)
     })
 

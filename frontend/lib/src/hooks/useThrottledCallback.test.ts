@@ -163,5 +163,59 @@ describe("useThrottledCallback", () => {
     expect(callback1).toHaveBeenCalledTimes(1)
     expect(callback2).toHaveBeenCalledTimes(1)
     expect(callback2).toHaveBeenCalledWith("second")
+
+    // After the trailing call executes, we're back in cooldown
+    // Wait for cooldown to end
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+
+    // Now a new call should execute immediately
+    act(() => {
+      result.current.throttledCallback("third")
+    })
+
+    expect(callback2).toHaveBeenCalledTimes(2)
+    expect(callback2).toHaveBeenLastCalledWith("third")
+  })
+
+  it("should allow immediate execution after trailing call without rerender", () => {
+    // This test verifies that the throttle works correctly even without
+    // a component rerender (e.g., for side-effect-only callbacks)
+    const callback = vi.fn()
+    const { result } = renderHook(() => useThrottledCallback(callback, 100))
+
+    // First call - executes immediately
+    act(() => {
+      result.current.throttledCallback("first")
+    })
+
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    // Queue a trailing call
+    act(() => {
+      result.current.throttledCallback("second")
+    })
+
+    // After cooldown, trailing call executes
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+
+    expect(callback).toHaveBeenCalledTimes(2)
+    expect(callback).toHaveBeenLastCalledWith("second")
+
+    // Another cooldown - verify immediate execution after trailing call
+    act(() => {
+      vi.advanceTimersByTime(100)
+    })
+
+    // New call should execute immediately
+    act(() => {
+      result.current.throttledCallback("third")
+    })
+
+    expect(callback).toHaveBeenCalledTimes(3)
+    expect(callback).toHaveBeenLastCalledWith("third")
   })
 })

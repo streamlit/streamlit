@@ -56,7 +56,7 @@ export function useThrottledCallback<A extends unknown[]>(
   const pendingArgsRef = useRef<A | null>(null)
   const isThrottledRef = useRef(false)
   const callbackRef = useRef(callback)
-  const shouldRestartRef = useRef(false)
+  const restartRef = useRef<(() => void) | null>(null)
 
   useEffect(() => {
     callbackRef.current = callback
@@ -65,10 +65,11 @@ export function useThrottledCallback<A extends unknown[]>(
   const onTimeoutComplete = useCallback(() => {
     isThrottledRef.current = false
     if (pendingArgsRef.current !== null) {
-      callbackRef.current(...pendingArgsRef.current)
+      const args = pendingArgsRef.current
       pendingArgsRef.current = null
+      callbackRef.current(...args)
       isThrottledRef.current = true
-      shouldRestartRef.current = true
+      restartRef.current?.()
     }
   }, [])
 
@@ -76,19 +77,15 @@ export function useThrottledCallback<A extends unknown[]>(
     autoStart: false,
   })
 
-  // Handle restart after timeout completes with pending args
+  // Keep restart ref in sync
   useEffect(() => {
-    if (shouldRestartRef.current) {
-      shouldRestartRef.current = false
-      restart()
-    }
-  })
+    restartRef.current = restart
+  }, [restart])
 
   const cancel = useCallback((): void => {
     clear()
     pendingArgsRef.current = null
     isThrottledRef.current = false
-    shouldRestartRef.current = false
   }, [clear])
 
   const throttledCallback = useCallback(
