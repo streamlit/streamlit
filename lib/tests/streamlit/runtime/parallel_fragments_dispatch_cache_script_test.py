@@ -31,7 +31,10 @@ from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.scriptrunner import ScriptRunnerEvent, add_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.script_requests import RerunData
-from streamlit.runtime.scriptrunner_utils.script_run_context import is_parallel_worker
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
+    _thread_state,
+)
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.runtime.scriptrunner.script_runner_test import TestScriptRunner
 
@@ -52,18 +55,73 @@ def patched_runtime() -> Iterator[None]:
         Runtime._instance = previous
 
 
-@pytest.mark.skip(
-    reason="Nested parallel fragments are explicitly not addressed on the prototype branch."
-)
-def test_u23_nested_parallel_fragment_inner_thread() -> None:
-    """Placeholder for scenario U23 (nested parallel fragments)."""
+class NestedParallelFragmentTests(DeltaGeneratorTestCase):
+    """U23/U24 — nested fragment scenarios inside parallel workers."""
 
+    def test_u23_nested_parallel_fragment_inner_thread(self) -> None:
+        """U23: A parallel fragment nested inside another parallel fragment
+        dispatches on the coordinator and runs in a separate thread."""
+        coordinator = ParallelFragmentCoordinator(
+            yield_check=lambda: None, poll_interval=0.01
+        )
+        self.script_run_ctx.parallel_coordinator = coordinator
 
-@pytest.mark.skip(
-    reason="Requires full fragment/stack plumbing; behavior covered by sequential fragment rerun path."
-)
-def test_u24_nested_regular_fragment_shares_outer_worker_thread() -> None:
-    """Placeholder for scenario U24."""
+        outer_ident: list[int] = []
+        inner_ident: list[int] = []
+
+        def inner_wrapped() -> None:
+            inner_ident.append(threading.get_ident())
+
+        def outer_wrapped() -> None:
+            outer_ident.append(threading.get_ident())
+            _dispatch_parallel_fragment(
+                ctx=self.script_run_ctx,
+                fragment_id="u23-inner",
+                wrapped_fragment=inner_wrapped,
+            )
+
+        _dispatch_parallel_fragment(
+            ctx=self.script_run_ctx,
+            fragment_id="u23-outer",
+            wrapped_fragment=outer_wrapped,
+        )
+        coordinator.join()
+
+        assert len(outer_ident) == 1
+        assert len(inner_ident) == 1
+        assert outer_ident[0] != threading.get_ident(), "outer ran on a worker thread"
+        assert inner_ident[0] != threading.get_ident(), "inner ran on a worker thread"
+        assert outer_ident[0] != inner_ident[0], "inner ran on a different thread than outer"
+
+    def test_u24_nested_regular_fragment_shares_outer_worker_thread(self) -> None:
+        """U24: A regular (non-parallel) fragment nested inside a parallel
+        fragment runs on the same thread as the outer parallel worker."""
+        coordinator = ParallelFragmentCoordinator(
+            yield_check=lambda: None, poll_interval=0.01
+        )
+        self.script_run_ctx.parallel_coordinator = coordinator
+
+        outer_ident: list[int] = []
+        inner_ident: list[int] = []
+
+        def inner_wrapped() -> None:
+            inner_ident.append(threading.get_ident())
+
+        def outer_wrapped() -> None:
+            outer_ident.append(threading.get_ident())
+            inner_wrapped()
+
+        _dispatch_parallel_fragment(
+            ctx=self.script_run_ctx,
+            fragment_id="u24-outer",
+            wrapped_fragment=outer_wrapped,
+        )
+        coordinator.join()
+
+        assert len(outer_ident) == 1
+        assert len(inner_ident) == 1
+        assert outer_ident[0] != threading.get_ident(), "outer ran on a worker thread"
+        assert outer_ident[0] == inner_ident[0], "inner ran on same thread as outer"
 
 
 class ParallelFragmentsDispatchAndCacheTests(DeltaGeneratorTestCase):
@@ -133,7 +191,7 @@ class ParallelFragmentsDispatchAndCacheTests(DeltaGeneratorTestCase):
         """U22: cache miss computation must not allocate a spinner on parallel workers."""
         main_dg = get_dg_singleton_instance().main_dg
 
-        outer_token = is_parallel_worker.set(True)
+        outer_token = _thread_state.set(FragmentThreadState(is_parallel_worker=True))
         try:
             with patch.object(main_dg, "spinner") as spinner_patch:
 
@@ -144,7 +202,7 @@ class ParallelFragmentsDispatchAndCacheTests(DeltaGeneratorTestCase):
                 assert heavy() == 123
                 spinner_patch.assert_not_called()
         finally:
-            is_parallel_worker.reset(outer_token)
+            _thread_state.reset(outer_token)
 
 
 @pytest.mark.usefixtures("patched_runtime")
