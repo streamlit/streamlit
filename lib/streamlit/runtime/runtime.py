@@ -20,7 +20,7 @@ import time
 import traceback
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import TYPE_CHECKING, Final, NamedTuple
+from typing import TYPE_CHECKING, Any, Final, NamedTuple
 
 from streamlit.components.lib.local_component_registry import LocalComponentRegistry
 from streamlit.components.v2.component_manager import BidiComponentManager
@@ -63,7 +63,10 @@ if TYPE_CHECKING:
     from streamlit.proto.BackMsg_pb2 import BackMsg
     from streamlit.runtime.caching.storage import CacheStorageManager
     from streamlit.runtime.media_file_storage import MediaFileStorage
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 # Wait for the script run result for 60s and if no result is available give up
@@ -116,6 +119,9 @@ class RuntimeConfig:
 
     # True if the command used to start Streamlit was `streamlit hello`.
     is_hello: bool = False
+
+    # Callback to invoke when an uncaught exception occurs in user script code.
+    on_script_error: OnScriptErrorHandler | None = None
 
     # TODO(vdonato): Eventually add a new fragment_storage_class field enabling the code
     # creating a new Streamlit Runtime to configure the FragmentStorage instances
@@ -217,12 +223,19 @@ class Runtime:
         # Discover and register components for CCv2 from installed packages
         self._bidi_component_registry.discover_and_register_components()
 
-        self._session_mgr = config.session_manager_class(
-            session_storage=config.session_storage,
-            uploaded_file_manager=self._uploaded_file_mgr,
-            script_cache=self._script_cache,
-            message_enqueued_callback=self._enqueued_some_message,
-        )
+        # Build kwargs, only including on_script_error when set to maintain
+        # backwards compatibility with custom SessionManager subclasses that
+        # may not accept this parameter yet.
+        session_mgr_kwargs: dict[str, Any] = {
+            "session_storage": config.session_storage,
+            "uploaded_file_manager": self._uploaded_file_mgr,
+            "script_cache": self._script_cache,
+            "message_enqueued_callback": self._enqueued_some_message,
+        }
+        if config.on_script_error is not None:
+            session_mgr_kwargs["on_script_error"] = config.on_script_error
+
+        self._session_mgr = config.session_manager_class(**session_mgr_kwargs)
 
         self._stats_mgr = StatsManager()
         self._stats_mgr.register_provider(get_data_cache_stats_provider())

@@ -22,7 +22,7 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -243,13 +243,9 @@ def _fragment(
                             # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
-                            # render error here so that the delta path is correct
-                            # for full app runs, the error will be displayed by the
-                            # main code handler
-                            # if not is_full_app_run:
-                            handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
+                            handle_user_script_exception(e, ctx.on_script_error)
+                            # Raise FragmentHandledException to signal that the error
+                            # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
             finally:

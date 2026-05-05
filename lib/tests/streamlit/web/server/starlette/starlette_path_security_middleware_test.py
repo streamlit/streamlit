@@ -65,6 +65,39 @@ def _create_websocket_app() -> Starlette:
     return app
 
 
+async def _call_asgi_with_path(app: Starlette, path: str) -> tuple[int | None, bytes]:
+    """Call an ASGI app with a raw HTTP scope for the given path.
+
+    This bypasses URL parsing that would interpret // as authority, allowing
+    us to test raw path handling.
+    """
+    scope = {
+        "type": "http",
+        "method": "GET",
+        "path": path,
+        "query_string": b"",
+        "headers": [],
+        "server": ("localhost", 8000),
+        "asgi": {"version": "3.0"},
+    }
+
+    response_status: int | None = None
+    response_body = b""
+
+    async def receive():
+        return {"type": "http.request", "body": b""}
+
+    async def send(message):
+        nonlocal response_status, response_body
+        if message["type"] == "http.response.start":
+            response_status = message["status"]
+        elif message["type"] == "http.response.body":
+            response_body += message.get("body", b"")
+
+    await app(scope, receive, send)
+    return response_status, response_body
+
+
 class TestPathSecurityMiddleware:
     """Tests for PathSecurityMiddleware."""
 
@@ -207,34 +240,9 @@ class TestDoubleSlashBypass:
         We use raw ASGI scope to simulate an attacker sending a malicious request
         directly, bypassing URL parsing that would interpret // as authority.
         """
-        # Build the app with middleware
         app = _create_test_app()
 
-        # Construct a raw ASGI scope with the malicious path
-        scope = {
-            "type": "http",
-            "method": "GET",
-            "path": unc_path,
-            "query_string": b"",
-            "headers": [],
-            "server": ("localhost", 8000),
-            "asgi": {"version": "3.0"},
-        }
-
-        response_status: int | None = None
-        response_body = b""
-
-        async def receive():
-            return {"type": "http.request", "body": b""}
-
-        async def send(message):
-            nonlocal response_status, response_body
-            if message["type"] == "http.response.start":
-                response_status = message["status"]
-            elif message["type"] == "http.response.body":
-                response_body += message.get("body", b"")
-
-        await app(scope, receive, send)
+        response_status, response_body = await _call_asgi_with_path(app, unc_path)
 
         # These MUST be blocked - if they return 200, we have a security bypass
         assert response_status == 400, (
@@ -328,3 +336,289 @@ class TestMiddlewarePosition:
         assert response.status_code == 400
         assert response.text == "Bad Request"
         assert handler_called is False  # Key assertion: handler was never called
+
+
+class TestSafePathFastPath:
+    """Tests for the safe path fast-path optimization.
+
+    These tests verify that known-safe routes skip the is_unsafe_path_pattern()
+    check for performance, while still being protected by the double-slash check.
+    """
+
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_prefixes_pass_through(self, safe_path: str) -> None:
+        """Test that known-safe route prefixes pass through without full validation.
+
+        Smoke test: verifies fast-path doesn't accidentally block these routes.
+        """
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(safe_path)
+
+        # These routes should reach the handler (200), not be blocked (400)
+        assert response.status_code == 200
+
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_paths_skip_unsafe_pattern_check(
+        self, safe_path: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that safe paths skip the is_unsafe_path_pattern() check.
+
+        This verifies the fast-path optimization is actually working by
+        monkeypatching is_unsafe_path_pattern to raise if called.
+        """
+        from streamlit.web.server.starlette import starlette_path_security_middleware
+
+        def _raise_if_called(path: str) -> bool:
+            raise AssertionError(
+                f"is_unsafe_path_pattern() was called for {safe_path!r} "
+                "but should have been skipped by the fast-path"
+            )
+
+        monkeypatch.setattr(
+            starlette_path_security_middleware,
+            "is_unsafe_path_pattern",
+            _raise_if_called,
+        )
+
+        app = _create_test_app()
+        client = TestClient(app)
+
+        # Should not raise - fast-path should skip is_unsafe_path_pattern
+        response = client.get(safe_path)
+        assert response.status_code == 200
+
+    @pytest.mark.parametrize(
+        "safe_path",
+        [
+            "//_stcore/health",
+            "//_stcore/script-health-check",
+            "//_stcore/metrics",
+            "//_stcore/host-config",
+            "//_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    @pytest.mark.anyio
+    async def test_safe_paths_still_check_double_slash(self, safe_path: str) -> None:
+        """Test that safe prefixes still get the double-slash UNC check.
+
+        Even though /_stcore/health is a safe prefix, a request to
+        //_stcore/health (note the double slash) should still be blocked.
+        This parametrizes over all safe paths to ensure regression protection.
+        """
+        app = _create_test_app()
+
+        response_status, _ = await _call_asgi_with_path(app, safe_path)
+
+        # Double-slash must still be blocked even with safe prefix
+        assert response_status == 400
+
+    @pytest.mark.parametrize(
+        "traversal_path",
+        [
+            "/_stcore/health/..\\..\\etc\\passwd",
+            "/_stcore/metrics/..\\..\\etc\\passwd",
+            "/_stcore/host-config/..\\..\\etc\\passwd",
+        ],
+        ids=[
+            "health-backslash-traversal",
+            "metrics-backslash-traversal",
+            "host-config-backslash-traversal",
+        ],
+    )
+    def test_exact_paths_dont_match_traversal_suffixes(
+        self, traversal_path: str
+    ) -> None:
+        """Test that exact-match safe paths don't match paths with traversal suffixes.
+
+        This documents the defense-in-depth behavior: paths like
+        /_stcore/health/..\\..\\etc\\passwd should NOT match the safe exact path
+        /_stcore/health and should go through full validation.
+
+        Note: Forward-slash traversal (/../..) is normalized by Starlette before
+        reaching the middleware (see TestPathSecurityMiddleware.test_starlette_normalizes_paths),
+        so we only test backslash traversal here.
+        """
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(traversal_path)
+
+        # These should be blocked - they don't match exact paths and contain
+        # traversal patterns that fail is_unsafe_path_pattern()
+        assert response.status_code == 400
+
+    @pytest.mark.parametrize(
+        "unsafe_route",
+        [
+            "/media/..\\..\\etc\\passwd",
+            "/component/..\\..\\etc\\passwd",
+            "/_stcore/bidi-components/..\\..\\etc\\passwd",
+            "/app/static/..\\..\\etc\\passwd",
+        ],
+        ids=[
+            "media-traversal",
+            "component-traversal",
+            "bidi-component-traversal",
+            "app-static-traversal",
+        ],
+    )
+    def test_non_safe_routes_still_validated(self, unsafe_route: str) -> None:
+        """Test that routes NOT in the safe prefix list are still validated."""
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(unsafe_route)
+
+        # These routes should be blocked by the middleware
+        assert response.status_code == 400
+
+
+class TestBaseUrlPathCompatibility:
+    """Tests for baseUrlPath compatibility with the safe path fast-path.
+
+    When server.baseUrlPath is configured (e.g., "/myapp"), routes are mounted
+    with that prefix, and scope["path"] includes it (e.g., "/myapp/_stcore/health").
+    The fast-path optimization must account for this prefix.
+    """
+
+    @pytest.mark.parametrize(
+        "safe_route",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_paths_with_base_url_prefix(
+        self, safe_route: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that safe paths work correctly when server.baseUrlPath is configured.
+
+        The fast-path should work for paths like /myapp/_stcore/health when
+        baseUrlPath is set to /myapp.
+        """
+        from streamlit import config
+
+        base_url = "/myapp"
+        monkeypatch.setattr(
+            config,
+            "get_option",
+            lambda key: base_url if key == "server.baseUrlPath" else None,
+        )
+
+        # Build the expected full path with base URL
+        full_path = f"{base_url}{safe_route}"
+
+        app = _create_test_app()
+        client = TestClient(app)
+
+        response = client.get(full_path)
+
+        # These routes should reach the handler (200), not be blocked (400)
+        assert response.status_code == 200
+
+    @pytest.mark.parametrize(
+        "safe_route",
+        [
+            "/_stcore/health",
+            "/_stcore/script-health-check",
+            "/_stcore/metrics",
+            "/_stcore/host-config",
+            "/_stcore/upload_file/abc123/file456",
+        ],
+        ids=[
+            "health",
+            "script-health-check",
+            "metrics",
+            "host-config",
+            "upload-file",
+        ],
+    )
+    def test_safe_paths_with_base_url_skip_unsafe_pattern_check(
+        self, safe_route: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that safe paths with baseUrlPath skip the is_unsafe_path_pattern() check.
+
+        This verifies the fast-path optimization works with baseUrlPath by
+        monkeypatching is_unsafe_path_pattern to raise if called.
+        """
+        from streamlit import config
+        from streamlit.web.server.starlette import starlette_path_security_middleware
+
+        base_url = "/myapp"
+        monkeypatch.setattr(
+            config,
+            "get_option",
+            lambda key: base_url if key == "server.baseUrlPath" else None,
+        )
+
+        full_path = f"{base_url}{safe_route}"
+
+        def _raise_if_called(path: str) -> bool:
+            raise AssertionError(
+                f"is_unsafe_path_pattern() was called for {full_path!r} "
+                "but should have been skipped by the fast-path"
+            )
+
+        monkeypatch.setattr(
+            starlette_path_security_middleware,
+            "is_unsafe_path_pattern",
+            _raise_if_called,
+        )
+
+        app = _create_test_app()
+        client = TestClient(app)
+
+        # Should not raise - fast-path should skip is_unsafe_path_pattern
+        response = client.get(full_path)
+        assert response.status_code == 200

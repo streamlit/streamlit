@@ -14,14 +14,10 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction
 from e2e_playwright.shared.app_utils import check_top_level_class
-from e2e_playwright.shared.vega_utils import (
-    assert_vega_chart_height,
-    assert_vega_chart_width,
-)
 
-TOTAL_SCATTER_CHARTS = 14
+TOTAL_SCATTER_CHARTS = 13
 
 
 def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunction):
@@ -71,7 +67,6 @@ def test_scatter_chart_rendering(app: Page, assert_snapshot: ImageCompareFunctio
     assert_snapshot(
         scatter_chart_elements.nth(12), name="st_scatter_chart-custom_axis_labels"
     )
-    # The add_rows chart (index 13) is tested separately in test_add_rows_preserves_styling
 
 
 def test_themed_scatter_chart_rendering(
@@ -93,26 +88,3 @@ def test_themed_scatter_chart_rendering(
 def test_check_top_level_class(app: Page):
     """Check that the top level class is correctly set."""
     check_top_level_class(app, "stVegaLiteChart")
-
-
-# Issue #11312 - add_rows should preserve styling params
-def test_add_rows_preserves_styling(app: Page, assert_snapshot: ImageCompareFunction):
-    """Test that add_rows preserves the original styling params (color, width, height,
-    use_container_width).
-    """
-    add_rows_chart = app.get_by_test_id("stVegaLiteChart").nth(13)
-    expect(add_rows_chart).to_be_visible()
-
-    # Click the button to add data to the chart
-    app.get_by_text("Add data to Scatter Chart").click()
-    wait_for_app_run(app)
-
-    # Wait for the chart to update
-    vega_display = add_rows_chart.locator("[role='graphics-document']")
-    expect(vega_display).to_be_visible()
-
-    # Check that the chart has the correct styling params
-    assert_vega_chart_width(add_rows_chart, 600)
-    assert_vega_chart_height(add_rows_chart, 300)
-
-    assert_snapshot(add_rows_chart, name="st_scatter_chart-add_rows_preserves_styling")

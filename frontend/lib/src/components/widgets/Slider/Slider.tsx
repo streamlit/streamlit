@@ -254,12 +254,14 @@ function Slider({
     []
   )
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- forwardRef passed to useCallback for BaseUI render prop
   const renderThumb = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- forwardRef passed to useCallback for BaseUI render prop
     forwardRef<HTMLDivElement, StyleProps>(
       function renderThumb(props, ref): ReactElement {
         const { $thumbIndex, $value } = props
         const thumbIndex = $thumbIndex || 0
+        // eslint-disable-next-line react-hooks/immutability -- mutable ref array for BaseUI render prop pattern
         thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
         // eslint-disable-next-line @eslint-react/no-create-ref
         thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
@@ -364,8 +366,9 @@ function Slider({
   // Then we can adjust the padding around the thumbs separately
   // from the dimensions of the track.
   //
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- forwardRef passed to useCallback for BaseUI render prop
   const renderInnerTrack = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- forwardRef passed to useCallback for BaseUI render prop
     forwardRef<HTMLDivElement, StylePropsWithChildren>(
       function renderInnerTrack(props, ref): ReactElement {
         const { children: thumbs, ...newProps } = props

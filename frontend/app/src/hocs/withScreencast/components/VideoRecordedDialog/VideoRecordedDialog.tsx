@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FunctionComponent } from "react"
+import { FunctionComponent, useEffect, useState } from "react"
 
 import {
   BaseButton,
@@ -44,7 +44,14 @@ export interface Props {
 const VideoRecordedDialog: FunctionComponent<
   React.PropsWithChildren<Props>
 > = ({ onClose, videoBlob, fileName }) => {
-  const videoSource = URL.createObjectURL(videoBlob)
+  const [videoSource, setVideoSource] = useState("")
+
+  useEffect(() => {
+    const url = URL.createObjectURL(videoBlob)
+    setVideoSource(url)
+    return () => URL.revokeObjectURL(url)
+  }, [videoBlob])
+
   const handleDownloadClick: () => void = () => {
     // Downloads are only done on links, so create a hidden one and click it
     // for the user.
