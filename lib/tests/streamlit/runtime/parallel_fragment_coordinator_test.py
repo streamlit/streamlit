@@ -193,8 +193,8 @@ def test_multiple_workers_all_joined() -> None:
     assert sorted(results) == [0, 1, 2]
 
 
-def test_u17_cooperative_cancellation_blocks_join_until_thread_finishes() -> None:
-    """U17: cancel() does not interrupt a worker sleeping — join waits ~sleep duration."""
+def test_u17_cooperative_cancellation_blocks_join_until_worker_finishes() -> None:
+    """U17: drain() does not interrupt a running worker — it waits for completion."""
     coordinator = ParallelFragmentCoordinator(
         yield_check=_noop_yield_check, poll_interval=0.01
     )
@@ -204,18 +204,15 @@ def test_u17_cooperative_cancellation_blocks_join_until_thread_finishes() -> Non
         started.set()
         time.sleep(0.35)
 
-    thread = threading.Thread(target=slow_worker)
-    coordinator.register(thread)
-    thread.start()
+    coordinator.submit(slow_worker)
     assert started.wait(timeout=5.0)
-    coordinator.cancel()
     t0 = time.monotonic()
-    coordinator.join()
+    coordinator.drain()
     assert time.monotonic() - t0 >= 0.25
 
 
-def test_u18_parallel_worker_stop_cancels_coordinator() -> None:
-    """U18: StopException from a parallel worker triggers coordinator cancellation."""
+def test_u18_parallel_worker_stop_signals_coordinator() -> None:
+    """U18: StopException from a parallel worker signals coordinator to stop."""
 
     def wrapped() -> None:
         raise StopException()
@@ -236,11 +233,12 @@ def test_u18_parallel_worker_stop_cancels_coordinator() -> None:
     )
     runner.start()
     runner.join(timeout=5.0)
-    assert coordinator.is_cancelled()
+    assert coordinator.should_stop()
+    assert isinstance(coordinator.worker_exception, StopException)
 
 
-def test_u19_app_rerun_exception_cancels_coordinator() -> None:
-    """U19: RerunException without fragment queue cancels coordinator (app-scope rerun)."""
+def test_u19_app_rerun_exception_signals_coordinator() -> None:
+    """U19: RerunException from a parallel worker signals coordinator to stop."""
 
     def wrapped() -> None:
         raise RerunException(RerunData())
@@ -261,11 +259,12 @@ def test_u19_app_rerun_exception_cancels_coordinator() -> None:
     )
     runner.start()
     runner.join(timeout=5.0)
-    assert coordinator.is_cancelled()
+    assert coordinator.should_stop()
+    assert isinstance(coordinator.worker_exception, RerunException)
 
 
-def test_u20_fragment_scoped_rerun_reruns_without_cancelling_coordinator() -> None:
-    """U20: Fragment-scoped rerun loops on the same thread until success."""
+def test_u20_worker_exception_is_none_on_clean_exit() -> None:
+    """U20: A worker that completes cleanly does not set worker_exception."""
     coordinator = ParallelFragmentCoordinator(
         yield_check=_noop_yield_check, poll_interval=0.01
     )
@@ -273,8 +272,6 @@ def test_u20_fragment_scoped_rerun_reruns_without_cancelling_coordinator() -> No
 
     def wrapped() -> None:
         calls.append(1)
-        if len(calls) == 1:
-            raise RerunException(RerunData(fragment_id_queue=["nested"]))
 
     parent_context = contextvars.Context()
     runner = threading.Thread(
@@ -289,8 +286,9 @@ def test_u20_fragment_scoped_rerun_reruns_without_cancelling_coordinator() -> No
     runner.start()
     runner.join(timeout=5.0)
 
-    assert len(calls) == 2
-    assert not coordinator.is_cancelled()
+    assert len(calls) == 1
+    assert not coordinator.should_stop()
+    assert coordinator.worker_exception is None
 
 
 def test_drain_stops_workers() -> None:
