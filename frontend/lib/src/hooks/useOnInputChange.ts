@@ -19,7 +19,7 @@ import { Dispatch, SetStateAction, useCallback } from "react"
 import { ValueWithSource } from "~lib/hooks/useBasicWidgetState"
 import { isInForm } from "~lib/util/utils"
 
-type OnInputChangeEventType = {
+export type OnInputChangeEventType = {
   target: {
     value: HTMLInputElement["value"]
   }

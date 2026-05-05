@@ -203,6 +203,269 @@ describe("TextInput widget", () => {
     )
   })
 
+  it.each([
+    { preFill: false, expectedValue: "TEST", label: "without prior typing" },
+    {
+      preFill: true,
+      expectedValue: "autofilled-value",
+      label: "after user typing",
+    },
+  ])(
+    "commits programmatic DOM value changes on blur $label",
+    async ({ preFill, expectedValue }) => {
+      const user = userEvent.setup()
+      const props = getProps()
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+
+      // First call happens on mount.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+      await user.click(textInput)
+
+      if (preFill) {
+        await user.type(textInput, "typed-value")
+      }
+
+      // Simulate password manager autofill by setting the DOM value directly.
+      textInput.value = expectedValue
+      await user.tab()
+
+      await waitFor(() => {
+        expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+      })
+
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        expectedValue,
+        { fromUi: true },
+        undefined
+      )
+    }
+  )
+
+  it("does not commit programmatic blur value changes that exceed maxChars", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ maxChars: 3 })
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    // First call happens on mount.
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+    const textInput = screen.getByRole<HTMLInputElement>("textbox")
+    await user.click(textInput)
+
+    // Simulate password manager autofill with a value that violates maxChars.
+    textInput.value = "TOOLONG"
+    await user.tab()
+
+    await waitFor(() => {
+      // onBlur reconciliation should reject this value and avoid committing.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    })
+    expect(textInput).toHaveValue("")
+  })
+
+  it("detects programmatic value changes via native input events", async () => {
+    const user = userEvent.setup()
+    const props = getProps()
+    const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    // First call happens on mount.
+    expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+    const textInput = screen.getByRole<HTMLInputElement>("textbox")
+    await user.click(textInput)
+
+    // Simulate password manager autofill by setting the DOM value directly,
+    // but dispatch a non-bubbling input event that React's delegated listener
+    // won't see. Our native event listener should still catch this.
+    textInput.value = "TEST"
+    act(() => {
+      textInput.dispatchEvent(new Event("input", { bubbles: false }))
+    })
+
+    // Pressing Enter should commit if the widget was marked dirty.
+    await user.keyboard("{Enter}")
+
+    await waitFor(() => {
+      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+    })
+
+    expect(setStringValueSpy).toHaveBeenLastCalledWith(
+      props.element,
+      "TEST",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("syncs non-bubbling native input changes immediately in forms without waiting for timers", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId" })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+      act(() => {
+        textInput.value = "TEST"
+        textInput.dispatchEvent(new Event("input", { bubbles: false }))
+      })
+
+      // In forms, we should immediately sync to widget state for non-bubbling
+      // native changes without waiting for deferred timeout reconciliation.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        "TEST",
+        { fromUi: true },
+        undefined
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("rejects over-max native programmatic changes and restores the DOM value", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId", maxChars: 3 })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+
+      // First call happens on mount.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+      textInput.value = "TOOLONG"
+      act(() => {
+        textInput.dispatchEvent(new Event("input", { bubbles: false }))
+      })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      // Overflow value should be ignored and immediately reverted.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      expect(textInput).toHaveValue("")
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("ignores non-bubbling native input events when disabled", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId" }, { disabled: true })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+
+      // First call happens on mount.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+
+      // If native listeners were attached while disabled, this event would mark
+      // the input dirty and trigger an immediate form-state update.
+      textInput.value = "TEST"
+      act(() => {
+        textInput.dispatchEvent(new Event("input", { bubbles: false }))
+      })
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not double-process bubbling input events handled by React", () => {
+    vi.useFakeTimers()
+    try {
+      const props = getProps({ formId: "formId" })
+      const setStringValueSpy = vi.spyOn(props.widgetMgr, "setStringValue")
+      render(<TextInput {...props} />)
+
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+
+      // Mount call + one onChange for the bubbling input event.
+      expect(setStringValueSpy).toHaveBeenCalledTimes(1)
+      textInput.value = "A"
+      act(() => {
+        textInput.dispatchEvent(new Event("input", { bubbles: true }))
+      })
+
+      // Flush deferred native reconciliation to verify it does not emit
+      // another synthetic change for standard bubbling input events.
+      act(() => {
+        vi.runAllTimers()
+      })
+
+      expect(setStringValueSpy).toHaveBeenCalledTimes(2)
+      expect(setStringValueSpy).toHaveBeenLastCalledWith(
+        props.element,
+        "A",
+        { fromUi: true },
+        undefined
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("does not re-register native listeners on each keystroke", async () => {
+    const addEventListenerSpy = vi.spyOn(
+      HTMLInputElement.prototype,
+      "addEventListener"
+    )
+    const removeEventListenerSpy = vi.spyOn(
+      HTMLInputElement.prototype,
+      "removeEventListener"
+    )
+    try {
+      const user = userEvent.setup()
+      const props = getProps()
+      const { unmount } = render(<TextInput {...props} />)
+      const textInput = screen.getByRole<HTMLInputElement>("textbox")
+
+      await user.type(textInput, "abc")
+
+      const nativeEventTypes = new Set(["input", "change"])
+      const addCallsForInput = addEventListenerSpy.mock.calls.filter(
+        (call, index) =>
+          addEventListenerSpy.mock.contexts[index] === textInput &&
+          nativeEventTypes.has(String(call[0]))
+      )
+      const removeCallsForInput = removeEventListenerSpy.mock.calls.filter(
+        (call, index) =>
+          removeEventListenerSpy.mock.contexts[index] === textInput &&
+          nativeEventTypes.has(String(call[0]))
+      )
+
+      expect(addCallsForInput).toHaveLength(2)
+      expect(removeCallsForInput).toHaveLength(0)
+
+      unmount()
+
+      const removeCallsAfterUnmount = removeEventListenerSpy.mock.calls.filter(
+        (call, index) =>
+          removeEventListenerSpy.mock.contexts[index] === textInput &&
+          nativeEventTypes.has(String(call[0]))
+      )
+      expect(removeCallsAfterUnmount).toHaveLength(2)
+    } finally {
+      addEventListenerSpy.mockRestore()
+      removeEventListenerSpy.mockRestore()
+    }
+  })
+
   it("sets widget value when enter is pressed", async () => {
     const user = userEvent.setup()
     const props = getProps()
@@ -331,6 +594,7 @@ describe("TextInput widget", () => {
       },
       undefined
     )
+    expect(setStringValueSpy).toHaveBeenCalledTimes(5)
   })
 
   it("does not update widget value on text changes when outside of a form", async () => {

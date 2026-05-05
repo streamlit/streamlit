@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useId, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useId,
+  useRef,
+  useState,
+} from "react"
 
 import { Input as UIInput } from "baseui/input"
 
@@ -34,7 +41,7 @@ import {
 } from "~lib/hooks/useBasicWidgetState"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import useOnInputChange from "~lib/hooks/useOnInputChange"
+import useStringInputHandlers from "~lib/hooks/useStringInputHandlers"
 import useSubmitFormViaEnterKey from "~lib/hooks/useSubmitFormViaEnterKey"
 import useUpdateUiValue from "~lib/hooks/useUpdateUiValue"
 import { convertRemToPx } from "~lib/theme/utils"
@@ -111,11 +118,21 @@ function TextInput({
   const theme = useEmotionTheme()
   const id = useId()
   const { placeholder, formId, icon, maxChars } = element
+  const inputRef = useRef<HTMLInputElement>(null)
 
-  const commitWidgetValue = useCallback((): void => {
-    setDirty(false)
-    setValueWithSource({ value: uiValue, fromUi: true })
-  }, [uiValue, setValueWithSource])
+  const { onChange, onBlur, onFocus, commitWidgetValue } =
+    useStringInputHandlers({
+      inputRef,
+      disabled,
+      formId,
+      maxChars,
+      uiValue,
+      dirty,
+      setDirty,
+      setUiValue,
+      setValueWithSource,
+      setFocused,
+    })
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
   const allowEnterToSubmit = isInForm({ formId })
@@ -125,25 +142,6 @@ function TextInput({
   // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
-
-  const onBlur = useCallback((): void => {
-    if (dirty) {
-      commitWidgetValue()
-    }
-    setFocused(false)
-  }, [dirty, commitWidgetValue])
-
-  const onFocus = useCallback((): void => {
-    setFocused(true)
-  }, [])
-
-  const onChange = useOnInputChange({
-    formId,
-    maxChars,
-    setDirty,
-    setUiValue,
-    setValueWithSource,
-  })
 
   const onKeyPress = useSubmitFormViaEnterKey(
     formId,
@@ -172,6 +170,7 @@ function TextInput({
         )}
       </WidgetLabel>
       <UIInput
+        inputRef={inputRef}
         value={uiValue ?? ""}
         placeholder={placeholder}
         onBlur={onBlur}

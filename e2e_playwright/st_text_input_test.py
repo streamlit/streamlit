@@ -444,3 +444,82 @@ def test_text_input_query_param_max_chars_truncation(page: Page, app_port: int):
 
     # Should be truncated to 5 characters
     expect_prefixed_markdown(page, "bound text max value:", "veryl")
+
+
+def test_text_input_programmatic_value_change_commits_without_blur(app: Page):
+    """Test that programmatic value changes (e.g. password manager autofill)
+    commit the value without requiring manual blur or Enter.
+
+    Password managers like 1Password set the input value programmatically and
+    dispatch native input + change events (both bubbling, isTrusted: false).
+    The widget must detect this and commit the value immediately.
+    """
+    password_input = get_text_input(app, "text input 11 (type=password)")
+    password_input_field = password_input.locator("input").first
+
+    # Verify initial value
+    expect_markdown(app, "value 11: my password")
+
+    # Focus the input first (password managers typically fill focused fields)
+    password_input_field.focus()
+
+    # Simulate 1Password autofill: programmatically set value and dispatch
+    # native input + change events (both bubbling), just like the extension does.
+    password_input_field.evaluate(
+        """el => {
+            // Programmatically set the value (bypasses React's synthetic events)
+            const nativeInputValueSetter =
+                Object.getOwnPropertyDescriptor(
+                    HTMLInputElement.prototype, 'value'
+                ).set;
+            nativeInputValueSetter.call(el, 'autofilled-password-123');
+
+            // Dispatch events matching 1Password's behavior:
+            // input event (bubbling) followed by change event (bubbling)
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }"""
+    )
+
+    # The value should be committed without needing blur or Enter
+    expect_prefixed_markdown(app, "value 11:", "autofilled-password-123")
+
+    # Verify the input field shows the new value
+    expect(password_input_field).to_have_value("autofilled-password-123")
+
+    # Verify that the rerun counter incremented (indicating a script rerun)
+    expect_markdown(app, "Rerun counter: 2")
+
+
+def test_text_input_programmatic_value_change_on_regular_input(app: Page):
+    """Test that programmatic value changes also work on regular (non-password)
+    text inputs. This covers the same password-manager-like autofill scenario
+    on a standard text input.
+    """
+    text_input = get_text_input(app, "text input 1 (default)")
+    text_input_field = text_input.locator("input").first
+
+    # Verify initial value is empty
+    expect_markdown(app, "value 1: ")
+
+    text_input_field.focus()
+
+    # Simulate programmatic autofill with native input + change events
+    text_input_field.evaluate(
+        """el => {
+            const nativeInputValueSetter =
+                Object.getOwnPropertyDescriptor(
+                    HTMLInputElement.prototype, 'value'
+                ).set;
+            nativeInputValueSetter.call(el, 'programmatic-fill');
+
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        }"""
+    )
+
+    # Value should be committed without blur
+    expect_prefixed_markdown(app, "value 1:", "programmatic-fill")
+
+    # The input field should also show the value
+    expect(text_input_field).to_have_value("programmatic-fill")
