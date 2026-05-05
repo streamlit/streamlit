@@ -211,7 +211,6 @@ const SidebarNav = ({
       window.localStorage.getItem("sidebarNavState") === "expanded"
 
     if (!expanded && (expandSidebarNav || cachedSidebarNavExpanded)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
       setExpanded(true)
     }
   }, [expanded, expandSidebarNav])
@@ -237,7 +236,7 @@ const SidebarNav = ({
       acc[sectionName] = storedState[sectionName] ?? true
       return acc
     }, {})
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
+
     setExpandedSections(allSections)
   }, [navigationStructure.sections, localStorageKey])
 

@@ -321,7 +321,7 @@ const Multiselect: FC<Props> = props => {
   // Memoized to prevent BaseWeb from remounting on every render
   const ValueContainer = useMemo(
     () =>
-      // eslint-disable-next-line @eslint-react/no-nested-component-definitions -- Required for baseweb component override with refs
+      // eslint-disable-next-line @eslint-react/no-nested-component-definitions, @eslint-react/component-hook-factories -- Required for baseweb component override with refs
       function ValueContainer(
         props: SharedStylePropsArg & { children: React.ReactNode }
       ): React.ReactElement {

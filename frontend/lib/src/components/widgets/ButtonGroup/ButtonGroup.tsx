@@ -284,8 +284,9 @@ function createOptionChild(
 ): React.FunctionComponent {
   const isSelected = selected.includes(index)
 
-  // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
-  // and we see a console.error otherwise
+  // We have to use forwardRef here because BasewebButtonGroup passes the ref down to
+  // its children and we see a console.error otherwise.
+  // eslint-disable-next-line @eslint-react/component-hook-factories -- Intentional: per-option forwardRef factory required by BasewebButtonGroup
   return forwardRef(function BaseButtonGroup(
     // Accept only the props compatible with BaseButton to improve type safety
     props: Partial<BaseButtonProps>,

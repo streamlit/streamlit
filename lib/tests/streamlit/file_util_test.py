@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import errno
+import io
 import os
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
@@ -260,6 +261,35 @@ class FileInPythonPathTest(unittest.TestCase):
                 file_util.get_main_script_directory("/path/to/my/app.py")
                 == "/path/to/my"
             )
+
+    def test_get_encoded_file_data_auto_text(self):
+        """Test get_encoded_file_data auto-detects text data and returns StringIO."""
+        text_data = b"Hello, this is plain text."
+        result = file_util.get_encoded_file_data(text_data, encoding="auto")
+        assert isinstance(result, io.StringIO)
+        assert result.read() == "Hello, this is plain text."
+
+    def test_get_encoded_file_data_auto_binary(self):
+        """Test get_encoded_file_data auto-detects binary data and returns BytesIO."""
+        binary_data = bytes(range(256))
+        result = file_util.get_encoded_file_data(binary_data, encoding="auto")
+        assert isinstance(result, io.BytesIO)
+        assert result.read() == binary_data
+
+    def test_get_encoded_file_data_explicit_encoding(self):
+        """Test get_encoded_file_data with explicit encoding returns StringIO."""
+        data = "Héllo wörld".encode()
+        result = file_util.get_encoded_file_data(data, encoding="utf-8")
+        assert isinstance(result, io.StringIO)
+        assert result.read() == "Héllo wörld"
+
+    def test_get_main_script_streamlit_file_path(self):
+        """Test get_main_script_streamlit_file_path returns correct path."""
+        result = file_util.get_main_script_streamlit_file_path(
+            "/home/user/app.py", "config.toml"
+        )
+        assert result.endswith(".streamlit/config.toml")
+        assert "/home/user/" in result
 
     def test_normalize_path_join(self):
         """Test file_util.normalize_path_join."""

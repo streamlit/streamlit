@@ -25,6 +25,7 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+    from hashlib import _Hash
 
     from streamlit.delta_generator import DeltaGenerator
 
@@ -65,16 +66,22 @@ def repr_(self: Any) -> str:
     return f"{classname}({field_reprs})"
 
 
-def calc_md5(s: bytes | str) -> str:
-    """Return the md5 hash of the given string.
+def create_fast_hasher() -> _Hash:
+    """Create a fast hasher for incremental hashing.
 
+    Uses BLAKE2b which produces 32-character hex digests (16 bytes).
+    """
+    return hashlib.blake2b(digest_size=16)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
+
+
+def calc_hash(s: bytes | str) -> str:
+    """Return a fast hash of the given string.
+
+    Uses BLAKE2b (~2.4x faster than MD5) and produces 32-character hex digests.
     This should not be used for security-related purposes.
     """
-    # Due to security issue in md5 and sha1, usedforsecurity
-    h = hashlib.new("md5", usedforsecurity=False)
-
     b = s.encode("utf-8") if isinstance(s, str) else s
-
+    h = create_fast_hasher()
     h.update(b)
     return h.hexdigest()
 

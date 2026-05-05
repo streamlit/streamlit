@@ -401,7 +401,7 @@ def marshall_images(
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
     if isinstance(image, (list, set, tuple)):
-        images = list(image)
+        images = list(image)  # ty: ignore[invalid-assignment]
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
         images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type, unused-ignore-comment]
     else:

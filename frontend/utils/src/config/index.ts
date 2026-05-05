@@ -212,7 +212,7 @@ function deepFreeze<T extends object>(obj: T): Readonly<T> {
     })
   }
 
-  return obj as Readonly<T>
+  return obj
 }
 
 /**

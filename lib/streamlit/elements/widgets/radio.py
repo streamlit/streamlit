@@ -549,7 +549,7 @@ class RadioMixin:
         # Cast to T | None since radio doesn't support accept_new_options,
         # so string values that aren't in options will be reset to default.
         current_value, value_needs_reset = validate_and_sync_value_with_options(
-            cast("T | None", widget_state.value), opt, index, key
+            cast("T | None", widget_state.value), opt, index, key, format_func
         )
 
         if value_needs_reset or widget_state.value_changed:

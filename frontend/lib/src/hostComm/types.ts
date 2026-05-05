@@ -176,6 +176,9 @@ export type IHostToGuestMessage = {
       prefix: string
       headers: Record<string, string>
     }
+  | {
+      type: "PRINT_APP"
+    }
 )
 
 export type IGuestToHostMessage =

@@ -121,7 +121,7 @@ export function useBasicWidgetClientState<
   // widget manager to update its state too.
   useEffect(() => {
     if (isNullOrUndefined(nextValueWithSource)) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- TODO: Do not set state in effect
+
     setNextValueWithSource(null) // Clear "event".
 
     setCurrentValue(nextValueWithSource.value)
@@ -348,6 +348,7 @@ export function useBasicWidgetState<
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
+    // eslint-disable-next-line react-hooks/immutability -- consuming setValue event from proto
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

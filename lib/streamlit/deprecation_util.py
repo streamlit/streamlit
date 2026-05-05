@@ -21,7 +21,7 @@ from typing import Any, Final, TypeVar, cast
 import streamlit
 from streamlit import config
 from streamlit.logger import get_logger
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -69,7 +69,7 @@ def show_deprecation_warning(
         script run.
     """
     if show_once:
-        message_hash = calc_md5(message)
+        message_hash = calc_hash(message)
         if message_hash in _shown_warnings:
             return
         _shown_warnings.add(message_hash)

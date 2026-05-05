@@ -27,7 +27,7 @@ from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.GraphVizChart_pb2 import GraphVizChart as GraphVizChartProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     import graphviz
@@ -171,7 +171,7 @@ class GraphvizMixin:
 
         # Generate element ID from delta path
         delta_path = self.dg._get_delta_path_str()
-        element_id = calc_md5(delta_path.encode())
+        element_id = calc_hash(delta_path.encode())
 
         graphviz_chart_proto = GraphVizChartProto()
 

@@ -212,10 +212,7 @@ const SelectableMultiValueLabel: FC<
   }
 
   return (
-    <components.MultiValueLabel
-      {...props}
-      innerProps={enhancedInnerProps as typeof props.innerProps}
-    />
+    <components.MultiValueLabel {...props} innerProps={enhancedInnerProps} />
   )
 }
 

@@ -160,7 +160,7 @@ def _coerce_enum(from_enum_value: E1, to_enum_class: type[E2]) -> E1 | E2:
             f"Expected an EnumMeta/Type in the second argument. Got {type(to_enum_class)}"
         )
     if isinstance(from_enum_value, to_enum_class):
-        return from_enum_value  # Enum is already a member, no coersion necessary
+        return from_enum_value  # Enum is already a member, no coercion necessary
 
     coercion_type = config.get_option("runner.enumCoercion")
     if coercion_type not in _ALLOWED_ENUM_COERCION_CONFIG_SETTINGS:

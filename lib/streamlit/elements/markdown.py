@@ -143,6 +143,10 @@ class MarkdownMixin:
               For example, you can use ``:orange-badge[your text here]`` or
               ``:blue-badge[your text here]``.
 
+            - Shimmer effect for loading or in-progress text, using the syntax
+              ``:shimmer[text to shimmer]``. The text fades in and out to indicate
+              ongoing activity. This respects the user's reduced motion preferences.
+
             - Small text, using the syntax ``:small[text to show small]``.
 
 
