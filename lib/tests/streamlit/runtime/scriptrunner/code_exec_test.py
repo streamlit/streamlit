@@ -141,9 +141,9 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         return super().setUp()
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_called_with_exception(
-        self, mock_handle: MagicMock, mock_show: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock
     ):
         """Test that the on_script_error handler is called with the exception."""
         handler = MagicMock(return_value=None)
@@ -156,13 +156,13 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         exec_func_with_error_handling(test_func, self.ctx)
 
         handler.assert_called_once_with(test_exception)
-        mock_handle.assert_called_once_with(test_exception, show_in_ui=False)
+        mock_log.assert_called_once_with(test_exception)
         mock_show.assert_called_once_with(test_exception)
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_returns_true_suppresses_ui_display(
-        self, mock_handle: MagicMock, mock_show: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock
     ):
         """Test that returning True from handler suppresses the default UI display."""
         handler = MagicMock(return_value=True)
@@ -174,16 +174,16 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         exec_func_with_error_handling(test_func, self.ctx)
 
         handler.assert_called_once()
-        mock_handle.assert_called_once()
+        mock_log.assert_called_once()
         mock_show.assert_not_called()
 
     @parameterized.expand(
         [(False,), (None,)], name_func=lambda f, n, p: f"{f.__name__}_{p.args[0]}"
     )
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_returns_non_true_shows_ui_display(
-        self, return_value: bool | None, mock_handle: MagicMock, mock_show: MagicMock
+        self, return_value: bool | None, mock_log: MagicMock, mock_show: MagicMock
     ):
         """Test that returning False or None from handler shows the default UI display."""
         handler = MagicMock(return_value=return_value)
@@ -200,9 +200,9 @@ class TestOnScriptErrorHandler(unittest.TestCase):
 
     @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_exception_logged_and_ui_shown(
-        self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
     ):
         """Test that handler exceptions are logged and default UI is shown."""
 
@@ -223,9 +223,9 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         mock_show.assert_called_once_with(test_exception)
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_no_handler_shows_ui_display(
-        self, mock_handle: MagicMock, mock_show: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock
     ):
         """Test that with no handler, the default UI display is shown."""
         self.ctx.on_script_error = None
@@ -236,13 +236,13 @@ class TestOnScriptErrorHandler(unittest.TestCase):
 
         exec_func_with_error_handling(test_func, self.ctx)
 
-        mock_handle.assert_called_once_with(test_exception, show_in_ui=False)
+        mock_log.assert_called_once_with(test_exception)
         mock_show.assert_called_once_with(test_exception)
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_not_called_for_stop_exception(
-        self, mock_handle: MagicMock, mock_show: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock
     ):
         """Test that the handler is NOT called for StopException (control flow)."""
         handler = MagicMock()
@@ -254,13 +254,13 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         exec_func_with_error_handling(test_func, self.ctx)
 
         handler.assert_not_called()
-        mock_handle.assert_not_called()
+        mock_log.assert_not_called()
         mock_show.assert_not_called()
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_not_called_for_rerun_exception(
-        self, mock_handle: MagicMock, mock_show: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock
     ):
         """Test that the handler is NOT called for RerunException (control flow)."""
         handler = MagicMock()
@@ -272,14 +272,14 @@ class TestOnScriptErrorHandler(unittest.TestCase):
         exec_func_with_error_handling(test_func, self.ctx)
 
         handler.assert_not_called()
-        mock_handle.assert_not_called()
+        mock_log.assert_not_called()
         mock_show.assert_not_called()
 
     @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_raising_stop_exception_is_logged(
-        self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
     ):
         """Test that StopException from handler is logged and default UI is shown."""
 
@@ -305,9 +305,9 @@ class TestOnScriptErrorHandler(unittest.TestCase):
 
     @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     def test_handler_raising_rerun_exception_is_logged(
-        self, mock_handle: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
+        self, mock_log: MagicMock, mock_show: MagicMock, mock_logger: MagicMock
     ):
         """Test that RerunException from handler is logged and default UI is shown."""
 

@@ -85,45 +85,35 @@ def show_uncaught_app_exception(ex: BaseException) -> None:
     exception._exception(main_delta_generator, ex, is_uncaught_app_exception=True)
 
 
-def handle_uncaught_app_exception(
-    ex: BaseException, *, show_in_ui: bool = True
-) -> None:
+def _log_uncaught_app_exception(ex: BaseException) -> None:
+    """Log an uncaught app exception to the console.
+
+    Uses rich traceback formatting if available and enabled, otherwise falls
+    back to standard Python logging.
+    """
+    error_logged = False
+
+    if config.get_option("logger.enableRich"):
+        try:
+            _print_rich_exception(ex)
+            error_logged = True
+        except Exception:
+            # Rich is not installed or not compatible to our config
+            error_logged = False
+
+    if not error_logged:
+        _LOGGER.error("Uncaught app execution", exc_info=ex)
+
+
+def handle_uncaught_app_exception(ex: BaseException) -> None:
     """Handle an exception that originated from a user app.
 
     By default, we show exceptions directly in the browser. However,
     if the user has disabled client error details, we display a generic
     warning in the frontend instead.
-
-    Parameters
-    ----------
-    ex : BaseException
-        The exception to handle.
-    show_in_ui : bool
-        If True (default), display the exception in the Streamlit UI after logging.
-        If False, only log the exception to the console.
     """
-
-    error_logged = False
-
-    if config.get_option("logger.enableRich"):
-        try:
-            # Print exception via rich
-            # Rich is only a soft dependency
-            # -> if not installed, we will use the default traceback formatting
-            _print_rich_exception(ex)
-            error_logged = True
-        except Exception:
-            # Rich is not installed or not compatible to our config
-            # -> Use normal traceback formatting as fallback
-            # Catching all exceptions because we don't want to leave any possibility of breaking here.
-            error_logged = False
-
-    if not error_logged:
-        # Only log error to console if not already logged by rich
-        _LOGGER.error("Uncaught app execution", exc_info=ex)
-
-    if show_in_ui:
-        show_uncaught_app_exception(ex)
+    _log_uncaught_app_exception(ex)
+    show_uncaught_app_exception(ex)
 
 
 def invoke_script_error_handler(
@@ -198,7 +188,7 @@ def handle_user_script_exception(
     on_script_error : Callable[[Exception], bool | None] | None
         The custom error handler callback, if any.
     """
-    handle_uncaught_app_exception(ex, show_in_ui=False)
+    _log_uncaught_app_exception(ex)
     suppress_ui_display = invoke_script_error_handler(ex, on_script_error)
     if not suppress_ui_display:
         show_uncaught_app_exception(ex)

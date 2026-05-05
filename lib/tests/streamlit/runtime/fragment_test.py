@@ -419,12 +419,12 @@ class FragmentTest(unittest.TestCase):
         assert fragment_id1 == fragment_id2
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_on_script_error_handler_called_with_exception(
         self,
         patched_get_script_run_ctx,
-        mock_handle: MagicMock,
+        mock_log: MagicMock,
         mock_show: MagicMock,
     ):
         """Test that the on_script_error handler is called with the exception in fragment."""
@@ -444,16 +444,16 @@ class FragmentTest(unittest.TestCase):
             my_fragment()
 
         handler.assert_called_once_with(test_exception)
-        mock_handle.assert_called_once_with(test_exception, show_in_ui=False)
+        mock_log.assert_called_once_with(test_exception)
         mock_show.assert_called_once_with(test_exception)
 
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_on_script_error_handler_returns_true_suppresses_ui(
         self,
         patched_get_script_run_ctx,
-        mock_handle: MagicMock,
+        mock_log: MagicMock,
         mock_show: MagicMock,
     ):
         """Test that returning True from handler suppresses UI display in fragment."""
@@ -471,17 +471,17 @@ class FragmentTest(unittest.TestCase):
             my_fragment()
 
         handler.assert_called_once()
-        mock_handle.assert_called_once()
+        mock_log.assert_called_once()
         mock_show.assert_not_called()
 
     @patch("streamlit.error_util._LOGGER")
     @patch("streamlit.error_util.show_uncaught_app_exception")
-    @patch("streamlit.error_util.handle_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_on_script_error_handler_exception_logged_and_ui_shown(
         self,
         patched_get_script_run_ctx,
-        mock_handle: MagicMock,
+        mock_log: MagicMock,
         mock_show: MagicMock,
         mock_logger: MagicMock,
     ):
