@@ -339,8 +339,8 @@ def _run_parallel_fragment(
             coordinator.request_stop()
         except FragmentHandledException:
             pass  # Already rendered as an error in the fragment container.
-        except Exception:
-            _LOGGER.exception("Parallel fragment %s failed", fragment_id[:8])
+        except Exception as e:
+            handle_uncaught_app_exception(e)
 
     parent_context.run(run_fragment)
 
