@@ -270,6 +270,7 @@ CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("popover", lambda: st.popover("Popover")),
     ("columns", lambda: st.columns(2)),
     ("status", lambda: st.status("Status")),
+    ("steps", lambda: st.steps()),
     ("form", lambda: st.form("Form")),
     ("empty", lambda: st.empty()),
     ("dialog", lambda: st.dialog("Dialog")),

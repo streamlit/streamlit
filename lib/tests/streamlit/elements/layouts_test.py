@@ -1963,3 +1963,138 @@ class DialogTest(DeltaGeneratorTestCase):
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.id
+
+
+class StepsContainerTest(DeltaGeneratorTestCase):
+    """Test st.steps() functionality."""
+
+    def test_basic_steps_container(self):
+        """Test that basic st.steps() works."""
+        st.steps()
+        steps_block = self.get_delta_from_queue()
+        assert steps_block.add_block.HasField("steps_container")
+
+    def test_steps_with_height(self):
+        """Test that height param is correctly applied."""
+        st.steps(height=300)
+        steps_block = self.get_delta_from_queue()
+        assert steps_block.add_block.height_config.pixel_height == 300
+
+    def test_steps_invalid_height(self):
+        """Test that invalid height raises error."""
+        with pytest.raises(StreamlitAPIException):
+            st.steps(height=0)
+
+        with pytest.raises(StreamlitAPIException):
+            st.steps(height=-100)
+
+    def test_step_basic(self):
+        """Test that step() method creates a step."""
+        steps = st.steps()
+        steps.step("First Step")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        # First delta is the steps container, second is the step
+        assert len(all_deltas) == 2
+        step_block = all_deltas[1]
+        assert step_block.add_block.HasField("step")
+        assert step_block.add_block.step.label == "First Step"
+
+    def test_step_with_description(self):
+        """Test that step description is correctly applied."""
+        steps = st.steps()
+        steps.step("Step", description="Step description")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.description == "Step description"
+
+    @parameterized.expand(
+        [
+            ("running", BlockProto.Step.State.RUNNING, "spinner"),
+            ("complete", BlockProto.Step.State.COMPLETE, ":material/check_circle:"),
+            ("error", BlockProto.Step.State.ERROR, ":material/error:"),
+        ]
+    )
+    def test_step_state(self, state, expected_proto_state, expected_icon):
+        """Test that step states set the correct proto state and icon."""
+        steps = st.steps()
+        steps.step("Step", state=state)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.state == expected_proto_state
+        assert step_block.add_block.step.icon == expected_icon
+
+    def test_step_custom_icon(self):
+        """Test that custom icon overrides state-derived icon."""
+        steps = st.steps()
+        steps.step("Step", state="running", icon=":material/star:")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.icon == ":material/star:"
+
+    def test_step_context_manager(self):
+        """Test step as context manager with content."""
+        steps = st.steps()
+        with steps.step("Step"):
+            st.write("Content")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        # steps container, step, markdown
+        assert len(all_deltas) == 3
+
+    def test_step_update(self):
+        """Test step.update() method."""
+        steps = st.steps()
+        step = steps.step("Step", state="running")
+        step.update(state="complete", label="Updated Step")
+
+        # Get the update message (last delta)
+        update_delta = self.get_delta_from_queue()
+        assert update_delta.add_block.step.label == "Updated Step"
+        assert update_delta.add_block.step.state == BlockProto.Step.State.COMPLETE
+
+    def test_step_update_invalid_state(self):
+        """Test that step.update() with invalid state raises error."""
+        steps = st.steps()
+        step = steps.step("Step")
+
+        with pytest.raises(StreamlitAPIException):
+            step.update(state="invalid")
+
+    def test_step_context_manager_auto_complete(self):
+        """Test that running step auto-transitions to complete on normal exit."""
+        steps = st.steps()
+        with steps.step("Step", state="running"):
+            pass
+
+        # Get the update message (last delta is the auto-transition update)
+        update_delta = self.get_delta_from_queue()
+        assert update_delta.add_block.step.state == BlockProto.Step.State.COMPLETE
+
+    def test_step_context_manager_auto_error(self):
+        """Test that running step auto-transitions to error on exception."""
+        steps = st.steps()
+        with pytest.raises(ValueError, match="test error"):
+            with steps.step("Step", state="running"):
+                raise ValueError("test error")
+
+        # Get the update message (last delta is the auto-transition update)
+        update_delta = self.get_delta_from_queue()
+        assert update_delta.add_block.step.state == BlockProto.Step.State.ERROR
+
+    def test_step_context_manager_no_auto_transition_non_running(self):
+        """Test that non-running state steps do not auto-transition on exit."""
+        steps = st.steps()
+        with steps.step("Step", state="complete"):
+            pass
+
+        # Should have exactly 2 deltas: steps container and step
+        # No auto-transition update should occur
+        all_deltas = self.get_all_deltas_from_queue()
+        assert len(all_deltas) == 2
+        # The step should remain in COMPLETE state
+        step_block = all_deltas[1]
+        assert step_block.add_block.step.state == BlockProto.Step.State.COMPLETE

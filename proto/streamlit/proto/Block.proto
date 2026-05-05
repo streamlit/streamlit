@@ -33,6 +33,8 @@ message Block {
     Popover popover = 10;
     Dialog dialog = 11;
     FlexContainer flex_container = 13;
+    StepsContainer steps_container = 18;
+    Step step = 19;
   }
 
   bool allow_empty = 8;
@@ -176,5 +178,31 @@ message Block {
     AvatarType avatar_type = 3;
   }
 
-  // Next ID: 17
+  message StepsContainer {
+    // Reserved for removed fields.
+    reserved 1; // label - removed, use st.expander for title/border
+    reserved 2; // expanded - removed
+  }
+
+  message Step {
+    enum State {
+      STATE_UNSPECIFIED = 0;
+      RUNNING = 1;
+      COMPLETE = 2;
+      ERROR = 3;
+    }
+
+    // Step label (required).
+    string label = 1;
+    // Optional subtitle shown below the label.
+    string description = 2;
+    // Icon to display. Can be emoji, Material icon, or "spinner".
+    string icon = 3;
+    // Step state. Affects default icon and visual styling.
+    State state = 4;
+    // Whether the step content is expanded (default true).
+    optional bool expanded = 5;
+  }
+
+  // Next ID: 20
 }
