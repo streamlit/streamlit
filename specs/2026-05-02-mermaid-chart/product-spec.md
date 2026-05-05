@@ -54,9 +54,11 @@ making it a natural fit for Streamlit's user base.
 
 #### Markdown Code Blocks (Primary Interface)
 
-Users can embed Mermaid diagrams directly in `st.markdown` using fenced code blocks. This
-support is limited to `st.markdown` calls only and does not extend to other markdown-bearing
-surfaces (tooltips, help text, table cells, chat messages, widget labels, etc.).
+Users can embed Mermaid diagrams directly in markdown using fenced code blocks. This works
+in all markdown surfaces that support code blocks, including `st.markdown`, tooltips (via
+`help` parameter), alerts (`st.success`, etc.), and chat message content. The only exceptions
+are widget labels and other constrained label contexts where complex elements are already
+restricted.
 
 ````python
 import streamlit as st
@@ -80,7 +82,9 @@ For discoverability and explicit usage, provide `st.mermaid_chart`:
 
 ```python
 st.mermaid_chart(
-    body: str,    # Mermaid diagram definition
+    body: str,                               # Mermaid diagram definition
+    *,
+    width: "auto" | "stretch" | "content" | int = "auto",  # Layout width
 ) -> DeltaGenerator
 ```
 
@@ -89,16 +93,12 @@ st.mermaid_chart(
 | Parameter | Type | Description |
 |-----------|------|-------------|
 | `body` | `str` | The Mermaid diagram definition using Mermaid syntax |
+| `width` | `"auto"`, `"stretch"`, `"content"`, or `int` | The width of the element (default: `"auto"`). See `st.markdown` for details. |
 
 **Implementation Note:** `st.mermaid_chart` internally calls `st.markdown` with the diagram
 wrapped in a code fence. The fence uses four backticks (````) to safely handle diagrams that
 may contain triple backticks in node labels or comments. This ensures consistent behavior
 between both approaches while avoiding parsing issues.
-
-**Intentional Simplicity:** `st.mermaid_chart` accepts only `body` and does not expose
-`st.markdown`'s additional parameters (like `width`). This is intentional — the command is
-designed as a simple, focused API for diagrams. Users who need layout control can use
-`st.markdown` directly with appropriate parameters.
 
 `````python
 # These are functionally equivalent for basic usage:
@@ -313,7 +313,7 @@ straightforward and well-documented.
 The following are explicitly not included in this initial release:
 
 - **`key` parameter** — Not needed for display-only elements without state
-- **`width`/`height` parameters** — Diagrams auto-size; users can wrap in `st.container`
+- **`height` parameter** — Diagrams auto-size vertically; users can wrap in `st.container`
 - **Click interactions** — Mermaid supports click callbacks, but this requires additional
   API design for callback handling
 - **Custom themes** — Users cannot override the automatic Streamlit theming
