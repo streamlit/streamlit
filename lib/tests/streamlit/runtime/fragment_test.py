@@ -37,6 +37,7 @@ from streamlit.runtime.fragment import (
 )
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import _thread_state
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -135,19 +136,27 @@ class FragmentTest(unittest.TestCase):
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_resets_current_fragment_id_on_success(self, patched_get_script_run_ctx):
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            FragmentThreadState,
+        )
+
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
         def my_fragment():
-            assert ctx.current_fragment_id != "my_fragment_id"
+            assert _thread_state.get().fragment_id != "my_fragment_id"
 
-        ctx.current_fragment_id = "my_fragment_id"
+        _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
         my_fragment()
-        assert ctx.current_fragment_id == "my_fragment_id"
+        assert _thread_state.get().fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            FragmentThreadState,
+        )
+
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -155,14 +164,14 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_exploding_fragment():
-            assert ctx.current_fragment_id != "my_fragment_id"
+            assert _thread_state.get().fragment_id != "my_fragment_id"
             raise Exception(exception_message)
 
-        ctx.current_fragment_id = "my_fragment_id"
+        _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
         with pytest.raises(Exception, match=exception_message):
             my_exploding_fragment()
 
-        assert ctx.current_fragment_id == "my_fragment_id"
+        assert _thread_state.get().fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_wrapped_fragment_not_saved_in_FragmentStorage(
@@ -205,7 +214,7 @@ class FragmentTest(unittest.TestCase):
         def my_fragment():
             nonlocal call_count
 
-            assert ctx.current_fragment_id is not None
+            assert _thread_state.get().fragment_id is not None
 
             curr_dg_stack = context_dg_stack.get()
             # Verify that mutations made in previous runs of my_fragment aren't
@@ -239,12 +248,17 @@ class FragmentTest(unittest.TestCase):
     def test_sets_current_fragment_id_in_full_script_runs(
         self, patched_get_script_run_ctx
     ):
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            FragmentThreadState,
+        )
+
         ctx = MagicMock()
         ctx.fragment_ids_this_run = []
         ctx.new_fragment_ids = set()
-        ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
+
+        _thread_state.set(FragmentThreadState(fragment_id=None))
 
         dg = MagicMock()
         dg.my_random_field = 0
@@ -252,7 +266,7 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_fragment():
-            assert ctx.current_fragment_id is not None
+            assert _thread_state.get().fragment_id is not None
 
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
@@ -272,7 +286,7 @@ class FragmentTest(unittest.TestCase):
         # This time, dg should have been mutated since we don't restore it from a
         # snapshot in a regular script run.
         assert dg.my_random_field == 3
-        assert ctx.current_fragment_id is None
+        assert _thread_state.get().fragment_id is None
 
     @parameterized.expand(
         [
@@ -408,7 +422,7 @@ class FragmentTest(unittest.TestCase):
         patched_get_script_run_ctx.return_value = ctx
 
         def my_function():
-            return ctx.current_fragment_id
+            return _thread_state.get().fragment_id
 
         fragment_id1 = _fragment(my_function)()
         fragment_id2 = _fragment(my_function, additional_hash_info="some_hash_info")()

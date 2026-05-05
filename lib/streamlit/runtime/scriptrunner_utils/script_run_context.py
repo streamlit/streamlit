@@ -58,19 +58,24 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
 
-# Used by parallel fragment worker threads to tag deltas with the correct fragment ID.
-# Each worker thread sets this via contextvars.Context.run(), so each thread gets its
-# own value without racing on the shared ScriptRunContext.current_fragment_id field.
-parallel_fragment_id: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "parallel_fragment_id", default=None
-)
 
-# True on parallel fragment worker threads during the parallel batch (full-app run).
-# Set before contextvars.copy_context() in _dispatch_parallel_fragment so the worker
-# inherits the value. Used by _check_not_parallel_worker to gate APIs that are unsafe
-# during concurrent execution (e.g. @st.dialog, st.switch_page).
-is_parallel_worker: contextvars.ContextVar[bool] = contextvars.ContextVar(
-    "is_parallel_worker", default=False
+@dataclass
+class FragmentThreadState:
+    """Per-thread state for a fragment execution.
+
+    Stored in a ContextVar so copy_context() provides automatic isolation.
+    """
+
+    fragment_id: str | None = None
+    delta_path: list[int] = field(default_factory=list)
+    in_fragment_callback: bool = False
+    active_script_hash: str = ""
+    is_parallel_worker: bool = False
+
+
+_thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
+    "thread_state",
+    default=FragmentThreadState(),  # noqa: B039
 )
 
 
@@ -148,11 +153,8 @@ class ScriptRunContext:
     form_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
-    current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: set[str] = field(default_factory=set)
-    in_fragment_callback: bool = False
-    _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
@@ -163,7 +165,7 @@ class ScriptRunContext:
 
     @property
     def active_script_hash(self) -> str:
-        return self._active_script_hash
+        return _thread_state.get().active_script_hash
 
     @property
     def main_script_parent(self) -> Path:
@@ -171,17 +173,25 @@ class ScriptRunContext:
 
     @contextlib.contextmanager
     def run_with_active_hash(self, page_hash: str) -> Generator[None, None, None]:
-        original_page_hash = self._active_script_hash
-        self._active_script_hash = page_hash
+        ts = _thread_state.get()
+        original_page_hash = ts.active_script_hash
+        ts.active_script_hash = page_hash
         try:
             yield
         finally:
-            # in the event of any exception, ensure we set the active hash back
-            self._active_script_hash = original_page_hash
+            ts.active_script_hash = original_page_hash
 
     def set_mpa_v2_page(self, page_script_hash: str) -> None:
-        self._active_script_hash = self.pages_manager.main_script_hash
+        _thread_state.get().active_script_hash = self.pages_manager.main_script_hash
         self.pages_manager.set_current_page_script_hash(page_script_hash)
+
+    def __post_init__(self) -> None:
+        self._main_thread_ident = threading.get_ident()
+        _thread_state.set(
+            FragmentThreadState(
+                active_script_hash=self.pages_manager.main_script_hash,
+            )
+        )
 
     def reset(
         self,
@@ -191,6 +201,11 @@ class ScriptRunContext:
         cached_message_hashes: set[str] | None = None,
         context_info: ContextInfo | None = None,
     ) -> None:
+        if threading.get_ident() != self._main_thread_ident:
+            raise RuntimeError(
+                "reset() must only be called from the main script thread"
+            )
+
         # Check if this is a same-page rerun BEFORE updating page_script_hash
         is_same_page = self.page_script_hash == page_script_hash
 
@@ -201,19 +216,21 @@ class ScriptRunContext:
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
-        self._active_script_hash = self.pages_manager.main_script_hash
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
-        self.current_fragment_id = None
-        self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids = set()
         self.has_dialog_opened = False
         self.parallel_coordinator = None
         self.cached_message_hashes = cached_message_hashes or set()
 
+        _thread_state.set(
+            FragmentThreadState(
+                active_script_hash=self.pages_manager.main_script_hash,
+            )
+        )
         in_cached_function.set(False)
 
         with self.session_state.query_params() as qp:
@@ -322,9 +339,7 @@ def enqueue_message(msg: ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
-    # Parallel fragment threads use a ContextVar for fragment ID tagging
-    # (avoids racing on the shared ctx.current_fragment_id field).
-    fragment_id = parallel_fragment_id.get() or ctx.current_fragment_id
+    fragment_id = _thread_state.get().fragment_id
     if fragment_id and msg.WhichOneof("type") == "delta":
         msg.delta.fragment_id = fragment_id
 

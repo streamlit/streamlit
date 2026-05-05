@@ -28,7 +28,9 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    FragmentThreadState,
     ScriptRunContext,
+    _thread_state,
     add_script_run_ctx,
     enqueue_message,
 )
@@ -42,10 +44,12 @@ if TYPE_CHECKING:
 
 def _create_script_run_context(
     fake_enqueue: Callable[[ForwardMsg], None],
-    current_fragment_id: str | None = None,
+    fragment_id: str | None = None,
     pages_manager: PagesManager | None = None,
     cached_message_hashes: set[str] | None = None,
 ):
+    if fragment_id is not None:
+        _thread_state.set(FragmentThreadState(fragment_id=fragment_id))
     return ScriptRunContext(
         session_id="TestSessionID",
         _enqueue=fake_enqueue,
@@ -56,7 +60,6 @@ def _create_script_run_context(
         user_info={"email": "test@example.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=pages_manager or PagesManager(""),
-        current_fragment_id=current_fragment_id,
         cached_message_hashes=cached_message_hashes or set(),
     )
 
@@ -197,26 +200,24 @@ class ScriptRunContextTest(unittest.TestCase):
         def fake_enqueue(msg: ForwardMsg):
             fake_enqueue_result["msg"] = msg
 
-            ctx = _create_script_run_context(
-                fake_enqueue, current_fragment_id="my_fragment_id"
-            )
-            add_script_run_ctx(ctx=ctx)
-            msg = ForwardMsg()
-            msg.delta.new_element.markdown.body = "foo"
-            enqueue_message(msg)
-            assert fake_enqueue_result is not None
-            assert (
-                fake_enqueue_result["msg"].delta.new_element.markdown.body
-                == msg.delta.new_element.markdown.body
-            )
-            assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
+        ctx = _create_script_run_context(fake_enqueue, fragment_id="my_fragment_id")
+        add_script_run_ctx(ctx=ctx)
+        _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+        enqueue_message(msg)
+        assert fake_enqueue_result is not None
+        assert (
+            fake_enqueue_result["msg"].delta.new_element.markdown.body
+            == msg.delta.new_element.markdown.body
+        )
+        assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
 
     def test_run_with_active_hash(self):
         """Ensure the active script is set correctly"""
         pages_manager = PagesManager("")
         ctx = _create_script_run_context(
             lambda _msg: None,
-            current_fragment_id="my_fragment_id",
             pages_manager=pages_manager,
         )
 

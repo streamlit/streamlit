@@ -316,7 +316,7 @@ class CachedFunc(Generic[P, R]):
         is_nested_cache_function = in_cached_function.get()
 
         from streamlit.runtime.scriptrunner_utils.script_run_context import (
-            is_parallel_worker,
+            _thread_state,
         )
 
         spinner_or_no_context = (
@@ -325,7 +325,7 @@ class CachedFunc(Generic[P, R]):
             )
             if spinner_message is not None
             and not is_nested_cache_function
-            and not is_parallel_worker.get()
+            and not _thread_state.get().is_parallel_worker
             else contextlib.nullcontext()
         )
         with spinner_or_no_context:
