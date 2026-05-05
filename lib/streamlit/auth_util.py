@@ -270,7 +270,10 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
     try:
         payload: JWTClaims = jwt.decode(
-            provider_token, get_signing_secret(), claims_options=claim_options
+            provider_token,
+            get_signing_secret(),
+            algorithms=["HS256"],
+            claims_options=claim_options,
         )
         payload.validate()
     except JoseError as e:
