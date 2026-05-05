@@ -96,9 +96,10 @@ function getDiagramTypeFromSource(source: string): string {
  *
  * @returns Object with extracted title and description, or undefined if not present
  */
-function extractAccessibilityInfo(
-  source: string
-): { title?: string; description?: string } {
+function extractAccessibilityInfo(source: string): {
+  title?: string
+  description?: string
+} {
   const result: { title?: string; description?: string } = {}
 
   // Match accTitle: <text>
@@ -113,7 +114,7 @@ function extractAccessibilityInfo(
     result.description = singleLineDescr[1].trim()
   } else {
     // Match multi-line accDescr { <text> }
-    const multiLineDescr = /^\s*accDescr\s*\{([^}]*)\}/ms.exec(source)
+    const multiLineDescr = /^\s*accDescr\s*\{([^}]*)\}/m.exec(source)
     if (multiLineDescr) {
       // Normalize whitespace in multi-line descriptions
       result.description = multiLineDescr[1].trim().replace(/\s+/g, " ")
@@ -557,12 +558,7 @@ const MermaidChart = memo(function MermaidChart({
           isFullScreen={isFullScreen}
           data-testid="stMermaidChart"
         >
-          {svgBlobUrl && (
-            <img
-              src={svgBlobUrl}
-              alt={getAltText(source)}
-            />
-          )}
+          {svgBlobUrl && <img src={svgBlobUrl} alt={getAltText(source)} />}
         </StyledMermaidContainer>
       </StyledToolbarElementContainer>
     </ErrorBoundary>
