@@ -79,7 +79,9 @@ interface MemberProps {
 }
 
 // Exported for tests.
-export function Member({ member }: MemberProps): ReactElement {
+export const Member = memo(function Member({
+  member,
+}: MemberProps): ReactElement {
   const { name, type, value, docString } = member
 
   return (
@@ -110,6 +112,6 @@ export function Member({ member }: MemberProps): ReactElement {
       </StyledMembersDetailsCell>
     </StyledMembersRow>
   )
-}
+})
 
 export default memo(Help)

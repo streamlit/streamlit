@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { lazy, ReactElement, useContext } from "react"
+import { lazy, memo, ReactElement, useContext } from "react"
 
 import {
   Alert as AlertProto,
@@ -224,9 +224,9 @@ function hideIfStale(isStale: boolean, component: ReactElement): ReactElement {
 }
 
 // Render ElementNodes (i.e. leaf nodes).
-const RawElementNodeRenderer = (
+const RawElementNodeRenderer = memo(function RawElementNodeRenderer(
   props: RawElementNodeRendererProps
-): ReactElement => {
+): ReactElement {
   const { node, isStale } = props
   const { isInRoot, isInHorizontalLayout } = useRequiredContext(FlexContext)
 
@@ -1215,7 +1215,7 @@ const RawElementNodeRenderer = (
     default:
       throw new Error(`Unrecognized Element type ${node.element.type}`)
   }
-}
+})
 
 // Render ElementNodes (i.e. leaf nodes) wrapped in Maybe for conditional rendering.
 const ElementNodeRenderer = (
