@@ -215,6 +215,13 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
     theme: "base",
     fontFamily: theme.genericFonts.bodyFont,
     fontSize: convertRemToPx(theme.fontSizes.md),
+    // Use SVG text elements instead of HTML foreignObject for labels.
+    // HTML labels can extend beyond the calculated viewBox, causing
+    // text clipping when rendered as an image.
+    htmlLabels: false,
+    flowchart: {
+      htmlLabels: false,
+    },
     themeVariables: {
       // Core theme variables - Mermaid derives many others from these
       darkMode: !isLightTheme,
