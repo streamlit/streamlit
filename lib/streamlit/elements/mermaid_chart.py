@@ -16,12 +16,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Width
 
 
 class MermaidChartMixin:
@@ -29,6 +30,8 @@ class MermaidChartMixin:
     def mermaid_chart(
         self,
         body: str,
+        *,
+        width: Width | Literal["auto"] = "auto",
     ) -> DeltaGenerator:
         """Display a Mermaid diagram.
 
@@ -42,6 +45,22 @@ class MermaidChartMixin:
             The Mermaid diagram definition as a string. This uses Mermaid's
             text-based syntax to define flowcharts, sequence diagrams, class
             diagrams, state diagrams, and more.
+
+        width : "auto", "stretch", "content", or int
+            The width of the element. This can be one of the following:
+
+            - ``"auto"`` (default): The width of the element adapts based on
+              the container flex layout. In vertical containers, the element
+              uses ``"stretch"`` width. In horizontal containers, the element
+              uses ``"content"`` width.
+            - ``"stretch"``: The width of the element matches the width of
+              the parent container.
+            - ``"content"``: The width of the element matches the width of its
+              content, but doesn't exceed the width of the parent container.
+            - An integer specifying the width in pixels: The element has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the element matches the width
+              of the parent container.
 
         Examples
         --------
@@ -59,8 +78,9 @@ class MermaidChartMixin:
            height: 300px
 
         """
-        mermaid_body = f"```mermaid\n{body}\n```"
-        return self.dg._markdown(mermaid_body)
+        # Use four backticks to safely handle diagrams containing triple backticks
+        mermaid_body = f"````mermaid\n{body}\n````"
+        return self.dg._markdown(mermaid_body, width=width)
 
     @property
     def dg(self) -> DeltaGenerator:

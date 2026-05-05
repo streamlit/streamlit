@@ -89,6 +89,63 @@ function getDiagramTypeFromSource(source: string): string {
 }
 
 /**
+ * Extracts accessibility directives (accTitle and accDescr) from mermaid source.
+ * Mermaid supports these directives for providing accessible descriptions:
+ *   accTitle: A short title for the diagram
+ *   accDescr: A longer description (can be single line or multi-line with braces)
+ *
+ * @returns Object with extracted title and description, or undefined if not present
+ */
+function extractAccessibilityInfo(
+  source: string
+): { title?: string; description?: string } {
+  const result: { title?: string; description?: string } = {}
+
+  // Match accTitle: <text>
+  const titleMatch = /^\s*accTitle\s*:\s*(.+)$/m.exec(source)
+  if (titleMatch) {
+    result.title = titleMatch[1].trim()
+  }
+
+  // Match single-line accDescr: <text>
+  const singleLineDescr = /^\s*accDescr\s*:\s*(.+)$/m.exec(source)
+  if (singleLineDescr) {
+    result.description = singleLineDescr[1].trim()
+  } else {
+    // Match multi-line accDescr { <text> }
+    const multiLineDescr = /^\s*accDescr\s*\{([^}]*)\}/ms.exec(source)
+    if (multiLineDescr) {
+      // Normalize whitespace in multi-line descriptions
+      result.description = multiLineDescr[1].trim().replace(/\s+/g, " ")
+    }
+  }
+
+  return result
+}
+
+/**
+ * Generates accessible alt text for a mermaid diagram.
+ * Prefers user-provided accTitle/accDescr directives, falls back to diagram type.
+ */
+function getAltText(source: string): string {
+  const { title, description } = extractAccessibilityInfo(source)
+
+  // Prefer user-provided accessibility info
+  if (title && description) {
+    return `${title}: ${description}`
+  }
+  if (title) {
+    return title
+  }
+  if (description) {
+    return description
+  }
+
+  // Fall back to diagram type
+  return `Mermaid ${getDiagramTypeFromSource(source)}`
+}
+
+/**
  * Symbol used to attach our theme tracking key to the mermaid module.
  * This makes the relationship between mermaid's global state and our
  * tracking explicit, rather than using a separate module-level variable.
@@ -265,9 +322,8 @@ function getMermaidThemeConfig(theme: EmotionTheme): Record<string, unknown> {
  * A component that renders Mermaid diagrams.
  * Lazy loads the mermaid library and renders diagrams client-side.
  *
- * Uses htmlLabels: false to generate native SVG text elements instead of
- * foreignObject with HTML. This allows rendering via an <img> tag, which
- * provides browser-enforced security sandboxing (no script execution possible).
+ * Renders via an <img> tag with blob URL, which provides browser-enforced
+ * security sandboxing (no script execution possible).
  */
 const MermaidChart = memo(function MermaidChart({
   source,
@@ -317,9 +373,6 @@ const MermaidChart = memo(function MermaidChart({
             startOnLoad: false,
             securityLevel: "strict",
             suppressErrorRendering: true,
-            // Use native SVG text instead of foreignObject with HTML.
-            // This enables rendering via <img> tag for browser-enforced security.
-            htmlLabels: false,
             ...themeConfig,
           })
           mermaidWithKey[THEME_CONFIG_KEY] = themeConfigKey
@@ -507,7 +560,7 @@ const MermaidChart = memo(function MermaidChart({
           {svgBlobUrl && (
             <img
               src={svgBlobUrl}
-              alt={`Mermaid ${getDiagramTypeFromSource(source)}`}
+              alt={getAltText(source)}
             />
           )}
         </StyledMermaidContainer>
