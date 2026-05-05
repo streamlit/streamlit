@@ -172,6 +172,19 @@ Invalid Mermaid syntax displays:
 - Error styled with Streamlit's error colors (red background)
 - The original source is not exposed in the error
 
+#### Streaming Behavior
+
+When mermaid code blocks appear in streamed content (e.g., `st.write_stream`):
+
+- **During streaming**: Mermaid code blocks render as syntax-highlighted code, showing the
+  diagram source as it's being typed. This provides visual feedback and avoids flickering
+  from failed partial diagram renders.
+- **After streaming completes**: The code block transforms into a rendered mermaid diagram.
+
+This "code-first, then diagram" approach ensures users see meaningful content during streaming
+rather than error states or jarring partial renders. The implementation leverages the existing
+`unterminatedParsing` flag that `StreamlitMarkdown` uses during streaming.
+
 ### Toolbar Actions
 
 The rendered diagram includes a hover toolbar (consistent with other Streamlit charts):
@@ -267,9 +280,35 @@ Note: `securityLevel: "strict"` already disables HTML labels and strips `foreign
 elements, so no additional `htmlLabels: false` configuration is needed. This allows
 Mermaid to render richer label styling where supported while maintaining security.
 
+**CSP Requirements**: The blob URL approach requires `blob:` in the `img-src` CSP directive.
+Deployments with restrictive Content-Security-Policy headers must include:
+
+```
+img-src 'self' blob:;
+```
+
+Streamlit does not enforce a CSP by default, but enterprise deployments, reverse proxies,
+or embedded iframe contexts may. Implementation should verify compatibility with common
+strict-CSP configurations.
+
 ### Accessibility
 
 - Diagrams include semantic alt text based on diagram type (e.g., "Mermaid flowchart")
+- Users can provide richer accessibility via Mermaid's native `accTitle` and `accDescr`
+  directives:
+
+  ```mermaid
+  accTitle: User authentication flow
+  accDescr: Shows login flow from button click through OAuth to token validation
+  graph TD
+      A[Login] --> B[OAuth] --> C[Validate]
+  ```
+
+- **Implementation note**: Since SVGs are loaded via `<img>` tags for security sandboxing,
+  screen readers cannot access inner SVG elements. The implementation must extract
+  `accTitle`/`accDescr` from the mermaid source and apply them as the `<img alt="...">`
+  attribute. If neither directive is present, fall back to generic alt text based on
+  diagram type.
 - Loading state uses `aria-busy="true"` and descriptive `aria-label`
 - Error messages use `role="alert"` for screen reader announcements
 - Fullscreen button has proper labeling
