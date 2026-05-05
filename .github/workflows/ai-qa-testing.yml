@@ -212,6 +212,7 @@ jobs:
           PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
           REPOSITORY: ${{ github.repository }}
           MODEL_NAME: ${{ env.MODEL }}
+          RUN_ID: ${{ github.run_id }}
         run: |
           if [ -f qa-artifacts/work-tmp/qa-report.md ]; then
             # Add footer to report
