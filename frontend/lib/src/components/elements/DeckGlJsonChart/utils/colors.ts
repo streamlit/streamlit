@@ -155,26 +155,22 @@ const getOriginalColorWithAppliedOpacity = ({
     return null
   }
 
-  let calculatedOpacity = 0
-
-  if (isSelected) {
-    // Some layers will have objects where the opacity is lower than the default
-    // selected opacity In this case, we want to use the higher opacity so that
-    // the differentiation between selected and unselected objects is more
-    // pronounced
-    calculatedOpacity = Math.max(
-      typeof originalColor[3] === "number" ? originalColor[3] : opacity,
-      opacity
-    )
-  } else {
-    // Some layers will have objects where the opacity is lower than the default
-    // unselected opacity In this case, we want to use the lower opacity so that
-    // we aren't raising the visibility of objects unnecessarily
-    calculatedOpacity = Math.min(
-      typeof originalColor[3] === "number" ? originalColor[3] : opacity,
-      opacity
-    )
-  }
+  const calculatedOpacity = isSelected
+    ? // Some layers will have objects where the opacity is lower than the default
+      // selected opacity In this case, we want to use the higher opacity so that
+      // the differentiation between selected and unselected objects is more
+      // pronounced
+      Math.max(
+        typeof originalColor[3] === "number" ? originalColor[3] : opacity,
+        opacity
+      )
+    : // Some layers will have objects where the opacity is lower than the default
+      // unselected opacity In this case, we want to use the lower opacity so that
+      // we aren't raising the visibility of objects unnecessarily
+      Math.min(
+        typeof originalColor[3] === "number" ? originalColor[3] : opacity,
+        opacity
+      )
 
   return [
     originalColor[0] || 0,

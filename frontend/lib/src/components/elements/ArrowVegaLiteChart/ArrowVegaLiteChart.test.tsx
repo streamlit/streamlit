@@ -23,7 +23,7 @@ import userEvent from "@testing-library/user-event"
 vi.mock("./useVegaEmbed", () => ({
   useVegaEmbed: () => {
     // Satisfy hooks rule by calling a React hook in this mock
-    useMemo(() => null, [])
+    const _memo = useMemo(() => null, [])
     return {
       createView: () => Promise.resolve(null),
       updateView: () => Promise.resolve(null),

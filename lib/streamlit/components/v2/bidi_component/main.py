@@ -505,9 +505,9 @@ class BidiComponentMixin:
         event_to_value: dict[str, Any] = {}
         for payload in payloads:
             if isinstance(payload, dict):
-                ev = payload.get("event")
+                ev = payload.get("event")  # ty: ignore[invalid-argument-type]
                 if isinstance(ev, str):
-                    event_to_value[ev] = payload.get("value")
+                    event_to_value[ev] = payload.get("value")  # ty: ignore[invalid-argument-type]
 
         for evt_name in callbacks_by_event:
             trigger_vals[evt_name] = event_to_value.get(evt_name)

@@ -135,7 +135,7 @@ export class ConnectionManager {
     } else {
       // Don't need to make a big deal out of this. Just print to console.
       LOG.error(
-        `Cannot send message when server is disconnected: ${String(obj)}`
+        `Cannot send message when server is disconnected: ${obj.type ?? "unknown"}`
       )
     }
   }

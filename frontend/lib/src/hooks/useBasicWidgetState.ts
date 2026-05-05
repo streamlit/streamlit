@@ -348,6 +348,7 @@ export function useBasicWidgetState<
   // "event", this time using the .setValue property of the proto.
   useEffect(() => {
     if (!element.setValue) return
+    // eslint-disable-next-line react-hooks/immutability -- consuming setValue event from proto
     element.setValue = false // Clear "event".
 
     setNextValueWithSource({

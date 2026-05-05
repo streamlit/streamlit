@@ -181,8 +181,7 @@ export class AppRoot {
       isNullOrUndefined(this.event) ||
       isNullOrUndefined(this.bottom)
     ) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      throw new Error(`Invalid root node children! ${root}`)
+      throw new Error(`Invalid root node children! ${root.debug()}`)
     }
   }
 
