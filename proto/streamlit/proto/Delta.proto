@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-import "streamlit/proto/ArrowNamedDataSet.proto";
 import "streamlit/proto/Block.proto";
 import "streamlit/proto/Element.proto";
 import "streamlit/proto/Transient.proto";
@@ -32,12 +31,9 @@ message Delta {
 
     // Append a new transient element (e.g. spinner) to the frontend.
     Transient new_transient = 9;
-
-    // Append data to a DataFrame for the current element.
-    ArrowNamedDataSet arrow_add_rows = 7;
   }
 
   string fragment_id = 8;
 
-  reserved 5;
+  reserved 5, 7;
 }

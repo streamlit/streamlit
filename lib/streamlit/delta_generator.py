@@ -118,7 +118,6 @@ if TYPE_CHECKING:
     from google.protobuf.message import Message
 
     from streamlit.cursor import Cursor
-    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Element_pb2 import Element as ElementProto
 
@@ -466,7 +465,6 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        add_rows_metadata: AddRowsMetadata | None = None,
         layout_config: LayoutConfig | None = None,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
@@ -477,8 +475,6 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        add_rows_metadata : AddRowsMetadata or None
-            Metadata for the add_rows method
 
         Returns
         -------
@@ -534,11 +530,7 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                dg._cursor.get_locked_cursor(
-                    delta_type=delta_type, add_rows_metadata=add_rows_metadata
-                )
-                if dg._cursor is not None
-                else None
+                dg._cursor.get_locked_cursor() if dg._cursor is not None else None
             )
 
             output_dg = DeltaGenerator(
@@ -615,7 +607,7 @@ class DeltaGenerator(
         block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor(add_rows_metadata=None)
+        dg._cursor.get_locked_cursor()
         _enqueue_message(msg)
 
         caching.save_block_message(

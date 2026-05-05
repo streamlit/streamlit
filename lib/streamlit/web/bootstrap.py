@@ -371,7 +371,6 @@ def run(
 
     This starts a blocking asyncio eventloop.
     """
-
     _fix_sys_path(main_script_path)
     _fix_sys_argv(main_script_path, args)
     _install_config_watchers(flag_options)

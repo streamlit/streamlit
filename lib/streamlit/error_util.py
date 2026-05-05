@@ -14,13 +14,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Final
+from typing import TYPE_CHECKING, Any, Final
 
 import streamlit
 from streamlit import config
 from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements import exception
 from streamlit.logger import get_logger
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -76,20 +79,18 @@ def _print_rich_exception(e: BaseException) -> None:
     )
 
 
-def _show_exception(ex: BaseException) -> None:
+def show_uncaught_app_exception(ex: BaseException) -> None:
     """Show the exception on the frontend."""
     main_delta_generator = get_dg_singleton_instance().main_dg
     exception._exception(main_delta_generator, ex, is_uncaught_app_exception=True)
 
 
-def handle_uncaught_app_exception(ex: BaseException) -> None:
-    """Handle an exception that originated from a user app.
+def _log_uncaught_app_exception(ex: BaseException) -> None:
+    """Log an uncaught app exception to the console.
 
-    By default, we show exceptions directly in the browser. However,
-    if the user has disabled client error details, we display a generic
-    warning in the frontend instead.
+    Uses rich traceback formatting if available and enabled, otherwise falls
+    back to standard Python logging.
     """
-
     error_logged = False
 
     if config.get_option("logger.enableRich"):
@@ -102,11 +103,103 @@ def handle_uncaught_app_exception(ex: BaseException) -> None:
         except Exception:
             # Rich is not installed or not compatible to our config
             # -> Use normal traceback formatting as fallback
-            # Catching all exceptions because we don't want to leave any possibility of breaking here.
+            # Catching all exceptions because we don't want to leave any possibility
+            # of breaking here.
             error_logged = False
 
     if not error_logged:
         # Only log error to console if not already logged by rich
         _LOGGER.error("Uncaught app execution", exc_info=ex)
 
-    _show_exception(ex)
+
+def handle_uncaught_app_exception(ex: BaseException) -> None:
+    """Handle an exception that originated from a user app.
+
+    By default, we show exceptions directly in the browser. However,
+    if the user has disabled client error details, we display a generic
+    warning in the frontend instead.
+
+    Note: This function is kept for backward compatibility with third-party code
+    that patches its __code__ attribute (e.g. streamlit-extras). Internal code
+    should use handle_user_script_exception() instead.
+    """
+    _log_uncaught_app_exception(ex)
+    show_uncaught_app_exception(ex)
+
+
+def invoke_script_error_handler(
+    ex: Exception,
+    on_script_error: Callable[[Exception], bool | None] | None,
+) -> bool:
+    """Invoke the on_script_error handler if set.
+
+    This function centralizes the logic for invoking the custom error handler,
+    handling any exceptions raised by the handler itself, and determining whether
+    to suppress the default UI display.
+
+    Parameters
+    ----------
+    ex : Exception
+        The original exception that occurred.
+    on_script_error : Callable[[Exception], bool | None] | None
+        The custom error handler callback, if any.
+
+    Returns
+    -------
+    bool
+        True if the handler suppressed the UI display, False otherwise.
+    """
+    # Import here to avoid circular dependency
+    from streamlit.runtime.scriptrunner_utils.exceptions import (
+        RerunException,
+        StopException,
+    )
+
+    suppress_ui_display = False
+    if on_script_error is not None:
+        try:
+            handler_result = on_script_error(ex)
+            if handler_result is True:
+                suppress_ui_display = True
+        except (StopException, RerunException):
+            # StopException/RerunException raised inside the handler should not
+            # crash the script runner thread. These are internal control-flow signals,
+            # so use warning-level logging without full traceback.
+            _LOGGER.warning(
+                "on_script_error handler raised a control-flow exception "
+                "(st.stop/st.rerun); falling back to default error UI",
+                exc_info=True,
+            )
+        except Exception:
+            # Log any handler errors and fall back to showing the original
+            # exception. We catch Exception (not BaseException) so that
+            # KeyboardInterrupt/SystemExit propagate unchanged. StopException and
+            # RerunException (BaseException subclasses) are caught explicitly above.
+            _LOGGER.exception("on_script_error handler raised an exception")
+    return suppress_ui_display
+
+
+def handle_user_script_exception(
+    ex: Exception,
+    on_script_error: Callable[[Exception], bool | None] | None,
+) -> None:
+    """Handle an uncaught exception from user script code.
+
+    This performs the standard error handling flow for exceptions that occur
+    during script execution:
+
+    1. Log the exception to the console
+    2. Invoke the custom on_script_error handler if set
+    3. Show the exception in the UI (unless suppressed by the handler)
+
+    Parameters
+    ----------
+    ex : Exception
+        The exception that occurred.
+    on_script_error : Callable[[Exception], bool | None] | None
+        The custom error handler callback, if any.
+    """
+    _log_uncaught_app_exception(ex)
+    suppress_ui_display = invoke_script_error_handler(ex, on_script_error)
+    if not suppress_ui_display:
+        show_uncaught_app_exception(ex)

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { isValidElement, ReactElement } from "react"
+import { isValidElement, memo, ReactElement } from "react"
 
 import { HelpCircle as HelpCircleIcon } from "react-feather"
 
@@ -73,7 +73,9 @@ type TooltipIconProps =
       children?: never
     })
 
-function TooltipIcon(props: TooltipIconProps): ReactElement {
+const TooltipIcon = memo(function TooltipIcon(
+  props: TooltipIconProps
+): ReactElement {
   const {
     placement = Placement.AUTO,
     isLatex = false,
@@ -150,7 +152,7 @@ function TooltipIcon(props: TooltipIconProps): ReactElement {
       </Tooltip>
     </StyledTooltipIconWrapper>
   )
-}
+})
 
 export function getHelpTooltipAriaLabel(label?: string | null): string {
   // We try to generate a widget-specific accessible name when possible. In some
