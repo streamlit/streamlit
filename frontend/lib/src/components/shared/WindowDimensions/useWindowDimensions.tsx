@@ -16,15 +16,16 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react"
 
-import { useDebouncedCallback } from "~lib/hooks/useDebouncedCallback"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useThrottledCallback } from "~lib/hooks/useThrottledCallback"
 import { convertRemToPx } from "~lib/theme/utils"
 
 /**
- * Debounce delay for window resize events in milliseconds.
- * This prevents excessive re-renders during active window resizing.
+ * Throttle delay for window resize events in milliseconds.
+ * This limits re-renders during active window resizing while still
+ * providing periodic updates.
  */
-const RESIZE_DEBOUNCE_MS = 100
+const RESIZE_THROTTLE_MS = 100
 
 export type WindowDimensions = {
   fullWidth: number
@@ -61,17 +62,17 @@ export const useWindowDimensions = (): WindowDimensions => {
     setWindowDimensions(getWindowDimensions())
   }, [getWindowDimensions])
 
-  const { debouncedCallback: debouncedResize, cancel: cancelDebounce } =
-    useDebouncedCallback(updateWindowDimensions, RESIZE_DEBOUNCE_MS)
+  const { throttledCallback: throttledResize, cancel: cancelThrottle } =
+    useThrottledCallback(updateWindowDimensions, RESIZE_THROTTLE_MS)
 
   useEffect(() => {
-    window.addEventListener("resize", debouncedResize)
+    window.addEventListener("resize", throttledResize)
 
     return () => {
-      window.removeEventListener("resize", debouncedResize)
-      cancelDebounce()
+      window.removeEventListener("resize", throttledResize)
+      cancelThrottle()
     }
-  }, [debouncedResize, cancelDebounce])
+  }, [throttledResize, cancelThrottle])
 
   useLayoutEffect(() => {
     // Measure once on load, let resize handlers take over from there

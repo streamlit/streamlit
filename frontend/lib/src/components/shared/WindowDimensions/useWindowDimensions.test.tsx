@@ -45,10 +45,8 @@ describe("useWindowDimensions", () => {
     expect(result.current.innerHeight).toBe(768)
   })
 
-  it("should debounce resize events with 100ms delay", () => {
+  it("should update immediately on first resize event (throttle)", () => {
     const { result } = renderHook(() => useWindowDimensions(), { wrapper })
-
-    const initialWidth = result.current.innerWidth
 
     act(() => {
       Object.defineProperty(window, "innerWidth", {
@@ -59,30 +57,14 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
-    // State should not update immediately
-    expect(result.current.innerWidth).toBe(initialWidth)
-
-    act(() => {
-      vi.advanceTimersByTime(50)
-    })
-
-    // Still not updated after 50ms
-    expect(result.current.innerWidth).toBe(initialWidth)
-
-    act(() => {
-      vi.advanceTimersByTime(50)
-    })
-
-    // Updated after 100ms total
+    // Throttle fires immediately on first call
     expect(result.current.innerWidth).toBe(800)
   })
 
-  it("should coalesce multiple rapid resize events to final value", () => {
+  it("should throttle subsequent resize events during cooldown", () => {
     const { result } = renderHook(() => useWindowDimensions(), { wrapper })
 
-    const initialWidth = result.current.innerWidth
-
-    // Fire multiple resize events in quick succession
+    // First resize - fires immediately
     act(() => {
       Object.defineProperty(window, "innerWidth", {
         writable: true,
@@ -92,9 +74,9 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
-    // Intermediate values should not be observed (still at initial)
-    expect(result.current.innerWidth).toBe(initialWidth)
+    expect(result.current.innerWidth).toBe(900)
 
+    // Second resize during cooldown - saved but not applied yet
     act(() => {
       Object.defineProperty(window, "innerWidth", {
         writable: true,
@@ -104,9 +86,10 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
-    // Still at initial - 850 should not be observed either
-    expect(result.current.innerWidth).toBe(initialWidth)
+    // Still at 900 during cooldown
+    expect(result.current.innerWidth).toBe(900)
 
+    // Third resize during cooldown - replaces pending
     act(() => {
       Object.defineProperty(window, "innerWidth", {
         writable: true,
@@ -116,14 +99,14 @@ describe("useWindowDimensions", () => {
       window.dispatchEvent(new Event("resize"))
     })
 
-    // Still at initial before debounce completes
-    expect(result.current.innerWidth).toBe(initialWidth)
+    // Still at 900 during cooldown
+    expect(result.current.innerWidth).toBe(900)
 
+    // After cooldown, the last pending value (800) is applied
     act(() => {
       vi.advanceTimersByTime(100)
     })
 
-    // Only the final value should be applied after debounce
     expect(result.current.innerWidth).toBe(800)
   })
 
