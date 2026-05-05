@@ -1680,6 +1680,9 @@ def test_upload_button_works_after_upload_and_delete(app: Page):
 
 
 @use_chat_input("inline")
+@pytest.mark.skip_browser(
+    "webkit"
+)  # Webkit has text input handling issues in Playwright 1.59
 def test_dynamic_stacked_layout_transitions(
     app: Page, assert_snapshot: ImageCompareFunction
 ):

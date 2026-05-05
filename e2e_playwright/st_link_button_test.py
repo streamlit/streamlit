@@ -134,8 +134,9 @@ def test_link_button_click_returns_true_for_rerun(app: Page):
     )
 
 
-@pytest.mark.only_browser(
-    "webkit"  # Firefox and Chromium are a bit flaky on the expect_popup.
+@pytest.mark.skip(
+    reason="Flaky on all browsers - Firefox/Chromium have expect_popup issues, "
+    "webkit has keyboard shortcut issues in Playwright 1.59"
 )
 def test_link_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut opens the link in a new tab."""
