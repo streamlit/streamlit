@@ -216,7 +216,7 @@ export class Quiver {
    * but is not 100% guaranteed to be unique.
    */
   public get hash(): string {
-    // Its important to calculate this at runtime.
+    // Calculate this at runtime for the eventual case that the underlying data changes.
     const valuesToHash = [
       this.dimensions.numColumns,
       this.dimensions.numDataColumns,
