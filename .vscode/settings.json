@@ -100,9 +100,5 @@
   },
   "typescript.tsdk": "frontend/node_modules/typescript/lib",
   "typescript.enablePromptUseWorkspaceTsdk": true,
-  "git.branchProtection": [
-    "develop"
-  ],
-  "python-envs.defaultEnvManager": "ms-python.python:conda",
-  "python-envs.defaultPackageManager": "ms-python.python:conda"
+  "git.branchProtection": ["develop"]
 }
