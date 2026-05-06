@@ -26,9 +26,11 @@ from typing import (
     TypeAlias,
 )
 
-from streamlit.errors import (
-    NoSessionContext,
+from streamlit.delta_generator_singletons import (
+    context_dg_stack,
+    get_default_dg_stack_value,
 )
+from streamlit.errors import NoSessionContext
 from streamlit.logger import get_logger
 from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
@@ -184,6 +186,17 @@ class ScriptRunContext:
 
     def on_script_start(self) -> None:
         self._has_script_started = True
+
+    def reset_dg_stack_for_callback(self) -> None:
+        """Reset cursors and the DG stack before running a widget callback.
+
+        Callbacks execute before a script or fragment rerun, so the current
+        cursor and dg stack can still point at a locked element from a previous
+        run. Resetting these ensures elements emitted in callbacks are written
+        to a valid container and avoids invalid delta paths.
+        """
+        self.cursors.clear()
+        context_dg_stack.set(get_default_dg_stack_value())
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""

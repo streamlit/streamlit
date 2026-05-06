@@ -327,12 +327,20 @@ class WStates(MutableMapping[str, Any]):
         kwargs = metadata.callback_kwargs or {}
 
         ctx = get_script_run_ctx()
+        _reset_callback_context(ctx)
         if ctx and metadata.fragment_id is not None:
             ctx.in_fragment_callback = True
             callback(*args, **kwargs)
             ctx.in_fragment_callback = False
         else:
             callback(*args, **kwargs)
+
+
+def _reset_callback_context(ctx: ScriptRunContext | None) -> None:
+    """Normalize cursors and DG stack before widget callbacks run."""
+    if ctx is None:
+        return
+    ctx.reset_dg_stack_for_callback()
 
 
 def _missing_key_error_message(key: str) -> str:
@@ -710,6 +718,7 @@ class SessionState:
         from streamlit.runtime.scriptrunner import RerunException
 
         ctx = get_script_run_ctx()
+        _reset_callback_context(ctx)
         if ctx and cb_metadata.fragment_id is not None:
             ctx.in_fragment_callback = True
             try:
