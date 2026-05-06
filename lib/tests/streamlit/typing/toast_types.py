@@ -31,6 +31,10 @@ if TYPE_CHECKING:
     # Basic toast - returns DeltaGenerator
     assert_type(toast("Your changes have been saved!"), DeltaGenerator)
 
+    # Toast with non-string body (SupportsStr protocol) - tests the body type contract
+    assert_type(toast(42), DeltaGenerator)
+    assert_type(toast(3.14), DeltaGenerator)
+
     # Toast with icon parameter (keyword-only)
     assert_type(toast("Success!", icon="✅"), DeltaGenerator)
     assert_type(toast("Loading...", icon=":material/check_circle:"), DeltaGenerator)
