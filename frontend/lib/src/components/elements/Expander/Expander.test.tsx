@@ -38,7 +38,7 @@ const getProps = (
   element: BlockProto.Expandable.create({
     label: "hi",
     expanded: true,
-    type: BlockProto.Expandable.Type.DEFAULT, // Default type (matches Python default)
+    type: BlockProto.Expandable.Type.DEFAULT,
     ...elementProps,
   }),
   isStale: false,

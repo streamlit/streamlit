@@ -67,14 +67,12 @@ export const StyledSummaryHeading = styled.span(({ theme }) => ({
 export const StyledSummaryLabelWrapper = styled.div<{ compact?: boolean }>(
   ({ compact }) => ({
     display: "flex",
-    // In compact mode, don't grow so chevron stays directly after label
-    ...(compact
-      ? {}
-      : {
-          width: "100%",
-          flexGrow: 1,
-        }),
     overflow: "hidden",
+    // In compact mode, don't grow so chevron stays directly after label
+    ...(!compact && {
+      width: "100%",
+      flexGrow: 1,
+    }),
   })
 )
 
@@ -166,8 +164,8 @@ interface StyledDetailsPanelProps {
 }
 
 export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
-  ({ theme, isCompact }) => ({
-    ...(!isCompact
+  ({ theme, isCompact }) =>
+    !isCompact
       ? {
           // Normal style (with border)
           padding: theme.spacing.lg,
@@ -178,6 +176,5 @@ export const StyledDetailsPanel = styled.div<StyledDetailsPanelProps>(
           padding: 0,
           paddingTop: theme.spacing.sm,
           borderTop: "none",
-        }),
-  })
+        }
 )

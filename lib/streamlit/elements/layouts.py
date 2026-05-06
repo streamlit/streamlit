@@ -1121,18 +1121,18 @@ class LayoutsMixin:
             An optional dict of kwargs to pass to the ``on_change``
             callback.
 
-        Returns
-        -------
-        ExpanderContainer
-            An ``ExpanderContainer`` object with an ``.open`` property to return
-            the current state of the expander if the expander tracks state.
-
         type : "default" or "compact"
             The visual style of the expander. If ``"default"`` (default), the
             expander is displayed with a border and background. If ``"compact"``,
             the expander is rendered as a minimal inline toggle—ideal for
             displaying AI reasoning, thoughts, or collapsible metadata without
             visual clutter.
+
+        Returns
+        -------
+        ExpanderContainer
+            An ``ExpanderContainer`` object with an ``.open`` property to return
+            the current state of the expander if the expander tracks state.
 
         Examples
         --------
