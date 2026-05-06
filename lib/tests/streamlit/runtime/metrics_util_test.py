@@ -971,7 +971,12 @@ def test_detect_installed_skills_detects_symlinked_skill_dir(
     # Symlink it into the .claude/skills directory
     skills_dir = app / ".claude" / "skills"
     skills_dir.mkdir(parents=True)
-    (skills_dir / "developing-with-streamlit").symlink_to(real_skill)
+    try:
+        (skills_dir / "developing-with-streamlit").symlink_to(
+            real_skill, target_is_directory=True
+        )
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
@@ -1068,7 +1073,10 @@ def test_detect_installed_agents_detects_symlinked_harness_dir(
     real_claude.mkdir(parents=True)
 
     # Symlink it into the home directory
-    (home / ".claude").symlink_to(real_claude)
+    try:
+        (home / ".claude").symlink_to(real_claude, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
 
     monkeypatch.setenv("HOME", str(home))
     assert metrics_util._detect_installed_agents() == ["claude"]
