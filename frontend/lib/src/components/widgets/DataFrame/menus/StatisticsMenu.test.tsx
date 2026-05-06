@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { screen, waitFor } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import { Field, Int64 } from "apache-arrow"
 
 import { NumberColumn } from "~lib/components/widgets/DataFrame/columns"
@@ -122,17 +122,16 @@ describe("StatisticsMenu", () => {
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
     })
 
-    // Check that we have a description list (dl element)
-    const dlElement = screen
-      .getByTestId("stDataFrameStatisticsContent")
-      .querySelector("dl")
-    expect(dlElement).toBeInTheDocument()
+    // Check that we have a description list with terms and definitions
+    const metricsContainer = screen.getByTestId("stDataFrameStatisticsMetrics")
+    expect(metricsContainer).toBeVisible()
+    expect(metricsContainer.tagName).toBe("DL")
 
-    // Check for dt (term) and dd (definition) elements
-    const dtElements = dlElement?.querySelectorAll("dt")
-    const ddElements = dlElement?.querySelectorAll("dd")
-    expect(dtElements?.length).toBeGreaterThan(0)
-    expect(ddElements?.length).toBeGreaterThan(0)
+    // Check for term (dt) and definition (dd) elements via getAllByRole is not possible
+    // as dt/dd don't have implicit roles, so verify via text content presence
+    const metricsScope = within(metricsContainer)
+    expect(metricsScope.getByText("Values")).toBeVisible()
+    expect(metricsScope.getByText("Average")).toBeVisible()
   })
 
   it("does not compute statistics when isOpen is false", () => {
@@ -145,9 +144,6 @@ describe("StatisticsMenu", () => {
     // When closed, the statistics content should not be rendered
     expect(
       screen.queryByTestId("stDataFrameStatisticsContent")
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByTestId("stDataFrameStatisticsSkeleton")
     ).not.toBeInTheDocument()
   })
 

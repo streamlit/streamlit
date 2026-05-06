@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useEffect, useRef } from "react"
+import { memo, ReactElement, useEffect, useMemo, useRef } from "react"
 
 import { CSSObject, Global } from "@emotion/react"
 import embed from "vega-embed"
@@ -202,6 +202,10 @@ function StatisticsChart({
 }: Readonly<StatisticsChartProps>): ReactElement | null {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
+  const tooltipStyles = useMemo(
+    () => createPopoverTooltipStyles(theme),
+    [theme]
+  )
 
   useEffect(() => {
     if (!chartRef.current) return
@@ -296,7 +300,7 @@ function StatisticsChart({
 
   return (
     <>
-      <Global styles={createPopoverTooltipStyles(theme)} />
+      <Global styles={tooltipStyles} />
       <StyledStatisticsChart
         ref={chartRef}
         data-testid="stDataFrameStatisticsChart"

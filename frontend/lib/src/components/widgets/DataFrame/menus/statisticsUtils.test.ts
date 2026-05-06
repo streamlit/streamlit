@@ -35,7 +35,7 @@ describe("statisticsUtils", () => {
       ["link", true],
       ["datetime", true],
       ["date", true],
-      ["time", true],
+      ["time", false], // time excluded - toSafeDate() lacks field metadata
       ["checkbox", true],
       ["multiselect", false],
       ["list", false],
@@ -56,7 +56,7 @@ describe("statisticsUtils", () => {
       ["link", "text"],
       ["datetime", "datetime"],
       ["date", "datetime"],
-      ["time", "datetime"],
+      ["time", null], // time excluded - toSafeDate() lacks field metadata
       ["checkbox", "boolean"],
       ["multiselect", null],
       ["list", null],

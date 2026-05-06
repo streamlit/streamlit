@@ -136,7 +136,8 @@ const NUMERIC_KINDS = new Set(["number", "progress"])
 const TEXT_KINDS = new Set(["text", "selectbox", "link"])
 
 /** Column kinds that support datetime statistics. */
-const DATETIME_KINDS = new Set(["datetime", "date", "time"])
+// Note: "time" excluded - toSafeDate() lacks field metadata to handle time-only values correctly
+const DATETIME_KINDS = new Set(["datetime", "date"])
 
 /** Column kinds that support boolean statistics. */
 const BOOLEAN_KINDS = new Set(["checkbox"])
@@ -184,7 +185,8 @@ function extractColumnValues(
 
   if (shouldSample) {
     // Systematic sampling: take evenly spaced samples
-    const step = Math.floor(numDataRows / SAMPLE_SIZE)
+    // Guard against zero step if constants are changed in the future
+    const step = Math.max(1, Math.floor(numDataRows / SAMPLE_SIZE))
     for (
       let i = 0;
       i < numDataRows && values.length < SAMPLE_SIZE;
@@ -348,7 +350,11 @@ export function computeTextStatistics(
         valueCounts.set(v, (valueCounts.get(v) || 0) + 1)
         lengths.push(v.length)
       }
-    } else if (typeof v === "number" || typeof v === "bigint") {
+    } else if (
+      typeof v === "number" ||
+      typeof v === "bigint" ||
+      typeof v === "boolean"
+    ) {
       const str = v.toString()
       valueCounts.set(str, (valueCounts.get(str) || 0) + 1)
       lengths.push(str.length)

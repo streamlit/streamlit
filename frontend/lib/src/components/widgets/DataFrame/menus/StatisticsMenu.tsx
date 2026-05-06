@@ -30,15 +30,12 @@ import {
   supportsStatistics,
 } from "./statisticsUtils"
 import {
-  StyledChartSkeletonBar,
-  StyledSkeletonBar,
   StyledStatisticsContainer,
   StyledStatisticsEmpty,
   StyledStatisticsLabel,
   StyledStatisticsMetrics,
   StyledStatisticsNote,
   StyledStatisticsRow,
-  StyledStatisticsSkeleton,
   StyledStatisticsValue,
 } from "./styled-components"
 
@@ -262,32 +259,11 @@ function StatisticsMetrics({
 }): ReactElement {
   const rows = getMetricRows(statistics)
   return (
-    <StyledStatisticsMetrics>
+    <StyledStatisticsMetrics data-testid="stDataFrameStatisticsMetrics">
       {rows.map(row => (
         <StatisticsRow key={row.label} label={row.label} value={row.value} />
       ))}
     </StyledStatisticsMetrics>
-  )
-}
-
-/** Skeleton bar widths for loading placeholder. */
-const SKELETON_WIDTHS = ["80%", "60%", "70%", "50%"] as const
-
-/**
- * Render a loading skeleton while statistics are being computed.
- */
-function StatisticsSkeleton(): ReactElement {
-  return (
-    <StyledStatisticsSkeleton
-      data-testid="stDataFrameStatisticsSkeleton"
-      aria-label="Loading statistics"
-      aria-busy="true"
-    >
-      <StyledChartSkeletonBar />
-      {SKELETON_WIDTHS.map(width => (
-        <StyledSkeletonBar key={width} width={width} />
-      ))}
-    </StyledStatisticsSkeleton>
   )
 }
 
@@ -298,12 +274,8 @@ function StatisticsContent({
   statistics,
 }: {
   statistics: ColumnStatistics | null
-}): ReactElement {
-  if (!statistics) {
-    return <StatisticsSkeleton />
-  }
-
-  if (statistics.count === 0) {
+}): ReactElement | null {
+  if (!statistics || statistics.count === 0) {
     return <StyledStatisticsEmpty>No data</StyledStatisticsEmpty>
   }
 

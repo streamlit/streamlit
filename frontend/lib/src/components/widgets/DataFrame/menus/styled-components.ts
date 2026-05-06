@@ -223,52 +223,6 @@ export const StyledStatisticsValue = styled.dd(({ theme }) => ({
 }))
 
 /**
- * Skeleton loading placeholder for statistics.
- */
-export const StyledStatisticsSkeleton = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: theme.spacing.sm,
-  padding: theme.spacing.sm,
-  minWidth: "13rem",
-}))
-
-interface StyledSkeletonBarProps {
-  width?: string
-}
-
-/**
- * Skeleton bar placeholder.
- */
-export const StyledSkeletonBar = styled.div<StyledSkeletonBarProps>(
-  ({ theme, width }) => ({
-    width: width ?? "100%",
-    height: theme.spacing.md,
-    backgroundColor: theme.colors.fadedText10,
-    borderRadius: theme.radii.sm,
-    animation: "pulse 1.5s ease-in-out infinite",
-    "@keyframes pulse": {
-      "0%, 100%": {
-        opacity: 0.4,
-      },
-      "50%": {
-        opacity: 0.7,
-      },
-    },
-  })
-)
-
-/**
- * Skeleton bar placeholder for chart area (taller).
- */
-export const StyledChartSkeletonBar = styled(StyledSkeletonBar)(
-  ({ theme }) => ({
-    height: theme.sizes.appDefaultBottomPadding,
-    width: "100%",
-  })
-)
-
-/**
  * Empty state message for statistics.
  */
 export const StyledStatisticsEmpty = styled.div(({ theme }) => ({
