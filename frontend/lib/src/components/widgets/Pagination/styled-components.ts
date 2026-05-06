@@ -24,8 +24,7 @@ export const StyledPaginationContainer =
   styled.div<StyledPaginationContainerProps>(({ shouldStretch }) => ({
     display: "flex",
     justifyContent: shouldStretch ? "center" : "flex-start",
-    width: shouldStretch ? "100%" : "fit-content",
-    maxWidth: "100%",
+    width: "100%",
   }))
 
 export const StyledPaginationButtonGroup = styled.div(({ theme }) => ({
