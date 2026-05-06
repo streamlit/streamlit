@@ -480,18 +480,19 @@ def _determine_delta_color_and_direction(
             "'green', 'blue', 'violet', 'gray'/'grey', 'primary')"
         )
 
-    if delta is None or delta == "" or _is_zero_delta(delta):
+    if delta is None or delta == "":
         return MetricColorAndDirection(
             color=MetricProto.MetricColor.GRAY,
             direction=MetricProto.MetricDirection.NONE,
         )
 
-    # Determine direction based on delta sign
-    cd_direction = (
-        MetricProto.MetricDirection.DOWN
-        if _is_negative_delta(delta)
-        else MetricProto.MetricDirection.UP
-    )
+    # Determine direction based on delta
+    if _is_zero_delta(delta):
+        cd_direction = MetricProto.MetricDirection.NONE
+    elif _is_negative_delta(delta):
+        cd_direction = MetricProto.MetricDirection.DOWN
+    else:
+        cd_direction = MetricProto.MetricDirection.UP
 
     # Handle explicit color names
     if delta_color in _DELTA_COLOR_TO_PROTO:
@@ -502,7 +503,11 @@ def _determine_delta_color_and_direction(
 
     # Handle "normal", "inverse", "off" modes
     is_negative = cd_direction == MetricProto.MetricDirection.DOWN
-    if delta_color == "normal":
+    is_zero = cd_direction == MetricProto.MetricDirection.NONE
+
+    if is_zero:
+        cd_color = MetricProto.MetricColor.GRAY
+    elif delta_color == "normal":
         cd_color = (
             MetricProto.MetricColor.RED
             if is_negative
