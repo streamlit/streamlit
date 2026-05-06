@@ -199,7 +199,11 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
               />
             </StyledSummaryLabelWrapper>
 
-            {/* Trailing chevron for compact mode - positioned directly after label */}
+            {/*
+              Trailing chevron for compact mode - positioned directly after label.
+              Uses chevron_right (smaller, tighter arrow) instead of keyboard_arrow_right
+              to give a more minimal appearance that fits the compact aesthetic.
+            */}
             {isCompact && (
               <DynamicIcon
                 iconValue={
