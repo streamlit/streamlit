@@ -25,13 +25,9 @@ import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import StatisticsChart from "./StatisticsChart"
 import {
-  BooleanStatistics,
   ColumnStatistics,
   computeStatistics,
-  DateTimeStatistics,
-  NumericStatistics,
   supportsStatistics,
-  TextStatistics,
 } from "./statisticsUtils"
 import {
   StyledChartSkeletonBar,
@@ -110,244 +106,146 @@ function computeEmptyPercentage(count: number, emptyCount: number): number {
   return total > 0 ? (emptyCount / total) * 100 : 0
 }
 
-/**
- * Render numeric statistics metrics.
- */
-function NumericMetrics({
-  stats,
-}: {
-  stats: NumericStatistics
-}): ReactElement {
-  const emptyPercentage = computeEmptyPercentage(stats.count, stats.nullCount)
-  const distinctPercentage =
-    stats.count > 0 ? (stats.unique / stats.count) * 100 : 0
+/** A single row in the statistics metrics display. */
+interface MetricRow {
+  label: string
+  value: string
+}
 
+/**
+ * Render a statistics row.
+ */
+function StatisticsRow({ label, value }: MetricRow): ReactElement {
   return (
-    <StyledStatisticsMetrics>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Values</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.count, 0)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Empty</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.nullCount, 0)} ({formatPercent(emptyPercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Distinct</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.unique, 0)} ({formatPercent(distinctPercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Sum</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.sum)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Minimum</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.min)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>25th percentile</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.q25)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Median</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.median)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>75th percentile</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.q75)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Maximum</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.max)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Average</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.mean)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Standard deviation</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.stdDev)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Variance</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.variance)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-    </StyledStatisticsMetrics>
+    <StyledStatisticsRow>
+      <StyledStatisticsLabel>{label}</StyledStatisticsLabel>
+      <StyledStatisticsValue>{value}</StyledStatisticsValue>
+    </StyledStatisticsRow>
   )
 }
 
 /**
- * Render text statistics metrics.
+ * Format a count with optional percentage.
  */
-function TextMetrics({ stats }: { stats: TextStatistics }): ReactElement {
-  const emptyPercentage = computeEmptyPercentage(stats.count, stats.empty)
-  const distinctPercentage =
-    stats.count > 0 ? (stats.unique / stats.count) * 100 : 0
-
-  return (
-    <StyledStatisticsMetrics>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Values</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.count, 0)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Empty</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.empty, 0)} ({formatPercent(emptyPercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Distinct</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.unique, 0)} ({formatPercent(distinctPercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Minimum length</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.minLength, 0)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Maximum length</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.maxLength, 0)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Average length</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.avgLength, 1)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-    </StyledStatisticsMetrics>
-  )
+function formatCountWithPercent(count: number, percentage: number): string {
+  return `${formatNumber(count, 0)} (${formatPercent(percentage)})`
 }
 
 /**
- * Render datetime statistics metrics.
+ * Build metrics rows for each statistics type.
  */
-function DateTimeMetrics({
-  stats,
-}: {
-  stats: DateTimeStatistics
-}): ReactElement {
-  const emptyPercentage = computeEmptyPercentage(stats.count, stats.nullCount)
-
-  return (
-    <StyledStatisticsMetrics>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Values</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.count, 0)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Empty</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.nullCount, 0)} ({formatPercent(emptyPercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Minimum</StyledStatisticsLabel>
-        <StyledStatisticsValue>{formatDate(stats.min)}</StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>25th percentile</StyledStatisticsLabel>
-        <StyledStatisticsValue>{formatDate(stats.q25)}</StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Median</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatDate(stats.median)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>75th percentile</StyledStatisticsLabel>
-        <StyledStatisticsValue>{formatDate(stats.q75)}</StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Maximum</StyledStatisticsLabel>
-        <StyledStatisticsValue>{formatDate(stats.max)}</StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Average</StyledStatisticsLabel>
-        <StyledStatisticsValue>{formatDate(stats.mean)}</StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Range</StyledStatisticsLabel>
-        <StyledStatisticsValue>{stats.range}</StyledStatisticsValue>
-      </StyledStatisticsRow>
-    </StyledStatisticsMetrics>
-  )
-}
-
-/**
- * Render boolean statistics metrics.
- */
-function BooleanMetrics({
-  stats,
-}: {
-  stats: BooleanStatistics
-}): ReactElement {
-  const emptyPercentage = computeEmptyPercentage(stats.count, stats.nullCount)
-
-  return (
-    <StyledStatisticsMetrics>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Values</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.count, 0)}
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>Empty</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.nullCount, 0)} ({formatPercent(emptyPercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>True</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.trueCount, 0)} (
-          {formatPercent(stats.truePercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-      <StyledStatisticsRow>
-        <StyledStatisticsLabel>False</StyledStatisticsLabel>
-        <StyledStatisticsValue>
-          {formatNumber(stats.falseCount, 0)} (
-          {formatPercent(stats.falsePercentage)})
-        </StyledStatisticsValue>
-      </StyledStatisticsRow>
-    </StyledStatisticsMetrics>
-  )
+function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
+  switch (statistics.type) {
+    case "numeric": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.nullCount
+      )
+      const distinctPct =
+        statistics.count > 0 ? (statistics.unique / statistics.count) * 100 : 0
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.nullCount, emptyPct),
+        },
+        {
+          label: "Distinct",
+          value: formatCountWithPercent(statistics.unique, distinctPct),
+        },
+        { label: "Sum", value: formatNumber(statistics.sum) },
+        { label: "Minimum", value: formatNumber(statistics.min) },
+        { label: "25th percentile", value: formatNumber(statistics.q25) },
+        { label: "Median", value: formatNumber(statistics.median) },
+        { label: "75th percentile", value: formatNumber(statistics.q75) },
+        { label: "Maximum", value: formatNumber(statistics.max) },
+        { label: "Average", value: formatNumber(statistics.mean) },
+        {
+          label: "Standard deviation",
+          value: formatNumber(statistics.stdDev),
+        },
+        { label: "Variance", value: formatNumber(statistics.variance) },
+      ]
+    }
+    case "text": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.empty
+      )
+      const distinctPct =
+        statistics.count > 0 ? (statistics.unique / statistics.count) * 100 : 0
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.empty, emptyPct),
+        },
+        {
+          label: "Distinct",
+          value: formatCountWithPercent(statistics.unique, distinctPct),
+        },
+        {
+          label: "Minimum length",
+          value: formatNumber(statistics.minLength, 0),
+        },
+        {
+          label: "Maximum length",
+          value: formatNumber(statistics.maxLength, 0),
+        },
+        {
+          label: "Average length",
+          value: formatNumber(statistics.avgLength, 1),
+        },
+      ]
+    }
+    case "datetime": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.nullCount
+      )
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.nullCount, emptyPct),
+        },
+        { label: "Minimum", value: formatDate(statistics.min) },
+        { label: "25th percentile", value: formatDate(statistics.q25) },
+        { label: "Median", value: formatDate(statistics.median) },
+        { label: "75th percentile", value: formatDate(statistics.q75) },
+        { label: "Maximum", value: formatDate(statistics.max) },
+        { label: "Average", value: formatDate(statistics.mean) },
+        { label: "Range", value: statistics.range },
+      ]
+    }
+    case "boolean": {
+      const emptyPct = computeEmptyPercentage(
+        statistics.count,
+        statistics.nullCount
+      )
+      return [
+        { label: "Values", value: formatNumber(statistics.count, 0) },
+        {
+          label: "Empty",
+          value: formatCountWithPercent(statistics.nullCount, emptyPct),
+        },
+        {
+          label: "True",
+          value: formatCountWithPercent(
+            statistics.trueCount,
+            statistics.truePercentage
+          ),
+        },
+        {
+          label: "False",
+          value: formatCountWithPercent(
+            statistics.falseCount,
+            statistics.falsePercentage
+          ),
+        },
+      ]
+    }
+  }
 }
 
 /**
@@ -358,16 +256,14 @@ function StatisticsMetrics({
 }: {
   statistics: ColumnStatistics
 }): ReactElement {
-  switch (statistics.type) {
-    case "numeric":
-      return <NumericMetrics stats={statistics} />
-    case "text":
-      return <TextMetrics stats={statistics} />
-    case "datetime":
-      return <DateTimeMetrics stats={statistics} />
-    case "boolean":
-      return <BooleanMetrics stats={statistics} />
-  }
+  const rows = getMetricRows(statistics)
+  return (
+    <StyledStatisticsMetrics>
+      {rows.map(row => (
+        <StatisticsRow key={row.label} label={row.label} value={row.value} />
+      ))}
+    </StyledStatisticsMetrics>
+  )
 }
 
 /** Skeleton bar widths for loading placeholder. */

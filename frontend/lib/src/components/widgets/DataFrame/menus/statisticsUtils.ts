@@ -72,7 +72,7 @@ export interface NumericStatistics {
 }
 
 /** Top value for text columns. */
-export interface TopValue {
+interface TopValue {
   value: string
   count: number
   percentage: number
@@ -506,6 +506,12 @@ export function computeDateTimeStatistics(
   }
 }
 
+/** Format a time unit with singular/plural handling. */
+function formatTimeUnit(value: number, unit: string): string {
+  const rounded = Math.round(value * 10) / 10
+  return rounded === 1 ? `1 ${unit}` : `${rounded} ${unit}s`
+}
+
 /**
  * Compute a human-readable date range string.
  */
@@ -519,32 +525,14 @@ function computeDateRange(minTimestamp: number, maxTimestamp: number): string {
   const diffMonths = diffDays / 30.44 // Average days per month
   const diffYears = diffDays / 365.25
 
-  if (diffYears >= 1) {
-    const years = Math.round(diffYears * 10) / 10
-    return years === 1 ? "1 year" : `${years} years`
-  }
-  if (diffMonths >= 1) {
-    const months = Math.round(diffMonths)
-    return months === 1 ? "1 month" : `${months} months`
-  }
-  if (diffWeeks >= 1) {
-    const weeks = Math.round(diffWeeks)
-    return weeks === 1 ? "1 week" : `${weeks} weeks`
-  }
-  if (diffDays >= 1) {
-    const days = Math.round(diffDays)
-    return days === 1 ? "1 day" : `${days} days`
-  }
-  if (diffHours >= 1) {
-    const hours = Math.round(diffHours)
-    return hours === 1 ? "1 hour" : `${hours} hours`
-  }
-  if (diffMinutes >= 1) {
-    const minutes = Math.round(diffMinutes)
-    return minutes === 1 ? "1 minute" : `${minutes} minutes`
-  }
-  const seconds = Math.round(diffSeconds)
-  return seconds === 1 ? "1 second" : `${seconds} seconds`
+  if (diffYears >= 1) return formatTimeUnit(diffYears, "year")
+  if (diffMonths >= 1) return formatTimeUnit(Math.round(diffMonths), "month")
+  if (diffWeeks >= 1) return formatTimeUnit(Math.round(diffWeeks), "week")
+  if (diffDays >= 1) return formatTimeUnit(Math.round(diffDays), "day")
+  if (diffHours >= 1) return formatTimeUnit(Math.round(diffHours), "hour")
+  if (diffMinutes >= 1)
+    return formatTimeUnit(Math.round(diffMinutes), "minute")
+  return formatTimeUnit(Math.round(diffSeconds), "second")
 }
 
 /**
@@ -606,7 +594,5 @@ export function computeStatistics(
       return computeDateTimeStatistics(values, isSampled)
     case "boolean":
       return computeBooleanStatistics(values, isSampled)
-    default:
-      return null
   }
 }
