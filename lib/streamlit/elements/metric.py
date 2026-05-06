@@ -480,7 +480,7 @@ def _determine_delta_color_and_direction(
             "'green', 'blue', 'violet', 'gray'/'grey', 'primary')"
         )
 
-    if delta is None or delta == "":
+    if delta is None or delta == "" or float(dedent(str(delta))) == 0:
         return MetricColorAndDirection(
             color=MetricProto.MetricColor.GRAY,
             direction=MetricProto.MetricDirection.NONE,
