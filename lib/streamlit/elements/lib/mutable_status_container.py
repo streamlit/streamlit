@@ -25,7 +25,7 @@ from streamlit.elements.lib.layout_utils import (
     get_width_config,
     validate_width,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import enqueue_message
@@ -48,6 +48,9 @@ class StatusContainer(DeltaGenerator):
         width: WidthWithoutContent = "stretch",
         type: Literal["default", "compact"] = "default",
     ) -> StatusContainer:
+        if type not in {"default", "compact"}:
+            raise StreamlitValueError("type", ["'default'", "'compact'"])
+
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
         expandable_proto.label = label or ""

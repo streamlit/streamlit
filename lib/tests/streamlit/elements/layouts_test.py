@@ -1373,6 +1373,11 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         status_block = self.get_delta_from_queue()
         assert status_block.add_block.expandable.type == expected_proto_type
 
+    def test_invalid_type(self):
+        """Test that invalid type values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.status("label", type="invalid")
+
 
 class TabsTest(DeltaGeneratorTestCase):
     def test_tab_required(self):
