@@ -136,6 +136,8 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
           // is rendered as markdown and may contain mixed colors, icons, or
           // other styled components. Opacity uniformly mutes all content
           // while preserving relative contrast within the label.
+          // Note: 0.6 matches st.caption styling. This is below WCAG AA
+          // contrast recommendations and may be adjusted in a future update.
           paddingLeft: 0,
           paddingRight: 0,
           paddingTop: theme.spacing.twoXS,
