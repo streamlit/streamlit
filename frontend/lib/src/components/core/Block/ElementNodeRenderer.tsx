@@ -841,7 +841,7 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.FIT_CONTENT_ELEMENT}
+          config={ElementContainerConfig.FULL_WIDTH}
           isStale={isStale}
         >
           <Pagination
