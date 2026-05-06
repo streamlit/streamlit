@@ -47,6 +47,7 @@ import "streamlit/proto/Html.proto";
 import "streamlit/proto/IFrame.proto";
 import "streamlit/proto/Image.proto";
 import "streamlit/proto/Json.proto";
+import "streamlit/proto/JsonEditor.proto";
 import "streamlit/proto/LinkButton.proto";
 import "streamlit/proto/Markdown.proto";
 import "streamlit/proto/MenuButton.proto";
@@ -112,6 +113,7 @@ message Element {
     IFrame iframe = 38;
     ImageList imgs = 6;
     Json json = 31;
+    JsonEditor json_editor = 65;
     LinkButton link_button = 51;
     Markdown markdown = 29;
     Metric metric = 42;
@@ -137,7 +139,7 @@ message Element {
     Heading heading = 47;
     Code code = 48;
     MenuButton menu_button = 64;
-    // Next ID: 65
+    // Next ID: 66
   }
 
   reserved 3, 9, 10, 11, 17;

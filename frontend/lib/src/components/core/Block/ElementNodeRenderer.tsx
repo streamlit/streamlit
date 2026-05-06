@@ -43,6 +43,7 @@ import {
   Html as HtmlProto,
   IFrame as IFrameProto,
   ImageList as ImageListProto,
+  JsonEditor as JsonEditorProto,
   Json as JsonProto,
   LinkButton as LinkButtonProto,
   Markdown as MarkdownProto,
@@ -177,6 +178,9 @@ const Feedback = lazy(
 )
 const FileUploader = lazy(
   () => import("~lib/components/widgets/FileUploader/FileUploader")
+)
+const JsonEditor = lazy(
+  () => import("~lib/components/widgets/JsonEditor/JsonEditor")
 )
 const FormSubmitContent = lazy(() =>
   import("~lib/components/widgets/Form/FormSubmitContent").then(module => ({
@@ -475,6 +479,24 @@ const RawElementNodeRenderer = (
           <Json element={node.element.json as JsonProto} {...elementProps} />
         </ElementContainer>
       )
+
+    case "jsonEditor": {
+      const jsonEditorProto = node.element.jsonEditor as JsonEditorProto
+      widgetProps.disabled = widgetProps.disabled || jsonEditorProto.disabled
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.DEFAULT}
+          isStale={isStale}
+        >
+          <JsonEditor
+            key={jsonEditorProto.id}
+            element={jsonEditorProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
 
     case "markdown": {
       // Markdown "auto" width behavior:

@@ -94,6 +94,7 @@ from streamlit.elements.widgets.color_picker import ColorPickerMixin
 from streamlit.elements.widgets.data_editor import DataEditorMixin
 from streamlit.elements.widgets.feedback import FeedbackMixin
 from streamlit.elements.widgets.file_uploader import FileUploaderMixin
+from streamlit.elements.widgets.json_editor import JsonEditorMixin
 from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
@@ -222,6 +223,7 @@ class DeltaGenerator(
     SpinnerMixin,
     TableMixin,
     JsonMixin,
+    JsonEditorMixin,
     TextMixin,
     TextWidgetsMixin,
     TimeWidgetsMixin,
