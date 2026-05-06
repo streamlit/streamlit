@@ -27,7 +27,7 @@ from e2e_playwright.shared.app_utils import (
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 22
+NUMBER_OF_EXPANDERS: Final = 25
 
 
 def test_expander_displays_correctly(
