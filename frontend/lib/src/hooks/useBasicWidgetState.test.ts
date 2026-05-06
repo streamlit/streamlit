@@ -52,6 +52,143 @@ const updateWidgetMgrState = vi.fn(
   ) => {}
 )
 
+describe("useBasicWidgetState - setValue ref-based dedup", () => {
+  let widgetMgr: WidgetStateManager
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    widgetMgr = new WidgetStateManager({
+      formsDataChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+    })
+  })
+
+  it("processes setValue when a new element reference arrives", () => {
+    const element1: MockProto = {
+      formId: "",
+      setValue: true,
+      id: "widget-ref-1",
+      value: "value-1",
+      default: "default",
+    }
+
+    const { result, rerender } = renderHook(
+      ({ el }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+        }),
+      { initialProps: { el: element1 } }
+    )
+
+    expect(result.current[0]).toBe("value-1")
+
+    const element2: MockProto = {
+      formId: "",
+      setValue: true,
+      id: "widget-ref-1",
+      value: "value-2",
+      default: "default",
+    }
+
+    rerender({ el: element2 })
+    expect(result.current[0]).toBe("value-2")
+  })
+
+  it("does not double-process when re-rendered with the same element reference", () => {
+    const element: MockProto = {
+      formId: "",
+      setValue: true,
+      id: "widget-batch-1",
+      value: "server-value",
+      default: "default",
+    }
+
+    const { result, rerender } = renderHook(
+      ({ el }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+        }),
+      { initialProps: { el: element } }
+    )
+
+    expect(result.current[0]).toBe("server-value")
+
+    updateWidgetMgrState.mockClear()
+
+    // Re-render with exact same reference (simulates React batching).
+    // The ref guard should prevent re-processing even though
+    // element.setValue may have been cleared by the previous effect.
+    rerender({ el: element })
+
+    expect(updateWidgetMgrState).not.toHaveBeenCalled()
+  })
+
+  it("processes setValue from a new element even after a previous element was cleared", () => {
+    const element1: MockProto = {
+      formId: "",
+      setValue: true,
+      id: "widget-seq-1",
+      value: "first",
+      default: "default",
+    }
+
+    const { result, rerender } = renderHook(
+      ({ el }) =>
+        useBasicWidgetState({
+          getStateFromWidgetMgr,
+          getCurrStateFromProto,
+          getDefaultStateFromProto,
+          updateWidgetMgrState,
+          element: el,
+          widgetMgr,
+          fragmentId: undefined,
+          formClearBehavior: "resetValueOnly",
+        }),
+      { initialProps: { el: element1 } }
+    )
+
+    expect(result.current[0]).toBe("first")
+
+    // Simulate a rerun that sends a new element proto with setValue=true
+    // (e.g., parallel fragment rerun acknowledging a user interaction).
+    const element2: MockProto = {
+      formId: "",
+      setValue: true,
+      id: "widget-seq-1",
+      value: "second",
+      default: "default",
+    }
+
+    rerender({ el: element2 })
+    expect(result.current[0]).toBe("second")
+
+    const element3: MockProto = {
+      formId: "",
+      setValue: true,
+      id: "widget-seq-1",
+      value: "third",
+      default: "default",
+    }
+
+    rerender({ el: element3 })
+    expect(result.current[0]).toBe("third")
+  })
+})
+
 describe("useBasicWidgetState - getDefaultState logic", () => {
   let widgetMgr: WidgetStateManager
 
