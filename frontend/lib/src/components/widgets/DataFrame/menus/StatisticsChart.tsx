@@ -40,6 +40,14 @@ const CHART_WIDTH = 180
 /** Chart height in pixels. */
 const CHART_HEIGHT = 56
 
+/** Accessible labels for each chart type. */
+const CHART_LABELS: Record<string, string> = {
+  numeric: "Distribution histogram",
+  datetime: "Distribution histogram",
+  text: "Top values frequency chart",
+  boolean: "True/false distribution chart",
+}
+
 /**
  * Formats a number for display in tooltips.
  */
@@ -266,13 +274,7 @@ function StatisticsChart({
     return null
   }
 
-  // Determine accessible label based on chart type
-  const chartLabel =
-    statistics.type === "numeric" || statistics.type === "datetime"
-      ? "Distribution histogram"
-      : statistics.type === "text"
-        ? "Top values frequency chart"
-        : "True/false distribution chart"
+  const chartLabel = CHART_LABELS[statistics.type]
 
   return (
     <>
