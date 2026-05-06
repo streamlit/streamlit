@@ -3178,7 +3178,7 @@ def ButtonColumn(
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of the button within the cell. If this is
-        ``None`` (default), buttons are left-aligned.
+        ``None`` (default), buttons are centered.
 
     type : "primary", "secondary", or "tertiary"
         An optional string that specifies the button type. This can be one of

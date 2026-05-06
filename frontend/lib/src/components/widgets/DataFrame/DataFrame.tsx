@@ -403,7 +403,7 @@ function DataFrame({
                 handleOpenButtonMenu(column.name, rowIdx, actions, bounds)
               },
             },
-          } as ButtonCell
+          }
         }
       }
 
@@ -608,9 +608,15 @@ function DataFrame({
     getOriginalIndex,
   ])
 
+  // Filter out button columns from CSV export (per spec: button columns are excluded from export)
+  const exportableColumns = useMemo(
+    () => columns.filter(col => col.kind !== "button"),
+    [columns]
+  )
+
   const { exportToCsv } = useDataExporter(
     getCellContent,
-    columns,
+    exportableColumns,
     numRows,
     enforceDownloadInNewTab
   )
