@@ -214,8 +214,8 @@ def test_setitem_allows_setting_before_widget_creation():
     )
 
     mock_ctx = MagicMock()
-    mock_ctx.widget_ids_this_run = set()
-    mock_ctx.form_ids_this_run = set()
+    mock_ctx.widget_ids_this_run = ThreadSafeSet()
+    mock_ctx.form_ids_this_run = ThreadSafeSet()
 
     presenter = make_bidi_component_presenter(
         aggregator_id="test_aggregator_id",

@@ -521,13 +521,15 @@ class ScriptRunner:
                 # interaction). Use the widget ids from the rerun data to
                 # maintain some widget state, as the rerun data should
                 # contain the latest widget ids from the frontend.
-                widget_ids: set[str] = set()
+                widget_ids: frozenset[str] = frozenset()
 
                 if (
                     rerun_data.widget_states is not None
                     and rerun_data.widget_states.widgets is not None
                 ):
-                    widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+                    widget_ids = frozenset(
+                        w.id for w in rerun_data.widget_states.widgets
+                    )
 
                 # For MPA page transitions: filter query params BEFORE cleanup.
                 # This uses existing bindings to remove params from other pages,
@@ -545,7 +547,7 @@ class ScriptRunner:
                     qp.set_initial_query_params_from_current()
 
                 # Now safe to do normal cleanup - filtering already done
-                self._session_state.on_script_finished(frozenset(widget_ids))
+                self._session_state.on_script_finished(widget_ids)
 
             fragment_ids_this_run: list[str] | None = (
                 rerun_data.fragment_id_queue or None
