@@ -43,6 +43,28 @@ import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElem
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
+/**
+ * Determine if we can reuse the element payload from an existing node.
+ * Returns true only when:
+ * - elementHash is non-empty and matches the existing node's hash
+ * - The element type matches
+ * - The element doesn't have a one-shot effect flag set by the backend
+ */
+function canReuseElementPayload(
+  existingNode: AppNode | undefined,
+  elementHash: string | undefined,
+  nextElement: Element
+): existingNode is ElementNode {
+  return (
+    Boolean(elementHash) &&
+    nextElement.type !== undefined &&
+    existingNode instanceof ElementNode &&
+    existingNode.elementHash === elementHash &&
+    existingNode.element.type === nextElement.type &&
+    !nextElement.hasOneShotEffect
+  )
+}
+
 interface LogoMetadata {
   // Associated scriptHash that created the logo
   activeScriptHash: string
@@ -216,21 +238,36 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    elementHash?: string
   ): AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
     switch (delta.type) {
       case "newElement": {
-        const element = delta.newElement as Element
+        const nextElement = delta.newElement as Element
+        const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          this.root,
+          deltaPath
+        )
+
+        // Check if we can reuse the payload (and derived caches) from an existing node
+        const canReuse = canReuseElementPayload(
+          existingNode,
+          elementHash,
+          nextElement
+        )
+
         return this.addElement(
           deltaPath,
           scriptRunId,
-          element,
+          canReuse ? existingNode.element : nextElement,
           metadata,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          elementHash,
+          canReuse ? existingNode : undefined
         )
       }
 
@@ -381,15 +418,28 @@ export class AppRoot {
     element: Element,
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string,
+    existingNodeForDerivations?: ElementNode
   ): AppRoot {
-    const elementNode = new ElementNode(
-      element,
-      metadata,
-      scriptRunId,
-      activeScriptHash,
-      fragmentId
-    )
+    // If we have an existing node to preserve derivations from, use its helper method
+    // to create a new node with updated lifecycle metadata but preserved lazy caches
+    const elementNode = existingNodeForDerivations
+      ? existingNodeForDerivations.withPreservedDerivations(
+          metadata,
+          scriptRunId,
+          activeScriptHash,
+          fragmentId,
+          elementHash
+        )
+      : new ElementNode(
+          element,
+          metadata,
+          scriptRunId,
+          activeScriptHash,
+          fragmentId,
+          elementHash
+        )
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(

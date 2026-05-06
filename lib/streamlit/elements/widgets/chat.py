@@ -1061,15 +1061,22 @@ class ChatMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
+        has_one_shot = widget_state.value_changed and widget_state.value is not None
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input", chat_input_proto, layout_config=layout_config
+                "chat_input",
+                chat_input_proto,
+                layout_config=layout_config,
+                has_one_shot_effect=has_one_shot,
             )
         else:
             self.dg._enqueue(
-                "chat_input", chat_input_proto, layout_config=layout_config
+                "chat_input",
+                chat_input_proto,
+                layout_config=layout_config,
+                has_one_shot_effect=has_one_shot,
             )
 
         return widget_state.value if not widget_state.value_changed else None

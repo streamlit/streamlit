@@ -17,7 +17,15 @@
 import { useCallback, useEffect, useLayoutEffect, useState } from "react"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { useThrottledCallback } from "~lib/hooks/useThrottledCallback"
 import { convertRemToPx } from "~lib/theme/utils"
+
+/**
+ * Throttle delay for window resize events in milliseconds.
+ * This limits re-renders during active window resizing while still
+ * providing periodic updates.
+ */
+const RESIZE_THROTTLE_MS = 100
 
 export type WindowDimensions = {
   fullWidth: number
@@ -54,13 +62,17 @@ export const useWindowDimensions = (): WindowDimensions => {
     setWindowDimensions(getWindowDimensions())
   }, [getWindowDimensions])
 
+  const { throttledCallback: throttledResize, cancel: cancelThrottle } =
+    useThrottledCallback(updateWindowDimensions, RESIZE_THROTTLE_MS)
+
   useEffect(() => {
-    window.addEventListener("resize", updateWindowDimensions)
+    window.addEventListener("resize", throttledResize)
 
     return () => {
-      window.removeEventListener("resize", updateWindowDimensions)
+      window.removeEventListener("resize", throttledResize)
+      cancelThrottle()
     }
-  }, [updateWindowDimensions])
+  }, [throttledResize, cancelThrottle])
 
   useLayoutEffect(() => {
     // Measure once on load, let resize handlers take over from there
