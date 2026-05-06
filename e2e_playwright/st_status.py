@@ -65,7 +65,7 @@ with st.status("Fixed width status", state="complete", width=200):
 with st.status("Stretch width status", state="complete", width="stretch"):
     st.write("Hello World")
 
-# Compact (borderless) status
+# Compact status
 with st.status("Compact running", type="compact") as status:
     st.write("Processing...")
     status.update(state="complete")

@@ -27,6 +27,7 @@ from streamlit.errors import (
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
     StreamlitInvalidVerticalAlignmentError,
+    StreamlitValueError,
 )
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.proto.GapSize_pb2 import GapSize
@@ -493,23 +494,22 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
 
-    def test_type_default_by_default(self):
-        """Test that type is DEFAULT by default."""
-        st.expander("label")
+    @parameterized.expand(
+        [
+            ("default", BlockProto.Expandable.Type.DEFAULT),
+            ("compact", BlockProto.Expandable.Type.COMPACT),
+        ]
+    )
+    def test_type_parameter(self, type_param: str, expected_proto_type: int):
+        """Test that the type parameter sets the correct proto type."""
+        st.expander("label", type=type_param)
         expander_block = self.get_delta_from_queue()
-        assert (
-            expander_block.add_block.expandable.type
-            == BlockProto.Expandable.Type.DEFAULT
-        )
+        assert expander_block.add_block.expandable.type == expected_proto_type
 
-    def test_type_compact(self):
-        """Test that type can be set to 'compact' for compact mode."""
-        st.expander("label", type="compact")
-        expander_block = self.get_delta_from_queue()
-        assert (
-            expander_block.add_block.expandable.type
-            == BlockProto.Expandable.Type.COMPACT
-        )
+    def test_invalid_type(self):
+        """Test that invalid type values raise StreamlitValueError."""
+        with pytest.raises(StreamlitValueError):
+            st.expander("label", type="invalid")
 
     def test_on_change_callback_without_key_works(self):
         """Test that a callback works without an explicit key."""
@@ -1361,21 +1361,17 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.status("label", width=invalid_width)
 
-    def test_type_default_by_default(self):
-        """Test that type is DEFAULT by default."""
-        st.status("label")
+    @parameterized.expand(
+        [
+            ("default", BlockProto.Expandable.Type.DEFAULT),
+            ("compact", BlockProto.Expandable.Type.COMPACT),
+        ]
+    )
+    def test_type_parameter(self, type_param: str, expected_proto_type: int):
+        """Test that the type parameter sets the correct proto type."""
+        st.status("label", type=type_param)
         status_block = self.get_delta_from_queue()
-        assert (
-            status_block.add_block.expandable.type == BlockProto.Expandable.Type.DEFAULT
-        )
-
-    def test_type_compact(self):
-        """Test that type can be set to 'compact' for compact mode."""
-        st.status("label", type="compact")
-        status_block = self.get_delta_from_queue()
-        assert (
-            status_block.add_block.expandable.type == BlockProto.Expandable.Type.COMPACT
-        )
+        assert status_block.add_block.expandable.type == expected_proto_type
 
 
 class TabsTest(DeltaGeneratorTestCase):

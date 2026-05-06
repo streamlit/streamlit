@@ -39,8 +39,6 @@ def test_status_container_rendering(
     assert_snapshot(status_containers.nth(8), name="st_status-uncaught_exception")
     assert_snapshot(status_containers.nth(9), name="st_status-fixed_pixel_width")
     assert_snapshot(status_containers.nth(10), name="st_status-stretch_width")
-
-    # Compact (borderless) status snapshots
     assert_snapshot(status_containers.nth(11), name="st_status-compact_running")
     assert_snapshot(status_containers.nth(12), name="st_status-compact_complete")
     assert_snapshot(status_containers.nth(13), name="st_status-compact_expanded")
@@ -71,7 +69,7 @@ def test_status_collapses_and_expands(app: Page):
 
 
 def test_compact_status_collapses_and_expands(app: Page):
-    """Test that a compact (borderless) status collapses and expands."""
+    """Test that a compact status collapses and expands."""
     compact_status = get_expander(app, "Compact expanded")
     # Starts expanded:
     expect(compact_status.get_by_text("Compact content visible")).to_be_visible()

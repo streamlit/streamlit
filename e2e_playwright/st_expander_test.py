@@ -52,11 +52,9 @@ def test_expander_displays_correctly(
     assert_snapshot(expander_elements.nth(9), name="st_expander-nested")
     assert_snapshot(expander_elements.nth(11), name="st_expander-fixed_width")
     assert_snapshot(expander_elements.nth(12), name="st_expander-stretch_width")
-    # Compact (type="compact") expander snapshots
     assert_snapshot(expander_elements.nth(14), name="st_expander-compact_collapsed")
     assert_snapshot(expander_elements.nth(15), name="st_expander-compact_expanded")
     assert_snapshot(expander_elements.nth(16), name="st_expander-compact_with_icon")
-
     assert_snapshot(expander_elements.nth(17), name="st_expander-with_code_block")
 
 
@@ -343,7 +341,7 @@ def test_expander_ignore_mode_does_not_trigger_rerun(app: Page):
 
 
 def test_compact_expander_collapses_and_expands(app: Page):
-    """Test that a compact (type='compact') expander collapses and expands."""
+    """Test that a compact expander collapses and expands."""
     # Compact expanded starts open
     compact_expanded = get_expander(app, "Compact expanded")
     expect(

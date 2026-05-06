@@ -151,13 +151,10 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
     setIsHovered(false)
   }
 
-  // For compact mode (type=COMPACT), chevron is trailing (after label)
-  // For normal mode, chevron is leading (before label)
   const isCompact = type === BlockProto.Expandable.Type.COMPACT
 
-  // Determine which icon to show (leading position)
-  // In normal mode: show chevron when no icon or hovering, show user icon otherwise
-  // In compact mode: always show user icon if present (chevron moves to trailing)
+  // Leading icon logic: normal mode swaps between chevron and user icon on hover;
+  // compact mode always shows user icon (if any) since the chevron is trailing.
   const showLeadingChevron = !isCompact && (!icon || isHovered)
   const showLeadingUserIcon = isCompact ? Boolean(icon) : icon && !isHovered
 
@@ -199,11 +196,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
               />
             </StyledSummaryLabelWrapper>
 
-            {/*
-              Trailing chevron for compact mode - positioned directly after label.
-              Uses chevron_right (smaller, tighter arrow) instead of keyboard_arrow_right
-              to give a more minimal appearance that fits the compact aesthetic.
-            */}
+            {/* Trailing chevron for compact mode (uses chevron_right for tighter appearance) */}
             {isCompact && (
               <DynamicIcon
                 iconValue={
