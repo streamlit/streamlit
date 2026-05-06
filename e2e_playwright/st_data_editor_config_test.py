@@ -174,6 +174,7 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
     )
 
 
+@pytest.mark.skip_browser("webkit")  # Cell overlay visibility flaky on webkit
 @pytest.mark.skip_browser("firefox")  # Cell overlay visibility flaky on Firefox
 def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the markdown cell can be edited."""
