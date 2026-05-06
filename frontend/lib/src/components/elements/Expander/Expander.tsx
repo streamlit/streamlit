@@ -136,11 +136,19 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
       ? handlePersistToggle
       : undefined
 
+  const isCompact = type === BlockProto.Expandable.Type.COMPACT
+
+  // Leading icon logic: normal mode swaps between chevron and user icon on hover;
+  // compact mode always shows user icon (if any) since the chevron is trailing.
+  const showLeadingChevron = !isCompact && (!icon || isHovered)
+  const showLeadingUserIcon = isCompact ? Boolean(icon) : icon && !isHovered
+
   const { isOpen, detailsRef, summaryRef, contentRef, handleToggle } =
     useDetailsAnimation({
       backendExpanded: initialExpanded,
       label,
       onToggle,
+      isCompact,
     })
 
   const handleMouseEnter = (): void => {
@@ -150,13 +158,6 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const handleMouseLeave = (): void => {
     setIsHovered(false)
   }
-
-  const isCompact = type === BlockProto.Expandable.Type.COMPACT
-
-  // Leading icon logic: normal mode swaps between chevron and user icon on hover;
-  // compact mode always shows user icon (if any) since the chevron is trailing.
-  const showLeadingChevron = !isCompact && (!icon || isHovered)
-  const showLeadingUserIcon = isCompact ? Boolean(icon) : icon && !isHovered
 
   return (
     <StyledExpandableContainer className="stExpander" data-testid="stExpander">
@@ -187,7 +188,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             )}
             {showLeadingUserIcon && <ExpanderIcon icon={icon} />}
 
-            <StyledSummaryLabelWrapper compact={isCompact}>
+            <StyledSummaryLabelWrapper isCompact={isCompact}>
               <StreamlitMarkdown
                 source={label}
                 allowHTML={false}

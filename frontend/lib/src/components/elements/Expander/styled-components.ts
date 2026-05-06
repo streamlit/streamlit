@@ -64,12 +64,12 @@ export const StyledSummaryHeading = styled.span(({ theme }) => ({
   gap: theme.spacing.sm,
 }))
 
-export const StyledSummaryLabelWrapper = styled.div<{ compact?: boolean }>(
-  ({ compact }) => ({
+export const StyledSummaryLabelWrapper = styled.div<{ isCompact: boolean }>(
+  ({ isCompact }) => ({
     display: "flex",
     overflow: "hidden",
     // In compact mode, don't grow so chevron stays directly after label
-    ...(!compact && {
+    ...(!isCompact && {
       width: "100%",
       flexGrow: 1,
     }),
