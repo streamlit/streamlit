@@ -259,7 +259,7 @@ def encode_provider_token(provider: str) -> str:
 def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     """Decode the JWT token and validate the claims."""
     try:
-        from authlib.jose import JoseError, JWTClaims, jwt
+        from authlib.jose import JoseError, JsonWebToken, JWTClaims
     except ImportError:  # pragma: no cover - optional dep
         raise StreamlitAuthError(
             """To use authentication features, you need to install Authlib>=1.3.2, e.g. via `pip install Authlib`."""
@@ -269,10 +269,10 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     # the 'exp' (and it is not expired), and 'provider' field exists.
     claim_options = {"exp": {"essential": True}, "provider": {"essential": True}}
     try:
-        payload: JWTClaims = jwt.decode(
+        jwt_decoder = JsonWebToken(["HS256"])
+        payload: JWTClaims = jwt_decoder.decode(
             provider_token,
             get_signing_secret(),
-            algorithms=["HS256"],
             claims_options=claim_options,
         )
         payload.validate()
