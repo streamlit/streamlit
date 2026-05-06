@@ -355,13 +355,10 @@ export function useBasicWidgetState<
   // skip a legitimate setValue=true event.
   const lastProcessedSetValueRef = useRef<unknown>(null)
 
-  // eslint-disable-next-line react-hooks/immutability -- consuming setValue event from proto
   useEffect(() => {
     if (!element.setValue) return
     if (lastProcessedSetValueRef.current === element) return
     lastProcessedSetValueRef.current = element
-
-    element.setValue = false // Secondary cleanup for backward compat
 
     setNextValueWithSource({
       value: getCurrStateFromProto(element),
