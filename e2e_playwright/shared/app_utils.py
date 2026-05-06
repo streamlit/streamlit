@@ -1518,14 +1518,18 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
             const images = element.querySelectorAll('img');
             return Promise.all(
                 Array.from(images).map(async img => {
-                    // First wait for the image to load
-                    if (!img.complete || img.naturalWidth === 0) {
+                    // Wait for image to load if not complete yet
+                    if (!img.complete) {
                         await new Promise((resolve, reject) => {
-                            img.addEventListener('load', resolve);
-                            img.addEventListener('error', reject);
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', reject, { once: true });
                         });
                     }
-                    // Then wait for the image to be decoded (ready for rendering)
+                    // Check for already-failed images (complete but no content)
+                    if (img.naturalWidth === 0) {
+                        throw new Error('Image failed to load: ' + img.src);
+                    }
+                    // Wait for the image to be decoded (ready for rendering)
                     // This is important for webkit which may have timing variations
                     // between load and decode completion
                     await img.decode();
