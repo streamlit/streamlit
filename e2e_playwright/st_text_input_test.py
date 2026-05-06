@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 22
+TEXT_INPUT_ELEMENTS = 23
 
 
 def test_text_input_widget_rendering(
@@ -444,3 +444,21 @@ def test_text_input_query_param_max_chars_truncation(page: Page, app_port: int):
 
     # Should be truncated to 5 characters
     expect_prefixed_markdown(page, "bound text max value:", "veryl")
+
+
+def test_text_input_setvalue_preserved_on_rerun(app: Page):
+    """Test that setValue=True commands are delivered even when the protobuf hash matches.
+
+    This verifies that text_input with a programmatic value is correctly set
+    on every rerun, not cached/skipped due to hash matching.
+    """
+    expect_markdown(app, "Text input counter: 1")
+    text_input = get_text_input(app, "Programmatic value input")
+    text_input_field = text_input.locator("input").first
+    expect(text_input_field).to_have_value("fixed_value")
+
+    for expected_counter in range(2, 5):
+        app.get_by_role("button", name="Trigger text input rerun", exact=True).click()
+        wait_for_app_run(app)
+        expect_markdown(app, f"Text input counter: {expected_counter}")
+        expect(text_input_field).to_have_value("fixed_value")

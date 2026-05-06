@@ -14,7 +14,8 @@
 # limitations under the License.
 
 """
-PreToolUse(Bash) hook: enforce uv run for Python commands and block direct pytest on e2e_playwright.
+PreToolUse(Bash) hook: enforce uv run for Python commands and git commands with hooks,
+and block direct pytest on e2e_playwright.
 
 Exit code semantics (as of Claude Code hooks):
 - exit 0: allow tool call
@@ -50,7 +51,18 @@ PYTEST_PATTERN = re.compile(
 )
 
 # Commands that must be run via `uv run`
-UV_RUN_COMMANDS = ("python", "python3", "pytest", "ruff", "mypy", "ty", "streamlit")
+# Includes git commands that trigger pre-commit/pre-push hooks
+UV_RUN_COMMANDS = (
+    "python",
+    "python3",
+    "pytest",
+    "ruff",
+    "mypy",
+    "ty",
+    "streamlit",
+    "git commit",
+    "git push",
+)
 
 
 def main() -> None:
@@ -82,15 +94,15 @@ def main() -> None:
         )
         sys.exit(2)
 
-    # Check if command starts with a Python tool that requires `uv run`
-    first_word = norm.split()[0] if norm else ""
-    if first_word in UV_RUN_COMMANDS:
-        print(  # noqa: T201
-            f"Policy: Bash('{norm}') is blocked.\n"
-            f"Use 'uv run {norm}' instead of running '{first_word}' directly.\n",
-            file=sys.stderr,
-        )
-        sys.exit(2)
+    # Check if command starts with a tool/command that requires `uv run`
+    for cmd_prefix in UV_RUN_COMMANDS:
+        if norm == cmd_prefix or norm.startswith(cmd_prefix + " "):
+            print(  # noqa: T201
+                f"Policy: Bash('{cmd}') is blocked.\n"
+                f"Use 'uv run {cmd}' instead of running '{cmd_prefix}' directly.\n",
+                file=sys.stderr,
+            )
+            sys.exit(2)
 
     sys.exit(0)
 

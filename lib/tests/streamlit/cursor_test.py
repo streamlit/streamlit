@@ -149,10 +149,9 @@ class TestRunningCursor:
         cursor = RunningCursor(RootContainer.MAIN)
 
         # First lock
-        locked1 = cursor.get_locked_cursor(foo="bar")
+        locked1 = cursor.get_locked_cursor()
         assert isinstance(locked1, LockedCursor)
         assert locked1.index == 0
-        assert locked1.props == {"foo": "bar"}
         assert cursor.index == 1
 
         # Second lock
@@ -190,18 +189,16 @@ class TestRunningCursor:
 class TestLockedCursor:
     def test_initialization(self):
         """Test initialization of LockedCursor."""
-        cursor = LockedCursor(RootContainer.MAIN, (1,), 5, foo="bar")
+        cursor = LockedCursor(RootContainer.MAIN, (1,), 5)
         assert cursor.root_container == RootContainer.MAIN
         assert cursor.parent_path == (1,)
         assert cursor.index == 5
         assert cursor.is_locked
-        assert cursor.props == {"foo": "bar"}
 
     def test_get_locked_cursor(self):
         """Test get_locked_cursor from LockedCursor."""
         cursor = LockedCursor(RootContainer.MAIN, index=5)
 
-        locked = cursor.get_locked_cursor(new_prop="value")
+        locked = cursor.get_locked_cursor()
         assert locked == cursor
         assert cursor.index == 5  # Index doesn't change
-        assert cursor.props == {"new_prop": "value"}

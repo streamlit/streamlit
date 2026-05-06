@@ -130,7 +130,7 @@ def highlight_first(value: float) -> str:
 
 
 df = pd.DataFrame(np.arange(0, 100, 1).reshape(10, 10))
-st.table(df.style.map(highlight_first))  # type: ignore[arg-type]
+st.table(df.style.map(highlight_first))  # type: ignore[arg-type] # ty: ignore[no-matching-overload]
 
 st.subheader("Pandas Styler: Background and font styling")
 
@@ -146,7 +146,7 @@ def highlight_max(s: Any, props: str = "") -> npt.NDArray[Any]:
 
 
 # Passing style values w/ all color formats to test css-style-string parsing robustness.
-styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload]
+styled_df = df.style.map(style_negative, props="color:#FF0000;").map(  # type: ignore[call-overload] # ty: ignore[invalid-argument-type]
     lambda v: "opacity: 20%;" if (v < 0.3) and (v > -0.3) else None
 )
 
@@ -203,7 +203,7 @@ styled_df = df.style
 
 # Apply formatting
 styled_df.format("{:.0f}")
-styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")  # ty: ignore[invalid-argument-type]
+styled_df.hide([("Random", "Tumour"), ("Random", "Non-Tumour")], axis="columns")
 
 cell_hover = {  # for row hover use <tr> instead of <td>
     "selector": "td:hover",
@@ -213,9 +213,9 @@ headers = {
     "selector": "th",
     "props": "background-color: #000066; color: white;",
 }
-styled_df.set_table_styles([cell_hover, headers])  # type: ignore
+styled_df.set_table_styles([cell_hover, headers])  # type: ignore[list-item] # ty: ignore[invalid-argument-type]
 styled_df.set_table_styles(
-    {
+    {  # ty: ignore[invalid-argument-type]
         ("Regression", "Tumour"): [
             {"selector": "th", "props": "border-left: 1px solid white"},
             {"selector": "td", "props": "border-left: 1px solid #000066"},
@@ -357,3 +357,14 @@ mi_df = pd.DataFrame(
     ),
 )
 st.table(mi_df, hide_index=True)
+
+st.subheader("Key-value with mixed content")
+# Combining markdown formatting, links, and badges
+kv_mixed = {
+    ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+    ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+    ":material/new_releases: Version": ":gray-badge[1.45.0]",
+    ":material/license: License": ":green-badge[Apache 2.0]",
+    ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+}
+st.table(kv_mixed, border="horizontal", width="content")

@@ -42,6 +42,11 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
+def _failing_format_func(_: object) -> str:
+    """Always raise; used to exercise serde ``format_func`` error paths."""
+    raise RuntimeError("format failed")
+
+
 class TestButtonGroupSerde:
     """Tests for the _SingleSelectButtonGroupSerde and _MultiSelectButtonGroupSerde classes."""
 
@@ -1287,3 +1292,143 @@ class SegmentedControlBindQueryParamsTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.button_group
         assert c.query_param_key == "my_key"
+
+
+class RequiredParameterTest(DeltaGeneratorTestCase):
+    """Tests for the required parameter on st.pills and st.segmented_control."""
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_default_is_false(self, command: Callable[..., Any]):
+        """Test that required defaults to False."""
+        command("label", ["a", "b", "c"])
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+    @parameterized.expand(
+        [
+            (st.pills, True),
+            (st.pills, False),
+            (st.segmented_control, True),
+            (st.segmented_control, False),
+        ]
+    )
+    def test_required_sets_proto_field(
+        self, command: Callable[..., Any], required: bool
+    ):
+        """Test that the required argument sets the proto field correctly."""
+        command("label", ["a", "b", "c"], required=required)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is required
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_default(self, command: Callable[..., Any]):
+        """Test that required works with a default value."""
+        command("label", ["a", "b", "c"], default="b", required=True)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is True
+        assert c.default == [1]
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_multi_select_raises_exception(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=True with selection_mode='multi' raises an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be used with.*selection_mode='multi'",
+        ):
+            command("label", ["a", "b", "c"], selection_mode="multi", required=True)
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_false_with_multi_select_allowed(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=False with selection_mode='multi' is allowed."""
+        command("label", ["a", "b", "c"], selection_mode="multi", required=False)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+
+def test_single_serde_serialize_empty_options_with_value() -> None:
+    """Return empty list when options are empty but value is not None.
+
+    Covers the early exit in ``_SingleSelectButtonGroupSerde.serialize`` when
+    there are no options to map to formatted wire strings.
+    """
+    serde = _SingleSelectButtonGroupSerde[str](
+        [],
+        formatted_options=[],
+        formatted_option_to_option_index={},
+    )
+    assert serde.serialize("anything") == []
+
+
+def test_single_serde_serialize_format_func_exception() -> None:
+    """Fall back to ``str(v)`` when ``format_func`` raises for an unmatched value."""
+    serde = _SingleSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["a", "b"],
+        formatted_option_to_option_index={"a": 0, "b": 1},
+        format_func=_failing_format_func,
+    )
+    assert serde.serialize("unknown") == ["unknown"]
+
+
+def test_single_serde_serialize_value_matched_by_format_func() -> None:
+    """Return ``[format_func(v)]`` when ``v`` is not matched by equality.
+
+    After direct option comparison fails, a successful ``format_func`` result
+    is sent as the single wire string.
+    """
+    serde = _SingleSelectButtonGroupSerde[int](
+        [1, 2],
+        formatted_options=["one", "two"],
+        formatted_option_to_option_index={"one": 0, "two": 1},
+        format_func=lambda x: f"num:{x}",
+    )
+    assert serde.serialize(99) == ["num:99"]
+
+
+def test_multi_serde_serialize_none_returns_empty_list() -> None:
+    """Serialize ``None`` for multi-select returns an empty list."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+    )
+    assert serde.serialize(None) == []
+
+
+def test_multi_serde_serialize_format_func_exception() -> None:
+    """Append ``str(v)`` when ``format_func`` raises for an unmatched value."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=_failing_format_func,
+    )
+    assert serde.serialize(["a", "not-in-options"]) == ["A", "not-in-options"]
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        (["ghost"], ["LABEL:ghost"]),
+        (["a", 42], ["A", "LABEL:42"]),
+    ],
+)
+def test_multi_serde_serialize_value_matched_by_format_func(
+    values: list[Any], expected: list[str]
+) -> None:
+    """Append ``format_func(v)`` when ``v`` is not matched by equality."""
+    serde = _MultiSelectButtonGroupSerde[str | int](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=lambda x: f"LABEL:{x}",
+    )
+    assert serde.serialize(values) == expected

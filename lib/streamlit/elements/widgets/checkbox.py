@@ -20,9 +20,8 @@ from typing import TYPE_CHECKING, cast
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import (
     check_widget_policies,
@@ -424,8 +423,7 @@ class CheckboxMixin:
         if bind == "query-params" and key is not None:
             checkbox_proto.query_param_key = str(key)
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         serde = CheckboxSerde(value)
 
@@ -447,7 +445,12 @@ class CheckboxMixin:
             checkbox_proto.value = checkbox_state.value
             checkbox_proto.set_value = True
 
-        self.dg._enqueue("checkbox", checkbox_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "checkbox",
+            checkbox_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=checkbox_state.value_changed,
+        )
         return checkbox_state.value
 
     @property

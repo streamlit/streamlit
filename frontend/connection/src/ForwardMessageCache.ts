@@ -17,7 +17,7 @@
 import { getLogger } from "loglevel"
 
 import { ForwardMsg } from "@streamlit/protobuf"
-import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
+import { isNullOrUndefined } from "@streamlit/utils"
 
 const LOG = getLogger("ForwardMessageCache")
 
@@ -126,14 +126,13 @@ export class ForwardMsgCache {
       return msg
     }
 
-    const newMsg = this.getCachedMessage(msg.refHash as string, true)
-    if (notNullOrUndefined(newMsg)) {
-      LOG.info(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
-    } else {
+    const cachedMessage = this.getCachedMessage(msg.refHash as string, true)
+    if (isNullOrUndefined(cachedMessage)) {
       throw new Error(
         `Cached ForwardMsg MISS [hash=${msg.refHash}]. This is not expected to happen. Please [report this bug](https://github.com/streamlit/streamlit/issues).`
       )
     }
+    LOG.info(`Cached ForwardMsg HIT [hash=${msg.refHash}]`)
 
     // Copy the metadata from the refMsg into our new message
     if (!msg.metadata) {
@@ -142,8 +141,8 @@ export class ForwardMsgCache {
       )
     }
 
-    newMsg.metadata = ForwardMsg.decode(encodedMsg).metadata
-    return newMsg
+    cachedMessage.metadata = msg.metadata
+    return cachedMessage
   }
 
   /**
@@ -205,14 +204,14 @@ export class ForwardMsgCache {
     hash: string,
     updateScriptRunCount: boolean
   ): ForwardMsg | undefined {
-    const cached = this.messages.get(hash)
-    if (isNullOrUndefined(cached)) {
+    const cachedEntry = this.messages.get(hash)
+    if (isNullOrUndefined(cachedEntry)) {
       return undefined
     }
 
     if (updateScriptRunCount) {
-      cached.scriptRunCount = this.scriptRunCount
+      cachedEntry.scriptRunCount = this.scriptRunCount
     }
-    return ForwardMsg.decode(cached.encodedMsg)
+    return ForwardMsg.decode(cachedEntry.encodedMsg)
   }
 }

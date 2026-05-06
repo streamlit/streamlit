@@ -34,8 +34,12 @@ from streamlit.errors import (
     StreamlitInvalidMaxError,
     StreamlitInvalidWidthError,
     StreamlitSelectionCountExceedsMaxError,
+    StreamlitValueError,
 )
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
+from streamlit.proto.SelectWidgetFilterMode_pb2 import (
+    SelectWidgetFilterMode as ProtoSelectWidgetFilterMode,
+)
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -61,6 +65,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
         assert c.default[:] == []
         assert not c.disabled
         assert not c.accept_new_options
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_FUZZY
 
     def test_just_disabled(self):
         """Test that it can be called with disabled param."""
@@ -221,6 +226,35 @@ class Multiselectbox(DeltaGeneratorTestCase):
         # Placeholder logic is now handled on the frontend side
         # Backend only passes through custom user-provided placeholders
 
+    def test_filter_mode(self):
+        """Test that it can set a non-default filter mode."""
+        st.multiselect("the label", ("m", "f"), filter_mode="contains")
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_CONTAINS
+
+    def test_filter_mode_none(self):
+        """Test that None filter mode is serialized using the frontend marker."""
+        st.multiselect("the label", ("m", "f"), filter_mode=None)
+
+        c = self.get_delta_from_queue().new_element.multiselect
+        assert c.filter_mode == ProtoSelectWidgetFilterMode.FILTER_MODE_NONE
+
+    def test_invalid_filter_mode(self):
+        """Test that unsupported filter modes raise an exception."""
+        with pytest.raises(StreamlitValueError, match=r"Invalid `filter_mode` value"):
+            st.multiselect("the label", ("m", "f"), filter_mode="invalid")
+
+    def test_filter_mode_none_with_accept_new_options_raises_exception(self):
+        """Test that filter_mode=None is incompatible with accept_new_options=True."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be None when `accept_new_options=True`",
+        ):
+            st.multiselect(
+                "the label", ("m", "f"), filter_mode=None, accept_new_options=True
+            )
+
     @parameterized.expand(
         [
             (["Tea", "Vodka", None], StreamlitAPIException),
@@ -378,6 +412,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 placeholder="placeholder 1",
                 format_func=lambda x: x.capitalize(),
                 options=["a", "b", "cd"],
+                filter_mode="fuzzy",
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
@@ -400,6 +435,7 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 placeholder="placeholder 2",
                 format_func=lambda x: x.upper(),
                 options=["a", "b", "cd", "e"],
+                filter_mode="prefix",
                 # Whitelisted kwargs:
                 accept_new_options=True,
                 max_selections=3,
@@ -428,7 +464,8 @@ class Multiselectbox(DeltaGeneratorTestCase):
                 "options": ["a", "b"],
                 "default": ["a"],
                 "max_selections": 2,
-                "accept_new_options": True,
+                "accept_new_options": False,
+                "filter_mode": "fuzzy",
                 "format_func": lambda x: x.lower(),
             }
 

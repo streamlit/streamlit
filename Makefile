@@ -51,6 +51,11 @@ all: init frontend
 # Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
 	uv run pre-commit install
+	@# Clone wiki repo for agent artifacts if not present
+	@if [ ! -d "agent-wiki" ]; then \
+		echo "Cloning streamlit.wiki into agent-wiki/..."; \
+		git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki; \
+	fi
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -202,6 +207,15 @@ python-types:
 	uv run ty check
 	# Run mypy type checker (reads config from pyproject.toml):
 	uv run mypy
+	# Template apps under lib/streamlit/.agents/ are skipped by the bare mypy
+	# run above (no __init__.py chain + dot-prefix directory). Run mypy per-
+	# template with MYPYPATH=lib so each file is checked against the real
+	# streamlit package. Per-file (not batched) because templates share the
+	# module name `streamlit_app`.
+	@for tpl in lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/*/streamlit_app.py; do \
+		echo "# mypy: $$tpl" && \
+		MYPYPATH=lib uv run mypy "$$tpl" || exit 1; \
+	done
 
 .PHONY: frontend-init
 # Install all frontend dependencies.
@@ -231,7 +245,7 @@ frontend:
 	cd frontend/ ; yarn workspaces foreach --all --topological --parallel run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
-	# Move manifest.json to a location that can actually be served by the Tornado
+	# Move manifest.json to a location that can actually be served by the
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
@@ -350,7 +364,7 @@ debug:
 			exit 1; \
 		fi; \
 		if [[ -z "$$BACKEND_PORT" ]]; then \
-			BACKEND_PORT=$$(awk '/Server started on port [0-9]+/ {print $$NF; exit}' "$$DEBUG_DIR/backend.log"); \
+			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
 		fi; \
 		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
@@ -598,6 +612,13 @@ bare-execution-tests:
 cli-smoke-tests:
 	uv run python scripts/cli_smoke_tests.py
 
+# Template apps under lib/streamlit/.agents/ need per-template mypy invocation:
+# (a) they all use the module name `streamlit_app`, so batching triggers a
+#     "duplicate module" error;
+# (b) they live under a dot-prefixed directory (`.agents/`), which confuses
+#     mypy's package-root resolution and prevents `import streamlit` from
+#     resolving — `MYPYPATH=lib` points at the real streamlit package.
+# `make python-types` applies the same per-template treatment to the full set.
 .PHONY: check
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
@@ -621,8 +642,8 @@ check:
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
 	( \
 		if [ -n "$$FE_FILES" ]; then \
-			echo "=== Frontend: format (prettier) ===" && \
-			cd frontend && yarn exec prettier --write $$FE_FILES && \
+			echo "=== Frontend: format (oxfmt) ===" && \
+			cd frontend && yarn exec oxfmt --config ./.oxfmtrc.json $$FE_FILES && \
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (oxlint) ===" && \
@@ -679,8 +700,19 @@ check:
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
-			uv run mypy $$PY_FILES && \
-			echo "" || PY_EXIT=1; \
+			PY_MYPY_NON_TEMPLATE=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			PY_MYPY_TEMPLATES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			if [ -n "$$(echo "$$PY_MYPY_NON_TEMPLATE" | tr -d ' ')" ]; then \
+				uv run mypy $$PY_MYPY_NON_TEMPLATE && \
+				echo "" || PY_EXIT=1; \
+			fi; \
+			if [ $$PY_EXIT -eq 0 ] && [ -n "$$(echo "$$PY_MYPY_TEMPLATES" | tr -d ' ')" ]; then \
+				echo "# Per-template mypy with MYPYPATH=lib (see 'make check' docstring for why)" && \
+				for tpl in $$PY_MYPY_TEMPLATES; do \
+					MYPYPATH=lib uv run mypy "$$tpl" || PY_EXIT=1; \
+				done; \
+				echo ""; \
+			fi; \
 		fi; \
 	else \
 		echo "No Python files changed."; \
@@ -696,7 +728,7 @@ check:
 	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ===" && \
-		SKIP=oxlint-frontend,prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		SKIP=oxlint-frontend,oxfmt-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
 			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \

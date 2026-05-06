@@ -1221,10 +1221,13 @@ export class WidgetStateManager {
       }
     })
 
-    // Build query string using query-string library
-    const boundParamsStr = queryString.stringify(boundParamsObj, {
-      arrayFormat: "none",
-    })
+    // Build query string using query-string library.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const boundParamsStr = queryString
+      .stringify(boundParamsObj, {
+        arrayFormat: "none",
+      })
+      .replaceAll("%20", "+")
 
     // Combine embed params with bound widget params
     if (!boundParamsStr) {
@@ -1267,13 +1270,10 @@ export class WidgetStateManager {
 
     switch (binding.valueType) {
       case "bool_value":
-        return String(value as boolean)
-
       case "double_value":
-        return String(value as number)
-
       case "int_value":
-        return String(value as number)
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string -- value is a primitive (boolean/number) here
+        return String(value)
 
       case "string_value":
         return value as string
@@ -1341,7 +1341,7 @@ export class WidgetStateManager {
     if (Array.isArray(urlValue)) {
       return this.isDefaultArrayValue(urlValue, binding)
     }
-    return this.isDefaultValue(urlValue as string, binding)
+    return this.isDefaultValue(urlValue, binding)
   }
 
   /**
@@ -1378,13 +1378,16 @@ export class WidgetStateManager {
       currentParams[paramKey] = value
     }
 
-    // Build new URL using query-string
-    // arrayFormat: "none" produces ?key=a&key=b for arrays
-    const newSearch = queryString.stringify(currentParams, {
-      arrayFormat: "none",
-      skipNull: true,
-      skipEmptyString: false,
-    })
+    // Build new URL using query-string.
+    // arrayFormat: "none" produces ?key=a&key=b for arrays.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const newSearch = queryString
+      .stringify(currentParams, {
+        arrayFormat: "none",
+        skipNull: true,
+        skipEmptyString: false,
+      })
+      .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
     const currentSearch = window.location.search.replace(/^\?/, "")
@@ -1532,7 +1535,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-    `value ${value} cannot be converted to number without a loss of precision!`
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Long has a toString() method
+    `value ${value.toString()} cannot be converted to number without a loss of precision!`
   )
 }

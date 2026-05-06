@@ -170,8 +170,8 @@ class DevcontainerSync:
         devcontainer_config = self._load_json_file(self.devcontainer_path)
         return vscode_settings, vscode_extensions, devcontainer_config
 
-    def _format_with_prettier(self, file_paths: list[str]) -> None:
-        """Format JSON files using prettier.
+    def _format_with_oxfmt(self, file_paths: list[str]) -> None:
+        """Format JSON files using oxfmt.
 
         Parameters
         ----------
@@ -182,39 +182,37 @@ class DevcontainerSync:
             return
 
         try:
-            # Convert to relative paths from repo root
+            # Oxfmt rejects paths containing "..", so keep repo-root relative paths.
             relative_paths = [
                 os.path.relpath(path, self.repo_root) if os.path.isabs(path) else path
                 for path in file_paths
             ]
 
             cmd = [
-                "./scripts/run_in_subdirectory.py",
-                "frontend",
                 "yarn",
+                "--cwd",
+                "frontend",
                 "exec",
-                "prettier",
-                "--write",
+                "oxfmt",
                 "--config",
-                "./.prettierrc",
+                "frontend/.oxfmtrc.json",
             ]
 
-            # Add file paths with proper relative path prefix
-            cmd.extend(f"../{relative_path}" for relative_path in relative_paths)
+            cmd.extend(relative_paths)
 
-            print("Formatting JSON files with prettier...")
+            print("Formatting JSON files with oxfmt...")
             result = subprocess.run(
                 cmd, check=False, cwd=self.repo_root, capture_output=True, text=True
             )
 
             if result.returncode != 0:
-                print(f"Warning: Prettier formatting failed: {result.stderr}")
+                print(f"Warning: Oxfmt formatting failed: {result.stderr}")
                 print(f"Command: {' '.join(cmd)}")
             else:
                 print("✅ JSON files formatted successfully")
 
         except Exception as e:
-            print(f"Warning: Failed to format files with prettier: {e}")
+            print(f"Warning: Failed to format files with oxfmt: {e}")
 
     def check_sync_status(self) -> bool:
         """Check if the files are in sync without modifying them.
@@ -288,8 +286,8 @@ class DevcontainerSync:
         print("Saving updated devcontainer configuration...")
         self._save_json_file(self.devcontainer_path, devcontainer_config)
 
-        # Format with prettier
-        self._format_with_prettier(
+        # Format with oxfmt
+        self._format_with_oxfmt(
             [
                 self.vscode_settings_path,
                 self.vscode_extensions_path,

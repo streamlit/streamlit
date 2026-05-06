@@ -54,7 +54,7 @@ Priority files (most likely to contain codebase-specific instructions):
 
 | Tool | Config file |
 |------|-------------|
-| TypeScript, React, Vite, Vitest, ESLint, Prettier, Emotion | `frontend/package.json` |
+| TypeScript, React, Vite, Vitest, ESLint, oxfmt, Emotion | `frontend/package.json` |
 | Yarn | `frontend/package.json` (`packageManager` field) |
 | Python, Ruff, mypy, pytest | `pyproject.toml` |
 | Node.js | `.nvmrc` |

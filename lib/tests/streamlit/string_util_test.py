@@ -239,3 +239,43 @@ class StringUtilTest(unittest.TestCase):
         """Test that validate_icon_or_emoji raises StreamlitAPIException on invalid inputs."""
         with pytest.raises(StreamlitAPIException):
             string_util.validate_icon_or_emoji(icon)
+
+    def test_validate_emoji_none(self):
+        """Test that validate_emoji returns empty string for None input."""
+        assert string_util.validate_emoji(None) == ""
+
+    def test_validate_material_icon_none(self):
+        """Test that validate_material_icon returns empty string for None input."""
+        assert string_util.validate_material_icon(None) == ""
+
+    @parameterized.expand(
+        [
+            (b"hello world", False),  # Text only
+            (b"\x00\x01\x02", True),  # Binary control characters
+            (b"text with \x00 null", True),  # Text with null byte
+            (b"", False),  # Empty bytes
+        ]
+    )
+    def test_is_binary_string(self, inp: bytes, expected: bool):
+        """Test that is_binary_string correctly identifies binary vs text data."""
+        assert string_util.is_binary_string(inp) == expected
+
+    def test_from_number_with_invalid_item_method(self):
+        """Test from_number with object that has item() but returns non-numeric."""
+
+        class FakeNumpyValue:
+            def item(self) -> str:
+                return "not a number"
+
+        with pytest.raises(TypeError):
+            string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]
+
+    def test_from_number_with_failing_item_method(self):
+        """Test from_number with object whose item() raises an exception."""
+
+        class FakeNumpyValue:
+            def item(self) -> int:
+                raise ValueError("item() failed")
+
+        with pytest.raises(TypeError):
+            string_util.from_number(FakeNumpyValue())  # type: ignore[arg-type]

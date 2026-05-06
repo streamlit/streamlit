@@ -20,7 +20,7 @@ runs:
     # Install uv and Python using the official astral-sh/setup-uv action.
     # This handles uv installation, Python version management, and venv activation.
     - name: Install uv and Python ${{ inputs.python_version }}
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
       with:
         python-version: ${{ inputs.python_version }}
         enable-cache: ${{ inputs.use_cached_venv }}

@@ -128,7 +128,7 @@ describe("applyColumnConfig", () => {
           type_config: {
             type: "text",
           },
-        } as ColumnConfigProps,
+        },
       ],
       [
         "column_2",
@@ -138,7 +138,7 @@ describe("applyColumnConfig", () => {
           alignment: "center",
           required: true,
           default: "this is the default",
-        } as ColumnConfigProps,
+        },
       ],
     ])
 
@@ -365,7 +365,7 @@ describe("applyColumnConfig", () => {
         {
           // Invalid alignment value (cast to bypass TypeScript type checking)
           alignment: "justify" as "left",
-        } as ColumnConfigProps,
+        },
       ],
     ])
 
