@@ -77,7 +77,8 @@ function AlertElement({
                   <StreamlitMarkdown
                     source={title}
                     allowHTML={false}
-                    style={{ marginBottom: 0 }}
+                    isLabel
+                    inheritFont
                   />
                 </StyledAlertTitle>
               </StyledAlertHeader>
