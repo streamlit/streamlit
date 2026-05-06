@@ -8,7 +8,7 @@ created: 2026-02-21
 ## Summary
 
 Add support for a compact, borderless style to `st.expander` and `st.status` via a new
-`type: Literal["normal", "compact"] = "normal"` parameter. The compact style removes the
+`type: Literal["default", "compact"] = "default"` parameter. The compact style removes the
 border and background, rendering the toggle as minimal inline text—ideal for displaying
 AI reasoning, thoughts, or collapsible metadata without visual clutter.
 
@@ -68,7 +68,7 @@ st.expander(
     label: str,
     expanded: bool = False,
     *,
-    type: Literal["normal", "compact"] = "normal",  # NEW
+    type: Literal["default", "compact"] = "default",  # NEW
     key: Key | None = None,
     icon: str | None = None,
     width: WidthWithoutContent = "stretch",
@@ -78,7 +78,7 @@ st.expander(
 st.status(
     label: str,
     *,
-    type: Literal["normal", "compact"] = "normal",  # NEW
+    type: Literal["default", "compact"] = "default",  # NEW
     expanded: bool = False,
     state: Literal["running", "complete", "error"] = "running",
     width: WidthWithoutContent = "stretch",
@@ -89,11 +89,11 @@ st.status(
 
 | Parameter | Type                             | Default    | Description                                                                                                                       |
 | --------- | -------------------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `type`    | `Literal["normal", "compact"]`   | `"normal"` | The visual style of the component. `"normal"` displays with border and background. `"compact"` renders as a minimal inline toggle. |
+| `type`    | `Literal["default", "compact"]`   | `"default"` | The visual style of the component. `"default"` displays with border and background. `"compact"` renders as a minimal inline toggle. |
 
 ### Behavior
 
-**`type="normal"` (default):**
+**`type="default"` (default):**
 
 - Current behavior: Full border, background color on hover, rounded corners
 - The expander/status appears as a distinct visual container
@@ -108,7 +108,7 @@ st.status(
 
 ### Design
 
-**Default style (`type="normal"`):**
+**Default style (`type="default"`):**
 
 ```
 ┌─────────────────────────────────────────┐
@@ -188,7 +188,7 @@ with st.expander("Debug details", type="compact"):
     st.json({"endpoint": "/api/data", "cache_hit": True, "query_time": "12ms"})
 ```
 
-**Comparison: normal vs compact:**
+**Comparison: default vs compact:**
 
 ```python
 import streamlit as st
