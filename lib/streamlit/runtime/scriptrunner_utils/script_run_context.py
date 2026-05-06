@@ -146,9 +146,9 @@ class ScriptRunContext:
         is_same_page = self.page_script_hash == page_script_hash
 
         self.cursors = {}
-        self.widget_ids_this_run = ThreadSafeSet()
-        self.widget_user_keys_this_run = ThreadSafeSet()
-        self.form_ids_this_run = ThreadSafeSet()
+        self.widget_ids_this_run.clear()
+        self.widget_user_keys_this_run.clear()
+        self.form_ids_this_run.clear()
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
@@ -160,7 +160,7 @@ class ScriptRunContext:
         self.current_fragment_id = None
         self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
-        self.new_fragment_ids = ThreadSafeSet()
+        self.new_fragment_ids.clear()
         self.has_dialog_opened = False
         self.cached_message_hashes = cached_message_hashes or set()
 
