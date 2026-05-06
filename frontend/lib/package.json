@@ -162,7 +162,7 @@
     "node-fetch": "3.3.2",
     "postinstall-postinstall": "^2.1.0",
     "timezone-mock": "^1.4.2",
-    "tsc-alias": "^1.8.16",
+    "tsc-alias": "^1.8.17",
     "typesync": "^0.14.3",
     "vite": "^8.0.9",
     "vite-plugin-dts": "^5.0.0",

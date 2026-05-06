@@ -1068,7 +1068,12 @@ class ArrowMixin:
                     selection_mode_set=selection_mode_set,
                 )
                 proto.selection_state = json.dumps(validated_state)
-                self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+                self.dg._enqueue(
+                    "dataframe",
+                    proto,
+                    layout_config=layout_config,
+                    has_one_shot_effect=True,
+                )
                 # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
                 return cast(
                     "DataframeState", ReadOnlyAttributeDictionary(validated_state)

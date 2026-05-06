@@ -38,7 +38,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 37
+NUM_SLIDER_WIDGETS = 38
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -661,3 +661,20 @@ def test_slider_ui_value_wins_on_rerun_and_syncs_url(page: Page, app_base_url: s
 
     expect_prefixed_markdown(page, "Bound ss value:", "76")
     expect(page).to_have_url(re.compile(r"bound_ss=76"))
+
+
+def test_slider_setvalue_preserved_on_rerun(app: Page):
+    """Test that slider setValue commands are delivered even when the protobuf hash matches.
+
+    This verifies that a slider with a programmatic value is correctly set
+    on every rerun, not cached/skipped due to hash matching.
+    """
+    expect_markdown(app, "Slider counter: 1")
+    slider = get_slider(app, "Programmatic slider")
+    expect(slider).to_contain_text("50")
+
+    for expected_counter in range(2, 5):
+        app.get_by_role("button", name="Trigger slider rerun", exact=True).click()
+        wait_for_app_run(app)
+        expect_markdown(app, f"Slider counter: {expected_counter}")
+        expect(slider).to_contain_text("50")

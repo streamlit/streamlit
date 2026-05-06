@@ -334,7 +334,10 @@ like '#00FFAA' or '#000'.
             color_picker_proto.set_value = True
 
         self.dg._enqueue(
-            "color_picker", color_picker_proto, layout_config=layout_config
+            "color_picker",
+            color_picker_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
         )
         return widget_state.value
 
