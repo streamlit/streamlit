@@ -47,10 +47,8 @@ with tab3:
 ### User Requests
 
 - [#8239](https://github.com/streamlit/streamlit/issues/8239) — `st.tabs` & `st.expander`:
-  Improve handling of frontend state/mount (79 👍). This spec addresses the active-tab reset,
+  Improve handling of frontend state/mount. This spec addresses the active-tab reset,
   the expander expanded-state reset, and the equivalent popover open-state reset.
-
----
 
 ## Proposal
 
@@ -250,8 +248,6 @@ how unkeyed widgets include all parameters in their element ID.
 The frontend store does not survive a full page refresh (new session). This is the expected
 behavior — in-session persistence is the goal of this spec.
 
----
-
 ## Alternatives Considered
 
 ### Backend Passive Tracking
@@ -264,17 +260,15 @@ invites users to gate content on the active tab — silently broken without `on_
 since no rerun fires on interaction. It also means these elements cannot be used inside
 `@st.cache_data` functions, where widgets are not permitted.
 
----
-
 ## Checklist
 
-| Item | Status |
+| Item | ✅ or comment |
 |---|---|
-| Works on SiS, Cloud, etc? | Yes — uses standard `compute_and_register_element_id` |
-| Breaking API changes | None — `key=` and `on_change` already exist on all three elements |
-| No new dependencies | Yes |
-| New `ScriptRunContext` fields | None — `compute_and_register_element_id` uses existing infrastructure |
+| Works on SiS, Cloud, etc? | ✅ uses standard `compute_and_register_element_id` |
+| Breaking API changes | ✅ `key=` and `on_change` already exist on all three elements |
+| No new dependencies | ✅ |
+| New `ScriptRunContext` fields | ✅ `compute_and_register_element_id` uses existing infrastructure |
 | Metrics collected | TBD — could track whether frontend store is used |
-| Any security/legal impact? | No |
-| Any docs changes needed? | Yes — document `key=` persistence behavior for all three elements; note page refresh resets to default |
-| CSS key styling | Setting `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format is `$$ID-<hash>-<user_key>` |
+| Any security/legal impact? | ✅ no |
+| Any docs changes needed? | ✅ document `key=` persistence behavior for all three elements; note page refresh resets to default |
+| CSS key styling | ✅ `Block.id` also enables `st-key-*` CSS classes for keyed elements; key class goes on `StyledLayoutWrapper` (expander, popover) and `StyledTabContainer` (tabs); keyed ID format is `$$ID-<hash>-<user_key>` |

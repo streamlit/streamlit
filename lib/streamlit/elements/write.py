@@ -227,7 +227,7 @@ class WriteMixin:
             if type_util.is_type(chunk, "langchain_core.messages.ai.AIMessageChunk"):
                 # Try to convert LangChain message chunk to a string:
                 try:
-                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute]
+                    chunk = chunk.content or ""  # noqa: PLW2901 # type: ignore[possibly-unbound-attribute] # ty: ignore[unresolved-attribute]
                 except AttributeError as err:
                     raise StreamlitAPIException(
                         "Failed to parse the LangChain AIMessageChunk. "
@@ -355,7 +355,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write1.streamlit.app/
-            height: 150px
+            height: 200px
 
         As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:
@@ -513,6 +513,7 @@ class WriteMixin:
                 or type_util.is_custom_dict(arg)
                 or type_util.is_namedtuple(arg)
                 or type_util.is_pydantic_model(arg)
+                or type_util.is_sequence_of_pydantic_models(arg)
             ):
                 flush_buffer()
                 self.dg.json(arg)

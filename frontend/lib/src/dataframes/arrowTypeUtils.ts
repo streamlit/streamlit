@@ -61,7 +61,7 @@ export interface PandasRangeIndex {
  * It needs to exactly match the structure used in the JSON
  * representation of the Pandas schema in the Arrow table.
  */
-export interface PandasColumnMetadata {
+interface PandasColumnMetadata {
   /**
    * The fieldName of the column.
    * For a single-index column, this is just the name of the column (e.g. "foo").

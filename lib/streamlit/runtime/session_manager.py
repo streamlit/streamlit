@@ -25,7 +25,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
@@ -35,11 +38,10 @@ class SessionClientDisconnectedError(Exception):
 
 @runtime_checkable
 class ClientContext(Protocol):
-    """Framework-agnostic context for the client WebSocket connection.
+    """Context for the client WebSocket connection.
 
-    This protocol abstracts away framework-specific request types (Tornado/Starlette)
-    to provide a consistent interface for accessing headers, cookies, and client info
-    from the initial WebSocket handshake.
+    Provides a consistent interface for accessing headers, cookies, and client
+    info from the initial WebSocket handshake.
     """
 
     @property
@@ -68,7 +70,7 @@ class SessionClient(Protocol):
         If the SessionClient has been disconnected, it should raise a
         SessionClientDisconnectedError.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @property
     def client_context(self) -> ClientContext | None:
@@ -76,7 +78,7 @@ class SessionClient(Protocol):
 
         Returns None if request context information is not available.
         """
-        return None
+        return None  # pragma: no cover - abstract
 
 
 @dataclass
@@ -147,7 +149,7 @@ class SessionStorage(Protocol):
             generally happen if there is an error with the underlying storage backend
             (e.g. if we lose our connection to it).
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def save(self, session_info: SessionInfo) -> None:
@@ -163,7 +165,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while saving the given session.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def delete(self, session_id: str) -> None:
@@ -186,7 +188,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while attempting to delete the session.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def list(self) -> list[SessionInfo]:  # ty: ignore[invalid-type-form]
@@ -201,7 +203,7 @@ class SessionStorage(Protocol):
         SessionStorageError
             Raised if an error occurs while attempting to list sessions.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
 
 class SessionManager(Protocol):
@@ -248,6 +250,7 @@ class SessionManager(Protocol):
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         """Initialize a SessionManager with the given SessionStorage.
 
@@ -264,8 +267,13 @@ class SessionManager(Protocol):
 
         message_enqueued_callback
             A callback invoked after a message is enqueued to be sent to a web client.
+
+        on_script_error
+            Callback to invoke when an uncaught exception occurs in user script code.
+            Returns True to suppress the default exception display, or False/None
+            to show the exception normally.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def connect_session(
@@ -310,7 +318,7 @@ class SessionManager(Protocol):
         str
             The session's unique string ID.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def close_session(self, session_id: str) -> None:
@@ -324,7 +332,7 @@ class SessionManager(Protocol):
         session_id
             The session's unique ID.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def get_session_info(self, session_id: str) -> SessionInfo | None:
@@ -340,7 +348,7 @@ class SessionManager(Protocol):
         -------
         SessionInfo or None
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     @abstractmethod
     def list_sessions(self) -> list[SessionInfo]:
@@ -350,7 +358,7 @@ class SessionManager(Protocol):
         -------
         List[SessionInfo]
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover - abstract
 
     def num_sessions(self) -> int:
         """Return the number of sessions tracked by this SessionManager.

@@ -28,18 +28,17 @@ import {
   LOG,
 } from "./StaticConnection"
 
+// vi.mock must be at top level (hoisted by Vitest)
+vi.mock(import("./utils"), async importOriginal => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    localStorageAvailable: vi.fn().mockReturnValue(true),
+  }
+})
+
 describe("StaticConnection", () => {
   let logErrorSpy: MockInstance
-
-  beforeAll(() => {
-    vi.mock(import("./utils"), async importOriginal => {
-      const actual = await importOriginal()
-      return {
-        ...actual,
-        localStorageAvailable: vi.fn().mockReturnValue(true),
-      }
-    })
-  })
 
   beforeEach(() => {
     logErrorSpy = vi.spyOn(LOG, "error").mockImplementation(() => {})

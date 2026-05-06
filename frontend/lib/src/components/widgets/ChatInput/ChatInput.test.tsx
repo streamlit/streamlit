@@ -23,10 +23,7 @@ import {
   IChatInputValue,
 } from "@streamlit/protobuf"
 
-import type {
-  RecordingState,
-  WaveformController,
-} from "~lib/components/audio/core/types"
+import type { WaveformController } from "~lib/components/audio/core/types"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import {
   createDirectoryFiles,
@@ -814,7 +811,7 @@ describe("ChatInput widget", () => {
 
     // Mock the waveform controller with proper typing
     const mockController: WaveformController = {
-      state: "idle" as RecordingState,
+      state: "idle",
       isPlaybackPlaying: false,
       mountRef: { current: null },
       playback: {

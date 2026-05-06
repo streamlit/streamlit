@@ -29,9 +29,8 @@ from typing import (
 from streamlit.dataframe_util import convert_anything_to_list
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.options_selector_utils import (
     convert_to_sequence_and_check_comparable,
@@ -1115,8 +1114,7 @@ class ButtonGroupMixin:
         if default is not None and len(default) == 0:
             _default = None
 
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=_default)
 
@@ -1214,7 +1212,12 @@ class ButtonGroupMixin:
             # Save format function for AppTest to serialize values as strings
             save_for_app_testing(ctx, element_id, options_format_func or str)
 
-        self.dg._enqueue("button_group", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "button_group",
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
 
         # Return widget_state with possibly updated value
         if value_needs_reset:

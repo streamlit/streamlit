@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, ReactNode } from "react"
+import { memo, ReactElement, ReactNode } from "react"
 
 import { EmotionIcon } from "@emotion-icons/emotion-icon"
 
@@ -57,21 +57,23 @@ interface IconProps {
   testid?: string
 }
 
-const Icon = ({
+const Icon = memo(function Icon({
   content,
   color,
   size,
   margin,
   padding,
   testid,
-}: IconProps): ReactElement => (
-  <StyledIcon
-    as={content}
-    aria-hidden="true"
-    data-testid={testid}
-    {...getDefaultProps({ size, margin, padding, color })}
-  />
-)
+}: IconProps): ReactElement {
+  return (
+    <StyledIcon
+      as={content}
+      aria-hidden="true"
+      data-testid={testid}
+      {...getDefaultProps({ size, margin, padding, color })}
+    />
+  )
+})
 
 interface EmojiIconProps {
   size?: IconSize
@@ -82,14 +84,14 @@ interface EmojiIconProps {
   color?: string
 }
 
-export const EmojiIcon = ({
+export const EmojiIcon = memo(function EmojiIcon({
   size,
   margin,
   padding,
   children,
   color,
   testid,
-}: EmojiIconProps): ReactElement => {
+}: EmojiIconProps): ReactElement {
   // Handle the case where the emoji is prefixed with emoji:
   if (typeof children === "string") {
     children = children.replace(/^emoji:/, "")
@@ -104,6 +106,6 @@ export const EmojiIcon = ({
       {children}
     </StyledEmojiIcon>
   )
-}
+})
 
 export default Icon

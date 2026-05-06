@@ -211,13 +211,13 @@ class WStates(MutableMapping[str, Any]):
     def keys(self) -> KeysView[str]:
         return KeysView(self.states)
 
-    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override]
+    def items(self) -> set[tuple[str, Any]]:  # type: ignore[override] # ty: ignore[invalid-method-override]
         return {(k, self[k]) for k in self}
 
-    def values(self) -> set[Any]:  # type: ignore[override]
+    def values(self) -> set[Any]:  # type: ignore[override] # ty: ignore[invalid-method-override]
         return {self[wid] for wid in self}
 
-    def update(self, other: WStates) -> None:  # type: ignore[override]
+    def update(self, other: WStates) -> None:  # type: ignore[override] # ty: ignore[invalid-method-override]
         """Copy all widget values and metadata from 'other' into this mapping,
         overwriting any data in this mapping that's also present in 'other'.
         """
@@ -302,12 +302,11 @@ class WStates(MutableMapping[str, Any]):
 
     def as_widget_states(self) -> list[WidgetStateProto]:
         """Return a list of serialized widget values for each widget with a value."""
-        states = [
-            self.get_serialized(widget_id)
+        return [
+            s
             for widget_id in self.states
-            if self.get_serialized(widget_id)
+            if (s := self.get_serialized(widget_id)) is not None
         ]
-        return cast("list[WidgetStateProto]", states)
 
     def call_callback(self, widget_id: str) -> None:
         """Call the given widget's callback and return the callback's

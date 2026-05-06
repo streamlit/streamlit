@@ -34,7 +34,7 @@ def test_popover_button_rendering(
 ):
     """Test that the popover buttons are correctly rendered via screenshot matching."""
     popover_elements = themed_app.get_by_test_id("stPopover")
-    expect(popover_elements).to_have_count(22)
+    expect(popover_elements).to_have_count(25)
 
     assert_snapshot(
         get_popover(themed_app, "popover 5 (in sidebar)"), name="st_popover-sidebar"
@@ -389,3 +389,32 @@ def test_keyed_popover_css_key_class(app: Page):
     """Keyed popover should have the st-key-* CSS class on the outermost element."""
     keyed_popover = get_element_by_key(app, "persist_popover")
     expect(keyed_popover).to_have_class(re.compile(r"st-key-persist_popover"))
+
+
+def test_popover_menu_style_icons_hide_chevron(
+    app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that menu-style icon labels hide the chevron (expand/collapse icon)."""
+    container = get_element_by_key(app, "menu_style_icons_container")
+
+    # Verify all three popovers are visible
+    popovers = container.get_by_test_id("stPopover")
+    expect(popovers).to_have_count(3)
+
+    # Check that chevron icons are NOT present in these buttons
+    # The chevron uses expand_more/expand_less material icons
+    menu_icon_popover = get_element_by_key(app, "menu_icon_popover")
+    more_vert_popover = get_element_by_key(app, "more_vert_icon_popover")
+    more_horiz_popover = get_element_by_key(app, "more_horiz_icon_popover")
+
+    # None of these buttons should have expand_more or expand_less icons
+    expect(menu_icon_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_vert_popover.get_by_text("expand_more")).not_to_be_visible()
+    expect(more_horiz_popover.get_by_text("expand_more")).not_to_be_visible()
+
+    # Verify that regular popovers DO have the chevron (for contrast)
+    regular_popover = get_popover(app, "popover 3 (with widgets)")
+    expect(regular_popover.get_by_text("expand_more")).to_be_visible()
+
+    # Snapshot the container with all three menu-style icon popovers
+    assert_snapshot(container, name="st_popover-menu_style_icons")

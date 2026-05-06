@@ -17,13 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Table_pb2 import Table as TableProto
@@ -32,6 +26,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 
@@ -309,7 +304,7 @@ class TableMixin:
             )
             st.table(df, height=300)
 
-        **Example 4: Display key-value data with auto-hidden headers**
+        **Example 4: Display key-value data**
 
         .. code-block:: python
             :filename: streamlit_app.py
@@ -318,15 +313,19 @@ class TableMixin:
 
             st.table(
                 {
-                    "Price": "$145.00",
-                    "Customer": "Bobby Jones",
-                    "Address": "129 Market St, NYC",
-                }
+                    ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+                    ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+                    ":material/new_releases: Version": ":gray-badge[1.45.0]",
+                    ":material/license: License": ":green-badge[Apache 2.0]",
+                    ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+                },
+                border="horizontal",
+                width="content",
             )
 
         .. output::
            https://doc-table-auto-header.streamlit.app/
-           height: 200px
+           height: 250px
 
         **Example 5: Display a minimal table without index and headers**
 
@@ -343,30 +342,13 @@ class TableMixin:
            https://doc-table-hide-header-and-index.streamlit.app/
            height: 200px
 
-        **Example 6: Display key-value data with badges**
-
-        >>> import streamlit as st
-        >>>
-        >>> st.table(
-        ...     {
-        ...         ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
-        ...         ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
-        ...         ":material/new_releases: Version": ":gray-badge[1.45.0]",
-        ...         ":material/license: License": ":green-badge[Apache 2.0]",
-        ...         ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
-        ...     },
-        ...     border="horizontal",
-        ...     width="content",
-        ... )
-
-        .. output::
-           https://doc-table-key-value-badges.streamlit.app/
-           height: 250px
-
         """
-        # Validate width and height parameters
-        validate_width(width, allow_content=True)
-        validate_height(height, allow_content=True)
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
@@ -397,12 +379,6 @@ class TableMixin:
         # when the position of the element is changed.
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
-
-        # Create layout configuration for width and height
-        layout_config = LayoutConfig(
-            width=width,
-            height=height,
-        )
 
         proto = TableProto()
         marshall_table(proto.arrow_data, data, default_uuid)

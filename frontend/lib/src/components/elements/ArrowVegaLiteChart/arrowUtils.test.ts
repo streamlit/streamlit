@@ -23,7 +23,13 @@ import { RANGE } from "~lib/mocks/arrow/types/range"
 import { UINT64 } from "~lib/mocks/arrow/types/uint64"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 
-import { getDataArray } from "./arrowUtils"
+import {
+  getDataArray,
+  getDataArrays,
+  getDataSets,
+  getInlineData,
+  WrappedNamedDataset,
+} from "./arrowUtils"
 
 describe("Types of dataframe indexes as x axis", () => {
   describe("Supported", () => {
@@ -163,5 +169,75 @@ describe("Types of dataframe indexes as x axis", () => {
         { c1: "bar", c2: "2" },
       ])
     })
+  })
+})
+
+describe("getInlineData", () => {
+  it("returns data array for valid Quiver data", () => {
+    const mockElement = { data: UNICODE }
+    const q = new Quiver(mockElement)
+
+    expect(getInlineData(q)).toEqual([
+      { c1: "foo", c2: "1" },
+      { c1: "bar", c2: "2" },
+    ])
+  })
+
+  it("returns null when quiverData is null", () => {
+    expect(getInlineData(null)).toBeNull()
+  })
+})
+
+describe("getDataSets", () => {
+  it("returns null for empty datasets array", () => {
+    expect(getDataSets([])).toBeNull()
+  })
+
+  it("returns mapping of named datasets", () => {
+    const q1 = new Quiver({ data: UNICODE })
+    const q2 = new Quiver({ data: INT64 })
+
+    const datasets: WrappedNamedDataset[] = [
+      { name: "dataset1", hasName: true, data: q1 },
+      { name: "dataset2", hasName: true, data: q2 },
+    ]
+
+    const result = getDataSets(datasets)
+    expect(result).not.toBeNull()
+    expect(result?.dataset1).toBe(q1)
+    expect(result?.dataset2).toBe(q2)
+  })
+
+  it("handles datasets without explicit names", () => {
+    const q = new Quiver({ data: UNICODE })
+
+    const datasets: WrappedNamedDataset[] = [
+      { name: null, hasName: false, data: q },
+    ]
+
+    const result = getDataSets(datasets)
+    expect(result).not.toBeNull()
+    expect(result?.null).toBe(q)
+  })
+})
+
+describe("getDataArrays", () => {
+  it("returns null for empty datasets", () => {
+    expect(getDataArrays([])).toBeNull()
+  })
+
+  it("returns data arrays for named datasets", () => {
+    const q = new Quiver({ data: UNICODE })
+
+    const datasets: WrappedNamedDataset[] = [
+      { name: "myData", hasName: true, data: q },
+    ]
+
+    const result = getDataArrays(datasets)
+    expect(result).not.toBeNull()
+    expect(result?.myData).toEqual([
+      { c1: "foo", c2: "1" },
+      { c1: "bar", c2: "2" },
+    ])
   })
 })

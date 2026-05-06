@@ -42,7 +42,10 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
@@ -73,11 +76,13 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         self._session_storage = session_storage
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
         self._message_enqueued_callback = message_enqueued_callback
+        self._on_script_error = on_script_error
 
         # Mapping of AppSession.id -> ActiveSessionInfo.
         self._active_session_info_by_id: dict[str, ActiveSessionInfo] = {}
@@ -141,6 +146,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             message_enqueued_callback=self._message_enqueued_callback,
             user_info=user_info,
             session_id_override=session_id_override,
+            on_script_error=self._on_script_error,
         )
 
         _LOGGER.debug(
@@ -285,7 +291,6 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             result[SESSION_DURATION_FAMILY] = [
                 CounterStat(
                     family_name=SESSION_DURATION_FAMILY,
-                    sample_name=f"{SESSION_DURATION_FAMILY}_total",
                     value=total_duration,
                     unit="seconds",
                     help="Total time spent in active sessions, in seconds.",

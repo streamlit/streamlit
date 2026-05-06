@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.55.0"
+version = "1.57.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -81,29 +81,14 @@ dependencies = [
   # Starting from Python 3.11, Python has built in support for reading TOML files.
   # Let's make sure to remove this "toml" library when we stop supporting Python 3.10.
   "toml>=0.10.1,<2",
-  # Tornado 6.0.3 was the current version when Python 3.8 was released (Oct 14, 2019).
-  # Tornado 6.5.0 is skipped due to a bug with Unicode characters in the filename.
-  # See https://github.com/tornadoweb/tornado/commit/62c276434dc5b13e10336666348408bf8c062391
-  "tornado>=6.0.3,<7,!=6.5.0",
   # Starlette requires typing-extensions >= 4.10.
   "typing-extensions>=4.10.0,<5",
-  # Don't require watchdog on MacOS, since it'll fail without xcode tools.
-  # Without watchdog, we fallback to a polling file watcher to check for app changes.
-  "watchdog>=2.1.5,<7; platform_system != 'Darwin'",
-]
-
-[project.optional-dependencies]
-# Optional dependency required for Snowflake connection:
-snowflake = [
-  "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
-  "snowflake-connector-python>=3.3.0; python_version<'3.12'",
-]
-# Optional dependency required for Starlette integration:
-starlette = [
   # ASGI web-framework:
   "starlette>=0.40.0",
   # ASGI server:
   "uvicorn>=0.30.0",
+  # Faster http parsing for Starlette server:
+  "httptools>=0.6.3",
   # Required by starlette:
   "anyio>=4.0.0",
   # Required for file-upload support:
@@ -112,6 +97,16 @@ starlette = [
   "websockets>=12.0.0",
   # Required for cookie signing:
   "itsdangerous>=2.1.2",
+  # Don't require watchdog on MacOS, since it'll fail without xcode tools.
+  # Without watchdog, we fallback to a polling file watcher to check for app changes.
+  "watchdog>=2.1.5,<7; platform_system != 'Darwin'",
+]
+
+[project.optional-dependencies]
+# Optional dependency required for Snowflake connection:
+snowflake = [
+  "snowflake-snowpark-python[modin]>=1.17.0",
+  "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=1.0.0"]
@@ -133,8 +128,6 @@ performance = [
   "orjson>=3.5.0",
   # uvloop speeds up the event loop:
   "uvloop>=0.15.2; sys_platform != 'win32' and sys_platform != 'cygwin' and platform_python_implementation != 'PyPy'",
-  # Faster http parsing for Starlette server:
-  "httptools>=0.6.3",
 ]
 # Install all optional dependencies:
 all = [
@@ -163,7 +156,13 @@ exclude = ["tests", "tests.*"]
 
 # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
 [tool.setuptools.package-data]
-streamlit = ["py.typed", "hello/**/*.py"]
+streamlit = [
+    "py.typed",
+    ".agents/**/*.md",
+    ".agents/skills/**/assets/templates/**/*.py",
+    ".agents/skills/**/assets/templates/**/*.toml",
+    "hello/**/*.py",
+]
 
 # =============================================================================
 # Pytest Configuration
@@ -214,6 +213,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 
 [tool.coverage.report]
@@ -222,6 +222,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",

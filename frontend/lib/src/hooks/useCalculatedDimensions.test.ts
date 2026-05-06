@@ -30,7 +30,7 @@ class MockResizeObserver {
   disconnect = vi.fn()
 }
 
-global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver
+global.ResizeObserver = MockResizeObserver
 
 describe("useCalculatedDimensions", () => {
   afterEach(() => {

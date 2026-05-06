@@ -19,12 +19,12 @@ from __future__ import annotations
 import os
 import sys
 import time
+import unittest
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, call, patch
 
 import pytest
 from parameterized import parameterized
-from tornado.testing import AsyncTestCase
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
@@ -64,17 +64,6 @@ text_no_encoding = text_utf
 text_latin = "complete! ð\x9f\x91¨â\x80\x8dð\x9f\x8e¤"
 
 
-# Workaround for https://github.com/pytest-dev/pytest/issues/12263:
-# Newer pytest version require this method to exist, but its not implemented
-# in older Tornado versions for AsyncTestCase.
-# Adding this to the test harmless and not affecting the ScriptRunnerTest below.
-def runTest(*args, **kwargs):
-    pass
-
-
-AsyncTestCase.runTest = runTest
-
-
 def _create_widget(id: str, states: WidgetStates) -> WidgetState:
     """
     Returns
@@ -94,7 +83,7 @@ def _is_control_event(event: ScriptRunnerEvent) -> bool:
     return event != ScriptRunnerEvent.ENQUEUE_FORWARD_MSG
 
 
-class ScriptRunnerTest(AsyncTestCase):
+class ScriptRunnerTest(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         mock_runtime = MagicMock(spec=Runtime)
@@ -382,7 +371,7 @@ class ScriptRunnerTest(AsyncTestCase):
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
-    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.handle_user_script_exception")
     def test_regular_KeyError_is_rethrown(
         self, patched_handle_exception, patched_get_script_run_ctx
     ):
@@ -1045,7 +1034,7 @@ class ScriptRunnerTest(AsyncTestCase):
         shutdown_data = scriptrunner.event_data[-1]
         assert (
             shutdown_data["client_state"].page_script_hash
-            == "f0b2ab81496648a6f2af976dfd35f4a8"
+            == "74c2683ab3d8427292ef911e1e05a630"
         )
 
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:

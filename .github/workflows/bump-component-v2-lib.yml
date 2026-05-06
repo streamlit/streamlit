@@ -73,7 +73,7 @@ jobs:
       - name: Create PR to develop (@streamlit/component-v2-lib)
         if: inputs.dry_run != true
         id: create_pr
-        uses: actions/github-script@v8
+        uses: actions/github-script@v9
         env:
           NEXT: ${{ steps.compute.outputs.next }}
         with:

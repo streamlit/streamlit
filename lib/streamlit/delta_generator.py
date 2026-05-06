@@ -97,6 +97,7 @@ from streamlit.elements.widgets.file_uploader import FileUploaderMixin
 from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
+from streamlit.elements.widgets.pagination import PaginationMixin
 from streamlit.elements.widgets.radio import RadioMixin
 from streamlit.elements.widgets.select_slider import SelectSliderMixin
 from streamlit.elements.widgets.selectbox import SelectboxMixin
@@ -118,7 +119,6 @@ if TYPE_CHECKING:
     from google.protobuf.message import Message
 
     from streamlit.cursor import Cursor
-    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Element_pb2 import Element as ElementProto
 
@@ -209,6 +209,7 @@ class DeltaGenerator(
     MenuButtonMixin,
     MultiSelectMixin,
     NumberInputMixin,
+    PaginationMixin,
     PdfMixin,
     PlotlyMixin,
     ProgressMixin,
@@ -466,8 +467,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        add_rows_metadata: AddRowsMetadata | None = None,
         layout_config: LayoutConfig | None = None,
+        has_one_shot_effect: bool = False,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -477,8 +478,6 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        add_rows_metadata : AddRowsMetadata or None
-            Metadata for the add_rows method
 
         Returns
         -------
@@ -522,6 +521,9 @@ class DeltaGenerator(
                     get_text_alignment_config(layout_config.text_alignment)
                 )
 
+        if has_one_shot_effect:
+            msg.delta.new_element.has_one_shot_effect = True
+
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
@@ -534,11 +536,7 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                dg._cursor.get_locked_cursor(
-                    delta_type=delta_type, add_rows_metadata=add_rows_metadata
-                )
-                if dg._cursor is not None
-                else None
+                dg._cursor.get_locked_cursor() if dg._cursor is not None else None
             )
 
             output_dg = DeltaGenerator(
@@ -615,7 +613,7 @@ class DeltaGenerator(
         block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor(add_rows_metadata=None)
+        dg._cursor.get_locked_cursor()
         _enqueue_message(msg)
 
         caching.save_block_message(
