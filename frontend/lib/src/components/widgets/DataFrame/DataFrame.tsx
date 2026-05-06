@@ -377,11 +377,12 @@ function DataFrame({
         const column = columns[col]
         // Look up widget ID by column name first, then by positional key (_pos:<index>)
         // to support both named and positional column configurations
-        const widgetId =
-          element.buttonClickWidgets[column.name] ??
-          element.buttonClickWidgets[
-            `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
-          ]
+        const positionalKey = `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
+        const matchedKey =
+          element.buttonClickWidgets[column.name] !== undefined
+            ? column.name
+            : positionalKey
+        const widgetId = element.buttonClickWidgets[matchedKey]
 
         // Only inject handlers if a widget ID exists (i.e., ButtonColumn has a key)
         if (widgetId) {
@@ -393,14 +394,14 @@ function DataFrame({
               ...(cell as ButtonCell).data,
               rowIndex: originalRowIndex,
               onClick: (rowIdx: number, label: string) => {
-                handleButtonClick(column.name, rowIdx, label)
+                handleButtonClick(matchedKey, rowIdx, label)
               },
               onOpenMenu: (
                 rowIdx: number,
                 actions: string[],
                 bounds: Rectangle & { clickX: number; clickY: number }
               ) => {
-                handleOpenButtonMenu(column.name, rowIdx, actions, bounds)
+                handleOpenButtonMenu(matchedKey, rowIdx, actions, bounds)
               },
             },
           }

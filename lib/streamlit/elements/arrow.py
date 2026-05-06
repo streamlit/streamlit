@@ -33,6 +33,7 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.column_config_utils import (
+    _NUMERICAL_POSITION_PREFIX,
     INDEX_IDENTIFIER,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
@@ -93,9 +94,6 @@ _ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row-required",
     "multi-row",
 }
-
-# Prefix for columns configured via numerical position (must match column_config_utils.py)
-_NUMERICAL_POSITION_PREFIX: Final[str] = "_pos:"
 
 
 class DataframeSelectionState(TypedDict, total=False):
