@@ -198,9 +198,8 @@ const StyledEmptyMessage = styled.div`
 `
 
 /**
- * Cell overlay editor for markdown cells.
- * Shows rendered markdown by default with edit button.
- * When editing, shows a textarea with save/cancel buttons.
+ * Cell overlay editor for markdown cells. Shows rendered markdown by default
+ * with edit button. When editing, shows a textarea with save/cancel buttons.
  */
 const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   value: cell,
