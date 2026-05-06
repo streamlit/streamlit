@@ -241,6 +241,7 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.cursors = {}
         ctx.fragment_ids_this_run = []
         ctx.new_fragment_ids = ThreadSafeSet()
         ctx.current_fragment_id = None
