@@ -328,7 +328,18 @@ class PaginationMixin:
 
         layout_config = create_layout_config(width=width, allow_content_width=True)
 
-        self.dg._enqueue("pagination", proto, layout_config=layout_config)
+        # has_one_shot_effect ensures the frontend processes the setValue when
+        # the value is changed programmatically (e.g., via session_state)
+        value_changed = (
+            widget_state.value_changed or current_value != widget_state.value
+        )
+
+        self.dg._enqueue(
+            "pagination",
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_changed,
+        )
 
         return current_value
 
