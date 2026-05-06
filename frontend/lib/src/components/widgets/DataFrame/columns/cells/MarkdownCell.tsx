@@ -30,11 +30,11 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { removeLineBreaks } from "~lib/components/widgets/DataFrame/columns/utils"
 
 interface MarkdownCellProps {
-  readonly kind: "markdown-cell"
+  kind: "markdown-cell"
   /** The raw markdown string value. */
-  readonly value: string | null
-  /** The plain text display value (markdown stripped) for cell preview. */
-  readonly displayValue: string
+  value: string | null
+  /** The plain text display value for cell preview. */
+  displayValue: string
 }
 
 export type MarkdownCell = CustomCell<MarkdownCellProps>
@@ -198,8 +198,8 @@ const StyledEmptyMessage = styled.div`
 `
 
 /**
- * The cell overlay editor for markdown cells.
- * Shows rendered markdown by default with hover overlay buttons.
+ * Cell overlay editor for markdown cells.
+ * Shows rendered markdown by default with edit button.
  * When editing, shows a textarea with save/cancel buttons.
  */
 const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
@@ -227,28 +227,14 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     setIsEditing(false)
   }, [cell.data.value])
 
-  const handleEdit = useCallback(() => {
-    setIsEditing(true)
-  }, [])
-
-  const handleTextareaChange = useCallback(
-    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      setEditValue(e.target.value)
-    },
-    []
-  )
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       // Prevent glide-data-grid from handling these keys
       e.stopPropagation()
 
-      // Ctrl/Cmd + Enter to save
       if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
         handleSave()
-      }
-      // Escape to cancel
-      if (e.key === "Escape") {
+      } else if (e.key === "Escape") {
         handleCancel()
       }
     },
@@ -276,7 +262,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
         </StyledOverlayButtons>
         <StyledTextarea
           value={editValue}
-          onChange={handleTextareaChange}
+          onChange={e => setEditValue(e.target.value)}
           onKeyDown={handleKeyDown}
           autoFocus
           placeholder="Enter markdown text..."
@@ -293,7 +279,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
       {!cell.readonly && (
         <StyledOverlayButtons>
           <StyledIconButton
-            onClick={handleEdit}
+            onClick={() => setIsEditing(true)}
             title="Edit"
             aria-label="Edit"
           >
@@ -315,10 +301,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   )
 }
 
-/**
- * Custom renderer for markdown cells.
- * Draws plain text preview in the cell grid.
- */
+/** Custom renderer for markdown cells. */
 const renderer: CustomRenderer<MarkdownCell> = {
   kind: GridCellKind.Custom,
 
