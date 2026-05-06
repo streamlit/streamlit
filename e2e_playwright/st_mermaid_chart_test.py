@@ -19,17 +19,15 @@ import re
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction
-from e2e_playwright.shared.app_utils import get_element_by_key
 
 
 def test_mermaid_charts_render(app: Page):
     """Test that all mermaid chart types render correctly."""
-    container = get_element_by_key(app, "mermaid_charts")
-    mermaid_charts = container.get_by_test_id("stMermaidChart")
-    expect(mermaid_charts).to_have_count(6)
+    mermaid_charts = app.get_by_test_id("stMermaidChart")
+    expect(mermaid_charts).to_have_count(7)
 
     # Check that each chart contains an img element with blob URL (rendered mermaid)
-    for i in range(6):
+    for i in range(7):
         img = mermaid_charts.nth(i).locator("img")
         expect(img).to_be_visible()
         expect(img).to_have_attribute("src", re.compile(r"^blob:"))
@@ -37,8 +35,7 @@ def test_mermaid_charts_render(app: Page):
 
 def test_chart_snapshots(app: Page, assert_snapshot: ImageCompareFunction):
     """Test all mermaid chart types rendering with snapshots."""
-    container = get_element_by_key(app, "mermaid_charts")
-    mermaid_charts = container.get_by_test_id("stMermaidChart")
+    mermaid_charts = app.get_by_test_id("stMermaidChart")
 
     chart_names = [
         "flowchart",
@@ -47,6 +44,7 @@ def test_chart_snapshots(app: Page, assert_snapshot: ImageCompareFunction):
         "state_diagram",
         "pie_chart",
         "gantt_chart",
+        "mind_map",
     ]
 
     for i, name in enumerate(chart_names):
@@ -59,8 +57,7 @@ def test_themed_chart_snapshots(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test mermaid chart rendering in light and dark theme."""
-    container = get_element_by_key(themed_app, "mermaid_charts")
-    mermaid_charts = container.get_by_test_id("stMermaidChart")
+    mermaid_charts = themed_app.get_by_test_id("stMermaidChart")
 
     themed_charts = [
         (0, "flowchart"),
@@ -76,9 +73,8 @@ def test_themed_chart_snapshots(
 
 def test_toolbar_copy_source(app: Page):
     """Test that copy source toolbar action works."""
-    container = get_element_by_key(app, "mermaid_charts")
     # Get the fullscreen frame which contains both the toolbar and the chart
-    fullscreen_frame = container.get_by_test_id("stFullScreenFrame").first
+    fullscreen_frame = app.get_by_test_id("stFullScreenFrame").first
     toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
     mermaid_chart = fullscreen_frame.get_by_test_id("stMermaidChart")
     expect(mermaid_chart.locator("img")).to_be_visible()
@@ -100,9 +96,8 @@ def test_toolbar_copy_source(app: Page):
 
 def test_toolbar_download_png(app: Page):
     """Test that download PNG toolbar action is available."""
-    container = get_element_by_key(app, "mermaid_charts")
     # Get the fullscreen frame which contains both the toolbar and the chart
-    fullscreen_frame = container.get_by_test_id("stFullScreenFrame").first
+    fullscreen_frame = app.get_by_test_id("stFullScreenFrame").first
     toolbar = fullscreen_frame.get_by_test_id("stElementToolbar")
     mermaid_chart = fullscreen_frame.get_by_test_id("stMermaidChart")
     expect(mermaid_chart.locator("img")).to_be_visible()

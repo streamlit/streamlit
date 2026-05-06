@@ -18,9 +18,8 @@ import streamlit as st
 
 st.header("Mermaid Chart Types")
 
-with st.container(key="mermaid_charts"):
-    st.subheader("Flowchart")
-    st.mermaid_chart("""
+st.subheader("Flowchart")
+st.mermaid_chart("""
 graph TD
     A[Start] --> B{Decision}
     B -->|Yes| C[OK]
@@ -29,8 +28,8 @@ graph TD
     D --> E
 """)
 
-    st.subheader("Sequence Diagram")
-    st.mermaid_chart("""
+st.subheader("Sequence Diagram")
+st.mermaid_chart("""
 sequenceDiagram
     participant User
     participant App
@@ -41,8 +40,8 @@ sequenceDiagram
     App-->>User: Update UI
 """)
 
-    st.subheader("Class Diagram")
-    st.mermaid_chart("""
+st.subheader("Class Diagram")
+st.mermaid_chart("""
 classDiagram
     Animal <|-- Duck
     Animal <|-- Fish
@@ -60,8 +59,8 @@ classDiagram
     }
 """)
 
-    st.subheader("State Diagram")
-    st.mermaid_chart("""
+st.subheader("State Diagram")
+st.mermaid_chart("""
 stateDiagram-v2
     [*] --> Still
     Still --> [*]
@@ -71,16 +70,16 @@ stateDiagram-v2
     Crash --> [*]
 """)
 
-    st.subheader("Pie Chart")
-    st.mermaid_chart("""
+st.subheader("Pie Chart")
+st.mermaid_chart("""
 pie title Favorite Pets
     "Dogs" : 386
     "Cats" : 325
     "Birds" : 89
 """)
 
-    st.subheader("Gantt Chart")
-    st.mermaid_chart("""
+st.subheader("Gantt Chart")
+st.mermaid_chart("""
 gantt
     title Project Schedule
     dateFormat  YYYY-MM-DD
@@ -90,4 +89,22 @@ gantt
     section Development
     Implementation :b1, after a2, 14d
     Testing        :b2, after b1, 7d
+""")
+
+st.subheader("Mind Map")
+st.mermaid_chart("""
+mindmap
+    root((Streamlit))
+        Elements
+            Text
+            Data
+            Charts
+        Widgets
+            Input
+            Selection
+            Media
+        Layout
+            Columns
+            Tabs
+            Containers
 """)
