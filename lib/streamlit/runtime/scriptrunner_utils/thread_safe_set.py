@@ -14,8 +14,8 @@
 
 from __future__ import annotations
 
-import copy
 import threading
+from typing import NoReturn
 
 
 class ThreadSafeSet:
@@ -54,9 +54,13 @@ class ThreadSafeSet:
         with self._lock:
             return frozenset(self._data)
 
-    def __deepcopy__(self, memo: dict[int, object]) -> ThreadSafeSet:
-        new = ThreadSafeSet()
-        memo[id(self)] = new
-        with self._lock:
-            new._data = copy.deepcopy(self._data, memo)
-        return new
+    def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
+        raise TypeError(
+            "ThreadSafeSet does not support deepcopy; "
+            "use .snapshot() for an immutable copy"
+        )
+
+    def __copy__(self) -> NoReturn:
+        raise TypeError(
+            "ThreadSafeSet does not support copy; use .snapshot() for an immutable copy"
+        )

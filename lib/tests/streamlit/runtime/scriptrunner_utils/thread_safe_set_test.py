@@ -17,6 +17,7 @@ from __future__ import annotations
 import copy
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from copy import deepcopy
 
 import pytest
 
@@ -112,34 +113,25 @@ def test_no_direct_data_access() -> None:
     assert not hasattr(s, "discard")
 
 
-# --- Deepcopy ---
+# --- Copy prevention ---
 
 
-def test_deepcopy_preserves_data() -> None:
-    """Verify that deepcopy produces an independent copy with the same data."""
+def test_deepcopy_raises_type_error() -> None:
+    """Verify that deepcopy raises TypeError with a helpful message."""
     s = ThreadSafeSet()
     s.check_and_add("a")
-    s.check_and_add("b")
 
-    s2 = copy.deepcopy(s)
-    assert s2.snapshot() == frozenset({"a", "b"})
-    s2.check_and_add("c")
-    assert "c" not in s
+    with pytest.raises(TypeError, match=r"use \.snapshot\(\)"):
+        deepcopy(s)
 
 
-def test_deepcopy_shared_reference_identity() -> None:
-    """Verify that memo registration preserves identity for shared references.
-
-    When the same ThreadSafeSet is referenced from multiple places in a
-    deep-copied object graph, all references should resolve to the same copy.
-    """
+def test_shallow_copy_raises_type_error() -> None:
+    """Verify that shallow copy raises TypeError with a helpful message."""
     s = ThreadSafeSet()
-    s.check_and_add("x")
-    container: list[ThreadSafeSet] = [s, s]
+    s.check_and_add("a")
 
-    cloned = copy.deepcopy(container)
-    assert cloned[0] is cloned[1]
-    assert cloned[0] is not s
+    with pytest.raises(TypeError, match=r"use \.snapshot\(\)"):
+        copy.copy(s)
 
 
 # --- Concurrency ---
