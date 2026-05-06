@@ -369,3 +369,20 @@ bound_ss = st.slider(
     bind="query-params",
 )
 st.write("Bound ss value:", bound_ss)
+
+# --- setValue one-shot test (element hash memo regression) ---
+if "slider_setvalue_counter" not in st.session_state:
+    st.session_state.slider_setvalue_counter = 0
+
+st.session_state.slider_setvalue_counter += 1
+
+st.slider(
+    "Programmatic slider",
+    min_value=0,
+    max_value=100,
+    value=50,
+    key="setvalue_test_slider",
+)
+st.write(f"Slider counter: {st.session_state.slider_setvalue_counter}")
+
+st.button("Trigger slider rerun")

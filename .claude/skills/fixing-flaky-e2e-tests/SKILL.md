@@ -138,6 +138,7 @@ wait_until(app, lambda: check_condition(), timeout=20000)
 - Element still animating when screenshot taken
 - Font rendering not complete
 - Async content not loaded
+- Images not fully loaded/decoded (especially in webkit)
 
 **Fix**: Ensure element is stable before screenshot:
 
@@ -146,6 +147,16 @@ element = page.locator(".my-element")
 expect(element).to_be_visible()
 # For elements with animations, wait for specific CSS state:
 expect(element).to_have_css("opacity", "1")
+assert_snapshot(element, name="snapshot")
+```
+
+For elements containing images, wait for images to be fully loaded and decoded:
+
+```python
+from e2e_playwright.shared.app_utils import wait_for_images_loaded
+
+element = page.locator(".my-element")
+wait_for_images_loaded(element)  # Waits for load + decode
 assert_snapshot(element, name="snapshot")
 ```
 
@@ -206,6 +217,7 @@ From `e2e_playwright.shared.app_utils`:
 - `expect_no_skeletons(element)` - Wait for loading skeletons to disappear
 - `reset_focus(page)` - Click outside to trigger blur events
 - `reset_hovering(locator)` - Move mouse away from element
+- `wait_for_images_loaded(element)` - Wait for images to be loaded and decoded (important for webkit)
 
 ## Complete workflow
 
