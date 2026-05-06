@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import { ReactElement, useContext, useMemo } from "react"
 
 import classNames from "classnames"
 
@@ -70,7 +70,18 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  return <>{RenderNodeVisitor.collectReactElements(props)}</>
+  // Memoize traversal to avoid recomputing during resize events.
+  // props.node is the only meaningful dependency. Other props (endpoints,
+  // widgetMgr, uploadClient, componentRegistry) are stable app-level instances.
+  // Boolean props like widgetsDisabled are passed to child elements which
+  // re-render independently.
+
+  const elements = useMemo(
+    () => RenderNodeVisitor.collectReactElements(props),
+    [props.node]
+  )
+
+  return <>{elements}</>
 }
 
 /**
