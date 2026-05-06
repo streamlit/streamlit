@@ -54,19 +54,50 @@ export class ElementNode implements AppNode {
   // The hash of the script that created this element.
   public readonly activeScriptHash: string
 
+  // The hash of this element's payload for content-based deduplication.
+  public readonly elementHash?: string
+
   /** Create a new ElementNode. */
   public constructor(
     element: Element,
     metadata: ForwardMsgMetadata,
     scriptRunId: string,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
+    this.elementHash = elementHash
+  }
+
+  /**
+   * Create a new ElementNode with updated lifecycle metadata but preserved
+   * lazy caches (quiverElement, vegaLiteChartElement). This is used when
+   * reusing an element payload based on matching elementHash.
+   */
+  public withPreservedDerivations(
+    metadata: ForwardMsgMetadata,
+    scriptRunId: string,
+    activeScriptHash: string,
+    fragmentId?: string,
+    elementHash?: string
+  ): ElementNode {
+    const newNode = new ElementNode(
+      this.element,
+      metadata,
+      scriptRunId,
+      activeScriptHash,
+      fragmentId,
+      elementHash
+    )
+    // Preserve the lazy caches from this node
+    newNode.lazyQuiverElement = this.lazyQuiverElement
+    newNode.lazyVegaLiteChartElement = this.lazyVegaLiteChartElement
+    return newNode
   }
 
   public get quiverElement(): Quiver {

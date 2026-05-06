@@ -465,7 +465,12 @@ class TextWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        self.dg._enqueue("text_input", text_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "text_input",
+            text_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @overload
@@ -813,7 +818,12 @@ class TextWidgetsMixin:
             width=width, height=height, allow_content_height=True
         )
 
-        self.dg._enqueue("text_area", text_area_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "text_area",
+            text_area_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @property

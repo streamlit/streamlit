@@ -466,6 +466,7 @@ class DeltaGenerator(
         delta_type: str,
         element_proto: Message,
         layout_config: LayoutConfig | None = None,
+        has_one_shot_effect: bool = False,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -517,6 +518,9 @@ class DeltaGenerator(
                 msg.delta.new_element.text_alignment_config.CopyFrom(
                     get_text_alignment_config(layout_config.text_alignment)
                 )
+
+        if has_one_shot_effect:
+            msg.delta.new_element.has_one_shot_effect = True
 
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
