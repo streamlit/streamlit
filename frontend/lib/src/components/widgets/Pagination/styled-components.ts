@@ -25,12 +25,14 @@ export const StyledPaginationContainer =
     display: "flex",
     justifyContent: shouldStretch ? "center" : "flex-start",
     width: shouldStretch ? "100%" : "fit-content",
+    maxWidth: "100%",
   }))
 
 export const StyledPaginationButtonGroup = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: theme.spacing.twoXS,
+  overflow: "hidden",
 }))
 
 interface StyledPaginationButtonProps {
