@@ -57,106 +57,53 @@ describe("MarkdownCell renderer", () => {
   })
 
   describe("measure", () => {
-    it("measures cell width correctly for non-empty content", () => {
-      const ctx = {
-        measureText: (text: string) => ({ width: text.length * 10 }),
-      } as CanvasRenderingContext2D
+    const ctx = {
+      measureText: (text: string) => ({ width: text.length * 10 }),
+    } as CanvasRenderingContext2D
 
-      const cell = createMarkdownCell("# Hello World", "Hello World")
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- Test mock
-      const width = renderer.measure!(ctx, cell, mockTheme as any)
-      // "Hello World".length * 10 + cellHorizontalPadding * 2
-      expect(width).toBe(11 * 10 + 8 * 2) // 126
-    })
-
-    it("measures cell width correctly for empty content", () => {
-      const ctx = {
-        measureText: (text: string) => ({ width: text.length * 10 }),
-      } as CanvasRenderingContext2D
-
-      const cell = createMarkdownCell(null, "")
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- Test mock
-      const width = renderer.measure!(ctx, cell, mockTheme as any)
-      // 0 + cellHorizontalPadding * 2
-      expect(width).toBe(16)
-    })
+    it.each([
+      ["Hello World", 126], // 11 chars * 10 + padding * 2
+      ["", 16], // 0 + padding * 2
+    ])(
+      "measures cell width for displayValue '%s'",
+      (displayValue, expected) => {
+        const cell = createMarkdownCell(displayValue || null, displayValue)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-non-null-assertion -- Test mock
+        const width = renderer.measure!(ctx, cell, mockTheme as any)
+        expect(width).toBe(expected)
+      }
+    )
   })
 
   describe("onPaste", () => {
-    it("updates cell data with pasted value", () => {
-      const cellData = {
-        kind: "markdown-cell" as const,
-        value: null,
-        displayValue: "",
+    it.each([
+      ["# New Content", "# New Content", "single line content"],
+      [
+        "# Title\n\nParagraph text\n- Item 1\n- Item 2",
+        "# Title  Paragraph text - Item 1 - Item 2",
+        "multiline with line breaks removed",
+      ],
+      ["", "", "empty string clears content"],
+      ["   ", "   ", "whitespace preserved"],
+    ])(
+      "handles paste: %s -> %s (%s)",
+      (pastedValue, expectedDisplay, _desc) => {
+        const cellData = {
+          kind: "markdown-cell" as const,
+          value: null,
+          displayValue: "",
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
+        const result = renderer.onPaste!(pastedValue, cellData)
+
+        expect(result).toEqual({
+          kind: "markdown-cell",
+          value: pastedValue,
+          displayValue: expectedDisplay,
+        })
       }
-      const pastedValue = "# New Content"
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
-      const result = renderer.onPaste!(pastedValue, cellData)
-
-      expect(result).toEqual({
-        kind: "markdown-cell",
-        value: "# New Content",
-        displayValue: "# New Content",
-      })
-    })
-
-    it("removes line breaks from displayValue for multiline content", () => {
-      const cellData = {
-        kind: "markdown-cell" as const,
-        value: null,
-        displayValue: "",
-      }
-      const pastedValue = "# Title\n\nParagraph text\n- Item 1\n- Item 2"
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
-      const result = renderer.onPaste!(pastedValue, cellData)
-
-      expect(result).toEqual({
-        kind: "markdown-cell",
-        value: pastedValue,
-        // Note: blank lines become double spaces when replaced
-        displayValue: "# Title  Paragraph text - Item 1 - Item 2",
-      })
-    })
-
-    it("handles empty string paste by clearing the cell content", () => {
-      const cellData = {
-        kind: "markdown-cell" as const,
-        value: "# Existing Content",
-        displayValue: "# Existing Content",
-      }
-      const pastedValue = ""
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
-      const result = renderer.onPaste!(pastedValue, cellData)
-
-      expect(result).toEqual({
-        kind: "markdown-cell",
-        value: "",
-        displayValue: "",
-      })
-    })
-
-    it("handles whitespace-only paste without altering whitespace", () => {
-      const cellData = {
-        kind: "markdown-cell" as const,
-        value: null,
-        displayValue: "",
-      }
-      const pastedValue = "   "
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- Test assertion
-      const result = renderer.onPaste!(pastedValue, cellData)
-
-      expect(result).toEqual({
-        kind: "markdown-cell",
-        value: "   ",
-        displayValue: "   ",
-      })
-    })
+    )
   })
 
   describe("provideEditor", () => {

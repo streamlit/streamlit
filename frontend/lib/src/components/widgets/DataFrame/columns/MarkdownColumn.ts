@@ -27,9 +27,7 @@ import {
   toSafeString,
 } from "./utils"
 
-/**
- * A column that supports rendering and editing of markdown text.
- */
+/** A column that supports rendering and editing of markdown text. */
 function MarkdownColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate: MarkdownCell = {
     kind: GridCellKind.Custom,
@@ -56,34 +54,23 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
     typeIcon: ":material/code:",
     validateInput,
     getCell(data?: unknown, validate?: boolean): GridCell {
-      if (validate) {
-        const validationResult = validateInput(data)
-        if (validationResult === false) {
-          return getErrorCell(toSafeString(data), "Invalid input.")
-        }
+      if (validate && !validateInput(data)) {
+        return getErrorCell(toSafeString(data), "Invalid input.")
       }
 
-      try {
-        const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
-        const displayData = cellData ? removeLineBreaks(cellData) : ""
+      const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
+      const displayData = cellData ? removeLineBreaks(cellData) : ""
 
-        return {
-          ...cellTemplate,
-          copyData: cellData ?? "",
-          isMissingValue: isNullOrUndefined(cellData),
-          data: {
-            kind: "markdown-cell",
-            value: cellData,
-            displayValue: displayData,
-          },
-        } as MarkdownCell
-      } catch (error) {
-        return getErrorCell(
-          toSafeString(data),
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          `The value cannot be interpreted as markdown. Error: ${error}`
-        )
-      }
+      return {
+        ...cellTemplate,
+        copyData: cellData ?? "",
+        isMissingValue: isNullOrUndefined(cellData),
+        data: {
+          kind: "markdown-cell",
+          value: cellData,
+          displayValue: displayData,
+        },
+      } as MarkdownCell
     },
     getCellValue(cell: MarkdownCell): string | null {
       return cell.data?.value ?? null
