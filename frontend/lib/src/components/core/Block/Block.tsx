@@ -70,15 +70,23 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  // Memoize traversal to avoid recomputing during resize events.
-  // props.node is the only meaningful dependency. Other props (endpoints,
-  // widgetMgr, uploadClient, componentRegistry) are stable app-level instances.
-  // Boolean props like widgetsDisabled are passed to child elements which
-  // re-render independently.
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    // Stable app-level instances (not needed in deps):
+    // endpoints, widgetMgr, uploadClient, componentRegistry
+  } = props
 
+  // Memoize traversal to avoid recomputing during resize events.
+  // The node and state-like props that affect child rendering are dependencies.
+  // Other props (endpoints, widgetMgr, uploadClient, componentRegistry) are
+  // stable app-level singletons.
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- props contains stable singletons; meaningful deps listed
   const elements = useMemo(
     () => RenderNodeVisitor.collectReactElements(props),
-    [props.node]
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- props contains stable singletons; meaningful deps listed
+    [node, widgetsDisabled, disableFullscreenMode]
   )
 
   return <>{elements}</>
