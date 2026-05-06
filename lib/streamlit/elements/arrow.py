@@ -962,12 +962,12 @@ class ArrowMixin:
             for col_name, config in column_config.items():
                 if isinstance(config, ButtonColumnResult):
                     # Transform key the same way column config does for consistency
-                    key = (
+                    column_widget_key = (
                         f"{_NUMERICAL_POSITION_PREFIX}{col_name}"
                         if isinstance(col_name, int)
                         else str(col_name)
                     )
-                    button_columns[key] = config
+                    button_columns[column_widget_key] = config
                     processed_column_config[col_name] = config.config
                 else:
                     processed_column_config[col_name] = config
@@ -1048,8 +1048,16 @@ class ArrowMixin:
 
         # Register widgets for button columns with keys
         ctx = get_script_run_ctx()
+        button_serde = ButtonClickSerde()
         for col_name, button_col in button_columns.items():
             if button_col.key is not None:
+                check_widget_policies(
+                    self.dg,
+                    button_col.key,
+                    on_change=button_col.on_click,
+                    default_value=None,
+                    writes_allowed=False,
+                )
                 widget_id = compute_and_register_element_id(
                     "dataframe_button",
                     user_key=button_col.key,
@@ -1057,7 +1065,6 @@ class ArrowMixin:
                     dg=self.dg,
                     column=col_name,
                 )
-                button_serde = ButtonClickSerde()
                 register_widget(
                     widget_id,
                     on_change_handler=button_col.on_click,

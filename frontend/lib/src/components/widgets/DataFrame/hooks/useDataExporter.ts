@@ -108,8 +108,12 @@ async function writeCsv(
 
   for (let row = 0; row < numRows; row++) {
     const rowData: unknown[] = []
-    columns.forEach((column: BaseColumn, col: number, _map) => {
-      rowData.push(column.getCellValue(getCellContent([col, row])))
+    columns.forEach((column: BaseColumn) => {
+      // Use column.indexNumber (original position) instead of loop index
+      // to handle filtered columns (e.g., button columns excluded from export)
+      rowData.push(
+        column.getCellValue(getCellContent([column.indexNumber, row]))
+      )
     })
     // Write row to CSV:
     await writable.write(textEncoder.encode(toCsvRow(rowData)))
