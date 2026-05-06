@@ -174,8 +174,9 @@ def test_multiselect_cell_editing_with_new_options(app: Page):
     )
 
 
-@pytest.mark.skip_browser("webkit")  # Cell overlay visibility flaky on webkit
-@pytest.mark.skip_browser("firefox")  # Cell overlay visibility flaky on Firefox
+@pytest.mark.only_browser(
+    "chromium"
+)  # Cell overlay visibility flaky on webkit and Firefox
 def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the markdown cell can be edited."""
     markdown_column_df = _get_editor(themed_app, "markdown-column")
@@ -229,8 +230,9 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     expect(textarea).to_have_value("## New Header\n\nThis is **updated** content.")
 
 
-@pytest.mark.skip_browser("webkit")  # Cell overlay visibility flaky on webkit
-@pytest.mark.skip_browser("firefox")  # Cell overlay visibility flaky on Firefox
+@pytest.mark.only_browser(
+    "chromium"
+)  # Cell overlay visibility flaky on webkit and Firefox
 def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
     markdown_column_df = _get_editor(themed_app, "markdown-column")
