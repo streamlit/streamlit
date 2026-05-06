@@ -529,7 +529,6 @@ def _determine_delta_color_and_direction(
 
 
 def _is_negative_delta(delta: Delta) -> bool:
-def _is_negative_delta(delta: Delta) -> bool:
     return dedent(str(delta)).startswith("-")
 
 
