@@ -68,20 +68,20 @@ st.expander(
     label: str,
     expanded: bool = False,
     *,
+    type: Literal["normal", "compact"] = "normal",  # NEW
     key: Key | None = None,
     icon: str | None = None,
     width: WidthWithoutContent = "stretch",
     on_change: Literal["ignore", "rerun"] = "ignore",
-    type: Literal["normal", "compact"] = "normal",  # NEW
 )
 
 st.status(
     label: str,
     *,
+    type: Literal["normal", "compact"] = "normal",  # NEW
     expanded: bool = False,
     state: Literal["running", "complete", "error"] = "running",
     width: WidthWithoutContent = "stretch",
-    type: Literal["normal", "compact"] = "normal",  # NEW
 )
 ```
 
