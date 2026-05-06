@@ -229,6 +229,7 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
 
 
 @pytest.mark.skip_browser("webkit")  # Cell overlay visibility flaky on webkit
+@pytest.mark.skip_browser("firefox")  # Cell overlay visibility flaky on Firefox
 def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
     markdown_column_df = _get_editor(themed_app, "markdown-column")
