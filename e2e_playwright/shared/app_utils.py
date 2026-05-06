@@ -1499,7 +1499,7 @@ def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator
 
 
 def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
-    """Wait for all images within a locator to be fully loaded.
+    """Wait for all images within a locator to be fully loaded and decoded.
 
     This is useful for stabilizing snapshot tests that include images,
     especially in browsers like webkit that may have timing variations
@@ -1517,14 +1517,18 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         """(element) => {
             const images = element.querySelectorAll('img');
             return Promise.all(
-                Array.from(images).map(img => {
-                    if (img.complete && img.naturalWidth > 0) {
-                        return Promise.resolve();
+                Array.from(images).map(async img => {
+                    // First wait for the image to load
+                    if (!img.complete || img.naturalWidth === 0) {
+                        await new Promise((resolve, reject) => {
+                            img.addEventListener('load', resolve);
+                            img.addEventListener('error', reject);
+                        });
                     }
-                    return new Promise((resolve, reject) => {
-                        img.addEventListener('load', resolve);
-                        img.addEventListener('error', reject);
-                    });
+                    // Then wait for the image to be decoded (ready for rendering)
+                    // This is important for webkit which may have timing variations
+                    // between load and decode completion
+                    await img.decode();
                 })
             );
         }""",
