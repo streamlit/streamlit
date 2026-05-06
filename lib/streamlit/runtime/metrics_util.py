@@ -35,7 +35,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 _LOGGER: Final = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
-_MAX_TRACKED_COMMANDS: Final = 200
+_MAX_TRACKED_COMMANDS: Final = 400
 # Only track a maximum of 25 uses per unique command since some apps use
 # commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
