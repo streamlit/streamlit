@@ -27,12 +27,8 @@ import {
   toSafeString,
 } from "./utils"
 
-// MarkdownColumn does not require additional parameters beyond BaseColumnProps
-
 /**
- * A column that supports rendering & editing of markdown text.
- * Cells display a plain text preview, and clicking opens an overlay
- * with rendered markdown and edit functionality.
+ * A column that supports rendering and editing of markdown text.
  */
 function MarkdownColumn(props: BaseColumnProps): BaseColumn {
   const cellTemplate: MarkdownCell = {

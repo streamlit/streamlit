@@ -114,10 +114,11 @@ st.dataframe(
 - `DateColumn` → Date only (no time)
 - `DatetimeColumn` → Dates with formatting
 - `ImageColumn` → Images
-- `JSONColumn` → Display JSON objects
+- `JsonColumn` → Display JSON objects
 - `LineChartColumn` → Sparkline charts
 - `LinkColumn` → Clickable links
 - `ListColumn` → Display lists/arrays
+- `MarkdownColumn` → Render Markdown text
 - `MultiselectColumn` → Multi-value selection
 - `NumberColumn` → Numbers with formatting
 - `ProgressColumn` → Progress bars
