@@ -65,6 +65,40 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
 
 
 @dataclass
+class FragmentThreadState:
+    """Per-thread state for a fragment execution.
+
+    Stored in a ContextVar so copy_context() provides automatic isolation.
+    """
+
+    fragment_id: str | None = None
+    delta_path: tuple[int, ...] | None = None
+    in_fragment_callback: bool = False
+    active_script_hash: str = ""
+
+
+_thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
+    "fragment_thread_state",
+)
+
+
+def get_fragment_thread_state() -> FragmentThreadState:
+    """Public accessor for the per-thread fragment state.
+
+    Raises RuntimeError if called before reset() has initialized the state.
+    All callers are behind get_script_run_ctx() guards, so this only fires
+    if there's a bug in initialization ordering.
+    """
+    try:
+        return _thread_state.get()
+    except LookupError:
+        raise RuntimeError(
+            "FragmentThreadState not initialized — "
+            "reset() must be called before accessing thread state."
+        )
+
+
+@dataclass
 class ScriptRunContext:
     """A context object that contains data for a "script run" - that is,
     data that's scoped to a single ScriptRunner execution (and therefore also
@@ -105,11 +139,8 @@ class ScriptRunContext:
     form_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
-    current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
-    in_fragment_callback: bool = False
-    _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
 
@@ -118,25 +149,23 @@ class ScriptRunContext:
         return self.pages_manager.current_page_script_hash
 
     @property
-    def active_script_hash(self) -> str:
-        return self._active_script_hash
-
-    @property
     def main_script_parent(self) -> Path:
         return self.pages_manager.main_script_parent
 
     @contextlib.contextmanager
     def run_with_active_hash(self, page_hash: str) -> Generator[None, None, None]:
-        original_page_hash = self._active_script_hash
-        self._active_script_hash = page_hash
+        ts = get_fragment_thread_state()
+        original_page_hash = ts.active_script_hash
+        ts.active_script_hash = page_hash
         try:
             yield
         finally:
-            # in the event of any exception, ensure we set the active hash back
-            self._active_script_hash = original_page_hash
+            ts.active_script_hash = original_page_hash
 
     def set_mpa_v2_page(self, page_script_hash: str) -> None:
-        self._active_script_hash = self.pages_manager.main_script_hash
+        get_fragment_thread_state().active_script_hash = (
+            self.pages_manager.main_script_hash
+        )
         self.pages_manager.set_current_page_script_hash(page_script_hash)
 
     def reset(
@@ -157,13 +186,15 @@ class ScriptRunContext:
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
-        self._active_script_hash = self.pages_manager.main_script_hash
+        _thread_state.set(
+            FragmentThreadState(
+                active_script_hash=self.pages_manager.main_script_hash,
+            )
+        )
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
-        self.current_fragment_id = None
-        self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids.clear()
         self.has_dialog_opened = False
@@ -188,7 +219,7 @@ class ScriptRunContext:
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""
-        msg.metadata.active_script_hash = self.active_script_hash
+        msg.metadata.active_script_hash = get_fragment_thread_state().active_script_hash
 
         # We populate the hash and cacheable field for all messages.
         # Besides the forward message cache, the hash might also be used
@@ -277,7 +308,8 @@ def enqueue_message(msg: ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
-    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
-        msg.delta.fragment_id = ctx.current_fragment_id
+    ts = get_fragment_thread_state()
+    if ts.fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ts.fragment_id
 
     ctx.enqueue(msg)

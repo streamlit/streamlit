@@ -112,6 +112,9 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_fragment_thread_state,
+)
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -168,7 +171,7 @@ def _maybe_print_use_warning() -> None:
 def _maybe_print_fragment_callback_warning() -> None:
     """Print a warning if elements are being modified during a fragment callback."""
     ctx = get_script_run_ctx()
-    if ctx and getattr(ctx, "in_fragment_callback", False):
+    if ctx and get_fragment_thread_state().in_fragment_callback:
         warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         logger.get_logger("root").warning(
@@ -489,7 +492,11 @@ class DeltaGenerator(
         dg = self._active_dg
 
         ctx = get_script_run_ctx()
-        if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
+        if (
+            ctx
+            and get_fragment_thread_state().fragment_id
+            and _writes_directly_to_sidebar(dg)
+        ):
             raise StreamlitAPIException(
                 "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
                 "supported. To write elements to the sidebar with a fragment, call your "

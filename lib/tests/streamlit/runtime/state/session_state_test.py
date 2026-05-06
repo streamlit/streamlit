@@ -38,6 +38,11 @@ from streamlit.errors import (
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
+    _thread_state,
+    get_fragment_thread_state,
+)
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
@@ -468,7 +473,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
 
     mock_ctx = MagicMock()
-    mock_ctx.in_fragment_callback = False
+    _thread_state.set(FragmentThreadState(in_fragment_callback=False))
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -477,7 +482,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
         # Callbacks internally catch RerunException and log a warning.
         ss._call_callbacks()
 
-    assert mock_ctx.in_fragment_callback is False
+    assert get_fragment_thread_state().in_fragment_callback is False
 
 
 def test_updates():
@@ -1466,7 +1471,6 @@ def test_session_state_iteration_excludes_trigger_widgets() -> None:
 class MockScriptRunCtx:
     """Mock script run context for testing."""
 
-    active_script_hash: str = "main_hash"
     fragment_ids_this_run: list[str] | None = None
 
 
@@ -1477,6 +1481,7 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         super().setUp()
         self.session_state = SessionState()
         self.query_params = self.session_state.query_params
+        _thread_state.set(FragmentThreadState(active_script_hash="main_hash"))
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

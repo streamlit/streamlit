@@ -28,9 +28,12 @@ from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileMan
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    FragmentThreadState,
     ScriptRunContext,
+    _thread_state,
     add_script_run_ctx,
     enqueue_message,
+    get_fragment_thread_state,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.util import patch_config_options
@@ -42,7 +45,6 @@ if TYPE_CHECKING:
 
 def _create_script_run_context(
     fake_enqueue: Callable[[ForwardMsg], None],
-    current_fragment_id: str | None = None,
     pages_manager: PagesManager | None = None,
     cached_message_hashes: set[str] | None = None,
 ):
@@ -56,7 +58,6 @@ def _create_script_run_context(
         user_info={"email": "test@example.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=pages_manager or PagesManager(""),
-        current_fragment_id=current_fragment_id,
         cached_message_hashes=cached_message_hashes or set(),
     )
 
@@ -68,6 +69,7 @@ class ScriptRunContextTest(unittest.TestCase):
             delattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME)
         except AttributeError:
             pass
+        _thread_state.set(FragmentThreadState())
 
     def test_allow_set_page_config_once(self):
         """st.set_page_config can be called once"""
@@ -115,7 +117,10 @@ class ScriptRunContextTest(unittest.TestCase):
         msg.delta.new_element.markdown.body = "foo"
 
         ctx.enqueue(msg)
-        assert msg.metadata.active_script_hash == ctx.active_script_hash
+        assert (
+            msg.metadata.active_script_hash
+            == get_fragment_thread_state().active_script_hash
+        )
 
         ctx.set_mpa_v2_page("new_hash")
 
@@ -197,9 +202,8 @@ class ScriptRunContextTest(unittest.TestCase):
         def fake_enqueue(msg: ForwardMsg):
             fake_enqueue_result["msg"] = msg
 
-            ctx = _create_script_run_context(
-                fake_enqueue, current_fragment_id="my_fragment_id"
-            )
+            _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
+            ctx = _create_script_run_context(fake_enqueue)
             add_script_run_ctx(ctx=ctx)
             msg = ForwardMsg()
             msg.delta.new_element.markdown.body = "foo"
@@ -216,18 +220,26 @@ class ScriptRunContextTest(unittest.TestCase):
         pages_manager = PagesManager("")
         ctx = _create_script_run_context(
             lambda _msg: None,
-            current_fragment_id="my_fragment_id",
             pages_manager=pages_manager,
         )
 
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
-        assert ctx.active_script_hash == pages_manager.main_script_hash
+        assert (
+            get_fragment_thread_state().active_script_hash
+            == pages_manager.main_script_hash
+        )
 
         pages_manager.set_pages({})
         ctx.set_mpa_v2_page("new_hash")
-        assert ctx.active_script_hash == pages_manager.main_script_hash
+        assert (
+            get_fragment_thread_state().active_script_hash
+            == pages_manager.main_script_hash
+        )
 
         with ctx.run_with_active_hash("new_hash"):
-            assert ctx.active_script_hash == "new_hash"
+            assert get_fragment_thread_state().active_script_hash == "new_hash"
 
-        assert ctx.active_script_hash == pages_manager.main_script_hash
+        assert (
+            get_fragment_thread_state().active_script_hash
+            == pages_manager.main_script_hash
+        )

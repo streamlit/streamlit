@@ -32,6 +32,9 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunContext,
     get_script_run_ctx,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    get_fragment_thread_state,
+)
 
 if TYPE_CHECKING:
     from streamlit.runtime.state.query_params import QueryParams, QueryParamsInput
@@ -96,7 +99,9 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    new_queue = list(
+        dropwhile(lambda x: x != get_fragment_thread_state().fragment_id, curr_queue)
+    )
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
