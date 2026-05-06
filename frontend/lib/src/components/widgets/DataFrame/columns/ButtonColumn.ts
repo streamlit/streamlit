@@ -73,7 +73,7 @@ function ButtonColumn(props: BaseColumnProps): BaseColumn {
             ...cellTemplate.data,
             data: null,
           },
-        } as ButtonCell
+        }
       }
 
       let buttonData: ButtonCellData
@@ -100,7 +100,7 @@ function ButtonColumn(props: BaseColumnProps): BaseColumn {
           ...cellTemplate.data,
           data: buttonData,
         },
-      } as ButtonCell
+      }
     },
     getCellValue(cell: ButtonCell): ButtonCellData {
       return cell.data.data
