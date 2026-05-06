@@ -20,6 +20,8 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
+from streamlit.elements.lib.utils import _register_element_id
+from streamlit.errors import StreamlitDuplicateElementId, StreamlitDuplicateElementKey
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
@@ -262,3 +264,71 @@ def test_on_script_finished_accepts_frozenset() -> None:
     """Verify on_script_finished type signature accepts frozenset[str]."""
     session_state = SessionState()
     session_state.on_script_finished(frozenset({"w1", "w2"}))
+
+
+# --- Caller-level concurrent registration ---
+
+
+def test_concurrent_duplicate_user_key_registration() -> None:
+    """Multiple threads registering the same user_key — exactly one succeeds.
+
+    Exercises the compound two-step check_and_add logic in _register_element_id
+    under contention: user_key registration (step 1) must produce exactly one
+    winner, with all other threads raising StreamlitDuplicateElementKey.
+    """
+    ctx = _make_ctx()
+    successes: list[bool] = []
+    duplicates: list[bool] = []
+    results_lock = threading.Lock()
+
+    element_id = "$$ID-text_input-my_key"
+
+    def register() -> None:
+        try:
+            _register_element_id(ctx, "text_input", element_id)
+            with results_lock:
+                successes.append(True)
+        except StreamlitDuplicateElementKey:
+            with results_lock:
+                duplicates.append(True)
+
+    num_threads = 10
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(register) for _ in range(num_threads)]
+        for f in futures:
+            f.result()
+
+    assert len(successes) == 1, f"Expected 1 success, got {len(successes)}"
+    assert len(duplicates) == num_threads - 1
+
+
+def test_concurrent_duplicate_element_id_registration() -> None:
+    """Multiple threads registering the same element_id (no user_key).
+
+    When there is no user_key, only the element_id check fires. Exactly one
+    thread should succeed; the rest raise StreamlitDuplicateElementId.
+    """
+    ctx = _make_ctx()
+    successes: list[bool] = []
+    duplicates: list[bool] = []
+    results_lock = threading.Lock()
+
+    element_id = "$$ID-text_input-None"
+
+    def register() -> None:
+        try:
+            _register_element_id(ctx, "text_input", element_id)
+            with results_lock:
+                successes.append(True)
+        except StreamlitDuplicateElementId:
+            with results_lock:
+                duplicates.append(True)
+
+    num_threads = 10
+    with ThreadPoolExecutor(max_workers=num_threads) as executor:
+        futures = [executor.submit(register) for _ in range(num_threads)]
+        for f in futures:
+            f.result()
+
+    assert len(successes) == 1, f"Expected 1 success, got {len(successes)}"
+    assert len(duplicates) == num_threads - 1
