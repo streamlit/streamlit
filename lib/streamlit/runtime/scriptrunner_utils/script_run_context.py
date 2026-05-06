@@ -95,14 +95,14 @@ class ScriptRunContext:
         default_factory=collections.Counter
     )
     _has_script_started: bool = False
-    widget_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
-    widget_user_keys_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
-    form_ids_this_run: ThreadSafeSet = field(default_factory=ThreadSafeSet)
+    widget_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
+    widget_user_keys_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
+    form_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
-    new_fragment_ids: ThreadSafeSet = field(default_factory=ThreadSafeSet)
+    new_fragment_ids: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     in_fragment_callback: bool = False
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time

@@ -15,10 +15,13 @@
 from __future__ import annotations
 
 import threading
-from typing import NoReturn
+from collections.abc import Hashable
+from typing import Generic, NoReturn, TypeVar
+
+T = TypeVar("T", bound=Hashable)
 
 
-class ThreadSafeSet:
+class ThreadSafeSet(Generic[T]):
     """A thread-safe set wrapper that enforces controlled access via atomic methods.
 
     This replaces bare ``set[str]`` fields where callers previously did non-atomic
@@ -31,9 +34,9 @@ class ThreadSafeSet:
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
-        self._data: set[str] = set()
+        self._data: set[T] = set()
 
-    def check_and_add(self, value: str) -> bool:
+    def check_and_add(self, value: T) -> bool:
         """Atomically check membership and add. Returns True if the value was new."""
         with self._lock:
             is_new = value not in self._data
@@ -49,7 +52,7 @@ class ThreadSafeSet:
         with self._lock:
             self._data.clear()
 
-    def snapshot(self) -> frozenset[str]:
+    def snapshot(self) -> frozenset[T]:
         """Return an immutable copy for read-only consumers."""
         with self._lock:
             return frozenset(self._data)
