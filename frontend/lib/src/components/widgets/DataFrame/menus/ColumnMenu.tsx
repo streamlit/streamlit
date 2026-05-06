@@ -215,6 +215,7 @@ function ColumnMenu({
                 onMouseLeave={() => setFormatMenuOpen(false)}
                 isActive={formatMenuOpen}
                 hasSubmenu={true}
+                role="menuitem"
               >
                 <div>
                   <DynamicIcon
@@ -237,6 +238,7 @@ function ColumnMenu({
                 onAutosize()
                 closeMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/arrows_outward:" />
               Autosize
@@ -248,6 +250,7 @@ function ColumnMenu({
                 onUnpinColumn()
                 closeMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/keep_off:" />
               Unpin column
@@ -259,6 +262,7 @@ function ColumnMenu({
                 onPinColumn()
                 closeMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/keep:" />
               Pin column
@@ -270,6 +274,7 @@ function ColumnMenu({
                 onHideColumn()
                 closeMenu()
               }}
+              role="menuitem"
             >
               <DynamicIcon size="base" iconValue=":material/visibility_off:" />
               Hide column
