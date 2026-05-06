@@ -1422,6 +1422,7 @@ function DataFrame({
             }}
             onCloseMenu={() => setButtonActionMenu(undefined)}
           />,
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
         )}
     </StyledResizableContainer>
