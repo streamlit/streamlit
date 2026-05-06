@@ -80,8 +80,9 @@ st.chat_message("assistant", avatar=image2).write(
     "Another message with the same blue avatar."
 )
 
-# Test avatar using local image
-CAT_IMAGE_PATH = STATIC_DIR / "test-cat.jpg"
+# Test avatar using local image (use square image to avoid objectFit: cover
+# rendering differences across browsers, especially webkit)
+CAT_IMAGE_PATH = STATIC_DIR / "test-cat-square.jpg"
 st.chat_message("user", avatar=str(CAT_IMAGE_PATH)).write("Cat avatar using str path")
 st.chat_message("user", avatar=CAT_IMAGE_PATH).write("Cat avatar using Path")
 
