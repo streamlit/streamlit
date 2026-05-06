@@ -1221,6 +1221,9 @@ class LayoutsMixin:
                 "on_change", ["'rerun'", "'ignore'", "a callable"]
             )
 
+        if type not in {"default", "compact"}:
+            raise StreamlitValueError("type", ["'default'", "'compact'"])
+
         key = to_key(key)
         is_stateful = on_change != "ignore"
 
@@ -1250,6 +1253,7 @@ class LayoutsMixin:
                 expanded=expanded,
                 icon=icon,
                 width=width,
+                type=type,
             )
             block_id = element_id
 
@@ -1273,6 +1277,7 @@ class LayoutsMixin:
                 user_key=key,
                 key_as_main_identity=False,
                 dg=self.dg,
+                type=type,
             )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
