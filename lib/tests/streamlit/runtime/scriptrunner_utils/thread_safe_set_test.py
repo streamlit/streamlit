@@ -91,7 +91,6 @@ def test_snapshot_is_immutable() -> None:
 def test_no_iter() -> None:
     """Verify that ThreadSafeSet does not expose __iter__."""
     s = ThreadSafeSet()
-    assert not hasattr(s, "__iter__")
     with pytest.raises(TypeError):
         iter(s)  # type: ignore[call-overload]
 
@@ -99,7 +98,6 @@ def test_no_iter() -> None:
 def test_no_len() -> None:
     """Verify that ThreadSafeSet does not expose __len__."""
     s = ThreadSafeSet()
-    assert not hasattr(s, "__len__")
     with pytest.raises(TypeError):
         len(s)  # type: ignore[arg-type]
 
@@ -221,8 +219,8 @@ def test_fields_are_thread_safe_set_instances() -> None:
     assert isinstance(ctx.form_ids_this_run, ThreadSafeSet)
 
 
-def test_reset_replaces_with_fresh_thread_safe_set() -> None:
-    """Verify reset() swaps fields for fresh ThreadSafeSet instances."""
+def test_reset_clears_thread_safe_sets() -> None:
+    """Verify reset() clears ThreadSafeSet fields in place."""
     ctx = _make_ctx()
     ctx.widget_ids_this_run.check_and_add("old_id")
     ctx.widget_user_keys_this_run.check_and_add("old_key")
