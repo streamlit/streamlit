@@ -186,15 +186,6 @@ class Cursor:
 
         return self
 
-    @property
-    def props(self) -> Any:
-        """Other data in this cursor. This is a temporary measure that will go
-        away when we implement improved return values for elements.
-
-        This is only implemented in LockedCursor.
-        """
-        raise NotImplementedError()
-
 
 class RunningCursor(Cursor):
     def __init__(
@@ -300,7 +291,6 @@ class RunningCursor(Cursor):
             root_container=self._root_container,
             parent_path=self._parent_path,
             index=self._index,
-            **props,
         )
         self._advance()
         return locked
@@ -328,7 +318,6 @@ class LockedCursor(Cursor):
         index: int = 0,
         transient_index: int | None = None,
         transient_elements: SparseList[Element] | None = None,
-        **props: Any,
     ) -> None:
         """A locked pointer to a location in the app.
 
@@ -347,17 +336,12 @@ class LockedCursor(Cursor):
           The running index of the transient elements.
         transient_elements: SparseList[Element]
           The list of active transient elements.
-        **props: any
-          Anything else you want to store in this cursor. This is a temporary
-          measure that will go away when we implement improved return values
-          for elements.
 
         """
         super().__init__(transient_index, transient_elements)
         self._root_container = root_container
         self._index = index
         self._parent_path = parent_path
-        self._props = props
 
     @property
     def root_container(self) -> int:

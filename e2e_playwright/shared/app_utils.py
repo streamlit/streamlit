@@ -1496,3 +1496,45 @@ def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator
     element = locator.get_by_test_id("stMetric").filter(has_text=label)
     expect(element).to_be_visible()
     return element
+
+
+def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
+    """Wait for all images within a locator to be fully loaded and decoded.
+
+    This is useful for stabilizing snapshot tests that include images,
+    especially in browsers like webkit that may have timing variations
+    in image loading/decoding.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator containing the images to wait for.
+
+    timeout : int
+        Maximum time to wait in milliseconds. Defaults to 5000ms.
+    """
+    locator.evaluate(
+        """(element) => {
+            const images = element.querySelectorAll('img');
+            return Promise.all(
+                Array.from(images).map(async img => {
+                    // Wait for image to load if not complete yet
+                    if (!img.complete) {
+                        await new Promise((resolve, reject) => {
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', reject, { once: true });
+                        });
+                    }
+                    // Check for already-failed images (complete but no content)
+                    if (img.naturalWidth === 0) {
+                        throw new Error('Image failed to load: ' + img.src);
+                    }
+                    // Wait for the image to be decoded (ready for rendering)
+                    // This is important for webkit which may have timing variations
+                    // between load and decode completion
+                    await img.decode();
+                })
+            );
+        }""",
+        timeout=timeout,
+    )

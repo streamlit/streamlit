@@ -108,7 +108,7 @@ function parseAlignmentConfig(
   }
 
   // Cast to string since invalid values can come from JSON at runtime
-  if (new Set(["left", "center", "right"]).has(alignment as string)) {
+  if (new Set(["left", "center", "right"]).has(alignment)) {
     return alignment
   }
 
@@ -226,7 +226,7 @@ export function applyColumnConfig(
     contentAlignment: parseAlignmentConfig(columnConfig.alignment),
     defaultValue: columnConfig.default,
     help: columnConfig.help,
-  } as BaseColumnProps) as BaseColumnProps
+  } as BaseColumnProps)
 }
 
 /**
@@ -325,7 +325,7 @@ function useColumnLoader(
 
   // Resync state whenever the parsed column config from the proto changes:
   useEffect(() => {
-    setColumnConfigMapping(parsedColumnConfig)
+    setColumnConfigMapping(parsedColumnConfig) // eslint-disable-line react-hooks/no-deriving-state-in-effects -- Syncs proto-derived config to local state
   }, [parsedColumnConfig])
 
   const shouldUseContainerWidthValue = useMemo(

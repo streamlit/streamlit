@@ -66,6 +66,7 @@ interface HostCommunicationProps {
   ) => void
   readonly restartWebsocketConnection: () => void
   readonly terminateWebsocketConnection: () => void
+  readonly printApp: () => void
 }
 
 /**
@@ -162,7 +163,7 @@ export default class HostCommunicationManager {
       {
         stCommVersion: HOST_COMM_VERSION,
         ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
+      },
       window.location.origin
     )
   }
@@ -175,7 +176,7 @@ export default class HostCommunicationManager {
       {
         stCommVersion: HOST_COMM_VERSION,
         ...message,
-      } as VersionedMessage<IGuestToHostMessage>,
+      },
       "*"
     )
   }
@@ -300,6 +301,10 @@ export default class HostCommunicationManager {
 
     if (message.type === "TERMINATE_WEBSOCKET_CONNECTION") {
       this.props.terminateWebsocketConnection()
+    }
+
+    if (message.type === "PRINT_APP") {
+      this.props.printApp()
     }
   }
 }

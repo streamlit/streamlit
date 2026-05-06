@@ -90,7 +90,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -219,7 +219,7 @@ class AppTest:
         args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
-        script_name = calc_md5(bytes(script, "utf-8"))
+        script_name = calc_hash(bytes(script, "utf-8"))
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
@@ -453,7 +453,7 @@ class AppTest:
             )
         page_path_str = str(full_page_path.resolve())
         _, page_name = page_icon_and_name(Path(page_path_str))
-        self._page_hash = calc_md5(page_name)
+        self._page_hash = calc_hash(page_name)
         return self
 
     @property

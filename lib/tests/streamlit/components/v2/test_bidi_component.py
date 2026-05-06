@@ -44,7 +44,7 @@ from streamlit.runtime.state.session_state import (
     STREAMLIT_INTERNAL_KEY_PREFIX,
     _is_internal_key,
 )
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -1274,7 +1274,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["mixed_json"] == calc_md5("{}")
+        assert identity["mixed_json"] == calc_hash("{}")
         assert identity["mixed_arrow_blobs"] == "a,b"
 
     def test_identity_kwargs_json_canonicalizes_order(self):
@@ -1292,7 +1292,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
-        assert identity["json"] == calc_md5(expected)
+        assert identity["json"] == calc_hash(expected)
 
     def test_identity_kwargs_mixed_json_canonicalizes_order(self):
         """MixedData identity must canonicalize JSON portion independently of storage order."""
@@ -1309,7 +1309,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
-        assert identity["mixed_json"] == calc_md5(expected)
+        assert identity["mixed_json"] == calc_hash(expected)
 
     def test_identity_kwargs_bytes_use_digest(self):
         """Raw byte payloads should contribute content digests, not the full payload."""
@@ -1325,7 +1325,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["bytes"] == calc_md5(b"bytes payload")
+        assert identity["bytes"] == calc_hash(b"bytes payload")
 
     def test_identity_kwargs_arrow_data_use_digest(self):
         """Arrow payloads should contribute digests to avoid hashing large blobs repeatedly."""
@@ -1341,7 +1341,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["arrow_data"] == calc_md5(b"\x00\x01")
+        assert identity["arrow_data"] == calc_hash(b"\x00\x01")
 
     def test_unkeyed_id_stable_when_json_key_order_changes(self):
         """Without a user key, changing the insertion order of keys in a JSON dict should NOT change the backend id."""
@@ -1419,7 +1419,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
             # Verify the result is correct (sorted keys)
             expected_canonical = json.dumps(data, sort_keys=True)
-            assert identity["json"] == calc_md5(expected_canonical)
+            assert identity["json"] == calc_hash(expected_canonical)
 
             # Verify the slow path was skipped
             mock_digest.assert_not_called()
@@ -1440,7 +1440,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             )
 
             # Verify result is still correct
-            assert identity["json"] == calc_md5(expected_canonical)
+            assert identity["json"] == calc_hash(expected_canonical)
 
             # Verify the slow path WAS called
             mock_digest.assert_called_once()

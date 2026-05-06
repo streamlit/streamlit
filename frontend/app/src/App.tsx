@@ -428,6 +428,7 @@ export class App extends PureComponent<Props, State> {
         this.connectionManager?.disconnect()
         this.connectionManager = null
       },
+      printApp: this.printCallback,
     })
 
     this.endpoints = new DefaultStreamlitEndpoints({
@@ -913,7 +914,7 @@ export class App extends PureComponent<Props, State> {
       // The setState will be applied in the expected render cycle in this case.
       this.setState({ connectionState: newState })
     } else {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * We are using `flushSync` here because there is code that expects every
        * state to be observed. With React batched updates, it is possible that
        * multiple `connectionState` changes are applied in 1 render cycle, leading
@@ -979,7 +980,8 @@ export class App extends PureComponent<Props, State> {
         delta: (deltaMsg: Delta) =>
           this.handleDeltaMsg(
             deltaMsg,
-            msgProto.metadata as ForwardMsgMetadata
+            msgProto.metadata as ForwardMsgMetadata,
+            msgProto.hash
           ),
         pageConfigChanged: (pageConfig: PageConfig) =>
           this.handlePageConfigChanged(pageConfig),
@@ -1738,14 +1740,16 @@ export class App extends PureComponent<Props, State> {
    */
   handleDeltaMsg = (
     deltaMsg: Delta,
-    metadataMsg: ForwardMsgMetadata
+    metadataMsg: ForwardMsgMetadata,
+    elementHash?: string
   ): void => {
     // Use functional state update to ensure we have latest elements
     this.setState(prevState => ({
       elements: prevState.elements.applyDelta(
         prevState.scriptRunId,
         deltaMsg,
-        metadataMsg
+        metadataMsg,
+        elementHash
       ),
     }))
   }
@@ -2092,8 +2096,9 @@ export class App extends PureComponent<Props, State> {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
     } else {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      LOG.error(`Not connected. Cannot send back message: ${msg}`)
+      LOG.error(
+        `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
+      )
     }
   }
 

@@ -610,7 +610,8 @@ export class WebsocketConnection {
         return
       }
 
-      if (isNullOrUndefined(this.websocket)) {
+      const websocket = this.websocket
+      if (isNullOrUndefined(websocket)) {
         // This should never happen! The only place we call
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
@@ -619,7 +620,7 @@ export class WebsocketConnection {
         return
       }
 
-      if (this.websocket.readyState === 0 /* CONNECTING */) {
+      if (websocket.readyState === 0 /* CONNECTING */) {
         LOG.info(`Client error: ${uri} timed out`)
         this.args.sendClientError(
           "Websocket connection timed out",

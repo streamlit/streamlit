@@ -526,7 +526,7 @@ describe("createTheme", () => {
         }
       }
 
-      vi.stubGlobal("Option", MockOption as unknown as typeof Option)
+      vi.stubGlobal("Option", MockOption)
 
       try {
         const customTheme = createTheme(
@@ -3651,10 +3651,7 @@ describe("Font weight configuration coverage", () => {
     }
 
     // Test that baseFontWeight actually affects the expected weights
-    const testTheme = createEmotionTheme(
-      { baseFontWeight: 300 } as Partial<ICustomThemeConfig>,
-      lightTheme
-    )
+    const testTheme = createEmotionTheme({ baseFontWeight: 300 }, lightTheme)
 
     AFFECTED_BY_BASE_WEIGHT.forEach(weightKey => {
       const typedKey = weightKey as keyof typeof testTheme.fontWeights

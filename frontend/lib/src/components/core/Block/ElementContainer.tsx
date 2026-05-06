@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { FC, ReactNode, Suspense, useContext } from "react"
+import { memo, ReactElement, ReactNode, Suspense, useContext } from "react"
 
 import classNames from "classnames"
 
@@ -65,12 +65,12 @@ export interface ElementContainerProps {
  * }
  * ```
  */
-export const ElementContainer: FC<ElementContainerProps> = ({
+export const ElementContainer = memo(function ElementContainer({
   node,
   config,
   isStale,
   children,
-}) => {
+}: ElementContainerProps): ReactElement {
   const { isFullScreen } = useContext(ViewStateContext)
 
   const elementType = node.element.type || ""
@@ -106,4 +106,4 @@ export const ElementContainer: FC<ElementContainerProps> = ({
       </ErrorBoundary>
     </StyledElementContainerLayoutWrapper>
   )
-}
+})

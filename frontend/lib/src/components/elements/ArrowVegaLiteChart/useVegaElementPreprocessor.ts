@@ -244,10 +244,11 @@ export const useVegaElementPreprocessor = (
   // Selection Mode is an array, so we want to update it only when the contents
   // change, not the reference itself (since each forward message would be a new
   // reference).
+  const selectionModeKey = JSON.stringify(inputSelectionMode)
   const selectionMode = useMemo(() => {
     return inputSelectionMode
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
-  }, [JSON.stringify(inputSelectionMode)])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
+  }, [selectionModeKey])
 
   const spec = useMemo(
     () =>

@@ -286,7 +286,7 @@ class ComponentFileWatcher:
             try:
                 cb = self._make_directory_callback(tuple(component_names))
                 # Use a glob pattern that matches all files to let Streamlit's
-                # watcher handle MD5 calculation and change detection
+                # watcher handle hash calculation and change detection
                 watcher = path_watcher_class(
                     directory,
                     cb,

@@ -51,6 +51,7 @@ import {
   MultiSelect as MultiSelectProto,
   NumberInput as NumberInputProto,
   PageLink as PageLinkProto,
+  Pagination as PaginationProto,
   PlotlyChart as PlotlyChartProto,
   Progress as ProgressProto,
   Radio as RadioProto,
@@ -192,6 +193,9 @@ const MenuButton = lazy(
 const NumberInput = lazy(
   () => import("~lib/components/widgets/NumberInput/NumberInput")
 )
+const Pagination = lazy(
+  () => import("~lib/components/widgets/Pagination/Pagination")
+)
 const Radio = lazy(() => import("~lib/components/widgets/Radio/Radio"))
 const Selectbox = lazy(
   () => import("~lib/components/widgets/Selectbox/Selectbox")
@@ -260,6 +264,7 @@ const RawElementNodeRenderer = (
           <AlertElement
             icon={alertProto.icon}
             body={alertProto.body}
+            title={alertProto.title}
             kind={getAlertElementKind(alertProto.format)}
             {...elementProps}
           />
@@ -823,6 +828,25 @@ const RawElementNodeRenderer = (
           <Feedback
             key={feedbackProto.id}
             element={feedbackProto}
+            {...widgetProps}
+          />
+        </ElementContainer>
+      )
+    }
+
+    case "pagination": {
+      const paginationProto = node.element.pagination as PaginationProto
+      widgetProps.disabled = widgetProps.disabled || paginationProto.disabled
+
+      return (
+        <ElementContainer
+          node={node}
+          config={ElementContainerConfig.FULL_WIDTH}
+          isStale={isStale}
+        >
+          <Pagination
+            key={paginationProto.id}
+            element={paginationProto}
             {...widgetProps}
           />
         </ElementContainer>

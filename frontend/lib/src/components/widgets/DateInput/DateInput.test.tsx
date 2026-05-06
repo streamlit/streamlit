@@ -619,7 +619,7 @@ describe("DateInput widget", () => {
 
       afterEach(() => {
         spy.mockRestore()
-        globalThis.Date = RealDate as never
+        globalThis.Date = RealDate
       })
 
       it("commits quick select range ending today within max without error", async () => {

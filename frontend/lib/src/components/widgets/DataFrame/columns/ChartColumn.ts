@@ -124,7 +124,7 @@ function BaseChartColumn(
       const chartData = toSafeArray(data)
 
       const convertedChartData: number[] = []
-      let normalizedChartData: number[] = []
+      let normalizedChartData: number[]
       if (chartData.length === 0) {
         return getEmptyCell()
       }

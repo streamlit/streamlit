@@ -202,9 +202,8 @@ function DataFrame({
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
   // editingMode field defined.
-  if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = DataframeProto.EditingMode.READ_ONLY
-  }
+  const editingMode =
+    element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
 
   const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
     DataframeProto.EditingMode
@@ -220,7 +219,7 @@ function DataFrame({
     // We don't show empty state for modes that allow adding rows
     // with a table that has data columns defined.
     !(
-      (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
+      (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
       dataDimensions.numDataColumns > 0
     )
 
@@ -231,19 +230,19 @@ function DataFrame({
   const isSortingEnabled =
     !isLargeTable &&
     !isEmptyTable &&
-    element.editingMode !== DYNAMIC &&
-    element.editingMode !== ADD_ONLY
+    editingMode !== DYNAMIC &&
+    editingMode !== ADD_ONLY
 
   // Check if the editing mode allows adding rows (DYNAMIC or ADD_ONLY)
   const canAddRows =
     !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
+    (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
     !disabled
 
   // Check if the editing mode allows deleting rows (DYNAMIC or DELETE_ONLY)
   const canDeleteRows =
     !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === DELETE_ONLY) &&
+    (editingMode === DYNAMIC || editingMode === DELETE_ONLY) &&
     !disabled
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -293,6 +292,10 @@ function DataFrame({
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
+
+  // Ref to track the last processed selectionState to avoid proto mutation.
+  // Used to detect when a new programmatic selection arrives from the backend.
+  const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
   // This is done here because it needs the output from useColumnSort.
@@ -434,15 +437,21 @@ function DataFrame({
   /**
    * Apply programmatic selection changes set via st.session_state.
    * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed); we clear it after consuming.
+   * the rerun where the value changed). We track processed values via ref
+   * to avoid mutating the proto object.
    */
   useEffect(() => {
-    if (!element.selectionState) {
+    // Skip if no selectionState or we've already processed this exact value
+    if (
+      !element.selectionState ||
+      element.selectionState === processedSelectionStateRef.current
+    ) {
       return
     }
 
     const selectionState = element.selectionState
-    element.selectionState = null
+    // Mark as processed (using ref instead of proto mutation)
+    processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
       selectionState,
@@ -457,9 +466,6 @@ function DataFrame({
     if (programmaticSelection) {
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
-    // We depend on `element.selectionState` instead of `element` for stability;
-    // `element` is only referenced to clear the one-shot signal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.selectionState,
     columns,
@@ -576,7 +582,7 @@ function DataFrame({
           textDark: gridTheme.glideTheme.textLight,
         },
         span: [0, Math.max(columns.length - 1, 0)],
-      } as GridCell
+      }
     },
     [columns, gridTheme.glideTheme.textLight]
   )
@@ -740,9 +746,7 @@ function DataFrame({
         if (
           !isFocused &&
           !isTouchDevice &&
-          !event.currentTarget.contains(
-            event.relatedTarget as HTMLElement | null
-          ) &&
+          !event.currentTarget.contains(event.relatedTarget) &&
           !isCellSelectionActivated
         ) {
           // Clear cell selections, but keep row & column selections.
@@ -1128,7 +1132,7 @@ function DataFrame({
           })}
           // If element is editable, enable editing features:
           {...(!isEmptyTable &&
-            element.editingMode !== READ_ONLY &&
+            editingMode !== READ_ONLY &&
             !disabled && {
               // Support fill handle for bulk editing:
               fillHandle: !isTouchDevice,
@@ -1261,6 +1265,7 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
         )}
     </StyledResizableContainer>

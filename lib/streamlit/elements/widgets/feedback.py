@@ -324,7 +324,12 @@ class FeedbackMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, None)
 
-        self.dg._enqueue("feedback", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "feedback",
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
 
         return widget_state.value
 

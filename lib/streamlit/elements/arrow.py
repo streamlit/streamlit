@@ -53,24 +53,18 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import Key, compute_and_register_element_id, to_key
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
-from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    enqueue_message,
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
 from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
-    from collections.abc import Hashable, Iterable
-
-    from numpy import typing as npt
-    from pandas import DataFrame
+    from collections.abc import Iterable
 
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 
@@ -752,11 +746,10 @@ class ArrowMixin:
         -------
         element or dict
             If ``on_select`` is ``"ignore"`` (default), this command returns an
-            internal placeholder for the dataframe element that can be used
-            with the ``.add_rows()`` method. Otherwise, this command returns a
-            dictionary-like object that supports both key and attribute
-            notation. The attributes are described by the ``DataframeState``
-            dictionary schema.
+            internal placeholder for the dataframe element. Otherwise, this
+            command returns a dictionary-like object that supports both key and
+            attribute notation. The attributes are described by the
+            ``DataframeState`` dictionary schema.
 
         Examples
         --------
@@ -1075,7 +1068,12 @@ class ArrowMixin:
                     selection_mode_set=selection_mode_set,
                 )
                 proto.selection_state = json.dumps(validated_state)
-                self.dg._enqueue("dataframe", proto, layout_config=layout_config)
+                self.dg._enqueue(
+                    "dataframe",
+                    proto,
+                    layout_config=layout_config,
+                    has_one_shot_effect=True,
+                )
                 # Return validated state wrapped in ReadOnlyAttributeDictionary for attribute-style access.
                 return cast(
                     "DataframeState", ReadOnlyAttributeDictionary(validated_state)
@@ -1088,236 +1086,10 @@ class ArrowMixin:
             )
         return self.dg._enqueue("dataframe", proto, layout_config=layout_config)
 
-    @gather_metrics("add_rows")
-    def add_rows(self, data: Data = None, **kwargs: Any) -> DeltaGenerator | None:
-        """Concatenate a dataframe to the bottom of the current one.
-
-        .. important::
-            ``add_rows`` is deprecated and might be removed in a future version.
-            If you have a specific use-case that requires the ``add_rows``
-            functionality, please tell us via this
-            [issue on Github](https://github.com/streamlit/streamlit/issues/13063).
-
-        Parameters
-        ----------
-        data : pandas.DataFrame, pandas.Styler, pyarrow.Table, numpy.ndarray, pyspark.sql.DataFrame, snowflake.snowpark.dataframe.DataFrame, Iterable, dict, or None
-            Table to concat. Optional.
-
-        **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
-            The named dataset to concat. Optional. You can only pass in 1
-            dataset (including the one in the data parameter).
-
-        Examples
-        --------
-        >>> import time
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> df1 = pd.DataFrame(
-        >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
-        >>> )
-        >>>
-        >>> df2 = pd.DataFrame(
-        >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
-        >>> )
-        >>>
-        >>> my_table = st.table(df1)
-        >>> time.sleep(1)
-        >>> my_table.add_rows(df2)
-
-        You can do the same thing with plots. For example, if you want to add
-        more data to a line chart:
-
-        >>> # Assuming df1 and df2 from the example above still exist...
-        >>> my_chart = st.line_chart(df1)
-        >>> time.sleep(1)
-        >>> my_chart.add_rows(df2)
-
-        And for plots whose datasets are named, you can pass the data with a
-        keyword argument where the key is the name:
-
-        >>> my_chart = st.vega_lite_chart(
-        ...     {
-        ...         "mark": "line",
-        ...         "encoding": {"x": "a", "y": "b"},
-        ...         "datasets": {
-        ...             "some_fancy_name": df1,  # <-- named dataset
-        ...         },
-        ...         "data": {"name": "some_fancy_name"},
-        ...     }
-        ... )
-        >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
-
-        """  # noqa: E501
-        show_deprecation_warning(
-            "`add_rows` is deprecated and might be removed in a future version."
-            " If you have a specific use-case that requires the `add_rows` "
-            "functionality, please tell us via this "
-            "[issue on Github](https://github.com/streamlit/streamlit/issues/13063).",
-            show_in_browser=True,
-            show_once=True,
-        )
-
-        return _arrow_add_rows(self.dg, data, **kwargs)
-
     @property
     def dg(self) -> DeltaGenerator:
         """Get our DeltaGenerator."""
         return cast("DeltaGenerator", self)
-
-
-def _prep_data_for_add_rows(
-    data: Data,
-    add_rows_metadata: AddRowsMetadata | None,
-) -> tuple[Data, AddRowsMetadata | None]:
-    if not add_rows_metadata:
-        if dataframe_util.is_pandas_styler(data):
-            # When calling add_rows on st.table or st.dataframe we want styles to
-            # pass through.
-            return data, None
-        return dataframe_util.convert_anything_to_pandas_df(data), None
-
-    # If add_rows_metadata is set, it indicates that the add_rows used called
-    # on a chart based on our built-in chart commands.
-
-    # For built-in chart commands we have to reshape the data structure
-    # otherwise the input data and the actual data used
-    # by vega_lite will be different, and it will throw an error.
-    from streamlit.elements.lib.built_in_chart_utils import prep_chart_data_for_add_rows
-
-    return prep_chart_data_for_add_rows(data, add_rows_metadata)
-
-
-def _arrow_add_rows(
-    dg: DeltaGenerator,
-    data: Data = None,
-    **kwargs: DataFrame | npt.NDArray[Any] | Iterable[Any] | dict[Hashable, Any] | None,
-) -> DeltaGenerator | None:
-    """Concatenate a dataframe to the bottom of the current one.
-
-    Parameters
-    ----------
-    data : pandas.DataFrame, pandas.Styler, numpy.ndarray, Iterable, dict, or None
-        Table to concat. Optional.
-
-    **kwargs : pandas.DataFrame, numpy.ndarray, Iterable, dict, or None
-        The named dataset to concat. Optional. You can only pass in 1
-        dataset (including the one in the data parameter).
-
-    Example
-    -------
-    >>> import time
-    >>> import pandas as pd
-    >>> import streamlit as st
-    >>> from numpy.random import default_rng as rng
-    >>>
-    >>> df1 = pd.DataFrame(
-    >>>     rng(0).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
-    >>> )
-    >>>
-    >>> df2 = pd.DataFrame(
-    >>>     rng(1).standard_normal(size=(50, 20)), columns=("col %d" % i for i in range(20))
-    >>> )
-    >>>
-    >>> my_table = st.table(df1)
-    >>> time.sleep(1)
-    >>> my_table.add_rows(df2)
-
-    You can do the same thing with plots. For example, if you want to add
-    more data to a line chart:
-
-    >>> # Assuming df1 and df2 from the example above still exist...
-    >>> my_chart = st.line_chart(df1)
-    >>> time.sleep(1)
-    >>> my_chart.add_rows(df2)
-
-    And for plots whose datasets are named, you can pass the data with a
-    keyword argument where the key is the name:
-
-    >>> my_chart = st.vega_lite_chart(
-    ...     {
-    ...         "mark": "line",
-    ...         "encoding": {"x": "a", "y": "b"},
-    ...         "datasets": {
-    ...             "some_fancy_name": df1,  # <-- named dataset
-    ...         },
-    ...         "data": {"name": "some_fancy_name"},
-    ...     }
-    ... )
-    >>> my_chart.add_rows(some_fancy_name=df2)  # <-- name used as keyword
-
-    """
-    if dg._root_container is None or dg._cursor is None:
-        return dg
-
-    if not dg._cursor.is_locked:
-        raise StreamlitAPIException("Only existing elements can `add_rows`.")
-
-    # Accept syntax st._arrow_add_rows(df).
-    if data is not None and len(kwargs) == 0:
-        name = ""
-    # Accept syntax st._arrow_add_rows(foo=df).
-    elif len(kwargs) == 1:
-        name, data = kwargs.popitem()
-    # Raise error otherwise.
-    else:
-        raise StreamlitAPIException(
-            "Wrong number of arguments to add_rows()."
-            "Command requires exactly one dataset"
-        )
-
-    # When doing _arrow_add_rows on an element that does not already have data
-    # (for example, st.line_chart() without any args), call the original
-    # st.foo() element with new data instead of doing a _arrow_add_rows().
-    if (
-        "add_rows_metadata" in dg._cursor.props
-        and dg._cursor.props["add_rows_metadata"]
-        and dg._cursor.props["add_rows_metadata"].last_index is None
-    ):
-        st_method = getattr(dg, dg._cursor.props["add_rows_metadata"].chart_command)
-        metadata = dg._cursor.props["add_rows_metadata"]
-
-        # Pass the styling properties stored in add_rows_metadata
-        # to the new element call.
-        kwargs = {}
-        if metadata.color is not None:
-            kwargs["color"] = metadata.color
-        if metadata.width is not None:
-            kwargs["width"] = metadata.width
-        if metadata.height is not None:
-            kwargs["height"] = metadata.height
-        if metadata.stack is not None:
-            kwargs["stack"] = metadata.stack
-
-        if metadata.chart_command == "bar_chart":
-            kwargs["horizontal"] = metadata.horizontal
-            kwargs["sort"] = metadata.sort
-
-        if metadata.use_container_width is not None:
-            kwargs["use_container_width"] = metadata.use_container_width
-
-        st_method(data, **kwargs)
-        return None
-
-    new_data, dg._cursor.props["add_rows_metadata"] = _prep_data_for_add_rows(
-        data,
-        dg._cursor.props["add_rows_metadata"],
-    )
-
-    msg = ForwardMsg()
-    msg.metadata.delta_path[:] = dg._cursor.delta_path
-
-    default_uuid = str(hash(dg._get_delta_path_str()))
-    marshall(msg.delta.arrow_add_rows.data, new_data, default_uuid)
-
-    if name:
-        msg.delta.arrow_add_rows.name = name
-        msg.delta.arrow_add_rows.has_name = True
-
-    enqueue_message(msg)
-
-    return dg
 
 
 def marshall(

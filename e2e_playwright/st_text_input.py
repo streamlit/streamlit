@@ -166,3 +166,16 @@ bound_text_max = st.text_input(
     max_chars=5,
 )
 st.write("bound text max value:", bound_text_max)
+
+# --- setValue one-shot test (element hash memo regression) ---
+if "setvalue_counter" not in st.session_state:
+    st.session_state.setvalue_counter = 0
+
+st.session_state.setvalue_counter += 1
+
+st.text_input(
+    "Programmatic value input", value="fixed_value", key="setvalue_test_input"
+)
+st.write(f"Text input counter: {st.session_state.setvalue_counter}")
+
+st.button("Trigger text input rerun")

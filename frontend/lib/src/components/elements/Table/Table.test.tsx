@@ -187,9 +187,7 @@ describe("st.table", () => {
     )
     expect(firstRowIndexCells.length).toBeGreaterThan(1)
 
-    const firstIndexLeft = getComputedStyle(
-      firstRowIndexCells[0] as HTMLElement
-    ).left
+    const firstIndexLeft = getComputedStyle(firstRowIndexCells[0]).left
     // Empty string means no sticky left positioning was applied
     expect(firstIndexLeft).toBe("")
   })
