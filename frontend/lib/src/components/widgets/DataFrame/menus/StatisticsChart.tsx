@@ -16,7 +16,7 @@
 
 import { memo, ReactElement, useEffect, useRef } from "react"
 
-import { Global } from "@emotion/react"
+import { CSSObject, Global } from "@emotion/react"
 import embed from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 import { TopLevelSpec } from "vega-lite"
@@ -24,6 +24,7 @@ import { TopLevelSpec } from "vega-lite"
 import { applyStreamlitTheme } from "~lib/components/elements/ArrowVegaLiteChart/CustomTheme"
 import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaLiteChart/styled-components"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import {
   BooleanStatistics,
@@ -49,6 +50,22 @@ const CHART_LABELS: Record<string, string> = {
 }
 
 /**
+ * Creates tooltip styles with higher z-index for use within popovers.
+ * This ensures tooltips appear above the popover menu.
+ */
+function createPopoverTooltipStyles(theme: EmotionTheme): CSSObject {
+  const baseStyles = StyledVegaLiteChartTooltips(theme)
+  return {
+    ...baseStyles,
+    "#vg-tooltip-element": {
+      ...(baseStyles["#vg-tooltip-element"] as CSSObject),
+      // Use popup + 10 to ensure tooltips appear above popovers
+      zIndex: theme.zIndices.popup + 10,
+    },
+  }
+}
+
+/**
  * Formats a number for display in tooltips.
  */
 function formatTooltipNumber(value: number): string {
@@ -60,7 +77,7 @@ function formatTooltipNumber(value: number): string {
 }
 
 /**
- * Formats a timestamp as a short date string.
+ * Formats a timestamp as a short date string in UTC.
  */
 function formatTooltipDate(timestamp: number): string {
   const date = new Date(timestamp)
@@ -68,6 +85,7 @@ function formatTooltipDate(timestamp: number): string {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone: "UTC",
   })
 }
 
@@ -278,7 +296,7 @@ function StatisticsChart({
 
   return (
     <>
-      <Global styles={StyledVegaLiteChartTooltips(theme)} />
+      <Global styles={createPopoverTooltipStyles(theme)} />
       <StyledStatisticsChart
         ref={chartRef}
         data-testid="stDataFrameStatisticsChart"

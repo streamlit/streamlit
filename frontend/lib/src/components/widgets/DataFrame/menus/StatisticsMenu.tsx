@@ -80,14 +80,18 @@ function formatNumber(value: number, precision = 2): string {
 }
 
 /**
- * Format a date for display in statistics.
+ * Format a datetime timestamp for display in statistics.
+ * Uses UTC to avoid timezone shifts that can change dates.
  */
-function formatDate(timestamp: number): string {
+function formatDatetime(timestamp: number): string {
   const date = new Date(timestamp)
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
   })
 }
 
@@ -209,12 +213,12 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
           label: "Empty",
           value: formatCountWithPercent(statistics.nullCount, emptyPct),
         },
-        { label: "Minimum", value: formatDate(statistics.min) },
-        { label: "25th percentile", value: formatDate(statistics.q25) },
-        { label: "Median", value: formatDate(statistics.median) },
-        { label: "75th percentile", value: formatDate(statistics.q75) },
-        { label: "Maximum", value: formatDate(statistics.max) },
-        { label: "Average", value: formatDate(statistics.mean) },
+        { label: "Minimum", value: formatDatetime(statistics.min) },
+        { label: "25th percentile", value: formatDatetime(statistics.q25) },
+        { label: "Median", value: formatDatetime(statistics.median) },
+        { label: "75th percentile", value: formatDatetime(statistics.q75) },
+        { label: "Maximum", value: formatDatetime(statistics.max) },
+        { label: "Average", value: formatDatetime(statistics.mean) },
         { label: "Range", value: statistics.range },
       ]
     }

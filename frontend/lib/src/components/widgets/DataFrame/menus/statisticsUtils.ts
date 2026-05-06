@@ -17,6 +17,8 @@
 import { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined } from "~lib/util/utils"
 
+import { toSafeDate } from "../columns/utils"
+
 /** Threshold for sampling large datasets. */
 const SAMPLE_THRESHOLD = 100_000
 
@@ -412,7 +414,7 @@ export function computeDateTimeStatistics(
   rawValues: unknown[],
   isSampled: boolean
 ): DateTimeStatistics {
-  // Convert values to timestamps
+  // Convert values to timestamps using toSafeDate which handles various units
   const timestamps: number[] = []
   let nullCount = 0
 
@@ -420,34 +422,14 @@ export function computeDateTimeStatistics(
     if (isNullOrUndefined(v)) {
       nullCount++
     } else {
-      let timestamp: number | null = null
-
-      if (v instanceof Date) {
-        timestamp = v.getTime()
-      } else if (typeof v === "number") {
-        // Assume milliseconds timestamp.
-        // Note: Unlike toSafeDate() which treats numbers as seconds with heuristic
-        // detection, this path handles less common cases where a datetime column
-        // contains JS numbers. Quiver datetime columns typically use bigint (handled
-        // below) with nanosecond precision. The milliseconds assumption here aligns
-        // with JavaScript Date conventions (Date.now() returns ms).
-        timestamp = v
-      } else if (typeof v === "bigint") {
-        // Arrow timestamps may be bigints in various units (ns, us, ms, s).
-        // Streamlit's Quiver layer normalizes datetime columns to nanoseconds,
-        // so we divide by 1,000,000 to convert to milliseconds.
-        // Note: If Arrow data from other sources uses different units,
-        // this conversion may be incorrect.
-        timestamp = Number(v / BigInt(1_000_000))
-      } else if (typeof v === "string") {
-        const parsed = Date.parse(v)
-        if (!Number.isNaN(parsed)) {
-          timestamp = parsed
+      // toSafeDate handles Date objects, bigints, numbers, and strings
+      // with automatic unit detection (seconds, milliseconds, microseconds, nanoseconds)
+      const date = toSafeDate(v)
+      if (date != null) {
+        const timestamp = date.getTime()
+        if (Number.isFinite(timestamp)) {
+          timestamps.push(timestamp)
         }
-      }
-
-      if (timestamp !== null && Number.isFinite(timestamp)) {
-        timestamps.push(timestamp)
       }
     }
   }
