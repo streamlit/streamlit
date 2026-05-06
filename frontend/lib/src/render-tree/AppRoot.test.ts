@@ -721,6 +721,316 @@ describe("AppRoot", () => {
       ) as BlockNode
       expect(newNode.deltaMsgReceivedAt).toBe(timestamp)
     })
+
+    describe("element hash-based payload reuse", () => {
+      it("reuses element payload when hash matches for safe element type", () => {
+        const hash = "same_hash_123"
+        // First delta - add a text element with a hash
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+        expect(node1.elementHash).toBe(hash)
+
+        // Second delta - same hash, should reuse payload
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Element payload reference should be the same
+        expect(node2.element).toBe(node1.element)
+        // But the node itself should be new (fresh lifecycle metadata)
+        expect(node2).not.toBe(node1)
+        // And lifecycle metadata should be updated
+        expect(node2.scriptRunId).toBe("run_id_2")
+        expect(node2.elementHash).toBe(hash)
+      })
+
+      it("creates fresh payload when hash differs", () => {
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          "hash_1"
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "world" } },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          "hash_2"
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Different hash means different payload
+        expect(node2.element).not.toBe(node1.element)
+        expect(node2.elementHash).toBe("hash_2")
+      })
+
+      it("creates fresh payload when hash is missing", () => {
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          "hash_1"
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Second delta without hash
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1])
+          // No hash provided
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Missing hash means no reuse
+        expect(node2.element).not.toBe(node1.element)
+        expect(node2.elementHash).toBeUndefined()
+      })
+
+      it("creates fresh payload when hasOneShotEffect is true", () => {
+        const hash = "same_hash_123"
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Second delta with hasOneShotEffect=true - should NOT reuse payload
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" }, hasOneShotEffect: true },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // hasOneShotEffect=true means one-shot effect, so no reuse
+        expect(node2.element).not.toBe(node1.element)
+      })
+
+      it("reuses payload when hasOneShotEffect is false or unset", () => {
+        const hash = "same_hash_123"
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" }, hasOneShotEffect: false },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // hasOneShotEffect=false allows reuse
+        expect(node2.element).toBe(node1.element)
+      })
+
+      it("updates lifecycle metadata when reusing payload", () => {
+        const hash = "same_hash_123"
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+          fragmentId: "fragment_1",
+        })
+        const metadata1 = forwardMsgMetadata([0, 1, 1], "script_hash_1")
+        const root1 = ROOT.applyDelta("run_id_1", delta1, metadata1, hash)
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+          fragmentId: "fragment_2",
+        })
+        const metadata2 = forwardMsgMetadata([0, 1, 1], "script_hash_2")
+        const root2 = root1.applyDelta("run_id_2", delta2, metadata2, hash)
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Element payload should be reused
+        expect(node2.element).toBe(node1.element)
+        // But all lifecycle metadata should be fresh
+        expect(node2.scriptRunId).toBe("run_id_2")
+        expect(node2.fragmentId).toBe("fragment_2")
+        expect(node2.activeScriptHash).toBe("script_hash_2")
+        expect(node2.metadata).toBe(metadata2)
+      })
+
+      it("stale cleanup still removes genuinely stale nodes when hash reuse is active", () => {
+        const hash = "same_hash_123"
+        // Create a text element with hash
+        const delta = makeProto(DeltaProto, {
+          newElement: { text: { body: "text1" } },
+        })
+        const newRoot = ROOT.applyDelta(
+          "new_session_id",
+          delta,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        ).clearStaleNodes("new_session_id", [])
+
+        // The reused element should survive stale cleanup
+        const node = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          newRoot.main,
+          [0, 0]
+        )
+        expect(node).toBeTextNode("text1")
+        // Only one element should remain after cleanup
+        expect(newRoot.getElements().size).toBe(1)
+      })
+
+      it("does not reuse payload across different delta paths", () => {
+        const hash = "same_hash_123"
+        // First delta at path [0, 1, 1]
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Second delta at different path [0, 0] but same hash
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 0]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [0]
+        ) as ElementNode
+
+        // Different paths should not reuse payload
+        expect(node2.element).not.toBe(node1.element)
+      })
+
+      it("does not reuse payload when element type changes", () => {
+        const hash = "same_hash_123"
+        // First delta - text element
+        const delta1 = makeProto(DeltaProto, {
+          newElement: { text: { body: "hello" } },
+        })
+        const root1 = ROOT.applyDelta(
+          "run_id_1",
+          delta1,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root1.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Second delta - markdown element (different type)
+        const delta2 = makeProto(DeltaProto, {
+          newElement: { markdown: { body: "hello" } },
+        })
+        const root2 = root1.applyDelta(
+          "run_id_2",
+          delta2,
+          forwardMsgMetadata([0, 1, 1]),
+          hash
+        )
+        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          root2.main,
+          [1, 1]
+        ) as ElementNode
+
+        // Different element types should not reuse payload
+        expect(node2.element).not.toBe(node1.element)
+      })
+    })
   })
 
   describe("AppRoot.clearStaleNodes", () => {

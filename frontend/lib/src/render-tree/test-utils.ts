@@ -39,14 +39,17 @@ export const FAKE_SCRIPT_HASH = "fake_script_hash"
 /** Create a `Text` element node with the given properties. */
 export function text(
   textArg: string,
-  scriptRunId = NO_SCRIPT_RUN_ID
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  elementHash?: string
 ): ElementNode {
   const element = makeProto(Element, { text: { body: textArg } })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
     scriptRunId,
-    FAKE_SCRIPT_HASH
+    FAKE_SCRIPT_HASH,
+    undefined,
+    elementHash
   )
 }
 
@@ -54,7 +57,8 @@ export function text(
 export function textInput(
   label: string,
   id: string = "some_id",
-  scriptRunId = NO_SCRIPT_RUN_ID
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  elementHash?: string
 ): ElementNode {
   const element = makeProto(Element, {
     textInput: {
@@ -69,7 +73,9 @@ export function textInput(
     element,
     ForwardMsgMetadata.create(),
     scriptRunId,
-    FAKE_SCRIPT_HASH
+    FAKE_SCRIPT_HASH,
+    undefined,
+    elementHash
   )
 }
 
@@ -101,7 +107,10 @@ export function blockWithId(
 }
 
 /** Create a table element node with the given properties. */
-export function table(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+export function table(
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  elementHash?: string
+): ElementNode {
   const element = makeProto(Element, {
     table: { arrowData: { data: UNICODE } },
   })
@@ -109,12 +118,17 @@ export function table(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
     element,
     ForwardMsgMetadata.create(),
     scriptRunId,
-    FAKE_SCRIPT_HASH
+    FAKE_SCRIPT_HASH,
+    undefined,
+    elementHash
   )
 }
 
 /** Create a dataframe element node with the given properties. */
-export function dataframe(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
+export function dataframe(
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  elementHash?: string
+): ElementNode {
   const element = makeProto(Element, {
     dataframe: { arrowData: { data: UNICODE } },
   })
@@ -122,21 +136,26 @@ export function dataframe(scriptRunId = NO_SCRIPT_RUN_ID): ElementNode {
     element,
     ForwardMsgMetadata.create(),
     scriptRunId,
-    FAKE_SCRIPT_HASH
+    FAKE_SCRIPT_HASH,
+    undefined,
+    elementHash
   )
 }
 
 /** Create a vegaLiteChart element node with the given properties. */
 export function vegaLiteChart(
   data: IVegaLiteChart,
-  scriptRunId = NO_SCRIPT_RUN_ID
+  scriptRunId = NO_SCRIPT_RUN_ID,
+  elementHash?: string
 ): ElementNode {
   const element = makeProto(Element, { vegaLiteChart: data })
   return new ElementNode(
     element,
     ForwardMsgMetadata.create(),
     scriptRunId,
-    FAKE_SCRIPT_HASH
+    FAKE_SCRIPT_HASH,
+    undefined,
+    elementHash
   )
 }
 

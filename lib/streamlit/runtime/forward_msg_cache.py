@@ -47,8 +47,8 @@ def populate_hash_if_needed(msg: ForwardMsg) -> None:
         # - Add the type element type and number of bytes to the hash.
         # - Only hash the first N bytes of the message.
 
-        # MD5 is good enough for what we need, which is uniqueness.
-        msg.hash = util.calc_md5(serialized_msg)
+        # The hash is good enough for what we need, which is uniqueness.
+        msg.hash = util.calc_hash(serialized_msg)
 
         # Restore metadata.
         msg.metadata.CopyFrom(metadata)

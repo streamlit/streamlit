@@ -18,7 +18,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "streamlit"
-version = "1.56.0"
+version = "1.57.0"
 description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
@@ -105,8 +105,8 @@ dependencies = [
 [project.optional-dependencies]
 # Optional dependency required for Snowflake connection:
 snowflake = [
-  "snowflake-snowpark-python[modin]>=1.17.0; python_version<'3.12'",
-  "snowflake-connector-python>=3.3.0; python_version<'3.12'",
+  "snowflake-snowpark-python[modin]>=1.17.0",
+  "snowflake-connector-python>=3.3.0",
 ]
 # Optional dependency required for PDF rendering:
 pdf = ["streamlit-pdf>=1.0.0"]
@@ -156,7 +156,13 @@ exclude = ["tests", "tests.*"]
 
 # PEP 561: https://mypy.readthedocs.io/en/stable/installed_packages.html
 [tool.setuptools.package-data]
-streamlit = ["py.typed", "hello/**/*.py"]
+streamlit = [
+    "py.typed",
+    ".agents/**/*.md",
+    ".agents/skills/**/assets/templates/**/*.py",
+    ".agents/skills/**/assets/templates/**/*.toml",
+    "hello/**/*.py",
+]
 
 # =============================================================================
 # Pytest Configuration
@@ -207,6 +213,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 
 [tool.coverage.report]
@@ -215,6 +222,7 @@ omit = [
   "streamlit/vendor/*",
   "streamlit/hello/*",
   "streamlit/static/*",
+  "streamlit/.agents/*",
 ]
 exclude_also = [
   "if TYPE_CHECKING:",

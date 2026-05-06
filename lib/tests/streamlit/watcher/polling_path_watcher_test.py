@@ -67,7 +67,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
@@ -77,7 +77,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         self.util_mock.path_modification_time = lambda *args: 102.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         self._run_executor_tasks()
         callback.assert_called_once()
@@ -89,7 +89,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
@@ -99,7 +99,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         # Same mtime!
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "2"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "2"
 
         # This is the test:
         self._run_executor_tasks()
@@ -112,7 +112,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 0.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "11"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "11"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/folder/", callback
@@ -122,7 +122,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         # Same mtime!
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "22"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "22"
 
         # This is the test:
         self._run_executor_tasks()
@@ -130,12 +130,12 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         watcher.close()
 
-    def test_callback_not_called_if_same_md5(self):
-        """Test that we ignore files with same md5."""
+    def test_callback_not_called_if_same_hash(self):
+        """Test that we ignore files with same content hash."""
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: "1"
+        self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: "1"
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/file.py", callback
@@ -145,7 +145,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback.assert_not_called()
 
         self.util_mock.path_modification_time = lambda *args: 102.0
-        # Same MD5
+        # Same hash
 
         # This is the test:
         self._run_executor_tasks()
@@ -153,9 +153,9 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         watcher.close()
 
-    def test_kwargs_plumbed_to_calc_md5(self):
+    def test_kwargs_plumbed_to_calc_hash(self):
         """Test that we pass the glob_pattern and allow_nonexistent kwargs to
-        calc_md5_with_blocking_retries.
+        calc_hash_with_blocking_retries.
 
         `PollingPathWatcher`s can be created with optional kwargs allowing
         the caller to specify what types of files to watch (when watching a
@@ -166,7 +166,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         callback = mock.Mock()
 
         self.util_mock.path_modification_time = lambda *args: 101.0
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(return_value="1")
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(return_value="1")
 
         watcher = polling_path_watcher.PollingPathWatcher(
             "/this/is/my/dir",
@@ -177,15 +177,15 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         self._run_executor_tasks()
         callback.assert_not_called()
-        _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.util_mock.calc_hash_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
 
         self.util_mock.path_modification_time = lambda *args: 102.0
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(return_value="2")
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(return_value="2")
 
         self._run_executor_tasks()
         callback.assert_called_once()
-        _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.util_mock.calc_hash_with_blocking_retries.call_args
         assert kwargs == {"glob_pattern": "*.py", "allow_nonexistent": True}
 
         watcher.close()
@@ -198,7 +198,7 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         def modify_mock_file():
             self.util_mock.path_modification_time = lambda *args: mod_count[0]
-            self.util_mock.calc_md5_with_blocking_retries = lambda _, **kwargs: (
+            self.util_mock.calc_hash_with_blocking_retries = lambda _, **kwargs: (
                 f"{mod_count[0]}"
             )
 
@@ -259,9 +259,9 @@ class PollingPathWatcherTest(unittest.TestCase):
         """
         callback = mock.Mock()
 
-        # Initially file doesn't exist: modification_time=0.0, MD5 based on path
+        # Initially file doesn't exist: modification_time=0.0, hash based on path
         self.util_mock.path_modification_time = mock.Mock(return_value=0.0)
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(
             return_value="nonexistent_hash"
         )
 
@@ -277,7 +277,7 @@ class PollingPathWatcherTest(unittest.TestCase):
         args = self.util_mock.path_modification_time.call_args[0]
         assert args[1] is True  # allow_nonexistent
 
-        _, kwargs = self.util_mock.calc_md5_with_blocking_retries.call_args
+        _, kwargs = self.util_mock.calc_hash_with_blocking_retries.call_args
         assert kwargs["allow_nonexistent"] is True
 
         self._run_executor_tasks()
@@ -285,7 +285,7 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         # Step 1: Simulate file being created
         self.util_mock.path_modification_time = mock.Mock(return_value=101.0)
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(
             return_value="initial_content_hash"
         )
 
@@ -296,7 +296,7 @@ class PollingPathWatcherTest(unittest.TestCase):
 
         # Step 2: Simulate file being modified
         self.util_mock.path_modification_time = mock.Mock(return_value=102.0)
-        self.util_mock.calc_md5_with_blocking_retries = mock.Mock(
+        self.util_mock.calc_hash_with_blocking_retries = mock.Mock(
             return_value="modified_content_hash"
         )
 

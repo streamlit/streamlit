@@ -22,7 +22,7 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -33,7 +33,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -167,7 +167,7 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        fragment_id = calc_md5(
+        fragment_id = calc_hash(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
 
@@ -243,13 +243,9 @@ def _fragment(
                             # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
-                            # render error here so that the delta path is correct
-                            # for full app runs, the error will be displayed by the
-                            # main code handler
-                            # if not is_full_app_run:
-                            handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
+                            handle_user_script_exception(e, ctx.on_script_error)
+                            # Raise FragmentHandledException to signal that the error
+                            # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
             finally:
@@ -384,7 +380,7 @@ def fragment(
         height: 220px
 
     This next example demonstrates how elements both inside and outside of a
-    fragement update with each app or fragment rerun. In this app, clicking
+    fragment update with each app or fragment rerun. In this app, clicking
     "Rerun full app" will increment both counters and update all values
     displayed in the app. In contrast, clicking "Rerun fragment" will only
     increment the counter within the fragment. In this case, the ``st.write``

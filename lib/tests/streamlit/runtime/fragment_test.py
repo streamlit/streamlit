@@ -418,6 +418,96 @@ class FragmentTest(unittest.TestCase):
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
 
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_called_with_exception(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+    ):
+        """Test that the on_script_error handler is called with the exception in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        handler = MagicMock(return_value=None)
+        ctx.on_script_error = handler
+        patched_get_script_run_ctx.return_value = ctx
+
+        test_exception = ValueError("fragment error")
+
+        @fragment
+        def my_fragment():
+            raise test_exception
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        handler.assert_called_once_with(test_exception)
+        mock_log.assert_called_once_with(test_exception)
+        mock_show.assert_called_once_with(test_exception)
+
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_returns_true_suppresses_ui(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+    ):
+        """Test that returning True from handler suppresses UI display in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        handler = MagicMock(return_value=True)
+        ctx.on_script_error = handler
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            raise ValueError("fragment error")
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        handler.assert_called_once()
+        mock_log.assert_called_once()
+        mock_show.assert_not_called()
+
+    @patch("streamlit.error_util._LOGGER")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_exception_logged_and_ui_shown(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+        mock_logger: MagicMock,
+    ):
+        """Test that handler exceptions are logged and default UI is shown in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        def raising_handler(exc: Exception) -> bool | None:
+            raise RuntimeError("handler error")
+
+        ctx.on_script_error = raising_handler
+        test_exception = ValueError("original error")
+
+        @fragment
+        def my_fragment():
+            raise test_exception
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        mock_logger.exception.assert_called_once_with(
+            "on_script_error handler raised an exception"
+        )
+        mock_show.assert_called_once_with(test_exception)
+
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
 

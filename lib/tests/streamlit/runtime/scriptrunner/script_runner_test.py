@@ -371,7 +371,7 @@ class ScriptRunnerTest(unittest.TestCase):
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
-    @patch("streamlit.runtime.fragment.handle_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.handle_user_script_exception")
     def test_regular_KeyError_is_rethrown(
         self, patched_handle_exception, patched_get_script_run_ctx
     ):
@@ -1034,7 +1034,7 @@ class ScriptRunnerTest(unittest.TestCase):
         shutdown_data = scriptrunner.event_data[-1]
         assert (
             shutdown_data["client_state"].page_script_hash
-            == "f0b2ab81496648a6f2af976dfd35f4a8"
+            == "74c2683ab3d8427292ef911e1e05a630"
         )
 
     def _assert_no_exceptions(self, scriptrunner: TestScriptRunner) -> None:

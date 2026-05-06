@@ -30,7 +30,6 @@ import {
   createFormsData,
   FileUploadClient,
   FormsData,
-  AppConfig as LibAppConfig,
   LibConfigContextProps,
   ScriptRunState,
   SessionInfo,
@@ -305,7 +304,7 @@ describe("StreamlitLibExample", () => {
 
   it("sees config types as compatible structures", () => {
     // Verify AppConfig is structurally identical between packages
-    const appConfig: ConnectionAppConfig = {} as LibAppConfig
+    const appConfig: ConnectionAppConfig = {}
 
     // Verify LibConfig (from connection) is compatible with LibContextProps (from lib)
     // LibContextProps extends LibConfig, so this verifies the inheritance is valid

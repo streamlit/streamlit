@@ -577,7 +577,12 @@ class SelectSliderMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
 
-        self.dg._enqueue("slider", slider_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "slider",
+            slider_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
         return current_value
 
     @property

@@ -76,14 +76,14 @@ BASE_ROUTE_COMPONENT: Final = "component"
 BASE_ROUTE_STATIC: Final = "static"
 
 # Health check routes
-_ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
-_ROUTE_SCRIPT_HEALTH: Final = f"{BASE_ROUTE_CORE}/script-health-check"
+ROUTE_HEALTH: Final = f"{BASE_ROUTE_CORE}/health"
+ROUTE_SCRIPT_HEALTH: Final = f"{BASE_ROUTE_CORE}/script-health-check"
 
 # Metrics routes
-_ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
+ROUTE_METRICS: Final = f"{BASE_ROUTE_CORE}/metrics"
 
 # Host configuration
-_ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
+ROUTE_HOST_CONFIG: Final = f"{BASE_ROUTE_CORE}/host-config"
 
 # Media and file routes
 _ROUTE_MEDIA: Final = f"{BASE_ROUTE_MEDIA}/{{file_id:path}}"
@@ -359,12 +359,12 @@ def create_health_routes(runtime: Runtime, base_url: str | None) -> list[BaseRou
 
     return [
         Route(
-            _with_base(_ROUTE_HEALTH, base_url),
+            _with_base(ROUTE_HEALTH, base_url),
             _health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(_ROUTE_HEALTH, base_url),
+            _with_base(ROUTE_HEALTH, base_url),
             _health_options,
             methods=["OPTIONS"],
         ),
@@ -395,12 +395,12 @@ def create_script_health_routes(
 
     return [
         Route(
-            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
             _script_health_endpoint,
             methods=["GET", "HEAD"],
         ),
         Route(
-            _with_base(_ROUTE_SCRIPT_HEALTH, base_url),
+            _with_base(ROUTE_SCRIPT_HEALTH, base_url),
             _script_health_options,
             methods=["OPTIONS"],
         ),
@@ -436,12 +436,12 @@ def create_metrics_routes(runtime: Runtime, base_url: str | None) -> list[BaseRo
 
     return [
         Route(
-            _with_base(_ROUTE_METRICS, base_url),
+            _with_base(ROUTE_METRICS, base_url),
             _metrics_endpoint,
             methods=["GET"],
         ),
         Route(
-            _with_base(_ROUTE_METRICS, base_url),
+            _with_base(ROUTE_METRICS, base_url),
             _metrics_options,
             methods=["OPTIONS"],
         ),
@@ -478,7 +478,7 @@ def create_host_config_routes(base_url: str | None) -> list[BaseRoute]:
 
     return [
         Route(
-            _with_base(_ROUTE_HOST_CONFIG, base_url),
+            _with_base(ROUTE_HOST_CONFIG, base_url),
             _host_config_endpoint,
             methods=["GET"],
         ),

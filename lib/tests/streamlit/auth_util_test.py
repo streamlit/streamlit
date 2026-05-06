@@ -16,25 +16,33 @@ from __future__ import annotations
 
 import base64
 import json
+import sys
 import unittest
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit import auth_util
 from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
+    _set_split_cookie,
     clear_cookie_and_chunks,
     generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
     get_redirect_uri,
     get_signing_secret,
+    is_authlib_installed,
     set_cookie_with_chunks,
+    validate_auth_credentials,
 )
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime.secrets import AttrDict
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Simulates realistic cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
@@ -515,217 +523,377 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
         assert result == {}
 
 
-class TestGetValidatedRedirectUri:
-    """Tests for get_validated_redirect_uri function."""
-
-    def test_returns_none_when_no_auth_section(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when no auth section exists."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: None,
-        )
-        assert auth_util.get_validated_redirect_uri() is None
-
-    def test_returns_none_when_no_redirect_uri(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri is missing."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict({}),
-        )
-        assert auth_util.get_validated_redirect_uri() is None
-
-    def test_returns_none_when_not_oauth2callback(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri doesn't end with /oauth2callback."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
+@pytest.mark.parametrize(
+    ("get_section", "expected"),
+    [
+        (lambda: None, None),
+        (lambda: AttrDict({}), None),
+        (
             lambda: AttrDict({"redirect_uri": "http://localhost:8501/callback"}),
-        )
-        # get_validated_redirect_uri checks suffix
-        assert auth_util.get_validated_redirect_uri() is None
-
-    def test_returns_uri_with_oauth2callback(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that redirect URI is returned when it ends with /oauth2callback."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
-        )
-        assert (
-            auth_util.get_validated_redirect_uri()
-            == "http://localhost:8501/oauth2callback"
-        )
-
-    @patch(
-        "streamlit.auth_util.config",
-        MagicMock(
-            get_option=MagicMock(return_value=9999),
+            None,
         ),
+        (
+            lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
+            "http://localhost:8501/oauth2callback",
+        ),
+    ],
+    ids=["no_section", "no_redirect_uri", "wrong_suffix", "valid_callback"],
+)
+def test_get_validated_redirect_uri(
+    get_section: Callable[[], AttrDict | None],
+    expected: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return None unless ``redirect_uri`` ends with ``/oauth2callback``."""
+    monkeypatch.setattr(auth_util, "get_secrets_auth_section", get_section)
+    assert auth_util.get_validated_redirect_uri() == expected
+
+
+@patch(
+    "streamlit.auth_util.config",
+    MagicMock(get_option=MagicMock(return_value=9999)),
+)
+def test_get_validated_redirect_uri_substitutes_port_placeholder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Substitute ``{port}`` in ``redirect_uri`` using the configured server port."""
+    monkeypatch.setattr(
+        auth_util,
+        "get_secrets_auth_section",
+        lambda: AttrDict({"redirect_uri": "http://localhost:{port}/oauth2callback"}),
     )
-    def test_substitutes_port_placeholder(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that {port} placeholder is substituted in redirect_uri (PR #12251)."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict(
-                {"redirect_uri": "http://localhost:{port}/oauth2callback"}
-            ),
-        )
-        assert (
-            auth_util.get_validated_redirect_uri()
-            == "http://localhost:9999/oauth2callback"
-        )
+    assert (
+        auth_util.get_validated_redirect_uri() == "http://localhost:9999/oauth2callback"
+    )
 
 
-class TestGetOriginFromRedirectUri:
-    """Tests for get_origin_from_redirect_uri function."""
-
-    def test_returns_none_when_no_auth_section(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when no auth section exists."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: None,
-        )
-        assert auth_util.get_origin_from_redirect_uri() is None
-
-    def test_returns_none_when_no_redirect_uri(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri is missing."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict({}),
-        )
-        assert auth_util.get_origin_from_redirect_uri() is None
-
-    def test_extracts_origin_correctly(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that origin is correctly extracted from redirect_uri."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
+@pytest.mark.parametrize(
+    ("get_section", "expected"),
+    [
+        (lambda: None, None),
+        (lambda: AttrDict({}), None),
+        (
             lambda: AttrDict({"redirect_uri": "https://example.com/oauth2callback"}),
-        )
-        assert auth_util.get_origin_from_redirect_uri() == "https://example.com"
-
-    def test_handles_localhost_with_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that localhost URIs with port are handled correctly."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
+            "https://example.com",
+        ),
+        (
             lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
-        )
-        assert auth_util.get_origin_from_redirect_uri() == "http://localhost:8501"
+            "http://localhost:8501",
+        ),
+    ],
+    ids=["no_section", "no_redirect_uri", "https_host", "localhost_port"],
+)
+def test_get_origin_from_redirect_uri(
+    get_section: Callable[[], AttrDict | None],
+    expected: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Parse scheme/host[/port] from ``redirect_uri``, or None if missing."""
+    monkeypatch.setattr(auth_util, "get_secrets_auth_section", get_section)
+    assert auth_util.get_origin_from_redirect_uri() == expected
 
-    @patch(
-        "streamlit.auth_util.config",
-        MagicMock(
-            get_option=MagicMock(return_value=7777),
+
+@patch(
+    "streamlit.auth_util.config",
+    MagicMock(get_option=MagicMock(return_value=7777)),
+)
+def test_get_origin_from_redirect_uri_substitutes_port_placeholder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Substitute ``{port}`` before parsing the origin."""
+    monkeypatch.setattr(
+        auth_util,
+        "get_secrets_auth_section",
+        lambda: AttrDict({"redirect_uri": "http://localhost:{port}/oauth2callback"}),
+    )
+    assert auth_util.get_origin_from_redirect_uri() == "http://localhost:7777"
+
+
+@pytest.mark.parametrize(
+    ("post_logout_redirect_uri", "id_token", "must_contain", "must_not_contain"),
+    [
+        (
+            "https://myapp.com/oauth2callback",
+            None,
+            [
+                "https://provider.com/logout",
+                "client_id=test-client-id",
+                "post_logout_redirect_uri",
+                "myapp.com",
+            ],
+            ["id_token_hint"],
+        ),
+        (
+            "https://myapp.com/oauth2callback",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
+            ["id_token_hint=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9"],
+            [],
+        ),
+        (
+            "http://localhost:8501/oauth2callback",
+            None,
+            ["http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"],
+            [],
+        ),
+    ],
+    ids=["basic", "with_id_token", "url_encoding"],
+)
+def test_build_logout_url(
+    post_logout_redirect_uri: str,
+    id_token: str | None,
+    must_contain: list[str],
+    must_not_contain: list[str],
+) -> None:
+    """Build logout URLs with correct query encoding and optional ``id_token_hint``."""
+    kwargs: dict[str, Any] = {
+        "end_session_endpoint": "https://provider.com/logout",
+        "client_id": "test-client-id",
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+    }
+    if id_token is not None:
+        kwargs["id_token"] = id_token
+    result = auth_util.build_logout_url(**kwargs)
+    for fragment in must_contain:
+        assert fragment in result
+    for fragment in must_not_contain:
+        assert fragment not in result
+
+
+def test_build_logout_url_preserves_existing_query() -> None:
+    """Append new parameters with ``&`` when the endpoint already has a query."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://provider.com/logout?existing=value",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+    )
+    assert "existing=value" in result
+    assert "client_id=test-client-id" in result
+    assert "?existing=value" in result or "existing=value&" in result
+    assert result.count("?") == 1
+
+
+def test_auth_cache_get_dict() -> None:
+    """Verify ``AuthCache.get_dict`` returns the internal cache dictionary."""
+    cache = AuthCache()
+    cache.set("k1", "v1")
+    cache.set("k2", "v2")
+    result = cache.get_dict()
+    assert result == {"k1": "v1", "k2": "v2"}
+    # Verify the returned dict reflects cache contents without relying on identity
+    assert isinstance(result, dict)
+
+
+def test_is_authlib_installed_old_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``is_authlib_installed`` returns False when Authlib is older than 1.3.2."""
+    fake_authlib = MagicMock()
+    fake_authlib.__version__ = "1.3.1"
+    monkeypatch.setitem(sys.modules, "authlib", fake_authlib)
+    assert is_authlib_installed() is False
+
+
+def test_set_split_cookie_single_chunk_path() -> None:
+    """Cover ``_set_split_cookie`` when the serialized value fits in one chunk.
+
+    The initial signed payload can exceed ``MAX_COOKIE_BYTES`` while the
+    empirically measured signing overhead (from the minimal probe value ``x``)
+    still leaves enough room for the full serialized string in a single chunk.
+    """
+    set_calls: list[tuple[str, str]] = []
+
+    def mock_set(name: str, val: str) -> None:
+        set_calls.append((name, val))
+
+    large_prefix = b"P" * 4500
+
+    def mock_create_signed(_name: str, value: str) -> bytes:
+        if value == "x":
+            return b"sig:" + base64.b64encode(value.encode())
+        return large_prefix + base64.b64encode(value.encode())
+
+    serialized = json.dumps({"data": "y" * 400})
+    _set_split_cookie(mock_set, mock_create_signed, "c", serialized)
+
+    assert set_calls == [("c", serialized)]
+
+
+@pytest.mark.parametrize(
+    ("secrets_mock", "provider", "expected_substring"),
+    [
+        pytest.param(
+            MagicMock(load_if_toml_exists=MagicMock(return_value=False)),
+            "google",
+            "authentication provider in `.streamlit/secrets.toml`",
+            id="no_secrets_toml",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(return_value=None),
+            ),
+            "google",
+            "authentication provider in `.streamlit/secrets.toml`",
+            id="no_auth_section",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "cookie_secret": "s",
+                        }
+                    )
+                ),
+            ),
+            "google",
+            '"redirect_uri"',
+            id="missing_redirect_uri",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                        }
+                    )
+                ),
+            ),
+            "google",
+            '"cookie_secret"',
+            id="missing_cookie_secret",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                            "cookie_secret": "s",
+                        }
+                    )
+                ),
+            ),
+            "my_provider",
+            "underscore",
+            id="provider_name_with_underscore",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                            "cookie_secret": "s",
+                        }
+                    )
+                ),
+            ),
+            "okta",
+            'the authentication provider "okta"',
+            id="named_provider_missing_section",
+        ),
+    ],
+)
+def test_validate_auth_credentials_errors(
+    secrets_mock: MagicMock,
+    provider: str,
+    expected_substring: str,
+) -> None:
+    """``validate_auth_credentials`` raises ``StreamlitAuthError`` for invalid secrets."""
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials(provider)
+    assert expected_substring in str(exc_info.value)
+
+
+def test_validate_auth_credentials_default_provider_section_none() -> None:
+    """Default provider raises when ``generate_default_provider_section`` yields None."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                }
+            )
         ),
     )
-    def test_substitutes_port_placeholder_in_origin(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that {port} placeholder is substituted when extracting origin (PR #12251)."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict(
-                {"redirect_uri": "http://localhost:{port}/oauth2callback"}
-            ),
-        )
-        assert auth_util.get_origin_from_redirect_uri() == "http://localhost:7777"
+    with (
+        patch("streamlit.auth_util.secrets_singleton", secrets_mock),
+        patch(
+            "streamlit.auth_util.generate_default_provider_section",
+            return_value=None,
+        ),
+    ):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("default")
+    assert "default authentication provider" in str(exc_info.value)
 
 
-class TestBuildLogoutUrl:
-    """Tests for build_logout_url function."""
+def test_validate_auth_credentials_default_missing_keys() -> None:
+    """Default provider mapping is missing required OAuth keys."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                    "default": {},
+                }
+            )
+        ),
+    )
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("default")
+    msg = str(exc_info.value)
+    assert "default authentication provider" in msg
+    assert "client_id" in msg
 
-    def test_builds_basic_logout_url(self) -> None:
-        """Test that basic logout URL is built correctly."""
-        from streamlit import auth_util
 
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout",
-            client_id="test-client-id",
-            post_logout_redirect_uri="https://myapp.com/oauth2callback",
-        )
-        assert "https://provider.com/logout" in result
-        assert "client_id=test-client-id" in result
-        assert "post_logout_redirect_uri" in result
-        assert "myapp.com" in result
-        # id_token_hint should NOT be present when not provided
-        assert "id_token_hint" not in result
+def test_validate_auth_credentials_named_provider_missing_keys() -> None:
+    """Named provider section exists but omits required keys."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                    "google": {"client_id": "only_id"},
+                }
+            )
+        ),
+    )
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("google")
+    msg = str(exc_info.value)
+    assert 'authentication provider "google"' in msg
+    assert "client_secret" in msg
 
-    def test_includes_id_token_hint_when_provided(self) -> None:
-        """Test that id_token_hint is included when provided."""
-        from streamlit import auth_util
 
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout",
-            client_id="test-client-id",
-            post_logout_redirect_uri="https://myapp.com/oauth2callback",
-            id_token="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
-        )
-        assert "id_token_hint=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" in result
-
-    def test_url_encodes_parameters(self) -> None:
-        """Test that parameters are properly URL encoded."""
-        from streamlit import auth_util
-
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout",
-            client_id="test-client-id",
-            post_logout_redirect_uri="http://localhost:8501/oauth2callback",
-        )
-        # URL-encoded colon and slashes
-        assert "http%3A%2F%2Flocalhost%3A8501%2Foauth2callback" in result
-
-    def test_handles_existing_query_params(self) -> None:
-        """Test that existing query params in endpoint are preserved."""
-        from streamlit import auth_util
-
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout?existing=value",
-            client_id="test-client-id",
-            post_logout_redirect_uri="https://myapp.com/oauth2callback",
-        )
-        assert "existing=value" in result
-        assert "client_id=test-client-id" in result
-        # Should use & not ? for additional params
-        assert "?existing=value" in result or "existing=value&" in result
-        assert result.count("?") == 1
+def test_validate_auth_credentials_provider_section_not_mapping() -> None:
+    """Provider entry must be a TOML table (mapping), not a scalar or list."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                    "google": ["not", "a", "table"],
+                }
+            )
+        ),
+    )
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("google")
+    assert "must be valid TOML" in str(exc_info.value)

@@ -112,7 +112,7 @@ steps:
 
 | Workflow | Trigger | Description |
 |----------|---------|-------------|
-| `nightly.yml` | Daily schedule (6:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
+| `nightly.yml` | Daily schedule (4:30 UTC) | Creates nightly tag, runs full test suite, publishes to PyPI |
 | `release.yml` | Manual (on tag) | Builds and publishes official releases to PyPI and GitHub |
 | `release-branch-creation.yml` | Manual | Creates release branch from a nightly tag |
 | `release-tag-and-pr-creation.yml` | Manual | Creates release tag and PR to merge back to develop |

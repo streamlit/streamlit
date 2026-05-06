@@ -101,8 +101,9 @@ const WebcamComponent = ({
 
   const [debouncedWidth, setDebouncedWidth] = useState(width)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce returns a function; stable across renders
   const memoizedSetDebouncedCallback = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- debounce factory pattern
     debounce(1000, setDebouncedWidth),
     []
   )

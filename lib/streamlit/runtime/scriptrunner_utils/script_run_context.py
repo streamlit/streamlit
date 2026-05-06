@@ -18,6 +18,7 @@ import collections
 import contextlib
 import contextvars
 import threading
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
@@ -35,7 +36,7 @@ from streamlit.runtime.forward_msg_cache import (
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator
+    from collections.abc import Generator
     from pathlib import Path
 
     from streamlit.cursor import RunningCursor
@@ -47,6 +48,9 @@ if TYPE_CHECKING:
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+
+OnScriptErrorHandler: TypeAlias = Callable[[Exception], bool | None]
+
 _LOGGER: Final = get_logger(__name__)
 
 UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
@@ -83,6 +87,7 @@ class ScriptRunContext:
     user_info: UserInfoType
     fragment_storage: FragmentStorage
     pages_manager: PagesManager
+    on_script_error: OnScriptErrorHandler | None = None
 
     # Hashes of messages that are cached in the client browser:
     cached_message_hashes: set[str] = field(default_factory=set)
