@@ -44,54 +44,11 @@ import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
 
 /**
- * Check if the element has a one-shot payload field that requires using the
- * fresh protobuf object. This guards against reusing payloads that carry
- * one-shot backend commands (like setValue) that need to be delivered.
- *
- * Currently covers:
- * - `setValue` boolean field used by widgets (Slider, TextInput, NumberInput, etc.)
- *   to indicate that the frontend should set the widget value programmatically.
- * - `selectionState` string field used by dataframe to set programmatic selection.
- *
- * When adding new element types with similar one-shot semantics, extend this
- * function accordingly.
- */
-function hasOneShotPayload(element: Element): boolean {
-  if (element.type === undefined) {
-    return false
-  }
-
-  const subElement = element[element.type as keyof Element]
-  if (subElement && typeof subElement === "object") {
-    const typedSubElement = subElement as {
-      setValue?: unknown
-      selectionState?: unknown
-    }
-
-    // Check setValue (used by most widgets)
-    const maybeSetValue = typedSubElement.setValue
-    if (typeof maybeSetValue === "boolean" && maybeSetValue === true) {
-      return true
-    }
-
-    // Check selectionState (used by dataframe for programmatic selection)
-    const maybeSelectionState = typedSubElement.selectionState
-    if (
-      typeof maybeSelectionState === "string" &&
-      maybeSelectionState.length > 0
-    ) {
-      return true
-    }
-  }
-  return false
-}
-
-/**
  * Determine if we can reuse the element payload from an existing node.
  * Returns true only when:
  * - elementHash is non-empty and matches the existing node's hash
  * - The element type matches
- * - The incoming payload doesn't have a one-shot command field (setValue, selectionState)
+ * - The element doesn't have a one-shot effect flag set by the backend
  */
 function canReuseElementPayload(
   existingNode: AppNode | undefined,
@@ -104,7 +61,7 @@ function canReuseElementPayload(
     existingNode instanceof ElementNode &&
     existingNode.elementHash === elementHash &&
     existingNode.element.type === nextElement.type &&
-    !hasOneShotPayload(nextElement)
+    !nextElement.hasOneShotEffect
   )
 }
 

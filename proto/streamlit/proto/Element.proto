@@ -81,6 +81,11 @@ message Element {
   optional streamlit.WidthConfig width_config = 58;
   optional streamlit.TextAlignmentConfig text_alignment_config = 61;
 
+  // When true, this element contains a one-shot effect (e.g., setValue,
+  // selectionState, balloons) that must be processed fresh. The frontend
+  // should not reuse payload references for elements with this flag set.
+  optional bool has_one_shot_effect = 65;
+
   // An element can be one of the following element types.
   oneof type {
     Alert alert = 30;

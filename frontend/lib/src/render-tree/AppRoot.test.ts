@@ -834,16 +834,10 @@ describe("AppRoot", () => {
         expect(node2.elementHash).toBeUndefined()
       })
 
-      it("creates fresh payload when setValue is true (one-shot guard)", () => {
+      it("creates fresh payload when hasOneShotEffect is true", () => {
         const hash = "same_hash_123"
         const delta1 = makeProto(DeltaProto, {
-          newElement: {
-            textInput: {
-              id: "some_id",
-              label: "Label",
-              setValue: false,
-            },
-          },
+          newElement: { text: { body: "hello" } },
         })
         const root1 = ROOT.applyDelta(
           "run_id_1",
@@ -856,15 +850,9 @@ describe("AppRoot", () => {
           [1, 1]
         ) as ElementNode
 
-        // Second delta with setValue=true - should NOT reuse payload
+        // Second delta with hasOneShotEffect=true - should NOT reuse payload
         const delta2 = makeProto(DeltaProto, {
-          newElement: {
-            textInput: {
-              id: "some_id",
-              label: "Label",
-              setValue: true,
-            },
-          },
+          newElement: { text: { body: "hello" }, hasOneShotEffect: true },
         })
         const root2 = root1.applyDelta(
           "run_id_2",
@@ -877,20 +865,14 @@ describe("AppRoot", () => {
           [1, 1]
         ) as ElementNode
 
-        // setValue=true means one-shot command, so no reuse
+        // hasOneShotEffect=true means one-shot effect, so no reuse
         expect(node2.element).not.toBe(node1.element)
       })
 
-      it("reuses payload when setValue is false", () => {
+      it("reuses payload when hasOneShotEffect is false or unset", () => {
         const hash = "same_hash_123"
         const delta1 = makeProto(DeltaProto, {
-          newElement: {
-            textInput: {
-              id: "some_id",
-              label: "Label",
-              setValue: false,
-            },
-          },
+          newElement: { text: { body: "hello" } },
         })
         const root1 = ROOT.applyDelta(
           "run_id_1",
@@ -904,13 +886,7 @@ describe("AppRoot", () => {
         ) as ElementNode
 
         const delta2 = makeProto(DeltaProto, {
-          newElement: {
-            textInput: {
-              id: "some_id",
-              label: "Label",
-              setValue: false,
-            },
-          },
+          newElement: { text: { body: "hello" }, hasOneShotEffect: false },
         })
         const root2 = root1.applyDelta(
           "run_id_2",
@@ -923,93 +899,7 @@ describe("AppRoot", () => {
           [1, 1]
         ) as ElementNode
 
-        // setValue=false allows reuse
-        expect(node2.element).toBe(node1.element)
-      })
-
-      it("creates fresh payload when dataframe has selectionState (one-shot guard)", () => {
-        const hash = "same_hash_123"
-        const delta1 = makeProto(DeltaProto, {
-          newElement: {
-            dataframe: {
-              arrowData: { data: new Uint8Array() },
-              selectionState: '{"selection":{"rows":[0]}}',
-            },
-          },
-        })
-        const root1 = ROOT.applyDelta(
-          "run_id_1",
-          delta1,
-          forwardMsgMetadata([0, 1, 1]),
-          hash
-        )
-        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
-          root1.main,
-          [1, 1]
-        ) as ElementNode
-
-        const delta2 = makeProto(DeltaProto, {
-          newElement: {
-            dataframe: {
-              arrowData: { data: new Uint8Array() },
-              selectionState: '{"selection":{"rows":[0]}}',
-            },
-          },
-        })
-        const root2 = root1.applyDelta(
-          "run_id_2",
-          delta2,
-          forwardMsgMetadata([0, 1, 1]),
-          hash
-        )
-        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
-          root2.main,
-          [1, 1]
-        ) as ElementNode
-
-        // selectionState present means no reuse (one-shot command)
-        expect(node2.element).not.toBe(node1.element)
-      })
-
-      it("reuses dataframe payload when no selectionState present", () => {
-        const hash = "same_hash_123"
-        const delta1 = makeProto(DeltaProto, {
-          newElement: {
-            dataframe: {
-              arrowData: { data: new Uint8Array() },
-            },
-          },
-        })
-        const root1 = ROOT.applyDelta(
-          "run_id_1",
-          delta1,
-          forwardMsgMetadata([0, 1, 1]),
-          hash
-        )
-        const node1 = GetNodeByDeltaPathVisitor.getNodeAtPath(
-          root1.main,
-          [1, 1]
-        ) as ElementNode
-
-        const delta2 = makeProto(DeltaProto, {
-          newElement: {
-            dataframe: {
-              arrowData: { data: new Uint8Array() },
-            },
-          },
-        })
-        const root2 = root1.applyDelta(
-          "run_id_2",
-          delta2,
-          forwardMsgMetadata([0, 1, 1]),
-          hash
-        )
-        const node2 = GetNodeByDeltaPathVisitor.getNodeAtPath(
-          root2.main,
-          [1, 1]
-        ) as ElementNode
-
-        // No selectionState allows reuse
+        // hasOneShotEffect=false allows reuse
         expect(node2.element).toBe(node1.element)
       })
 

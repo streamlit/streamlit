@@ -560,7 +560,12 @@ class RadioMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, format_func)
-        self.dg._enqueue("radio", radio_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "radio",
+            radio_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
         return current_value
 
     @property
