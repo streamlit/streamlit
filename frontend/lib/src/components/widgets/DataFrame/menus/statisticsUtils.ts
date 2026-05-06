@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
+import { toSafeDate } from "~lib/components/widgets/DataFrame/columns/utils"
 import { Quiver } from "~lib/dataframes/Quiver"
-import { isNullOrUndefined } from "~lib/util/utils"
-
-import { toSafeDate } from "../columns/utils"
+import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
 /** Threshold for sampling large datasets. */
 const SAMPLE_THRESHOLD = 100_000
@@ -425,7 +424,7 @@ export function computeDateTimeStatistics(
       // toSafeDate handles Date objects, bigints, numbers, and strings
       // with automatic unit detection (seconds, milliseconds, microseconds, nanoseconds)
       const date = toSafeDate(v)
-      if (date != null) {
+      if (notNullOrUndefined(date)) {
         const timestamp = date.getTime()
         if (Number.isFinite(timestamp)) {
           timestamps.push(timestamp)
