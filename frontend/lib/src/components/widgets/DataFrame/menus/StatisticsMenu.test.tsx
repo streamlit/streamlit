@@ -51,13 +51,12 @@ describe("StatisticsMenu", () => {
     isStretched: false,
   })
 
-  const defaultProps: StatisticsMenuProps = {
+  const defaultProps: Omit<StatisticsMenuProps, "children"> = {
     column: numberColumn,
     data: mockQuiver,
     isOpen: true,
     onMouseEnter: vi.fn(),
     onMouseLeave: vi.fn(),
-    children: <div data-testid="trigger">Trigger</div>,
   }
 
   beforeEach(() => {
@@ -65,13 +64,21 @@ describe("StatisticsMenu", () => {
   })
 
   it("renders the trigger element", () => {
-    render(<StatisticsMenu {...defaultProps} isOpen={false} />)
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={false}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
 
     expect(screen.getByTestId("trigger")).toBeVisible()
   })
 
   it("shows statistics content when isOpen is true", async () => {
-    render(<StatisticsMenu {...defaultProps} isOpen={true} />)
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
 
     await waitFor(() => {
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
@@ -79,7 +86,11 @@ describe("StatisticsMenu", () => {
   })
 
   it("renders numeric statistics metrics", async () => {
-    render(<StatisticsMenu {...defaultProps} isOpen={true} />)
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
 
     await waitFor(() => {
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
@@ -101,7 +112,11 @@ describe("StatisticsMenu", () => {
   })
 
   it("uses semantic markup for statistics metrics", async () => {
-    render(<StatisticsMenu {...defaultProps} isOpen={true} />)
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
 
     await waitFor(() => {
       expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
@@ -121,7 +136,11 @@ describe("StatisticsMenu", () => {
   })
 
   it("does not compute statistics when isOpen is false", () => {
-    render(<StatisticsMenu {...defaultProps} isOpen={false} />)
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={false}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
 
     // When closed, the statistics content should not be rendered
     expect(
@@ -140,9 +159,11 @@ describe("StatisticsMenu", () => {
 
     render(
       <StatisticsMenu
-        {...defaultProps}
         column={unsupportedColumn}
+        data={mockQuiver}
         isOpen={true}
+        onMouseEnter={vi.fn()}
+        onMouseLeave={vi.fn()}
       >
         <div data-testid="unsupported-trigger">Unsupported</div>
       </StatisticsMenu>
