@@ -46,7 +46,7 @@ class StatusContainer(DeltaGenerator):
         expanded: bool = False,
         state: States = "running",
         width: WidthWithoutContent = "stretch",
-        type: Literal["normal", "compact"] = "normal",
+        type: Literal["default", "compact"] = "default",
     ) -> StatusContainer:
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = expanded
@@ -54,7 +54,7 @@ class StatusContainer(DeltaGenerator):
         expandable_proto.type = (
             BlockProto.Expandable.Type.COMPACT
             if type == "compact"
-            else BlockProto.Expandable.Type.NORMAL
+            else BlockProto.Expandable.Type.DEFAULT
         )
 
         if state == "running":

@@ -66,12 +66,12 @@ with st.status("Stretch width status", state="complete", width="stretch"):
     st.write("Hello World")
 
 # Compact (borderless) status
-with st.status("Compact running", border=False) as status:
+with st.status("Compact running", type="compact") as status:
     st.write("Processing...")
     status.update(state="complete")
 
-with st.status("Compact complete", state="complete", border=False):
+with st.status("Compact complete", state="complete", type="compact"):
     st.write("Done!")
 
-with st.status("Compact expanded", state="complete", expanded=True, border=False):
+with st.status("Compact expanded", state="complete", expanded=True, type="compact"):
     st.write("Compact content visible")

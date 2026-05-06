@@ -493,13 +493,13 @@ class ExpanderTest(DeltaGeneratorTestCase):
         assert not expander_block.add_block.expandable.expanded
         assert expander.open is False
 
-    def test_type_normal_by_default(self):
-        """Test that type is NORMAL by default."""
+    def test_type_default_by_default(self):
+        """Test that type is DEFAULT by default."""
         st.expander("label")
         expander_block = self.get_delta_from_queue()
         assert (
             expander_block.add_block.expandable.type
-            == BlockProto.Expandable.Type.NORMAL
+            == BlockProto.Expandable.Type.DEFAULT
         )
 
     def test_type_compact(self):
@@ -1361,12 +1361,12 @@ class StatusContainerTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException):
             st.status("label", width=invalid_width)
 
-    def test_type_normal_by_default(self):
-        """Test that type is NORMAL by default."""
+    def test_type_default_by_default(self):
+        """Test that type is DEFAULT by default."""
         st.status("label")
         status_block = self.get_delta_from_queue()
         assert (
-            status_block.add_block.expandable.type == BlockProto.Expandable.Type.NORMAL
+            status_block.add_block.expandable.type == BlockProto.Expandable.Type.DEFAULT
         )
 
     def test_type_compact(self):

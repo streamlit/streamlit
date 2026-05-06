@@ -996,7 +996,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        type: Literal["normal", "compact"] = "normal",
+        type: Literal["default", "compact"] = "default",
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1127,8 +1127,8 @@ class LayoutsMixin:
             An ``ExpanderContainer`` object with an ``.open`` property to return
             the current state of the expander if the expander tracks state.
 
-        type : "normal" or "compact"
-            The visual style of the expander. If ``"normal"`` (default), the
+        type : "default" or "compact"
+            The visual style of the expander. If ``"default"`` (default), the
             expander is displayed with a border and background. If ``"compact"``,
             the expander is rendered as a minimal inline toggle—ideal for
             displaying AI reasoning, thoughts, or collapsible metadata without
@@ -1280,7 +1280,7 @@ class LayoutsMixin:
         expandable_proto.type = (
             BlockProto.Expandable.Type.COMPACT
             if type == "compact"
-            else BlockProto.Expandable.Type.NORMAL
+            else BlockProto.Expandable.Type.DEFAULT
         )
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
@@ -1694,7 +1694,7 @@ class LayoutsMixin:
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
         width: WidthWithoutContent = "stretch",
-        type: Literal["normal", "compact"] = "normal",
+        type: Literal["default", "compact"] = "default",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
 
@@ -1760,8 +1760,8 @@ class LayoutsMixin:
               the parent container, the width of the container matches the width
               of the parent container.
 
-        type : "normal" or "compact"
-            The visual style of the status container. If ``"normal"`` (default),
+        type : "default" or "compact"
+            The visual style of the status container. If ``"default"`` (default),
             the container is displayed with a border and background. If
             ``"compact"``, the container is rendered as a minimal inline
             toggle—ideal for displaying AI reasoning or task progress without

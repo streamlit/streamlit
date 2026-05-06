@@ -101,7 +101,7 @@ message Block {
 
   message Expandable {
     enum Type {
-      NORMAL = 0; // Default: with border and background
+      DEFAULT = 0; // Default: with border and background
       COMPACT = 1; // Minimal inline toggle without border
     }
 
