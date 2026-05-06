@@ -471,15 +471,20 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_command_tracking_limits(self):
         """Command tracking limits should be respected.
 
-        Current limits are 25 per unique command and 200 in total.
+        Current limits are _MAX_TRACKED_PER_COMMAND (25) per unique command
+        and _MAX_TRACKED_COMMANDS (400) in total.
         """
         ctx = get_script_run_ctx()
         assert ctx is not None
         ctx.reset()
         ctx.gather_usage_stats = True
 
+        # Create enough unique command names to exceed _MAX_TRACKED_COMMANDS
+        # when each is called _MAX_TRACKED_PER_COMMAND + 1 times.
+        # With 20 commands * 25 per command = 500, which exceeds the 400 limit.
+        num_unique_commands = 20
         funcs = []
-        for i in range(10):
+        for i in range(num_unique_commands):
 
             def test_function() -> str:
                 return "foo"

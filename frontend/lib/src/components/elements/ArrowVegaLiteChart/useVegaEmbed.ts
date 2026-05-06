@@ -209,13 +209,10 @@ export function useVegaEmbed(
         return
       }
 
-      // Check if dataframes have same "shape" but the new one has more rows.
       if (dataArg.hash !== prevData.hash) {
-        // Clean the dataset and insert from scratch.
+        // Data has changed, replace the dataset.
         view.data(name, getDataArray(dataArg))
-        LOG.info(
-          `Had to clear the ${name} dataset before inserting data through Vega view.`
-        )
+        LOG.info(`Replaced the ${name} dataset in Vega view.`)
       }
     },
     []

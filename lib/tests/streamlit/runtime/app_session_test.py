@@ -362,6 +362,7 @@ class AppSessionTest(unittest.TestCase):
             user_info={"email": "test@example.com"},
             fragment_storage=session._fragment_storage,
             pages_manager=session._pages_manager,
+            on_script_error=None,
             local_sources_watcher=session._local_sources_watcher,
         )
 

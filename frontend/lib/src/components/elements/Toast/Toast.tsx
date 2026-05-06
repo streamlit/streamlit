@@ -20,6 +20,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -118,11 +119,11 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
   const shortened = body !== displayMessage
 
   const [expanded, setExpanded] = useState(!shortened)
-  const [toastKey, setToastKey] = useState<React.Key>(0)
+  const toastKeyRef = useRef<React.Key | null>(null)
 
   const handleClick = useCallback((): void => {
-    setExpanded(!expanded)
-  }, [expanded])
+    setExpanded(value => !value)
+  }, [])
 
   const styleOverrides = useMemo(() => generateToastOverrides(theme), [theme])
 
@@ -175,7 +176,7 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
       overrides: { ...styleOverrides },
       autoHideDuration: autoHideDurationMs,
     })
-    setToastKey(newKey)
+    toastKeyRef.current = newKey
 
     return () => {
       // Disable transition so toast doesn't flicker on removal
@@ -184,6 +185,7 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
       })
       // Remove toast on unmount
       toaster.clear(newKey)
+      toastKeyRef.current = null
     }
 
     // Array must be empty to run as mount/cleanup
@@ -191,12 +193,16 @@ function Toast({ element }: Readonly<ToastProps>): ReactElement {
   }, [])
 
   useEffect(() => {
+    if (toastKeyRef.current === null) {
+      return
+    }
+
     // Handles expand/collapse button behavior for long toast messages
-    toaster.update(toastKey, {
+    toaster.update(toastKeyRef.current, {
       children: toastContent,
       overrides: { ...styleOverrides },
     })
-  }, [toastKey, toastContent, styleOverrides])
+  }, [toastContent, styleOverrides])
 
   const sidebarErrorMessage = (
     <AlertElement

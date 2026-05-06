@@ -111,6 +111,7 @@ export function useBasicWidgetClientState<
   // - It only has a value the moment when the user calls setValue (internally
   //   called setNextValueWithSource). And then it's immediately set to null
   //   internally.
+  // eslint-disable-next-line @eslint-react/no-unused-state -- Intentional queued event state is consumed by an effect to sync React state and WidgetStateManager.
   const [nextValueWithSource, setNextValueWithSource] =
     useState<ValueWithSource<T> | null>({
       value: currentValue,
