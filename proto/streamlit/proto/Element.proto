@@ -143,8 +143,8 @@ message Element {
     Heading heading = 47;
     Code code = 48;
     MenuButton menu_button = 64;
-    Pagination pagination = 65;
-    // Next ID: 66
+    Pagination pagination = 66;
+    // Next ID: 67
   }
 
   reserved 3, 9, 10, 11, 17;
