@@ -41,6 +41,7 @@ import {
   mockEndpoints,
 } from "@streamlit/connection"
 import {
+  AppRoot,
   CachedTheme,
   CUSTOM_THEME_AUTO_NAME,
   CUSTOM_THEME_DARK_NAME,
@@ -455,6 +456,25 @@ function sendForwardMessage(
 
     getMockConnectionManagerProp("onMessage")(fwMessage)
   })
+}
+
+/**
+ * Mock the fragment IDs reported by `AppRoot.getActiveIds()` so tests can
+ * control which fragment timers survive the latest committed tree update.
+ */
+function mockActiveFragmentIds(fragmentIds: string[]): MockInstance {
+  const getActiveIds = AppRoot.prototype.getActiveIds
+
+  return vi
+    .spyOn(AppRoot.prototype, "getActiveIds")
+    .mockImplementation(function (this: AppRoot) {
+      const activeIds = getActiveIds.call(this)
+
+      return {
+        ...activeIds,
+        fragmentIds: new Set(fragmentIds),
+      }
+    })
 }
 
 async function openCacheModal(): Promise<void> {
@@ -3852,6 +3872,41 @@ describe("App", () => {
       expect(setInterval).toHaveBeenCalledWith(expect.any(Function), 1000)
     })
 
+    it("replaces an existing interval for the same fragment id", () => {
+      renderApp(getProps())
+      const connectionManager = getMockConnectionManager()
+
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+      sendForwardMessage("autoRerun", {
+        interval: 2.0,
+        fragmentId: "myFragmentId",
+      })
+
+      expect(clearInterval).toHaveBeenCalledTimes(1)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+      ).toEqual(
+        expect.objectContaining({
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+        })
+      )
+    })
+
     it("clears intervals on handleNewSession message", () => {
       renderApp(getProps())
       sendForwardMessage("autoRerun", {
@@ -3870,6 +3925,64 @@ describe("App", () => {
 
       expect(clearInterval).toHaveBeenCalled()
       expect(clearInterval).toHaveBeenCalled()
+    })
+
+    it("clears intervals when the app unmounts", () => {
+      const { unmount } = renderApp(getProps())
+
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+
+      unmount()
+
+      expect(clearInterval).toHaveBeenCalledTimes(1)
+    })
+
+    it("clears only fragment timers removed from the committed tree", () => {
+      const getActiveIdsSpy = mockActiveFragmentIds(["liveFragment"])
+
+      try {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "liveFragment",
+        })
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "staleFragment",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+
+        expect(clearInterval).toHaveBeenCalledTimes(1)
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[0][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "liveFragment",
+            isAutoRerun: true,
+          })
+        )
+      } finally {
+        getActiveIdsSpy.mockRestore()
+      }
     })
 
     it("triggers rerunScript with is_auto_rerun set to true", () => {
@@ -4382,7 +4495,7 @@ describe("App", () => {
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
     })
 
-    it("requests script rerun if autoReruns is not empty", () => {
+    it("requests script rerun if fragment auto reruns are active", () => {
       vi.useFakeTimers()
       renderApp(getProps())
       const widgetStateManager =
@@ -4431,6 +4544,65 @@ describe("App", () => {
       })
       expect(sendUpdateWidgetsMessageSpy).toHaveBeenCalled()
       vi.useRealTimers()
+    })
+
+    it("does not request script rerun after stale auto reruns are cleaned up", () => {
+      vi.useFakeTimers()
+      const getActiveIdsSpy = mockActiveFragmentIds([])
+
+      try {
+        renderApp(getProps())
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        sendForwardMessage("newSession", NEW_SESSION_JSON)
+        sendForwardMessage("autoRerun", {
+          interval: 1,
+          fragmentId: "myFragmentId",
+        })
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
+        )
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.DISCONNECTED_FOREVER
+          )
+        })
+
+        const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+        sessionInfo.setCurrent(mockSessionInfoProps())
+        sessionInfo.setCurrent(mockSessionInfoProps())
+        expect(sessionInfo.last).toBeTruthy()
+
+        const sendUpdateWidgetsMessageSpy = vi.spyOn(
+          widgetStateManager,
+          "sendUpdateWidgetsMessage"
+        )
+        sendUpdateWidgetsMessageSpy.mockClear()
+
+        act(() => {
+          getMockConnectionManagerProp("connectionStateChanged")(
+            ConnectionState.CONNECTED
+          )
+        })
+
+        expect(sendUpdateWidgetsMessageSpy).not.toHaveBeenCalled()
+      } finally {
+        getActiveIdsSpy.mockRestore()
+        vi.useRealTimers()
+      }
     })
   })
 

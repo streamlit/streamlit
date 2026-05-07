@@ -1508,6 +1508,83 @@ describe("AppRoot", () => {
     })
   })
 
+  describe("AppRoot.getActiveIds", () => {
+    it("returns fragment ids alongside elements and block ids", () => {
+      const rootWithActiveIds = ROOT.applyDelta(
+        "current_run",
+        makeProto(DeltaProto, {
+          addBlock: {
+            id: "$$ID-abc123-fragment-container",
+            allowEmpty: true,
+          },
+          fragmentId: "block_fragment",
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      ).applyDelta(
+        "current_run",
+        makeProto(DeltaProto, {
+          newElement: { text: { body: "fragment child" } },
+          fragmentId: "element_fragment",
+        }),
+        forwardMsgMetadata([0, 1, 1, 0])
+      )
+
+      const { elements, blockIds, fragmentIds } =
+        rootWithActiveIds.getActiveIds()
+      const elementBodies = Array.from(elements).map(
+        element => element.text?.body
+      )
+
+      expect(elementBodies).toContain("fragment child")
+      expect(blockIds).toEqual(new Set(["$$ID-abc123-fragment-container"]))
+      expect(fragmentIds).toEqual(
+        new Set(["block_fragment", "element_fragment"])
+      )
+      expect(fragmentIds.has("missing_fragment")).toBe(false)
+    })
+
+    it("returns fragment ids from the post-prune live tree", () => {
+      const rootWithStaleNestedFragment = ROOT.applyDelta(
+        "current_run",
+        makeProto(DeltaProto, {
+          addBlock: { allowEmpty: true },
+          fragmentId: "live_fragment",
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+        .applyDelta(
+          "old_run",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "stale child" } },
+            fragmentId: "stale_nested_fragment",
+          }),
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+        .applyDelta(
+          "current_run",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "live child" } },
+            fragmentId: "live_fragment",
+          }),
+          forwardMsgMetadata([0, 1, 1, 1])
+        )
+
+      const prunedRoot = rootWithStaleNestedFragment.clearStaleNodes(
+        "current_run",
+        ["live_fragment"]
+      )
+      const { elements, fragmentIds } = prunedRoot.getActiveIds()
+      const elementBodies = Array.from(elements).map(
+        element => element.text?.body
+      )
+
+      expect(fragmentIds).toEqual(new Set(["live_fragment"]))
+      expect(fragmentIds.has("stale_nested_fragment")).toBe(false)
+      expect(elementBodies).toContain("live child")
+      expect(elementBodies).not.toContain("stale child")
+    })
+  })
+
   describe("AppRoot.debug", () => {
     it("prints labeled child sections with tree output", () => {
       const out = ROOT.debug()

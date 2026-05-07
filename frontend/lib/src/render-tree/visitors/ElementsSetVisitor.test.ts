@@ -14,7 +14,16 @@
  * limitations under the License.
  */
 
-import { block, blockWithId, text } from "~lib/render-tree/test-utils"
+import { ForwardMsgMetadata } from "@streamlit/protobuf"
+
+import { BlockNode } from "~lib/render-tree/BlockNode"
+import { ElementNode } from "~lib/render-tree/ElementNode"
+import {
+  block,
+  blockWithId,
+  FAKE_SCRIPT_HASH,
+  text,
+} from "~lib/render-tree/test-utils"
 import { TransientNode } from "~lib/render-tree/TransientNode"
 
 import { ElementsSetVisitor } from "./ElementsSetVisitor"
@@ -229,6 +238,63 @@ describe("ElementsSetVisitor", () => {
       expect(visitor.elements.has(child.element)).toBe(true)
       expect(visitor.blockIds.size).toBe(1)
       expect(visitor.blockIds.has("$$ID-abc-mykey")).toBe(true)
+    })
+  })
+
+  describe("fragmentIds collection", () => {
+    it("collects fragment ids from nested block and element nodes", () => {
+      const fragmentElement = new ElementNode(
+        text("fragment child").element,
+        ForwardMsgMetadata.create(),
+        "run",
+        FAKE_SCRIPT_HASH,
+        "element-fragment"
+      )
+      const fragmentBlock = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [fragmentElement],
+        undefined,
+        "run",
+        "block-fragment"
+      )
+      const stableBlock = blockWithId("$$ID-abc-mykey", [fragmentBlock])
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitBlockNode(stableBlock)
+
+      expect(visitor.fragmentIds).toEqual(
+        new Set(["block-fragment", "element-fragment"])
+      )
+      expect(visitor.fragmentIds.has("missing-fragment")).toBe(false)
+      expect(visitor.blockIds).toEqual(new Set(["$$ID-abc-mykey"]))
+      expect(visitor.elements).toEqual(new Set([fragmentElement.element]))
+    })
+
+    it("collects fragment ids from transient nodes via elements and anchor", () => {
+      const transientElement = new ElementNode(
+        text("transient child").element,
+        ForwardMsgMetadata.create(),
+        "run",
+        FAKE_SCRIPT_HASH,
+        "transient-fragment"
+      )
+      const anchor = new BlockNode(
+        FAKE_SCRIPT_HASH,
+        [],
+        undefined,
+        "run",
+        "anchor-fragment"
+      )
+      const transient = new TransientNode("run", anchor, [transientElement], 1)
+      const visitor = new ElementsSetVisitor()
+
+      visitor.visitTransientNode(transient)
+
+      expect(visitor.fragmentIds).toEqual(
+        new Set(["anchor-fragment", "transient-fragment"])
+      )
+      expect(visitor.elements).toEqual(new Set([transientElement.element]))
+      expect(visitor.blockIds.size).toBe(0)
     })
   })
 

@@ -23,13 +23,15 @@ import { TransientNode } from "~lib/render-tree/TransientNode"
 import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.interface"
 
 /**
- * A visitor that collects all Elements and stable block IDs from an AppNode
- * tree.
+ * A visitor that collects all Elements, stable block IDs, and fragment IDs
+ * from an AppNode tree.
  *
  * - `elements`: all Element protos found in ElementNodes.
  * - `blockIds`: IDs from BlockNodes that have a stable identity (e.g. keyed
  *   layout containers). These are used to prevent `elementStates` entries
  *   from being garbage-collected.
+ * - `fragmentIds`: fragment IDs from live BlockNodes and ElementNodes. These
+ *   are used to determine which fragment-scoped resources should remain active.
  *
  * This visitor uses mutable Sets for performance, accumulating results
  * as it traverses the tree. The visitor methods return the element Set
@@ -42,19 +44,25 @@ import type { AppNodeVisitor } from "~lib/render-tree/visitors/AppNodeVisitor.in
  * rootNode.accept(visitor)
  * const elements = visitor.elements
  * const blockIds = visitor.blockIds
+ * const fragmentIds = visitor.fragmentIds
  * ```
  */
 export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
   public readonly elements: Set<Element>
   public readonly blockIds: Set<string>
+  public readonly fragmentIds: Set<string>
 
   constructor() {
     this.elements = new Set<Element>()
     this.blockIds = new Set<string>()
+    this.fragmentIds = new Set<string>()
   }
 
   visitElementNode(node: ElementNode): Set<Element> {
     this.elements.add(node.element)
+    if (node.fragmentId) {
+      this.fragmentIds.add(node.fragmentId)
+    }
     return this.elements
   }
 
@@ -62,12 +70,19 @@ export class ElementsSetVisitor implements AppNodeVisitor<Set<Element>> {
     if (node.deltaBlock?.id) {
       this.blockIds.add(node.deltaBlock.id)
     }
+    if (node.fragmentId) {
+      this.fragmentIds.add(node.fragmentId)
+    }
     for (const child of node.children) {
       child.accept(this)
     }
     return this.elements
   }
 
+  /**
+   * Traverse both transient payload elements and the transient anchor so
+   * fragment IDs attached to either side remain visible to callers.
+   */
   visitTransientNode(node: TransientNode): Set<Element> {
     // Add all transient elements to the set
     node.transientNodes.forEach(element => {

@@ -38,6 +38,7 @@ import {
 } from "@streamlit/app/src/components/StreamlitDialog/StreamlitDialog"
 import { UserSettings } from "@streamlit/app/src/components/StreamlitDialog/UserSettings"
 import ToolbarActions from "@streamlit/app/src/components/ToolbarActions/ToolbarActions"
+import { FragmentAutoRerunManager } from "@streamlit/app/src/FragmentAutoRerunManager"
 import withScreencast, {
   ScreenCastHOC,
 } from "@streamlit/app/src/hocs/withScreencast/withScreencast"
@@ -217,7 +218,6 @@ interface State {
   deployedAppMetadata: DeployedAppMetadata
   libConfig: LibConfig
   appConfig: AppConfig
-  autoReruns: NodeJS.Timeout[]
   inputsDisabled: boolean
   scriptChangedOnDisk: boolean
 }
@@ -261,6 +261,12 @@ export class App extends PureComponent<Props, State> {
   private connectionManager: ConnectionManager | null
 
   private readonly widgetMgr: WidgetStateManager
+
+  /**
+   * Tracks fragment `run_every` timers outside React state so duplicate or
+   * stale intervals can be replaced and pruned without triggering rerenders.
+   */
+  private readonly fragmentAutoRerunManager: FragmentAutoRerunManager
 
   private readonly hostCommunicationMgr: HostCommunicationManager
 
@@ -358,7 +364,6 @@ export class App extends PureComponent<Props, State> {
       deployedAppMetadata: {},
       libConfig: {},
       appConfig: {},
-      autoReruns: [],
       inputsDisabled: false,
       navigationPosition: Navigation.Position.SIDEBAR,
       scriptChangedOnDisk: false,
@@ -375,6 +380,10 @@ export class App extends PureComponent<Props, State> {
     this.widgetMgr.setQueryParamsChangeHandler(
       this.handleQueryParamsFromWidget
     )
+
+    this.fragmentAutoRerunManager = new FragmentAutoRerunManager({
+      onTick: this.handleAutoRerunTick,
+    })
 
     this.hostCommunicationMgr = new HostCommunicationManager({
       streamlitExecutionStartedAt: props.streamlitExecutionStartedAt,
@@ -725,6 +734,8 @@ export class App extends PureComponent<Props, State> {
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
 
+    this.fragmentAutoRerunManager.clearAll()
+
     this.hostCommunicationMgr.closeHostCommunication()
 
     window.removeEventListener("popstate", this.onHistoryChange, false)
@@ -879,7 +890,7 @@ export class App extends PureComponent<Props, State> {
         // Script is using fragments (fragments in last run or
         // fragment auto-reruns configured):
         this.state.fragmentIdsThisRun.length > 0 ||
-        this.state.autoReruns.length > 0
+        this.fragmentAutoRerunManager.hasActiveAutoReruns()
       ) {
         LOG.info("Requesting a script run.")
         this.widgetMgr.sendUpdateWidgetsMessage(undefined)
@@ -1184,16 +1195,17 @@ export class App extends PureComponent<Props, State> {
     })
   }
 
+  /**
+   * Register or refresh the server-configured `run_every` interval for a fragment.
+   *
+   * Re-scheduling the same fragment replaces its previous timer so reconnects
+   * and reruns do not leave duplicate callbacks behind.
+   */
   handleAutoRerun = (autoRerun: AutoRerun): void => {
-    const intervalId = setInterval(() => {
-      this.widgetMgr.sendUpdateWidgetsMessage(autoRerun.fragmentId, true)
-    }, autoRerun.interval * 1000)
-
-    this.setState((prevState: State) => {
-      return {
-        autoReruns: [...prevState.autoReruns, intervalId],
-      }
-    })
+    this.fragmentAutoRerunManager.schedule(
+      autoRerun.fragmentId,
+      autoRerun.interval
+    )
   }
 
   /**
@@ -1601,17 +1613,17 @@ export class App extends PureComponent<Props, State> {
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
         this.setState(
-          ({ scriptRunId, fragmentIdsThisRun, elements }) => {
-            return {
-              // Apply any pending elements that haven't been applied.
-              elements: elements.clearStaleNodes(
-                scriptRunId,
-                fragmentIdsThisRun
-              ),
-            }
-          },
+          ({ scriptRunId, fragmentIdsThisRun, elements }) => ({
+            // Apply any pending elements that haven't been applied.
+            elements: elements.clearStaleNodes(
+              scriptRunId,
+              fragmentIdsThisRun
+            ),
+          }),
           () => {
-            this.removeInactiveWidgetState()
+            this.cleanupAfterElementTreeUpdate({
+              pruneInactiveAutoReruns: true,
+            })
           }
         )
       }
@@ -1665,27 +1677,48 @@ export class App extends PureComponent<Props, State> {
         }
       },
       () => {
-        this.removeInactiveWidgetState()
+        this.cleanupAfterElementTreeUpdate()
       }
     )
   }
 
   /**
-   * Remove widget and element state for items no longer present in the
-   * current render tree. Called from setState callbacks where this.state
-   * access is a false positive (the callback runs after the update is
-   * committed). Converting App to a functional component would let us
-   * use useEffect and remove this suppress entirely.
+   * Remove widget state and fragment timers for items no longer present in the
+   * current render tree.
+   *
+   * This runs from `setState` callbacks after the new tree has committed, so we
+   * can inspect the live fragment IDs before deciding which fragment-scoped
+   * resources should remain active.
+   *
+   * @param pruneInactiveAutoReruns - When true, remove fragment auto-rerun
+   *   timers for fragments that are absent from the committed tree.
    */
-  private removeInactiveWidgetState(): void {
-    const { elements, blockIds } = this.state.elements.getActiveIds()
-    const activeIds = new Set([
+  private cleanupAfterElementTreeUpdate({
+    pruneInactiveAutoReruns = false,
+  }: {
+    pruneInactiveAutoReruns?: boolean
+  } = {}): void {
+    const { elements, blockIds, fragmentIds } =
+      this.state.elements.getActiveIds()
+    const activeWidgetIds = new Set([
       ...Array.from(elements)
         .map(element => getElementId(element))
         .filter(notUndefined),
       ...blockIds,
     ])
-    this.widgetMgr.removeInactive(activeIds)
+
+    this.widgetMgr.removeInactive(activeWidgetIds)
+
+    if (pruneInactiveAutoReruns) {
+      this.fragmentAutoRerunManager.pruneInactive(fragmentIds)
+    }
+  }
+
+  /**
+   * Send the fragment-scoped rerun request when a managed auto-rerun interval fires.
+   */
+  private readonly handleAutoRerunTick = (fragmentId: string): void => {
+    this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
   }
 
   /**
@@ -1797,10 +1830,7 @@ export class App extends PureComponent<Props, State> {
    * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
    */
   cleanupAutoReruns = (): void => {
-    this.state.autoReruns.forEach((value: NodeJS.Timeout) => {
-      clearInterval(value)
-    })
-    this.setState({ autoReruns: [] })
+    this.fragmentAutoRerunManager.clearAll()
   }
 
   /**
