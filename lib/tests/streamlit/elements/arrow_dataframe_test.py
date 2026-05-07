@@ -1206,6 +1206,35 @@ class TestButtonClickSerde:
         serde = ButtonClickSerde()
         assert serde.deserialize(ui_value) == expected
 
+    @pytest.mark.parametrize(
+        "ui_value",
+        [
+            "not json",  # Invalid JSON syntax
+            '"just a string"',  # Valid JSON but wrong shape (string not dict)
+            '{"row": "0", "label": "x"}',  # row is string instead of int
+            '{"row": 0}',  # Missing label
+            '{"label": "x"}',  # Missing row
+            "[]",  # Array instead of dict
+        ],
+        ids=[
+            "invalid_json",
+            "json_string_not_dict",
+            "row_string_not_int",
+            "missing_label",
+            "missing_row",
+            "array_not_dict",
+        ],
+    )
+    def test_deserialize_malformed_payload_raises(self, ui_value: str) -> None:
+        """Test deserialize raises for malformed payloads with wrong shape or types."""
+        import json
+
+        from streamlit.errors import StreamlitAPIException
+
+        serde = ButtonClickSerde()
+        with pytest.raises((StreamlitAPIException, json.JSONDecodeError)):
+            serde.deserialize(ui_value)
+
     def test_roundtrip_preserves_state(self) -> None:
         """Test that serialization roundtrip preserves the click state."""
         serde = ButtonClickSerde()

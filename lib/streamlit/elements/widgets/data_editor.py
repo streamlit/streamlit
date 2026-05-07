@@ -1191,9 +1191,11 @@ class DataEditorMixin:
 
         # Register widgets for button columns with keys
         # Button columns are read-only in data_editor but clicks still trigger callbacks
-        button_serde = ButtonClickSerde()
-        for col_name, button_col in button_columns.items():
-            if button_col.key is not None:
+        # Skip registration when the entire data_editor is disabled (disabled=True)
+        # since clicks should not fire in that case
+        if disabled is not True:
+            button_serde = ButtonClickSerde()
+            for col_name, button_col in button_columns.items():
                 check_widget_policies(
                     self.dg,
                     button_col.key,

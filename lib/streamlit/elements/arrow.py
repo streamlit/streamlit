@@ -1061,31 +1061,35 @@ class ArrowMixin:
         ctx = get_script_run_ctx()
         button_serde = ButtonClickSerde()
         for col_name, button_col in button_columns.items():
-            if button_col.key is not None:
-                check_widget_policies(
-                    self.dg,
-                    button_col.key,
-                    on_change=button_col.on_click,
-                    default_value=None,
-                    writes_allowed=False,
-                )
-                widget_id = compute_and_register_element_id(
-                    "dataframe_button",
-                    user_key=button_col.key,
-                    key_as_main_identity=True,
-                    dg=self.dg,
-                )
-                register_widget(
-                    widget_id,
-                    on_change_handler=button_col.on_click,
-                    args=button_col.args,
-                    kwargs=button_col.kwargs,
-                    deserializer=button_serde.deserialize,
-                    serializer=button_serde.serialize,
-                    ctx=ctx,
-                    value_type="string_trigger_value",
-                )
-                proto.button_click_widgets[col_name] = widget_id
+            check_widget_policies(
+                self.dg,
+                button_col.key,
+                on_change=button_col.on_click,
+                default_value=None,
+                writes_allowed=False,
+            )
+            widget_id = compute_and_register_element_id(
+                "dataframe_button",
+                user_key=button_col.key,
+                key_as_main_identity=True,
+                dg=self.dg,
+            )
+            register_widget(
+                widget_id,
+                on_change_handler=button_col.on_click,
+                args=button_col.args,
+                kwargs=button_col.kwargs,
+                deserializer=button_serde.deserialize,
+                serializer=button_serde.serialize,
+                ctx=ctx,
+                value_type="string_trigger_value",
+            )
+            proto.button_click_widgets[col_name] = widget_id
+
+        # Set form_id if button columns are present or selection is activated
+        # This ensures button clicks respect form submission behavior
+        if button_columns or is_selection_activated:
+            proto.form_id = current_form_id(self.dg)
 
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"
@@ -1100,7 +1104,6 @@ class ArrowMixin:
             proto.selection_mode.extend(
                 _selection_mode_set_to_proto_values(selection_mode_set)
             )
-            proto.form_id = current_form_id(self.dg)
 
             normalized_selection_mode = tuple(sorted(selection_mode_set))
 
@@ -1115,8 +1118,6 @@ class ArrowMixin:
                 )
                 selection_default_json = json.dumps(validated_default)
                 proto.selection_default = selection_default_json
-
-            ctx = get_script_run_ctx()
 
             proto.id = compute_and_register_element_id(
                 "dataframe",

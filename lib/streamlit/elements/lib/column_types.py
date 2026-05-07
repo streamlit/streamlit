@@ -3274,8 +3274,8 @@ def ButtonColumn(
     ... )
 
     .. note::
-        Button columns only work with ``st.dataframe``, not ``st.data_editor``.
-        They are always read-only.
+        Button columns are always read-only. In ``st.data_editor``, the underlying
+        cell values cannot be edited, but button clicks still trigger callbacks.
     """
     config: ColumnConfig = ColumnConfig(
         label=label,
