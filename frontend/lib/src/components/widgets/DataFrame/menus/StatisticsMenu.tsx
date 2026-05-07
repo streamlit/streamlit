@@ -347,8 +347,6 @@ function StatisticsMenu({
   // Note: This useMemo caches within a single open session only, not across
   // open/close cycles (the component unmounts when the parent ColumnMenu closes).
   // For large datasets, computation is bounded by SAMPLE_SIZE (10k values).
-  // Note: Statistics are computed from the original Quiver data, not from any
-  // editing state. For st.data_editor, values reflect the original data, not edits.
   const statistics = useMemo((): ColumnStatistics | null => {
     if (!isOpen) return null
     return computeStatistics(column.kind, data, column.indexNumber)

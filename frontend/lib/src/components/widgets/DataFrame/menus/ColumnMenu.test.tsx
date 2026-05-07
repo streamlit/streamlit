@@ -360,5 +360,15 @@ describe("DataFrame ColumnMenu", () => {
 
       expect(screen.getByText("Statistics")).toBeVisible()
     })
+
+    it("does not render 'Statistics' when isEditable is true", async () => {
+      // Statistics are hidden for editable tables (st.data_editor) because
+      // they would show stale data from the original Quiver, not the edits.
+      await renderAndWaitForPopover(
+        <ColumnMenu {...defaultProps} data={mockQuiver} isEditable={true} />
+      )
+
+      expect(screen.queryByText("Statistics")).not.toBeInTheDocument()
+    })
   })
 })

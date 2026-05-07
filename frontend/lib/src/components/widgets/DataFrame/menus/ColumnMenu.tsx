@@ -52,6 +52,10 @@ export interface ColumnMenuProps {
   // may not have Quiver data bound initially. Statistics menu is only shown
   // when data is available.
   data?: Quiver
+  // Whether the table is in an editable mode (st.data_editor).
+  // Statistics menu is hidden for editable tables since the displayed stats
+  // would reflect the original data, not the user's edits.
+  isEditable?: boolean
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void
   // Callback to sort column
@@ -85,6 +89,7 @@ function ColumnMenu({
   onHideColumn,
   column,
   data,
+  isEditable,
   onChangeFormat,
   onAutosize,
 }: ColumnMenuProps): ReactElement {
@@ -174,7 +179,7 @@ function ColumnMenu({
               <StyledMenuDivider />
             </>
           )}
-          {data && supportsStatistics(column.kind) && (
+          {data && !isEditable && supportsStatistics(column.kind) && (
             <StatisticsMenu
               column={column}
               data={data}
