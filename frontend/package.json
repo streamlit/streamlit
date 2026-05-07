@@ -75,7 +75,7 @@
     "eslint-plugin-testing-library": "^7.16.2",
     "globals": "^17.5.0",
     "jiti": "^2.6.1",
-    "knip": "^6.9.0",
+    "knip": "^6.11.0",
     "oxfmt": "^0.47.0",
     "oxlint": "^1.60.0",
     "typescript": "^6.0.3",
