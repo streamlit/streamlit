@@ -347,16 +347,22 @@ function DataFrame({
       actions: string[],
       bounds: Rectangle & { clickX: number; clickY: number }
     ): void => {
+      // Close any existing menu first to ensure clean state transition
+      setButtonActionMenu(undefined)
+
       // Position menu at the click position
       const screenTop = bounds.clickY
       const screenLeft = bounds.clickX
 
-      setButtonActionMenu({
-        columnName,
-        rowIndex,
-        actions,
-        screenTop,
-        screenLeft,
+      // Use requestAnimationFrame to ensure state clears before setting new menu
+      requestAnimationFrame(() => {
+        setButtonActionMenu({
+          columnName,
+          rowIndex,
+          actions,
+          screenTop,
+          screenLeft,
+        })
       })
     },
     []
