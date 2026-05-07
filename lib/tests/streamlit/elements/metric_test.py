@@ -240,6 +240,38 @@ class MetricTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitValueError):
             st.metric("label_test", "123", 5, delta_arrow="invalid")  # type: ignore[arg-type]
 
+    @parameterized.expand(
+        [
+            (0, "0"),
+            (0.0, "0"),
+            ("0", "0"),
+            ("0.0", "0.0"),
+            ("0%", "0%"),
+            ("+0", "+0"),
+            ("0,000", "0,000"),
+            ("0 kg", "0 kg"),
+            ("0 °F", "0 °F"),
+        ]
+    )
+    def test_zero_delta_color_and_direction(self, delta, expected_delta):
+        """Test that zero delta values are rendered as neutral."""
+        st.metric("label_test", "123", delta)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.delta == expected_delta
+        assert c.color == MetricProto.MetricColor.GRAY
+        assert c.direction == MetricProto.MetricDirection.NONE
+
+    def test_zero_delta_respects_named_color(self):
+        """Test that zero delta respects explicit named colors."""
+        st.metric("label_test", "123", 0, delta_color="green")
+
+        c = self.get_delta_from_queue().new_element.metric
+
+        assert c.color == MetricProto.MetricColor.GREEN
+        assert c.direction == MetricProto.MetricDirection.NONE
+
     def test_metric_in_column(self):
         col1, col2, col3, col4, col5 = st.columns(5)
         with col1:
