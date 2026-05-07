@@ -165,9 +165,11 @@ function createHistogramSpec(
 
 /**
  * Creates a Vega-Lite spec for a horizontal bar chart (text/boolean statistics).
+ * Pass fullLabel for tooltip and truncatedLabel for axis display to avoid
+ * collapsing distinct long values that share the same prefix.
  */
 function createBarChartSpec(
-  data: { label: string; value: number }[],
+  data: { fullLabel: string; truncatedLabel: string; value: number }[],
   theme: ReturnType<typeof useEmotionTheme>
 ): TopLevelSpec {
   const spec: TopLevelSpec = {
@@ -181,7 +183,7 @@ function createBarChartSpec(
     },
     encoding: {
       y: {
-        field: "label",
+        field: "fullLabel",
         type: "nominal",
         axis: null,
         sort: "-x",
@@ -193,7 +195,7 @@ function createBarChartSpec(
         scale: { nice: false },
       },
       tooltip: [
-        { field: "label", type: "nominal", title: "Value" },
+        { field: "fullLabel", type: "nominal", title: "Value" },
         { field: "value", type: "quantitative", title: "Count" },
       ],
     },
@@ -257,7 +259,9 @@ function StatisticsChart({
       case "text":
         if (statistics.topValues.length > 0) {
           const data = statistics.topValues.map(v => ({
-            label: v.value.length > 15 ? `${v.value.slice(0, 15)}…` : v.value,
+            fullLabel: v.value,
+            truncatedLabel:
+              v.value.length > 15 ? `${v.value.slice(0, 15)}…` : v.value,
             value: v.count,
           }))
           spec = createBarChartSpec(data, theme)
@@ -267,8 +271,16 @@ function StatisticsChart({
       case "boolean":
         spec = createBarChartSpec(
           [
-            { label: "True", value: statistics.trueCount },
-            { label: "False", value: statistics.falseCount },
+            {
+              fullLabel: "True",
+              truncatedLabel: "True",
+              value: statistics.trueCount,
+            },
+            {
+              fullLabel: "False",
+              truncatedLabel: "False",
+              value: statistics.falseCount,
+            },
           ],
           theme
         )
@@ -316,6 +328,12 @@ function StatisticsChart({
 
   return (
     <>
+      {/*
+       * Global styles raise the z-index of #vg-tooltip-element for all Vega charts
+       * while this component is mounted. This is a global side effect, but only one
+       * tooltip is visible at a time, and the elevated z-index is required for tooltips
+       * to appear above the column menu portal. See createPopoverTooltipStyles() for details.
+       */}
       <Global styles={tooltipStyles} />
       <StyledStatisticsChart
         ref={chartRef}

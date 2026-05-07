@@ -56,24 +56,15 @@ export interface StatisticsMenuProps {
 
 /**
  * Format a number for display in statistics.
+ * Uses toLocaleString consistently for all numbers to respect locale decimal separators.
  */
 function formatNumber(value: number, precision = 2): string {
   if (!Number.isFinite(value)) return "-"
 
-  // Use locale formatting for large numbers
-  if (Math.abs(value) >= 1000) {
-    return value.toLocaleString(undefined, {
-      maximumFractionDigits: precision,
-    })
-  }
-
-  // For small numbers, use fixed precision
-  // Remove trailing zeros only after a decimal point
-  const fixed = value.toFixed(precision)
-  if (fixed.includes(".")) {
-    return fixed.replace(/\.?0+$/, "")
-  }
-  return fixed
+  return value.toLocaleString(undefined, {
+    maximumFractionDigits: precision,
+    minimumFractionDigits: 0,
+  })
 }
 
 /**
@@ -300,10 +291,9 @@ function getNullOrEmptyCount(statistics: ColumnStatistics): number {
 function getReducedMetricRows(statistics: ColumnStatistics): MetricRow[] {
   const emptyCount = getNullOrEmptyCount(statistics)
   const emptyPct = computeEmptyPercentage(statistics.count, emptyCount)
-  const label = statistics.type === "text" ? "Empty" : "Empty"
   return [
     { label: "Values", value: formatNumber(statistics.count, 0) },
-    { label, value: formatCountWithPercent(emptyCount, emptyPct) },
+    { label: "Empty", value: formatCountWithPercent(emptyCount, emptyPct) },
   ]
 }
 

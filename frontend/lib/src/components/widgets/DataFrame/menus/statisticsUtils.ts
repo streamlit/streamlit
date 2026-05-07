@@ -513,7 +513,7 @@ function computeDateRange(minTimestamp: number, maxTimestamp: number): string {
   const diffMonths = diffDays / 30.44 // Average days per month
   const diffYears = diffDays / 365.25
 
-  if (diffYears >= 1) return formatTimeUnit(diffYears, "year")
+  if (diffYears >= 1) return formatTimeUnit(Math.round(diffYears), "year")
   if (diffMonths >= 1) return formatTimeUnit(Math.round(diffMonths), "month")
   if (diffWeeks >= 1) return formatTimeUnit(Math.round(diffWeeks), "week")
   if (diffDays >= 1) return formatTimeUnit(Math.round(diffDays), "day")

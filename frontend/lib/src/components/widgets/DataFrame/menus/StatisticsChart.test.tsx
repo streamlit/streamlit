@@ -266,9 +266,12 @@ describe("StatisticsChart", () => {
 
     const [, spec] = mockEmbed.mock.calls[0] as [
       unknown,
-      { data: { values: { label: string }[] } },
+      { data: { values: { fullLabel: string; truncatedLabel: string }[] } },
     ]
     const chartData = spec.data.values
-    expect(chartData[0].label).toBe("this is a very …")
+    expect(chartData[0].truncatedLabel).toBe("this is a very …")
+    expect(chartData[0].fullLabel).toBe(
+      "this is a very long value that should be truncated"
+    )
   })
 })
