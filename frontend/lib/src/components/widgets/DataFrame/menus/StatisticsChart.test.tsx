@@ -19,7 +19,7 @@ import { screen, waitFor } from "@testing-library/react"
 import { render } from "~lib/test_util"
 
 import StatisticsChart from "./StatisticsChart"
-import {
+import type {
   BooleanStatistics,
   DateTimeStatistics,
   NumericStatistics,

@@ -253,14 +253,9 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
 }
 
 /**
- * Render statistics metrics based on type.
+ * Render statistics metrics from a list of rows.
  */
-function StatisticsMetrics({
-  statistics,
-}: {
-  statistics: ColumnStatistics
-}): ReactElement {
-  const rows = getMetricRows(statistics)
+function MetricsDisplay({ rows }: { rows: MetricRow[] }): ReactElement {
   return (
     <StyledStatisticsMetrics data-testid="stDataFrameStatisticsMetrics">
       {rows.map(row => (
@@ -298,24 +293,6 @@ function getReducedMetricRows(statistics: ColumnStatistics): MetricRow[] {
 }
 
 /**
- * Render reduced statistics metrics (for all-null/empty columns).
- */
-function ReducedStatisticsMetrics({
-  statistics,
-}: {
-  statistics: ColumnStatistics
-}): ReactElement {
-  const rows = getReducedMetricRows(statistics)
-  return (
-    <StyledStatisticsMetrics data-testid="stDataFrameStatisticsMetrics">
-      {rows.map(row => (
-        <StatisticsRow key={row.label} label={row.label} value={row.value} />
-      ))}
-    </StyledStatisticsMetrics>
-  )
-}
-
-/**
  * Statistics content displayed in the submenu.
  */
 function StatisticsContent({
@@ -333,7 +310,7 @@ function StatisticsContent({
     if (emptyCount > 0) {
       return (
         <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
-          <ReducedStatisticsMetrics statistics={statistics} />
+          <MetricsDisplay rows={getReducedMetricRows(statistics)} />
         </StyledStatisticsContainer>
       )
     }
@@ -343,7 +320,7 @@ function StatisticsContent({
   return (
     <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
       <StatisticsChart statistics={statistics} />
-      <StatisticsMetrics statistics={statistics} />
+      <MetricsDisplay rows={getMetricRows(statistics)} />
       {statistics.isSampled && (
         <StyledStatisticsNote>Based on sample</StyledStatisticsNote>
       )}

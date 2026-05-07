@@ -112,10 +112,6 @@ function ColumnMenu({
     }
   }, [])
 
-  const closeMenu = useCallback((): void => {
-    onCloseMenu()
-  }, [onCloseMenu])
-
   const handleCopyNameToClipboard = useCallback((): void => {
     copyToClipboard(column.title)
   }, [column.title, copyToClipboard])
@@ -155,7 +151,7 @@ function ColumnMenu({
               <StyledMenuListItem
                 onClick={() => {
                   onSortColumn("asc")
-                  closeMenu()
+                  onCloseMenu()
                 }}
                 role="menuitem"
               >
@@ -165,7 +161,7 @@ function ColumnMenu({
               <StyledMenuListItem
                 onClick={() => {
                   onSortColumn("desc")
-                  closeMenu()
+                  onCloseMenu()
                 }}
                 role="menuitem"
               >
@@ -211,7 +207,7 @@ function ColumnMenu({
               onMouseEnter={() => setFormatMenuOpen(true)}
               onMouseLeave={() => setFormatMenuOpen(false)}
               onChangeFormat={onChangeFormat}
-              onCloseMenu={closeMenu}
+              onCloseMenu={onCloseMenu}
             >
               <StyledMenuListItem
                 onMouseEnter={() => setFormatMenuOpen(true)}
@@ -239,7 +235,7 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onAutosize()
-                closeMenu()
+                onCloseMenu()
               }}
               role="menuitem"
             >
@@ -251,7 +247,7 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onUnpinColumn()
-                closeMenu()
+                onCloseMenu()
               }}
               role="menuitem"
             >
@@ -263,7 +259,7 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onPinColumn()
-                closeMenu()
+                onCloseMenu()
               }}
               role="menuitem"
             >
@@ -275,7 +271,7 @@ function ColumnMenu({
             <StyledMenuListItem
               onClick={() => {
                 onHideColumn()
-                closeMenu()
+                onCloseMenu()
               }}
               role="menuitem"
             >
@@ -290,9 +286,9 @@ function ColumnMenu({
       showArrow={false}
       popoverMargin={convertRemToPx("0.375rem")}
       onClickOutside={
-        !formatMenuOpen && !statsMenuOpen ? closeMenu : undefined
+        !formatMenuOpen && !statsMenuOpen ? onCloseMenu : undefined
       }
-      onEsc={closeMenu}
+      onEsc={onCloseMenu}
       overrides={{
         Body: {
           props: {

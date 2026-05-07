@@ -26,13 +26,7 @@ import { StyledVegaLiteChartTooltips } from "~lib/components/elements/ArrowVegaL
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import type { EmotionTheme } from "~lib/theme/types"
 
-import {
-  BooleanStatistics,
-  DateTimeStatistics,
-  HistogramBin,
-  NumericStatistics,
-  TextStatistics,
-} from "./statisticsUtils"
+import { ColumnStatistics, HistogramBin } from "./statisticsUtils"
 import { StyledStatisticsChart } from "./styled-components"
 
 /** Chart width in pixels. */
@@ -104,11 +98,7 @@ function formatTooltipDate(timestamp: number, includeTime = false): string {
 }
 
 interface StatisticsChartProps {
-  statistics:
-    | NumericStatistics
-    | TextStatistics
-    | DateTimeStatistics
-    | BooleanStatistics
+  statistics: ColumnStatistics
 }
 
 /**
