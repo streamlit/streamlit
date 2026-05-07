@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-import { useCallback, useState } from "react"
+import { useCallback, useMemo, useState } from "react"
 
 import styled from "@emotion/styled"
+import { Check, Close, Edit } from "@emotion-icons/material-outlined"
 import {
   type CustomCell,
   type CustomRenderer,
@@ -24,9 +25,10 @@ import {
   GridCellKind,
   type ProvideEditorCallback,
 } from "@glideapps/glide-data-grid"
-import { Check, Edit2, X } from "react-feather"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { StyledToolbar } from "~lib/components/shared/Toolbar/styled-components"
+import { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { removeLineBreaks } from "~lib/components/widgets/DataFrame/columns/utils"
 
 interface MarkdownCellProps {
@@ -52,125 +54,113 @@ const StyledContainer = styled.div`
   font-size: var(--gdg-editor-font-size);
 `
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledOverlayButtons = styled.div`
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  display: flex;
-  gap: 4px;
-  opacity: 0.4;
-  transition: opacity 0.15s ease;
-  z-index: 1;
+const TOOLBAR_OPACITY_TRANSITION = "opacity 300ms 150ms"
+const TOOLBAR_HIDE_TRANSITION = `${TOOLBAR_OPACITY_TRANSITION}, visibility 0ms linear 450ms`
+const TOOLBAR_SHOW_TRANSITION = `${TOOLBAR_OPACITY_TRANSITION}, visibility 0ms linear 150ms`
 
-  ${StyledContainer}:hover &,
-  ${StyledContainer}:focus-within & {
-    opacity: 1;
-  }
-`
+interface StyledToolbarWrapperProps {
+  locked?: boolean
+}
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledIconButton = styled.button`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  background-color: var(--gdg-bg-bubble);
-  color: var(--gdg-text-dark);
-  cursor: pointer;
-  transition:
-    background-color 0.15s ease,
-    transform 0.1s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
+  ({ theme, locked }) => ({
+    opacity: locked ? 1 : 0,
+    visibility: locked ? "visible" : "hidden",
+    padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
+    top: 0,
+    right: 0,
+    position: "absolute",
+    zIndex: theme.zIndices.sidebar + 1,
+    pointerEvents: locked ? "auto" : "none",
+    transition: locked ? TOOLBAR_SHOW_TRANSITION : TOOLBAR_HIDE_TRANSITION,
+  })
+)
 
-  &:hover {
-    background-color: var(--gdg-accent-light);
-    transform: scale(1.05);
-  }
+const StyledCellToolbar = styled(StyledToolbar)({
+  pointerEvents: "auto",
+})
 
-  &:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px var(--gdg-accent-color);
-  }
-`
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
+const StyledMarkdownViewer = styled.div({
+  position: "relative",
+  flex: 1,
+  overflowY: "auto",
+  padding: "16px",
+  paddingBottom: "24px",
+  backgroundColor: "var(--gdg-bg-cell)",
+  color: "var(--gdg-text-dark)",
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledMarkdownViewer = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-  padding-bottom: 24px;
-  background-color: var(--gdg-bg-cell);
-  color: var(--gdg-text-dark);
+  // Show toolbar on hover/focus
+  "&:hover, &:focus-visible, &:focus-within:has(:focus-visible)": {
+    [`.stMarkdownCellToolbar`]: {
+      opacity: 1,
+      visibility: "visible",
+      pointerEvents: "auto",
+      transition: TOOLBAR_SHOW_TRANSITION,
+    },
+  },
 
-  /* Apply styles to markdown content */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
-    margin-top: 0;
-    margin-bottom: 0.5em;
-  }
+  // Apply styles to markdown content
+  "h1, h2, h3, h4, h5, h6": {
+    marginTop: 0,
+    marginBottom: "0.5em",
+  },
 
-  p {
-    margin-top: 0;
-    margin-bottom: 0.5em;
-  }
+  p: {
+    marginTop: 0,
+    marginBottom: "0.5em",
+  },
 
-  ul,
-  ol {
-    margin-top: 0;
-    margin-bottom: 0.5em;
-    padding-left: 1.5em;
-  }
+  "ul, ol": {
+    marginTop: 0,
+    marginBottom: "0.5em",
+    paddingLeft: "1.5em",
+  },
 
-  /* Inline code */
-  code {
-    padding: 0.2em 0.4em;
-    border-radius: 3px;
-    background-color: var(--gdg-bg-bubble);
-    font-size: 0.9em;
-    font-family:
-      "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-  }
+  // Inline code
+  code: {
+    padding: "0.2em 0.4em",
+    borderRadius: "3px",
+    backgroundColor: "var(--gdg-bg-bubble)",
+    fontSize: "0.9em",
+    fontFamily:
+      '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace',
+  },
 
-  /* Code blocks - reset the pre and nested code styles */
-  pre {
-    padding: 0.75em 1em;
-    margin: 0.5em 0;
-    border-radius: 4px;
-    background-color: var(--gdg-bg-bubble);
-    overflow-x: auto;
-    font-family:
-      "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-    font-size: 0.875em;
-    line-height: 1.5;
+  // Code blocks - reset the pre and nested code styles
+  pre: {
+    padding: "0.75em 1em",
+    margin: "0.5em 0",
+    borderRadius: "4px",
+    backgroundColor: "var(--gdg-bg-bubble)",
+    overflowX: "auto",
+    fontFamily:
+      '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace',
+    fontSize: "0.875em",
+    lineHeight: 1.5,
 
-    /* Reset code styles inside pre */
-    code {
-      padding: 0;
-      background-color: transparent;
-      font-size: inherit;
-      border-radius: 0;
-    }
-  }
+    // Reset code styles inside pre
+    code: {
+      padding: 0,
+      backgroundColor: "transparent",
+      fontSize: "inherit",
+      borderRadius: 0,
+    },
+  },
 
-  a {
-    color: var(--gdg-accent-color);
-    text-decoration: underline;
-  }
+  a: {
+    color: "var(--gdg-accent-color)",
+    textDecoration: "underline",
+  },
 
-  blockquote {
-    margin: 0.5em 0;
-    padding-left: 1em;
-    border-left: 3px solid var(--gdg-border-color);
-    color: var(--gdg-text-medium);
-  }
-`
+  blockquote: {
+    margin: "0.5em 0",
+    paddingLeft: "1em",
+    borderLeft: "3px solid var(--gdg-border-color)",
+    color: "var(--gdg-text-medium)",
+  },
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
 const StyledTextarea = styled.textarea`
@@ -208,6 +198,11 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(cell.data.value ?? "")
 
+  const isTouchDevice = useMemo<boolean>(
+    () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
+    []
+  )
+
   const handleSave = useCallback(() => {
     onChange({
       ...cell,
@@ -243,22 +238,20 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   if (isEditing) {
     return (
       <StyledContainer data-testid="markdown-cell-editor">
-        <StyledOverlayButtons style={{ opacity: 1 }}>
-          <StyledIconButton
-            onClick={handleSave}
-            title="Save (Ctrl+Enter)"
-            aria-label="Save"
-          >
-            <Check size={16} aria-hidden="true" />
-          </StyledIconButton>
-          <StyledIconButton
-            onClick={handleCancel}
-            title="Cancel (Escape)"
-            aria-label="Cancel"
-          >
-            <X size={16} aria-hidden="true" />
-          </StyledIconButton>
-        </StyledOverlayButtons>
+        <StyledToolbarWrapper locked>
+          <StyledCellToolbar>
+            <ToolbarAction
+              label="Save (Ctrl+Enter)"
+              icon={Check}
+              onClick={handleSave}
+            />
+            <ToolbarAction
+              label="Cancel (Escape)"
+              icon={Close}
+              onClick={handleCancel}
+            />
+          </StyledCellToolbar>
+        </StyledToolbarWrapper>
         <StyledTextarea
           value={editValue}
           onChange={e => setEditValue(e.target.value)}
@@ -275,18 +268,21 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
 
   return (
     <StyledContainer data-testid="markdown-cell-viewer">
-      {!cell.readonly && (
-        <StyledOverlayButtons>
-          <StyledIconButton
-            onClick={() => setIsEditing(true)}
-            title="Edit"
-            aria-label="Edit"
-          >
-            <Edit2 size={16} aria-hidden="true" />
-          </StyledIconButton>
-        </StyledOverlayButtons>
-      )}
       <StyledMarkdownViewer>
+        {!cell.readonly && (
+          <StyledToolbarWrapper
+            className="stMarkdownCellToolbar"
+            locked={isTouchDevice}
+          >
+            <StyledCellToolbar>
+              <ToolbarAction
+                label="Edit"
+                icon={Edit}
+                onClick={() => setIsEditing(true)}
+              />
+            </StyledCellToolbar>
+          </StyledToolbarWrapper>
+        )}
         {hasContent ? (
           <StreamlitMarkdown
             source={cell.data.value ?? ""}
