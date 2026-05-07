@@ -139,9 +139,11 @@ def check_fragment_path_policy(dg: DeltaGenerator) -> None:
     """
 
     ctx = get_script_run_ctx()
+    if ctx is None:
+        return
+
     ts = get_fragment_thread_state()
-    # Check is only relevant for fragments
-    if ctx is None or ts.fragment_id is None:
+    if ts.fragment_id is None:
         return
 
     current_fragment_delta_path = ts.delta_path
