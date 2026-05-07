@@ -538,7 +538,10 @@ def _is_zero_delta(delta: Delta) -> bool:
     if delta is None or delta == "":
         return False
     try:
-        match = re.search(r"-?\d*\.?\d+", str(delta))
+
+        delta_str = dedent(str(delta)).strip()
+        match = re.match(r"-?\d*\.?\d+", delta_str)
         return bool(match and float(match.group()) == 0)
+
     except ValueError:
         return False
