@@ -20,6 +20,7 @@ import {
   ReactElement,
   useCallback,
   useEffect,
+  useRef,
 } from "react"
 
 import { ACCESSIBILITY_TYPE, PLACEMENT, Popover } from "baseui/popover"
@@ -64,6 +65,25 @@ function ButtonActionMenu({
 }: ButtonActionMenuProps): ReactElement {
   const theme = useEmotionTheme()
   const { colors, fontSizes, fontWeights } = theme
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close the menu when clicking outside. We use a global mousedown listener
+  // because BaseWeb's onClickOutside doesn't work reliably with canvas elements
+  // like glide-data-grid.
+  useEffect(() => {
+    function handleMouseDown(event: MouseEvent): void {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        onCloseMenu()
+      }
+    }
+
+    // Use mousedown instead of click to close before other handlers fire
+    document.addEventListener("mousedown", handleMouseDown)
+
+    return () => {
+      document.removeEventListener("mousedown", handleMouseDown)
+    }
+  }, [onCloseMenu])
 
   // Close the menu when scrolling occurs, since the fixed-position anchor
   // would become misaligned with the cell. This is more user-friendly than
@@ -105,7 +125,7 @@ function ButtonActionMenu({
     <Popover
       aria-label="Button action menu"
       content={
-        <StyledMenuList role="menu">
+        <StyledMenuList ref={menuRef} role="menu">
           {actions.map((label, index) => {
             const { icon, text } = extractLeadingMaterialIcon(label)
             return (
