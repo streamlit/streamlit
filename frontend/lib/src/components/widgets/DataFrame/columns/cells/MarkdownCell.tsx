@@ -41,18 +41,23 @@ interface MarkdownCellProps {
 
 export type MarkdownCell = CustomCell<MarkdownCellProps>
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledContainer = styled.div`
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  height: 100%;
-  min-height: 200px;
-  max-height: 400px;
-  font-family: var(--gdg-font-family);
-  font-size: var(--gdg-editor-font-size);
-`
+interface StyledContainerProps {
+  isEditing?: boolean
+}
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
+const StyledContainer = styled.div<StyledContainerProps>(({ isEditing }) => ({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  width: isEditing ? "min(37.5rem, 80vw)" : "100%",
+  height: "100%",
+  minHeight: isEditing ? "18.75rem" : "12.5rem",
+  maxHeight: isEditing ? "min(31.25rem, 70vh)" : "25rem",
+  fontFamily: "var(--gdg-font-family)",
+  fontSize: "var(--gdg-editor-font-size)",
+}))
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 const TOOLBAR_OPACITY_TRANSITION = "opacity 300ms 150ms"
 const TOOLBAR_HIDE_TRANSITION = `${TOOLBAR_OPACITY_TRANSITION}, visibility 0ms linear 450ms`
@@ -81,12 +86,12 @@ const StyledCellToolbar = styled(StyledToolbar)({
 })
 
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
-const StyledMarkdownViewer = styled.div({
+const StyledMarkdownViewer = styled.div(({ theme }) => ({
   position: "relative",
   flex: 1,
   overflowY: "auto",
-  padding: "16px",
-  paddingBottom: "24px",
+  padding: theme.spacing.lg,
+  paddingBottom: theme.spacing.twoXL,
   backgroundColor: "var(--gdg-bg-cell)",
   color: "var(--gdg-text-dark)",
 
@@ -120,7 +125,7 @@ const StyledMarkdownViewer = styled.div({
   // Inline code
   code: {
     padding: "0.2em 0.4em",
-    borderRadius: "3px",
+    borderRadius: theme.radii.sm,
     backgroundColor: "var(--gdg-bg-bubble)",
     fontSize: "0.9em",
     fontFamily:
@@ -131,7 +136,7 @@ const StyledMarkdownViewer = styled.div({
   pre: {
     padding: "0.75em 1em",
     margin: "0.5em 0",
-    borderRadius: "4px",
+    borderRadius: theme.radii.sm,
     backgroundColor: "var(--gdg-bg-bubble)",
     overflowX: "auto",
     fontFamily:
@@ -156,30 +161,38 @@ const StyledMarkdownViewer = styled.div({
   blockquote: {
     margin: "0.5em 0",
     paddingLeft: "1em",
-    borderLeft: "3px solid var(--gdg-border-color)",
+    borderLeft: `${theme.radii.sm} solid var(--gdg-border-color)`,
     color: "var(--gdg-text-medium)",
   },
-})
+}))
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledTextarea = styled.textarea`
-  flex: 1;
-  padding: 16px;
-  padding-bottom: 24px;
-  border: none;
-  resize: none;
-  background-color: var(--gdg-bg-cell);
-  color: var(--gdg-text-dark);
-  font-family:
-    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-  font-size: var(--gdg-editor-font-size);
-  line-height: 1.5;
+const StyledEditWrapper = styled.div({
+  position: "relative",
+  display: "flex",
+  flexDirection: "column",
+  flex: 1,
+})
 
-  &:focus {
-    outline: none;
-  }
-`
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
+const StyledTextarea = styled.textarea(({ theme }) => ({
+  flex: 1,
+  padding: theme.spacing.lg,
+  paddingBottom: theme.spacing.twoXL,
+  border: "none",
+  resize: "none",
+  backgroundColor: "var(--gdg-bg-cell)",
+  color: "var(--gdg-text-dark)",
+  fontFamily:
+    '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace',
+  fontSize: "var(--gdg-editor-font-size)",
+  lineHeight: 1.5,
+
+  "&:focus": {
+    outline: "none",
+  },
+}))
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
 const StyledEmptyMessage = styled.div`
@@ -237,29 +250,31 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
 
   if (isEditing) {
     return (
-      <StyledContainer data-testid="markdown-cell-editor">
-        <StyledToolbarWrapper locked>
-          <StyledCellToolbar>
-            <ToolbarAction
-              label="Save (Ctrl+Enter)"
-              icon={Check}
-              onClick={handleSave}
-            />
-            <ToolbarAction
-              label="Cancel (Escape)"
-              icon={Close}
-              onClick={handleCancel}
-            />
-          </StyledCellToolbar>
-        </StyledToolbarWrapper>
-        <StyledTextarea
-          value={editValue}
-          onChange={e => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoFocus
-          placeholder="Enter markdown text..."
-          aria-label="Edit markdown content"
-        />
+      <StyledContainer data-testid="markdown-cell-editor" isEditing>
+        <StyledEditWrapper>
+          <StyledToolbarWrapper locked>
+            <StyledCellToolbar>
+              <ToolbarAction
+                label="Save (Ctrl+Enter)"
+                icon={Check}
+                onClick={handleSave}
+              />
+              <ToolbarAction
+                label="Cancel (Escape)"
+                icon={Close}
+                onClick={handleCancel}
+              />
+            </StyledCellToolbar>
+          </StyledToolbarWrapper>
+          <StyledTextarea
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            placeholder="Enter markdown text..."
+            aria-label="Edit markdown content"
+          />
+        </StyledEditWrapper>
       </StyledContainer>
     )
   }
