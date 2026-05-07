@@ -82,12 +82,13 @@ const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
 )
 
 // eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledEditToolbarRow = styled.div(({ theme }) => ({
+const StyledTextareaWrapper = styled.div({
+  position: "relative",
   display: "flex",
-  justifyContent: "flex-end",
-  padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 ${theme.spacing.sm}`,
+  flexDirection: "column",
+  flex: 1,
   backgroundColor: "var(--gdg-bg-cell)",
-}))
+})
 
 const StyledCellToolbar = styled(StyledToolbar)({
   pointerEvents: "auto",
@@ -252,28 +253,30 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   if (isEditing) {
     return (
       <StyledContainer data-testid="markdown-cell-editor" isEditing>
-        <StyledEditToolbarRow>
-          <StyledCellToolbar>
-            <ToolbarAction
-              label="Save (Ctrl+Enter)"
-              icon={Check}
-              onClick={handleSave}
-            />
-            <ToolbarAction
-              label="Cancel (Escape)"
-              icon={Close}
-              onClick={handleCancel}
-            />
-          </StyledCellToolbar>
-        </StyledEditToolbarRow>
-        <StyledTextarea
-          value={editValue}
-          onChange={e => setEditValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          autoFocus
-          placeholder="Enter markdown text..."
-          aria-label="Edit markdown content"
-        />
+        <StyledTextareaWrapper>
+          <StyledToolbarWrapper locked>
+            <StyledCellToolbar>
+              <ToolbarAction
+                label="Save (Ctrl+Enter)"
+                icon={Check}
+                onClick={handleSave}
+              />
+              <ToolbarAction
+                label="Cancel (Escape)"
+                icon={Close}
+                onClick={handleCancel}
+              />
+            </StyledCellToolbar>
+          </StyledToolbarWrapper>
+          <StyledTextarea
+            value={editValue}
+            onChange={e => setEditValue(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoFocus
+            placeholder="Enter markdown text..."
+            aria-label="Edit markdown content"
+          />
+        </StyledTextareaWrapper>
       </StyledContainer>
     )
   }
