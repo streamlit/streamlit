@@ -73,11 +73,16 @@ function ButtonActionMenu({
   useEffect(() => {
     function handleMouseDown(event: MouseEvent): void {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        // If clicking inside the DataFrame, let the grid's button click handler
+        // manage menu state (it closes the current menu and opens a new one if needed)
+        const target = event.target as Element
+        if (target.closest('[data-testid^="stDataFrame"]')) {
+          return
+        }
         onCloseMenu()
       }
     }
 
-    // Use mousedown instead of click to close before other handlers fire
     document.addEventListener("mousedown", handleMouseDown)
 
     return () => {
