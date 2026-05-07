@@ -16,7 +16,13 @@ from __future__ import annotations
 
 import json
 import pickle  # noqa: S403
-from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Iterator,
+    KeysView,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -238,7 +244,7 @@ class WStates(MutableMapping[str, Any]):
 
     def remove_stale_widgets(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
@@ -857,13 +863,13 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.
 
         Parameters
         ----------
-        widget_ids_this_run: set[str]
+        widget_ids_this_run: frozenset[str]
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
@@ -897,7 +903,7 @@ class SessionState:
                 }:
                     self._old_state[state_id] = None
 
-    def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
+    def _remove_stale_widgets(self, active_widget_ids: frozenset[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -1294,7 +1300,7 @@ def _is_internal_key(key: str) -> bool:
 
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
-    active_widget_ids: set[str],
+    active_widget_ids: frozenset[str],
     fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:

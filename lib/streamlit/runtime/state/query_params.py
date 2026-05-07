@@ -768,7 +768,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def remove_stale_bindings(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None = None,
         widget_metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -782,7 +782,7 @@ class QueryParams(MutableMapping[str, str]):
 
         Parameters
         ----------
-        active_widget_ids : set[str]
+        active_widget_ids : frozenset[str]
             Set of widget IDs that are currently active/rendered.
         fragment_ids_this_run : list[str] | None
             List of fragment IDs being run, or None for full script runs.

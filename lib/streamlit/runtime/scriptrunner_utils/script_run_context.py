@@ -34,6 +34,7 @@ from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
 )
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -99,14 +100,14 @@ class ScriptRunContext:
         default_factory=collections.Counter
     )
     _has_script_started: bool = False
-    widget_ids_this_run: set[str] = field(default_factory=set)
-    widget_user_keys_this_run: set[str] = field(default_factory=set)
-    form_ids_this_run: set[str] = field(default_factory=set)
+    widget_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
+    widget_user_keys_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
+    form_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
-    new_fragment_ids: set[str] = field(default_factory=set)
+    new_fragment_ids: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     in_fragment_callback: bool = False
     _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
@@ -150,9 +151,9 @@ class ScriptRunContext:
         is_same_page = self.page_script_hash == page_script_hash
 
         self.cursors = {}
-        self.widget_ids_this_run = set()
-        self.widget_user_keys_this_run = set()
-        self.form_ids_this_run = set()
+        self.widget_ids_this_run.clear()
+        self.widget_user_keys_this_run.clear()
+        self.form_ids_this_run.clear()
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
@@ -164,7 +165,7 @@ class ScriptRunContext:
         self.current_fragment_id = None
         self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
-        self.new_fragment_ids = set()
+        self.new_fragment_ids.clear()
         self.has_dialog_opened = False
         self.cached_message_hashes = cached_message_hashes or set()
 
