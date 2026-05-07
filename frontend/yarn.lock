@@ -3641,7 +3641,7 @@ __metadata:
     node-emoji: "npm:^2.2.0"
     node-fetch: "npm:3.3.2"
     numbro: "npm:^2.5.0"
-    plotly.js: "npm:^3.5.0"
+    plotly.js: "npm:^3.5.1"
     postinstall-postinstall: "npm:^2.1.0"
     protobufjs: "npm:^8.0.3"
     query-string: "npm:^9.3.1"
@@ -6578,15 +6578,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"canvas-fit@npm:^1.5.0":
-  version: 1.5.0
-  resolution: "canvas-fit@npm:1.5.0"
-  dependencies:
-    element-size: "npm:^1.1.1"
-  checksum: 10c0/9d85ce4c205e7edf87fa6281891780e1f62c0ffc62b4e4b16f3d27960e2b81cb05e340b21068bd35ea63651c5f343f3c0af981e40cd2f9a42bc6c7e387248bbb
-  languageName: node
-  linkType: hard
-
 "canvas-hypertxt@npm:^1.0.3":
   version: 1.0.3
   resolution: "canvas-hypertxt@npm:1.0.3"
@@ -6818,15 +6809,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color-alpha@npm:1.0.4":
-  version: 1.0.4
-  resolution: "color-alpha@npm:1.0.4"
-  dependencies:
-    color-parse: "npm:^1.3.8"
-  checksum: 10c0/dd78453f9c9fc20e9303d085357594abe26ec5ea644d87ef21d6bd61e1eaf02e324d43efaa00dd68af2b7e551f4bc53c11dafd9556835c3707a7b29623053842
-  languageName: node
-  linkType: hard
-
 "color-alpha@npm:^1.0.4":
   version: 1.1.3
   resolution: "color-alpha@npm:1.1.3"
@@ -6889,16 +6871,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color-parse@npm:2.0.0":
-  version: 2.0.0
-  resolution: "color-parse@npm:2.0.0"
-  dependencies:
-    color-name: "npm:^1.0.0"
-  checksum: 10c0/f489deaea5bb323e05f41436d747e22bbb45928420fce8a989c209a4baa71c7ee90f8b43298d9565844af1d02580743d5d87b506519f755b4b218df6b72eb4a0
-  languageName: node
-  linkType: hard
-
-"color-parse@npm:^1.3.8, color-parse@npm:^1.4.1, color-parse@npm:^1.4.2":
+"color-parse@npm:^1.4.1, color-parse@npm:^1.4.2":
   version: 1.4.3
   resolution: "color-parse@npm:1.4.3"
   dependencies:
@@ -8666,13 +8639,6 @@ __metadata:
   version: 1.5.54
   resolution: "electron-to-chromium@npm:1.5.54"
   checksum: 10c0/e37ebadc832de1548045ca8b415f96539f4a2fad74a81c25d81ef3c161793443bf2ebbc0c5abd9a7fa4f42ba50cb2af4912c77177806b7dc904a5050409048ac
-  languageName: node
-  linkType: hard
-
-"element-size@npm:^1.1.1":
-  version: 1.1.1
-  resolution: "element-size@npm:1.1.1"
-  checksum: 10c0/517560f4e0b2dbd0adfe5660bb2572625f605a6268e7983cf96c7584538bef8733fd34e213dc5f653eaea9db5c38069d6e7a3ab960f03c460bcd51e42ee1554d
   languageName: node
   linkType: hard
 
@@ -13722,37 +13688,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mouse-change@npm:^1.4.0":
-  version: 1.4.0
-  resolution: "mouse-change@npm:1.4.0"
-  dependencies:
-    mouse-event: "npm:^1.0.0"
-  checksum: 10c0/e500b88fe23cceaee41d2e5120b91776b983767303ec307b113e88590b414638408dfc692e31a1b64f7bddc211e5b6c74fc9a3af8067ae7ca52202c7b42f2926
-  languageName: node
-  linkType: hard
-
 "mouse-event-offset@npm:^3.0.2":
   version: 3.0.2
   resolution: "mouse-event-offset@npm:3.0.2"
   checksum: 10c0/999a9f85082258fbd5a0478f54dbe4e6f064c13dae486e6fb39e5ebf73d81ee339f919c9ff7eb14819b6fd0e0f440f77506115e783582889f05549b2d9a1d2ef
-  languageName: node
-  linkType: hard
-
-"mouse-event@npm:^1.0.0":
-  version: 1.0.5
-  resolution: "mouse-event@npm:1.0.5"
-  checksum: 10c0/b8da3570537a08279ae19f5f4417b7814de0271c89ea4d5746d97f3de50abd62dd4499c0fca6c5ca2af7f8ddb79986493dfd2082669aab87783558adf2d56761
-  languageName: node
-  linkType: hard
-
-"mouse-wheel@npm:^1.2.0":
-  version: 1.2.0
-  resolution: "mouse-wheel@npm:1.2.0"
-  dependencies:
-    right-now: "npm:^1.0.0"
-    signum: "npm:^1.0.0"
-    to-px: "npm:^1.0.1"
-  checksum: 10c0/a5710b0fa46d7465ad22146b5c43ab4475567eaee7d697936c6be751e05dad3e3433a069735bcdcd09b44de9f1cfd2223eb3e28a7a71e83ecfc3fdbeb3f064d7
   languageName: node
   linkType: hard
 
@@ -14838,9 +14777,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"plotly.js@npm:^3.5.0":
-  version: 3.5.0
-  resolution: "plotly.js@npm:3.5.0"
+"plotly.js@npm:^3.5.1":
+  version: 3.5.1
+  resolution: "plotly.js@npm:3.5.1"
   dependencies:
     "@plotly/d3": "npm:3.8.2"
     "@plotly/d3-sankey": "npm:0.7.2"
@@ -14851,10 +14790,7 @@ __metadata:
     "@turf/bbox": "npm:^7.1.0"
     "@turf/centroid": "npm:^7.1.0"
     base64-arraybuffer: "npm:^1.0.2"
-    canvas-fit: "npm:^1.5.0"
-    color-alpha: "npm:1.0.4"
     color-normalize: "npm:1.5.0"
-    color-parse: "npm:2.0.0"
     color-rgba: "npm:3.0.0"
     country-regex: "npm:^1.1.0"
     d3-force: "npm:^1.2.1"
@@ -14872,9 +14808,7 @@ __metadata:
     has-passive-events: "npm:^1.0.0"
     is-mobile: "npm:^4.0.0"
     maplibre-gl: "npm:^4.7.1"
-    mouse-change: "npm:^1.4.0"
     mouse-event-offset: "npm:^3.0.2"
-    mouse-wheel: "npm:^1.2.0"
     native-promise-only: "npm:^0.8.1"
     parse-svg-path: "npm:^0.1.2"
     point-in-polygon: "npm:^1.1.0"
@@ -14885,14 +14819,12 @@ __metadata:
     regl-scatter2d: "npm:^3.3.1"
     regl-splom: "npm:^1.0.14"
     strongly-connected-components: "npm:^1.0.1"
-    superscript-text: "npm:^1.0.0"
     svg-path-sdf: "npm:^1.1.3"
     tinycolor2: "npm:^1.4.2"
-    to-px: "npm:1.0.1"
     topojson-client: "npm:^3.1.0"
     webgl-context: "npm:^2.2.0"
     world-calendars: "npm:^1.0.4"
-  checksum: 10c0/5247d4be5fb39268d14b95fa3d4d278f56bbd35c01b53b71eb331208c66d936044ef42dd2e3b2574987171fc1d04bdb7cf53e5dce1a113f19ef2f0bf80aaacaa
+  checksum: 10c0/37b9f84bb2b52e13a3e778dca69c2478e321190e5e44084f003321e65b9f444f67bcd0c1f8114cb7e420bc0ca9344bf4eb34974400c94dc67c0f59534f21d529
   languageName: node
   linkType: hard
 
@@ -16333,13 +16265,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"right-now@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "right-now@npm:1.0.0"
-  checksum: 10c0/e7a7e95d490e05816643adb99ce5bcbd726f39abc56f5da6e2d148fcd81803fd1320d80e03f186d8ac02a1b07116a777660897574cfc5c9c08e65e6f7f015a17
-  languageName: node
-  linkType: hard
-
 "rimraf@npm:~2.6.2":
   version: 2.6.3
   resolution: "rimraf@npm:2.6.3"
@@ -16732,13 +16657,6 @@ __metadata:
   version: 4.1.0
   resolution: "signal-exit@npm:4.1.0"
   checksum: 10c0/41602dce540e46d599edba9d9860193398d135f7ff72cab629db5171516cfae628d21e7bfccde1bbfdf11c48726bc2a6d1a8fb8701125852fbfda7cf19c6aa83
-  languageName: node
-  linkType: hard
-
-"signum@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "signum@npm:1.0.0"
-  checksum: 10c0/e29582d673f0e2f3b2345f7e795f2c2be192e353f80371ed79631a0708f0200dd4db7997636b51b818007cd426da156becee3316ff9fa5c63004ce672162c74b
   languageName: node
   linkType: hard
 
@@ -17414,13 +17332,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"superscript-text@npm:^1.0.0":
-  version: 1.0.0
-  resolution: "superscript-text@npm:1.0.0"
-  checksum: 10c0/0d4dee472ca830234c16fd56cdf7d4bf6e3b7d80aefbb2390a6e8aa9b9e304d67df39e6154f9238e6eaebfe47766aad8de6082781760f0cc16c6ee6b57f547df
-  languageName: node
-  linkType: hard
-
 "supports-color@npm:8.1.1":
   version: 8.1.1
   resolution: "supports-color@npm:8.1.1"
@@ -17713,15 +17624,6 @@ __metadata:
   version: 1.1.0
   resolution: "to-float32@npm:1.1.0"
   checksum: 10c0/7fed0ba97b9c6280b5858d2ca60ed005961f5feda7c413c6f7eb2be224ed033244d413ab6c53bd5d603edba2642d15ba4f952ebf1e87dc1fe837182a41b7b811
-  languageName: node
-  linkType: hard
-
-"to-px@npm:1.0.1":
-  version: 1.0.1
-  resolution: "to-px@npm:1.0.1"
-  dependencies:
-    parse-unit: "npm:^1.0.1"
-  checksum: 10c0/bd6c2a300316700a81b602283365ce6e093ca77ebdca5611578f3fe58d9799f4a328e836ae5a034e5f007ec513712545ca93e61f4db199f9a87a8a29bb34d756
   languageName: node
   linkType: hard
 
