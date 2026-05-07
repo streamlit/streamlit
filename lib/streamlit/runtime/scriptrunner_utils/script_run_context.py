@@ -17,11 +17,13 @@ from __future__ import annotations
 import collections
 import contextlib
 import contextvars
+import dataclasses
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
+    Any,
     Final,
     TypeAlias,
 )
@@ -64,11 +66,13 @@ in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
 )
 
 
-@dataclass
+@dataclass(frozen=True)
 class FragmentThreadState:
     """Per-thread state for a fragment execution.
 
-    Stored in a ContextVar so copy_context() provides automatic isolation.
+    Frozen so that all mutations must go through ThreadState.update() or
+    ThreadState.scoped(), which rebind the ContextVar and guarantee context
+    isolation when using copy_context().
     """
 
     fragment_id: str | None = None
@@ -82,20 +86,61 @@ _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.Context
 )
 
 
-def get_fragment_thread_state() -> FragmentThreadState:
-    """Public accessor for the per-thread fragment state.
+class ThreadState:
+    """Encapsulates all access to the per-thread FragmentThreadState ContextVar.
 
-    Raises RuntimeError if called before reset() has initialized the state.
-    All callers are behind get_script_run_ctx() guards, so this only fires
-    if there's a bug in initialization ordering.
+    The ContextVar ``_thread_state`` is module-private. External code interacts
+    exclusively through this class. The frozen dataclass ensures callers cannot
+    bypass the API — in-place mutation raises ``FrozenInstanceError``.
     """
-    try:
-        return _thread_state.get()
-    except LookupError:
-        raise RuntimeError(
-            "FragmentThreadState not initialized — "
-            "reset() must be called before accessing thread state."
-        )
+
+    @staticmethod
+    def initialize(**kwargs: Any) -> None:
+        """Create a fresh FragmentThreadState and bind it in the current context.
+
+        Called from ``reset()`` at the start of every script run, and from
+        PR 7's worker setup after ``copy_context()``.
+        """
+        _thread_state.set(FragmentThreadState(**kwargs))
+
+    @staticmethod
+    def get() -> FragmentThreadState:
+        """Read the current context's FragmentThreadState.
+
+        Returns a frozen object — callers can read fields but cannot mutate
+        them. Raises ``RuntimeError`` if called before ``initialize()``.
+        """
+        try:
+            return _thread_state.get()
+        except LookupError:
+            raise RuntimeError(
+                "FragmentThreadState not initialized — "
+                "reset() must be called before accessing thread state."
+            )
+
+    @staticmethod
+    def update(**kwargs: Any) -> None:
+        """Update one or more fields on the current context's state.
+
+        Creates a new frozen dataclass via ``dataclasses.replace()`` and
+        rebinds the ContextVar, ensuring context isolation.
+        """
+        _thread_state.set(dataclasses.replace(ThreadState.get(), **kwargs))
+
+    @staticmethod
+    @contextlib.contextmanager
+    def scoped(**overrides: Any) -> Generator[None, None, None]:
+        """Temporarily override fields, automatically restore on exit.
+
+        Uses ``ContextVar.reset(token)`` to atomically restore the entire
+        previous state. Used for nesting within a single thread (e.g. nested
+        fragments) where ``copy_context()`` is not involved.
+        """
+        token = _thread_state.set(dataclasses.replace(ThreadState.get(), **overrides))
+        try:
+            yield
+        finally:
+            _thread_state.reset(token)
 
 
 @dataclass
@@ -154,18 +199,11 @@ class ScriptRunContext:
 
     @contextlib.contextmanager
     def run_with_active_hash(self, page_hash: str) -> Generator[None, None, None]:
-        ts = get_fragment_thread_state()
-        original_page_hash = ts.active_script_hash
-        ts.active_script_hash = page_hash
-        try:
+        with ThreadState.scoped(active_script_hash=page_hash):
             yield
-        finally:
-            ts.active_script_hash = original_page_hash
 
     def set_mpa_v2_page(self, page_script_hash: str) -> None:
-        get_fragment_thread_state().active_script_hash = (
-            self.pages_manager.main_script_hash
-        )
+        ThreadState.update(active_script_hash=self.pages_manager.main_script_hash)
         self.pages_manager.set_current_page_script_hash(page_script_hash)
 
     def reset(
@@ -186,10 +224,8 @@ class ScriptRunContext:
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
-        _thread_state.set(
-            FragmentThreadState(
-                active_script_hash=self.pages_manager.main_script_hash,
-            )
+        ThreadState.initialize(
+            active_script_hash=self.pages_manager.main_script_hash,
         )
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
@@ -219,7 +255,7 @@ class ScriptRunContext:
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""
-        msg.metadata.active_script_hash = get_fragment_thread_state().active_script_hash
+        msg.metadata.active_script_hash = ThreadState.get().active_script_hash
 
         # We populate the hash and cacheable field for all messages.
         # Besides the forward message cache, the hash might also be used
@@ -308,7 +344,7 @@ def enqueue_message(msg: ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
-    ts = get_fragment_thread_state()
+    ts = ThreadState.get()
     if ts.fragment_id and msg.WhichOneof("type") == "delta":
         msg.delta.fragment_id = ts.fragment_id
 

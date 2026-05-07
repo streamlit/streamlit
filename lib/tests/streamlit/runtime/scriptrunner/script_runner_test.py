@@ -50,10 +50,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequests,
     ScriptRequestType,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    FragmentThreadState,
-    _thread_state,
-)
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
@@ -390,7 +387,7 @@ class ScriptRunnerTest(unittest.TestCase):
             raise KeyError("kaboom")
 
         def fragment():
-            _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
+            ThreadState.update(fragment_id="my_fragment_id")
             _fragment(non_optional_func)()
 
         scriptrunner = TestScriptRunner("good_script.py")

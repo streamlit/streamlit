@@ -33,8 +33,7 @@ from streamlit.errors import (
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    FragmentThreadState,
-    _thread_state,
+    ThreadState,
     in_cached_function,
 )
 
@@ -199,11 +198,9 @@ class CheckCacheReplayTest(ElementPoliciesTest):
 class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
     def setUp(self):
         ctx = MagicMock()
-        _thread_state.set(
-            FragmentThreadState(
-                fragment_id="my_fragment_id",
-                delta_path=(0, 1, 2),
-            )
+        ThreadState.update(
+            fragment_id="my_fragment_id",
+            delta_path=(0, 1, 2),
         )
         self.ctx = ctx
 

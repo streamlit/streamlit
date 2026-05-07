@@ -33,7 +33,7 @@ from streamlit.runtime.scriptrunner import (
     get_script_run_ctx,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    get_fragment_thread_state,
+    ThreadState,
 )
 
 if TYPE_CHECKING:
@@ -100,7 +100,7 @@ def _new_fragment_id_queue(
         )
 
     new_queue = list(
-        dropwhile(lambda x: x != get_fragment_thread_state().fragment_id, curr_queue)
+        dropwhile(lambda x: x != ThreadState.get().fragment_id, curr_queue)
     )
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(

@@ -31,7 +31,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    get_fragment_thread_state,
+    ThreadState,
     get_script_run_ctx,
 )
 from streamlit.time_util import time_to_seconds
@@ -172,7 +172,7 @@ def _fragment(
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
-        initialized_active_script_hash = get_fragment_thread_state().active_script_hash
+        initialized_active_script_hash = ThreadState.get().active_script_hash
 
         def wrapped_fragment() -> Any:
             import streamlit as st
@@ -197,15 +197,12 @@ def _fragment(
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
             ctx.new_fragment_ids.check_and_add(fragment_id)
-            # Set the fragment_id on thread state so that elements corresponding to
-            # this fragment get tagged with the appropriate ID. It gets reset after the
-            # fragment function finishes running to either return to the script (outside
-            # of any fragments) or to the outer fragment this one is nested in.
-            ts = get_fragment_thread_state()
-            prev_fragment_id = ts.fragment_id
-            ts.fragment_id = fragment_id
-
-            try:
+            # Set the fragment_id on thread state so that elements corresponding
+            # to this fragment get tagged with the appropriate ID.
+            # ThreadState.scoped() restores fragment_id (and all other fields)
+            # after the fragment finishes — returning to the outer fragment
+            # or to top-level script execution.
+            with ThreadState.scoped(fragment_id=fragment_id):
                 # Make sure we set the active script hash to the same value
                 # for the fragment run as when defined upon initialization
                 # This ensures that elements (especially widgets) are tied
@@ -213,7 +210,7 @@ def _fragment(
                 active_hash_context = (
                     ctx.run_with_active_hash(initialized_active_script_hash)
                     if initialized_active_script_hash
-                    != get_fragment_thread_state().active_script_hash
+                    != ThreadState.get().active_script_hash
                     else contextlib.nullcontext()
                 )
                 result = None
@@ -228,12 +225,14 @@ def _fragment(
                             # e.g. [0, 3, 0] -> [0, 3].
                             # All fragment elements start with [0, 3].
                             active_dg = context_dg_stack.get()[-1]
-                            ts.delta_path = tuple(
-                                (
-                                    active_dg._cursor.delta_path
-                                    if active_dg._cursor
-                                    else []
-                                )[:-1]
+                            ThreadState.update(
+                                delta_path=tuple(
+                                    (
+                                        active_dg._cursor.delta_path
+                                        if active_dg._cursor
+                                        else []
+                                    )[:-1]
+                                )
                             )
                             result = non_optional_func(*args, **kwargs)
                         except (
@@ -250,9 +249,6 @@ def _fragment(
                             # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
-            finally:
-                ts.fragment_id = prev_fragment_id
-                ts.delta_path = None
 
         ctx.fragment_storage.set(fragment_id, wrapped_fragment)
 

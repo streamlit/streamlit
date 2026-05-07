@@ -25,10 +25,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext
-from streamlit.runtime.scriptrunner_utils.script_run_context import (
-    FragmentThreadState,
-    _thread_state,
-)
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state import SafeSessionState, SessionState
 
 # Reexport functions that were moved to main codebase
@@ -48,9 +45,9 @@ def create_mock_script_run_ctx() -> ScriptRunContext:
 
     Also initializes FragmentThreadState on the current thread's ContextVar,
     mirroring what reset() does in production. This ensures any code path that
-    calls get_fragment_thread_state() will find an initialized binding.
+    calls ThreadState.get() will find an initialized binding.
     """
-    _thread_state.set(FragmentThreadState())
+    ThreadState.initialize()
     return ScriptRunContext(
         session_id="mock_session_id",
         _enqueue=lambda msg: None,
