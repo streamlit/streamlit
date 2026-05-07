@@ -123,17 +123,17 @@ describe("ButtonColumn", () => {
     expect(cell.data.kind).toEqual("button-cell")
   })
 
-  it("sets readonly to true", () => {
-    const mockColumn = ButtonColumn(MOCK_BUTTON_COLUMN_PROPS)
-    const cell = mockColumn.getCell("Click me") as ButtonCell
-    expect(cell.readonly).toBe(true)
-  })
-
-  it("sets allowOverlay to false", () => {
-    const mockColumn = ButtonColumn(MOCK_BUTTON_COLUMN_PROPS)
-    const cell = mockColumn.getCell("Click me") as ButtonCell
-    expect(cell.allowOverlay).toBe(false)
-  })
+  it.each([
+    ["readonly", true],
+    ["allowOverlay", false],
+  ] as const)(
+    "cell has %s set to %s",
+    (prop: "readonly" | "allowOverlay", expected: boolean) => {
+      const mockColumn = ButtonColumn(MOCK_BUTTON_COLUMN_PROPS)
+      const cell = mockColumn.getCell("Click me") as ButtonCell
+      expect(cell[prop]).toBe(expected)
+    }
+  )
 
   it.each([
     ["Click me", "Click me"],

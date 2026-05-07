@@ -1180,40 +1180,34 @@ class TestButtonClickSerde:
 
     def test_serialize_none_returns_empty_proto(self) -> None:
         """Test that serializing None returns empty StringTriggerValue."""
-
         serde = ButtonClickSerde()
         result = serde.serialize(None)
         assert result.data == ""
 
     def test_serialize_click_state(self) -> None:
         """Test that serializing click state returns StringTriggerValue with JSON data."""
-
         serde = ButtonClickSerde()
         result = serde.serialize({"row": 5, "label": "Click me"})
         assert result.data == '{"row": 5, "label": "Click me"}'
 
-    def test_deserialize_none_returns_none(self) -> None:
-        """Test that deserializing None returns None."""
-
+    @pytest.mark.parametrize(
+        ("ui_value", "expected"),
+        [
+            (None, None),
+            ("", None),
+            ('{"row": 3, "label": "Delete"}', {"row": 3, "label": "Delete"}),
+        ],
+        ids=["none", "empty_string", "valid_json"],
+    )
+    def test_deserialize(
+        self, ui_value: str | None, expected: dict[str, object] | None
+    ) -> None:
+        """Test deserialize returns None for empty input and parsed dict for valid JSON."""
         serde = ButtonClickSerde()
-        assert serde.deserialize(None) is None
-
-    def test_deserialize_empty_string_returns_none(self) -> None:
-        """Test that deserializing empty string returns None."""
-
-        serde = ButtonClickSerde()
-        assert serde.deserialize("") is None
-
-    def test_deserialize_valid_json(self) -> None:
-        """Test that deserializing valid JSON returns click state."""
-
-        serde = ButtonClickSerde()
-        result = serde.deserialize('{"row": 3, "label": "Delete"}')
-        assert result == {"row": 3, "label": "Delete"}
+        assert serde.deserialize(ui_value) == expected
 
     def test_roundtrip_preserves_state(self) -> None:
         """Test that serialization roundtrip preserves the click state."""
-
         serde = ButtonClickSerde()
         original = {"row": 0, "label": ":material/edit: Edit"}
         serialized = serde.serialize(original)

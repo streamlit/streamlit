@@ -57,17 +57,19 @@ describe("ButtonCell renderer", () => {
     expect(renderer.isMatch(otherCell)).toBe(false)
   })
 
-  it("has needsHover set to true", () => {
-    expect(renderer.needsHover).toBe(true)
-  })
-
-  it("has needsHoverPosition set to true", () => {
-    expect(renderer.needsHoverPosition).toBe(true)
-  })
-
-  it("has no editor (provideEditor is undefined)", () => {
-    expect(renderer.provideEditor).toBeUndefined()
-  })
+  it.each([
+    ["needsHover", true],
+    ["needsHoverPosition", true],
+    ["provideEditor", undefined],
+  ] as const)(
+    "renderer property %s equals %s",
+    (
+      prop: "needsHover" | "needsHoverPosition" | "provideEditor",
+      expected
+    ) => {
+      expect(renderer[prop]).toBe(expected)
+    }
+  )
 
   describe("measure", () => {
     const createMockCtx = (): CanvasRenderingContext2D =>

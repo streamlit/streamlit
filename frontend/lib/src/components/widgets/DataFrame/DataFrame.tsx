@@ -310,13 +310,9 @@ function DataFrame({
     getCellContent: getSortedCellContent,
   } = useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  /**
-   * Handle button clicks in button columns.
-   * Serializes the click state and triggers the associated widget.
-   */
+  /** Handle button clicks in button columns. */
   const handleButtonClick = useCallback(
     (columnName: string, rowIndex: number, label: string): void => {
-      // Close any open button action menu
       setButtonActionMenu(undefined)
 
       if (!widgetMgr) return
@@ -324,7 +320,6 @@ function DataFrame({
       const widgetId = element.buttonClickWidgets[columnName]
       if (!widgetId) return
 
-      // Serialize click state as JSON: { row: rowIndex, label: label }
       const clickState = JSON.stringify({ row: rowIndex, label })
       widgetMgr.setStringTriggerValue(
         { id: widgetId, formId: element.formId },
@@ -336,10 +331,7 @@ function DataFrame({
     [widgetMgr, element.buttonClickWidgets, element.formId, fragmentId]
   )
 
-  /**
-   * Handle opening the button action menu for multi-action buttons.
-   * Uses the click position for accurate menu placement.
-   */
+  /** Handle opening the button action menu for multi-action buttons. */
   const handleOpenButtonMenu = useCallback(
     (
       columnName: string,
@@ -347,21 +339,15 @@ function DataFrame({
       actions: string[],
       bounds: Rectangle & { clickX: number; clickY: number }
     ): void => {
-      // Close any existing menu first to ensure clean state transition
+      // Clear existing menu first, then set new one after a frame to ensure clean transition
       setButtonActionMenu(undefined)
-
-      // Position menu at the click position
-      const screenTop = bounds.clickY
-      const screenLeft = bounds.clickX
-
-      // Use requestAnimationFrame to ensure state clears before setting new menu
       requestAnimationFrame(() => {
         setButtonActionMenu({
           columnName,
           rowIndex,
           actions,
-          screenTop,
-          screenLeft,
+          screenTop: bounds.clickY,
+          screenLeft: bounds.clickX,
         })
       })
     },
@@ -369,23 +355,19 @@ function DataFrame({
   )
 
   /**
-   * Wrap getCellContent to inject button click handler into button cells.
-   * This allows button cells to trigger widget state updates when clicked.
-   * Only injects handlers when a widget ID exists for the column (i.e., when
-   * the ButtonColumn was created with a key parameter).
+   * Wrap getCellContent to inject button click handlers into button cells.
+   * Only injects handlers when a widget ID exists (ButtonColumn has a key).
    */
   const getCellContent = useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       const cell = getSortedCellContent([col, row])
 
-      // Check if this is a button cell and inject the click handler
       if (
         cell.kind === GridCellKind.Custom &&
         (cell.data as Record<string, unknown>)?.kind === "button-cell"
       ) {
         const column = columns[col]
-        // Look up widget ID by column name first, then by positional key (_pos:<index>)
-        // to support both named and positional column configurations
+        // Look up widget ID by column name or positional key (_pos:<index>)
         const positionalKey = `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
         const matchedKey =
           element.buttonClickWidgets[column.name] !== undefined
@@ -393,7 +375,6 @@ function DataFrame({
             : positionalKey
         const widgetId = element.buttonClickWidgets[matchedKey]
 
-        // Only inject handlers if a widget ID exists (i.e., ButtonColumn has a key)
         if (widgetId) {
           const originalRowIndex = getOriginalIndex(row)
 

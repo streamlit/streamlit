@@ -319,27 +319,18 @@ class ButtonClickSerde:
         return StringTriggerValue(data=json.dumps(v))
 
     def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
-        if ui_value is None or ui_value == "":
+        if not ui_value:
             return None
+
         parsed = json.loads(ui_value)
-        # Validate shape and types of the parsed data
-        if not isinstance(parsed, dict):
+        # Validate shape: must be a dict with "row" (int) and "label" (str)
+        if (
+            not isinstance(parsed, dict)
+            or not isinstance(parsed.get("row"), int)
+            or not isinstance(parsed.get("label"), str)
+        ):
             raise StreamlitAPIException(
-                f"Invalid button click state: expected a dict, got {type(parsed).__name__}."
-            )
-        if "row" not in parsed or "label" not in parsed:
-            raise StreamlitAPIException(
-                "Invalid button click state: missing required 'row' or 'label' field."
-            )
-        if not isinstance(parsed["row"], int):
-            raise StreamlitAPIException(
-                f"Invalid button click state: 'row' must be an integer, "
-                f"got {type(parsed['row']).__name__}."
-            )
-        if not isinstance(parsed["label"], str):
-            raise StreamlitAPIException(
-                f"Invalid button click state: 'label' must be a string, "
-                f"got {type(parsed['label']).__name__}."
+                "Invalid button click state: expected {row: int, label: str}."
             )
         return cast("ButtonClickState", parsed)
 

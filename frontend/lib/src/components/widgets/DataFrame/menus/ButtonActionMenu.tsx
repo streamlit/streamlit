@@ -67,15 +67,12 @@ function ButtonActionMenu({
   const { colors, fontSizes, fontWeights } = theme
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Close the menu when clicking outside. We use a global mousedown listener
-  // because BaseWeb's onClickOutside doesn't work reliably with canvas elements
-  // like glide-data-grid.
+  // Close menu on click outside (except clicks inside the DataFrame canvas)
   useEffect(() => {
     function handleMouseDown(event: MouseEvent): void {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        // If clicking inside the DataFrame, let the grid's button click handler
-        // manage menu state (it closes the current menu and opens a new one if needed)
         const target = event.target as Element
+        // Let grid's button handler manage state for DataFrame clicks
         if (target.closest('[data-testid^="stDataFrame"]')) {
           return
         }
@@ -84,21 +81,15 @@ function ButtonActionMenu({
     }
 
     document.addEventListener("mousedown", handleMouseDown)
-
-    return () => {
-      document.removeEventListener("mousedown", handleMouseDown)
-    }
+    return () => document.removeEventListener("mousedown", handleMouseDown)
   }, [onCloseMenu])
 
-  // Close the menu when scrolling occurs, since the fixed-position anchor
-  // would become misaligned with the cell. This is more user-friendly than
-  // blocking all page scrolling while the menu is open.
+  // Close menu on scroll (fixed positioning would misalign with cell)
   useEffect(() => {
     function handleScroll(): void {
       onCloseMenu()
     }
 
-    // Use capture phase to detect scroll before it propagates
     document.addEventListener("scroll", handleScroll, { capture: true })
     document.addEventListener("wheel", handleScroll, { passive: true })
 
@@ -135,7 +126,7 @@ function ButtonActionMenu({
             const { icon, text } = extractLeadingMaterialIcon(label)
             return (
               <StyledMenuListItem
-                // Index is intentionally used to handle duplicate labels in user-provided data
+                // Index used to handle duplicate labels in user-provided data
                 // eslint-disable-next-line @eslint-react/no-array-index-key
                 key={`${label}-${index}`}
                 onClick={() => handleSelectAction(label)}
@@ -194,15 +185,10 @@ function ButtonActionMenu({
         },
       }}
     >
-      {/* Invisible anchor element positioned at the click location */}
+      {/* Invisible anchor for menu positioning (BaseWeb requires a target element) */}
       <div
         data-testid="stDataFrameButtonActionMenuTarget"
         style={{
-          // This is an invisible div that's used to position the menu.
-          // The position is provided from outside via the `top` and `left` properties.
-          // This a workaround for the fact that BaseWeb's Popover doesn't support
-          // positioning to a virtual position and always requires a target
-          // component for positioning.
           position: "fixed",
           top,
           left,

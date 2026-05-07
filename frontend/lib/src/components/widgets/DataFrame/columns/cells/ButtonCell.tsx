@@ -37,6 +37,15 @@ const BUTTON_PADDING = 8
 /** Gap between icon and text in button labels. */
 const ICON_TEXT_GAP = 4
 
+/** Approximate width for the "more_vert" menu icon */
+const MULTI_ACTION_ICON_WIDTH = 20
+
+/** Approximate width per character for content estimation */
+const CHAR_WIDTH_ESTIMATE = 7
+
+/** Approximate width for a Material icon */
+const ICON_WIDTH_ESTIMATE = 20
+
 /** Tolerance margin for click detection to account for estimation errors. */
 const CLICK_TOLERANCE = 8
 
@@ -146,6 +155,18 @@ interface ButtonBounds {
   height: number
 }
 
+/** Alignment-based button X position calculation */
+const ALIGNMENT_OFFSET: Record<
+  "left" | "center" | "right",
+  (cellWidth: number, cellPadding: number, buttonWidth: number) => number
+> = {
+  left: (_cellWidth, cellPadding) => cellPadding,
+  center: (cellWidth, _cellPadding, buttonWidth) =>
+    (cellWidth - buttonWidth) / 2,
+  right: (cellWidth, cellPadding, buttonWidth) =>
+    cellWidth - buttonWidth - cellPadding,
+}
+
 /**
  * Calculate button bounds relative to cell origin.
  * Used by both draw (for hover) and onClick (for click detection).
@@ -161,22 +182,8 @@ function getButtonBounds(
   const verticalPadding = Math.floor(cellPadding * 0.5)
   const buttonHeight = Math.ceil(cellHeight - verticalPadding * 2)
 
-  let buttonX: number
-  switch (alignment) {
-    case "left":
-      buttonX = cellPadding
-      break
-    case "right":
-      buttonX = cellWidth - buttonWidth - cellPadding
-      break
-    case "center":
-    default:
-      buttonX = (cellWidth - buttonWidth) / 2
-      break
-  }
-
   return {
-    x: buttonX,
+    x: ALIGNMENT_OFFSET[alignment](cellWidth, cellPadding, buttonWidth),
     y: verticalPadding,
     width: buttonWidth,
     height: buttonHeight,
@@ -226,22 +233,21 @@ const renderer: CustomRenderer<ButtonCell> = {
     const { data, onClick, onOpenMenu, rowIndex, alignment } = cell.data
     if (!data || rowIndex === undefined) return undefined
 
-    // Estimate content width without ctx (conservative char width estimate)
+    // Estimate content width without canvas context
     const label = getSingleButtonLabel(data)
     const isMultiAction = Array.isArray(data) && data.length > 1
     let estimatedContentWidth: number
 
     if (isMultiAction) {
-      // Multi-action buttons show the "more_vert" icon (~20px)
-      estimatedContentWidth = 20
+      estimatedContentWidth = MULTI_ACTION_ICON_WIDTH
     } else {
       const hasIcon = label?.startsWith(":material/") ?? false
       const textPart = hasIcon
         ? label?.replace(/^:material\/[^:]+:/, "").trim()
         : label
-      // Use ~7px per character as a rough estimate. This won't match the actual
-      // rendered width exactly, but CLICK_TOLERANCE compensates for the mismatch.
-      estimatedContentWidth = (textPart?.length ?? 0) * 7 + (hasIcon ? 20 : 0)
+      estimatedContentWidth =
+        (textPart?.length ?? 0) * CHAR_WIDTH_ESTIMATE +
+        (hasIcon ? ICON_WIDTH_ESTIMATE : 0)
     }
 
     const buttonBounds = getButtonBounds(
@@ -252,7 +258,6 @@ const renderer: CustomRenderer<ButtonCell> = {
       alignment
     )
 
-    // Use tolerance margin to account for estimation mismatch with precise draw bounds
     if (!isWithinButton(buttonBounds, posX, posY, CLICK_TOLERANCE)) {
       return undefined
     }
@@ -260,9 +265,7 @@ const renderer: CustomRenderer<ButtonCell> = {
     if (label) {
       onClick?.(rowIndex, label)
     } else if (isMultiAction) {
-      // Multi-action: open menu at the click position.
-      // The bounds Rectangle from glide-data-grid is in viewport/screen coordinates,
-      // which matches the fixed positioning used by the ButtonActionMenu anchor.
+      // Open menu at click position (bounds is in viewport coordinates)
       const clickX = bounds.x + (posX ?? bounds.width / 2)
       const clickY = bounds.y + (posY ?? bounds.height / 2)
       onOpenMenu?.(rowIndex, data, { ...bounds, clickX, clickY })
