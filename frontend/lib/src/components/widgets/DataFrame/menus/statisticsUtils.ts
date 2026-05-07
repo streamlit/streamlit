@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-import { toSafeDate } from "~lib/components/widgets/DataFrame/columns/utils"
+import {
+  toSafeBoolean,
+  toSafeDate,
+} from "~lib/components/widgets/DataFrame/columns/utils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
 
@@ -531,8 +534,8 @@ function computeDateRange(minTimestamp: number, maxTimestamp: number): string {
 
 /**
  * Compute statistics for a boolean column.
- * Explicitly recognizes truthy (true, 1, "true", "1") and falsy (false, 0, "false", "0")
- * patterns. Values not matching either pattern are counted as null.
+ * Uses toSafeBoolean() to match the broader vocabulary recognized by checkbox columns
+ * (true/t/yes/y/on/1 and false/f/no/n/off/0, case-insensitively).
  */
 export function computeBooleanStatistics(
   rawValues: unknown[],
@@ -543,14 +546,13 @@ export function computeBooleanStatistics(
   let nullCount = 0
 
   for (const v of rawValues) {
-    if (isNullOrUndefined(v)) {
-      nullCount++
-    } else if (v === true || v === 1 || v === "true" || v === "1") {
+    const boolValue = toSafeBoolean(v)
+    if (boolValue === true) {
       trueCount++
-    } else if (v === false || v === 0 || v === "false" || v === "0") {
+    } else if (boolValue === false) {
       falseCount++
     } else {
-      // Values not matching explicit truthy/falsy patterns are treated as null/unknown
+      // null (empty), undefined (cannot be interpreted as boolean)
       nullCount++
     }
   }

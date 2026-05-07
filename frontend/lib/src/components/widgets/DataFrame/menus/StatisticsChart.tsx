@@ -155,11 +155,11 @@ function createHistogramSpec(
 
 /**
  * Creates a Vega-Lite spec for a horizontal bar chart (text/boolean statistics).
- * Pass fullLabel for tooltip and truncatedLabel for axis display to avoid
- * collapsing distinct long values that share the same prefix.
+ * Uses fullLabel for data binding and tooltip. The y-axis is hidden (axis: null)
+ * so no label truncation is needed - full values are preserved for accurate tooltips.
  */
 function createBarChartSpec(
-  data: { fullLabel: string; truncatedLabel: string; value: number }[],
+  data: { fullLabel: string; value: number }[],
   theme: ReturnType<typeof useEmotionTheme>
 ): TopLevelSpec {
   const spec: TopLevelSpec = {
@@ -250,8 +250,6 @@ function StatisticsChart({
         if (statistics.topValues.length > 0) {
           const data = statistics.topValues.map(v => ({
             fullLabel: v.value,
-            truncatedLabel:
-              v.value.length > 15 ? `${v.value.slice(0, 15)}…` : v.value,
             value: v.count,
           }))
           spec = createBarChartSpec(data, theme)
@@ -263,12 +261,10 @@ function StatisticsChart({
           [
             {
               fullLabel: "True",
-              truncatedLabel: "True",
               value: statistics.trueCount,
             },
             {
               fullLabel: "False",
-              truncatedLabel: "False",
               value: statistics.falseCount,
             },
           ],

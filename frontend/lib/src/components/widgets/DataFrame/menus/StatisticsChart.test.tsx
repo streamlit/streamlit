@@ -246,12 +246,12 @@ describe("StatisticsChart", () => {
     })
   })
 
-  it("truncates long text labels to 15 characters", async () => {
+  it("preserves full text labels for tooltip display", async () => {
     const longTextStats: TextStatistics = {
       ...textStats,
       topValues: [
         {
-          value: "this is a very long value that should be truncated",
+          value: "this is a very long value that should be preserved",
           count: 50,
           percentage: 50,
         },
@@ -266,12 +266,12 @@ describe("StatisticsChart", () => {
 
     const [, spec] = mockEmbed.mock.calls[0] as [
       unknown,
-      { data: { values: { fullLabel: string; truncatedLabel: string }[] } },
+      { data: { values: { fullLabel: string; value: number }[] } },
     ]
     const chartData = spec.data.values
-    expect(chartData[0].truncatedLabel).toBe("this is a very …")
+    // Full label is preserved for accurate tooltips (y-axis is hidden)
     expect(chartData[0].fullLabel).toBe(
-      "this is a very long value that should be truncated"
+      "this is a very long value that should be preserved"
     )
   })
 })
