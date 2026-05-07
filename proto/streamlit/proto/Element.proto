@@ -54,6 +54,7 @@ import "streamlit/proto/Metric.proto";
 import "streamlit/proto/MultiSelect.proto";
 import "streamlit/proto/NumberInput.proto";
 import "streamlit/proto/PageLink.proto";
+import "streamlit/proto/Pagination.proto";
 import "streamlit/proto/PlotlyChart.proto";
 import "streamlit/proto/Progress.proto";
 import "streamlit/proto/Radio.proto";
@@ -142,7 +143,8 @@ message Element {
     Heading heading = 47;
     Code code = 48;
     MenuButton menu_button = 64;
-    // Next ID: 65
+    Pagination pagination = 66;
+    // Next ID: 67
   }
 
   reserved 3, 9, 10, 11, 17;

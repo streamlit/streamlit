@@ -1499,7 +1499,7 @@ def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator
 
 
 def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
-    """Wait for all images within a locator to be fully loaded.
+    """Wait for all images within a locator to be fully loaded and decoded.
 
     This is useful for stabilizing snapshot tests that include images,
     especially in browsers like webkit that may have timing variations
@@ -1517,14 +1517,22 @@ def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
         """(element) => {
             const images = element.querySelectorAll('img');
             return Promise.all(
-                Array.from(images).map(img => {
-                    if (img.complete && img.naturalWidth > 0) {
-                        return Promise.resolve();
+                Array.from(images).map(async img => {
+                    // Wait for image to load if not complete yet
+                    if (!img.complete) {
+                        await new Promise((resolve, reject) => {
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', reject, { once: true });
+                        });
                     }
-                    return new Promise((resolve, reject) => {
-                        img.addEventListener('load', resolve);
-                        img.addEventListener('error', reject);
-                    });
+                    // Check for already-failed images (complete but no content)
+                    if (img.naturalWidth === 0) {
+                        throw new Error('Image failed to load: ' + img.src);
+                    }
+                    // Wait for the image to be decoded (ready for rendering)
+                    // This is important for webkit which may have timing variations
+                    // between load and decode completion
+                    await img.decode();
                 })
             );
         }""",

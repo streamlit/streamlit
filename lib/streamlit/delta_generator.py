@@ -97,6 +97,7 @@ from streamlit.elements.widgets.file_uploader import FileUploaderMixin
 from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
+from streamlit.elements.widgets.pagination import PaginationMixin
 from streamlit.elements.widgets.radio import RadioMixin
 from streamlit.elements.widgets.select_slider import SelectSliderMixin
 from streamlit.elements.widgets.selectbox import SelectboxMixin
@@ -208,6 +209,7 @@ class DeltaGenerator(
     MenuButtonMixin,
     MultiSelectMixin,
     NumberInputMixin,
+    PaginationMixin,
     PdfMixin,
     PlotlyMixin,
     ProgressMixin,
