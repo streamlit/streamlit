@@ -20,6 +20,7 @@ import { PLACEMENT, Popover, TRIGGER_TYPE } from "baseui/popover"
 
 import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import { getTimezone } from "~lib/dataframes/arrowTypeUtils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
@@ -69,18 +70,27 @@ function formatNumber(value: number, precision = 2): string {
 
 /**
  * Format a datetime timestamp for display in statistics.
- * Uses UTC to avoid timezone shifts that can change dates.
+ * Uses the column's timezone if available, otherwise defaults to UTC
+ * to avoid local timezone shifts that can change dates.
+ *
  * @param timestamp - Unix timestamp in milliseconds
  * @param isDateOnly - If true, format as date only without time
+ * @param timezone - Optional timezone identifier (e.g., "America/New_York", "UTC")
  */
-function formatDatetime(timestamp: number, isDateOnly = false): string {
+function formatDatetime(
+  timestamp: number,
+  isDateOnly = false,
+  timezone?: string
+): string {
   const date = new Date(timestamp)
+  // Use provided timezone, or default to UTC for consistency
+  const tz = timezone || "UTC"
   if (isDateOnly) {
     return date.toLocaleDateString(undefined, {
       year: "numeric",
       month: "short",
       day: "numeric",
-      timeZone: "UTC",
+      timeZone: tz,
     })
   }
   return date.toLocaleString(undefined, {
@@ -89,7 +99,7 @@ function formatDatetime(timestamp: number, isDateOnly = false): string {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "UTC",
+    timeZone: tz,
   })
 }
 
@@ -206,7 +216,7 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         statistics.nullCount
       )
       const fmt = (ts: number): string =>
-        formatDatetime(ts, statistics.isDateOnly)
+        formatDatetime(ts, statistics.isDateOnly, statistics.timezone)
       return [
         { label: "Values", value: formatNumber(statistics.count, 0) },
         {
@@ -349,8 +359,10 @@ function StatisticsMenu({
   // For large datasets, computation is bounded by SAMPLE_SIZE (10k values).
   const statistics = useMemo((): ColumnStatistics | null => {
     if (!isOpen) return null
-    return computeStatistics(column.kind, data, column.indexNumber)
-  }, [isOpen, column.kind, column.indexNumber, data])
+    // Extract timezone from column's Arrow type metadata for datetime columns
+    const timezone = getTimezone(column.arrowType)
+    return computeStatistics(column.kind, data, column.indexNumber, timezone)
+  }, [isOpen, column.kind, column.indexNumber, column.arrowType, data])
 
   // Defensive fallback: parent ColumnMenu already guards this, but keep for safety.
   // This ensures the component renders nothing if called directly without the guard.

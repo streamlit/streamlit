@@ -289,6 +289,39 @@ describe("statisticsUtils", () => {
         "3 hours"
       )
     })
+
+    it("preserves timezone parameter in statistics", () => {
+      const values = [new Date("2023-01-01"), new Date("2023-01-02")]
+
+      // Without timezone
+      const statsNoTz = computeDateTimeStatistics(values, false)
+      expect(statsNoTz.timezone).toBeUndefined()
+
+      // With timezone
+      const statsWithTz = computeDateTimeStatistics(
+        values,
+        false,
+        false,
+        "America/New_York"
+      )
+      expect(statsWithTz.timezone).toBe("America/New_York")
+
+      // With UTC timezone
+      const statsUtc = computeDateTimeStatistics(values, false, false, "UTC")
+      expect(statsUtc.timezone).toBe("UTC")
+    })
+
+    it("preserves timezone for date-only columns", () => {
+      const values = [new Date("2023-01-01")]
+      const stats = computeDateTimeStatistics(
+        values,
+        false,
+        true,
+        "Europe/London"
+      )
+      expect(stats.isDateOnly).toBe(true)
+      expect(stats.timezone).toBe("Europe/London")
+    })
   })
 
   describe("computeBooleanStatistics", () => {

@@ -100,6 +100,8 @@ export interface DateTimeStatistics {
   type: "datetime"
   /** Whether the underlying column is date-only (no time component). */
   isDateOnly: boolean
+  /** The timezone identifier from the column's Arrow type metadata (e.g., "UTC", "America/New_York"). */
+  timezone?: string
   count: number
   nullCount: number
   unique: number
@@ -234,7 +236,8 @@ export function computeNumericStatistics(
       nullCount++
     } else {
       const num = Number(v)
-      if (!Number.isNaN(num) && Number.isFinite(num)) {
+      // Number.isFinite already excludes NaN and ±Infinity
+      if (Number.isFinite(num)) {
         values.push(num)
       }
     }
@@ -429,11 +432,13 @@ export function computeTextStatistics(
  * before Sep 2001 / 10^12 ms) could be misinterpreted.
  *
  * @param isDateOnly - True if the column is date-only (no time component)
+ * @param timezone - Optional timezone identifier from the column's Arrow type metadata
  */
 export function computeDateTimeStatistics(
   rawValues: unknown[],
   isSampled: boolean,
-  isDateOnly = false
+  isDateOnly = false,
+  timezone?: string
 ): DateTimeStatistics {
   // Convert values to timestamps using toSafeDate which handles various units.
   // toSafeDate uses magnitude thresholds to detect the unit: >= 10^18 = ns,
@@ -463,6 +468,7 @@ export function computeDateTimeStatistics(
     return {
       type: "datetime",
       isDateOnly,
+      timezone,
       count: 0,
       nullCount,
       unique: 0,
@@ -497,6 +503,7 @@ export function computeDateTimeStatistics(
   return {
     type: "datetime",
     isDateOnly,
+    timezone,
     count,
     nullCount,
     unique,
@@ -584,11 +591,17 @@ export function computeBooleanStatistics(
 
 /**
  * Compute statistics for a column based on its kind.
+ *
+ * @param columnKind - The column kind (e.g., "numeric", "datetime", "text", "checkbox")
+ * @param data - The Quiver data
+ * @param columnIndex - The absolute column index in Quiver
+ * @param timezone - Optional timezone identifier for datetime columns (from column.arrowType)
  */
 export function computeStatistics(
   columnKind: string,
   data: Quiver,
-  columnIndex: number
+  columnIndex: number,
+  timezone?: string
 ): ColumnStatistics | null {
   const statsType = getStatisticsType(columnKind)
   if (!statsType) return null
@@ -601,11 +614,12 @@ export function computeStatistics(
     case "text":
       return computeTextStatistics(values, isSampled)
     case "datetime":
-      // Pass isDateOnly flag based on column kind
+      // Pass isDateOnly flag based on column kind and timezone from Arrow type
       return computeDateTimeStatistics(
         values,
         isSampled,
-        columnKind === "date"
+        columnKind === "date",
+        timezone
       )
     case "boolean":
       return computeBooleanStatistics(values, isSampled)
