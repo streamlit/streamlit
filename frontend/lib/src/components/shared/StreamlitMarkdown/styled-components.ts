@@ -205,10 +205,12 @@ export const StyledStreamlitMarkdown =
       isToast,
       truncate,
     }) => {
-      // All widget labels use smaller font size (fontSizes.sm). Normal markdown text stays at
-      // fontSizes.md (isLabel=false). Alert titles (st.warning etc.) also stay at fontSizes.md
-      // via inheritFont=true, inheriting from their StyledAlertTitle container.
-      // Toasts and captions also use smaller font size.
+      // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
+      // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
+      // Toasts and captions also use the smaller font size.
+      // Some label contexts (e.g. alert titles, dialog titles, slider labels, metric values)
+      // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
+      // and font-weight inherit from their parent container instead.
       const useSmallerFontSize = isLabel || isToast || isCaption
 
       return {
