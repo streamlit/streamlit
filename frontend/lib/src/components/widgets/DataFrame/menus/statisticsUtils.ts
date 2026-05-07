@@ -133,8 +133,14 @@ export type ColumnStatistics =
 /** Column kinds that support numeric statistics. */
 const NUMERIC_KINDS = new Set(["number", "progress"])
 
-/** Column kinds that support text statistics. */
-const TEXT_KINDS = new Set(["text", "selectbox", "link"])
+/**
+ * Column kinds that support text statistics.
+ * Note: "selectbox" and "link" are excluded because they can render user-facing
+ * display labels that differ from the raw cell content (e.g., hrefs, option codes).
+ * Until the stats pipeline uses column.getCell() for display values, enabling these
+ * would make statistics disagree with what's shown in the table.
+ */
+const TEXT_KINDS = new Set(["text"])
 
 /** Column kinds that support datetime statistics. */
 // Note: "time" excluded - toSafeDate() lacks field metadata to handle time-only values correctly

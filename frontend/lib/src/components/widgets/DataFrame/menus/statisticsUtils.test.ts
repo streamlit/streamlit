@@ -31,8 +31,8 @@ describe("statisticsUtils", () => {
       ["number", true],
       ["progress", true],
       ["text", true],
-      ["selectbox", true],
-      ["link", true],
+      ["selectbox", false], // excluded - display label differs from raw content
+      ["link", false], // excluded - display label differs from raw content
       ["datetime", true],
       ["date", true],
       ["time", false], // time excluded - toSafeDate() lacks field metadata
@@ -52,8 +52,8 @@ describe("statisticsUtils", () => {
       ["number", "numeric"],
       ["progress", "numeric"],
       ["text", "text"],
-      ["selectbox", "text"],
-      ["link", "text"],
+      ["selectbox", null], // excluded - display label differs from raw content
+      ["link", null], // excluded - display label differs from raw content
       ["datetime", "datetime"],
       ["date", "datetime"],
       ["time", null], // time excluded - toSafeDate() lacks field metadata

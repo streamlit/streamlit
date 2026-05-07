@@ -343,8 +343,10 @@ function StatisticsMenu({
   const theme = useEmotionTheme()
   const { colors, fontSizes, fontWeights } = theme
 
-  // Only compute statistics when menu is open
-  // Memoize based on data and column to cache results
+  // Compute statistics only when menu is open.
+  // Note: This useMemo caches within a single open session only, not across
+  // open/close cycles (the component unmounts when the parent ColumnMenu closes).
+  // For large datasets, computation is bounded by SAMPLE_SIZE (10k values).
   const statistics = useMemo((): ColumnStatistics | null => {
     if (!isOpen) return null
     if (!supportsStatistics(column.kind)) return null
