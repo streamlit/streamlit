@@ -31,6 +31,7 @@ from streamlit.dataframe_util import (
     is_pandas_version_less_than,
 )
 from streamlit.elements.arrow import (
+    ButtonClickSerde,
     DataframeSelectionSerde,
     _validate_selection_state,
     parse_selection_mode,
@@ -1179,7 +1180,6 @@ class TestButtonClickSerde:
 
     def test_serialize_none_returns_empty_proto(self) -> None:
         """Test that serializing None returns empty StringTriggerValue."""
-        from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         result = serde.serialize(None)
@@ -1187,7 +1187,6 @@ class TestButtonClickSerde:
 
     def test_serialize_click_state(self) -> None:
         """Test that serializing click state returns StringTriggerValue with JSON data."""
-        from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         result = serde.serialize({"row": 5, "label": "Click me"})
@@ -1195,21 +1194,18 @@ class TestButtonClickSerde:
 
     def test_deserialize_none_returns_none(self) -> None:
         """Test that deserializing None returns None."""
-        from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         assert serde.deserialize(None) is None
 
     def test_deserialize_empty_string_returns_none(self) -> None:
         """Test that deserializing empty string returns None."""
-        from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         assert serde.deserialize("") is None
 
     def test_deserialize_valid_json(self) -> None:
         """Test that deserializing valid JSON returns click state."""
-        from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         result = serde.deserialize('{"row": 3, "label": "Delete"}')
@@ -1217,7 +1213,6 @@ class TestButtonClickSerde:
 
     def test_roundtrip_preserves_state(self) -> None:
         """Test that serialization roundtrip preserves the click state."""
-        from streamlit.elements.arrow import ButtonClickSerde
 
         serde = ButtonClickSerde()
         original = {"row": 0, "label": ":material/edit: Edit"}

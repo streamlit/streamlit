@@ -447,6 +447,15 @@ def process_config_mapping(
             transformed_column_config[column] = ColumnConfig(hidden=True)
         elif isinstance(config, str):
             transformed_column_config[column] = ColumnConfig(label=config)
+        elif isinstance(config, ButtonColumnResult):
+            # ButtonColumnResult is only valid in st.dataframe where it's preprocessed
+            # before reaching this function. Encountering it here means it was passed
+            # to st.data_editor which doesn't support ButtonColumn with callbacks.
+            raise StreamlitAPIException(
+                f"Invalid column config for column `{column}`. "
+                f"`ButtonColumn` with `key` parameter is not supported in `st.data_editor`. "
+                f"Button columns only work with `st.dataframe`."
+            )
         elif isinstance(config, dict):
             # Ensure that the column config objects are cloned
             # since we will apply in-place changes to it.

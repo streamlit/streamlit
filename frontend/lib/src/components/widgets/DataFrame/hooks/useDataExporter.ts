@@ -102,18 +102,20 @@ async function writeCsv(
   // Write UTF-8 BOM for excel compatibility:
   await writable.write(textEncoder.encode(CSV_UTF8_BOM))
 
-  // Write headers:
-  const headers: string[] = columns.map(column => column.name)
+  // Write headers (skip button columns as they are not exportable):
+  const headers: string[] = columns
+    .filter(column => column.kind !== "button")
+    .map(column => column.name)
   await writable.write(textEncoder.encode(toCsvRow(headers)))
 
   for (let row = 0; row < numRows; row++) {
     const rowData: unknown[] = []
-    columns.forEach((column: BaseColumn) => {
-      // Use column.indexNumber (original position) instead of loop index
-      // to handle filtered columns (e.g., button columns excluded from export)
-      rowData.push(
-        column.getCellValue(getCellContent([column.indexNumber, row]))
-      )
+    // Iterate over full columns array using loop index for getCellContent,
+    // since it expects position in the displayed columns array.
+    // Skip button columns as they are not exportable.
+    columns.forEach((column: BaseColumn, col: number) => {
+      if (column.kind === "button") return
+      rowData.push(column.getCellValue(getCellContent([col, row])))
     })
     // Write row to CSV:
     await writable.write(textEncoder.encode(toCsvRow(rowData)))

@@ -609,15 +609,11 @@ function DataFrame({
     getOriginalIndex,
   ])
 
-  // Filter out button columns from CSV export (per spec: button columns are excluded from export)
-  const exportableColumns = useMemo(
-    () => columns.filter(col => col.kind !== "button"),
-    [columns]
-  )
-
+  // Button columns are filtered inside useDataExporter to ensure correct column
+  // indexing for getCellContent (which expects full columns array positions)
   const { exportToCsv } = useDataExporter(
     getCellContent,
-    exportableColumns,
+    columns,
     numRows,
     enforceDownloadInNewTab
   )

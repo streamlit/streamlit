@@ -321,7 +321,27 @@ class ButtonClickSerde:
     def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
         if ui_value is None or ui_value == "":
             return None
-        return cast("ButtonClickState", json.loads(ui_value))
+        parsed = json.loads(ui_value)
+        # Validate shape and types of the parsed data
+        if not isinstance(parsed, dict):
+            raise StreamlitAPIException(
+                f"Invalid button click state: expected a dict, got {type(parsed).__name__}."
+            )
+        if "row" not in parsed or "label" not in parsed:
+            raise StreamlitAPIException(
+                "Invalid button click state: missing required 'row' or 'label' field."
+            )
+        if not isinstance(parsed["row"], int):
+            raise StreamlitAPIException(
+                f"Invalid button click state: 'row' must be an integer, "
+                f"got {type(parsed['row']).__name__}."
+            )
+        if not isinstance(parsed["label"], str):
+            raise StreamlitAPIException(
+                f"Invalid button click state: 'label' must be a string, "
+                f"got {type(parsed['label']).__name__}."
+            )
+        return cast("ButtonClickState", parsed)
 
 
 def parse_selection_mode(
@@ -1063,7 +1083,6 @@ class ArrowMixin:
                     user_key=button_col.key,
                     key_as_main_identity=True,
                     dg=self.dg,
-                    column=col_name,
                 )
                 register_widget(
                     widget_id,
