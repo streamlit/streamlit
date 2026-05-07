@@ -50,7 +50,7 @@ const StyledContainer = styled.div<StyledContainerProps>(({ isEditing }) => ({
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  width: isEditing ? "min(37.5rem, 80vw)" : "100%",
+  width: "100%",
   height: "100%",
   minHeight: isEditing ? "18.75rem" : "12.5rem",
   maxHeight: isEditing ? "min(31.25rem, 70vh)" : "25rem",
@@ -80,6 +80,14 @@ const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
     transition: locked ? TOOLBAR_SHOW_TRANSITION : TOOLBAR_HIDE_TRANSITION,
   })
 )
+
+// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
+const StyledEditToolbarRow = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "flex-end",
+  padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 ${theme.spacing.sm}`,
+  backgroundColor: "var(--gdg-bg-cell)",
+}))
 
 const StyledCellToolbar = styled(StyledToolbar)({
   pointerEvents: "auto",
@@ -167,13 +175,6 @@ const StyledMarkdownViewer = styled.div(({ theme }) => ({
 }))
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
-const StyledEditWrapper = styled.div({
-  position: "relative",
-  display: "flex",
-  flexDirection: "column",
-  flex: 1,
-})
-
 /* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
 const StyledTextarea = styled.textarea(({ theme }) => ({
   flex: 1,
@@ -251,30 +252,28 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   if (isEditing) {
     return (
       <StyledContainer data-testid="markdown-cell-editor" isEditing>
-        <StyledEditWrapper>
-          <StyledToolbarWrapper locked>
-            <StyledCellToolbar>
-              <ToolbarAction
-                label="Save (Ctrl+Enter)"
-                icon={Check}
-                onClick={handleSave}
-              />
-              <ToolbarAction
-                label="Cancel (Escape)"
-                icon={Close}
-                onClick={handleCancel}
-              />
-            </StyledCellToolbar>
-          </StyledToolbarWrapper>
-          <StyledTextarea
-            value={editValue}
-            onChange={e => setEditValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            autoFocus
-            placeholder="Enter markdown text..."
-            aria-label="Edit markdown content"
-          />
-        </StyledEditWrapper>
+        <StyledEditToolbarRow>
+          <StyledCellToolbar>
+            <ToolbarAction
+              label="Save (Ctrl+Enter)"
+              icon={Check}
+              onClick={handleSave}
+            />
+            <ToolbarAction
+              label="Cancel (Escape)"
+              icon={Close}
+              onClick={handleCancel}
+            />
+          </StyledCellToolbar>
+        </StyledEditToolbarRow>
+        <StyledTextarea
+          value={editValue}
+          onChange={e => setEditValue(e.target.value)}
+          onKeyDown={handleKeyDown}
+          autoFocus
+          placeholder="Enter markdown text..."
+          aria-label="Edit markdown content"
+        />
       </StyledContainer>
     )
   }
