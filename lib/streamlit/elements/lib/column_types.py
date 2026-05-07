@@ -3135,12 +3135,14 @@ def ButtonColumn(
     kwargs: WidgetKwargs | None = None,
     key: str | None = None,
 ) -> ButtonColumnResult | ColumnConfig:
-    """Configure a button column in ``st.dataframe``.
+    """Configure a button column in ``st.dataframe`` or ``st.data_editor``.
 
     Button columns display clickable buttons in each cell, enabling row-level
     actions with Python callbacks. The cell values determine the button labels.
     This command needs to be used in the ``column_config`` parameter of
-    ``st.dataframe``. Button columns are always read-only.
+    ``st.dataframe`` or ``st.data_editor``. Button columns are always read-only—
+    in ``st.data_editor``, the underlying cell values cannot be edited, but
+    button clicks still trigger callbacks.
 
     Parameters
     ----------

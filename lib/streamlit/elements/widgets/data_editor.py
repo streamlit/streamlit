@@ -38,7 +38,9 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
+from streamlit.elements.arrow import ButtonClickSerde
 from streamlit.elements.lib.column_config_utils import (
+    _NUMERICAL_POSITION_PREFIX,
     INDEX_IDENTIFIER,
     ColumnConfigMapping,
     ColumnConfigMappingInput,
@@ -51,6 +53,7 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ButtonColumnResult
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -1033,8 +1036,27 @@ class DataEditorMixin:
         # Check if the column names are valid and unique.
         _check_column_names(data_df)
 
+        # Process ButtonColumnResult objects and extract callback references
+        # Button columns are read-only in data_editor but can still trigger clicks
+        button_columns: dict[str, ButtonColumnResult] = {}
+        processed_column_config: ColumnConfigMappingInput | None = None
+        if column_config is not None:
+            processed_column_config = {}
+            for col_name, config in column_config.items():
+                if isinstance(config, ButtonColumnResult):
+                    # Transform key the same way column config does for consistency
+                    column_widget_key = (
+                        f"{_NUMERICAL_POSITION_PREFIX}{col_name}"
+                        if isinstance(col_name, int)
+                        else str(col_name)
+                    )
+                    button_columns[column_widget_key] = config
+                    processed_column_config[col_name] = config.config
+                else:
+                    processed_column_config[col_name] = config
+
         # Convert the user provided column config into the frontend compatible format:
-        column_config_mapping = process_config_mapping(column_config)
+        column_config_mapping = process_config_mapping(processed_column_config)
 
         # Deactivate editing for columns that are not compatible with arrow
         for column_name, column_data in data_df.items():
@@ -1166,6 +1188,36 @@ class DataEditorMixin:
         proto.arrow_data.data = arrow_bytes
 
         marshall_column_config(proto, column_config_mapping)
+
+        # Register widgets for button columns with keys
+        # Button columns are read-only in data_editor but clicks still trigger callbacks
+        button_serde = ButtonClickSerde()
+        for col_name, button_col in button_columns.items():
+            if button_col.key is not None:
+                check_widget_policies(
+                    self.dg,
+                    button_col.key,
+                    on_change=button_col.on_click,
+                    default_value=None,
+                    writes_allowed=False,
+                )
+                widget_id = compute_and_register_element_id(
+                    "dataframe_button",
+                    user_key=button_col.key,
+                    key_as_main_identity=True,
+                    dg=self.dg,
+                )
+                register_widget(
+                    widget_id,
+                    on_change_handler=button_col.on_click,
+                    args=button_col.args,
+                    kwargs=button_col.kwargs,
+                    deserializer=button_serde.deserialize,
+                    serializer=button_serde.serialize,
+                    ctx=ctx,
+                    value_type="string_trigger_value",
+                )
+                proto.button_click_widgets[col_name] = widget_id
 
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"
