@@ -316,6 +316,9 @@ function DataFrame({
    */
   const handleButtonClick = useCallback(
     (columnName: string, rowIndex: number, label: string): void => {
+      // Close any open button action menu
+      setButtonActionMenu(undefined)
+
       if (!widgetMgr) return
 
       const widgetId = element.buttonClickWidgets[columnName]
