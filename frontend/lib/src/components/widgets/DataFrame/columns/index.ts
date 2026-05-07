@@ -40,9 +40,7 @@ import TextColumn from "./TextColumn"
 import { ColumnCreator } from "./utils"
 
 export { ImageCellEditor } from "./cells/ImageCellEditor"
-export type { JsonCell } from "./cells/JsonCell"
-export type { MarkdownCell } from "./cells/MarkdownCell"
-export type { MultiSelectCell } from "./cells/MultiSelectCell"
+
 export type { DateTimeColumnParams } from "./DateTimeColumn"
 export type { LinkColumnParams } from "./LinkColumn"
 export type { NumberColumnParams } from "./NumberColumn"
@@ -91,8 +89,6 @@ export {
   DateColumn,
   DateTimeColumn,
   ListColumn,
-  MarkdownColumn,
-  MultiselectColumn,
   NumberColumn,
   ObjectColumn,
   SelectboxColumn,
