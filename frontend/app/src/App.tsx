@@ -298,10 +298,14 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
-  // Whether we've sent a non-auto rerun request that the server hasn't
-  // acknowledged yet. This closes the gap before sessionStatusChanged flips
-  // scriptRunState to RUNNING, without blocking unrelated auto-rerun fragments.
+  // Whether we've handed a non-auto rerun request to the connection manager
+  // and are still waiting for the server to acknowledge it. This closes the
+  // gap before sessionStatusChanged flips scriptRunState to RUNNING.
   private hasPendingRerunRequest: boolean = false
+
+  // Fragment IDs whose auto-rerun timers should stay quiescent until the next
+  // committed tree update after an in-flight auto-rerun request.
+  private readonly blockedAutoRerunFragmentIds = new Set<string>()
 
   public constructor(props: Props) {
     super(props)
@@ -739,7 +743,7 @@ export class App extends PureComponent<Props, State> {
     // but at this point it should always be set.
     this.connectionManager?.disconnect()
 
-    this.fragmentAutoRerunManager.clearAll()
+    this.cleanupAutoReruns()
 
     this.hostCommunicationMgr.closeHostCommunication()
 
@@ -1275,6 +1279,7 @@ export class App extends PureComponent<Props, State> {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
     if (sessionEvent.type === "scriptCompilationException") {
       this.hasPendingRerunRequest = false
+      this.blockedAutoRerunFragmentIds.clear()
       this.setState({ scriptRunState: ScriptRunState.COMPILATION_ERROR })
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_COMPILE_ERROR,
@@ -1362,6 +1367,7 @@ export class App extends PureComponent<Props, State> {
     // after the latest rerun request:
     this.hasReceivedNewSession = true
     this.hasPendingRerunRequest = false
+    this.blockedAutoRerunFragmentIds.clear()
 
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
@@ -1633,6 +1639,7 @@ export class App extends PureComponent<Props, State> {
             this.cleanupAfterElementTreeUpdate({
               pruneInactiveAutoReruns: true,
             })
+            this.blockedAutoRerunFragmentIds.clear()
           }
         )
       }
@@ -1727,12 +1734,15 @@ export class App extends PureComponent<Props, State> {
    * Send the fragment-scoped rerun request when a managed auto-rerun interval fires.
    * `scriptRunState` covers the post-ack window once the server reports RUNNING,
    * and `hasPendingRerunRequest` covers the pre-ack window after a non-auto
-   * rerun is sent but before that status update arrives.
+   * rerun is sent but before that status update arrives. For auto-reruns, we
+   * also block the in-flight fragment subtree so a parent fragment cannot queue
+   * a stale descendant rerun before post-commit pruning runs.
    */
   private readonly handleAutoRerunTick = (fragmentId: string): void => {
     if (
       this.state.scriptRunState !== ScriptRunState.NOT_RUNNING ||
-      this.hasPendingRerunRequest
+      this.hasPendingRerunRequest ||
+      this.blockedAutoRerunFragmentIds.has(fragmentId)
     ) {
       return
     }
@@ -1850,6 +1860,18 @@ export class App extends PureComponent<Props, State> {
    */
   cleanupAutoReruns = (): void => {
     this.fragmentAutoRerunManager.clearAll()
+    this.blockedAutoRerunFragmentIds.clear()
+  }
+
+  /**
+   * Block auto-rerun timers for the in-flight fragment and its live descendants
+   * until the next committed tree update confirms which fragment timers remain.
+   */
+  private blockPendingAutoRerunSubtree(fragmentId: string): void {
+    this.blockedAutoRerunFragmentIds.add(fragmentId)
+    this.state.elements.getFragmentSubtreeIds(fragmentId).forEach(activeId => {
+      this.blockedAutoRerunFragmentIds.add(activeId)
+    })
   }
 
   /**
@@ -2024,13 +2046,7 @@ export class App extends PureComponent<Props, State> {
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
 
-    // Mark non-auto reruns as pending immediately so auto-rerun timers do not
-    // enqueue another fragment rerun before the server reports that this one
-    // started. Auto-reruns themselves stay concurrent with other fragments, so
-    // auto-parent -> auto-child chains still rely on post-commit tree pruning.
-    this.hasPendingRerunRequest = isAutoRerun !== true
-
-    this.sendBackMsg(
+    const sent = this.sendBackMsg(
       new BackMsg({
         rerunScript: {
           queryString,
@@ -2044,6 +2060,17 @@ export class App extends PureComponent<Props, State> {
         },
       })
     )
+
+    if (sent) {
+      if (isAutoRerun === true && fragmentId) {
+        this.blockPendingAutoRerunSubtree(fragmentId)
+      } else {
+        // Mark non-auto reruns as pending once the request is handed to the
+        // connection manager so auto-rerun timers do not enqueue another
+        // fragment rerun before the server reports that this one started.
+        this.hasPendingRerunRequest = true
+      }
+    }
     // Reset hasReceivedNewSession to false to ensure that we are aware
     // if a finished message is from a previous script run.
     this.hasReceivedNewSession = false
@@ -2145,16 +2172,19 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Sends a message back to the server.
+   *
+   * @returns Whether the message was handed to the connection manager.
    */
-  private readonly sendBackMsg = (msg: BackMsg): void => {
+  private readonly sendBackMsg = (msg: BackMsg): boolean => {
     if (this.connectionManager) {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
-    } else {
-      LOG.error(
-        `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
-      )
+      return true
     }
+    LOG.error(
+      `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
+    )
+    return false
   }
 
   /**

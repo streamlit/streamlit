@@ -46,6 +46,9 @@ def test_nested_fragment_run_every_can_disappear_without_crashing(app: Page):
     standalone_fragment = _get_fragment_markdown(app, "standalone uuid in fragment:")
     nested_fragment = _get_fragment_markdown(app, "nested uuid in fragment:")
 
+    expect(standalone_fragment).to_be_visible()
+    expect(nested_fragment).to_be_visible()
+
     standalone_text = standalone_fragment.text_content()
     nested_text = nested_fragment.text_content()
 

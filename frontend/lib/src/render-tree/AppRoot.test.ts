@@ -1585,6 +1585,62 @@ describe("AppRoot", () => {
     })
   })
 
+  describe("AppRoot.getFragmentSubtreeIds", () => {
+    it("returns the fragment ids rendered inside a fragment subtree", () => {
+      const rootWithNestedFragments = ROOT.applyDelta(
+        "current_run",
+        makeProto(DeltaProto, {
+          addBlock: { allowEmpty: true },
+          fragmentId: "parent_fragment",
+        }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+        .applyDelta(
+          "current_run",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "parent child" } },
+            fragmentId: "parent_fragment",
+          }),
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+        .applyDelta(
+          "current_run",
+          makeProto(DeltaProto, {
+            addBlock: { allowEmpty: true },
+            fragmentId: "nested_fragment",
+          }),
+          forwardMsgMetadata([0, 1, 1, 1])
+        )
+        .applyDelta(
+          "current_run",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "nested child" } },
+            fragmentId: "nested_fragment",
+          }),
+          forwardMsgMetadata([0, 1, 1, 1, 0])
+        )
+        .applyDelta(
+          "current_run",
+          makeProto(DeltaProto, {
+            addBlock: { allowEmpty: true },
+            fragmentId: "other_fragment",
+          }),
+          forwardMsgMetadata([0, 1, 2])
+        )
+
+      expect(
+        rootWithNestedFragments.getFragmentSubtreeIds("parent_fragment")
+      ).toEqual(new Set(["parent_fragment", "nested_fragment"]))
+      expect(
+        rootWithNestedFragments.getFragmentSubtreeIds("other_fragment")
+      ).toEqual(new Set(["other_fragment"]))
+    })
+
+    it("returns an empty set when the fragment is not in the tree", () => {
+      expect(ROOT.getFragmentSubtreeIds("missing_fragment")).toEqual(new Set())
+    })
+  })
+
   describe("AppRoot.debug", () => {
     it("prints labeled child sections with tree output", () => {
       const out = ROOT.debug()

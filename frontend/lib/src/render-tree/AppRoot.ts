@@ -420,6 +420,43 @@ export class AppRoot {
     }
   }
 
+  /**
+   * Return the fragment IDs currently rendered inside `fragmentId`'s subtree.
+   * This includes `fragmentId` itself when it is present in the committed tree,
+   * plus any nested fragment scopes rendered under it.
+   */
+  public getFragmentSubtreeIds(fragmentId: string): Set<string> {
+    const fragmentIds = new Set<string>()
+
+    const visitNode = (node: AppNode, isInTargetSubtree = false): void => {
+      const inTargetSubtree =
+        isInTargetSubtree || node.fragmentId === fragmentId
+
+      if (inTargetSubtree && node.fragmentId) {
+        fragmentIds.add(node.fragmentId)
+      }
+
+      if (node instanceof BlockNode) {
+        node.children.forEach(child => visitNode(child, inTargetSubtree))
+      } else if (node instanceof TransientNode) {
+        node.transientNodes.forEach(element =>
+          visitNode(element, inTargetSubtree)
+        )
+
+        if (node.anchor) {
+          visitNode(node.anchor, inTargetSubtree)
+        }
+      }
+    }
+
+    visitNode(this.main)
+    visitNode(this.sidebar)
+    visitNode(this.event)
+    visitNode(this.bottom)
+
+    return fragmentIds
+  }
+
   private addElement(
     deltaPath: number[],
     scriptRunId: string,
