@@ -5153,8 +5153,8 @@ describe("App", () => {
       })
 
       // A single tick is enough to prove the interval is active before page
-      // navigation. Additional ticks are now suppressed while that rerun is
-      // pending, which closes the stale nested-fragment race.
+      // navigation. This test focuses on page-change cleanup rather than the
+      // separate pending-rerun suppression path.
       vi.advanceTimersByTime(1000) // in milliseconds
 
       const connectionManager = getMockConnectionManager()

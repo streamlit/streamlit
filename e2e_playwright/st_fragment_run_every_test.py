@@ -59,8 +59,9 @@ def test_nested_fragment_run_every_can_disappear_without_crashing(app: Page):
 
     expect(nested_fragment).to_have_count(0)
 
-    # Wait for multiple standalone ticks so a stale nested timer has enough time
-    # to queue one last rerun and surface the original delta-path crash.
+    # Wait for two standalone ticks: one should be enough in theory, but the
+    # extra tick gives slower runners another chance to surface a stale nested
+    # rerun without stretching the test much longer.
     for _ in range(2):
         expect(standalone_fragment).not_to_have_text(standalone_text)
         standalone_text = standalone_fragment.text_content()

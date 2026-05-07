@@ -1725,6 +1725,9 @@ export class App extends PureComponent<Props, State> {
 
   /**
    * Send the fragment-scoped rerun request when a managed auto-rerun interval fires.
+   * `scriptRunState` covers the post-ack window once the server reports RUNNING,
+   * and `hasPendingRerunRequest` covers the pre-ack window after a non-auto
+   * rerun is sent but before that status update arrives.
    */
   private readonly handleAutoRerunTick = (fragmentId: string): void => {
     if (
@@ -2023,7 +2026,8 @@ export class App extends PureComponent<Props, State> {
 
     // Mark non-auto reruns as pending immediately so auto-rerun timers do not
     // enqueue another fragment rerun before the server reports that this one
-    // started. Auto-reruns themselves stay concurrent with other fragments.
+    // started. Auto-reruns themselves stay concurrent with other fragments, so
+    // auto-parent -> auto-child chains still rely on post-commit tree pruning.
     this.hasPendingRerunRequest = isAutoRerun !== true
 
     this.sendBackMsg(
