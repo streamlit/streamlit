@@ -540,7 +540,7 @@ def _is_zero_delta(delta: Delta) -> bool:
     try:
 
         delta_str = dedent(str(delta)).strip()
-        match = re.match(r"-?\d*\.?\d+", delta_str)
+        match = re.match(r"[+-]?\d*\.?\d+", delta_str)
         return bool(match and float(match.group()) == 0)
 
     except ValueError:
