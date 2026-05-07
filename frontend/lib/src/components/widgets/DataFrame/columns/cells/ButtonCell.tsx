@@ -58,6 +58,8 @@ interface ButtonCellProps {
   readonly data: ButtonCellData
   /** The button style variant. */
   readonly buttonType: "primary" | "secondary" | "tertiary"
+  /** Horizontal alignment of the button in the cell. Defaults to center. */
+  readonly alignment?: "left" | "center" | "right"
   /** The row index (original data row, before sorting). Set by DataFrame when rendering. */
   readonly rowIndex?: number
   /** Callback when a single button is clicked (set by DataFrame component). */
@@ -152,15 +154,33 @@ function getButtonBounds(
   cellWidth: number,
   cellHeight: number,
   cellPadding: number,
-  contentWidth: number
+  contentWidth: number,
+  alignment: "left" | "center" | "right" = "center"
 ): ButtonBounds {
   const buttonWidth = contentWidth + BUTTON_PADDING * 2
   const verticalPadding = Math.floor(cellPadding * 0.5)
   const buttonHeight = Math.ceil(cellHeight - verticalPadding * 2)
-  const buttonX = (cellWidth - buttonWidth) / 2
-  const buttonY = verticalPadding
 
-  return { x: buttonX, y: buttonY, width: buttonWidth, height: buttonHeight }
+  let buttonX: number
+  switch (alignment) {
+    case "left":
+      buttonX = cellPadding
+      break
+    case "right":
+      buttonX = cellWidth - buttonWidth - cellPadding
+      break
+    case "center":
+    default:
+      buttonX = (cellWidth - buttonWidth) / 2
+      break
+  }
+
+  return {
+    x: buttonX,
+    y: verticalPadding,
+    width: buttonWidth,
+    height: buttonHeight,
+  }
 }
 
 /**
@@ -203,7 +223,7 @@ const renderer: CustomRenderer<ButtonCell> = {
   onSelect: a => a.preventDefault(),
   onClick: args => {
     const { cell, bounds, posX, posY, theme } = args
-    const { data, onClick, onOpenMenu, rowIndex } = cell.data
+    const { data, onClick, onOpenMenu, rowIndex, alignment } = cell.data
     if (!data || rowIndex === undefined) return undefined
 
     // Estimate content width without ctx (conservative char width estimate)
@@ -228,7 +248,8 @@ const renderer: CustomRenderer<ButtonCell> = {
       bounds.width,
       bounds.height,
       theme.cellHorizontalPadding,
-      estimatedContentWidth
+      estimatedContentWidth,
+      alignment
     )
 
     // Use tolerance margin to account for estimation mismatch with precise draw bounds
@@ -262,7 +283,7 @@ const renderer: CustomRenderer<ButtonCell> = {
   },
   draw: (args, cell) => {
     const { ctx, theme, rect, hoverX, hoverY } = args
-    const { data, buttonType } = cell.data
+    const { data, buttonType, alignment } = cell.data
     const padding = theme.cellHorizontalPadding
 
     if (!data) return true
@@ -276,7 +297,8 @@ const renderer: CustomRenderer<ButtonCell> = {
       rect.width,
       rect.height,
       padding,
-      contentWidth
+      contentWidth,
+      alignment
     )
 
     // Absolute position for drawing

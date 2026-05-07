@@ -56,6 +56,7 @@ function ButtonColumn(props: BaseColumnProps): BaseColumn {
       kind: "button-cell",
       data: null,
       buttonType,
+      alignment: props.contentAlignment,
     },
   }
 
