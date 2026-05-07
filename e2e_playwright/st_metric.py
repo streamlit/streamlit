@@ -178,6 +178,14 @@ with col2:
         chart_type="line",
     )
 
+# Test zero delta
+st.metric(
+    "Zero delta",
+    100,
+    0,
+    border=True,
+)
+
 # Format parameter tests
 format_col1, format_col2, format_col3, format_col4 = st.container(
     key="metric_format_config"
