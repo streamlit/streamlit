@@ -337,6 +337,9 @@ const renderer: CustomRenderer<MarkdownCell> = {
   provideEditor: () => ({
     editor: MarkdownCellEditor,
     disablePadding: true,
+    styleOverride: {
+      minWidth: "min(37.5rem, 90vw)",
+    },
   }),
 
   onPaste: (val: string, cell: MarkdownCellProps) => {
