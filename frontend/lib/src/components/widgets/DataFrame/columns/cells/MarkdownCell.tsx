@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useState } from "react"
 
 import styled from "@emotion/styled"
 import { Check, Close, Edit } from "@emotion-icons/material-outlined"
@@ -81,7 +81,7 @@ const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
   })
 )
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
 const StyledTextareaWrapper = styled.div({
   position: "relative",
   display: "flex",
@@ -89,6 +89,7 @@ const StyledTextareaWrapper = styled.div({
   flex: 1,
   backgroundColor: "var(--gdg-bg-cell)",
 })
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
 const StyledCellToolbar = styled(StyledToolbar)({
   pointerEvents: "auto",
@@ -213,11 +214,6 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   const [isEditing, setIsEditing] = useState(false)
   const [editValue, setEditValue] = useState(cell.data.value ?? "")
 
-  const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
-    []
-  )
-
   const handleSave = useCallback(() => {
     onChange({
       ...cell,
@@ -287,10 +283,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     <StyledContainer data-testid="markdown-cell-viewer">
       <StyledMarkdownViewer>
         {!cell.readonly && (
-          <StyledToolbarWrapper
-            className="stMarkdownCellToolbar"
-            locked={isTouchDevice}
-          >
+          <StyledToolbarWrapper className="stMarkdownCellToolbar" locked>
             <StyledCellToolbar>
               <ToolbarAction
                 label="Edit"
