@@ -420,6 +420,14 @@ export function computeTextStatistics(
 
 /**
  * Compute statistics for a datetime column.
+ *
+ * Note: This uses toSafeDate() which applies a heuristic to detect the time unit
+ * (seconds vs. milliseconds vs. microseconds vs. nanoseconds) based on magnitude
+ * thresholds. Streamlit normalizes datetime columns to nanoseconds in the Quiver
+ * layer, so this works correctly for standard Streamlit data. However, data from
+ * other Arrow sources with different time units (e.g., raw millisecond timestamps
+ * before Sep 2001 / 10^12 ms) could be misinterpreted.
+ *
  * @param isDateOnly - True if the column is date-only (no time component)
  */
 export function computeDateTimeStatistics(
@@ -427,7 +435,9 @@ export function computeDateTimeStatistics(
   isSampled: boolean,
   isDateOnly = false
 ): DateTimeStatistics {
-  // Convert values to timestamps using toSafeDate which handles various units
+  // Convert values to timestamps using toSafeDate which handles various units.
+  // toSafeDate uses magnitude thresholds to detect the unit: >= 10^18 = ns,
+  // >= 10^15 = µs, >= 10^12 = ms, otherwise seconds.
   const timestamps: number[] = []
   let nullCount = 0
 
@@ -436,7 +446,6 @@ export function computeDateTimeStatistics(
       nullCount++
     } else {
       // toSafeDate handles Date objects, bigints, numbers, and strings
-      // with automatic unit detection (seconds, milliseconds, microseconds, nanoseconds)
       const date = toSafeDate(v)
       if (notNullOrUndefined(date)) {
         const timestamp = date.getTime()
