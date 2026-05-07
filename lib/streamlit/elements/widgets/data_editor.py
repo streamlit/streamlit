@@ -40,8 +40,8 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.arrow import ButtonClickSerde
 from streamlit.elements.lib.column_config_utils import (
-    _NUMERICAL_POSITION_PREFIX,
     INDEX_IDENTIFIER,
+    NUMERICAL_POSITION_PREFIX,
     ColumnConfigMapping,
     ColumnConfigMappingInput,
     ColumnDataKind,
@@ -1046,7 +1046,7 @@ class DataEditorMixin:
                 if isinstance(config, ButtonColumnResult):
                     # Transform key the same way column config does for consistency
                     column_widget_key = (
-                        f"{_NUMERICAL_POSITION_PREFIX}{col_name}"
+                        f"{NUMERICAL_POSITION_PREFIX}{col_name}"
                         if isinstance(col_name, int)
                         else str(col_name)
                     )

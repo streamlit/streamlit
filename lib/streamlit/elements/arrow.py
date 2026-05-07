@@ -33,8 +33,8 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.column_config_utils import (
-    _NUMERICAL_POSITION_PREFIX,
     INDEX_IDENTIFIER,
+    NUMERICAL_POSITION_PREFIX,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
     marshall_column_config,
@@ -323,7 +323,7 @@ class ButtonClickSerde:
             return None
 
         parsed = json.loads(ui_value)
-        # Validate shape: must be a dict with "row" (int) and "label" (str)
+        # Validate shape: must be a dict with "row" (int >= 0) and "label" (str)
         if (
             not isinstance(parsed, dict)
             or not isinstance(parsed.get("row"), int)
@@ -332,6 +332,14 @@ class ButtonClickSerde:
             raise StreamlitAPIException(
                 "Invalid button click state: expected {row: int, label: str}."
             )
+
+        # Validate row is non-negative (bounds check - row < num_rows is
+        # checked downstream when accessing the data)
+        if parsed["row"] < 0:
+            raise StreamlitAPIException(
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+            )
+
         return cast("ButtonClickState", parsed)
 
 
@@ -974,7 +982,7 @@ class ArrowMixin:
                 if isinstance(config, ButtonColumnResult):
                     # Transform key the same way column config does for consistency
                     column_widget_key = (
-                        f"{_NUMERICAL_POSITION_PREFIX}{col_name}"
+                        f"{NUMERICAL_POSITION_PREFIX}{col_name}"
                         if isinstance(col_name, int)
                         else str(col_name)
                     )

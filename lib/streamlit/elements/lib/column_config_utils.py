@@ -43,7 +43,7 @@ INDEX_IDENTIFIER: IndexIdentifierType = "_index"
 # This is used as prefix for columns that are configured via the numerical position.
 # The integer value is converted into a string key with this prefix.
 # This needs to match with the prefix configured in the frontend.
-_NUMERICAL_POSITION_PREFIX = "_pos:"
+NUMERICAL_POSITION_PREFIX = "_pos:"
 
 
 # The column data kind is used to describe the type of the data within the column.
@@ -536,7 +536,7 @@ def _convert_column_config_to_json(column_config_mapping: ColumnConfigMapping) -
         # Ignore all None values and prefix columns specified by numerical index:
         return json.dumps(
             {
-                (f"{_NUMERICAL_POSITION_PREFIX}{k!s}" if isinstance(k, int) else k): v
+                (f"{NUMERICAL_POSITION_PREFIX}{k!s}" if isinstance(k, int) else k): v
                 for (k, v) in remove_none_values(column_config_mapping).items()
             },
             allow_nan=False,
