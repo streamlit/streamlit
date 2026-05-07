@@ -715,6 +715,68 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         _app(element_producer)
 
 
+class ParallelFragmentDispatchTest(DeltaGeneratorTestCase):
+    """Tests for ``_dispatch_parallel_fragment``."""
+
+    # Suppress unawaited coroutine warning from MagicMock(spec=Runtime).
+    pytestmark = pytest.mark.filterwarnings(
+        "ignore:coroutine.*was never awaited:RuntimeWarning"
+    )
+
+    def test_pre_created_container_uses_flex_container_proto_type(self) -> None:
+        """The container pre-created on the main thread for a parallel fragment
+        must use the same ``flex_container`` Block proto type that a fragment
+        rerun produces via ``st.container()``.
+
+        Regression test for the parallel-fragment widget-state-loss bug: if R1's
+        pre-created container is an empty ``Block`` and R2's container is a
+        ``flex_container``, the frontend's ``addBlock`` reconciliation drops
+        ``children = []`` (no inheritance), forcing widgets to unmount/remount
+        and creating a window where user click state can be lost.
+        """
+        from streamlit.runtime.fragment import ParallelFragmentCoordinator
+
+        # Stand up a coordinator that captures submitted workers without
+        # running them, so the test runs deterministically on a single thread.
+        captured_workers: list[Callable[[], None]] = []
+
+        coordinator = MagicMock(spec=ParallelFragmentCoordinator)
+        coordinator.submit = MagicMock(
+            side_effect=lambda fn, *args: captured_workers.append(lambda: fn(*args))
+        )
+        self.script_run_ctx.parallel_coordinator = coordinator
+        # Treat this as a full app run (not a fragment-id-scoped rerun) so
+        # ``_fragment`` takes the parallel-dispatch path.
+        self.script_run_ctx.fragment_ids_this_run = []
+
+        @fragment(parallel=True)
+        def my_parallel_fragment() -> None:  # pragma: no cover - body unused
+            pass
+
+        my_parallel_fragment()
+
+        # Exactly one addBlock should have been enqueued from the main-thread
+        # pre-creation step (the worker hasn't run yet).
+        deltas = self.get_all_deltas_from_queue()
+        assert len(deltas) == 1, (
+            f"expected 1 addBlock delta, got {len(deltas)}: {deltas}"
+        )
+        delta = deltas[0]
+        assert delta.WhichOneof("type") == "add_block", delta
+        block = delta.add_block
+
+        # The pre-created container must be a flex_container so it matches the
+        # proto type produced by ``st.container()`` on a fragment rerun.
+        assert block.WhichOneof("type") == "flex_container", (
+            f"parallel fragment pre-created container has wrong proto type: "
+            f"{block.WhichOneof('type')!r} (expected 'flex_container')"
+        )
+
+        # The delta should be tagged with the fragment_id so the frontend
+        # routes child elements to the correct fragment.
+        assert delta.fragment_id, "delta should be tagged with fragment_id"
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",

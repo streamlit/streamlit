@@ -267,9 +267,21 @@ def _dispatch_parallel_fragment(
     error handling, and running the user function.  When it detects
     ``is_parallel_worker`` is ``True``, it skips creating its own
     ``st.container()`` and uses the pre-created container from the DG stack.
+
+    We use ``st.container()`` here (rather than an empty ``Block``) so the
+    pre-created container has the *same* ``flex_container`` Block proto type
+    that ``wrapped_fragment`` produces on a fragment rerun.  If the proto
+    types differed, the frontend's ``addBlock`` reconciliation in
+    ``AppRoot.ts`` would fail the ``existingNode.deltaBlock.type ===
+    block.type`` check on the rerun, drop ``children = []`` (no inheritance),
+    and force every widget inside the fragment to unmount/remount.  That
+    transient empty-children render opens a window where a user click that
+    landed during the initial app run could be reverted by stale React
+    state.  Matching the proto types lets the frontend keep the existing
+    BlockNode's children and re-render the widgets in place.
     """
+    import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
-    from streamlit.proto.Block_pb2 import Block as Block_pb2
 
     ts = _thread_state.get()
     prev_fragment_id = ts.fragment_id
@@ -278,10 +290,11 @@ def _dispatch_parallel_fragment(
 
     # Pre-create the container on the main thread.  open_block() on the
     # parent cursor advances it past this slot; the child RunningCursor
-    # starts with _owner_ident = None.
-    block_proto = Block_pb2()
-    active_dg = context_dg_stack.get()[-1]
-    container_dg = active_dg._block(block_proto)
+    # starts with _owner_ident = None.  Using ``st.container()`` (instead of
+    # an empty ``Block_pb2()``) ensures R1's container has the same
+    # ``flex_container`` proto type as R2's container created by
+    # ``wrapped_fragment`` on rerun (see docstring above).
+    container_dg = st.container()
 
     # Push the container DG onto the stack so the worker thread inherits it.
     # context_dg_stack stores tuples (immutable), so copy_context() captures
