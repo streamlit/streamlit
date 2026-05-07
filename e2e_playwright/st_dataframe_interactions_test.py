@@ -910,11 +910,6 @@ def test_statistics_menu_for_numeric_column(
     expect(statistics_content.get_by_text("Minimum", exact=True)).to_be_visible()
     expect(statistics_content.get_by_text("Maximum", exact=True)).to_be_visible()
 
-    # Verify skeleton is NOT visible (statistics have loaded)
-    expect(
-        themed_app.get_by_test_id("stDataFrameStatisticsSkeleton")
-    ).not_to_be_visible()
-
     # Wait for the statistics chart SVG to finish rendering (Vega renders asynchronously)
     statistics_chart = themed_app.get_by_test_id("stDataFrameStatisticsChart")
     expect(statistics_chart).to_be_visible()

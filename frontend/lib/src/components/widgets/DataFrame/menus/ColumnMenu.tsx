@@ -47,7 +47,10 @@ export interface ColumnMenuProps {
   left: number
   // The selected column:
   column: BaseColumn
-  // The Arrow data for statistics computation
+  // The Arrow data for statistics computation.
+  // Optional because DataFrame always provides it, but data-editor scenarios
+  // may not have Quiver data bound initially. Statistics menu is only shown
+  // when data is available.
   data?: Quiver
   // Callback used to instruct the parent to close the menu
   onCloseMenu: () => void

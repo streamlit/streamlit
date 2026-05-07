@@ -79,9 +79,19 @@ function formatNumber(value: number, precision = 2): string {
 /**
  * Format a datetime timestamp for display in statistics.
  * Uses UTC to avoid timezone shifts that can change dates.
+ * @param timestamp - Unix timestamp in milliseconds
+ * @param isDateOnly - If true, format as date only without time
  */
-function formatDatetime(timestamp: number): string {
+function formatDatetime(timestamp: number, isDateOnly = false): string {
   const date = new Date(timestamp)
+  if (isDateOnly) {
+    return date.toLocaleDateString(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone: "UTC",
+    })
+  }
   return date.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
@@ -204,18 +214,20 @@ function getMetricRows(statistics: ColumnStatistics): MetricRow[] {
         statistics.count,
         statistics.nullCount
       )
+      const fmt = (ts: number): string =>
+        formatDatetime(ts, statistics.isDateOnly)
       return [
         { label: "Values", value: formatNumber(statistics.count, 0) },
         {
           label: "Empty",
           value: formatCountWithPercent(statistics.nullCount, emptyPct),
         },
-        { label: "Minimum", value: formatDatetime(statistics.min) },
-        { label: "25th percentile", value: formatDatetime(statistics.q25) },
-        { label: "Median", value: formatDatetime(statistics.median) },
-        { label: "75th percentile", value: formatDatetime(statistics.q75) },
-        { label: "Maximum", value: formatDatetime(statistics.max) },
-        { label: "Average", value: formatDatetime(statistics.mean) },
+        { label: "Minimum", value: fmt(statistics.min) },
+        { label: "25th percentile", value: fmt(statistics.q25) },
+        { label: "Median", value: fmt(statistics.median) },
+        { label: "75th percentile", value: fmt(statistics.q75) },
+        { label: "Maximum", value: fmt(statistics.max) },
+        { label: "Average", value: fmt(statistics.mean) },
         { label: "Range", value: statistics.range },
       ]
     }
@@ -268,6 +280,52 @@ function StatisticsMetrics({
 }
 
 /**
+ * Get the null/empty count from statistics.
+ */
+function getNullOrEmptyCount(statistics: ColumnStatistics): number {
+  switch (statistics.type) {
+    case "numeric":
+    case "datetime":
+    case "boolean":
+      return statistics.nullCount
+    case "text":
+      return statistics.empty
+  }
+}
+
+/**
+ * Build reduced metrics for all-null/empty columns.
+ * Shows only Values and Empty counts.
+ */
+function getReducedMetricRows(statistics: ColumnStatistics): MetricRow[] {
+  const emptyCount = getNullOrEmptyCount(statistics)
+  const emptyPct = computeEmptyPercentage(statistics.count, emptyCount)
+  const label = statistics.type === "text" ? "Empty" : "Empty"
+  return [
+    { label: "Values", value: formatNumber(statistics.count, 0) },
+    { label, value: formatCountWithPercent(emptyCount, emptyPct) },
+  ]
+}
+
+/**
+ * Render reduced statistics metrics (for all-null/empty columns).
+ */
+function ReducedStatisticsMetrics({
+  statistics,
+}: {
+  statistics: ColumnStatistics
+}): ReactElement {
+  const rows = getReducedMetricRows(statistics)
+  return (
+    <StyledStatisticsMetrics data-testid="stDataFrameStatisticsMetrics">
+      {rows.map(row => (
+        <StatisticsRow key={row.label} label={row.label} value={row.value} />
+      ))}
+    </StyledStatisticsMetrics>
+  )
+}
+
+/**
  * Statistics content displayed in the submenu.
  */
 function StatisticsContent({
@@ -275,7 +333,20 @@ function StatisticsContent({
 }: {
   statistics: ColumnStatistics | null
 }): ReactElement | null {
-  if (!statistics || statistics.count === 0) {
+  if (!statistics) {
+    return <StyledStatisticsEmpty>No data</StyledStatisticsEmpty>
+  }
+
+  // If count is 0 but we have null/empty values, show reduced metrics
+  const emptyCount = getNullOrEmptyCount(statistics)
+  if (statistics.count === 0) {
+    if (emptyCount > 0) {
+      return (
+        <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
+          <ReducedStatisticsMetrics statistics={statistics} />
+        </StyledStatisticsContainer>
+      )
+    }
     return <StyledStatisticsEmpty>No data</StyledStatisticsEmpty>
   }
 
@@ -322,9 +393,9 @@ function StatisticsMenu({
   return (
     <Popover
       triggerType={TRIGGER_TYPE.hover}
-      returnFocus
-      autoFocus
-      focusLock
+      // Note: autoFocus and focusLock are intentionally omitted for this read-only
+      // submenu, allowing keyboard users to navigate the parent column menu while
+      // the statistics panel is open.
       isOpen={isOpen}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

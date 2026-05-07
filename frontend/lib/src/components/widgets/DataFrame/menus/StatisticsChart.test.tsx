@@ -72,7 +72,6 @@ describe("StatisticsChart", () => {
     count: 100,
     empty: 5,
     unique: 20,
-    frequency: 15,
     minLength: 1,
     maxLength: 50,
     avgLength: 10,
@@ -86,6 +85,7 @@ describe("StatisticsChart", () => {
 
   const datetimeStats: DateTimeStatistics = {
     type: "datetime",
+    isDateOnly: false,
     count: 100,
     nullCount: 2,
     unique: 80,

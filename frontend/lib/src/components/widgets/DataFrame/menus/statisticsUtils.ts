@@ -85,7 +85,6 @@ export interface TextStatistics {
   count: number
   empty: number
   unique: number
-  frequency: number
   minLength: number
   maxLength: number
   avgLength: number
@@ -96,6 +95,8 @@ export interface TextStatistics {
 /** DateTime column statistics. */
 export interface DateTimeStatistics {
   type: "datetime"
+  /** Whether the underlying column is date-only (no time component). */
+  isDateOnly: boolean
   count: number
   nullCount: number
   unique: number
@@ -184,7 +185,10 @@ function extractColumnValues(
   const values: unknown[] = []
 
   if (shouldSample) {
-    // Systematic sampling: take evenly spaced samples
+    // Systematic sampling: take evenly spaced samples.
+    // Note: Systematic sampling is fast and deterministic but can be biased on
+    // datasets with periodic structure. For UI summary purposes this is acceptable.
+    // Reservoir/random sampling would be unbiased but adds complexity.
     // Guard against zero step if constants are changed in the future
     const step = Math.max(1, Math.floor(numDataRows / SAMPLE_SIZE))
     for (
@@ -378,12 +382,6 @@ export function computeTextStatistics(
       percentage: count > 0 ? (valueCount / count) * 100 : 0,
     }))
 
-  // Frequency of most common value
-  const frequency =
-    sortedEntries.length > 0 && count > 0
-      ? (sortedEntries[0][1] / count) * 100
-      : 0
-
   // Length statistics - use reduce instead of spread to avoid stack overflow on large arrays
   let minLength = Infinity
   let maxLength = 0
@@ -403,7 +401,6 @@ export function computeTextStatistics(
     count,
     empty,
     unique,
-    frequency,
     minLength,
     maxLength,
     avgLength,
@@ -414,10 +411,12 @@ export function computeTextStatistics(
 
 /**
  * Compute statistics for a datetime column.
+ * @param isDateOnly - True if the column is date-only (no time component)
  */
 export function computeDateTimeStatistics(
   rawValues: unknown[],
-  isSampled: boolean
+  isSampled: boolean,
+  isDateOnly = false
 ): DateTimeStatistics {
   // Convert values to timestamps using toSafeDate which handles various units
   const timestamps: number[] = []
@@ -445,6 +444,7 @@ export function computeDateTimeStatistics(
   if (count === 0) {
     return {
       type: "datetime",
+      isDateOnly,
       count: 0,
       nullCount,
       unique: 0,
@@ -478,6 +478,7 @@ export function computeDateTimeStatistics(
 
   return {
     type: "datetime",
+    isDateOnly,
     count,
     nullCount,
     unique,
@@ -524,6 +525,8 @@ function computeDateRange(minTimestamp: number, maxTimestamp: number): string {
 
 /**
  * Compute statistics for a boolean column.
+ * Explicitly recognizes truthy (true, 1, "true", "1") and falsy (false, 0, "false", "0")
+ * patterns. Values not matching either pattern are counted as null.
  */
 export function computeBooleanStatistics(
   rawValues: unknown[],
@@ -538,8 +541,11 @@ export function computeBooleanStatistics(
       nullCount++
     } else if (v === true || v === 1 || v === "true" || v === "1") {
       trueCount++
-    } else {
+    } else if (v === false || v === 0 || v === "false" || v === "0") {
       falseCount++
+    } else {
+      // Values not matching explicit truthy/falsy patterns are treated as null/unknown
+      nullCount++
     }
   }
 
@@ -578,7 +584,12 @@ export function computeStatistics(
     case "text":
       return computeTextStatistics(values, isSampled)
     case "datetime":
-      return computeDateTimeStatistics(values, isSampled)
+      // Pass isDateOnly flag based on column kind
+      return computeDateTimeStatistics(
+        values,
+        isSampled,
+        columnKind === "date"
+      )
     case "boolean":
       return computeBooleanStatistics(values, isSampled)
   }

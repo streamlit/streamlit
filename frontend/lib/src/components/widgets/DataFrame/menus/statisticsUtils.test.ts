@@ -141,7 +141,6 @@ describe("statisticsUtils", () => {
       expect(stats.count).toBe(6)
       expect(stats.empty).toBe(0)
       expect(stats.unique).toBe(3)
-      expect(stats.frequency).toBeCloseTo(50, 1) // apple appears 3/6 = 50%
       expect(stats.topValues).toHaveLength(3)
       expect(stats.topValues[0].value).toBe("apple")
       expect(stats.topValues[0].count).toBe(3)

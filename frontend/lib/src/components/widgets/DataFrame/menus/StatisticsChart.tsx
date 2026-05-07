@@ -51,7 +51,9 @@ const CHART_LABELS: Record<string, string> = {
 
 /**
  * Creates tooltip styles with higher z-index for use within popovers.
- * This ensures tooltips appear above the popover menu.
+ * This ensures tooltips appear above the column menu portal (#portal uses tablePortal).
+ * Both #vg-tooltip-element and #portal are siblings under <body>, so z-index comparison
+ * applies directly. Using tablePortal + 10 ensures tooltips render above the menu.
  */
 function createPopoverTooltipStyles(theme: EmotionTheme): CSSObject {
   const baseStyles = StyledVegaLiteChartTooltips(theme)
@@ -59,8 +61,8 @@ function createPopoverTooltipStyles(theme: EmotionTheme): CSSObject {
     ...baseStyles,
     "#vg-tooltip-element": {
       ...(baseStyles["#vg-tooltip-element"] as CSSObject),
-      // Use popup + 10 to ensure tooltips appear above popovers
-      zIndex: theme.zIndices.popup + 10,
+      // Use tablePortal + 10 to ensure tooltips appear above the column menu portal
+      zIndex: theme.zIndices.tablePortal + 10,
     },
   }
 }
@@ -77,10 +79,22 @@ function formatTooltipNumber(value: number): string {
 }
 
 /**
- * Formats a timestamp as a short date string in UTC.
+ * Formats a timestamp as a date/datetime string in UTC.
+ * @param timestamp - Unix timestamp in milliseconds
+ * @param includeTime - If true, include time in the formatted string
  */
-function formatTooltipDate(timestamp: number): string {
+function formatTooltipDate(timestamp: number, includeTime = false): string {
   const date = new Date(timestamp)
+  if (includeTime) {
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    })
+  }
   return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -229,11 +243,13 @@ function StatisticsChart({
 
       case "datetime":
         if (statistics.histogram.length > 0) {
+          // Include time in tooltip for datetime columns, exclude for date-only
+          const includeTime = !statistics.isDateOnly
           spec = createHistogramSpec(
             statistics.histogram,
             theme,
             (start, end) =>
-              `${formatTooltipDate(start)} – ${formatTooltipDate(end)}`
+              `${formatTooltipDate(start, includeTime)} – ${formatTooltipDate(end, includeTime)}`
           )
         }
         break
