@@ -52,16 +52,20 @@ def test_nested_fragment_run_every_can_disappear_without_crashing(app: Page):
     assert standalone_text is not None
     assert nested_text is not None
 
+    # Let the nested fragment tick once so its stale timer is live before we hide it.
     expect(nested_fragment).not_to_have_text(nested_text)
 
     click_toggle(app, "Show nested auto fragment")
 
     expect(nested_fragment).to_have_count(0)
 
-    # Wait for the remaining run_every fragment to tick to ensure the hidden
-    # nested fragment's old timer does not crash the app.
-    expect(standalone_fragment).not_to_have_text(standalone_text)
-    expect(app.get_by_test_id("stException")).to_have_count(0)
+    # Wait for multiple standalone ticks so a stale nested timer has enough time
+    # to queue one last rerun and surface the original delta-path crash.
+    for _ in range(2):
+        expect(standalone_fragment).not_to_have_text(standalone_text)
+        standalone_text = standalone_fragment.text_content()
+        assert standalone_text is not None
+        expect(app.get_by_test_id("stException")).to_have_count(0)
 
     click_toggle(app, "Show nested auto fragment")
 

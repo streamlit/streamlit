@@ -298,6 +298,11 @@ export class App extends PureComponent<Props, State> {
   // This will allow us to ignore finished messages from previous script runs.
   private hasReceivedNewSession: boolean = false
 
+  // Whether we've sent a non-auto rerun request that the server hasn't
+  // acknowledged yet. This closes the gap before sessionStatusChanged flips
+  // scriptRunState to RUNNING, without blocking unrelated auto-rerun fragments.
+  private hasPendingRerunRequest: boolean = false
+
   public constructor(props: Props) {
     super(props)
 
@@ -1213,6 +1218,8 @@ export class App extends PureComponent<Props, State> {
    * @param statusChangeProto a SessionStatus protobuf
    */
   handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
+    this.hasPendingRerunRequest = false
+
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
       let { scriptRunState } = prevState
@@ -1267,6 +1274,7 @@ export class App extends PureComponent<Props, State> {
   handleSessionEvent = (sessionEvent: SessionEvent): void => {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
     if (sessionEvent.type === "scriptCompilationException") {
+      this.hasPendingRerunRequest = false
       this.setState({ scriptRunState: ScriptRunState.COMPILATION_ERROR })
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_COMPILE_ERROR,
@@ -1353,6 +1361,7 @@ export class App extends PureComponent<Props, State> {
     // Set this flag to indicate that we have received a NewSession message
     // after the latest rerun request:
     this.hasReceivedNewSession = true
+    this.hasPendingRerunRequest = false
 
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
@@ -1718,6 +1727,13 @@ export class App extends PureComponent<Props, State> {
    * Send the fragment-scoped rerun request when a managed auto-rerun interval fires.
    */
   private readonly handleAutoRerunTick = (fragmentId: string): void => {
+    if (
+      this.state.scriptRunState !== ScriptRunState.NOT_RUNNING ||
+      this.hasPendingRerunRequest
+    ) {
+      return
+    }
+
     this.widgetMgr.sendUpdateWidgetsMessage(fragmentId, true)
   }
 
@@ -2004,6 +2020,11 @@ export class App extends PureComponent<Props, State> {
 
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
+
+    // Mark non-auto reruns as pending immediately so auto-rerun timers do not
+    // enqueue another fragment rerun before the server reports that this one
+    // started. Auto-reruns themselves stay concurrent with other fragments.
+    this.hasPendingRerunRequest = isAutoRerun !== true
 
     this.sendBackMsg(
       new BackMsg({

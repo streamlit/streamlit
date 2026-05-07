@@ -477,6 +477,19 @@ function mockActiveFragmentIds(fragmentIds: string[]): MockInstance {
     })
 }
 
+function withMockedActiveFragmentIds(
+  fragmentIds: string[],
+  runTest: () => void
+): void {
+  const getActiveIdsSpy = mockActiveFragmentIds(fragmentIds)
+
+  try {
+    runTest()
+  } finally {
+    getActiveIdsSpy.mockRestore()
+  }
+}
+
 async function openCacheModal(): Promise<void> {
   // eslint-disable-next-line testing-library/prefer-user-event -- keyboard shortcuts listen on document.body; userEvent dispatches to the focused element which may differ
   fireEvent.keyDown(document.body, {
@@ -3929,21 +3942,82 @@ describe("App", () => {
 
     it("clears intervals when the app unmounts", () => {
       const { unmount } = renderApp(getProps())
+      const connectionManager = getMockConnectionManager()
 
       sendForwardMessage("autoRerun", {
         interval: 1.0,
         fragmentId: "myFragmentId",
       })
 
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
       unmount()
 
       expect(clearInterval).toHaveBeenCalledTimes(1)
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(connectionManager.sendMessage).not.toHaveBeenCalled()
+    })
+
+    it("does not queue fragment auto reruns while another rerun is pending", () => {
+      renderApp(getProps())
+      const connectionManager = getMockConnectionManager()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      act(() => {
+        widgetStateManager.sendUpdateWidgetsMessage(undefined)
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.fragmentId
+      ).toBeUndefined()
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: false,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[1][0].rerunScript
+      ).toEqual(
+        expect.objectContaining({
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+        })
+      )
     })
 
     it("clears only fragment timers removed from the committed tree", () => {
-      const getActiveIdsSpy = mockActiveFragmentIds(["liveFragment"])
-
-      try {
+      withMockedActiveFragmentIds(["liveFragment"], () => {
         renderApp(getProps())
         const connectionManager = getMockConnectionManager()
 
@@ -3980,9 +4054,7 @@ describe("App", () => {
             isAutoRerun: true,
           })
         )
-      } finally {
-        getActiveIdsSpy.mockRestore()
-      }
+      })
     })
 
     it("triggers rerunScript with is_auto_rerun set to true", () => {
@@ -4548,59 +4620,58 @@ describe("App", () => {
 
     it("does not request script rerun after stale auto reruns are cleaned up", () => {
       vi.useFakeTimers()
-      const getActiveIdsSpy = mockActiveFragmentIds([])
-
       try {
-        renderApp(getProps())
-        const widgetStateManager =
-          getStoredValue<WidgetStateManager>(WidgetStateManager)
+        withMockedActiveFragmentIds([], () => {
+          renderApp(getProps())
+          const widgetStateManager =
+            getStoredValue<WidgetStateManager>(WidgetStateManager)
 
-        act(() => {
-          getMockConnectionManagerProp("connectionStateChanged")(
-            ConnectionState.CONNECTED
+          act(() => {
+            getMockConnectionManagerProp("connectionStateChanged")(
+              ConnectionState.CONNECTED
+            )
+          })
+
+          sendForwardMessage("newSession", NEW_SESSION_JSON)
+          sendForwardMessage("autoRerun", {
+            interval: 1,
+            fragmentId: "myFragmentId",
+          })
+          sendForwardMessage(
+            "scriptFinished",
+            ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
           )
-        })
+          sendForwardMessage("sessionStatusChanged", {
+            runOnSave: false,
+            scriptIsRunning: false,
+          })
 
-        sendForwardMessage("newSession", NEW_SESSION_JSON)
-        sendForwardMessage("autoRerun", {
-          interval: 1,
-          fragmentId: "myFragmentId",
-        })
-        sendForwardMessage(
-          "scriptFinished",
-          ForwardMsg.ScriptFinishedStatus.FINISHED_SUCCESSFULLY
-        )
-        sendForwardMessage("sessionStatusChanged", {
-          runOnSave: false,
-          scriptIsRunning: false,
-        })
+          act(() => {
+            getMockConnectionManagerProp("connectionStateChanged")(
+              ConnectionState.DISCONNECTED_FOREVER
+            )
+          })
 
-        act(() => {
-          getMockConnectionManagerProp("connectionStateChanged")(
-            ConnectionState.DISCONNECTED_FOREVER
+          const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
+          sessionInfo.setCurrent(mockSessionInfoProps())
+          sessionInfo.setCurrent(mockSessionInfoProps())
+          expect(sessionInfo.last).toBeTruthy()
+
+          const sendUpdateWidgetsMessageSpy = vi.spyOn(
+            widgetStateManager,
+            "sendUpdateWidgetsMessage"
           )
+          sendUpdateWidgetsMessageSpy.mockClear()
+
+          act(() => {
+            getMockConnectionManagerProp("connectionStateChanged")(
+              ConnectionState.CONNECTED
+            )
+          })
+
+          expect(sendUpdateWidgetsMessageSpy).not.toHaveBeenCalled()
         })
-
-        const sessionInfo = getStoredValue<SessionInfo>(SessionInfo)
-        sessionInfo.setCurrent(mockSessionInfoProps())
-        sessionInfo.setCurrent(mockSessionInfoProps())
-        expect(sessionInfo.last).toBeTruthy()
-
-        const sendUpdateWidgetsMessageSpy = vi.spyOn(
-          widgetStateManager,
-          "sendUpdateWidgetsMessage"
-        )
-        sendUpdateWidgetsMessageSpy.mockClear()
-
-        act(() => {
-          getMockConnectionManagerProp("connectionStateChanged")(
-            ConnectionState.CONNECTED
-          )
-        })
-
-        expect(sendUpdateWidgetsMessageSpy).not.toHaveBeenCalled()
       } finally {
-        getActiveIdsSpy.mockRestore()
         vi.useRealTimers()
       }
     })
@@ -5081,26 +5152,22 @@ describe("App", () => {
         fragmentId: "fragmentId",
       })
 
-      // advance timer X times to trigger the interval-function
-      const times = 3
-      for (let i = 0; i < times; i++) {
-        vi.advanceTimersByTime(1000) // in milliseconds
-      }
+      // A single tick is enough to prove the interval is active before page
+      // navigation. Additional ticks are now suppressed while that rerun is
+      // pending, which closes the stale nested-fragment race.
+      vi.advanceTimersByTime(1000) // in milliseconds
 
       const connectionManager = getMockConnectionManager()
-      expect(connectionManager.sendMessage).toBeCalledTimes(times)
-      // ensure that all calls came from the autoRerun by checking the fragment id
-      for (let i = 0; i < times; i++) {
-        expect(
-          // @ts-expect-error
-          connectionManager.sendMessage.mock.calls[i][0].rerunScript
-        ).toEqual(
-          expect.objectContaining({
-            isAutoRerun: true,
-            fragmentId: "fragmentId",
-          })
-        )
-      }
+      expect(connectionManager.sendMessage).toBeCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript
+      ).toEqual(
+        expect.objectContaining({
+          isAutoRerun: true,
+          fragmentId: "fragmentId",
+        })
+      )
 
       // trigger a page change. we use a post message instead
       // of triggering a pange change via a newSession message,
@@ -5110,7 +5177,7 @@ describe("App", () => {
         pageScriptHash: "hash1",
       })
 
-      for (let i = 0; i < times; i++) {
+      for (let i = 0; i < 3; i++) {
         vi.advanceTimersByTime(1000) // in milliseconds
       }
 
@@ -5118,10 +5185,7 @@ describe("App", () => {
       // despite advancing the timer. We could check whether clearInterval
       // was called, but this check is more observing the behavior than checking
       // the exact internals.
-      const oldCallCountPlusPageChangeRequest = times + 1
-      expect(connectionManager.sendMessage).toBeCalledTimes(
-        oldCallCountPlusPageChangeRequest
-      )
+      expect(connectionManager.sendMessage).toBeCalledTimes(2)
 
       vi.useRealTimers()
     })
