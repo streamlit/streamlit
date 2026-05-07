@@ -136,6 +136,7 @@ function ButtonActionMenu({
       onClickOutside={onCloseMenu}
       onEsc={onCloseMenu}
       accessibilityType={ACCESSIBILITY_TYPE.menu}
+      autoFocus={false}
       showArrow={false}
       popoverMargin={POPOVER_MARGIN}
       overrides={{
