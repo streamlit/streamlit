@@ -9356,7 +9356,7 @@ __metadata:
     "@typescript-eslint/types": "npm:^8.58.2"
     "@typescript-eslint/utils": "npm:^8.58.2"
     "@vitest/coverage-v8": "npm:^4.1.5"
-    eslint: "npm:^10.2.0"
+    eslint: "npm:^10.3.0"
     typescript: "npm:^6.0.3"
     typesync: "npm:^0.14.3"
     vitest: "npm:^4.1.5"
@@ -9421,9 +9421,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"eslint@npm:^10.2.0":
-  version: 10.2.1
-  resolution: "eslint@npm:10.2.1"
+"eslint@npm:^10.3.0":
+  version: 10.3.0
+  resolution: "eslint@npm:10.3.0"
   dependencies:
     "@eslint-community/eslint-utils": "npm:^4.8.0"
     "@eslint-community/regexpp": "npm:^4.12.2"
@@ -9462,7 +9462,7 @@ __metadata:
       optional: true
   bin:
     eslint: bin/eslint.js
-  checksum: 10c0/176795a3794a785502fa5cd14a9609264c2be5405552d20fed3e499bd465c29639c91ac44619ae66787b0fb7494e72d112550a2136a735d92a26bc6a7af4915c
+  checksum: 10c0/81e3ceba949f62d1b530660279db86cf814f5dc43d7cc3759a8008fe4fc679d46568279fe1cceb7ddbbc98ab57a96ae524f6e811ffc6897b49b90ea08aa785e5
   languageName: node
   linkType: hard
 
@@ -17078,7 +17078,7 @@ __metadata:
     "@vitest/coverage-v8": "npm:^4.1.5"
     "@vitest/eslint-plugin": "npm:^1.6.16"
     concurrently: "npm:^9.2.1"
-    eslint: "npm:^10.2.0"
+    eslint: "npm:^10.3.0"
     eslint-import-resolver-typescript: "npm:^4.4.4"
     eslint-plugin-import: "npm:^2.32.0"
     eslint-plugin-jsx-a11y: "npm:^6.10.2"
