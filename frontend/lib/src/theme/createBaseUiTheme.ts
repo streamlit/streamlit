@@ -95,7 +95,7 @@ const createBaseUiThemeOverrides = (
 
   const fontStyles = {
     fontFamily: genericFonts.bodyFont,
-    fontSize: fontSizes.md,
+    fontSize: fontSizes.sm,
     fontSizeSm: fontSizes.sm,
     fontWeight: "normal",
     lineHeight: lineHeights.base,

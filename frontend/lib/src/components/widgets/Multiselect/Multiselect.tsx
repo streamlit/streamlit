@@ -495,7 +495,7 @@ const Multiselect: FC<Props> = props => {
                       borderTopRightRadius: theme.radii.md2,
                       borderBottomRightRadius: theme.radii.md2,
                       borderBottomLeftRadius: theme.radii.md2,
-                      fontSize: theme.fontSizes.md,
+                      fontSize: theme.fontSizes.sm,
                       paddingLeft: theme.spacing.sm,
                       // Top and left margins are deferred to ValueContainer padding
                       marginTop: theme.spacing.none,
