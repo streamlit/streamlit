@@ -190,9 +190,14 @@ function ColumnMenu({
               <StyledMenuListItem
                 onMouseEnter={() => setStatsMenuOpen(true)}
                 onMouseLeave={() => setStatsMenuOpen(false)}
+                onFocus={() => setStatsMenuOpen(true)}
+                onBlur={() => setStatsMenuOpen(false)}
                 isActive={statsMenuOpen}
                 hasSubmenu={true}
                 role="menuitem"
+                aria-haspopup="menu"
+                aria-expanded={statsMenuOpen}
+                tabIndex={0}
               >
                 <div>
                   <DynamicIcon size="base" iconValue=":material/bar_chart:" />

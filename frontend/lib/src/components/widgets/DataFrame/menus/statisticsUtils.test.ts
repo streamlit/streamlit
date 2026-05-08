@@ -208,29 +208,12 @@ describe("statisticsUtils", () => {
       expect(stats.type).toBe("datetime")
       expect(stats.count).toBe(5)
       expect(stats.nullCount).toBe(0)
-      expect(stats.unique).toBe(5)
       expect(stats.min).toBe(baseDate.getTime())
       expect(stats.max).toBe(baseDate.getTime() + dayMs * 4)
       expect(stats.q25).toBe(baseDate.getTime() + dayMs)
       expect(stats.median).toBe(baseDate.getTime() + dayMs * 2)
       expect(stats.q75).toBe(baseDate.getTime() + dayMs * 3)
       expect(stats.range).toBe("4 days")
-    })
-
-    it("computes unique count with duplicate timestamps", () => {
-      const baseDate = new Date("2023-01-01T00:00:00Z")
-      const dayMs = 1000 * 60 * 60 * 24
-      const values = [
-        new Date(baseDate.getTime()),
-        new Date(baseDate.getTime()), // duplicate
-        new Date(baseDate.getTime() + dayMs),
-        new Date(baseDate.getTime() + dayMs), // duplicate
-        new Date(baseDate.getTime() + dayMs * 2),
-      ]
-      const stats = computeDateTimeStatistics(values, false)
-
-      expect(stats.count).toBe(5)
-      expect(stats.unique).toBe(3)
     })
 
     it("handles null values", () => {

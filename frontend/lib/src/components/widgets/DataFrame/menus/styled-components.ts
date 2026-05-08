@@ -162,11 +162,17 @@ export const StyledStatisticsContainer = styled.div(({ theme }) => ({
 }))
 
 /**
+ * Height of the statistics chart in rem.
+ * Corresponds to CHART_HEIGHT (56px) in StatisticsChart.tsx.
+ */
+const STATISTICS_CHART_HEIGHT = "3.5rem"
+
+/**
  * Container for the statistics chart.
  */
 export const StyledStatisticsChart = styled.div(({ theme }) => ({
   width: "100%",
-  height: theme.sizes.appDefaultBottomPadding,
+  height: STATISTICS_CHART_HEIGHT,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

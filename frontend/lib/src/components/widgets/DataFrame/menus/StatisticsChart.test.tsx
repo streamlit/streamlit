@@ -88,7 +88,6 @@ describe("StatisticsChart", () => {
     isDateOnly: false,
     count: 100,
     nullCount: 2,
-    unique: 80,
     mean: Date.parse("2023-06-15"),
     q25: Date.parse("2023-03-15"),
     median: Date.parse("2023-06-15"),

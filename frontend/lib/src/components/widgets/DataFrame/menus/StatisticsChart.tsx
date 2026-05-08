@@ -47,7 +47,7 @@ const CHART_LABELS: Record<string, string> = {
  * Creates tooltip styles with higher z-index for use within popovers.
  * This ensures tooltips appear above the column menu portal (#portal uses tablePortal).
  * Both #vg-tooltip-element and #portal are siblings under <body>, so z-index comparison
- * applies directly. Using tablePortal + 10 ensures tooltips render above the menu.
+ * applies directly. Using tablePortalTooltip ensures tooltips render above the menu.
  */
 function createPopoverTooltipStyles(theme: EmotionTheme): CSSObject {
   const baseStyles = StyledVegaLiteChartTooltips(theme)
@@ -55,8 +55,8 @@ function createPopoverTooltipStyles(theme: EmotionTheme): CSSObject {
     ...baseStyles,
     "#vg-tooltip-element": {
       ...(baseStyles["#vg-tooltip-element"] as CSSObject),
-      // Use tablePortal + 10 to ensure tooltips appear above the column menu portal
-      zIndex: theme.zIndices.tablePortal + 10,
+      // Use tablePortalTooltip to ensure tooltips appear above the column menu portal
+      zIndex: theme.zIndices.tablePortalTooltip,
     },
   }
 }
@@ -73,12 +73,19 @@ function formatTooltipNumber(value: number): string {
 }
 
 /**
- * Formats a timestamp as a date/datetime string in UTC.
+ * Formats a timestamp as a date/datetime string.
  * @param timestamp - Unix timestamp in milliseconds
  * @param includeTime - If true, include time in the formatted string
+ * @param timezone - Optional timezone identifier (e.g., "America/New_York", "UTC").
+ *                   Defaults to UTC for consistency with StatisticsMenu.
  */
-function formatTooltipDate(timestamp: number, includeTime = false): string {
+function formatTooltipDate(
+  timestamp: number,
+  includeTime = false,
+  timezone?: string
+): string {
   const date = new Date(timestamp)
+  const tz = timezone || "UTC"
   if (includeTime) {
     return date.toLocaleString(undefined, {
       month: "short",
@@ -86,14 +93,14 @@ function formatTooltipDate(timestamp: number, includeTime = false): string {
       year: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      timeZone: "UTC",
+      timeZone: tz,
     })
   }
   return date.toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: tz,
   })
 }
 
@@ -237,11 +244,13 @@ function StatisticsChart({
         if (statistics.histogram.length > 0) {
           // Include time in tooltip for datetime columns, exclude for date-only
           const includeTime = !statistics.isDateOnly
+          // Thread timezone through to tooltip formatter for consistency with metrics display
+          const tz = statistics.timezone
           spec = createHistogramSpec(
             statistics.histogram,
             theme,
             (start, end) =>
-              `${formatTooltipDate(start, includeTime)} – ${formatTooltipDate(end, includeTime)}`
+              `${formatTooltipDate(start, includeTime, tz)} – ${formatTooltipDate(end, includeTime, tz)}`
           )
         }
         break

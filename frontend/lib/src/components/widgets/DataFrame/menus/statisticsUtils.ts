@@ -104,7 +104,6 @@ export interface DateTimeStatistics {
   timezone?: string
   count: number
   nullCount: number
-  unique: number
   mean: number
   q25: number
   median: number
@@ -182,6 +181,7 @@ export function getStatisticsType(
 /**
  * Extract column values from Quiver data.
  * Applies sampling for large datasets.
+ * Returns null if extraction fails (e.g., malformed Arrow buffer).
  *
  * @param data - The Quiver data
  * @param columnIndex - The absolute column index in Quiver (including index columns)
@@ -189,35 +189,41 @@ export function getStatisticsType(
 function extractColumnValues(
   data: Quiver,
   columnIndex: number
-): { values: unknown[]; isSampled: boolean } {
-  const { numDataRows } = data.dimensions
-  const shouldSample = numDataRows > SAMPLE_THRESHOLD
+): { values: unknown[]; isSampled: boolean } | null {
+  try {
+    const { numDataRows } = data.dimensions
+    const shouldSample = numDataRows > SAMPLE_THRESHOLD
 
-  const values: unknown[] = []
+    const values: unknown[] = []
 
-  if (shouldSample) {
-    // Systematic sampling: take evenly spaced samples.
-    // Note: Systematic sampling is fast and deterministic but can be biased on
-    // datasets with periodic structure. For UI summary purposes this is acceptable.
-    // Reservoir/random sampling would be unbiased but adds complexity.
-    // Guard against zero step if constants are changed in the future
-    const step = Math.max(1, Math.floor(numDataRows / SAMPLE_SIZE))
-    for (
-      let i = 0;
-      i < numDataRows && values.length < SAMPLE_SIZE;
-      i += step
-    ) {
-      const cell = data.getCell(i, columnIndex)
-      values.push(cell.content)
+    if (shouldSample) {
+      // Systematic sampling: take evenly spaced samples.
+      // Note: Systematic sampling is fast and deterministic but can be biased on
+      // datasets with periodic structure. For UI summary purposes this is acceptable.
+      // Reservoir/random sampling would be unbiased but adds complexity.
+      // Guard against zero step if constants are changed in the future
+      const step = Math.max(1, Math.floor(numDataRows / SAMPLE_SIZE))
+      for (
+        let i = 0;
+        i < numDataRows && values.length < SAMPLE_SIZE;
+        i += step
+      ) {
+        const cell = data.getCell(i, columnIndex)
+        values.push(cell.content)
+      }
+    } else {
+      for (let i = 0; i < numDataRows; i++) {
+        const cell = data.getCell(i, columnIndex)
+        values.push(cell.content)
+      }
     }
-  } else {
-    for (let i = 0; i < numDataRows; i++) {
-      const cell = data.getCell(i, columnIndex)
-      values.push(cell.content)
-    }
+
+    return { values, isSampled: shouldSample }
+  } catch {
+    // If cell extraction fails (malformed Arrow buffer, unexpected type, etc.),
+    // return null to signal graceful degradation to the "No data" state.
+    return null
   }
-
-  return { values, isSampled: shouldSample }
 }
 
 /**
@@ -462,7 +468,6 @@ export function computeDateTimeStatistics(
   }
 
   const count = timestamps.length
-  const unique = new Set(timestamps).size
 
   if (count === 0) {
     return {
@@ -471,7 +476,6 @@ export function computeDateTimeStatistics(
       timezone,
       count: 0,
       nullCount,
-      unique: 0,
       mean: 0,
       q25: 0,
       median: 0,
@@ -506,7 +510,6 @@ export function computeDateTimeStatistics(
     timezone,
     count,
     nullCount,
-    unique,
     mean,
     q25,
     median,
@@ -606,7 +609,11 @@ export function computeStatistics(
   const statsType = getStatisticsType(columnKind)
   if (!statsType) return null
 
-  const { values, isSampled } = extractColumnValues(data, columnIndex)
+  const result = extractColumnValues(data, columnIndex)
+  // If extraction failed (malformed data), return null to show "No data" state
+  if (!result) return null
+
+  const { values, isSampled } = result
 
   switch (statsType) {
     case "numeric":
