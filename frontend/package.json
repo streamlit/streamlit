@@ -56,7 +56,7 @@
     "@eslint/compat": "^2.0.5",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
-    "@playwright/cli": "^0.1.8",
+    "@playwright/cli": "^0.1.11",
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",

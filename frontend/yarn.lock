@@ -3025,14 +3025,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@playwright/cli@npm:^0.1.8":
-  version: 0.1.10
-  resolution: "@playwright/cli@npm:0.1.10"
+"@playwright/cli@npm:^0.1.11":
+  version: 0.1.12
+  resolution: "@playwright/cli@npm:0.1.12"
   dependencies:
-    playwright: "npm:1.60.0-alpha-1777575331000"
+    playwright: "npm:1.60.0-alpha-1778101408000"
+    playwright-core: "npm:1.60.0-alpha-1778101408000"
   bin:
     playwright-cli: playwright-cli.js
-  checksum: 10c0/e2ccda7120664fb1f729b1958173457fc41fff833d88f442ca8689a28046dcc382338674799a241766bccedef8cb32be0ea96e6bc2a9ed572db25c23013d25c9
+  checksum: 10c0/fd436a2e5e4f0da7e22db2dbf15115e09471db14440e51665cc113ac072d440cc5b9bc55b5c629ab7981c3ab77c98d79a39acd56d1f9b867d4dead70974e6157
   languageName: node
   linkType: hard
 
@@ -14744,27 +14745,27 @@ __metadata:
   languageName: node
   linkType: hard
 
-"playwright-core@npm:1.60.0-alpha-1777575331000":
-  version: 1.60.0-alpha-1777575331000
-  resolution: "playwright-core@npm:1.60.0-alpha-1777575331000"
+"playwright-core@npm:1.60.0-alpha-1778101408000":
+  version: 1.60.0-alpha-1778101408000
+  resolution: "playwright-core@npm:1.60.0-alpha-1778101408000"
   bin:
     playwright-core: cli.js
-  checksum: 10c0/f786e9b7ceaba4d5bcb36caf0912078faab9b6b6d1045bb15e8ee3d17ff280b91c9e43561189b549d153800e98657190bbd23c0b14953f325d212c4e2d1f4dde
+  checksum: 10c0/3b5bf243cd5896b336064bf245757c2fab9941e5e0fb1c649e08fc54970bf6edf86922ad4e5d571aa13bbba2d9caa51178fe966a2a95002b294dc42f1460767c
   languageName: node
   linkType: hard
 
-"playwright@npm:1.60.0-alpha-1777575331000":
-  version: 1.60.0-alpha-1777575331000
-  resolution: "playwright@npm:1.60.0-alpha-1777575331000"
+"playwright@npm:1.60.0-alpha-1778101408000":
+  version: 1.60.0-alpha-1778101408000
+  resolution: "playwright@npm:1.60.0-alpha-1778101408000"
   dependencies:
     fsevents: "npm:2.3.2"
-    playwright-core: "npm:1.60.0-alpha-1777575331000"
+    playwright-core: "npm:1.60.0-alpha-1778101408000"
   dependenciesMeta:
     fsevents:
       optional: true
   bin:
     playwright: cli.js
-  checksum: 10c0/035ef41d882e191d5b42c7a08612384dde6c13a5ece77e8f27e36a8c55916d236426ad2be82447565d8eb80c18fe444f3a4e84da929f8062323b0dc5857f2479
+  checksum: 10c0/4242720e4a374c4dc38173dce272de35de752450173799baac8c7ce0c26a3730da4280c58bb592ca141828f6a573d9cdbd27b7a973a4bef13ec17dc770a1f912
   languageName: node
   linkType: hard
 
@@ -16989,7 +16990,7 @@ __metadata:
     "@eslint/compat": "npm:^2.0.5"
     "@eslint/eslintrc": "npm:^3.3.5"
     "@eslint/js": "npm:^10.0.1"
-    "@playwright/cli": "npm:^0.1.8"
+    "@playwright/cli": "npm:^0.1.11"
     "@types/eslint": "npm:^9.6.1"
     "@types/eslint-plugin-jsx-a11y": "npm:~6.10.1"
     "@types/node": "npm:>=24 <25"
