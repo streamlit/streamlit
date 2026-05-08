@@ -166,8 +166,15 @@ table behavior:
 - `on_select="ignore"`.
 - The input is not a `pandas.Styler`.
 - `height!="content"`.
-- Search is disabled until server-side search exists.
 - CSV download remains disabled or is reimplemented as a server-side export.
+
+**Backwards Compatibility Note:** The existing large-table path (>150k rows) already disables
+sorting and CSV download but still shows search UI. Auto-lazy would additionally disable search
+since searching only loaded chunks would be misleading. This is a user-visible behavior change
+for existing apps. Until server-side search is implemented, auto-lazy should be limited to
+explicit `st.DataFrameSource` wrappers rather than silently auto-converting large in-memory
+dataframes. The auto-lazy threshold for in-memory dataframes should only activate once
+server-side search exists to avoid removing existing search functionality.
 
 For smaller in-memory dataframes, Streamlit should keep eager rendering by default. A source
 wrapper can still force lazy delivery when the app author wants it.
@@ -202,10 +209,15 @@ Parameters:
 
 Validation:
 
-- Exactly one of `data` or `load` must be provided.
+- Exactly one of `data` or `load` must be provided:
+  - Passing neither raises `StreamlitAPIException("DataFrameSource requires either 'data' or 'load'")`.
+  - Passing both raises `StreamlitAPIException("DataFrameSource accepts 'data' or 'load', not both")`.
 - If `row_count` is `None`, the source is sequential: Streamlit can request forward chunks but
   cannot support arbitrary row jumps.
-- If `row_count` is provided, it must be non-negative.
+- If `row_count` is provided, it must be non-negative. Negative values raise
+  `StreamlitAPIException("row_count must be non-negative")`.
+- If `row_count` is a callable that returns `None` after previously returning a known row count,
+  Streamlit should treat this as an error and fall back to the last known row count with a warning.
 - Callback loaders must return a dataframe-like object with columns compatible with the
   declared or inferred schema.
 
@@ -275,8 +287,12 @@ The follow-up should define:
 `st.dataframe` selection state is position-based relative to the original dataframe, and lazy
 server-side data can be reordered, filtered, or partially unavailable.
 
-Until a stable row identity contract exists, Streamlit should raise a clear
-`StreamlitAPIException` when a lazy source is used with `on_select != "ignore"`.
+For **explicit** lazy sources (`st.DataFrameSource`), Streamlit should raise a clear
+`StreamlitAPIException` when used with `on_select != "ignore"`.
+
+For **implicit** auto-lazy sources (in-memory dataframes above the threshold), Streamlit should
+fall back to the current eager/capped-preview behavior when `on_select != "ignore"` to maintain
+backward compatibility. This avoids breaking existing `st.dataframe(obj, on_select=...)` calls.
 
 ### Styling and Column Configuration
 
@@ -389,7 +405,7 @@ capability declarations are clearer and make unsupported UI states easier to exp
 
 ## Checklist
 
-| Item                         | Status or comment                                      |
+| Item                         | ✅ or comment                                          |
 |------------------------------|--------------------------------------------------------|
 | Works on SiS, Cloud, etc?    | Yes, chunk loading stays server-side and session-bound |
 | No breaking API changes      | Yes, API is additive; auto-lazy behavior needs care    |
