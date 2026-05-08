@@ -292,19 +292,25 @@ export class App extends PureComponent<Props, State> {
 
   private isInitializingConnectionManager: boolean = true
 
-  // Whether we have received a NewSession message after the latest rerun request.
-  // This is used to ensure that we only increment the message cache run count after
-  // we have received a NewSession message after the latest rerun request.
-  // This will allow us to ignore finished messages from previous script runs.
+  /**
+   * Whether we have received a NewSession message after the latest rerun request.
+   * This is used to ensure that we only increment the message cache run count after
+   * we have received a NewSession message after the latest rerun request.
+   * This allows us to ignore finished messages from previous script runs.
+   */
   private hasReceivedNewSession: boolean = false
 
-  // Whether we've handed a non-auto rerun request to the connection manager
-  // and are still waiting for the server to acknowledge it. This closes the
-  // gap before sessionStatusChanged flips scriptRunState to RUNNING.
+  /**
+   * Whether we've handed a non-auto rerun request to the connection manager
+   * and are still waiting for the server to acknowledge it. This closes the
+   * gap before sessionStatusChanged flips scriptRunState to RUNNING.
+   */
   private hasPendingRerunRequest: boolean = false
 
-  // Fragment IDs whose auto-rerun timers should stay quiescent until the next
-  // committed tree update after an in-flight auto-rerun request.
+  /**
+   * Fragment IDs whose auto-rerun timers should stay quiescent until the next
+   * committed tree update after an in-flight auto-rerun request.
+   */
   private readonly blockedAutoRerunFragmentIds = new Set<string>()
 
   public constructor(props: Props) {
@@ -1222,7 +1228,11 @@ export class App extends PureComponent<Props, State> {
    * @param statusChangeProto a SessionStatus protobuf
    */
   handleSessionStatusChanged = (statusChangeProto: SessionStatus): void => {
-    this.hasPendingRerunRequest = false
+    if (statusChangeProto.scriptIsRunning) {
+      // runOnSave updates also emit sessionStatusChanged while the app stays idle,
+      // so only clear the pending rerun flag once the server reports RUNNING.
+      this.hasPendingRerunRequest = false
+    }
 
     this.setState((prevState: State) => {
       // Determine our new ScriptRunState
@@ -1868,6 +1878,8 @@ export class App extends PureComponent<Props, State> {
    * until the next committed tree update confirms which fragment timers remain.
    */
   private blockPendingAutoRerunSubtree(fragmentId: string): void {
+    // Keep the root fragment blocked even before it appears in the committed
+    // tree, since getFragmentSubtreeIds only sees the last committed snapshot.
     this.blockedAutoRerunFragmentIds.add(fragmentId)
     this.state.elements.getFragmentSubtreeIds(fragmentId).forEach(activeId => {
       this.blockedAutoRerunFragmentIds.add(activeId)

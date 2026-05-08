@@ -61,6 +61,7 @@ def test_nested_fragment_run_every_can_disappear_without_crashing(app: Page):
     click_toggle(app, "Show nested auto fragment")
 
     expect(nested_fragment).to_have_count(0)
+    expect(app.get_by_test_id("stException")).to_have_count(0)
 
     # Wait for two standalone ticks: one should be enough in theory, but the
     # extra tick gives slower runners another chance to surface a stale nested

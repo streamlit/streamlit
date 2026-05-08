@@ -4047,6 +4047,64 @@ describe("App", () => {
       )
     })
 
+    it("does not clear pending reruns on runOnSave-only status updates", () => {
+      renderApp(getProps())
+      const connectionManager = getMockConnectionManager()
+      const widgetStateManager =
+        getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+      sendForwardMessage("autoRerun", {
+        interval: 1.0,
+        fragmentId: "myFragmentId",
+      })
+
+      // @ts-expect-error
+      connectionManager.sendMessage.mockClear()
+
+      act(() => {
+        widgetStateManager.sendUpdateWidgetsMessage(undefined)
+      })
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: true,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[0][0].rerunScript.fragmentId
+      ).toBeUndefined()
+
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: true,
+        scriptIsRunning: true,
+      })
+      sendForwardMessage("sessionStatusChanged", {
+        runOnSave: true,
+        scriptIsRunning: false,
+      })
+
+      act(() => {
+        vi.advanceTimersByTime(1000)
+      })
+
+      expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+      expect(
+        // @ts-expect-error
+        connectionManager.sendMessage.mock.calls[1][0].rerunScript
+      ).toEqual(
+        expect.objectContaining({
+          fragmentId: "myFragmentId",
+          isAutoRerun: true,
+        })
+      )
+    })
+
     it("blocks descendant auto reruns while an auto rerun ancestor is pending", () => {
       withMockedActiveFragmentIds(["parentFragment", "childFragment"], () => {
         withMockedFragmentSubtreeIds(
@@ -4162,6 +4220,8 @@ describe("App", () => {
 
       const previousConnectionManager =
         appInstanceWithPrivateFields.connectionManager
+      // This branch is only reachable by temporarily dropping the mounted App's
+      // private connectionManager before the rerun request is sent.
       appInstanceWithPrivateFields.connectionManager = null
 
       act(() => {
