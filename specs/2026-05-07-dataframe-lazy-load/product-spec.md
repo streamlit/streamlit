@@ -114,6 +114,7 @@ For arbitrary backends, users can provide a range loader and total row count.
 
 ```python
 import pandas as pd
+import pyarrow as pa
 import streamlit as st
 
 
@@ -136,12 +137,12 @@ orders = st.DataFrameSource(
         "SELECT COUNT(*) FROM orders",
         connection,
     ).iat[0, 0],
-    columns={
-        "id": "int64",
-        "status": "string",
-        "created_at": "datetime64[ns]",
-        "total": "float64",
-    },
+    schema=pa.schema([
+        ("id", pa.int64()),
+        ("status", pa.string()),
+        ("created_at", pa.timestamp("us")),
+        ("total", pa.float64()),
+    ]),
 )
 
 st.dataframe(orders)
@@ -197,7 +198,7 @@ class DataFrameSource:
         *,
         load: Callable[[int, int], Data] | None = None,
         row_count: int | Callable[[], int | None] | None = None,
-        columns: Mapping[str, str] | Sequence[str] | None = None,
+        schema: pa.Schema | None = None,
     ) -> None:
         ...
 ```
@@ -213,19 +214,17 @@ Parameters:
   element is rendered (not on every chunk request). If the callable raises an exception,
   Streamlit logs a warning and falls back to the last known row count (or treats as
   unknown-size if no prior count exists).
-- `columns`: Optional schema for callback-backed sources. If omitted, Streamlit can infer it
-  from the first non-empty chunk. Empty sources should provide `columns`. When provided as a
-  `Mapping`, keys are column names and values are pandas-compatible dtype strings (`"int64"`,
-  `"float64"`, `"string"`, `"bool"`, `"datetime64[ns]"`, `"timedelta64[ns]"`, `"object"`,
-  `"category"`). Note: Use the canonical pandas dtype strings; shortcuts like `"datetime"`
-  are not supported to avoid vocabulary fragmentation.
+- `schema`: Optional PyArrow schema for callback-backed sources. If omitted, Streamlit infers
+  the schema from the first non-empty chunk. Empty sources should provide `schema`. Using
+  PyArrow schema directly avoids dtype string ambiguity and matches the internal Arrow
+  representation.
 
 Validation:
 
 - Exactly one of `data` or `load` must be provided:
   - Passing neither raises `StreamlitAPIException("DataFrameSource requires either 'data' or 'load'")`.
   - Passing both raises `StreamlitAPIException("DataFrameSource accepts 'data' or 'load', not both")`.
-- When `data` is provided, `row_count` and `columns` are ignored (they are derived from
+- When `data` is provided, `row_count` and `schema` are ignored (they are derived from
   the dataframe). Passing these alongside `data` issues a deprecation warning but does not
   fail, allowing future flexibility if explicit overrides become useful.
 - If `row_count` is `None`, the source is sequential: Streamlit can request forward chunks but

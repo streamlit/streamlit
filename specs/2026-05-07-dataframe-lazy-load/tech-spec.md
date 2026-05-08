@@ -40,7 +40,7 @@ class DataframeSourceProtocol(Protocol):
         ...
 
     @property
-    def columns(self) -> DataframeSchema:
+    def schema(self) -> pa.Schema:
         ...
 
     def load_rows(self, offset: int, limit: int) -> Data:
@@ -221,7 +221,7 @@ less invasive for the first implementation because existing column/type parsing 
 
 Phase 1 adapters:
 
-- Callback source: `st.DataFrameSource(load=..., row_count=..., columns=...)`
+- Callback source: `st.DataFrameSource(load=..., row_count=..., schema=...)`
 - In-memory pandas DataFrame: slice with `.iloc[offset : offset + limit]`
 - In-memory Polars DataFrame: slice with `.slice(offset, limit)`
 - Auto-lazy in-memory pandas/Polars dataframes above the existing frontend large-table
