@@ -97,6 +97,8 @@ message LazyDataframe {
   uint32 page_size = 4;
   string generation = 5;
   AccessMode access_mode = 6;
+  ArrowData initial_chunk = 7;  // Dedicated field for initial rows; keeps arrow_data for eager path only
+  bytes serialized_schema = 8;  // Arrow IPC schema bytes when initial_chunk is empty
 
   enum AccessMode {
     RANDOM_ACCESS = 0;
@@ -105,9 +107,10 @@ message LazyDataframe {
 }
 ```
 
-For lazy dataframes, `arrow_data` can contain the initial chunk and schema. If no initial rows
-are available, it should contain enough schema information for the frontend to construct
-columns, or the lazy metadata should be extended with serialized schema.
+For lazy dataframes, the `initial_chunk` field in `LazyDataframe` contains the initial rows and
+schema. If no initial rows are available, `serialized_schema` should contain the Arrow IPC schema
+bytes so the frontend can construct columns without waiting for the first chunk. The top-level
+`arrow_data` field in `Dataframe` remains reserved for the eager (non-lazy) rendering path.
 
 Add chunk request/response messages to `BackMsg` and `ForwardMsg`.
 
@@ -125,6 +128,7 @@ message DataframeChunkResponse {
   string request_id = 2;
   uint64 offset = 3;
   string generation = 4;
+  bool end_of_stream = 7;  // True when this is the final chunk for sequential sources
   oneof result {
     ArrowData arrow_data = 5;
     string error_msg = 6;
@@ -180,7 +184,8 @@ Responsibilities:
 - Clear all chunks when the source generation changes.
 - Surface per-range errors and support retry.
 - For sequential sources, request only the next unloaded range and grow the apparent row count
-  as chunks arrive. A chunk with fewer rows than requested (or zero rows) signals end of stream.
+  as chunks arrive. The `end_of_stream` response flag signals exhaustion; the frontend should
+  stop requesting further chunks and finalize the row count when this flag is true.
 
 Glide's `getCellContent` must remain synchronous. The cache should therefore return:
 

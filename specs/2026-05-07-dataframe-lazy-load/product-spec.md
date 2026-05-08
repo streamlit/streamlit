@@ -205,7 +205,10 @@ Parameters:
 - `row_count`: Total number of rows, or `None` when the total is unknown. Can be callable so
   Streamlit can recompute it on rerun.
 - `columns`: Optional schema for callback-backed sources. If omitted, Streamlit can infer it
-  from the first non-empty chunk. Empty sources should provide `columns`.
+  from the first non-empty chunk. Empty sources should provide `columns`. When provided as a
+  `Mapping`, keys are column names and values are pandas-compatible dtype strings (`"int64"`,
+  `"float64"`, `"string"`, `"bool"`, `"datetime64[ns]"`, `"timedelta64[ns]"`, `"object"`,
+  `"category"`) or `"datetime"` as an alias for `"datetime64[ns]"`.
 
 Validation:
 
