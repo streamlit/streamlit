@@ -1676,6 +1676,22 @@ export class App extends PureComponent<Props, State> {
             }
           }
         )
+      } else if (
+        status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
+      ) {
+        // The script finished early because another rerun superseded it. The
+        // success path below only releases blocks for fragments that actually
+        // commit, so without this we would leave the interrupted fragment's
+        // entry in `pendingAutoRerunBlocks` indefinitely (until the next
+        // full-app rerun), silently dropping all of its future auto-rerun
+        // ticks. Release the block(s) for the interrupted fragment(s) here so
+        // their timers can resume once the superseding run finishes; the
+        // `scriptRunState` and `hasPendingRerunRequest` guards in
+        // `handleAutoRerunTick` still suppress ticks while another rerun is
+        // in flight.
+        this.state.fragmentIdsThisRun.forEach(interruptedFragmentId => {
+          this.releasePendingAutoRerunBlock(interruptedFragmentId)
+        })
       }
 
       // Tell the ConnectionManager to increment the message cache run
@@ -1932,11 +1948,18 @@ export class App extends PureComponent<Props, State> {
   /**
    * Clear all auto reruns that were registered. This should be called whenever
    * the content of the auto rerun function might not be valid anymore and could
-   * lead to issues, e.g. when a new full app-rerun session is started or the active page changed.
+   * lead to issues, e.g. when a new full app-rerun session is started or the
+   * active page changed.
+   *
+   * Also fully resets the pending auto-rerun guard (timers, blocked-subtree map,
+   * and the `hasPendingRerunRequest` flag) so the helper's effect matches its
+   * name. Any caller invoking `cleanupAutoReruns` expects the auto-rerun
+   * subsystem to start from a clean slate, so leaving `hasPendingRerunRequest`
+   * set could silently suppress the next batch of fragment ticks.
    */
   cleanupAutoReruns = (): void => {
     this.fragmentAutoRerunManager.clearAll()
-    this.clearBlockedAutoReruns()
+    this.resetPendingAutoRerunState()
   }
 
   /**
