@@ -560,16 +560,14 @@ class ScriptRunner:
                 # (st.query_params in user code will reflect the correct params for the new page)
                 main_script_hash = self._pages_manager.main_script_hash
 
-                # Ensure ThreadState is initialized before filtering so that
-                # ctx.enqueue() (called by _send_query_param_msg) can read
-                # active_script_hash.  On a reused thread the previous run's
-                # reset() already set this, but a fresh ScriptRunner thread
-                # (created by fastReruns) has no prior value.  reset() will
-                # re-initialize with the same main_script_hash shortly after.
-                try:
-                    ThreadState.get()
-                except RuntimeError:
-                    ThreadState.initialize(active_script_hash=main_script_hash)
+                # Initialize ThreadState so ctx.enqueue() can read
+                # active_script_hash during query-param filtering below.
+                # On a reused thread this is a no-op (same value from the
+                # previous run's reset).  On a fresh thread created by
+                # fastReruns, the ContextVar is unset and this provides
+                # the correct value.  ctx.reset() re-initializes shortly
+                # after with the same main_script_hash.
+                ThreadState.initialize(active_script_hash=main_script_hash)
                 valid_script_hashes = {main_script_hash, page_script_hash}
                 with self._session_state.query_params() as qp:
                     qp.populate_from_query_string(
