@@ -132,7 +132,7 @@ def load_orders(offset: int, limit: int) -> pd.DataFrame:
 
 
 orders = st.DataFrameSource(
-    load=load_orders,
+    load_orders,
     row_count=lambda: pd.read_sql(
         "SELECT COUNT(*) FROM orders",
         connection,
@@ -194,9 +194,8 @@ Preferred name: `st.DataFrameSource`.
 class DataFrameSource:
     def __init__(
         self,
-        data: Data | None = None,
+        data: Data | Callable[[int, int], Data],
         *,
-        load: Callable[[int, int], Data] | None = None,
         row_count: int | Callable[[], int | None] | None = None,
         schema: pa.Schema | None = None,
     ) -> None:
@@ -205,30 +204,25 @@ class DataFrameSource:
 
 Parameters:
 
-- `data`: An existing dataframe-like object to deliver in chunks. This is mainly for forcing
-  lazy delivery below the auto-lazy threshold.
-- `load`: Callback that accepts `offset` and `limit`, and returns rows in the half-open range
-  `[offset, offset + limit)`.
+- `data`: Either a dataframe-like object to deliver in chunks, or a callable that accepts
+  `(offset, limit)` and returns rows in the half-open range `[offset, offset + limit)`.
+  Streamlit detects callables automatically.
 - `row_count`: Total number of rows, or `None` when the total is unknown. Can be callable so
   Streamlit can recompute it on rerun. The callable is invoked once per rerun when the
   element is rendered (not on every chunk request). If the callable raises an exception,
   Streamlit logs a warning and falls back to the last known row count (or treats as
-  unknown-size if no prior count exists).
+  unknown-size if no prior count exists). Ignored when `data` is a dataframe (row count is
+  derived from the data).
 - `schema`: Optional PyArrow schema for callback-backed sources. If omitted, Streamlit infers
-  the schema from the first non-empty chunk. Empty sources should provide `schema`. Using
-  PyArrow schema directly avoids dtype string ambiguity and matches the internal Arrow
-  representation.
+  the schema from the first non-empty chunk. Empty sources should provide `schema`. Ignored
+  when `data` is a dataframe (schema is derived from the data).
 
 Validation:
 
-- Exactly one of `data` or `load` must be provided:
-  - Passing neither raises `StreamlitAPIException("DataFrameSource requires either 'data' or 'load'")`.
-  - Passing both raises `StreamlitAPIException("DataFrameSource accepts 'data' or 'load', not both")`.
-- When `data` is provided, `row_count` and `schema` are ignored (they are derived from
-  the dataframe). Passing these alongside `data` issues a deprecation warning but does not
-  fail, allowing future flexibility if explicit overrides become useful.
-- If `row_count` is `None`, the source is sequential: Streamlit can request forward chunks but
-  cannot support arbitrary row jumps.
+- If `data` is a dataframe, `row_count` and `schema` are derived from it. Passing these
+  explicitly issues a warning but does not fail.
+- If `data` is a callable and `row_count` is `None`, the source is sequential: Streamlit can
+  request forward chunks but cannot support arbitrary row jumps.
 - If `row_count` is provided, it must be non-negative. Negative values raise
   `StreamlitAPIException("row_count must be non-negative")`.
 - If `row_count` is a callable that returns `None` after previously returning a known row count,

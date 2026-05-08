@@ -221,7 +221,7 @@ less invasive for the first implementation because existing column/type parsing 
 
 Phase 1 adapters:
 
-- Callback source: `st.DataFrameSource(load=..., row_count=..., schema=...)`
+- Callback source: `st.DataFrameSource(loader, row_count=..., schema=...)`
 - In-memory pandas DataFrame: slice with `.iloc[offset : offset + limit]`
 - In-memory Polars DataFrame: slice with `.slice(offset, limit)`
 - Auto-lazy in-memory pandas/Polars dataframes above the existing frontend large-table
