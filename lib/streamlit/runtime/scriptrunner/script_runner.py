@@ -51,6 +51,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
+    ThreadState,
     UserInfoType,
     add_script_run_ctx,
     get_script_run_ctx,
@@ -558,6 +559,17 @@ class ScriptRunner:
                 # ensuring st.query_params is accurate when the new page runs.
                 # (st.query_params in user code will reflect the correct params for the new page)
                 main_script_hash = self._pages_manager.main_script_hash
+
+                # Ensure ThreadState is initialized before filtering so that
+                # ctx.enqueue() (called by _send_query_param_msg) can read
+                # active_script_hash.  On a reused thread the previous run's
+                # reset() already set this, but a fresh ScriptRunner thread
+                # (created by fastReruns) has no prior value.  reset() will
+                # re-initialize with the same main_script_hash shortly after.
+                try:
+                    ThreadState.get()
+                except RuntimeError:
+                    ThreadState.initialize(active_script_hash=main_script_hash)
                 valid_script_hashes = {main_script_hash, page_script_hash}
                 with self._session_state.query_params() as qp:
                     qp.populate_from_query_string(
