@@ -1367,6 +1367,7 @@ export class App extends PureComponent<Props, State> {
    */
   handleNewSession = (newSessionProto: NewSession): void => {
     const initialize = newSessionProto.initialize as Initialize
+    const { fragmentIdsThisRun } = newSessionProto
 
     if (this.hasStreamlitVersionChanged(initialize)) {
       window.location.reload()
@@ -1376,8 +1377,13 @@ export class App extends PureComponent<Props, State> {
     // Set this flag to indicate that we have received a NewSession message
     // after the latest rerun request:
     this.hasReceivedNewSession = true
-    this.hasPendingRerunRequest = false
-    this.blockedAutoRerunFragmentIds.clear()
+    if (!fragmentIdsThisRun.length) {
+      // Full-app reruns can deliver a NewSession without a fresh RUNNING status
+      // transition if the app was already running. Fragment reruns keep their
+      // auto-rerun subtree blocked until the committed tree is updated.
+      this.hasPendingRerunRequest = false
+      this.blockedAutoRerunFragmentIds.clear()
+    }
 
     // First, handle initialization logic. Each NewSession message has
     // initialization data. If this is the _first_ time we're receiving
@@ -1393,7 +1399,6 @@ export class App extends PureComponent<Props, State> {
       scriptRunId,
       name: scriptName,
       mainScriptPath,
-      fragmentIdsThisRun,
       pageScriptHash: newPageScriptHash,
       mainScriptHash,
     } = newSessionProto

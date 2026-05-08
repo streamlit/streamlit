@@ -4182,6 +4182,79 @@ describe("App", () => {
       })
     })
 
+    it("keeps descendant auto reruns blocked until a fragment rerun commits", () => {
+      withMockedActiveFragmentIds(["parentFragment", "childFragment"], () => {
+        withMockedFragmentSubtreeIds(
+          {
+            parentFragment: ["parentFragment", "childFragment"],
+          },
+          () => {
+            renderApp(getProps())
+            const connectionManager = getMockConnectionManager()
+            const widgetStateManager =
+              getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+            sendForwardMessage("autoRerun", {
+              interval: 1.0,
+              fragmentId: "childFragment",
+            })
+
+            // @ts-expect-error
+            connectionManager.sendMessage.mockClear()
+
+            act(() => {
+              widgetStateManager.sendUpdateWidgetsMessage(
+                "parentFragment",
+                true
+              )
+            })
+
+            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+            sendForwardMessage("newSession", {
+              ...NEW_SESSION_JSON,
+              fragmentIdsThisRun: ["parentFragment"],
+            })
+
+            act(() => {
+              vi.advanceTimersByTime(1000)
+            })
+
+            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+            sendForwardMessage("sessionStatusChanged", {
+              runOnSave: false,
+              scriptIsRunning: true,
+            })
+            sendForwardMessage(
+              "scriptFinished",
+              ForwardMsg.ScriptFinishedStatus
+                .FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+            )
+            sendForwardMessage("sessionStatusChanged", {
+              runOnSave: false,
+              scriptIsRunning: false,
+            })
+
+            act(() => {
+              vi.advanceTimersByTime(1000)
+            })
+
+            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+            expect(
+              // @ts-expect-error
+              connectionManager.sendMessage.mock.calls[1][0].rerunScript
+            ).toEqual(
+              expect.objectContaining({
+                fragmentId: "childFragment",
+                isAutoRerun: true,
+              })
+            )
+          }
+        )
+      })
+    })
+
     it("does not leave reruns pending if no connection manager is available", () => {
       let appInstance: App | null = null
 
