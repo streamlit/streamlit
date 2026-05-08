@@ -53,12 +53,10 @@ describe("AlertContainer element", () => {
     [Kind.SUCCESS, "status"],
     [Kind.WARNING, "status"],
   ] as const)(
-    "applies role=%s for kind=%s",
+    "for kind=%s, renders role=%s",
     (kind: Kind, expectedRole: string) => {
       render(<AlertContainer {...getProps({ kind })} />)
-      expect(
-        screen.getByRole(expectedRole, { hidden: true })
-      ).toBeInTheDocument()
+      expect(screen.getByRole(expectedRole, { hidden: true })).toBeVisible()
     }
   )
 
