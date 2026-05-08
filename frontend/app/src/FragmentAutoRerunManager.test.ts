@@ -61,6 +61,42 @@ describe("FragmentAutoRerunManager", () => {
     expect(onTick).toHaveBeenCalledWith("fragment-a")
   })
 
+  it("clears the timer for a single fragment id", () => {
+    const onTick = vi.fn()
+    const manager = new FragmentAutoRerunManager({ onTick })
+
+    manager.schedule("fragment-a", 1)
+    manager.schedule("fragment-b", 1)
+
+    manager.clear("fragment-a")
+
+    expect(clearInterval).toHaveBeenCalledTimes(1)
+    expect(manager.hasActiveAutoReruns()).toBe(true)
+
+    vi.advanceTimersByTime(1000)
+
+    expect(onTick).toHaveBeenCalledTimes(1)
+    expect(onTick).toHaveBeenCalledWith("fragment-b")
+    expect(onTick).not.toHaveBeenCalledWith("fragment-a")
+  })
+
+  it("is a no-op when clearing an unknown fragment id", () => {
+    const onTick = vi.fn()
+    const manager = new FragmentAutoRerunManager({ onTick })
+
+    manager.schedule("fragment-a", 1)
+
+    manager.clear("not-a-real-fragment")
+
+    expect(clearInterval).not.toHaveBeenCalled()
+    expect(manager.hasActiveAutoReruns()).toBe(true)
+
+    vi.advanceTimersByTime(1000)
+
+    expect(onTick).toHaveBeenCalledTimes(1)
+    expect(onTick).toHaveBeenCalledWith("fragment-a")
+  })
+
   it("prunes timers whose fragment ids are no longer active", () => {
     const onTick = vi.fn()
     const manager = new FragmentAutoRerunManager({ onTick })

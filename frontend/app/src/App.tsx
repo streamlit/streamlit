@@ -1712,9 +1712,13 @@ export class App extends PureComponent<Props, State> {
    * Remove widget state and fragment timers for items no longer present in the
    * current render tree.
    *
-   * This runs from `setState` callbacks after the new tree has committed, so we
-   * can inspect the live fragment IDs before deciding which fragment-scoped
-   * resources should remain active.
+   * This must only be invoked from a `setState` callback. React runs those
+   * callbacks after the corresponding state update has committed, so reading
+   * `this.state.elements` here is safe even though the surrounding code path
+   * just produced a new value for it: the read returns the freshly committed
+   * tree (rather than racing the in-flight `setState`), which is what lets us
+   * decide accurately which widgets and fragment-scoped timers should remain
+   * active.
    *
    * @param pruneInactiveAutoReruns - When true, remove fragment auto-rerun
    *   timers for fragments that are absent from the committed tree.
@@ -2058,7 +2062,9 @@ export class App extends PureComponent<Props, State> {
     const cachedMessageHashes =
       this.connectionManager?.getCachedMessageHashes() ?? []
 
-    const sent = this.sendBackMsg(
+    // The `!baseUriParts` early return above guarantees `connectionManager`
+    // exists at this point, so `sendBackMsg` will hand the message to it.
+    this.sendBackMsg(
       new BackMsg({
         rerunScript: {
           queryString,
@@ -2073,15 +2079,13 @@ export class App extends PureComponent<Props, State> {
       })
     )
 
-    if (sent) {
-      if (isAutoRerun === true && fragmentId) {
-        this.blockPendingAutoRerunSubtree(fragmentId)
-      } else {
-        // Mark non-auto reruns as pending once the request is handed to the
-        // connection manager so auto-rerun timers do not enqueue another
-        // fragment rerun before the server reports that this one started.
-        this.hasPendingRerunRequest = true
-      }
+    if (isAutoRerun === true && fragmentId) {
+      this.blockPendingAutoRerunSubtree(fragmentId)
+    } else {
+      // Mark non-auto reruns as pending once the request is handed to the
+      // connection manager so auto-rerun timers do not enqueue another
+      // fragment rerun before the server reports that this one started.
+      this.hasPendingRerunRequest = true
     }
     // Reset hasReceivedNewSession to false to ensure that we are aware
     // if a finished message is from a previous script run.
