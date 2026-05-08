@@ -60,15 +60,27 @@ implement filtering UI or inspect callback signatures to infer capabilities.
 
 ### Session Source Manager
 
-Add a session-scoped manager for lazy dataframe sources.
+Add a session-scoped manager for lazy dataframe sources. This follows the same pattern as
+`MediaFileManager.add_deferred()` for deferred download buttons (see
+`lib/streamlit/runtime/media_file_manager.py`), but with dataframe-specific semantics.
+
+**Pattern reference:** The deferred download mechanism in `st.download_button` demonstrates
+the non-rerun request/response flow:
+1. `add_deferred()` registers a callable with a unique `file_id`
+2. Frontend sends `DeferredFileRequest` BackMsg
+3. `AppSession._handle_deferred_file_request()` executes callable via `asyncio.to_thread()`
+4. `DeferredFileResponse` ForwardMsg sent back with URL or error
+
+Lazy dataframe chunks use the same pattern but return Arrow data directly instead of URLs.
 
 Responsibilities:
 
 - Register a source for the current session and element generation.
 - Return a unique `source_id` that cannot be used across sessions.
-- Load row ranges in a worker thread so slow data queries do not block the event loop.
-  User `load` and `row_count` callables run in this worker thread; they do not have access
-  to `ScriptRunContext` and must not call Streamlit APIs (e.g., `st.session_state`). Users
+- Load row ranges in a worker thread via `asyncio.to_thread()` so slow data queries do not
+  block the event loop (same as deferred downloads).
+  User `data` callables run in this worker thread; they do not have access to
+  `ScriptRunContext` and must not call Streamlit APIs (e.g., `st.session_state`). Users
   who need shared state should pass it explicitly via closure or use thread-safe patterns.
   This means callables must create per-call database connections or use thread-safe
   connection pools.
@@ -193,13 +205,16 @@ does not match an active table request.
 
 ### Chunk Request Flow
 
-1. Frontend sends `DataframeChunkRequest` over the existing connection.
-2. `AppSession` routes it without requesting a script rerun.
-3. The source manager validates the session/source/generation.
-4. The requested rows are loaded in an executor. The executor does NOT propagate the
-   registering rerun's `ScriptRunContext`; user callbacks cannot call Streamlit APIs.
-   This isolation prevents concurrency issues with concurrent script reruns.
-5. The chunk is serialized as Arrow and returned as `DataframeChunkResponse`.
+Following the same pattern as `_handle_deferred_file_request()` in `app_session.py`:
+
+1. Frontend sends `DataframeChunkRequest` BackMsg over the existing websocket.
+2. `AppSession.handle_backmsg()` routes to `_handle_dataframe_chunk_request()` without
+   triggering a script rerun.
+3. The handler validates session/source/generation.
+4. The source's `data` callable is executed via `asyncio.to_thread()` to avoid blocking
+   the event loop. The worker thread does NOT have `ScriptRunContext`; user callbacks
+   cannot call Streamlit APIs.
+5. The chunk is serialized as Arrow and sent back as `DataframeChunkResponse` ForwardMsg.
 6. The frontend inserts the chunk into its cache and triggers a render.
 
 ### Frontend Cache and Rendering
