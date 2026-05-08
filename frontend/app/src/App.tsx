@@ -315,6 +315,19 @@ export class App extends PureComponent<Props, State> {
    */
   private readonly pendingAutoRerunBlocks = new Map<string, Set<string>>()
 
+  /**
+   * Synchronous mirror of `state.fragmentIdsThisRun` that is updated alongside
+   * the corresponding `setState` call so handlers reading it inside the same
+   * React batch see the latest value rather than the previous run's. The
+   * frontend's WebSocket pump can dispatch several ForwardMsgs back-to-back
+   * (e.g. NewSession → SessionStatus → ScriptFinished), and React 18 batches
+   * the resulting `setState`s into one commit. Without this mirror,
+   * `handleScriptFinished` could read the prior run's `fragmentIdsThisRun`
+   * and release the wrong auto-rerun block, leaving the just-completed
+   * fragment permanently blocked from future ticks until a full-app rerun.
+   */
+  private fragmentIdsThisRunSync: readonly string[] = []
+
   public constructor(props: Props) {
     super(props)
 
@@ -1378,6 +1391,10 @@ export class App extends PureComponent<Props, State> {
     // Set this flag to indicate that we have received a NewSession message
     // after the latest rerun request:
     this.hasReceivedNewSession = true
+    // Mirror `fragmentIdsThisRun` synchronously so handlers running inside the
+    // same React batch (NewSession → ... → ScriptFinished) read the value for
+    // the current run instead of the prior run's stale `state` value.
+    this.fragmentIdsThisRunSync = fragmentIdsThisRun
     if (!fragmentIdsThisRun.length) {
       // Full-app reruns can deliver a NewSession without a fresh RUNNING status
       // transition if the app was already running. Fragment reruns keep their
@@ -1642,12 +1659,18 @@ export class App extends PureComponent<Props, State> {
         // leftover elements will be cleared after finished successfully.
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
-        // Capture the fragment IDs that just ran so the setState callback can
-        // release the right auto-rerun blocks without reading `this.state`
-        // (which the lint rules disallow inside setState callbacks). The
-        // value is already correct here because `handleNewSession` set it
-        // earlier in this script run.
-        const committedFragmentIds = this.state.fragmentIdsThisRun
+        // Capture the fragment IDs that just ran from the synchronous mirror.
+        // Reading `this.state.fragmentIdsThisRun` here is unsafe because
+        // React 18 batches the setState calls from the back-to-back
+        // ForwardMsgs that drive a single script run (NewSession →
+        // SessionStatus → ScriptFinished). When that batching kicks in,
+        // `state.fragmentIdsThisRun` still reflects the previous run, so the
+        // setState callback below would release the wrong auto-rerun blocks
+        // and leave the just-completed fragment permanently quiescent until
+        // the next full-app rerun. `fragmentIdsThisRunSync` is updated
+        // alongside `setState` in `handleNewSession`, so it always matches
+        // the run that just finished.
+        const committedFragmentIds = this.fragmentIdsThisRunSync
         this.setState(
           ({ scriptRunId, fragmentIdsThisRun, elements }) => ({
             // Apply any pending elements that haven't been applied.
@@ -1680,7 +1703,7 @@ export class App extends PureComponent<Props, State> {
         status === ForwardMsg.ScriptFinishedStatus.FINISHED_EARLY_FOR_RERUN
       ) {
         // The script finished early because another rerun superseded it. The
-        // success path below only releases blocks for fragments that actually
+        // success path above only releases blocks for fragments that actually
         // commit, so without this we would leave the interrupted fragment's
         // entry in `pendingAutoRerunBlocks` indefinitely (until the next
         // full-app rerun), silently dropping all of its future auto-rerun
@@ -1688,8 +1711,10 @@ export class App extends PureComponent<Props, State> {
         // their timers can resume once the superseding run finishes; the
         // `scriptRunState` and `hasPendingRerunRequest` guards in
         // `handleAutoRerunTick` still suppress ticks while another rerun is
-        // in flight.
-        this.state.fragmentIdsThisRun.forEach(interruptedFragmentId => {
+        // in flight. We use the synchronous mirror for the same reason the
+        // success branch does — handlers in the same React batch must not
+        // observe a stale `state.fragmentIdsThisRun`.
+        this.fragmentIdsThisRunSync.forEach(interruptedFragmentId => {
           this.releasePendingAutoRerunBlock(interruptedFragmentId)
         })
       }

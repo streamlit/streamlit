@@ -4490,6 +4490,127 @@ describe("App", () => {
       }
     })
 
+    it("releases the in-flight auto-rerun block even when the server's NewSession and ScriptFinished arrive in a single React batch", () => {
+      // Regression test for a race where multiple WebSocket messages from the
+      // same script run get processed before React commits the
+      // `fragmentIdsThisRun` setState. handleScriptFinished captured
+      // `this.state.fragmentIdsThisRun` synchronously and used it to decide
+      // which auto-rerun blocks to release, so the stale value (from the
+      // previous run) caused the just-completed run's block to leak. With the
+      // block leaked, every subsequent auto-rerun tick for that fragment was
+      // suppressed by isAutoRerunBlocked until the next full-app rerun.
+      const cleanupFragmentTree = installMockFragmentTree({
+        activeFragmentIds: ["fragmentA"],
+        fragmentSubtrees: {
+          fragmentA: ["fragmentA"],
+        },
+      })
+
+      try {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager()
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "fragmentA",
+        })
+
+        // Seed `state.fragmentIdsThisRun` with a previous run's value that
+        // does NOT include `fragmentA`. After this commits, a stale read of
+        // `this.state.fragmentIdsThisRun` inside handleScriptFinished would
+        // return ["fragmentB"] instead of ["fragmentA"].
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          fragmentIdsThisRun: ["fragmentB"],
+        })
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        // First tick: fires the in-flight auto-rerun for fragmentA and marks
+        // it as blocked until the rerun commits.
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[0][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "fragmentA",
+            isAutoRerun: true,
+          })
+        )
+
+        // Server replies for the just-sent fragmentA rerun, but every
+        // ForwardMsg lands inside the same React batch (single act()). React
+        // does not flush `fragmentIdsThisRun` between handlers, so when
+        // handleScriptFinished reads `this.state.fragmentIdsThisRun` it still
+        // sees the previous run's ["fragmentB"].
+        act(() => {
+          const onMessage = getMockConnectionManagerProp("onMessage")
+          const newSessionMsg = new ForwardMsg()
+          newSessionMsg.newSession = cloneDeep({
+            ...NEW_SESSION_JSON,
+            fragmentIdsThisRun: ["fragmentA"],
+          })
+          onMessage(newSessionMsg)
+
+          const startedMsg = new ForwardMsg()
+          startedMsg.sessionStatusChanged = SessionStatus.create({
+            runOnSave: false,
+            scriptIsRunning: true,
+          })
+          onMessage(startedMsg)
+
+          const finishedMsg = new ForwardMsg()
+          finishedMsg.scriptFinished =
+            ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+          onMessage(finishedMsg)
+
+          const stoppedMsg = new ForwardMsg()
+          stoppedMsg.sessionStatusChanged = SessionStatus.create({
+            runOnSave: false,
+            scriptIsRunning: false,
+          })
+          onMessage(stoppedMsg)
+        })
+
+        // Next tick: must fire because the block for fragmentA was released
+        // when its rerun committed. Without the fix, the stale read leaves
+        // the block in place and this tick is dropped.
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[1][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "fragmentA",
+            isAutoRerun: true,
+          })
+        )
+      } finally {
+        cleanupFragmentTree()
+      }
+    })
+
     it("triggers rerunScript with is_auto_rerun set to true", () => {
       // Since we mock the isEmbed function, we need to set its return value
       vi.mocked(isEmbed).mockReturnValue(false)
