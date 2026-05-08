@@ -75,10 +75,14 @@ When `st.dataframe` receives a supported unevaluated object and Streamlit can de
 count plus fetch row ranges, Streamlit should render it as a lazy dataframe instead of
 materializing a capped preview.
 
+Note: The following examples show the target experience for Phase 2 adapters. In Phase 1,
+these objects will still use the capped-preview fallback until their adapters are implemented.
+
 ```python
 import polars as pl
 import streamlit as st
 
+# Phase 2: Polars LazyFrame adapter
 events = pl.scan_parquet("s3://bucket/events/*.parquet")
 
 st.dataframe(events)
@@ -87,12 +91,14 @@ st.dataframe(events)
 ```python
 from snowflake.snowpark.functions import col
 
+# Phase 2: Snowpark DataFrame adapter
 orders = session.table("orders").filter(col("status") == "OPEN")
 
 st.dataframe(orders)
 ```
 
 ```python
+# Phase 2: DuckDB relation adapter
 rel = duckdb.sql("SELECT * FROM 'logs/*.parquet'")
 
 st.dataframe(rel)
@@ -133,7 +139,7 @@ orders = st.DataFrameSource(
     columns={
         "id": "int64",
         "status": "string",
-        "created_at": "datetime",
+        "created_at": "datetime64[ns]",
         "total": "float64",
     },
 )
@@ -203,18 +209,25 @@ Parameters:
 - `load`: Callback that accepts `offset` and `limit`, and returns rows in the half-open range
   `[offset, offset + limit)`.
 - `row_count`: Total number of rows, or `None` when the total is unknown. Can be callable so
-  Streamlit can recompute it on rerun.
+  Streamlit can recompute it on rerun. The callable is invoked once per rerun when the
+  element is rendered (not on every chunk request). If the callable raises an exception,
+  Streamlit logs a warning and falls back to the last known row count (or treats as
+  unknown-size if no prior count exists).
 - `columns`: Optional schema for callback-backed sources. If omitted, Streamlit can infer it
   from the first non-empty chunk. Empty sources should provide `columns`. When provided as a
   `Mapping`, keys are column names and values are pandas-compatible dtype strings (`"int64"`,
   `"float64"`, `"string"`, `"bool"`, `"datetime64[ns]"`, `"timedelta64[ns]"`, `"object"`,
-  `"category"`) or `"datetime"` as an alias for `"datetime64[ns]"`.
+  `"category"`). Note: Use the canonical pandas dtype strings; shortcuts like `"datetime"`
+  are not supported to avoid vocabulary fragmentation.
 
 Validation:
 
 - Exactly one of `data` or `load` must be provided:
   - Passing neither raises `StreamlitAPIException("DataFrameSource requires either 'data' or 'load'")`.
   - Passing both raises `StreamlitAPIException("DataFrameSource accepts 'data' or 'load', not both")`.
+- When `data` is provided, `row_count` and `columns` are ignored (they are derived from
+  the dataframe). Passing these alongside `data` issues a deprecation warning but does not
+  fail, allowing future flexibility if explicit overrides become useful.
 - If `row_count` is `None`, the source is sequential: Streamlit can request forward chunks but
   cannot support arbitrary row jumps.
 - If `row_count` is provided, it must be non-negative. Negative values raise
@@ -333,8 +346,10 @@ Not supported in lazy mode:
 - Add callback-backed `st.DataFrameSource(load=..., row_count=...)`.
 - Add `st.DataFrameSource(df)` for explicit in-memory pandas/Polars chunking below the
   auto-lazy threshold.
-- Auto-lazy compatible in-memory pandas/Polars dataframes above 150,000 rows.
 - Disable selection, editing, Styler, and table-wide sort/search for lazy sources.
+
+Note: Auto-lazy for in-memory dataframes above 150,000 rows is deferred to Phase 3 when
+server-side search exists, per the Backwards Compatibility Note above (lines 171-177).
 
 ### Phase 2: Existing Lazy Data Adapters
 
@@ -345,18 +360,25 @@ Not supported in lazy mode:
   random access.
 - Keep capped-preview fallback for objects that cannot provide row count or stable range access.
 
-### Phase 3: Server-side Sorting, Search, and Filtering
+### Phase 3: Server-side Sorting, Search, Filtering, and Auto-lazy
 
 - Add explicit sort/search/filter capabilities to `st.DataFrameSource`.
 - Add request metadata for sort/search/filter state.
 - Recompute row count when filters change.
 - Reset chunk cache on sort/search/filter changes.
+- Enable auto-lazy for in-memory pandas/Polars dataframes above 150,000 rows (now that
+  server-side search exists to replace client-side search).
 
 ### Phase 4: Streaming Sources
 
 - Add unknown-size sequential sources with `row_count=None` for append-only logs or generators.
 - Use loaded-size scroll behavior until the source is exhausted.
 - Define cache bounds and backpressure for long-running streams.
+
+Note: The API and behavior sections describe `row_count=None` support to define the full
+contract, but Phase 4 timing reflects that unknown-size sources need additional scrolling
+and cache semantics work beyond the MVP. Known-size sources with random access are the
+MVP focus.
 
 ## Alternatives Considered
 

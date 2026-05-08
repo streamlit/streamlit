@@ -67,11 +67,20 @@ Responsibilities:
 - Register a source for the current session and element generation.
 - Return a unique `source_id` that cannot be used across sessions.
 - Load row ranges in a worker thread so slow data queries do not block the event loop.
+  User `load` and `row_count` callables run in this worker thread; they do not have access
+  to `ScriptRunContext` and must not call Streamlit APIs (e.g., `st.session_state`). Users
+  who need shared state should pass it explicitly via closure or use thread-safe patterns.
+  This means callables must create per-call database connections or use thread-safe
+  connection pools.
 - Limit concurrent in-flight chunk requests per source (e.g., max 3 concurrent requests) to
   prevent a rapidly scrolling user from queuing unbounded simultaneous queries.
 - Convert loaded chunks to Arrow bytes.
 - Reject stale source ids after reruns, element removal, or session shutdown.
 - Bound server-side metadata and clean up per-session state.
+- Element disappearance detection: The source manager tracks registered sources by element
+  id. On each rerun, the manager compares the new element tree against registered sources.
+  Sources whose element ids no longer appear in the tree are marked stale and their state
+  is cleaned up. Session shutdown also triggers cleanup of all sources for that session.
 
 This should live near runtime/session code, not in the media file manager. The media file
 manager is optimized for deferred file generation and URL serving, while dataframe chunks are
@@ -101,8 +110,9 @@ message LazyDataframe {
   bytes serialized_schema = 8;  // Arrow IPC schema bytes when initial_chunk is empty
 
   enum AccessMode {
-    RANDOM_ACCESS = 0;
-    SEQUENTIAL = 1;
+    ACCESS_MODE_UNSPECIFIED = 0;
+    RANDOM_ACCESS = 1;
+    SEQUENTIAL = 2;
   }
 }
 ```
@@ -136,6 +146,14 @@ message DataframeChunkResponse {
 }
 ```
 
+**`end_of_stream` semantics:**
+- For sequential sources, `end_of_stream=true` signals the source is exhausted. The frontend
+  MUST treat this as terminal and stop requesting further chunks.
+- `end_of_stream=true` with `error_msg` is a terminal error state (no retry).
+- For sequential sources, `end_of_stream=false` with zero-row `arrow_data` is invalid; the
+  server must set `end_of_stream=true` when returning the final (possibly empty) chunk.
+```
+
 The server must enforce a maximum on `limit` (e.g., 10,000 rows) to prevent a modified client
 from requesting arbitrarily large chunks and causing OOM or warehouse cost spikes. The server
 should also apply per-session concurrency/backpressure rules to bound simultaneous in-flight
@@ -165,7 +183,9 @@ does not match an active table request.
 1. Frontend sends `DataframeChunkRequest` over the existing connection.
 2. `AppSession` routes it without requesting a script rerun.
 3. The source manager validates the session/source/generation.
-4. The requested rows are loaded in an executor.
+4. The requested rows are loaded in an executor. The executor does NOT propagate the
+   registering rerun's `ScriptRunContext`; user callbacks cannot call Streamlit APIs.
+   This isolation prevents concurrency issues with concurrent script reruns.
 5. The chunk is serialized as Arrow and returned as `DataframeChunkResponse`.
 6. The frontend inserts the chunk into its cache and triggers a render.
 
@@ -308,8 +328,9 @@ ORDER BY __st_row_num;
 ```
 
 Note: `source_id` contains hyphens (UUID format) which are invalid in unquoted Snowflake
-identifiers. The adapter must either sanitize the id (replace hyphens with underscores) or
-use quoted identifiers (`"__st_dataframe_<source_id>"`).
+identifiers. The adapter must always use double-quoted identifiers
+(`"__st_dataframe_<source_id>"`) to avoid case-folding and character restrictions. The
+identifier must also be length-checked (Snowflake limit: 255 chars) before use.
 
 Then each chunk is a range predicate against the materialized row index:
 
