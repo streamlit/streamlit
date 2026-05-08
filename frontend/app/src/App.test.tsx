@@ -396,6 +396,29 @@ function renderApp(props: Props): RenderResult {
   )
 }
 
+function renderAppWithRef(props: Props): RenderResult & { app: App } {
+  let app: App | null = null
+
+  const renderResult = render(
+    <RootStyleProvider theme={getDefaultTheme()}>
+      <WindowDimensionsProvider>
+        <App
+          ref={instance => {
+            app = instance
+          }}
+          {...props}
+        />
+      </WindowDimensionsProvider>
+    </RootStyleProvider>
+  )
+
+  if (!app) {
+    throw new Error("Expected App instance ref to be assigned")
+  }
+
+  return { ...renderResult, app }
+}
+
 function getStoredValue<T>(
   // At runtime, vi.mock() adds a `.mock` property to the class constructor.
   // We accept `unknown` and use vi.mocked() internally to access it safely.
@@ -477,19 +500,6 @@ function mockActiveFragmentIds(fragmentIds: string[]): MockInstance {
     })
 }
 
-function withMockedActiveFragmentIds(
-  fragmentIds: string[],
-  runTest: () => void
-): void {
-  const getActiveIdsSpy = mockActiveFragmentIds(fragmentIds)
-
-  try {
-    runTest()
-  } finally {
-    getActiveIdsSpy.mockRestore()
-  }
-}
-
 function mockFragmentSubtreeIds(
   fragmentSubtrees: Record<string, string[]>
 ): MockInstance {
@@ -508,16 +518,46 @@ function mockFragmentSubtreeIds(
     })
 }
 
-function withMockedFragmentSubtreeIds(
-  fragmentSubtrees: Record<string, string[]>,
-  runTest: () => void
-): void {
-  const getFragmentSubtreeIdsSpy = mockFragmentSubtreeIds(fragmentSubtrees)
+function installMockFragmentTree({
+  activeFragmentIds,
+  fragmentSubtrees = {},
+}: {
+  activeFragmentIds?: string[]
+  fragmentSubtrees?: Record<string, string[]>
+}): () => void {
+  const restoreMocks: Array<() => void> = []
 
-  try {
-    runTest()
-  } finally {
-    getFragmentSubtreeIdsSpy.mockRestore()
+  if (activeFragmentIds !== undefined) {
+    const getActiveIdsSpy = mockActiveFragmentIds(activeFragmentIds)
+    restoreMocks.push(() => {
+      getActiveIdsSpy.mockRestore()
+    })
+  }
+
+  if (Object.keys(fragmentSubtrees).length > 0) {
+    const getFragmentSubtreeIdsSpy = mockFragmentSubtreeIds(fragmentSubtrees)
+    restoreMocks.push(() => {
+      getFragmentSubtreeIdsSpy.mockRestore()
+    })
+  }
+
+  return () => {
+    restoreMocks.reverse().forEach(restoreMock => {
+      restoreMock()
+    })
+  }
+}
+
+function temporarilyClearConnectionManager(app: App): () => void {
+  const appInstanceWithPrivateFields = app as unknown as {
+    connectionManager: ConnectionManager | null
+  }
+  const previousConnectionManager =
+    appInstanceWithPrivateFields.connectionManager
+  appInstanceWithPrivateFields.connectionManager = null
+
+  return () => {
+    appInstanceWithPrivateFields.connectionManager = previousConnectionManager
   }
 }
 
@@ -4106,170 +4146,153 @@ describe("App", () => {
     })
 
     it("blocks descendant auto reruns while an auto rerun ancestor is pending", () => {
-      withMockedActiveFragmentIds(["parentFragment", "childFragment"], () => {
-        withMockedFragmentSubtreeIds(
-          {
-            parentFragment: ["parentFragment", "childFragment"],
-          },
-          () => {
-            renderApp(getProps())
-            const connectionManager = getMockConnectionManager()
-            const widgetStateManager =
-              getStoredValue<WidgetStateManager>(WidgetStateManager)
-
-            sendForwardMessage("autoRerun", {
-              interval: 1.0,
-              fragmentId: "childFragment",
-            })
-
-            // @ts-expect-error
-            connectionManager.sendMessage.mockClear()
-
-            act(() => {
-              widgetStateManager.sendUpdateWidgetsMessage(
-                "parentFragment",
-                true
-              )
-            })
-
-            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
-            expect(
-              // @ts-expect-error
-              connectionManager.sendMessage.mock.calls[0][0].rerunScript
-            ).toEqual(
-              expect.objectContaining({
-                fragmentId: "parentFragment",
-                isAutoRerun: true,
-              })
-            )
-
-            act(() => {
-              vi.advanceTimersByTime(1000)
-            })
-
-            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
-
-            sendForwardMessage("sessionStatusChanged", {
-              runOnSave: false,
-              scriptIsRunning: true,
-            })
-            sendForwardMessage(
-              "scriptFinished",
-              ForwardMsg.ScriptFinishedStatus
-                .FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-            )
-            sendForwardMessage("sessionStatusChanged", {
-              runOnSave: false,
-              scriptIsRunning: false,
-            })
-
-            act(() => {
-              vi.advanceTimersByTime(1000)
-            })
-
-            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
-            expect(
-              // @ts-expect-error
-              connectionManager.sendMessage.mock.calls[1][0].rerunScript
-            ).toEqual(
-              expect.objectContaining({
-                fragmentId: "childFragment",
-                isAutoRerun: true,
-              })
-            )
-          }
-        )
+      const cleanupFragmentTree = installMockFragmentTree({
+        activeFragmentIds: ["parentFragment", "childFragment"],
+        fragmentSubtrees: {
+          parentFragment: ["parentFragment", "childFragment"],
+        },
       })
+
+      try {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager()
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "childFragment",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        act(() => {
+          widgetStateManager.sendUpdateWidgetsMessage("parentFragment", true)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[0][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "parentFragment",
+            isAutoRerun: true,
+          })
+        )
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[1][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "childFragment",
+            isAutoRerun: true,
+          })
+        )
+      } finally {
+        cleanupFragmentTree()
+      }
     })
 
     it("keeps descendant auto reruns blocked until a fragment rerun commits", () => {
-      withMockedActiveFragmentIds(["parentFragment", "childFragment"], () => {
-        withMockedFragmentSubtreeIds(
-          {
-            parentFragment: ["parentFragment", "childFragment"],
-          },
-          () => {
-            renderApp(getProps())
-            const connectionManager = getMockConnectionManager()
-            const widgetStateManager =
-              getStoredValue<WidgetStateManager>(WidgetStateManager)
-
-            sendForwardMessage("autoRerun", {
-              interval: 1.0,
-              fragmentId: "childFragment",
-            })
-
-            // @ts-expect-error
-            connectionManager.sendMessage.mockClear()
-
-            act(() => {
-              widgetStateManager.sendUpdateWidgetsMessage(
-                "parentFragment",
-                true
-              )
-            })
-
-            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
-
-            sendForwardMessage("newSession", {
-              ...NEW_SESSION_JSON,
-              fragmentIdsThisRun: ["parentFragment"],
-            })
-
-            act(() => {
-              vi.advanceTimersByTime(1000)
-            })
-
-            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
-
-            sendForwardMessage("sessionStatusChanged", {
-              runOnSave: false,
-              scriptIsRunning: true,
-            })
-            sendForwardMessage(
-              "scriptFinished",
-              ForwardMsg.ScriptFinishedStatus
-                .FINISHED_FRAGMENT_RUN_SUCCESSFULLY
-            )
-            sendForwardMessage("sessionStatusChanged", {
-              runOnSave: false,
-              scriptIsRunning: false,
-            })
-
-            act(() => {
-              vi.advanceTimersByTime(1000)
-            })
-
-            expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
-            expect(
-              // @ts-expect-error
-              connectionManager.sendMessage.mock.calls[1][0].rerunScript
-            ).toEqual(
-              expect.objectContaining({
-                fragmentId: "childFragment",
-                isAutoRerun: true,
-              })
-            )
-          }
-        )
+      const cleanupFragmentTree = installMockFragmentTree({
+        activeFragmentIds: ["parentFragment", "childFragment"],
+        fragmentSubtrees: {
+          parentFragment: ["parentFragment", "childFragment"],
+        },
       })
+
+      try {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager()
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "childFragment",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        act(() => {
+          widgetStateManager.sendUpdateWidgetsMessage("parentFragment", true)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          fragmentIdsThisRun: ["parentFragment"],
+        })
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(1)
+
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[1][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "childFragment",
+            isAutoRerun: true,
+          })
+        )
+      } finally {
+        cleanupFragmentTree()
+      }
     })
 
     it("does not leave reruns pending if no connection manager is available", () => {
-      let appInstance: App | null = null
-
-      render(
-        <RootStyleProvider theme={getDefaultTheme()}>
-          <WindowDimensionsProvider>
-            <App
-              ref={instance => {
-                appInstance = instance
-              }}
-              {...getProps()}
-            />
-          </WindowDimensionsProvider>
-        </RootStyleProvider>
-      )
+      const { app } = renderAppWithRef(getProps())
 
       const connectionManager = getMockConnectionManager()
       const widgetStateManager =
@@ -4283,26 +4306,16 @@ describe("App", () => {
       // @ts-expect-error
       connectionManager.sendMessage.mockClear()
 
-      if (!appInstance) {
-        throw new Error("Expected App instance ref to be assigned")
-      }
-
-      const appInstanceWithPrivateFields = appInstance as unknown as {
-        connectionManager: ConnectionManager | null
-      }
-
-      const previousConnectionManager =
-        appInstanceWithPrivateFields.connectionManager
       // This branch is only reachable by temporarily dropping the mounted App's
       // private connectionManager before the rerun request is sent.
-      appInstanceWithPrivateFields.connectionManager = null
-
-      act(() => {
-        widgetStateManager.sendUpdateWidgetsMessage(undefined)
-      })
-
-      appInstanceWithPrivateFields.connectionManager =
-        previousConnectionManager ?? connectionManager
+      const restoreConnectionManager = temporarilyClearConnectionManager(app)
+      try {
+        act(() => {
+          widgetStateManager.sendUpdateWidgetsMessage(undefined)
+        })
+      } finally {
+        restoreConnectionManager()
+      }
 
       act(() => {
         vi.advanceTimersByTime(1000)
@@ -4321,7 +4334,11 @@ describe("App", () => {
     })
 
     it("clears only fragment timers removed from the committed tree", () => {
-      withMockedActiveFragmentIds(["liveFragment"], () => {
+      const cleanupFragmentTree = installMockFragmentTree({
+        activeFragmentIds: ["liveFragment"],
+      })
+
+      try {
         renderApp(getProps())
         const connectionManager = getMockConnectionManager()
 
@@ -4358,7 +4375,9 @@ describe("App", () => {
             isAutoRerun: true,
           })
         )
-      })
+      } finally {
+        cleanupFragmentTree()
+      }
     })
 
     it("triggers rerunScript with is_auto_rerun set to true", () => {
@@ -4925,7 +4944,11 @@ describe("App", () => {
     it("does not request script rerun after stale auto reruns are cleaned up", () => {
       vi.useFakeTimers()
       try {
-        withMockedActiveFragmentIds([], () => {
+        const cleanupFragmentTree = installMockFragmentTree({
+          activeFragmentIds: [],
+        })
+
+        try {
           renderApp(getProps())
           const widgetStateManager =
             getStoredValue<WidgetStateManager>(WidgetStateManager)
@@ -4974,7 +4997,9 @@ describe("App", () => {
           })
 
           expect(sendUpdateWidgetsMessageSpy).not.toHaveBeenCalled()
-        })
+        } finally {
+          cleanupFragmentTree()
+        }
       } finally {
         vi.useRealTimers()
       }

@@ -35,6 +35,7 @@ import { AppNode, NO_SCRIPT_RUN_ID } from "./AppNode.interface"
 import { BlockNode } from "./BlockNode"
 import { ElementNode } from "./ElementNode"
 import { TransientNode } from "./TransientNode"
+import type { AppNodeVisitor } from "./visitors/AppNodeVisitor.interface"
 import { ClearStaleNodeVisitor } from "./visitors/ClearStaleNodeVisitor"
 import { ClearTransientNodesVisitor } from "./visitors/ClearTransientNodesVisitor"
 import { DebugVisitor } from "./visitors/DebugVisitor"
@@ -74,6 +75,60 @@ interface LogoMetadata {
 }
 interface AppLogo extends LogoMetadata {
   logo: Logo
+}
+
+/**
+ * Collect all fragment IDs rendered inside a target fragment's committed subtree.
+ */
+class FragmentSubtreeIdsVisitor implements AppNodeVisitor<Set<string>> {
+  public readonly fragmentIds = new Set<string>()
+
+  private subtreeDepth = 0
+
+  public constructor(private readonly targetFragmentId: string) {}
+
+  public visitElementNode(node: ElementNode): Set<string> {
+    if (
+      node.fragmentId &&
+      (this.subtreeDepth > 0 || node.fragmentId === this.targetFragmentId)
+    ) {
+      this.fragmentIds.add(node.fragmentId)
+    }
+
+    return this.fragmentIds
+  }
+
+  public visitBlockNode(node: BlockNode): Set<string> {
+    const entersTargetSubtree = node.fragmentId === this.targetFragmentId
+    const isInTargetSubtree = this.subtreeDepth > 0 || entersTargetSubtree
+
+    if (isInTargetSubtree && node.fragmentId) {
+      this.fragmentIds.add(node.fragmentId)
+    }
+
+    if (entersTargetSubtree) {
+      this.subtreeDepth += 1
+    }
+
+    for (const child of node.children) {
+      child.accept(this)
+    }
+
+    if (entersTargetSubtree) {
+      this.subtreeDepth -= 1
+    }
+
+    return this.fragmentIds
+  }
+
+  public visitTransientNode(node: TransientNode): Set<string> {
+    node.transientNodes.forEach(element => {
+      element.accept(this)
+    })
+    node.anchor?.accept(this)
+
+    return this.fragmentIds
+  }
 }
 
 /**
@@ -392,6 +447,10 @@ export class AppRoot {
     return this.getActiveIds().elements
   }
 
+  private visitCommittedTree<T>(visitor: AppNodeVisitor<T>): T {
+    return this.root.accept(visitor)
+  }
+
   /**
    * Return all active elements, block IDs, and fragment IDs in the tree.
    * Block IDs are collected from blocks that have a stable identity
@@ -407,11 +466,7 @@ export class AppRoot {
     fragmentIds: Set<string>
   } {
     const visitor = new ElementsSetVisitor()
-
-    this.main.accept(visitor)
-    this.sidebar.accept(visitor)
-    this.event.accept(visitor)
-    this.bottom.accept(visitor)
+    this.visitCommittedTree(visitor)
 
     return {
       elements: visitor.elements,
@@ -426,35 +481,10 @@ export class AppRoot {
    * plus any nested fragment scopes rendered under it.
    */
   public getFragmentSubtreeIds(fragmentId: string): Set<string> {
-    const fragmentIds = new Set<string>()
+    const visitor = new FragmentSubtreeIdsVisitor(fragmentId)
+    this.visitCommittedTree(visitor)
 
-    const visitNode = (node: AppNode, isInTargetSubtree = false): void => {
-      const inTargetSubtree =
-        isInTargetSubtree || node.fragmentId === fragmentId
-
-      if (inTargetSubtree && node.fragmentId) {
-        fragmentIds.add(node.fragmentId)
-      }
-
-      if (node instanceof BlockNode) {
-        node.children.forEach(child => visitNode(child, inTargetSubtree))
-      } else if (node instanceof TransientNode) {
-        node.transientNodes.forEach(element =>
-          visitNode(element, inTargetSubtree)
-        )
-
-        if (node.anchor) {
-          visitNode(node.anchor, inTargetSubtree)
-        }
-      }
-    }
-
-    visitNode(this.main)
-    visitNode(this.sidebar)
-    visitNode(this.event)
-    visitNode(this.bottom)
-
-    return fragmentIds
+    return visitor.fragmentIds
   }
 
   private addElement(

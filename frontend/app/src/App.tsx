@@ -1231,7 +1231,7 @@ export class App extends PureComponent<Props, State> {
     if (statusChangeProto.scriptIsRunning) {
       // runOnSave updates also emit sessionStatusChanged while the app stays idle,
       // so only clear the pending rerun flag once the server reports RUNNING.
-      this.hasPendingRerunRequest = false
+      this.clearPendingRerunRequest()
     }
 
     this.setState((prevState: State) => {
@@ -1288,8 +1288,7 @@ export class App extends PureComponent<Props, State> {
   handleSessionEvent = (sessionEvent: SessionEvent): void => {
     this.sessionEventDispatcher.handleSessionEventMsg(sessionEvent)
     if (sessionEvent.type === "scriptCompilationException") {
-      this.hasPendingRerunRequest = false
-      this.blockedAutoRerunFragmentIds.clear()
+      this.resetPendingAutoRerunState()
       this.setState({ scriptRunState: ScriptRunState.COMPILATION_ERROR })
       const newDialog: DialogProps = {
         type: DialogType.SCRIPT_COMPILE_ERROR,
@@ -1381,8 +1380,7 @@ export class App extends PureComponent<Props, State> {
       // Full-app reruns can deliver a NewSession without a fresh RUNNING status
       // transition if the app was already running. Fragment reruns keep their
       // auto-rerun subtree blocked until the committed tree is updated.
-      this.hasPendingRerunRequest = false
-      this.blockedAutoRerunFragmentIds.clear()
+      this.resetPendingAutoRerunState()
     }
 
     // First, handle initialization logic. Each NewSession message has
@@ -1654,7 +1652,7 @@ export class App extends PureComponent<Props, State> {
             this.cleanupAfterElementTreeUpdate({
               pruneInactiveAutoReruns: true,
             })
-            this.blockedAutoRerunFragmentIds.clear()
+            this.clearBlockedAutoReruns()
           }
         )
       }
@@ -1747,6 +1745,23 @@ export class App extends PureComponent<Props, State> {
     if (pruneInactiveAutoReruns) {
       this.fragmentAutoRerunManager.pruneInactive(fragmentIds)
     }
+  }
+
+  private clearPendingRerunRequest(): void {
+    this.hasPendingRerunRequest = false
+  }
+
+  private clearBlockedAutoReruns(): void {
+    this.blockedAutoRerunFragmentIds.clear()
+  }
+
+  private resetPendingAutoRerunState(): void {
+    this.clearPendingRerunRequest()
+    this.clearBlockedAutoReruns()
+  }
+
+  private markPendingRerunRequest(): void {
+    this.hasPendingRerunRequest = true
   }
 
   /**
@@ -1879,14 +1894,14 @@ export class App extends PureComponent<Props, State> {
    */
   cleanupAutoReruns = (): void => {
     this.fragmentAutoRerunManager.clearAll()
-    this.blockedAutoRerunFragmentIds.clear()
+    this.clearBlockedAutoReruns()
   }
 
   /**
    * Block auto-rerun timers for the in-flight fragment and its live descendants
    * until the next committed tree update confirms which fragment timers remain.
    */
-  private blockPendingAutoRerunSubtree(fragmentId: string): void {
+  private markPendingAutoRerun(fragmentId: string): void {
     // Keep the root fragment blocked even before it appears in the committed
     // tree, since getFragmentSubtreeIds only sees the last committed snapshot.
     this.blockedAutoRerunFragmentIds.add(fragmentId)
@@ -2085,12 +2100,12 @@ export class App extends PureComponent<Props, State> {
     )
 
     if (isAutoRerun === true && fragmentId) {
-      this.blockPendingAutoRerunSubtree(fragmentId)
+      this.markPendingAutoRerun(fragmentId)
     } else {
       // Mark non-auto reruns as pending once the request is handed to the
       // connection manager so auto-rerun timers do not enqueue another
       // fragment rerun before the server reports that this one started.
-      this.hasPendingRerunRequest = true
+      this.markPendingRerunRequest()
     }
     // Reset hasReceivedNewSession to false to ensure that we are aware
     // if a finished message is from a previous script run.
