@@ -108,7 +108,7 @@ message LazyDataframe {
   AccessMode access_mode = 6;
   ArrowData initial_chunk = 7;  // Dedicated field for initial rows; keeps arrow_data for eager path only
   bytes serialized_schema = 8;  // Arrow IPC schema bytes when initial_chunk is empty
-  repeated string sortable_columns = 9;  // Columns that support server-side sorting (empty = no sorting)
+  bool sortable = 9;  // Whether server-side sorting is enabled
 
   enum AccessMode {
     ACCESS_MODE_UNSPECIFIED = 0;

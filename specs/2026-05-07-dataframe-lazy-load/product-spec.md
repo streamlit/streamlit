@@ -149,7 +149,7 @@ orders = st.DataFrameSource(
         ("created_at", pa.timestamp("us")),
         ("total", pa.float64()),
     ]),
-    sortable=["id", "created_at", "total"],  # status is not sortable
+    sortable=True,
 )
 
 st.dataframe(orders)
@@ -205,7 +205,7 @@ class DataFrameSource:
         *,
         row_count: int | Callable[[], int | None] | None = None,
         schema: pa.Schema | None = None,
-        sortable: bool | Sequence[str] = False,
+        sortable: bool = True,
     ) -> None:
         ...
 ```
@@ -225,10 +225,8 @@ Parameters:
 - `schema`: Optional PyArrow schema for callback-backed sources. If omitted, Streamlit infers
   the schema from the first non-empty chunk. Empty sources should provide `schema`. Ignored
   when `data` is a dataframe (schema is derived from the data).
-- `sortable`: Which columns support server-side sorting. `True` enables sorting on all columns,
-  `False` disables sorting entirely, or a list of column names enables sorting on those columns
-  only. For dataframe sources, defaults to `True` (all columns sortable). For callback sources,
-  defaults to `False` (caller must opt-in and handle sort in the callback).
+- `sortable`: Whether server-side sorting is enabled. Defaults to `True`. For callback sources,
+  the callback must handle the `sort` parameter when `sortable=True`.
 
 Validation:
 
@@ -242,7 +240,6 @@ Validation:
   Streamlit should treat this as an error and fall back to the last known row count with a warning.
 - Callback loaders must return a dataframe-like object with columns compatible with the
   declared or inferred schema.
-- If `sortable` lists column names, they must exist in the schema.
 
 ## Behavior
 
@@ -303,9 +300,9 @@ st.DataFrameSource(
     load_orders,
     row_count=count_orders,
     schema=schema,
-    sortable=["created_at", "total"],
-    searchable=["status", "id"],  # future
-    filterable=["status", "created_at"],  # future
+    sortable=True,
+    searchable=True,  # future
+    filterable=True,  # future
 )
 ```
 
