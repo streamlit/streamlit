@@ -22,6 +22,7 @@ from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner import ScriptRunContext, add_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.state import SafeSessionState, SessionState
 
 if TYPE_CHECKING:
@@ -78,6 +79,16 @@ def call_on_threads(
             )
             thread = threads[ii]
             add_script_run_ctx(thread, ctx)
+
+            # Each thread simulates an independent script run. In production,
+            # the ScriptRunner calls reset() which initializes ThreadState.
+            original_run = thread.run
+
+            def _run_with_init(orig=original_run):
+                ThreadState.initialize()
+                orig()
+
+            thread.run = _run_with_init  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
 
     for thread in threads:
         thread.start()

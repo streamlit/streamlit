@@ -198,7 +198,7 @@ class CheckCacheReplayTest(ElementPoliciesTest):
 class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
     def setUp(self):
         ctx = MagicMock()
-        ThreadState.update(
+        ThreadState.initialize(
             fragment_id="my_fragment_id",
             delta_path=(0, 1, 2),
         )

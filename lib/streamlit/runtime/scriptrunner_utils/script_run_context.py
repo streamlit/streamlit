@@ -283,7 +283,9 @@ def add_script_run_ctx(
     """Adds the current ScriptRunContext to a newly-created thread.
 
     This should be called from this thread's parent thread,
-    before the new thread starts.
+    before the new thread starts. Propagates both the ScriptRunContext
+    (via threading.local) and the FragmentThreadState (via ContextVar
+    initialization in the child thread's run method).
 
     Parameters
     ----------
@@ -305,6 +307,24 @@ def add_script_run_ctx(
         ctx = get_script_run_ctx()
     if ctx is not None:
         setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+
+    # ContextVars don't cross thread boundaries, so capture the parent's
+    # FragmentThreadState and initialize it when the child thread starts.
+    try:
+        parent_ts = ThreadState.get()
+    except RuntimeError:
+        parent_ts = None
+
+    if parent_ts is not None:
+        original_run = thread.run
+        parent_fields = dataclasses.asdict(parent_ts)
+
+        def _run_with_thread_state() -> None:
+            ThreadState.initialize(**parent_fields)
+            original_run()
+
+        thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
+
     return thread
 
 

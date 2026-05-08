@@ -387,7 +387,7 @@ class ScriptRunnerTest(unittest.TestCase):
             raise KeyError("kaboom")
 
         def fragment():
-            ThreadState.update(fragment_id="my_fragment_id")
+            ThreadState.initialize(fragment_id="my_fragment_id")
             _fragment(non_optional_func)()
 
         scriptrunner = TestScriptRunner("good_script.py")
