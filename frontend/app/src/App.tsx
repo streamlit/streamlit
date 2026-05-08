@@ -308,10 +308,12 @@ export class App extends PureComponent<Props, State> {
   private hasPendingRerunRequest: boolean = false
 
   /**
-   * Fragment IDs whose auto-rerun timers should stay quiescent until the next
-   * committed tree update after an in-flight auto-rerun request.
+   * Fragment subtrees that should be blocked from firing auto-reruns until
+   * their parent auto-rerun request commits. Keyed by the requested fragment
+   * ID (the root of the rerun) so overlapping in-flight requests do not lose
+   * each other's protection when one of them commits first.
    */
-  private readonly blockedAutoRerunFragmentIds = new Set<string>()
+  private readonly pendingAutoRerunBlocks = new Map<string, Set<string>>()
 
   public constructor(props: Props) {
     super(props)
@@ -1640,6 +1642,12 @@ export class App extends PureComponent<Props, State> {
         // leftover elements will be cleared after finished successfully.
         // We also don't do this if our script had a compilation error and didn't
         // finish successfully.
+        // Capture the fragment IDs that just ran so the setState callback can
+        // release the right auto-rerun blocks without reading `this.state`
+        // (which the lint rules disallow inside setState callbacks). The
+        // value is already correct here because `handleNewSession` set it
+        // earlier in this script run.
+        const committedFragmentIds = this.state.fragmentIdsThisRun
         this.setState(
           ({ scriptRunId, fragmentIdsThisRun, elements }) => ({
             // Apply any pending elements that haven't been applied.
@@ -1652,7 +1660,20 @@ export class App extends PureComponent<Props, State> {
             this.cleanupAfterElementTreeUpdate({
               pruneInactiveAutoReruns: true,
             })
-            this.clearBlockedAutoReruns()
+            // Release auto-rerun blocks scoped to the request(s) that just
+            // committed. For full-app reruns `committedFragmentIds` is empty,
+            // in which case `handleNewSession` has already cleared all blocks
+            // and we still defensively wipe the map. For fragment runs we
+            // only release the blocks belonging to the committed fragment
+            // root(s) so any other in-flight overlapping auto-rerun keeps its
+            // descendant timers blocked until that request also commits.
+            if (committedFragmentIds.length === 0) {
+              this.clearBlockedAutoReruns()
+            } else {
+              committedFragmentIds.forEach(committedFragmentId => {
+                this.releasePendingAutoRerunBlock(committedFragmentId)
+              })
+            }
           }
         )
       }
@@ -1752,7 +1773,28 @@ export class App extends PureComponent<Props, State> {
   }
 
   private clearBlockedAutoReruns(): void {
-    this.blockedAutoRerunFragmentIds.clear()
+    this.pendingAutoRerunBlocks.clear()
+  }
+
+  /**
+   * Release the block scoped to a single committed auto-rerun request without
+   * disturbing other in-flight requests' blocked subtrees.
+   */
+  private releasePendingAutoRerunBlock(fragmentId: string): void {
+    this.pendingAutoRerunBlocks.delete(fragmentId)
+  }
+
+  /**
+   * Returns true if any in-flight auto-rerun request is still blocking the
+   * given fragment ID from queuing additional auto-rerun ticks.
+   */
+  private isAutoRerunBlocked(fragmentId: string): boolean {
+    for (const blockedSet of this.pendingAutoRerunBlocks.values()) {
+      if (blockedSet.has(fragmentId)) {
+        return true
+      }
+    }
+    return false
   }
 
   private resetPendingAutoRerunState(): void {
@@ -1776,7 +1818,7 @@ export class App extends PureComponent<Props, State> {
     if (
       this.state.scriptRunState !== ScriptRunState.NOT_RUNNING ||
       this.hasPendingRerunRequest ||
-      this.blockedAutoRerunFragmentIds.has(fragmentId)
+      this.isAutoRerunBlocked(fragmentId)
     ) {
       return
     }
@@ -1898,16 +1940,25 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Block auto-rerun timers for the in-flight fragment and its live descendants
-   * until the next committed tree update confirms which fragment timers remain.
+   * Block auto-rerun timers for the in-flight fragment and its live
+   * descendants until the next committed tree update confirms which fragment
+   * timers remain. The blocked set is scoped to this rerun request so that
+   * overlapping in-flight requests can release their protection independently
+   * when each commits, instead of one finish wiping every block.
+   *
+   * `getFragmentSubtreeIds` only walks the last committed tree, so any
+   * brand-new auto-rerun child fragment introduced during the in-flight rerun
+   * is not added to the blocked set. In practice that is safe because such a
+   * fragment cannot already have a `run_every` timer scheduled, but callers
+   * should not rely on this set covering the in-flight subtree.
    */
   private markPendingAutoRerun(fragmentId: string): void {
-    // Keep the root fragment blocked even before it appears in the committed
-    // tree, since getFragmentSubtreeIds only sees the last committed snapshot.
-    this.blockedAutoRerunFragmentIds.add(fragmentId)
+    const blockedSet = new Set<string>()
+    blockedSet.add(fragmentId)
     this.state.elements.getFragmentSubtreeIds(fragmentId).forEach(activeId => {
-      this.blockedAutoRerunFragmentIds.add(activeId)
+      blockedSet.add(activeId)
     })
+    this.pendingAutoRerunBlocks.set(fragmentId, blockedSet)
   }
 
   /**
@@ -2207,20 +2258,19 @@ export class App extends PureComponent<Props, State> {
   }
 
   /**
-   * Sends a message back to the server.
-   *
-   * @returns Whether the message was handed to the connection manager.
+   * Sends a message back to the server. Callers must ensure the connection is
+   * available (e.g. via the `!baseUriParts` early return in
+   * `sendRerunBackMsg`); a missing connection manager is logged and dropped.
    */
-  private readonly sendBackMsg = (msg: BackMsg): boolean => {
+  private readonly sendBackMsg = (msg: BackMsg): void => {
     if (this.connectionManager) {
       LOG.info(msg)
       this.connectionManager.sendMessage(msg)
-      return true
+      return
     }
     LOG.error(
       `Not connected. Cannot send back message: ${msg.type ?? "unknown"}`
     )
-    return false
   }
 
   /**

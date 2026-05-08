@@ -548,6 +548,13 @@ function installMockFragmentTree({
   }
 }
 
+/**
+ * Test helper that artificially clears the mounted App's private
+ * `connectionManager` reference so we can exercise the `!baseUriParts` early
+ * return inside `sendRerunBackMsg`. This branch is otherwise unreachable in
+ * the test harness because the App always has a mock connection manager
+ * attached after mount. The returned function restores the original reference.
+ */
 function temporarilyClearConnectionManager(app: App): () => void {
   const appInstanceWithPrivateFields = app as unknown as {
     connectionManager: ConnectionManager | null
@@ -4372,6 +4379,109 @@ describe("App", () => {
         ).toEqual(
           expect.objectContaining({
             fragmentId: "liveFragment",
+            isAutoRerun: true,
+          })
+        )
+      } finally {
+        cleanupFragmentTree()
+      }
+    })
+
+    it("keeps overlapping auto-rerun blocks scoped per request when one commits", () => {
+      // Regression test for the case where two independent fragment auto-reruns
+      // are in flight at the same time (both sent in the pre-ACK window before
+      // either has reported `scriptIsRunning`). Committing one must not clear
+      // the blocked subtree belonging to the other in-flight request — that
+      // would re-open the stale-descendant-tick window and allow a removed
+      // child fragment to enqueue a rerun before its parent's commit.
+      const cleanupFragmentTree = installMockFragmentTree({
+        activeFragmentIds: ["fragmentA", "fragmentB", "childOfB"],
+        fragmentSubtrees: {
+          fragmentA: ["fragmentA"],
+          fragmentB: ["fragmentB", "childOfB"],
+        },
+      })
+
+      try {
+        renderApp(getProps())
+        const connectionManager = getMockConnectionManager()
+        const widgetStateManager =
+          getStoredValue<WidgetStateManager>(WidgetStateManager)
+
+        sendForwardMessage("autoRerun", {
+          interval: 1.0,
+          fragmentId: "childOfB",
+        })
+
+        // @ts-expect-error
+        connectionManager.sendMessage.mockClear()
+
+        // Two overlapping in-flight auto-rerun requests, both queued before
+        // either commits.
+        act(() => {
+          widgetStateManager.sendUpdateWidgetsMessage("fragmentA", true)
+        })
+        act(() => {
+          widgetStateManager.sendUpdateWidgetsMessage("fragmentB", true)
+        })
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+
+        // Server commits fragmentA first. Old behavior cleared every blocked
+        // subtree here; the per-request fix must leave fragmentB's block
+        // intact so its descendant timers stay quiescent.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          fragmentIdsThisRun: ["fragmentA"],
+        })
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+        // childOfB must still be blocked by fragmentB's pending request, so
+        // no extra rerun message has been enqueued yet.
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(2)
+
+        // Server commits fragmentB. Now its block is released and the child
+        // auto-rerun can finally fire.
+        sendForwardMessage("newSession", {
+          ...NEW_SESSION_JSON,
+          fragmentIdsThisRun: ["fragmentB"],
+        })
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: true,
+        })
+        sendForwardMessage(
+          "scriptFinished",
+          ForwardMsg.ScriptFinishedStatus.FINISHED_FRAGMENT_RUN_SUCCESSFULLY
+        )
+        sendForwardMessage("sessionStatusChanged", {
+          runOnSave: false,
+          scriptIsRunning: false,
+        })
+
+        act(() => {
+          vi.advanceTimersByTime(1000)
+        })
+        expect(connectionManager.sendMessage).toHaveBeenCalledTimes(3)
+        expect(
+          // @ts-expect-error
+          connectionManager.sendMessage.mock.calls[2][0].rerunScript
+        ).toEqual(
+          expect.objectContaining({
+            fragmentId: "childOfB",
             isAutoRerun: true,
           })
         )

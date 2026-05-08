@@ -121,6 +121,15 @@ class FragmentSubtreeIdsVisitor implements AppNodeVisitor<Set<string>> {
     return this.fragmentIds
   }
 
+  /**
+   * Forward the traversal into both transient children and the anchor without
+   * touching `subtreeDepth`. Fragments are wrapped in `BlockNode`s in the
+   * current tree shape, so the anchor itself is never the target fragment and
+   * `visitBlockNode` is responsible for entering the matching subtree. If the
+   * tree shape changes such that a `TransientNode` could be anchored on the
+   * target fragment directly, this visitor would need its own depth bookkeeping
+   * here to capture nested fragments under the anchor.
+   */
   public visitTransientNode(node: TransientNode): Set<string> {
     node.transientNodes.forEach(element => {
       element.accept(this)
