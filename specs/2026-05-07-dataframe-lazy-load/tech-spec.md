@@ -108,6 +108,7 @@ message LazyDataframe {
   AccessMode access_mode = 6;
   ArrowData initial_chunk = 7;  // Dedicated field for initial rows; keeps arrow_data for eager path only
   bytes serialized_schema = 8;  // Arrow IPC schema bytes when initial_chunk is empty
+  repeated string sortable_columns = 9;  // Columns that support server-side sorting (empty = no sorting)
 
   enum AccessMode {
     ACCESS_MODE_UNSPECIFIED = 0;
@@ -125,12 +126,24 @@ bytes so the frontend can construct columns without waiting for the first chunk.
 Add chunk request/response messages to `BackMsg` and `ForwardMsg`.
 
 ```proto
+message SortState {
+  string column = 1;
+  SortDirection direction = 2;
+
+  enum SortDirection {
+    SORT_DIRECTION_UNSPECIFIED = 0;
+    ASCENDING = 1;
+    DESCENDING = 2;
+  }
+}
+
 message DataframeChunkRequest {
   string source_id = 1;
   string request_id = 2;
   uint64 offset = 3;
   uint32 limit = 4;
   string generation = 5;
+  optional SortState sort = 6;  // Current sort state, if any
 }
 
 message DataframeChunkResponse {
@@ -201,7 +214,7 @@ Responsibilities:
 - Enforce an LRU limit for random-access chunks (e.g., retain the most recent N chunks).
 - Enforce a memory bound for sequential-source caches to prevent unbounded growth when
   scrolling through large append-only logs. Use the same LRU limit as random-access sources.
-- Clear all chunks when the source generation changes.
+- Clear all chunks when the source generation or sort state changes.
 - Surface per-range errors and support retry.
 - For sequential sources, request only the next unloaded range and grow the apparent row count
   as chunks arrive. The `end_of_stream` response flag signals exhaustion; the frontend should
@@ -423,10 +436,11 @@ The follow-up should add:
 - `pandas.Styler`: keep existing eager `st.dataframe(styler)` behavior and reject explicit
   lazy wrapping
 - `st.data_editor`: out of scope
-- Client-side table-wide sort/search: disable for explicit lazy dataframes. For in-memory
-  dataframes, defer auto-lazy until server-side search exists to avoid removing the existing
-  search affordance.
+- Client-side search: disabled for lazy dataframes. Searching only loaded chunks would be
+  incorrect. Server-side search is deferred to a follow-up phase.
 - Filtering: out of scope until `st.dataframe` has a filtering UI/API.
+
+Note: Server-side sorting IS supported in MVP via the `sortable` parameter.
 
 ## Security and Isolation
 

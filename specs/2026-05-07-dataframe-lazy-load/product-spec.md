@@ -116,14 +116,20 @@ For arbitrary backends, users can provide a range loader and total row count.
 import pandas as pd
 import pyarrow as pa
 import streamlit as st
+from streamlit import SortState
 
 
-def load_orders(offset: int, limit: int) -> pd.DataFrame:
+def load_orders(offset: int, limit: int, sort: SortState | None) -> pd.DataFrame:
+    order_by = "id"  # default sort
+    if sort:
+        direction = "DESC" if sort.direction == "desc" else "ASC"
+        order_by = f"{sort.column} {direction}"
+
     return pd.read_sql(
-        """
+        f"""
         SELECT id, status, created_at, total
         FROM orders
-        ORDER BY id
+        ORDER BY {order_by}
         LIMIT ? OFFSET ?
         """,
         connection,
@@ -143,6 +149,7 @@ orders = st.DataFrameSource(
         ("created_at", pa.timestamp("us")),
         ("total", pa.float64()),
     ]),
+    sortable=["id", "created_at", "total"],  # status is not sortable
 )
 
 st.dataframe(orders)
@@ -194,10 +201,11 @@ Preferred name: `st.DataFrameSource`.
 class DataFrameSource:
     def __init__(
         self,
-        data: Data | Callable[[int, int], Data],
+        data: Data | Callable[[int, int, SortState | None], Data],
         *,
         row_count: int | Callable[[], int | None] | None = None,
         schema: pa.Schema | None = None,
+        sortable: bool | Sequence[str] = False,
     ) -> None:
         ...
 ```
@@ -205,8 +213,9 @@ class DataFrameSource:
 Parameters:
 
 - `data`: Either a dataframe-like object to deliver in chunks, or a callable that accepts
-  `(offset, limit)` and returns rows in the half-open range `[offset, offset + limit)`.
-  Streamlit detects callables automatically.
+  `(offset, limit, sort)` and returns rows in the half-open range `[offset, offset + limit)`.
+  The `sort` parameter is a `SortState` object with `column: str` and `direction: "asc" | "desc"`,
+  or `None` if no sort is active. Streamlit detects callables automatically.
 - `row_count`: Total number of rows, or `None` when the total is unknown. Can be callable so
   Streamlit can recompute it on rerun. The callable is invoked once per rerun when the
   element is rendered (not on every chunk request). If the callable raises an exception,
@@ -216,6 +225,10 @@ Parameters:
 - `schema`: Optional PyArrow schema for callback-backed sources. If omitted, Streamlit infers
   the schema from the first non-empty chunk. Empty sources should provide `schema`. Ignored
   when `data` is a dataframe (schema is derived from the data).
+- `sortable`: Which columns support server-side sorting. `True` enables sorting on all columns,
+  `False` disables sorting entirely, or a list of column names enables sorting on those columns
+  only. For dataframe sources, defaults to `True` (all columns sortable). For callback sources,
+  defaults to `False` (caller must opt-in and handle sort in the callback).
 
 Validation:
 
@@ -229,6 +242,7 @@ Validation:
   Streamlit should treat this as an error and fall back to the last known row count with a warning.
 - Callback loaders must return a dataframe-like object with columns compatible with the
   declared or inferred schema.
+- If `sortable` lists column names, they must exist in the schema.
 
 ## Behavior
 
@@ -259,26 +273,39 @@ capability.
 
 ### Sorting and Search
 
-In the first version, table-wide sort/search should be disabled for lazy sources unless the
-source explicitly supports server-side behavior in a later phase. Sorting or searching only
-loaded chunks would be incorrect because unloaded rows would be excluded.
+**Sorting:** Server-side sorting is supported in the first version via the `sortable` parameter.
+When the user clicks a column header to sort:
+
+1. The frontend clears cached chunks (sort changes row order).
+2. Chunk requests include the current sort state (column + direction).
+3. The source returns rows in the sorted order.
+4. For dataframe sources, Streamlit handles sorting automatically.
+5. For callback sources, the callback receives the sort state and must return correctly sorted data.
+
+Only columns listed in `sortable` show the sort UI. Sorting is disabled entirely when
+`sortable=False`.
+
+**Search:** Table-wide search is disabled for lazy sources in the first version. Searching only
+loaded chunks would be incorrect because unloaded rows would be excluded. Server-side search
+can be added in a follow-up phase.
 
 `st.dataframe` does not currently support filtering. Lazy loading should not introduce
 filtering UI in the MVP, but the source API should leave a clear extension path for a future
 server-side filtering feature.
 
-### Follow-up: Server-side Filtering
+### Follow-up: Server-side Search and Filtering
 
-When `st.dataframe` gets filtering UI, lazy dataframes should support it with explicit source
-capabilities instead of inferring support from the loader signature:
+When `st.dataframe` gets search/filtering UI for lazy sources, the API can extend with
+additional capabilities:
 
 ```python
 st.DataFrameSource(
-    load=load_orders,
+    load_orders,
     row_count=count_orders,
-    columns=columns,
+    schema=schema,
     sortable=["created_at", "total"],
-    filterable=["status", "created_at"],
+    searchable=["status", "id"],  # future
+    filterable=["status", "created_at"],  # future
 )
 ```
 
@@ -336,16 +363,16 @@ Not supported in lazy mode:
 
 ## Phased Implementation
 
-### Phase 1: Lazy Transport and Custom Sources
+### Phase 1: Lazy Transport, Custom Sources, and Server-side Sorting
 
-- Add the backend/frontend protocol for row chunk requests.
-- Add callback-backed `st.DataFrameSource(load=..., row_count=...)`.
-- Add `st.DataFrameSource(df)` for explicit in-memory pandas/Polars chunking below the
-  auto-lazy threshold.
-- Disable selection, editing, Styler, and table-wide sort/search for lazy sources.
+- Add the backend/frontend protocol for row chunk requests with sort state.
+- Add `st.DataFrameSource(data, row_count=..., schema=..., sortable=...)`.
+- Support both dataframe and callable sources.
+- Server-side sorting via `sortable` parameter.
+- Disable selection, editing, Styler, and search for lazy sources.
 
 Note: Auto-lazy for in-memory dataframes above 150,000 rows is deferred to Phase 3 when
-server-side search exists, per the Backwards Compatibility Note above (lines 171-177).
+server-side search exists, per the Backwards Compatibility Note above.
 
 ### Phase 2: Existing Lazy Data Adapters
 
@@ -356,12 +383,12 @@ server-side search exists, per the Backwards Compatibility Note above (lines 171
   random access.
 - Keep capped-preview fallback for objects that cannot provide row count or stable range access.
 
-### Phase 3: Server-side Sorting, Search, Filtering, and Auto-lazy
+### Phase 3: Server-side Search, Filtering, and Auto-lazy
 
-- Add explicit sort/search/filter capabilities to `st.DataFrameSource`.
-- Add request metadata for sort/search/filter state.
+- Add `searchable` and `filterable` capabilities to `st.DataFrameSource`.
+- Add request metadata for search/filter state.
 - Recompute row count when filters change.
-- Reset chunk cache on sort/search/filter changes.
+- Reset chunk cache on search/filter changes.
 - Enable auto-lazy for in-memory pandas/Polars dataframes above 150,000 rows (now that
   server-side search exists to replace client-side search).
 
