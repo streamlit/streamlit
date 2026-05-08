@@ -422,7 +422,9 @@ The follow-up should add:
   for implicit auto-lazy sources, fall back to eager rendering to maintain backward compatibility
 - `pandas.Styler`: keep existing eager `st.dataframe(styler)` behavior and reject explicit
   lazy wrapping
-- `height="content"`: raise because content height requires full materialization
+- `height="content"` with sequential sources (`row_count=None`): raise because the frontend
+  caps content height at 10,000px but still needs the total row count upfront. For sources
+  with a known `row_count`, `height="content"` is supported.
 - `st.data_editor`: out of scope
 - Client-side table-wide sort/search: disable for explicit lazy dataframes. For in-memory
   dataframes, defer auto-lazy until server-side search exists to avoid removing the existing
