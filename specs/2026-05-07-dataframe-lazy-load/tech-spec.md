@@ -259,7 +259,8 @@ Phase 2 adapters:
 
 - Polars LazyFrame: use `.slice(offset, limit).collect()`
 - Snowpark DataFrame/Table: generate bounded queries and use native count
-- DuckDB relation: use relation limit/offset APIs
+
+DuckDB and other adapters can be added in Phase 3+ based on user demand.
 
 Keep using `dataframe_util.is_unevaluated_data_object` as the central detection point. If an
 object is detected but no lazy adapter is ready, keep the current capped-preview fallback.

@@ -98,7 +98,7 @@ st.dataframe(orders)
 ```
 
 ```python
-# Phase 2: DuckDB relation adapter
+# Future: DuckDB relation adapter (Phase 3+)
 rel = duckdb.sql("SELECT * FROM 'logs/*.parquet'")
 
 st.dataframe(rel)
@@ -373,14 +373,12 @@ server-side search exists, per the Backwards Compatibility Note above.
 
 ### Phase 2: Existing Lazy Data Adapters
 
-- Replace capped previews with lazy rendering where feasible for existing unevaluated data
-  objects.
-- Start with Polars LazyFrame, Snowpark DataFrame/Table, and DuckDB relation. For Snowflake,
-  direct `LIMIT/OFFSET` should be treated as a deterministic fallback, not as efficient deep
-  random access.
+- Replace capped previews with lazy rendering for Polars LazyFrame and Snowpark DataFrame/Table.
+- For Snowflake, direct `LIMIT/OFFSET` should be treated as a deterministic fallback, not as
+  efficient deep random access.
 - Keep capped-preview fallback for objects that cannot provide row count or stable range access.
 
-### Phase 3: Server-side Search, Filtering, and Auto-lazy
+### Phase 3: Server-side Search, Filtering, Auto-lazy, and Additional Adapters
 
 - Add `searchable` and `filterable` capabilities to `st.DataFrameSource`.
 - Add request metadata for search/filter state.
@@ -388,6 +386,7 @@ server-side search exists, per the Backwards Compatibility Note above.
 - Reset chunk cache on search/filter changes.
 - Enable auto-lazy for in-memory pandas/Polars dataframes above 150,000 rows (now that
   server-side search exists to replace client-side search).
+- Add DuckDB relation adapter and other unevaluated data object adapters based on user demand.
 
 ### Phase 4: Streaming Sources
 
