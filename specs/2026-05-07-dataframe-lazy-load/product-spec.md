@@ -320,16 +320,17 @@ Supported in lazy mode:
 - `row_height`
 - `placeholder`
 - `width`
-- `height="auto"`, `height="stretch"`, `height="content"` (requires known `row_count`), and
-  fixed integer heights
+- `height="auto"`, `height="stretch"`, `height="content"`, and fixed integer heights
+
+Note on `height="content"` with lazy sources: For sources with a known `row_count`, the height
+is computed upfront. For sequential sources (`row_count=None`), the height starts based on
+loaded rows and grows as more rows are fetched, capping at 10,000px. This may cause layout
+shifts as the table grows, which is acceptable for streaming/sequential use cases.
 
 Not supported in lazy mode:
 
 - `pandas.Styler`: `st.dataframe(styler)` should keep the existing eager path;
   `st.DataFrameSource(styler)` should be rejected.
-- `height="content"` with sequential sources (`row_count=None`), because the frontend caps
-  content height at 10,000px but still needs the total row count to compute the correct height.
-  For sources with a known `row_count`, `height="content"` is supported.
 
 ### Cache and Invalidation
 
