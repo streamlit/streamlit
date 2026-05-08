@@ -16,8 +16,6 @@
 
 import styled from "@emotion/styled"
 
-import { notNullOrUndefined } from "@streamlit/utils"
-
 import type { EmotionThemeColors } from "~lib/theme/types"
 
 import { Kind } from "./types"
@@ -44,7 +42,7 @@ export const StyledAlertContainer = styled.div<StyledAlertContainerProps>(
     marginBottom: theme.spacing.none,
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
-    ...(notNullOrUndefined($width) ? { width: `${$width}px` } : {}),
+    ...($width ? { width: `${$width}px` } : {}),
     borderRadius: theme.radii.default,
     paddingTop: theme.spacing.lg,
     paddingBottom: theme.spacing.lg,

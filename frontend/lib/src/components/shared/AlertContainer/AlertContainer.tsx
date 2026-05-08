@@ -49,7 +49,7 @@ export default function AlertContainer({
       $width={width}
       data-testid="stAlertContainer"
       className="stAlertContainer"
-      role={kind === Kind.ERROR ? "alert" : "status"}
+      role={kind === Kind.ERROR || kind === Kind.WARNING ? "alert" : "status"}
     >
       <StyledAlertContent data-testid={`stAlertContent${testid}`}>
         {children}

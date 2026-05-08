@@ -51,19 +51,12 @@ describe("AlertContainer element", () => {
     [Kind.ERROR, "alert"],
     [Kind.INFO, "status"],
     [Kind.SUCCESS, "status"],
-    [Kind.WARNING, "status"],
+    [Kind.WARNING, "alert"],
   ] as const)(
     "for kind=%s, renders role=%s",
     (kind: Kind, expectedRole: string) => {
       render(<AlertContainer {...getProps({ kind })} />)
-      expect(screen.getByRole(expectedRole, { hidden: true })).toBeVisible()
+      expect(screen.getByRole(expectedRole)).toBeVisible()
     }
   )
-
-  it("does not apply role=alert for non-error kinds", () => {
-    render(<AlertContainer {...getProps({ kind: Kind.INFO })} />)
-    expect(
-      screen.queryByRole("alert", { hidden: true })
-    ).not.toBeInTheDocument()
-  })
 })
