@@ -219,6 +219,13 @@ Following the same pattern as `_handle_deferred_file_request()` in `app_session.
 
 ### Frontend Cache and Rendering
 
+Integrate lazy loading into the existing `DataFrame` component rather than creating a separate
+lazy dataframe component. This keeps all rendering, column configuration, selection, and toolbar
+logic unified. The `useDataLoader` hook should check for lazy metadata and branch accordingly:
+
+- **Eager path** (existing): Direct `data.getCell()` access on the complete Quiver
+- **Lazy path** (new): Chunk-based lookup with `LoadingCell` fallback for missing ranges
+
 Add a lazy row cache for dataframe elements.
 
 Responsibilities:
@@ -288,8 +295,9 @@ feedback when chunks load and avoids unnecessary timer overhead.
 
 #### Quiver Chunk Storage
 
-Extend `Quiver` to store chunks as a map keyed by chunk index, following the pattern from
-prototype PR #11032:
+Extend the existing `Quiver` class to store chunks as a map keyed by chunk index, following the
+pattern from prototype PR #11032. This avoids creating a separate lazy Quiver class and keeps
+all Arrow parsing logic in one place:
 
 ```typescript
 class Quiver {
