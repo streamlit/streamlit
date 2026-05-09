@@ -272,12 +272,29 @@ def image_to_url(
         # Following regex allows svg image files to start either via a "<?xml...>" tag
         # eventually followed by a "<svg...>" tag or directly starting with a "<svg>" tag
         if re.search(r"(^\s?(<\?xml[\s\S]*<svg\s)|^\s?<svg\s|^\s?<svg>\s)", image):
-            if "xmlns" not in image:
-                # The xmlns attribute is required for SVGs to render in an img tag.
-                # If it's not present, we add to the first SVG tag:
-                image = image.replace(
-                    "<svg", '<svg xmlns="http://www.w3.org/2000/svg" ', 1
-                )
+            # Improved regex: matches both normal <svg> and namespace <svg:svg> tags.
+            svg_tag_match = re.search(r"<svg[^>]*>", image)
+            if svg_tag_match:
+                svg_tag = svg_tag_match.group(0)
+                # Check if xmlns attribute is missing - add it if so
+                if "xmlns" not in svg_tag:
+                    image = image.replace(svg_tag, svg_tag.replace("<svg", '<svg xmlns="http://www.w3.org/2000/svg"', 1), 1)
+                # Re-check svg_tag after potential modification
+                svg_tag = re.search(r"<svg[^>]*>", image).group(0) if re.search(r"<svg[^>]*>", image) else ""
+                # If width/height attributes are missing, infer from viewBox
+                if "width=" not in svg_tag and "height=" not in svg_tag:
+                    vb_match = re.search(r'viewBox="([^"]+)"', svg_tag)
+                    if vb_match:
+                        # viewBox="min_x min_y width height"
+                        parts = vb_match.group(1).strip().split()
+                        if len(parts) == 4:
+                            vb_w, vb_h = float(parts[2]), float(parts[3])
+                            # Use viewBox dimensions as default width/height for display
+                            svg_tag_new = re.search(r"<svg([^>]*)>", image)
+                            if svg_tag_new:
+                                attrs = svg_tag_new.group(1)  # everything between 'svg' and '>'
+                                new_attrs = attrs + f' width="{int(vb_w)}" height="{int(vb_h)}"'
+                                image = image.replace(f"<svg{attrs}>", f"<svg{new_attrs}>", 1)
             # Convert to base64 to prevent issues with encoding:
             import base64
 
