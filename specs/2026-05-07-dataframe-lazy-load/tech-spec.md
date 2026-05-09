@@ -517,6 +517,11 @@ annotations. Explicit capabilities are easier to validate and document.
 
 ## References
 
+- Prior prototype PR #11032: https://github.com/streamlit/streamlit/pull/11032 — WIP implementation
+  demonstrating BackMsg/ForwardMsg chunk protocol, fragment_storage for callbacks, and Quiver chunk
+  cache. Key patterns validated: non-rerun chunk requests, delta-path-based chunk routing, and
+  loading cell rendering. This spec improves on the prototype with a dedicated source manager,
+  explicit generation tracking, and support for sorting/sequential sources.
 - Snowflake `LIMIT / FETCH`: https://docs.snowflake.com/en/sql-reference/constructs/limit
 - Snowpark `DataFrame.limit`: https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/api/snowflake.snowpark.DataFrame.limit
 - Snowflake top-K pruning: https://docs.snowflake.com/en/user-guide/querying-top-k-pruning-optimization
