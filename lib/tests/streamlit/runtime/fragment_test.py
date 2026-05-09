@@ -37,6 +37,7 @@ from streamlit.runtime.fragment import (
 )
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -90,7 +91,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage._fragments["some_other_key"] = "some_other_fragment"
         assert len(self._storage._fragments) == 2
 
-        self._storage.clear(new_fragment_ids={"some_key"})
+        self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
 
@@ -240,8 +241,9 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = set()
+        ctx.new_fragment_ids = ThreadSafeSet()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -257,11 +259,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
-        assert len(ctx.new_fragment_ids) == 0
+        assert len(ctx.new_fragment_ids.snapshot()) == 0
         my_fragment()
 
         # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
-        assert len(ctx.new_fragment_ids) == 1
+        assert len(ctx.new_fragment_ids.snapshot()) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.

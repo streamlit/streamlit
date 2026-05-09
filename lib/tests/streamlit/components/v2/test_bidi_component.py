@@ -311,7 +311,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # Compute expected aggregator trigger id
         base_id = next(
             wid
-            for wid in ctx.widget_ids_this_run
+            for wid in ctx.widget_ids_this_run.snapshot()
             if wid.startswith("$$ID") and EVENT_DELIM not in wid
         )
         aggregator_id = _make_trigger_id(base_id, "events")

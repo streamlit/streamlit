@@ -189,12 +189,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             {showLeadingUserIcon && <ExpanderIcon icon={icon} />}
 
             <StyledSummaryLabelWrapper isCompact={isCompact}>
-              <StreamlitMarkdown
-                source={label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-              />
+              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
             </StyledSummaryLabelWrapper>
 
             {/* Trailing chevron for compact mode (uses chevron_right for tighter appearance) */}
