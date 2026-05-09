@@ -232,6 +232,13 @@ Responsibilities:
 
 - Track loaded, loading, failed, and missing row ranges.
 - Deduplicate overlapping in-flight requests.
+- **Debounce chunk requests during rapid scroll**: Show loading cells immediately (no UI
+  debounce), but debounce actual network requests (~100-200ms) so rapid scrolling doesn't
+  fire dozens of requests for chunks the user scrolls past. After the debounce, request only
+  the currently visible range plus buffer—not every range scrolled through.
+- **Cancel or deprioritize stale requests**: If a chunk request is in flight for a range that
+  is no longer near the visible viewport (e.g., user scrolled away), consider canceling it or
+  letting it complete at low priority. This prevents wasted bandwidth and server load.
 - Prefetch a small buffer before and after the visible range.
 - Enforce an LRU limit for random-access chunks (e.g., retain the most recent N chunks).
 - Enforce a memory bound for sequential-source caches to prevent unbounded growth when
