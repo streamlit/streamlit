@@ -86,8 +86,8 @@ Immutable root with 4 top-level containers:
 
 **ElementNode** (`ElementNode.ts`):
 - Leaf node for UI elements
-- Contains `Element` protobuf message
-- Lazy-loads processed data (Quiver for dataframes)
+- Contains `Element` protobuf message and metadata (elementHash)
+- Data model derivation (e.g., Quiver for dataframes) is handled at the component level
 
 **TransientNode** (`TransientNode.ts`):
 - Holds transient elements (currently used for spinners) at a delta path position

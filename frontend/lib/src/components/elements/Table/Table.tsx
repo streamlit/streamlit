@@ -18,7 +18,11 @@ import { memo, ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import { streamlit, Table as TableProto } from "@streamlit/protobuf"
+import {
+  IArrowData,
+  streamlit,
+  Table as TableProto,
+} from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -46,7 +50,7 @@ import {
 
 export interface TableProps {
   element: TableProto
-  data: Quiver
+  elementHash?: string
   widthConfig?: streamlit.IWidthConfig | null
   heightConfig?: streamlit.IHeightConfig | null
 }
@@ -78,7 +82,17 @@ function getStickyType(stickyTop: boolean, stickyLeft: boolean): StickyType {
 }
 
 export function Table(props: Readonly<TableProps>): ReactElement {
-  const table = props.data
+  const { element, elementHash } = props
+
+  // Construct Quiver from the proto's arrowData. The elementHash serves as the
+  // primary memoization key to avoid unnecessary re-parsing when the payload
+  // hasn't changed.
+  const table = useMemo(
+    () => new Quiver(element.arrowData as IArrowData),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- elementHash is the primary cache key
+    [elementHash, element.arrowData]
+  )
+
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =
     table.dimensions

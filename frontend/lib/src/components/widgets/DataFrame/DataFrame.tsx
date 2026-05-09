@@ -47,7 +47,11 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
+import {
+  Dataframe as DataframeProto,
+  IArrowData,
+  streamlit,
+} from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -104,7 +108,13 @@ const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 export interface DataFrameProps {
   element: DataframeProto
-  data: Quiver
+  elementHash?: string
+  /**
+   * Optional pre-constructed Quiver data. If provided, this is used directly
+   * instead of constructing from element.arrowData. This is primarily used by
+   * ReadOnlyGrid which already has a Quiver instance.
+   */
+  data?: Quiver
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
@@ -119,13 +129,14 @@ export interface DataFrameProps {
  * The main component used by dataframe & data_editor to render an editable table.
  *
  * @param element - The element's proto message
- * @param data - The Arrow data to render (extracted from the proto message)
+ * @param data - Optional pre-constructed Quiver data (for ReadOnlyGrid use case)
  * @param disabled - Whether the widget is disabled
  * @param widgetMgr - The widget manager
  */
 function DataFrame({
   element,
-  data,
+  elementHash,
+  data: dataProp,
   disabled,
   widgetMgr,
   disableFullscreenMode,
@@ -134,6 +145,15 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
+  // Use provided Quiver data or construct from proto's arrowData. The
+  // elementHash serves as the primary memoization key to avoid unnecessary
+  // re-parsing when the payload hasn't changed.
+  const data = useMemo(
+    () => dataProp ?? new Quiver(element.arrowData as IArrowData),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- elementHash is the primary cache key
+    [dataProp, elementHash, element.arrowData]
+  )
+
   const {
     expanded: isFullScreen,
     expand,
