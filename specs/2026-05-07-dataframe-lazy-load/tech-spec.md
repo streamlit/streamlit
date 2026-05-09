@@ -239,6 +239,11 @@ Responsibilities:
 - **Cancel or deprioritize stale requests**: If a chunk request is in flight for a range that
   is no longer near the visible viewport (e.g., user scrolled away), consider canceling it or
   letting it complete at low priority. This prevents wasted bandwidth and server load.
+- **Chunk-based pagination**: The frontend should request data in fixed-size chunks (e.g., 500
+  rows) rather than individual rows. The chunk size is provided by the backend in `page_size`.
+  When the visible range spans rows 1200–1250, the frontend calculates the required chunk
+  indices (`chunkIndex = Math.floor(row / pageSize)`) and requests any missing chunks. This
+  reduces request overhead and aligns with how the backend fetches data.
 - Prefetch a small buffer before and after the visible range.
 - Enforce an LRU limit for random-access chunks (e.g., retain the most recent N chunks).
 - Enforce a memory bound for sequential-source caches to prevent unbounded growth when
