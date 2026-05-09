@@ -245,6 +245,93 @@ Each Arrow chunk can be parsed into a `Quiver`. The cache can either store chunk
 plus offset metadata, or normalize parsed cells into a row cache. Chunk-level Quivers are likely
 less invasive for the first implementation because existing column/type parsing remains intact.
 
+#### Loading Cell Implementation
+
+Glide Data Grid provides a native `LoadingCell` type with built-in skeleton animation:
+
+```typescript
+import { GridCellKind, LoadingCell } from "@glideapps/glide-data-grid"
+
+// Return from getCellContent when chunk is not yet loaded
+return {
+  kind: GridCellKind.Loading,
+  allowOverlay: false,
+  skeletonHeight: 20,
+  skeletonWidth: 100,
+  skeletonWidthVariability: 30,
+} as LoadingCell
+```
+
+No custom loading UI is required. The `useDataLoader` hook should check chunk availability and
+return `LoadingCell` for rows in missing chunks while triggering a chunk request.
+
+#### Cell Refresh After Chunk Load
+
+When a `DataframeChunkResponse` ForwardMsg arrives, the frontend must trigger a re-render of
+the affected cells. Glide Data Grid's `updateCells()` API allows targeted cell refresh without
+a full table re-render:
+
+```typescript
+// After chunk is inserted into cache, refresh affected cells
+const cellsToUpdate: { cell: [number, number] }[] = []
+for (let row = 0; row < chunkSize; row++) {
+  for (let col = 0; col < columnCount; col++) {
+    cellsToUpdate.push({ cell: [col, chunkOffset + row] })
+  }
+}
+dataEditorRef.current?.updateCells(cellsToUpdate)
+```
+
+The ForwardMsg handler should directly trigger this update when a chunk response arrives,
+avoiding the polling approach used in the prototype PR #11032. This provides immediate
+feedback when chunks load and avoids unnecessary timer overhead.
+
+#### Quiver Chunk Storage
+
+Extend `Quiver` to store chunks as a map keyed by chunk index, following the pattern from
+prototype PR #11032:
+
+```typescript
+class Quiver {
+  // Existing fields...
+
+  private _chunks: Map<number, Quiver> = new Map()
+  private _chunkSize: number | undefined
+
+  public get chunkSize(): number | undefined {
+    return this._chunkSize
+  }
+
+  public addChunk(chunk: Quiver, chunkIndex: number): void {
+    this._chunks.set(chunkIndex, chunk)
+  }
+
+  public hasChunk(chunkIndex: number): boolean {
+    return this._chunks.has(chunkIndex)
+  }
+
+  public getChunk(chunkIndex: number): Quiver | undefined {
+    return this._chunks.get(chunkIndex)
+  }
+}
+```
+
+Each chunk is itself a `Quiver` instance with its own parsed Arrow data. Cell lookups for
+rows beyond the initial chunk compute the chunk index and row offset within that chunk:
+
+```typescript
+const chunkIndex = Math.floor(originalRow / data.chunkSize)
+const rowInChunk = originalRow % data.chunkSize
+
+if (data.hasChunk(chunkIndex)) {
+  const chunk = data.getChunk(chunkIndex)
+  return chunk.getCell(rowInChunk, columnIndex)
+}
+// else return LoadingCell and trigger request
+```
+
+This keeps the existing `Quiver` cell-access patterns intact while adding chunk-level storage.
+
 ### Adapter Strategy
 
 Phase 1 adapters:
