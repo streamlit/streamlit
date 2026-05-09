@@ -12,10 +12,11 @@ large to send to the browser in one message. The end-state design should keep th
 `st.dataframe(data)` path for supported lazy data objects, and expose a small
 dataframe-specific source wrapper when users need custom loading logic.
 
-The initial version should focus on read-only row loading. Known-size sources can support
-random access; unknown-size sources should fit the same API as sequential sources with
-`row_count=None`. Server-side sorting, search, filtering, editing, and selection semantics
-should be designed as follow-up capabilities instead of being bundled into the first API.
+The initial version should focus on read-only row loading for known-size sources, server-side
+sorting, and automatic lazy delivery for compatible large in-memory dataframes. Unknown-size
+sequential sources with `row_count=None`, server-side search/filtering, editing, and selection
+semantics should be designed as follow-up capabilities instead of being bundled into the first
+API.
 
 ## Problem
 
@@ -61,8 +62,11 @@ st.dataframe(df_page)
   identity model.
 - Push-based real-time streaming. Unknown-size pull-based sources can fit the same source API,
   but live updates beyond scroll-triggered loading need separate lifecycle behavior.
-- Server-side sorting/search/filtering UI. Sorting or searching only loaded chunks would be
-  misleading, and `st.dataframe` does not yet have filtering UI.
+- Unknown-size sequential sources with `row_count=None`. The first version requires a known row
+  count for callback-backed sources so the scrollbar, cache, and request validation can remain
+  simple.
+- Server-side search/filtering UI. Searching or filtering only loaded chunks would be misleading,
+  and `st.dataframe` does not yet have filtering UI.
 - Pandas Styler support in lazy mode. Styler output is tied to the materialized table.
 - New required dependencies. Backend-specific support should use optional detection, as
   existing dataframe conversion does.
@@ -120,10 +124,20 @@ from streamlit import SortState
 
 
 def load_orders(offset: int, limit: int, sort: SortState | None) -> pd.DataFrame:
-    order_by = "id"  # default sort
+    sortable_columns = {
+        "id": "id",
+        "status": "status",
+        "created_at": "created_at",
+        "total": "total",
+    }
+
+    order_by = "id ASC"  # default stable sort
     if sort:
+        sort_column = sortable_columns.get(sort.column)
+        if sort_column is None:
+            raise ValueError(f"Unsupported sort column: {sort.column}")
         direction = "DESC" if sort.direction == "desc" else "ASC"
-        order_by = f"{sort.column} {direction}"
+        order_by = f"{sort_column} {direction}, id ASC"
 
     return pd.read_sql(
         f"""
@@ -156,7 +170,9 @@ st.dataframe(orders)
 ```
 
 The loader returns normal dataframe-like data. Streamlit handles Arrow serialization, chunk
-cache metadata, retry behavior, and frontend integration.
+cache metadata, retry behavior, and frontend integration. Sort columns should be translated
+through an explicit whitelist like the example above; app code should not interpolate raw
+frontend-provided column names into SQL.
 
 ### 3. Auto-lazy Large In-memory Dataframes
 
@@ -179,16 +195,13 @@ table behavior:
 - `st.dataframe` is read-only.
 - `on_select="ignore"`.
 - The input is not a `pandas.Styler`.
-- `height!="content"`.
 - CSV download remains disabled or is reimplemented as a server-side export.
 
 **Backwards Compatibility Note:** The existing large-table path (>150k rows) already disables
-sorting and CSV download but still shows search UI. Auto-lazy would additionally disable search
-since searching only loaded chunks would be misleading. This is a user-visible behavior change
-for existing apps. Until server-side search is implemented, auto-lazy should be limited to
-explicit `st.DataFrameSource` wrappers rather than silently auto-converting large in-memory
-dataframes. The auto-lazy threshold for in-memory dataframes should only activate once
-server-side search exists to avoid removing existing search functionality.
+sorting and CSV download but still shows search UI. Auto-lazy additionally disables search since
+searching only loaded chunks would be misleading. This is an intentional user-visible behavior
+change for the first version in exchange for bounded initial payload and browser memory usage.
+Server-side search can restore search for auto-lazy dataframes in a later phase.
 
 For smaller in-memory dataframes, Streamlit should keep eager rendering by default. A source
 wrapper can still force lazy delivery when the app author wants it.
@@ -203,7 +216,7 @@ class DataFrameSource:
         self,
         data: Data | Callable[[int, int, SortState | None], Data],
         *,
-        row_count: int | Callable[[], int | None] | None = None,
+        row_count: int | Callable[[], int] | None = None,
         schema: pa.Schema | None = None,
         sortable: bool = True,
     ) -> None:
@@ -216,28 +229,27 @@ Parameters:
   `(offset, limit, sort)` and returns rows in the half-open range `[offset, offset + limit)`.
   The `sort` parameter is a `SortState` object with `column: str` and `direction: "asc" | "desc"`,
   or `None` if no sort is active. Streamlit detects callables automatically.
-- `row_count`: Total number of rows, or `None` when the total is unknown. Can be callable so
-  Streamlit can recompute it on rerun. The callable is invoked once per rerun when the
-  element is rendered (not on every chunk request). If the callable raises an exception,
-  Streamlit logs a warning and falls back to the last known row count (or treats as
-  unknown-size if no prior count exists). Ignored when `data` is a dataframe (row count is
-  derived from the data).
+- `row_count`: Total number of rows. Required for callback-backed sources in the first version.
+  Can be callable so Streamlit can recompute it on rerun. The callable is invoked once per rerun
+  when the element is rendered (not on every chunk request). Ignored when `data` is a dataframe
+  (row count is derived from the data). `row_count=None` for unknown-size sequential sources is
+  reserved for a follow-up phase.
 - `schema`: Optional PyArrow schema for callback-backed sources. If omitted, Streamlit infers
   the schema from the first non-empty chunk. Empty sources should provide `schema`. Ignored
   when `data` is a dataframe (schema is derived from the data).
 - `sortable`: Whether server-side sorting is enabled. Defaults to `True`. For callback sources,
-  the callback must handle the `sort` parameter when `sortable=True`.
+  the callback must handle the `sort` parameter when `sortable=True`. Sorting is a global
+  capability for the source; per-column sortable allowlists are not part of the first version.
 
 Validation:
 
 - If `data` is a dataframe, `row_count` and `schema` are derived from it. Passing these
   explicitly issues a warning but does not fail.
-- If `data` is a callable and `row_count` is `None`, the source is sequential: Streamlit can
-  request forward chunks but cannot support arbitrary row jumps.
+- If `data` is a callable and `row_count` is `None`, Streamlit raises
+  `StreamlitAPIException("row_count is required for callable DataFrameSource")` in the first
+  version.
 - If `row_count` is provided, it must be non-negative. Negative values raise
   `StreamlitAPIException("row_count must be non-negative")`.
-- If `row_count` is a callable that returns `None` after previously returning a known row count,
-  Streamlit should treat this as an error and fall back to the last known row count with a warning.
 - Callback loaders must return a dataframe-like object with columns compatible with the
   declared or inferred schema.
 
@@ -263,10 +275,8 @@ the table should show loading rows and request the first visible chunk.
 - Cached chunks should render synchronously once loaded.
 - Failed chunks should show an inline error state with retry.
 
-For sources with `row_count=None`, the scrollbar should reflect the loaded extent instead of a
-known total size. The frontend should only request the next unloaded range; jumping to arbitrary
-unloaded offsets is not supported until the source reports a total row count and random-access
-capability.
+For the first version, all lazy sources have a known row count and support row-range requests.
+Unknown-size sequential sources are covered in Phase 4.
 
 ### Sorting and Search
 
@@ -279,8 +289,10 @@ When the user clicks a column header to sort:
 4. For dataframe sources, Streamlit handles sorting automatically.
 5. For callback sources, the callback receives the sort state and must return correctly sorted data.
 
-Only columns listed in `sortable` show the sort UI. Sorting is disabled entirely when
-`sortable=False`.
+When `sortable=True`, sortable dataframe columns show the existing sort UI. When
+`sortable=False`, sorting is disabled entirely. The first version intentionally does not expose a
+per-column public allowlist; app authors whose backend can only sort some columns should set
+`sortable=False` and keep sorting disabled until a narrower capability API exists.
 
 **Search:** Table-wide search is disabled for lazy sources in the first version. Searching only
 loaded chunks would be incorrect because unloaded rows would be excluded. Server-side search
@@ -340,9 +352,9 @@ Supported in lazy mode:
 - `height="auto"`, `height="stretch"`, `height="content"`, and fixed integer heights
 
 Note on `height="content"` with lazy sources: For sources with a known `row_count`, the height
-is computed upfront. For sequential sources (`row_count=None`), the height starts based on
-loaded rows and grows as more rows are fetched, capping at 10,000px. This may cause layout
-shifts as the table grows, which is acceptable for streaming/sequential use cases.
+is computed upfront from the total row count and capped at the existing 10,000px maximum content
+height. Very large lazy dataframes therefore still render as a scrollable table inside the capped
+height instead of expanding the page to the full dataset height.
 
 Not supported in lazy mode:
 
@@ -364,12 +376,11 @@ Not supported in lazy mode:
 
 - Add the backend/frontend protocol for row chunk requests with sort state.
 - Add `st.DataFrameSource(data, row_count=..., schema=..., sortable=...)`.
-- Support both dataframe and callable sources.
+- Support known-size dataframe and callable sources.
 - Server-side sorting via `sortable` parameter.
+- Auto-lazy compatible in-memory pandas/Polars dataframes above the existing frontend large-table
+  threshold (`150000` rows).
 - Disable selection, editing, Styler, and search for lazy sources.
-
-Note: Auto-lazy for in-memory dataframes above 150,000 rows is deferred to Phase 3 when
-server-side search exists, per the Backwards Compatibility Note above.
 
 ### Phase 2: Existing Lazy Data Adapters
 
@@ -378,14 +389,13 @@ server-side search exists, per the Backwards Compatibility Note above.
   efficient deep random access.
 - Keep capped-preview fallback for objects that cannot provide row count or stable range access.
 
-### Phase 3: Server-side Search, Filtering, Auto-lazy, and Additional Adapters
+### Phase 3: Server-side Search, Filtering, and Additional Adapters
 
 - Add `searchable` and `filterable` capabilities to `st.DataFrameSource`.
 - Add request metadata for search/filter state.
 - Recompute row count when filters change.
 - Reset chunk cache on search/filter changes.
-- Enable auto-lazy for in-memory pandas/Polars dataframes above 150,000 rows (now that
-  server-side search exists to replace client-side search).
+- Restore search support for auto-lazy in-memory pandas/Polars dataframes via server-side search.
 - Add DuckDB relation adapter and other unevaluated data object adapters based on user demand.
 
 ### Phase 4: Streaming Sources
@@ -394,10 +404,9 @@ server-side search exists, per the Backwards Compatibility Note above.
 - Use loaded-size scroll behavior until the source is exhausted.
 - Define cache bounds and backpressure for long-running streams.
 
-Note: The API and behavior sections describe `row_count=None` support to define the full
-contract, but Phase 4 timing reflects that unknown-size sources need additional scrolling
-and cache semantics work beyond the MVP. Known-size sources with random access are the
-MVP focus.
+Note: The Phase 1 API reserves `row_count=None` for this later contract. Unknown-size sources
+need additional scrolling and cache semantics work beyond the MVP. Known-size sources with
+random access are the MVP focus.
 
 ## Alternatives Considered
 
@@ -452,7 +461,7 @@ capability declarations are clearer and make unsupported UI states easier to exp
 | Item                         | ✅ or comment                                          |
 |------------------------------|--------------------------------------------------------|
 | Works on SiS, Cloud, etc?    | Yes, chunk loading stays server-side and session-bound |
-| No breaking API changes      | Yes, API is additive; auto-lazy behavior needs care    |
+| No breaking API changes      | API additive; auto-lazy changes large-table search UI  |
 | No new dependencies          | Yes, adapters use optional detection                   |
 | Metrics collected            | Track lazy source type, chunks loaded, errors, bytes   |
 | Any security/legal impact?   | Needs request/source id validation per session         |

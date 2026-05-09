@@ -9,9 +9,10 @@ created: 2026-05-07
 
 Implement lazy row loading for read-only `st.dataframe` by registering a session-scoped data
 source on the backend and allowing the frontend to request Arrow row chunks without triggering
-a script rerun. The frontend should keep a row-range cache and continue using Glide's
-synchronous `getCellContent` path by returning loading/error cells for ranges that are not yet
-available.
+a script rerun. The first version supports known-size sources, server-side sorting, and
+auto-lazy delivery for compatible large in-memory pandas/Polars dataframes. The frontend should
+keep a row-range cache and continue using Glide's synchronous `getCellContent` path by returning
+loading/error cells for ranges that are not yet available.
 
 ## Current Architecture Constraints
 
@@ -36,25 +37,35 @@ normalize to this shape.
 ```python
 class DataframeSourceProtocol(Protocol):
     @property
-    def row_count(self) -> int | None:
+    def row_count(self) -> int:
         ...
 
     @property
     def schema(self) -> pa.Schema:
         ...
 
-    def load_rows(self, offset: int, limit: int) -> Data:
+    @property
+    def sortable(self) -> bool:
+        ...
+
+    def load_rows(
+        self,
+        offset: int,
+        limit: int,
+        *,
+        sort: SortState | None = None,
+    ) -> Data:
         ...
 ```
 
 `Data` is any existing dataframe-compatible return type that can be serialized through
 `dataframe_util.convert_anything_to_arrow_bytes`.
 
-`row_count=None` means the source is sequential and unknown-size. Streamlit can request forward
-chunks and grow the loaded extent, but it should not issue arbitrary random-access requests.
+Phase 1 requires a known `row_count`. Unknown-size sequential sources with `row_count=None` can
+extend this protocol in a later phase with an explicit `access_mode` and end-of-stream contract.
 
-Future sort/search/filter support can extend this protocol with explicit capability
-declarations and keyword-only request parameters. Filtering is not part of current
+Sorting is part of Phase 1. Search/filter support can extend this protocol later with explicit
+capability declarations and keyword-only request parameters. Filtering is not part of current
 `st.dataframe` behavior, so the first version should reserve the extension point but not
 implement filtering UI or inspect callback signatures to infer capabilities.
 
@@ -89,10 +100,18 @@ Responsibilities:
 - Convert loaded chunks to Arrow bytes.
 - Reject stale source ids after reruns, element removal, or session shutdown.
 - Bound server-side metadata and clean up per-session state.
-- Element disappearance detection: The source manager tracks registered sources by element
-  id. On each rerun, the manager compares the new element tree against registered sources.
-  Sources whose element ids no longer appear in the tree are marked stale and their state
-  is cleaned up. Session shutdown also triggers cleanup of all sources for that session.
+- Source lifecycle should mirror the media-file reference pattern rather than requiring the
+  backend to inspect the frontend element tree:
+  - Use the dataframe element coordinates (`DeltaGenerator._get_delta_path_str()`) plus
+    generation as the server-side location key.
+  - On a full rerun, clear the session's active dataframe-source references before the script
+    starts, register sources as `st.dataframe` calls execute, and prune sources that were not
+    re-registered after the script finishes.
+  - On a fragment rerun, only replace sources re-rendered by that fragment. Do not prune
+    unrelated full-app sources that remain visible.
+  - When a source is replaced at the same coordinates, mark the previous generation stale so
+    in-flight chunk responses are ignored by the frontend.
+  - Session shutdown clears all sources for that session.
 
 This should live near runtime/session code, not in the media file manager. The media file
 manager is optimized for deferred file generation and URL serving, while dataframe chunks are
@@ -113,7 +132,7 @@ message Dataframe {
 
 message LazyDataframe {
   string source_id = 1;
-  optional uint64 row_count = 2;
+  optional uint64 row_count = 2;  // Always set in Phase 1; optional for future sequential sources
   uint64 initial_offset = 3;
   uint32 page_size = 4;
   string generation = 5;
@@ -171,18 +190,24 @@ message DataframeChunkResponse {
 }
 ```
 
-**`end_of_stream` semantics:**
+`end_of_stream` is reserved for future sequential sources. In Phase 1, known-size random-access
+sources should return `end_of_stream=false` for successful chunks and rely on `row_count` for
+scroll bounds.
+
+**Future `end_of_stream` semantics:**
 - For sequential sources, `end_of_stream=true` signals the source is exhausted. The frontend
   MUST treat this as terminal and stop requesting further chunks.
 - `end_of_stream=true` with `error_msg` is a terminal error state (no retry).
 - For sequential sources, `end_of_stream=false` with zero-row `arrow_data` is invalid; the
   server must set `end_of_stream=true` when returning the final (possibly empty) chunk.
-```
 
 The server must enforce a maximum on `limit` (e.g., 10,000 rows) to prevent a modified client
 from requesting arbitrarily large chunks and causing OOM or warehouse cost spikes. The server
 should also apply per-session concurrency/backpressure rules to bound simultaneous in-flight
-requests.
+requests. If a valid row-limited chunk still serializes above the websocket message size limit,
+the server should return a chunk error response and log the source id, offset, limit, and
+serialized size. Adaptive byte-based chunk splitting can be added later if this shows up in real
+usage.
 
 `request_id` should be a UUID generated by the frontend per request to deduplicate responses.
 `generation` should be a UUID generated by the backend when a source is registered, changing
@@ -199,10 +224,9 @@ not as a separate element. The existing parameter handling for `column_config`, 
 
 1. `st.dataframe` detects a lazy-capable source:
    - explicit `st.DataFrameSource`
-   - supported unevaluated object adapter
+   - supported unevaluated object adapter (Phase 2+)
    - compatible in-memory pandas/Polars dataframe above the large-table threshold
-2. Validate unsupported combinations such as `on_select`, `pandas.Styler`, `data_editor`, and
-   `height="content"`.
+2. Validate unsupported combinations such as `on_select`, `pandas.Styler`, and `data_editor`.
 3. Register the source in the session source manager.
 4. Fetch an initial chunk if cheap and safe.
 5. Enqueue `Dataframe` with normal display configuration plus `lazy_data`.
@@ -221,6 +245,62 @@ Following the same pattern as `_handle_deferred_file_request()` in `app_session.
 5. The chunk is serialized as Arrow and sent back as `DataframeChunkResponse` ForwardMsg.
 6. The frontend inserts the chunk into its cache and triggers a render.
 
+### Frontend Transport and Render-tree Integration
+
+The frontend should add a dataframe-specific request/response path alongside the existing
+deferred-file plumbing:
+
+- `App.tsx` handles `ForwardMsg.dataframe_chunk_response` in the top-level ForwardMsg dispatch.
+- `App.tsx` exposes a `requestDataframeChunk(request)` callback and a response subscription
+  registry through a small context, similar in spirit to `DownloadContext` but keyed by
+  `(source_id, generation, request_id)`.
+- `DataFrame` registers a listener while a lazy dataframe is mounted and unregisters it on
+  unmount, source id changes, or generation changes.
+- `DataFrame` sends `BackMsg.dataframe_chunk_request` through that context instead of reaching
+  into connection state directly.
+
+This spec assumes the component-owned Arrow data refactor described in
+`specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`. Lazy dataframe handling
+should stay inside the dataframe component/hooks rather than adding a lazy branch to
+`frontend/lib/src/render-tree/ElementNode.ts`:
+
+- Top-level `arrow_data` remains the eager-only payload.
+- `DataFrame` constructs the schema/initial-data `Quiver` from
+  `dataframe.lazy_data.initial_chunk`.
+- To avoid a special schema-only `Quiver` constructor, the backend should prefer sending
+  `initial_chunk` as a valid Arrow IPC table with the full schema and zero or more rows. The
+  separate `serialized_schema` field remains available as a fallback if a zero-row Arrow table is
+  impractical for a specific adapter.
+- `DataFrame` must derive the displayed row count from `lazy_data.row_count` when lazy metadata is
+  present, not from `data.dimensions.numDataRows` on the initial chunk.
+- Column loading, column configuration, and formatting continue to use the schema/initial
+  `Quiver`. Cell lookup for rows not present in the initial chunk goes through the lazy cache.
+
+### Server-side Sorting Integration
+
+Lazy dataframes cannot use the current client-side `useColumnSort` path because that hook derives
+a complete sorted row mapping by calling `getCellContent` across the full table. For lazy
+sources, sorting must be a separate server-side mode:
+
+- Split the dataframe sorting hook into eager and lazy branches, or add an explicit
+  `sortingMode: "client" | "server" | "disabled"` option.
+- In server mode, the hook only manages sort state and header indicators. It must not call
+  Glide's `useColumnSort` helper and must not build a row remapping array.
+- `getOriginalIndex` can be identity for lazy dataframes because selection and editing are
+  disabled in the MVP.
+- Header clicks and column-menu sort actions update the server sort state, clear the lazy chunk
+  cache, cancel/deprioritize stale in-flight requests, and request the currently visible chunk
+  with the new sort state.
+- Chunk requests include the active `SortState`. The `column` value should be a stable backend
+  field id/name from the Arrow schema, not the displayed column label.
+- `sortable=False` disables all sort UI for lazy sources. `sortable=True` enables sorting for the
+  source as a whole; per-column public allowlists are out of scope for the first version.
+- Built-in in-memory dataframe sources sort before slicing. Pandas sources should use a stable
+  sort (for example `kind="mergesort"`), and Polars sources should apply `.sort(...)` before
+  `.slice(...)`.
+- Callback sources receive the sort state and are responsible for returning rows in that order.
+  If a backend cannot safely sort every exposed column, the app should set `sortable=False`.
+
 ### Frontend Cache and Rendering
 
 Integrate lazy loading into the existing `DataFrame` component rather than creating a separate
@@ -229,9 +309,10 @@ logic unified. All compatible existing features must continue to work for lazy s
 
 - **Column configuration**: `column_config` for custom renderers, type overrides, and formatting
 - **Column display**: `column_order` and `hide_index`
-- **Sizing**: `width`, `height`, `use_container_width`
+- **Sizing**: `width`, `height`, `use_container_width`; `height="content"` uses
+  `lazy_data.row_count` and the existing 10,000px content-height cap
 - **Row display**: `row_height` (custom row heights via proto)
-- **Toolbar**: Fullscreen toggle, column visibility (search and CSV download disabled for lazy)
+- **Toolbar**: Fullscreen toggle, column visibility (search and CSV download hidden for lazy)
 
 The `useDataLoader` hook should check for lazy metadata and branch accordingly:
 
@@ -258,13 +339,8 @@ Responsibilities:
   reduces request overhead and aligns with how the backend fetches data.
 - Prefetch a small buffer before and after the visible range.
 - Enforce an LRU limit for random-access chunks (e.g., retain the most recent N chunks).
-- Enforce a memory bound for sequential-source caches to prevent unbounded growth when
-  scrolling through large append-only logs. Use the same LRU limit as random-access sources.
 - Clear all chunks when the source generation or sort state changes.
 - Surface per-range errors and support retry.
-- For sequential sources, request only the next unloaded range and grow the apparent row count
-  as chunks arrive. The `end_of_stream` response flag signals exhaustion; the frontend should
-  stop requesting further chunks and finalize the row count when this flag is true.
 
 Glide's `getCellContent` must remain synchronous. The cache should therefore return:
 
@@ -317,60 +393,55 @@ The ForwardMsg handler should directly trigger this update when a chunk response
 avoiding the polling approach used in the prototype PR #11032. This provides immediate
 feedback when chunks load and avoids unnecessary timer overhead.
 
-#### Quiver Chunk Storage
+#### Lazy Chunk Storage
 
-Extend the existing `Quiver` class to store chunks as a map keyed by chunk index, following the
-pattern from prototype PR #11032. This avoids creating a separate lazy Quiver class and keeps
-all Arrow parsing logic in one place:
+Each loaded Arrow chunk should still be parsed into a normal `Quiver` so the existing Arrow
+type parsing and cell conversion code stays centralized. The chunk map itself should live in a
+lazy dataframe cache object owned by the dataframe component/hook, not in the initial eager
+`Quiver` instance:
 
 ```typescript
-class Quiver {
-  // Existing fields...
+class LazyDataframeCache {
+  private chunks: Map<number, Quiver> = new Map()
+  private failedChunks: Map<number, string> = new Map()
 
-  private _chunks: Map<number, Quiver> = new Map()
-  private _chunkSize: number | undefined
-
-  public get chunkSize(): number | undefined {
-    return this._chunkSize
-  }
+  public constructor(
+    private readonly chunkSize: number,
+    private readonly requestChunk: (chunkIndex: number) => void,
+  ) {}
 
   public addChunk(chunk: Quiver, chunkIndex: number): void {
-    this._chunks.set(chunkIndex, chunk)
+    this.chunks.set(chunkIndex, chunk)
+    this.failedChunks.delete(chunkIndex)
   }
 
-  public hasChunk(chunkIndex: number): boolean {
-    return this._chunks.has(chunkIndex)
-  }
-
-  public getChunk(chunkIndex: number): Quiver | undefined {
-    return this._chunks.get(chunkIndex)
+  public getCell(row: number, column: number): DataFrameCell | "loading" | "error" {
+    const chunkIndex = Math.floor(row / this.chunkSize)
+    const rowInChunk = row % this.chunkSize
+    const chunk = this.chunks.get(chunkIndex)
+    if (chunk) {
+      return chunk.getCell(rowInChunk, column)
+    }
+    this.requestChunk(chunkIndex)
+    return this.failedChunks.has(chunkIndex) ? "error" : "loading"
   }
 }
 ```
 
-Each chunk is itself a `Quiver` instance with its own parsed Arrow data. Cell lookups for
-rows beyond the initial chunk compute the chunk index and row offset within that chunk:
-
-```typescript
-const chunkIndex = Math.floor(originalRow / data.chunkSize)
-const rowInChunk = originalRow % data.chunkSize
-
-if (data.hasChunk(chunkIndex)) {
-  const chunk = data.getChunk(chunkIndex)
-  return chunk.getCell(rowInChunk, columnIndex)
-}
-// else return LoadingCell and trigger request
-```
-
-This keeps the existing `Quiver` cell-access patterns intact while adding chunk-level storage.
+The exact class/function shape can be adjusted during implementation, but the key constraint is
+that the initial schema `Quiver` remains a parsed Arrow snapshot while mutable loaded/loading/
+failed state lives in the lazy cache. This keeps the existing `Quiver` immutability assumption
+intact and still reuses `Quiver.getCell()` for every loaded chunk.
 
 ### Adapter Strategy
 
 Phase 1 adapters:
 
 - Callback source: `st.DataFrameSource(loader, row_count=..., schema=...)`
-- In-memory pandas DataFrame: slice with `.iloc[offset : offset + limit]`
-- In-memory Polars DataFrame: slice with `.slice(offset, limit)`
+- In-memory pandas DataFrame: apply server-side sort state with stable `sort_values(...)` when
+  active, then slice with `.iloc[offset : offset + limit]`
+- In-memory Polars DataFrame: apply `.sort(...)` when sort state is active, then slice with
+  `.slice(offset, limit)`
 - Auto-lazy in-memory pandas/Polars dataframes above the existing frontend large-table
   threshold (`150000` rows) when lazy mode is compatible.
 
@@ -573,6 +644,7 @@ The follow-up should add:
 - `st.data_editor`: out of scope
 - Client-side search: disabled for lazy dataframes. Searching only loaded chunks would be
   incorrect. Server-side search is deferred to a follow-up phase.
+- CSV download/export: hidden for lazy dataframes in MVP. Server-side export can be added later.
 - Filtering: out of scope until `st.dataframe` has a filtering UI/API.
 
 Note: Server-side sorting IS supported in MVP via the `sortable` parameter.
@@ -580,7 +652,8 @@ Note: Server-side sorting IS supported in MVP via the `sortable` parameter.
 ## Security and Isolation
 
 - Source ids must be unguessable and scoped to a single session.
-- Chunk requests must validate the active session id and source generation.
+- Chunk requests must validate that the source id belongs to the current `AppSession` and that
+  the requested generation is active.
 - Chunk requests reuse the existing websocket session authentication (XSRF, cookies,
   identity binding). No additional auth mechanism is required since chunk requests are
   BackMsg/ForwardMsg pairs on the same authenticated websocket connection.
@@ -628,19 +701,26 @@ annotations. Explicit capabilities are easier to validate and document.
   stale source rejection.
 - Proto tests through generated types after `make protobuf`.
 - Frontend unit tests for cache range merging, stale response handling, loading cells, error
-  cells, and retry.
-- E2E tests for scroll loading without script rerun, rerun invalidation, and unsupported
-  combinations.
+  cells, retry, and server-side sort state transitions that do not call the client-side sorter.
+- E2E tests for scroll loading without script rerun, server-side sorting, auto-lazy large
+  in-memory dataframes, rerun invalidation, hidden search/CSV controls, `height="content"`
+  fallback behavior, and unsupported combinations.
+- External e2e coverage is recommended because chunk requests use websocket session transport and
+  future Snowflake/Snowpark adapters depend on hosted runtime/session behavior. Focus on proxied
+  websocket chunk requests, stale response handling after rerun/reconnect, and Snowflake session
+  lifecycle cleanup.
 - Performance smoke test with a source larger than browser memory to verify initial payload size
   stays bounded.
 
 ## References
 
+- Component-owned Arrow data refactor:
+  `specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`
 - Prior prototype PR #11032: https://github.com/streamlit/streamlit/pull/11032 — WIP implementation
   demonstrating BackMsg/ForwardMsg chunk protocol, fragment_storage for callbacks, and Quiver chunk
   cache. Key patterns validated: non-rerun chunk requests, delta-path-based chunk routing, and
   loading cell rendering. This spec improves on the prototype with a dedicated source manager,
-  explicit generation tracking, and support for sorting/sequential sources.
+  explicit generation tracking, and server-side sorting.
 - Snowflake `LIMIT / FETCH`: https://docs.snowflake.com/en/sql-reference/constructs/limit
 - Snowpark `DataFrame.limit`: https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/api/snowflake.snowpark.DataFrame.limit
 - Snowflake top-K pruning: https://docs.snowflake.com/en/user-guide/querying-top-k-pruning-optimization
