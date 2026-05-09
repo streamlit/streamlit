@@ -27,6 +27,26 @@ loading/error cells for ranges that are not yet available.
   dataframe chunks need a similar AppSession-handled path, but not the media-file manager
   because chunks are not downloadable files or stable URLs.
 
+## Prior Art: Prototype PR #11032
+
+Prototype PR [#11032](https://github.com/streamlit/streamlit/pull/11032) validates several useful
+parts of the lazy-loading model:
+
+- A non-rerun `BackMsg` request can ask the backend for a dataframe chunk.
+- The frontend can return Glide `LoadingCell` values while a chunk is missing.
+- Loaded chunks need to trigger `DataEditorRef.updateCells()` so visible cells refresh.
+- Chunk-level Arrow payloads can be parsed back into normal `Quiver` instances.
+
+This spec should not copy these prototype details:
+
+- `Delta.add_chunk` routed through `AppRoot` and `ElementNode`; chunk responses should instead go
+  through dataframe-owned request/response handling.
+- Mutable chunk methods on `Quiver`; the chunk cache should store immutable chunk-level
+  `Quiver` instances.
+- Polling to detect loaded chunks; the response handler should directly update affected cells.
+- `fragment_storage` for user chunk callbacks; lazy sources need a dedicated session-scoped
+  source manager with explicit lifecycle cleanup.
+
 ## Proposal
 
 ### Backend Data Source Protocol
@@ -716,11 +736,7 @@ annotations. Explicit capabilities are easier to validate and document.
 
 - Component-owned Arrow data refactor:
   `specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`
-- Prior prototype PR #11032: https://github.com/streamlit/streamlit/pull/11032 — WIP implementation
-  demonstrating BackMsg/ForwardMsg chunk protocol, fragment_storage for callbacks, and Quiver chunk
-  cache. Key patterns validated: non-rerun chunk requests, delta-path-based chunk routing, and
-  loading cell rendering. This spec improves on the prototype with a dedicated source manager,
-  explicit generation tracking, and server-side sorting.
+- Prior prototype PR #11032: https://github.com/streamlit/streamlit/pull/11032
 - Snowflake `LIMIT / FETCH`: https://docs.snowflake.com/en/sql-reference/constructs/limit
 - Snowpark `DataFrame.limit`: https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/api/snowflake.snowpark.DataFrame.limit
 - Snowflake top-K pruning: https://docs.snowflake.com/en/user-guide/querying-top-k-pruning-optimization
