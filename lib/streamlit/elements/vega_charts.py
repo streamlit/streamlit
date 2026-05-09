@@ -1776,6 +1776,7 @@ class VegaChartsMixin:
         each other.
         - ``overlay``: combines the two datasets into a single chart and uses color
         to distinguish them.
+        - ``difference``: calculates the difference between the two datasets
 
         Parameters
         ----------
@@ -1806,7 +1807,7 @@ class VegaChartsMixin:
 
             Defaults to ``"line"``.
 
-        mode : "side_by_side" or "overlay"
+        mode : "side_by_side", "overlay", or "difference"
             The comparison mode to use.
 
             - ``"side_by_side"`` displays both datasets in separate charts next to
@@ -1814,6 +1815,8 @@ class VegaChartsMixin:
             - ``"overlay"`` displays both datasets on the same chart. The datasets
             are combined into one dataframe with an additional categorical column
             used to distinguish them visually.
+            - ``"difference"`` displays the difference between the two datasets
+            in a single chart
 
             Defaults to ``"side_by_side"``.
 
@@ -1903,10 +1906,10 @@ class VegaChartsMixin:
         ...     mode="overlay",
         ... )
         """
-        if mode not in {"side_by_side", "overlay"}:
+        if mode not in {"side_by_side", "overlay", "difference"}:
             raise StreamlitAPIException(
-                f"You have passed {mode} to `mode`. But only 'side_by_side' "
-                "and 'overlay' are supported."
+                f"You have passed {mode} to `mode`. But only 'side_by_side', "
+                "'overlay', and 'difference' are supported."
             )
 
         if chart_type not in {"line", "bar", "area"}:
@@ -1988,6 +1991,7 @@ class VegaChartsMixin:
                 )
 
         chart_method_name = f"{chart_type}_chart"
+        chart_method = cast("Any", getattr(self, chart_method_name))
 
         if mode == "side_by_side":
             left_col, right_col = self.columns(2)
@@ -2066,8 +2070,6 @@ class VegaChartsMixin:
                 ignore_index=True,
             )
 
-            chart_method = cast("Any", getattr(self, chart_method_name))
-
             chart_data = combined_df
             chart_y = y_columns[0]
             chart_color = compare_label_column
@@ -2102,6 +2104,71 @@ class VegaChartsMixin:
                 chart_args["stack"] = "layered"
 
             return chart_method(**chart_args)
+
+        if mode == "difference":
+            compare_index_column = "Index"
+
+            diff_before_df = before_df.copy()
+            diff_after_df = after_df.copy()
+
+            if x is None:
+                if (
+                    compare_index_column in diff_before_df.columns
+                    or compare_index_column in diff_after_df.columns
+                ):
+                    raise StreamlitAPIException(
+                        f'Column "{compare_index_column}" is reserved for compare_chart.'
+                    )
+
+                x_column = compare_index_column
+                diff_before_df[x_column] = diff_before_df.index
+                diff_after_df[x_column] = diff_after_df.index
+            else:
+                x_column = x
+
+            if diff_before_df[x_column].duplicated().any():
+                raise StreamlitAPIException(
+                    f'Column "{x_column}" must not contain duplicate values in data_before '
+                    "for difference mode."
+                )
+
+            if diff_after_df[x_column].duplicated().any():
+                raise StreamlitAPIException(
+                    f'Column "{x_column}" must not contain duplicate values in data_after '
+                    "for difference mode."
+                )
+
+            merged_df = diff_before_df[[x_column, *y_columns]].merge(
+                diff_after_df[[x_column, *y_columns]],
+                on=x_column,
+                how="outer",
+                suffixes=("_before", "_after"),
+                indicator=True,
+            )
+
+            if not (merged_df["_merge"] == "both").all():
+                raise StreamlitAPIException(
+                    f'Column "{x_column}" must contain the same values in both datasets '
+                    "for difference mode."
+                )
+
+            difference_df = merged_df[[x_column]].copy()
+
+            for y_column in y_columns:
+                difference_df[y_column] = (
+                    merged_df[f"{y_column}_after"] - merged_df[f"{y_column}_before"]
+                )
+
+            y_column = y_columns[0] if len(y_columns) == 1 else y_columns
+
+            return chart_method(
+                difference_df,
+                x=x_column,
+                y=y_column,
+                width=resolved_width,
+                height=resolved_height,
+            )
+
         raise StreamlitAPIException(
             f"Invalid `mode`: {mode!r}. "
             'Supported values are "side_by_side" and "overlay".'

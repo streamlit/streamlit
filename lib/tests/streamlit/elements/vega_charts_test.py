@@ -1858,6 +1858,101 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 mode="overlay",
             )
 
+    def test_compare_chart_difference_calculates_after_minus_before(self):
+        """Test that difference mode calculates data_after minus data_before."""
+        before_df = pd.DataFrame({"name": ["A", "B", "C"], "value": [10, 20, 15]})
+        after_df = pd.DataFrame({"name": ["A", "B", "C"], "value": [14, 18, 22]})
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y="value",
+            chart_type="bar",
+            mode="difference",
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        expected_df = pd.DataFrame({"name": ["A", "B", "C"], "value": [4, -2, 7]})
+
+        pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def test_compare_chart_difference_with_multiple_y_columns(self):
+        """Test that difference mode supports multiple y columns."""
+        before_df = pd.DataFrame(
+            {
+                "name": ["A", "B"],
+                "grade": [10, 20],
+                "value": [5, 7],
+            }
+        )
+        after_df = pd.DataFrame(
+            {
+                "name": ["A", "B"],
+                "grade": [14, 18],
+                "value": [8, 10],
+            }
+        )
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y=["grade", "value"],
+            chart_type="bar",
+            mode="difference",
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        color_column = f"color{_PROTECTION_SUFFIX}"
+        value_column = f"value{_PROTECTION_SUFFIX}"
+
+        expected_df = pd.DataFrame(
+            {
+                "name": ["A", "B", "A", "B"],
+                color_column: ["grade", "grade", "value", "value"],
+                value_column: [4, -2, 3, 3],
+            }
+        )
+
+        pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def test_compare_chart_difference_raises_when_x_has_duplicates_in_data_before(self):
+        """Test that difference mode raises when data_before has duplicate x values."""
+        before_df = pd.DataFrame({"name": ["A", "A"], "value": [10, 20]})
+        after_df = pd.DataFrame({"name": ["A", "B"], "value": [15, 25]})
+
+        with pytest.raises(
+            StreamlitAPIException, match="duplicate values in data_before"
+        ):
+            st.compare_chart(
+                before_df,
+                after_df,
+                x="name",
+                y="value",
+                mode="difference",
+            )
+
+    def test_compare_chart_difference_raises_when_x_has_duplicates_in_data_after(self):
+        """Test that difference mode raises when data_after has duplicate x values."""
+        before_df = pd.DataFrame({"name": ["A", "B"], "value": [10, 20]})
+        after_df = pd.DataFrame({"name": ["A", "A"], "value": [15, 25]})
+
+        with pytest.raises(
+            StreamlitAPIException, match="duplicate values in data_after"
+        ):
+            st.compare_chart(
+                before_df,
+                after_df,
+                x="name",
+                y="value",
+                mode="difference",
+            )
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
         """Test arrow chart with no arguments."""
