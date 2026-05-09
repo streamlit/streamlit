@@ -1666,10 +1666,6 @@ ST_CHART_ARGS = [
 class BuiltInChartTest(DeltaGeneratorTestCase):
     """Test our built-in chart commands."""
 
-    def test_compare_chart_is_exposed_on_streamlit(self):
-        """Test that the compare_chart API is publicly exposed."""
-        assert callable(st.compare_chart)
-
     def test_compare_chart_with_default_arguments(self):
         """Test that compare_chart accepts defaults with two simple DataFrames."""
         before_df = pd.DataFrame({"x": [1, 2], "y": [10, 20]})
@@ -1708,14 +1704,159 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
 
         assert len(vega_chart_deltas) == 2
 
-    @parameterized.expand(["overlay", "difference", "ratio"])
-    def test_compare_chart_unsupported_modes_raise_error(self, mode: str):
-        """Test unsupported compare_chart modes raise a clear error."""
+    def test_compare_chart_invalid_mode_raises_error(self):
+        """Test invalid compare_chart mode raises a clear error."""
         before_df = pd.DataFrame({"x": [1, 2], "y": [10, 20]})
         after_df = pd.DataFrame({"x": [1, 2], "y": [15, 25]})
 
-        with pytest.raises(StreamlitAPIException, match='Only "side_by_side"'):
-            st.compare_chart(before_df, after_df, mode=mode)
+        with pytest.raises(StreamlitAPIException, match="supported"):
+            st.compare_chart(before_df, after_df, mode="invalid_mode")
+
+    def test_compare_chart_overlay_uses_dataset_column_for_color(self):
+        """Test that overlay mode uses a dataset column for color grouping."""
+        before_df = pd.DataFrame({"name": ["A", "B"], "value": [10, 20]})
+        after_df = pd.DataFrame({"name": ["A", "B"], "value": [15, 25]})
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y="value",
+            chart_type="bar",
+            mode="overlay",
+            labels=("Control", "Treatment"),
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        assert chart_spec["encoding"]["color"]["field"] == "Dataset"
+
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        assert set(output_df["Dataset"]) == {"Control", "Treatment"}
+        assert list(output_df["name"]) == ["A", "B", "A", "B"]
+        assert list(output_df["value"]) == [10, 20, 15, 25]
+
+    def test_compare_chart_overlay_with_multiple_y_columns_uses_series_column(self):
+        """Test that overlay mode with multiple y columns creates a combined series column."""
+        before_df = pd.DataFrame(
+            {
+                "name": ["A", "B", "C"],
+                "grade": [10, 20, 15],
+                "value": [15, 45, 19],
+            }
+        )
+        after_df = pd.DataFrame(
+            {
+                "name": ["A", "B", "C"],
+                "grade": [14, 18, 22],
+                "value": [85, 90, 88],
+            }
+        )
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y=["grade", "value"],
+            chart_type="bar",
+            mode="overlay",
+            labels=("Before", "After"),
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        chart_spec = json.loads(proto.spec)
+
+        assert chart_spec["encoding"]["color"]["field"] == "Series"
+        assert chart_spec["encoding"]["y"]["field"] == "Value"
+
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        assert set(output_df["Series"]) == {
+            "Before - value",
+            "After - value",
+            "Before - grade",
+            "After - grade",
+        }
+
+    def test_compare_chart_overlay_with_implicit_y_uses_common_numeric_columns(self):
+        """Test that overlay mode infers common numeric columns when y is None."""
+        before_df = pd.DataFrame(
+            {
+                "name": ["A", "B"],
+                "value": [10, 20],
+                "score": [1.5, 2.5],
+            }
+        )
+        after_df = pd.DataFrame(
+            {
+                "name": ["A", "B"],
+                "value": [15, 25],
+                "score": [2.0, 3.0],
+            }
+        )
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y=None,
+            chart_type="bar",
+            mode="overlay",
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        assert set(output_df["Series"]) == {
+            "Before - value",
+            "After - value",
+            "Before - score",
+            "After - score",
+        }
+
+    def test_compare_chart_overlay_raises_when_x_column_is_missing(self):
+        """Test that overlay mode raises when x does not exist in both datasets."""
+        before_df = pd.DataFrame({"name": ["A", "B"], "value": [10, 20]})
+        after_df = pd.DataFrame({"category": ["A", "B"], "value": [15, 25]})
+
+        with pytest.raises(StreamlitAPIException, match="selected for `x`"):
+            st.compare_chart(
+                before_df,
+                after_df,
+                x="name",
+                y="value",
+                mode="overlay",
+            )
+
+    def test_compare_chart_overlay_raises_when_y_column_is_missing(self):
+        """Test that overlay mode raises when y does not exist in both datasets."""
+        before_df = pd.DataFrame({"name": ["A", "B"], "value": [10, 20]})
+        after_df = pd.DataFrame({"name": ["A", "B"], "score": [15, 25]})
+
+        with pytest.raises(StreamlitAPIException, match="selected for `y`"):
+            st.compare_chart(
+                before_df,
+                after_df,
+                x="name",
+                y="value",
+                mode="overlay",
+            )
+
+    def test_compare_chart_overlay_raises_when_y_column_is_not_numeric(self):
+        """Test that overlay mode raises when y is not numeric in both datasets."""
+        before_df = pd.DataFrame({"name": ["A", "B"], "value": ["low", "high"]})
+        after_df = pd.DataFrame({"name": ["A", "B"], "value": ["low", "high"]})
+
+        with pytest.raises(StreamlitAPIException, match="must be numeric"):
+            st.compare_chart(
+                before_df,
+                after_df,
+                x="name",
+                y="value",
+                mode="overlay",
+            )
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
