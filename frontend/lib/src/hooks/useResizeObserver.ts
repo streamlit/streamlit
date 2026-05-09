@@ -100,6 +100,10 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     let frameId: number
 
     const observer = new ResizeObserver(() => {
+      // Cancel any pending animation frame to avoid redundant updates
+      if (frameId) {
+        cancelAnimationFrame(frameId)
+      }
       frameId = window.requestAnimationFrame(() => {
         if (throttleMs > 0) {
           throttledUpdateValues()
