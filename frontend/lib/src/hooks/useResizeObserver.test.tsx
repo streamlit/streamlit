@@ -83,4 +83,12 @@ describe("useResizeObserver", () => {
 
     expect(mockObserve).toHaveBeenCalledWith(mockElement)
   })
+
+  it("accepts debounceMs parameter", () => {
+    const properties: DOMRectKeys[] = ["width", "height"]
+    const { result } = renderHook(() => useResizeObserver(properties, [], 100))
+
+    expect(result.current.values).toEqual([])
+    expect(result.current.elementRef.current).toBeNull()
+  })
 })

@@ -32,6 +32,9 @@ import { useResizeObserver } from "./useResizeObserver"
  * that will cause the observer to be re-evaluated.
  * @param {number} [fallbackValue=-1] - The value to return when width or height is 0.
  * The default value is -1 which allows components to detect when dimensions aren't ready.
+ * @param {number} [debounceMs=0] - Optional debounce delay in milliseconds.
+ * When > 0, dimension updates are debounced to reduce the frequency of
+ * state updates during rapid resize operations (e.g., 100ms for chart components).
  *
  * @returns An object containing:
  *   - width: The current width of the observed element in pixels (or fallbackValue if width is 0)
@@ -59,10 +62,20 @@ import { useResizeObserver } from "./useResizeObserver"
  *   // width and height will be 0 instead of -1 when not ready
  * };
  * ```
+ *
+ * @example
+ * ```tsx
+ * // With debouncing for expensive chart recreations
+ * const MetricChart = () => {
+ *   const { width, elementRef } = useCalculatedDimensions([], -1, 100);
+ *   // Updates debounced by 100ms to reduce chart recreation frequency
+ * };
+ * ```
  */
 export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = [],
-  fallbackValue: number = -1
+  fallbackValue: number = -1,
+  debounceMs = 0
 ): {
   width: number
   height: number
@@ -73,7 +86,8 @@ export const useCalculatedDimensions = <T extends HTMLDivElement>(
     elementRef,
   } = useResizeObserver<T>(
     useMemo(() => ["width", "height"], []),
-    dependencies
+    dependencies,
+    debounceMs
   )
 
   return {

@@ -258,7 +258,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
   const { width: chartWidth, elementRef: chartContainerRef } =
-    useCalculatedDimensions()
+    useCalculatedDimensions([], -1, 100)
 
   const { MetricDirection } = MetricProto
   const {
