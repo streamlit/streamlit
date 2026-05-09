@@ -187,7 +187,7 @@ describe("useCalculatedDimensions", () => {
     expect(initialRef).toBe(rerenderedRef)
   })
 
-  it("passes debounceMs to useResizeObserver", () => {
+  it("passes throttleMs to useResizeObserver", () => {
     const spy = vi
       .spyOn(useResizeObserver, "useResizeObserver")
       .mockImplementation(() => ({

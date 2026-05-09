@@ -22,7 +22,7 @@ import {
   useState,
 } from "react"
 
-import useTimeout from "./useTimeout"
+import { useThrottledCallback } from "./useThrottledCallback"
 
 export type DOMRectKeys =
   | "bottom"
@@ -41,9 +41,10 @@ export type DOMRectKeys =
  * @param {DOMRectKeys[]} properties - The list of DOMRect properties to observe.
  * @param {React.DependencyList} [dependencies=[]] - An optional list of dependencies
  * that will cause the observer to be re-evaluated.
- * @param {number} [debounceMs=0] - Optional debounce delay in milliseconds.
- * When > 0, dimension updates are debounced to reduce the frequency of
- * state updates during rapid resize operations.
+ * @param {number} [throttleMs=0] - Optional throttle delay in milliseconds.
+ * When > 0, dimension updates are throttled to reduce the frequency of
+ * state updates during rapid resize operations while still providing
+ * visual feedback (updates at most once per throttleMs).
  * @returns {{
  *   values: number[],
  *   elementRef: MutableRefObject<T | null>,
@@ -52,7 +53,7 @@ export type DOMRectKeys =
 export const useResizeObserver = <T extends HTMLDivElement>(
   properties: DOMRectKeys[],
   dependencies: React.DependencyList = [],
-  debounceMs = 0
+  throttleMs = 0
 ): {
   values: number[]
   elementRef: MutableRefObject<T | null>
@@ -82,11 +83,8 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     setValues(getValues())
   }, [getValues])
 
-  const { restart: restartDebounce, clear: clearDebounce } = useTimeout(
-    updateValues,
-    debounceMs > 0 ? debounceMs : null,
-    { autoStart: false }
-  )
+  const { throttledCallback: throttledUpdateValues, cancel: cancelThrottle } =
+    useThrottledCallback(updateValues, throttleMs > 0 ? throttleMs : 100)
 
   useEffect(() => {
     if (!elementRef.current) {
@@ -99,8 +97,8 @@ export const useResizeObserver = <T extends HTMLDivElement>(
 
     const observer = new ResizeObserver(() => {
       frameId = window.requestAnimationFrame(() => {
-        if (debounceMs > 0) {
-          restartDebounce()
+        if (throttleMs > 0) {
+          throttledUpdateValues()
         } else {
           setValues(getValues())
         }
@@ -114,14 +112,14 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       if (frameId) {
         cancelAnimationFrame(frameId)
       }
-      clearDebounce()
+      cancelThrottle()
     }
   }, [
     properties,
     getValues,
-    debounceMs,
-    restartDebounce,
-    clearDebounce,
+    throttleMs,
+    throttledUpdateValues,
+    cancelThrottle,
     ...dependencies,
   ])
 
