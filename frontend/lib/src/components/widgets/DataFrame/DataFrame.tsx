@@ -403,19 +403,20 @@ function DataFrame({
 
     const currentGetOriginalIndex = getOriginalIndexRef.current
 
-    // Build a Map from original index to display index for O(1) lookups.
-    // This converts the O(n²) nested loop into O(n) time complexity.
-    const originalToDisplayMap = new Map<number, number>()
-    for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
-      originalToDisplayMap.set(currentGetOriginalIndex(displayIdx), displayIdx)
-    }
-
-    // Find the new display indices for the original data rows
+    // Use a Set for O(1) lookup of target original indices.
+    // Time: O(n) single pass through display rows. Space: O(k) where k = selected rows.
+    // Currently k=1 (single-row-required mode), but this scales if multi-row is added.
+    const targetOriginalIndices = new Set(originalRowIndices)
     const newDisplayIndices: number[] = []
-    for (const origIdx of originalRowIndices) {
-      const displayIdx = originalToDisplayMap.get(origIdx)
-      if (displayIdx !== undefined) {
+
+    for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
+      const origIdx = currentGetOriginalIndex(displayIdx)
+      if (targetOriginalIndices.has(origIdx)) {
         newDisplayIndices.push(displayIdx)
+        // Early exit when all targets found
+        if (newDisplayIndices.length === targetOriginalIndices.size) {
+          break
+        }
       }
     }
 
