@@ -83,11 +83,12 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     setValues(getValues())
   }, [getValues])
 
-  // throttleMs || 1: hooks cannot be called conditionally; passing 1ms when
-  // throttleMs=0 keeps useThrottledCallback safe, but the throttled path is
-  // never reached because the `if (throttleMs > 0)` guard below prevents it.
+  // Hooks cannot be called conditionally, so we always call useThrottledCallback.
+  // When throttleMs=0, we pass 1ms as a placeholder delay since useTimeout
+  // requires a positive value. The throttled path is never reached in this case
+  // because the `if (throttleMs > 0)` guard below routes around it.
   const { throttledCallback: throttledUpdateValues, cancel: cancelThrottle } =
-    useThrottledCallback(updateValues, throttleMs || 1)
+    useThrottledCallback(updateValues, Math.max(throttleMs, 1))
 
   useEffect(() => {
     if (!elementRef.current) {
@@ -117,6 +118,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
       }
       cancelThrottle()
     }
+    /* eslint-disable react-hooks/exhaustive-deps -- dependencies spread is intentional */
   }, [
     properties,
     getValues,
@@ -125,6 +127,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     cancelThrottle,
     ...dependencies,
   ])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   return { values, elementRef }
 }

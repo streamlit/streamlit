@@ -51,6 +51,12 @@ import {
 const LARGE_DATASET_POINT_THRESHOLD = 1000
 
 /**
+ * Throttle delay (in ms) for chart resize updates. This reduces Vega chart
+ * recreation frequency during rapid resize operations (e.g., window resizing).
+ */
+const CHART_RESIZE_THROTTLE_MS = 100
+
+/**
  * Safely format a numeric string, returning the original value if formatting fails.
  */
 function safeFormatNumber(value: string, format: string): string {
@@ -258,7 +264,7 @@ function Metric({ element }: Readonly<MetricProps>): ReactElement {
   const theme = useEmotionTheme()
   const chartRef = useRef<HTMLDivElement>(null)
   const { width: chartWidth, elementRef: chartContainerRef } =
-    useCalculatedDimensions([], -1, 100)
+    useCalculatedDimensions([], -1, CHART_RESIZE_THROTTLE_MS)
 
   const { MetricDirection } = MetricProto
   const {

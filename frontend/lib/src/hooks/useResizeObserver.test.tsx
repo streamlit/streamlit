@@ -121,9 +121,9 @@ describe("useResizeObserver", () => {
     const properties: DOMRectKeys[] = ["width", "height"]
     renderHook(() => useResizeObserver(properties, [], 0))
 
-    // Verify useThrottledCallback was called with 1ms fallback (hooks can't be
-    // called conditionally, so we always call useThrottledCallback but pass 1
-    // when throttleMs is 0)
+    // Verify useThrottledCallback was called with 1ms fallback via Math.max
+    // (hooks can't be called conditionally, so we always call useThrottledCallback
+    // but pass Math.max(throttleMs, 1) = 1 when throttleMs is 0)
     expect(
       useThrottledCallbackModule.useThrottledCallback
     ).toHaveBeenCalledWith(expect.any(Function), 1)
