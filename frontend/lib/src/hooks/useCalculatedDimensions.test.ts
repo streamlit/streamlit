@@ -122,7 +122,7 @@ describe("useCalculatedDimensions", () => {
 
     renderHook(() => useCalculatedDimensions())
 
-    expect(spy).toHaveBeenCalledWith(["width", "height"], [], 0)
+    expect(spy).toHaveBeenCalledWith(["width", "height"], [], 100)
   })
 
   it("passes dependencies to useResizeObserver", () => {
@@ -136,7 +136,7 @@ describe("useCalculatedDimensions", () => {
 
     renderHook(() => useCalculatedDimensions(dependencies))
 
-    expect(spy).toHaveBeenCalledWith(["width", "height"], dependencies, 0)
+    expect(spy).toHaveBeenCalledWith(["width", "height"], dependencies, 100)
   })
 
   it("uses custom fallback value when provided", () => {

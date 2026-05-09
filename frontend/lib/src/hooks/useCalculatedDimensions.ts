@@ -32,10 +32,10 @@ import { useResizeObserver } from "./useResizeObserver"
  * that will cause the observer to be re-evaluated.
  * @param {number} [fallbackValue=-1] - The value to return when width or height is 0.
  * The default value is -1 which allows components to detect when dimensions aren't ready.
- * @param {number} [throttleMs=0] - Optional throttle delay in milliseconds.
- * When > 0, dimension updates are throttled to reduce the frequency of
- * state updates during rapid resize operations while still providing visual
- * feedback (e.g., 100ms for chart components).
+ * @param {number} [throttleMs=100] - Throttle delay in milliseconds.
+ * Dimension updates are throttled to reduce the frequency of state updates
+ * during rapid resize operations while still providing visual feedback.
+ * Pass 0 to disable throttling if immediate updates are required.
  *
  * @returns An object containing:
  *   - width: The current width of the observed element in pixels (or fallbackValue if width is 0)
@@ -66,17 +66,17 @@ import { useResizeObserver } from "./useResizeObserver"
  *
  * @example
  * ```tsx
- * // With throttling for expensive chart recreations
- * const MetricChart = () => {
- *   const { width, elementRef } = useCalculatedDimensions([], -1, 100);
- *   // Updates throttled to at most once per 100ms during resize
+ * // Disable throttling for immediate updates
+ * const ResponsiveComponent = () => {
+ *   const { width, elementRef } = useCalculatedDimensions([], -1, 0);
+ *   // Updates immediately on every resize event
  * };
  * ```
  */
 export const useCalculatedDimensions = <T extends HTMLDivElement>(
   dependencies: React.DependencyList = [],
   fallbackValue: number = -1,
-  throttleMs = 0
+  throttleMs = 100
 ): {
   width: number
   height: number
