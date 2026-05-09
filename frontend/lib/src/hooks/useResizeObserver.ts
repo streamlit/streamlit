@@ -84,7 +84,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
   }, [getValues])
 
   const { throttledCallback: throttledUpdateValues, cancel: cancelThrottle } =
-    useThrottledCallback(updateValues, throttleMs > 0 ? throttleMs : 100)
+    useThrottledCallback(updateValues, throttleMs || 1)
 
   useEffect(() => {
     if (!elementRef.current) {
