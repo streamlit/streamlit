@@ -24,6 +24,7 @@
   ],
   "scripts": {
     "build": "env NODE_OPTIONS=--max_old_space_size=8192 vite build",
+    "buildWatch": "env DEV_WATCH=1 NODE_OPTIONS=--max_old_space_size=8192 vite build --watch",
     "typecheck": "yarn run typecheck:all",
     "test": "vitest run",
     "testWatch": "vitest",
