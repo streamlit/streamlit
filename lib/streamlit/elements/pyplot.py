@@ -223,15 +223,31 @@ def marshall(
 
     image = io.BytesIO()
     fig.savefig(image, **kwargs)
+
+    # When the user requests an SVG render via savefig (e.g. format="svg"),
+    # the BytesIO contains XML text rather than a raster image. The image
+    # marshalling pipeline routes raster bytes through PIL, which cannot
+    # decode SVG and would raise UnidentifiedImageError (see #11489). Hand
+    # SVG output to marshall_images as a decoded string so it takes the
+    # existing string-SVG branch in image_to_url, which emits a
+    # `data:image/svg+xml` URL.
+    fig_format = str(kwargs.get("format", "")).lower()
+    if fig_format == "svg":
+        marshall_image: Any = image.getvalue().decode("utf-8")
+        output_format = "auto"
+    else:
+        marshall_image = image
+        output_format = "PNG"
+
     marshall_images(
         coordinates=coordinates,
-        image=image,
+        image=marshall_image,
         caption=None,
         layout_config=layout_config,
         proto_imgs=image_list_proto,
         clamp=False,
         channels="RGB",
-        output_format="PNG",
+        output_format=output_format,
     )
 
     # Clear the figure after rendering it. This means that subsequent

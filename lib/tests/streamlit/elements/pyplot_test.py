@@ -235,3 +235,38 @@ class PyplotTest(DeltaGeneratorTestCase):
 
         el = self.get_delta_from_queue().new_element
         assert getattr(el.width_config, expected_attribute)
+
+    def test_st_pyplot_svg_format(self):
+        """Regression test for #11489: ``st.pyplot(fig, format="svg")`` must
+        not crash with PIL.UnidentifiedImageError.
+
+        SVG output from ``Figure.savefig`` is XML text, not raster bytes, so
+        the marshalling pipeline has to route it through the string-SVG
+        branch in ``image_to_url`` and emit a ``data:image/svg+xml;base64``
+        URL instead of running it through PIL.
+        """
+        fig, ax = plt.subplots(figsize=(2, 2))
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, format="svg")
+
+        el = self.get_delta_from_queue().new_element
+        assert len(el.imgs.imgs) == 1
+        # Expected: an inline data URL, base64-encoded SVG. Before the fix
+        # this assertion was unreachable because st.pyplot raised
+        # PIL.UnidentifiedImageError before the proto could be enqueued.
+        assert el.imgs.imgs[0].url.startswith("data:image/svg+xml;base64,")
+
+    @parameterized.expand([("svg",), ("SVG",), ("Svg",)])
+    def test_st_pyplot_svg_format_case_insensitive(self, fmt: str):
+        """``format`` is matched case-insensitively to mirror Matplotlib's
+        own behavior — ``Figure.savefig(format="SVG")`` and ``"svg"`` are
+        equivalent. The fix must not regress that contract.
+        """
+        fig, ax = plt.subplots(figsize=(2, 2))
+        ax.plot([1, 2, 3], [1, 2, 3])
+
+        st.pyplot(fig, format=fmt)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.imgs[0].url.startswith("data:image/svg+xml;base64,")
