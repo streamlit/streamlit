@@ -52,6 +52,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: DEV_BUILD || DEV_WATCH,
+    reportCompressedSize: false,
     lib: {
       // Specify the entry point of your library
       entry: path.resolve(__dirname, "src/index.ts"),

@@ -194,6 +194,7 @@ export default defineConfig(({ command }) => ({
     assetsDir: "static",
     sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
+    reportCompressedSize: false,
     rolldownOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js

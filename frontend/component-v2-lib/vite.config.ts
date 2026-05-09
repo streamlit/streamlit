@@ -37,6 +37,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: DEV_BUILD || DEV_WATCH,
+    reportCompressedSize: false,
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "@streamlit/component-v2-lib",
