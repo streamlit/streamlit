@@ -83,6 +83,9 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     setValues(getValues())
   }, [getValues])
 
+  // throttleMs || 1: hooks cannot be called conditionally; passing 1ms when
+  // throttleMs=0 keeps useThrottledCallback safe, but the throttled path is
+  // never reached because the `if (throttleMs > 0)` guard below prevents it.
   const { throttledCallback: throttledUpdateValues, cancel: cancelThrottle } =
     useThrottledCallback(updateValues, throttleMs || 1)
 

@@ -17,6 +17,7 @@
 import { renderHook } from "@testing-library/react"
 
 import { DOMRectKeys, useResizeObserver } from "./useResizeObserver"
+import * as useThrottledCallbackModule from "./useThrottledCallback"
 
 const mockDisconnect = vi.fn()
 const mockObserve = vi.fn()
@@ -84,11 +85,47 @@ describe("useResizeObserver", () => {
     expect(mockObserve).toHaveBeenCalledWith(mockElement)
   })
 
-  it("accepts throttleMs parameter", () => {
-    const properties: DOMRectKeys[] = ["width", "height"]
-    const { result } = renderHook(() => useResizeObserver(properties, [], 100))
+  it("uses throttled callback when throttleMs > 0", () => {
+    const mockThrottledCallback = vi.fn()
+    const mockCancel = vi.fn()
 
-    expect(result.current.values).toEqual([])
-    expect(result.current.elementRef.current).toBeNull()
+    vi.spyOn(
+      useThrottledCallbackModule,
+      "useThrottledCallback"
+    ).mockReturnValue({
+      throttledCallback: mockThrottledCallback,
+      cancel: mockCancel,
+    })
+
+    const properties: DOMRectKeys[] = ["width", "height"]
+    renderHook(() => useResizeObserver(properties, [], 100))
+
+    // Verify useThrottledCallback was called with the throttle delay
+    expect(
+      useThrottledCallbackModule.useThrottledCallback
+    ).toHaveBeenCalledWith(expect.any(Function), 100)
+  })
+
+  it("passes 1ms fallback to useThrottledCallback when throttleMs is 0", () => {
+    const mockThrottledCallback = vi.fn()
+    const mockCancel = vi.fn()
+
+    vi.spyOn(
+      useThrottledCallbackModule,
+      "useThrottledCallback"
+    ).mockReturnValue({
+      throttledCallback: mockThrottledCallback,
+      cancel: mockCancel,
+    })
+
+    const properties: DOMRectKeys[] = ["width", "height"]
+    renderHook(() => useResizeObserver(properties, [], 0))
+
+    // Verify useThrottledCallback was called with 1ms fallback (hooks can't be
+    // called conditionally, so we always call useThrottledCallback but pass 1
+    // when throttleMs is 0)
+    expect(
+      useThrottledCallbackModule.useThrottledCallback
+    ).toHaveBeenCalledWith(expect.any(Function), 1)
   })
 })
