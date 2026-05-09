@@ -58,7 +58,9 @@ export default defineConfig({
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "@streamlit/lib", // Replace with your library's name
       fileName: format => `streamlit-lib.${format}.js`,
-      // For development, only build es format since that is what Streamlit uses
+      // For development, only build es format since that is what Streamlit uses.
+      // DEV_WATCH is intentionally workspace-only: consumers in the monorepo
+      // use the ESM entry (import/module), so missing CJS/UMD outputs are fine.
       formats: DEV_WATCH ? ["es"] : ["es", "umd", "cjs"],
     },
     rolldownOptions: {
