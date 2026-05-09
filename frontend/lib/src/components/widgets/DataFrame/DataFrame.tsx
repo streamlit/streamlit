@@ -47,11 +47,7 @@ import {
 import { Resizable } from "re-resizable"
 import { createPortal } from "react-dom"
 
-import {
-  Dataframe as DataframeProto,
-  IArrowData,
-  streamlit,
-} from "@streamlit/protobuf"
+import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
@@ -148,11 +144,17 @@ function DataFrame({
   // Use provided Quiver data or construct from proto's arrowData. The
   // elementHash serves as the primary memoization key to avoid unnecessary
   // re-parsing when the payload hasn't changed.
-  const data = useMemo(
-    () => dataProp ?? new Quiver(element.arrowData as IArrowData),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- elementHash is the primary cache key
-    [dataProp, elementHash, element.arrowData]
-  )
+  const data = useMemo(() => {
+    if (dataProp !== undefined) {
+      return dataProp
+    }
+    if (!element.arrowData) {
+      throw new Error("DataFrame element is missing arrowData")
+    }
+    return new Quiver(element.arrowData)
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataProp, elementHash, element.arrowData])
 
   const {
     expanded: isFullScreen,

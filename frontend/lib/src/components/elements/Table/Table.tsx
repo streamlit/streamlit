@@ -18,11 +18,7 @@ import { memo, ReactElement, useMemo } from "react"
 
 import { range } from "lodash-es"
 
-import {
-  IArrowData,
-  streamlit,
-  Table as TableProto,
-} from "@streamlit/protobuf"
+import { streamlit, Table as TableProto } from "@streamlit/protobuf"
 
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { format as formatArrowCell } from "~lib/dataframes/arrowFormatUtils"
@@ -87,11 +83,14 @@ export function Table(props: Readonly<TableProps>): ReactElement {
   // Construct Quiver from the proto's arrowData. The elementHash serves as the
   // primary memoization key to avoid unnecessary re-parsing when the payload
   // hasn't changed.
-  const table = useMemo(
-    () => new Quiver(element.arrowData as IArrowData),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- elementHash is the primary cache key
-    [elementHash, element.arrowData]
-  )
+  const table = useMemo(() => {
+    if (!element.arrowData) {
+      throw new Error("Table element is missing arrowData")
+    }
+    return new Quiver(element.arrowData)
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elementHash, element.arrowData])
 
   const { cssId, cssStyles, caption } = table.styler ?? {}
   const { numHeaderRows, numDataRows, numColumns, numIndexColumns } =

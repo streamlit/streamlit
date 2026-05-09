@@ -145,7 +145,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
       selectionMode: elementProto.selectionMode,
       formId: elementProto.formId,
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- elementHash is the primary cache key
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [elementHash, elementProto]
   )
   const [showData, setShowData] = useState(false)
