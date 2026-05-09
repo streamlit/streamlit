@@ -3519,7 +3519,6 @@ __metadata:
     vite-bundle-analyzer: "npm:^1.3.8"
     vite-plugin-svgr: "npm:^5.2.0"
     vite-plugin-terminal: "npm:^1.4.0"
-    vite-tsconfig-paths: "npm:^6.1.0"
     vitest: "npm:^4.1.5"
     vitest-canvas-mock: "npm:^1.1.4"
     vitest-websocket-mock: "npm:^0.5.0"
@@ -3534,7 +3533,6 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.9"
     vite-plugin-dts: "npm:^5.0.0"
-    vite-tsconfig-paths: "npm:^6.1.0"
     vitest: "npm:^4.1.5"
   languageName: unknown
   linkType: soft
@@ -3554,7 +3552,6 @@ __metadata:
     vite: "npm:^8.0.9"
     vite-plugin-dts: "npm:^5.0.0"
     vite-plugin-svgr: "npm:^5.2.0"
-    vite-tsconfig-paths: "npm:^6.1.0"
     vitest: "npm:^4.1.5"
     vitest-websocket-mock: "npm:^0.5.0"
   languageName: unknown
@@ -3682,7 +3679,6 @@ __metadata:
     vite: "npm:^8.0.9"
     vite-plugin-dts: "npm:^5.0.0"
     vite-plugin-svgr: "npm:^5.2.0"
-    vite-tsconfig-paths: "npm:^6.1.0"
     vitest: "npm:^4.1.5"
     vitest-canvas-mock: "npm:^1.1.4"
     vitest-fetch-mock: "npm:^0.4.5"
@@ -3718,7 +3714,6 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.9"
     vite-plugin-dts: "npm:^5.0.0"
-    vite-tsconfig-paths: "npm:^6.1.0"
     vitest: "npm:^4.1.5"
   languageName: unknown
   linkType: soft
@@ -10477,13 +10472,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"globrex@npm:^0.1.2":
-  version: 0.1.2
-  resolution: "globrex@npm:0.1.2"
-  checksum: 10c0/a54c029520cf58bda1d8884f72bd49b4cd74e977883268d931fd83bcbd1a9eb96d57c7dbd4ad80148fb9247467ebfb9b215630b2ed7563b2a8de02e1ff7f89d1
-  languageName: node
-  linkType: hard
-
 "glsl-inject-defines@npm:^1.0.1":
   version: 1.0.3
   resolution: "glsl-inject-defines@npm:1.0.3"
@@ -16973,7 +16961,6 @@ __metadata:
     typesync: "npm:^0.14.3"
     vite: "npm:^8.0.9"
     vite-plugin-dts: "npm:^5.0.0"
-    vite-tsconfig-paths: "npm:^6.1.0"
     vitest: "npm:^4.1.5"
   peerDependencies:
     react: ^18.2.0
@@ -17749,20 +17736,6 @@ __metadata:
   bin:
     tsc-alias: dist/bin/index.js
   checksum: 10c0/024301d25e48917da2b11bd92683fdf62c9c9603eb711937f0aa8e24df0d988290a4f5e94ac91b77601ea36335bf4ab5637944c47755df82a2a0cf95720d5c0f
-  languageName: node
-  linkType: hard
-
-"tsconfck@npm:^3.0.3":
-  version: 3.1.3
-  resolution: "tsconfck@npm:3.1.3"
-  peerDependencies:
-    typescript: ^5.0.0
-  peerDependenciesMeta:
-    typescript:
-      optional: true
-  bin:
-    tsconfck: bin/tsconfck.js
-  checksum: 10c0/64f7a8ed0a6d36b0902dfc0075e791d2242f7634644f124343ec0dec4f3f70092f929c5a9f59496d51883aa81bb1e595deb92a219593575d2e75b849064713d1
   languageName: node
   linkType: hard
 
@@ -19016,19 +18989,6 @@ __metadata:
   peerDependencies:
     vite: ^2.0.0||^3.0.0||^4.0.0||^5.0.0||^6.0.0||^7.0.0
   checksum: 10c0/e0c155f47e9305b945b1d7cf2691768c1f41eef45f61c7924632ae2e5f136e9c872891e36b2a720401ae667f8f6c9babae7b7d204acb1f3d58c3c16d2eff7f97
-  languageName: node
-  linkType: hard
-
-"vite-tsconfig-paths@npm:^6.1.0":
-  version: 6.1.1
-  resolution: "vite-tsconfig-paths@npm:6.1.1"
-  dependencies:
-    debug: "npm:^4.1.1"
-    globrex: "npm:^0.1.2"
-    tsconfck: "npm:^3.0.3"
-  peerDependencies:
-    vite: "*"
-  checksum: 10c0/5e61080991418fefa08c5b98995cdcada4931ae01ac97ef9e2ee941051f61b76890a6e7ba48bed3b2a229ec06fef33a06621bba4ce457b3f4233ad31dc0c1d1b
   languageName: node
   linkType: hard
 
