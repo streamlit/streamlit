@@ -193,6 +193,10 @@ does not match an active table request.
 
 ### Backend Render Flow
 
+Lazy loading integrates into the existing `st.dataframe` implementation in `lib/streamlit/elements/arrow.py`,
+not as a separate element. The existing parameter handling for `column_config`, `column_order`, `hide_index`,
+`use_container_width`, `height`, and display options should work unchanged for lazy sources.
+
 1. `st.dataframe` detects a lazy-capable source:
    - explicit `st.DataFrameSource`
    - supported unevaluated object adapter
@@ -221,7 +225,15 @@ Following the same pattern as `_handle_deferred_file_request()` in `app_session.
 
 Integrate lazy loading into the existing `DataFrame` component rather than creating a separate
 lazy dataframe component. This keeps all rendering, column configuration, selection, and toolbar
-logic unified. The `useDataLoader` hook should check for lazy metadata and branch accordingly:
+logic unified. All compatible existing features must continue to work for lazy sources:
+
+- **Column configuration**: `column_config` for custom renderers, type overrides, and formatting
+- **Column display**: `column_order` and `hide_index`
+- **Sizing**: `width`, `height`, `use_container_width`
+- **Row display**: `row_height` (custom row heights via proto)
+- **Toolbar**: Fullscreen toggle, column visibility (search and CSV download disabled for lazy)
+
+The `useDataLoader` hook should check for lazy metadata and branch accordingly:
 
 - **Eager path** (existing): Direct `data.getCell()` access on the complete Quiver
 - **Lazy path** (new): Chunk-based lookup with `LoadingCell` fallback for missing ranges
