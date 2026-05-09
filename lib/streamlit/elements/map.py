@@ -55,7 +55,9 @@ _DEFAULT_MAP: Final[dict[str, Any]] = dict(deck_gl_json_chart.EMPTY_MAP)
 # Other default parameters for st.map.
 _DEFAULT_LAT_COL_NAMES: Final = {"lat", "latitude", "LAT", "LATITUDE"}
 _DEFAULT_LON_COL_NAMES: Final = {"lon", "longitude", "LON", "LONGITUDE"}
-_DEFAULT_COLOR: Final = (200, 30, 0, 160)
+# Use Streamlit's default chart color (blue) with alpha for map markers
+# instead of hardcoded red. This makes maps consistent with other chart elements.
+_DEFAULT_COLOR: Final = (0, 104, 201, 160)  # #0068c9 with alpha=160
 _DEFAULT_SIZE: Final = 100
 _DEFAULT_ZOOM_LEVEL: Final = 12
 _ZOOM_LEVELS: Final = [
