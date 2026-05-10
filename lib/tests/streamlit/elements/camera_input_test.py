@@ -183,6 +183,25 @@ class CameraInputWidthTest(DeltaGeneratorTestCase):
             assert id1 == id2
 
 
+
+
+
+class CameraInputSizeTest(DeltaGeneratorTestCase):
+    def test_camera_input_size_sets_proto_fields(self):
+        """Test that size parameter sets camera_width and camera_height proto fields."""
+        st.camera_input("the label", size=(640, 480))
+
+        c = self.get_delta_from_queue().new_element.camera_input
+        assert c.camera_width == 640
+        assert c.camera_height == 480
+
+    def test_camera_input_size_none_leaves_fields_unset(self):
+        """Test that default None leaves camera_width and camera_height as 0."""
+        st.camera_input("the label")
+
+        c = self.get_delta_from_queue().new_element.camera_input
+        assert c.camera_width == 0
+        assert c.camera_height == 0
 class CameraInputSerdeTest(DeltaGeneratorTestCase):
     """Test CameraInputSerde serialization and deserialization."""
 
