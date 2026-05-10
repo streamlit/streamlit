@@ -63,7 +63,7 @@ def create_streamlit_static_handler(
 
     class _StreamlitStaticFiles(StaticFiles):
         def __init__(self, directory: str, base_url: str | None) -> None:
-            super().__init__(directory=directory, html=True)
+            super().__init__(directory=directory, html=True, follow_symlink=True)
             self._base_url = (base_url or "").strip("/")
             self._index_path = os.path.join(directory, "index.html")
 
