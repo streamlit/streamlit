@@ -45,6 +45,8 @@ import SwitchFacingModeButton, { FacingMode } from "./SwitchFacingModeButton"
 export interface Props {
   handleCapture: (capturedPhoto: string | null) => void
   width: number
+  cameraWidth: number
+  cameraHeight: number
   disabled: boolean
   clearPhotoInProgress: boolean
   setClearPhotoInProgress: (clearPhotoInProgress: boolean) => void
@@ -162,7 +164,8 @@ const WebcamComponent = ({
               setClearPhotoInProgress(false)
             }}
             videoConstraints={{
-              width: { ideal: debouncedWidth },
+              width: cameraWidth ? { exact: cameraWidth } : { ideal: debouncedWidth },
+              height: cameraHeight ? { exact: cameraHeight } : undefined,
               facingMode,
             }}
           />
