@@ -1770,13 +1770,14 @@ class VegaChartsMixin:
         It makes it easier to compare two datasets using simple chart types such as
         ``st.line_chart``, ``st.bar_chart`` and ``st.area_chart``.
 
-        The function currently supports two comparison modes:
+        The function currently supports four comparison modes:
 
         - ``side_by_side``: displays the two datasets in separate charts next to
         each other.
         - ``overlay``: combines the two datasets into a single chart and uses color
         to distinguish them.
         - ``difference``: calculates the difference between the two datasets
+        - ``ratio``: calculates the ratio between the two datasets
 
         Parameters
         ----------
@@ -1807,7 +1808,7 @@ class VegaChartsMixin:
 
             Defaults to ``"line"``.
 
-        mode : "side_by_side", "overlay", or "difference"
+        mode : "side_by_side", "overlay", "difference", or "ratio"
             The comparison mode to use.
 
             - ``"side_by_side"`` displays both datasets in separate charts next to
@@ -1816,6 +1817,8 @@ class VegaChartsMixin:
             are combined into one dataframe with an additional categorical column
             used to distinguish them visually.
             - ``"difference"`` displays the difference between the two datasets
+            in a single chart
+            - ``"ratio"`` displays the ratio between the two datasets
             in a single chart
 
             Defaults to ``"side_by_side"``.
@@ -1906,16 +1909,16 @@ class VegaChartsMixin:
         ...     mode="overlay",
         ... )
         """
-        if mode not in {"side_by_side", "overlay", "difference"}:
+        if mode not in {"side_by_side", "overlay", "difference", "ratio"}:
             raise StreamlitAPIException(
                 f"You have passed {mode} to `mode`. But only 'side_by_side', "
-                "'overlay', and 'difference' are supported."
+                "'overlay', 'difference' and 'ratio' are supported."
             )
 
         if chart_type not in {"line", "bar", "area"}:
             raise StreamlitAPIException(
                 f"You have passed {chart_type} to `chart_type`. But only 'line', "
-                "'bar', and 'area' are supported."
+                "'bar' and 'area' are supported."
             )
 
         if len(labels) != 2:
@@ -2105,7 +2108,7 @@ class VegaChartsMixin:
 
             return chart_method(**chart_args)
 
-        if mode == "difference":
+        if mode in {"difference", "ratio"}:
             compare_index_column = "Index"
 
             diff_before_df = before_df.copy()
@@ -2129,13 +2132,13 @@ class VegaChartsMixin:
             if diff_before_df[x_column].duplicated().any():
                 raise StreamlitAPIException(
                     f'Column "{x_column}" must not contain duplicate values in data_before '
-                    "for difference mode."
+                    f"for {mode} mode."
                 )
 
             if diff_after_df[x_column].duplicated().any():
                 raise StreamlitAPIException(
                     f'Column "{x_column}" must not contain duplicate values in data_after '
-                    "for difference mode."
+                    f"for {mode} mode."
                 )
 
             merged_df = diff_before_df[[x_column, *y_columns]].merge(
@@ -2149,20 +2152,30 @@ class VegaChartsMixin:
             if not (merged_df["_merge"] == "both").all():
                 raise StreamlitAPIException(
                     f'Column "{x_column}" must contain the same values in both datasets '
-                    "for difference mode."
+                    f"for {mode} mode."
                 )
 
-            difference_df = merged_df[[x_column]].copy()
+            result_df = merged_df[[x_column]].copy()
 
             for y_column in y_columns:
-                difference_df[y_column] = (
-                    merged_df[f"{y_column}_after"] - merged_df[f"{y_column}_before"]
-                )
+                if mode == "difference":
+                    result_df[y_column] = (
+                        merged_df[f"{y_column}_after"] - merged_df[f"{y_column}_before"]
+                    )
+                else:
+                    if (merged_df[f"{y_column}_before"] == 0).any():
+                        raise StreamlitAPIException(
+                            f'Column "{y_column}" contains zero values in data_before '
+                            "which are not allowed for ratio mode."
+                        )
+                    result_df[y_column] = (
+                        merged_df[f"{y_column}_after"] / merged_df[f"{y_column}_before"]
+                    )
 
             y_column = y_columns[0] if len(y_columns) == 1 else y_columns
 
             return chart_method(
-                difference_df,
+                result_df,
                 x=x_column,
                 y=y_column,
                 width=resolved_width,
@@ -2171,7 +2184,7 @@ class VegaChartsMixin:
 
         raise StreamlitAPIException(
             f"Invalid `mode`: {mode!r}. "
-            'Supported values are "side_by_side" and "overlay".'
+            'Supported values are "side_by_side", "overlay", "difference" and "ratio".'
         )
 
     # When on_select=Ignore, return DeltaGenerator.

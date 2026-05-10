@@ -1953,6 +1953,86 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
                 mode="difference",
             )
 
+    def test_compare_chart_ratio_calculates_after_divided_by_before(self):
+        """Test that ratio mode calculates data_after divided by data_before."""
+        before_df = pd.DataFrame({"name": ["A", "B", "C"], "value": [10, 20, 5]})
+        after_df = pd.DataFrame({"name": ["A", "B", "C"], "value": [20, 10, 10]})
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y="value",
+            chart_type="bar",
+            mode="ratio",
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        expected_df = pd.DataFrame({"name": ["A", "B", "C"], "value": [2.0, 0.5, 2.0]})
+
+        pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def test_compare_chart_ratio_with_multiple_y_columns(self):
+        """Test that ratio mode supports multiple y columns."""
+        before_df = pd.DataFrame(
+            {
+                "name": ["A", "B"],
+                "grade": [10, 20],
+                "value": [5, 8],
+            }
+        )
+        after_df = pd.DataFrame(
+            {
+                "name": ["A", "B"],
+                "grade": [20, 10],
+                "value": [10, 16],
+            }
+        )
+
+        st.compare_chart(
+            before_df,
+            after_df,
+            x="name",
+            y=["grade", "value"],
+            chart_type="bar",
+            mode="ratio",
+        )
+
+        proto = self.get_delta_from_queue().new_element.vega_lite_chart
+        output_df = convert_arrow_bytes_to_pandas_df(proto.datasets[0].data.data)
+
+        color_column = f"color{_PROTECTION_SUFFIX}"
+        value_column = f"value{_PROTECTION_SUFFIX}"
+
+        expected_df = pd.DataFrame(
+            {
+                "name": ["A", "B", "A", "B"],
+                color_column: ["grade", "grade", "value", "value"],
+                value_column: [2.0, 0.5, 2.0, 2.0],
+            }
+        )
+
+        pd.testing.assert_frame_equal(output_df, expected_df)
+
+    def test_compare_chart_ratio_raises_when_data_before_has_zero(self):
+        """Test that ratio mode raises when data_before contains zero values."""
+        before_df = pd.DataFrame({"name": ["A", "B"], "value": [0, 20]})
+        after_df = pd.DataFrame({"name": ["A", "B"], "value": [15, 25]})
+
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"contains zero values in data_before.*ratio mode",
+        ):
+            st.compare_chart(
+                before_df,
+                after_df,
+                x="name",
+                y="value",
+                mode="ratio",
+            )
+
     @parameterized.expand(ST_CHART_ARGS)
     def test_empty_chart(self, chart_command: Callable, altair_type: str):
         """Test arrow chart with no arguments."""
