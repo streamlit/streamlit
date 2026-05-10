@@ -89,6 +89,8 @@ const AskForCameraPermission = ({
 const WebcamComponent = ({
   handleCapture,
   width,
+  cameraWidth,
+  cameraHeight,
   disabled,
   clearPhotoInProgress,
   setClearPhotoInProgress,
@@ -164,8 +166,8 @@ const WebcamComponent = ({
               setClearPhotoInProgress(false)
             }}
             videoConstraints={{
-              width: cameraWidth ? { exact: cameraWidth } : { ideal: debouncedWidth },
-              height: cameraHeight ? { exact: cameraHeight } : undefined,
+              width: cameraWidth ? { ideal: cameraWidth } : { ideal: debouncedWidth },
+              height: cameraHeight ? { ideal: cameraHeight } : undefined,
               facingMode,
             }}
           />
