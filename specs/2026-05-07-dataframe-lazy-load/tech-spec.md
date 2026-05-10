@@ -10,9 +10,12 @@ created: 2026-05-07
 Implement lazy row loading for read-only `st.dataframe` by registering a session-scoped data
 source on the backend and allowing the frontend to request Arrow row chunks without triggering
 a script rerun. The first version supports known-size sources, server-side sorting, and
-auto-lazy delivery for compatible large in-memory pandas/Polars dataframes. The frontend should
-keep a row-range cache and continue using Glide's synchronous `getCellContent` path by returning
-loading/error cells for ranges that are not yet available.
+the tri-state `lazy: bool | None = None` API. `lazy=True` uses native lazy adapters when
+available and otherwise falls back to an in-memory pandas source for supported eager inputs;
+`lazy=None` auto-selects lazy mode for supported unevaluated inputs and large compatible
+in-memory dataframes. The frontend should keep a row-range cache and continue using Glide's
+synchronous `getCellContent` path by returning loading/error cells for ranges that are not yet
+available.
 
 ## Current Architecture Constraints
 
@@ -51,8 +54,10 @@ This spec should not copy these prototype details:
 
 ### Backend Data Source Protocol
 
-Use a small internal protocol. Public `st.DataFrameSource` and built-in adapters should
-normalize to this shape.
+Use a small internal protocol. Built-in adapters, auto-lazy in-memory sources, and the
+`lazy=True` pandas fallback normalize to this shape. Do not expose a public
+`st.DataFrameSource` API in the first implementation; a custom-source wrapper can be added later
+after the protocol has proven stable.
 
 ```python
 class DataframeSourceProtocol(Protocol):
@@ -83,11 +88,40 @@ class DataframeSourceProtocol(Protocol):
 
 Phase 1 requires a known `row_count`. Unknown-size sequential sources with `row_count=None` can
 extend this protocol in a later phase with an explicit `access_mode` and end-of-stream contract.
+That later phase can auto-wrap Python generator/iterator inputs that yield dataframe-compatible
+chunks such as `pandas.DataFrame`, `pyarrow.Table`, `pyarrow.RecordBatch`, or other supported
+dataframe objects.
 
-Sorting is part of Phase 1. Search/filter support can extend this protocol later with explicit
-capability declarations and keyword-only request parameters. Filtering is not part of current
-`st.dataframe` behavior, so the first version should reserve the extension point but not
-implement filtering UI or inspect callback signatures to infer capabilities.
+Sorting is part of Phase 1 via the boolean `sortable` source capability. Search/filter support
+can extend this protocol later with explicit capability declarations and keyword-only request
+parameters. Filtering is not part of current `st.dataframe` behavior, so the first version should
+reserve the extension point but not implement filtering UI or infer capabilities from callback
+signatures.
+
+### Lazy Mode Resolution
+
+`st.dataframe` should resolve delivery mode before Arrow serialization:
+
+1. Validate public arguments that are independent of lazy mode.
+2. If `lazy is False`, use the existing eager path for in-memory inputs and the existing
+   capped-preview fallback for unevaluated objects.
+3. If the input/options are incompatible with lazy mode:
+   - `lazy=True`: raise `StreamlitAPIException` with the incompatible option.
+   - `lazy=None`: use eager rendering or the existing capped-preview fallback.
+4. If a native lazy adapter exists and can provide a known row count, schema, and stable row-range
+   access, use it when `lazy=True` or when `lazy=None` auto-selects lazy mode.
+5. If `lazy=True` and the input is a supported eager data format, convert it once to an
+   in-memory pandas dataframe and serve row slices from that object. This reduces the initial
+   browser payload but not server memory usage or conversion cost.
+6. If `lazy=None` and the input is an in-memory pandas or Polars dataframe above the existing
+   large-table threshold (`150000` rows), use an in-memory source.
+7. Otherwise use the existing eager path.
+
+For remote unevaluated inputs, `lazy=True` must not silently materialize the full dataset just to
+use the pandas fallback. It should use a native adapter or raise a clear error.
+
+The forced-lazy small-data threshold is 1,000 rows. Inputs with 1,000 rows or fewer may stay on
+the eager path even when `lazy=True` because the payload is bounded and eager rendering is simpler.
 
 ### Session Source Manager
 
@@ -110,11 +144,10 @@ Responsibilities:
 - Return a unique `source_id` that cannot be used across sessions.
 - Load row ranges in a worker thread via `asyncio.to_thread()` so slow data queries do not
   block the event loop (same as deferred downloads).
-  User `data` callables run in this worker thread; they do not have access to
-  `ScriptRunContext` and must not call Streamlit APIs (e.g., `st.session_state`). Users
-  who need shared state should pass it explicitly via closure or use thread-safe patterns.
-  This means callables must create per-call database connections or use thread-safe
-  connection pools.
+  Source loaders run in this worker thread; they do not have access to `ScriptRunContext` and
+  must not call Streamlit APIs (e.g., `st.session_state`). If Streamlit later exposes custom
+  user callbacks, those callbacks must pass shared state explicitly via closure or use
+  thread-safe patterns, including per-call database connections or thread-safe connection pools.
 - Limit concurrent in-flight chunk requests per source (e.g., max 3 concurrent requests) to
   prevent a rapidly scrolling user from queuing unbounded simultaneous queries.
 - Convert loaded chunks to Arrow bytes.
@@ -214,6 +247,13 @@ message DataframeChunkResponse {
 sources should return `end_of_stream=false` for successful chunks and rely on `row_count` for
 scroll bounds.
 
+For future generator-backed sequential sources, the source manager should consume yielded chunks
+in order, serialize each yielded dataframe-compatible object to Arrow, and send
+`end_of_stream=true` when the generator is exhausted. These sources should use loaded-size scroll
+behavior, disable sorting/search/random jumps by default, and infer schema from the first yielded
+chunk when possible. Generators that may be empty need an explicit schema through the future
+sequential-source contract.
+
 **Future `end_of_stream` semantics:**
 - For sequential sources, `end_of_stream=true` signals the source is exhausted. The frontend
   MUST treat this as terminal and stop requesting further chunks.
@@ -242,14 +282,15 @@ Lazy loading integrates into the existing `st.dataframe` implementation in `lib/
 not as a separate element. The existing parameter handling for `column_config`, `column_order`, `hide_index`,
 `use_container_width`, `height`, and display options should work unchanged for lazy sources.
 
-1. `st.dataframe` detects a lazy-capable source:
-   - explicit `st.DataFrameSource`
-   - supported unevaluated object adapter (Phase 2+)
-   - compatible in-memory pandas/Polars dataframe above the large-table threshold
+1. `st.dataframe` resolves `lazy` mode:
+   - `lazy=False`: eager/capped-preview path.
+   - `lazy=None`: auto-select lazy mode only when compatible.
+   - `lazy=True`: require lazy mode, with native adapter or safe in-memory pandas fallback.
 2. Validate unsupported combinations such as `on_select`, `pandas.Styler`, and `data_editor`.
-3. Register the source in the session source manager.
-4. Fetch an initial chunk if cheap and safe.
-5. Enqueue `Dataframe` with normal display configuration plus `lazy_data`.
+3. Normalize the selected lazy input to `DataframeSourceProtocol`.
+4. Register the source in the session source manager.
+5. Fetch an initial chunk if cheap and safe.
+6. Enqueue `Dataframe` with normal display configuration plus `lazy_data`.
 
 ### Chunk Request Flow
 
@@ -259,8 +300,8 @@ Following the same pattern as `_handle_deferred_file_request()` in `app_session.
 2. `AppSession.handle_backmsg()` routes to `_handle_dataframe_chunk_request()` without
    triggering a script rerun.
 3. The handler validates session/source/generation.
-4. The source's `data` callable is executed via `asyncio.to_thread()` to avoid blocking
-   the event loop. The worker thread does NOT have `ScriptRunContext`; user callbacks
+4. The source's `load_rows` implementation is executed via `asyncio.to_thread()` to avoid
+   blocking the event loop. The worker thread does NOT have `ScriptRunContext`; source loaders
    cannot call Streamlit APIs.
 5. The chunk is serialized as Arrow and sent back as `DataframeChunkResponse` ForwardMsg.
 6. The frontend inserts the chunk into its cache and triggers a render.
@@ -318,8 +359,9 @@ sources, sorting must be a separate server-side mode:
 - Built-in in-memory dataframe sources sort before slicing. Pandas sources should use a stable
   sort (for example `kind="mergesort"`), and Polars sources should apply `.sort(...)` before
   `.slice(...)`.
-- Callback sources receive the sort state and are responsible for returning rows in that order.
-  If a backend cannot safely sort every exposed column, the app should set `sortable=False`.
+- Native adapters and future custom sources receive the sort state and are responsible for
+  returning rows in that order. If a backend cannot safely sort every exposed column, the source
+  should set `sortable=False`.
 
 ### Frontend Cache and Rendering
 
@@ -457,23 +499,29 @@ intact and still reuses `Quiver.getCell()` for every loaded chunk.
 
 Phase 1 adapters:
 
-- Callback source: `st.DataFrameSource(loader, row_count=..., schema=...)`
-- In-memory pandas DataFrame: apply server-side sort state with stable `sort_values(...)` when
-  active, then slice with `.iloc[offset : offset + limit]`
+- In-memory pandas fallback for `lazy=True`: convert supported eager inputs to pandas once,
+  derive `row_count` and schema, apply server-side sort state with stable `sort_values(...)` when
+  active, then slice with `.iloc[offset : offset + limit]`.
+- In-memory pandas DataFrame: same source implementation as the fallback, without an extra
+  conversion step.
 - In-memory Polars DataFrame: apply `.sort(...)` when sort state is active, then slice with
-  `.slice(offset, limit)`
+  `.slice(offset, limit)`.
 - Auto-lazy in-memory pandas/Polars dataframes above the existing frontend large-table
   threshold (`150000` rows) when lazy mode is compatible.
+- Native unevaluated adapters that are implementation-ready and can provide known row count,
+  schema, stable range access, and safe sorting semantics.
 
 Phase 2 adapters:
 
-- Polars LazyFrame: use `.slice(offset, limit).collect()`
-- Snowpark DataFrame/Table: generate bounded queries and use native count
+- Polars LazyFrame: use `.slice(offset, limit).collect()` if not completed in Phase 1.
+- Snowpark DataFrame/Table: generate bounded queries and use native count if not completed in
+  Phase 1.
 
 DuckDB and other adapters can be added in Phase 3+ based on user demand.
 
 Keep using `dataframe_util.is_unevaluated_data_object` as the central detection point. If an
-object is detected but no lazy adapter is ready, keep the current capped-preview fallback.
+object is detected but no lazy adapter is ready, keep the current capped-preview fallback for
+`lazy=None` and `lazy=False`; for `lazy=True`, raise a clear `StreamlitAPIException`.
 
 ### Snowflake Loading Strategy
 
@@ -487,9 +535,10 @@ Every Snowflake-backed lazy dataframe needs a stable row order. Snowflake suppor
 non-deterministic without an `ORDER BY`. Chunked rendering without stable ordering can show
 duplicates, omit rows, or reorder already-loaded chunks across requests.
 
-For custom loaders, the app author should own the `ORDER BY` clause. For automatic Snowpark
-adapters, Streamlit should only claim random-access semantics when it can preserve or require a
-deterministic order. A later API may need an explicit `order_by` option for Snowflake sources.
+For a future custom-source API, the app author should own the `ORDER BY` clause. For automatic
+Snowpark adapters, Streamlit should only claim random-access semantics when it can preserve or
+require a deterministic order. A later API may need an explicit `order_by` option for Snowflake
+sources.
 
 #### Mode 1: Direct `LIMIT/OFFSET`
 
@@ -657,17 +706,18 @@ The follow-up should add:
 
 ## Unsupported Combinations in MVP
 
-- `on_select != "ignore"`: for explicit `st.DataFrameSource`, raise `StreamlitAPIException`;
-  for implicit auto-lazy sources, fall back to eager rendering to maintain backward compatibility
-- `pandas.Styler`: keep existing eager `st.dataframe(styler)` behavior and reject explicit
-  lazy wrapping
+- `on_select != "ignore"`: for `lazy=True`, raise `StreamlitAPIException`; for `lazy=None`,
+  fall back to eager rendering to maintain backward compatibility; for `lazy=False`, use the
+  existing eager behavior.
+- `pandas.Styler`: keep existing eager `st.dataframe(styler)` behavior for `lazy=None` and
+  `lazy=False`; raise `StreamlitAPIException` for `lazy=True`.
 - `st.data_editor`: out of scope
 - Client-side search: disabled for lazy dataframes. Searching only loaded chunks would be
   incorrect. Server-side search is deferred to a follow-up phase.
 - CSV download/export: hidden for lazy dataframes in MVP. Server-side export can be added later.
 - Filtering: out of scope until `st.dataframe` has a filtering UI/API.
 
-Note: Server-side sorting IS supported in MVP via the `sortable` parameter.
+Note: Server-side sorting IS supported in MVP via the internal `sortable` source capability.
 
 ## Security and Isolation
 
@@ -717,8 +767,8 @@ annotations. Explicit capabilities are easier to validate and document.
 
 ## Testing
 
-- Python unit tests for `DataFrameSource` validation, adapter slicing, source manager cleanup, and
-  stale source rejection.
+- Python unit tests for `lazy` mode resolution, internal source validation, adapter slicing,
+  pandas fallback behavior, source manager cleanup, and stale source rejection.
 - Proto tests through generated types after `make protobuf`.
 - Frontend unit tests for cache range merging, stale response handling, loading cells, error
   cells, retry, and server-side sort state transitions that do not call the client-side sorter.
