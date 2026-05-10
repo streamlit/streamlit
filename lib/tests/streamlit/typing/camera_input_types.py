@@ -62,6 +62,17 @@ if TYPE_CHECKING:
     assert_type(camera_input("Take a picture", width="stretch"), UploadedFile | None)
     assert_type(camera_input("Take a picture", width=300), UploadedFile | None)
 
+
+
+    # Camera input with size parameter
+    assert_type(
+        camera_input("Take a picture", size=(640, 480)), UploadedFile | None
+    )
+    assert_type(
+        camera_input("Take a picture", size=(1920, 1080)), UploadedFile | None
+    )
+    assert_type(camera_input("Take a picture", size=None), UploadedFile | None)
+
     # Camera input with on_change callback
     def my_callback() -> None:
         pass
