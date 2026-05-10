@@ -146,7 +146,7 @@ cp <file> agent-wiki/references/YYYY-MM-DD-<description>.md
 
 Example: `2024-03-15-widget-state-deep-dive.md`
 
-Use the same commit/push workflow as PR artifacts (step 5), adding `references/` instead of `pull-requests/`.
+Use the same commit/push workflow as PR artifacts (step 5), substituting `references/` for `pull-requests/` in both the `git add` command and the commit message (e.g., `"Add reference: YYYY-MM-DD-<description>"`).
 
 Public URL: `https://issues.streamlit.app/agent_wiki_explorer?file=references/YYYY-MM-DD-<description>.md`
 
@@ -155,4 +155,4 @@ Public URL: `https://issues.streamlit.app/agent_wiki_explorer?file=references/YY
 - The `agent-wiki/` directory is gitignored and persists across sessions
 - Always push to `master` — never create feature branches or use `--force`
 - This is a **public repo** — never push sensitive information
-- Only upload files directly relevant to the current PR
+- Only upload files directly relevant to the current PR or general reference materials
