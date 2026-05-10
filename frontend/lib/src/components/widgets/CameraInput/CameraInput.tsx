@@ -657,6 +657,8 @@ const CameraInput = ({
         <WebcamComponent
           handleCapture={handleCapture}
           width={width}
+          cameraWidth={element.cameraWidth}
+          cameraHeight={element.cameraHeight}
           disabled={disabled}
           clearPhotoInProgress={clearPhotoInProgress}
           setClearPhotoInProgress={setClearPhotoInProgress}
