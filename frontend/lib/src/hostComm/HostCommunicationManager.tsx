@@ -178,7 +178,15 @@ export default class HostCommunicationManager {
    * Register a function to deliver a message to the Host
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
-    window.parent.postMessage(this.buildVersionedMessage(message), "*")
+    const embedParentOrigin =
+      (window as any).__snowsight?.STREAMLIT_EMBED_MODE === true
+        ? (window as any).__snowsight?.STREAMLIT_PREAMBLE_PARENT_ORIGIN
+        : null
+    const targetOrigin =
+      typeof embedParentOrigin === "string" && embedParentOrigin.length > 0
+        ? embedParentOrigin
+        : "*"
+    window.parent.postMessage(this.buildVersionedMessage(message), targetOrigin)
   }
 
   private buildVersionedMessage(

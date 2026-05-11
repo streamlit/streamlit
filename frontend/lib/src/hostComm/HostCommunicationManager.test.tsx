@@ -929,3 +929,154 @@ describe("HostCommunicationManager external auth token handling", () => {
     )
   })
 })
+
+describe("HostCommunicationManager targetOrigin narrowing", () => {
+  let hostCommunicationMgr: HostCommunicationManager
+  let postMessageSpy: MockInstance
+  const originalParent = window.parent
+  const originalSnowsight = (window as any).__snowsight
+
+  beforeEach(() => {
+    hostCommunicationMgr = new HostCommunicationManager({
+      streamlitExecutionStartedAt: 100,
+      themeChanged: vi.fn(),
+      sendRerunBackMsg: vi.fn(),
+      pageChanged: vi.fn(),
+      closeModal: vi.fn(),
+      stopScript: vi.fn(),
+      rerunScript: vi.fn(),
+      clearCache: vi.fn(),
+      sendAppHeartbeat: vi.fn(),
+      setInputsDisabled: vi.fn(),
+      isOwnerChanged: vi.fn(),
+      fileUploadClientConfigChanged: vi.fn(),
+      hostMenuItemsChanged: vi.fn(),
+      hostToolbarItemsChanged: vi.fn(),
+      hostHideSidebarNavChanged: vi.fn(),
+      sidebarChevronDownshiftChanged: vi.fn(),
+      pageLinkBaseUrlChanged: vi.fn(),
+      queryParamsChanged: vi.fn(),
+      deployedAppMetadataChanged: vi.fn(),
+      restartWebsocketConnection: vi.fn(),
+      terminateWebsocketConnection: vi.fn(),
+    })
+    mockEventListeners()
+
+    const fakeParent = { postMessage: vi.fn() } as unknown as Window
+    Object.defineProperty(window, "parent", {
+      value: fakeParent,
+      configurable: true,
+    })
+    postMessageSpy = vi.spyOn(fakeParent, "postMessage")
+  })
+
+  afterEach(() => {
+    postMessageSpy.mockRestore()
+    Object.defineProperty(window, "parent", {
+      value: originalParent,
+      configurable: true,
+    })
+    ;(window as any).__snowsight = originalSnowsight
+  })
+
+  it("narrows targetOrigin to parent origin when embed mode is enabled", () => {
+    ;(window as any).__snowsight = {
+      STREAMLIT_EMBED_MODE: true,
+      STREAMLIT_PREAMBLE_PARENT_ORIGIN: "https://analytics.example.com",
+    }
+
+    hostCommunicationMgr.sendMessageToHost({
+      type: "GUEST_READY",
+      streamlitExecutionStartedAt: 100,
+      guestReadyAt: Date.now(),
+    })
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stCommVersion: HOST_COMM_VERSION,
+        type: "GUEST_READY",
+      }),
+      "https://analytics.example.com"
+    )
+  })
+
+  it("falls back to wildcard when embed mode is disabled", () => {
+    ;(window as any).__snowsight = {
+      STREAMLIT_EMBED_MODE: false,
+      STREAMLIT_PREAMBLE_PARENT_ORIGIN: "https://analytics.example.com",
+    }
+
+    hostCommunicationMgr.sendMessageToHost({
+      type: "GUEST_READY",
+      streamlitExecutionStartedAt: 100,
+      guestReadyAt: Date.now(),
+    })
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stCommVersion: HOST_COMM_VERSION,
+        type: "GUEST_READY",
+      }),
+      "*"
+    )
+  })
+
+  it("falls back to wildcard when __snowsight is missing", () => {
+    ;(window as any).__snowsight = undefined
+
+    hostCommunicationMgr.sendMessageToHost({
+      type: "GUEST_READY",
+      streamlitExecutionStartedAt: 100,
+      guestReadyAt: Date.now(),
+    })
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stCommVersion: HOST_COMM_VERSION,
+        type: "GUEST_READY",
+      }),
+      "*"
+    )
+  })
+
+  it("falls back to wildcard when embed mode is true but parent origin is empty", () => {
+    ;(window as any).__snowsight = {
+      STREAMLIT_EMBED_MODE: true,
+      STREAMLIT_PREAMBLE_PARENT_ORIGIN: "",
+    }
+
+    hostCommunicationMgr.sendMessageToHost({
+      type: "GUEST_READY",
+      streamlitExecutionStartedAt: 100,
+      guestReadyAt: Date.now(),
+    })
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stCommVersion: HOST_COMM_VERSION,
+        type: "GUEST_READY",
+      }),
+      "*"
+    )
+  })
+
+  it("falls back to wildcard when embed mode is true but parent origin is missing", () => {
+    ;(window as any).__snowsight = {
+      STREAMLIT_EMBED_MODE: true,
+    }
+
+    hostCommunicationMgr.sendMessageToHost({
+      type: "GUEST_READY",
+      streamlitExecutionStartedAt: 100,
+      guestReadyAt: Date.now(),
+    })
+
+    expect(postMessageSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        stCommVersion: HOST_COMM_VERSION,
+        type: "GUEST_READY",
+      }),
+      "*"
+    )
+  })
+})
