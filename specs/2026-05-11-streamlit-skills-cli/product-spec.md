@@ -62,6 +62,53 @@ streamlit skills --global --yes
 `--yes` skips prompts and confirms project installation. `--global` should not be
 enabled until `finding-streamlit-skills` is bundled.
 
+### Alternatives Considered
+
+**Symlink vs copy installation**
+
+| Option                    | Pros                                          | Cons                                         |
+|---------------------------|-----------------------------------------------|----------------------------------------------|
+| **Symlinks** (preferred)  | Auto-updates when Streamlit upgrades; no duplication | Not supported on all platforms (some Windows configs) |
+| **Copy**                  | Works everywhere                              | Drifts from installed Streamlit; needs re-run after upgrades |
+| **Hybrid** (chosen)       | Best of both: symlink by default, copy fallback | Slightly more complex implementation         |
+
+Decision: Use symlinks by default with copy fallback. This keeps skills in sync for
+most users while supporting platforms where symlinks fail.
+
+**Project root detection**
+
+| Option                                     | Pros                                    | Cons                                              |
+|--------------------------------------------|-----------------------------------------|---------------------------------------------------|
+| **Always current directory**               | Predictable                             | Wrong for monorepos or nested project structures  |
+| **Git root only**                          | Clean, well-defined                     | Fails for non-git projects                        |
+| **Heuristic** (chosen): existing dir > git root > cwd | Respects existing setup; finds repo root | Slightly magic; may surprise in edge cases        |
+
+Decision: Use heuristic approach. Check for existing `.agents/` or `.claude/`
+directories first, then fall back to git root, then current directory. This matches
+user intent in the common case.
+
+**Target directories**
+
+| Option                                               | Pros                                     | Cons                                           |
+|------------------------------------------------------|------------------------------------------|------------------------------------------------|
+| **Generic `.agents/skills/` only**                   | Simple, agent-agnostic                   | Claude Code users must configure discovery     |
+| **Claude Code only (`.claude/skills/`)**             | Works out of the box for Claude          | Excludes other agents                          |
+| **Both** (chosen): `.agents/skills/` + `.claude/skills/` when Claude detected | Works for Claude and other agents | Two directories to manage                      |
+
+Decision: Always install to `.agents/skills/` (generic) and also to `.claude/skills/`
+when `~/.claude` exists. This gives Claude users immediate access while keeping the
+generic location for other agents.
+
+**Command naming**
+
+| Option               | Pros                                    | Cons                                        |
+|----------------------|-----------------------------------------|---------------------------------------------|
+| `streamlit skills`   | Clear, matches library-skills naming    | New subcommand namespace                    |
+| `streamlit install-skills` | Action-oriented                    | Verbose; "install" may imply pip            |
+| `streamlit agents`   | Groups future agent commands            | Less specific to skills                     |
+
+Decision: Use `streamlit skills` for clarity and alignment with library-skills.
+
 ### Interactive Flow
 
 **Step 1: Choose install mode**
@@ -184,11 +231,11 @@ user's home directory. This mode requires Claude Code (`~/.claude` must exist).
 
 ## Checklist
 
-| Item                      | Status |
-|---------------------------|--------|
-| Works on SiS, Cloud, etc? | Yes - CLI-only, no runtime impact |
-| No breaking API changes   | Yes - new command only |
-| No new dependencies       | Yes - Click already exists, otherwise stdlib |
-| Metrics collected         | Existing runtime metrics already detect installed skills; no new CLI telemetry proposed |
-| Security/legal impact     | Low - local filesystem writes only; must avoid overwriting user-managed files |
-| Docs changes needed       | Yes - CLI reference plus a short setup note for bundled agent skills |
+| Item                       | ✅ or comment                                                                            |
+|----------------------------|------------------------------------------------------------------------------------------|
+| Works on SiS, Cloud, etc?  | Yes - CLI-only, no runtime impact                                                        |
+| No breaking API changes    | Yes - new command only                                                                   |
+| No new dependencies        | Yes - Click already exists, otherwise stdlib                                             |
+| Metrics collected          | Existing runtime metrics already detect installed skills; no new CLI telemetry proposed  |
+| Any security/legal impact? | Low - local filesystem writes only; must avoid overwriting user-managed files            |
+| Any docs changes needed?   | Yes - CLI reference plus a short setup note for bundled agent skills                     |
