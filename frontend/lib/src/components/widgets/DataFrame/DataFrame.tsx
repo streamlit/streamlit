@@ -403,9 +403,7 @@ function DataFrame({
 
     const currentGetOriginalIndex = getOriginalIndexRef.current
 
-    // Use a Set for O(1) lookup of target original indices.
-    // Time: O(n) single pass through display rows. Space: O(k) where k = selected rows.
-    // Currently k=1 (single-row-required mode), but this scales if multi-row is added.
+    // Build a Set for O(1) lookup instead of O(n²) nested loops
     const targetOriginalIndices = new Set(originalRowIndices)
     const newDisplayIndices: number[] = []
 
