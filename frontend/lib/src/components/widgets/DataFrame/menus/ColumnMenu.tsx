@@ -195,7 +195,7 @@ function ColumnMenu({
                 isActive={statsMenuOpen}
                 hasSubmenu={true}
                 role="menuitem"
-                aria-haspopup="menu"
+                aria-haspopup="dialog"
                 aria-expanded={statsMenuOpen}
                 tabIndex={0}
               >
@@ -222,9 +222,14 @@ function ColumnMenu({
               <StyledMenuListItem
                 onMouseEnter={() => setFormatMenuOpen(true)}
                 onMouseLeave={() => setFormatMenuOpen(false)}
+                onFocus={() => setFormatMenuOpen(true)}
+                onBlur={() => setFormatMenuOpen(false)}
                 isActive={formatMenuOpen}
                 hasSubmenu={true}
                 role="menuitem"
+                aria-haspopup="menu"
+                aria-expanded={formatMenuOpen}
+                tabIndex={0}
               >
                 <div>
                   <DynamicIcon

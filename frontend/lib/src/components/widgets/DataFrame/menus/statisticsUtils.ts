@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
+import { getLogger } from "loglevel"
+
 import {
   toSafeBoolean,
   toSafeDate,
 } from "~lib/components/widgets/DataFrame/columns/utils"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { isNullOrUndefined, notNullOrUndefined } from "~lib/util/utils"
+
+const LOG = getLogger("DataFrameStatistics")
 
 /** Threshold for sampling large datasets. */
 const SAMPLE_THRESHOLD = 100_000
@@ -219,9 +223,10 @@ function extractColumnValues(
     }
 
     return { values, isSampled: shouldSample }
-  } catch {
+  } catch (error) {
     // If cell extraction fails (malformed Arrow buffer, unexpected type, etc.),
-    // return null to signal graceful degradation to the "No data" state.
+    // log the error and return null to signal graceful degradation to the "No data" state.
+    LOG.warn("Failed to extract column values for statistics", error)
     return null
   }
 }

@@ -888,13 +888,16 @@ def test_statistics_menu_for_numeric_column(
     column_menu = themed_app.get_by_test_id("stDataFrameColumnMenu")
     expect(column_menu).to_be_visible()
 
+    # Verify statistics submenu is NOT visible before hovering (lazy-open behavior)
+    statistics_menu = themed_app.get_by_test_id("stDataFrameStatisticsMenu")
+    expect(statistics_menu).not_to_be_visible()
+
     # Hover over the Statistics menu item to open the submenu
     statistics_item = column_menu.get_by_text("Statistics")
     expect(statistics_item).to_be_visible()
     statistics_item.hover()
 
     # Wait for the statistics submenu to appear
-    statistics_menu = themed_app.get_by_test_id("stDataFrameStatisticsMenu")
     expect(statistics_menu).to_be_visible()
 
     # Wait for statistics to be computed (content should appear)
@@ -910,10 +913,15 @@ def test_statistics_menu_for_numeric_column(
     expect(statistics_content.get_by_text("Minimum", exact=True)).to_be_visible()
     expect(statistics_content.get_by_text("Maximum", exact=True)).to_be_visible()
 
+    # Verify boolean-specific labels are NOT present (this is a numeric column)
+    expect(statistics_content.get_by_text("True", exact=True)).not_to_be_visible()
+    expect(statistics_content.get_by_text("False", exact=True)).not_to_be_visible()
+
     # Wait for the statistics chart SVG to finish rendering (Vega renders asynchronously)
+    # Use get_by_role with "img" since the chart wrapper has role="img"
     statistics_chart = themed_app.get_by_test_id("stDataFrameStatisticsChart")
     expect(statistics_chart).to_be_visible()
-    expect(statistics_chart.locator("svg")).to_be_visible()
+    expect(statistics_chart.get_by_role("img")).to_be_visible()
 
     # Take a snapshot of the statistics panel
     assert_snapshot(statistics_menu, name="st_dataframe-statistics_numeric_column")
