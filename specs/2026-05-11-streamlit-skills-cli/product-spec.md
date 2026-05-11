@@ -112,7 +112,12 @@ Decision: Use `streamlit skills` for clarity and alignment with library-skills.
 
 ### Interactive Flow
 
-**Step 1: Choose install mode**
+In v1 with only the project mode available, the installer skips the mode
+selection prompt and goes directly to Step 2 (installation confirmation). When
+`--global` is enabled in a future version, Step 1 will be reintroduced to let
+users choose between project and global installation.
+
+**Step 1: Choose install mode** (future, when multiple modes exist)
 
 ```text
 $ streamlit skills
@@ -185,6 +190,13 @@ binary. It should prefer symlinks so skills stay in sync when Streamlit is
 upgraded in place. If symlinks are not supported on the platform, the
 implementation may fall back to copying and should tell the user that rerunning
 `streamlit skills` is needed after upgrading Streamlit.
+
+**Copy fallback version tracking:** When copying (instead of symlinking), the
+implementation should store a version marker (e.g., `.streamlit-skills-version`
+file containing the Streamlit version string) in each target directory. On
+subsequent runs, compare this marker against the current Streamlit version to
+detect "up to date" vs "needs refresh" states. If the marker is missing or
+mismatched, overwrite Streamlit-owned copies.
 
 **Global install (future):** Installs only the `finding-streamlit-skills` meta
 skill. That skill should teach the agent how to locate the bundled Streamlit
