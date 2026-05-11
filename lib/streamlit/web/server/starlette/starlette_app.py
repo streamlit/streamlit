@@ -55,6 +55,7 @@ from streamlit.web.server.starlette.starlette_server_config import (
     GZIP_COMPRESSLEVEL,
     GZIP_MINIMUM_SIZE,
     SESSION_COOKIE_NAME,
+    get_cookie_path,
 )
 from streamlit.web.server.starlette.starlette_static_routes import (
     create_streamlit_static_assets_routes,
@@ -181,8 +182,6 @@ def create_streamlit_middleware() -> list[Middleware]:
     middleware.append(Middleware(PathSecurityMiddleware))
 
     # Add session middleware with cookie path matching baseUrlPath for proper OAuth state
-    base_path: str | None = config.get_option("server.baseUrlPath")
-    cookie_path = "/" + base_path.strip("/") if base_path else "/"
     middleware.append(
         Middleware(
             SessionMiddleware,
@@ -190,7 +189,7 @@ def create_streamlit_middleware() -> list[Middleware]:
             same_site="lax",
             https_only=bool(config.get_option("server.sslCertFile")),
             session_cookie=SESSION_COOKIE_NAME,
-            path=cookie_path,
+            path=get_cookie_path(),
         )
     )
 

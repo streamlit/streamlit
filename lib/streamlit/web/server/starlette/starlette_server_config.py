@@ -64,3 +64,19 @@ STATIC_ASSET_CACHE_MAX_AGE_SECONDS: Final = 365 * 24 * 60 * 60
 
 # Maximum size for app static files (200 MB)
 MAX_APP_STATIC_FILE_SIZE: Final = 200 * 1024 * 1024
+
+
+def get_cookie_path() -> str:
+    """Get the cookie path based on server.baseUrlPath configuration.
+
+    Used for setting cookie paths consistently across SessionMiddleware (OAuth state)
+    and auth cookies (user/tokens). Both must use the same path calculation to ensure
+    cookies are properly scoped and the OAuth state persists across the login flow.
+    """
+    from streamlit import config
+
+    base_path: str = config.get_option("server.baseUrlPath")
+    if base_path:
+        # Ensure path starts with "/" and doesn't have trailing slash
+        return "/" + base_path.strip("/")
+    return "/"

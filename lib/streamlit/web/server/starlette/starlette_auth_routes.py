@@ -44,6 +44,7 @@ from streamlit.web.server.starlette.starlette_app_utils import (
 from streamlit.web.server.starlette.starlette_server_config import (
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
+    get_cookie_path,
 )
 
 if TYPE_CHECKING:
@@ -124,17 +125,6 @@ async def _redirect_to_base(base_url: str) -> RedirectResponse:
     return RedirectResponse(make_url_path(base_url, "/"), status_code=302)
 
 
-def _get_cookie_path() -> str:
-    """Get the cookie path based on server.baseUrlPath configuration."""
-    from streamlit import config
-
-    base_path: str | None = config.get_option("server.baseUrlPath")
-    if base_path:
-        # Ensure path starts with "/" and doesn't have trailing slash
-        return "/" + base_path.strip("/")
-    return "/"
-
-
 async def _set_auth_cookie(
     response: Response, user_info: dict[str, Any], tokens: dict[str, Any]
 ) -> None:
@@ -181,7 +171,7 @@ def _set_single_cookie(
         cookie_payload,
         httponly=True,
         samesite="lax",
-        path=_get_cookie_path(),
+        path=get_cookie_path(),
     )
 
 
@@ -212,7 +202,7 @@ def _clear_auth_cookie(response: Response, request: Request) -> None:
     The path must match the path used when setting the cookie, otherwise
     the browser won't delete it.
     """
-    cookie_path = _get_cookie_path()
+    cookie_path = get_cookie_path()
 
     def get_single_cookie(cookie_name: str) -> bytes | None:
         return _get_signed_cookie_from_request(request, cookie_name)
@@ -265,18 +255,16 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    # Extract code_challenge_method from client_kwargs if present.
-    # Authlib's config loading doesn't handle this parameter, so we need to
-    # set it manually on the client after creation.
+    # PKCE (Proof Key for Code Exchange) support: Extract code_challenge_method from
+    # client_kwargs before registration. Authlib's config loading doesn't include
+    # code_challenge_method in OAUTH_CLIENT_PARAMS, so we must set it manually.
     code_challenge_method = provider_client_kwargs.pop("code_challenge_method", None)
 
     oauth = starlette_client.OAuth(config=_AuthlibConfig(config))
     oauth.register(provider)
     client = oauth.create_client(provider)  # type: ignore[no-untyped-call]
 
-    # Apply PKCE code_challenge_method if specified in config.
-    # This enables PKCE (Proof Key for Code Exchange) which is required by
-    # some OIDC providers like pocket-id.
+    # Apply code_challenge_method after client creation if specified.
     if code_challenge_method:
         client.code_challenge_method = code_challenge_method
 
@@ -466,8 +454,8 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
     state = request.query_params.get("state")
     _LOGGER.debug(
-        "OAuth callback received. State: %s",
-        state[:20] + "..." if state and len(state) > 20 else state,
+        "OAuth callback received. state_len=%d",
+        len(state) if state else 0,
     )
     provider = _get_provider_by_state(request, state)
     origin = _get_origin_from_secrets()
@@ -507,7 +495,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
         token = await client.authorize_access_token(request)
     except Exception:
         _LOGGER.exception("Token exchange failed for provider '%s'", provider)
-        raise
+        return await _redirect_to_base(base_url)
     user = token.get("userinfo") or {}
 
     response = await _redirect_to_base(base_url)
