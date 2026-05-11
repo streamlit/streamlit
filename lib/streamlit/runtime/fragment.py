@@ -250,33 +250,42 @@ class MemoryFragmentStorage(FragmentStorage):
             )
 
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
-        """Run ancestors before descendants while preserving sibling order."""
+        """Run queued ancestors before descendants while preserving FIFO otherwise."""
         with self._lock:
-            original_positions = {
-                fragment_id: index for index, fragment_id in enumerate(fragment_ids)
-            }
 
-            def get_depth(fragment_id: str) -> int:
-                depth = 0
+            def has_queued_ancestor(
+                fragment_id: str, queued_fragment_ids: set[str]
+            ) -> bool:
                 seen_ids = {fragment_id}
                 current = fragment_id
 
                 while True:
                     parent_id = self._parent_by_id.get(current)
                     if parent_id is None or parent_id in seen_ids:
-                        return depth
+                        return False
+                    if parent_id in queued_fragment_ids:
+                        return True
 
                     seen_ids.add(parent_id)
                     current = parent_id
-                    depth += 1
 
-            return sorted(
-                fragment_ids,
-                key=lambda fragment_id: (
-                    get_depth(fragment_id),
-                    original_positions[fragment_id],
-                ),
-            )
+            remaining_fragment_ids = list(fragment_ids)
+            ordered_fragment_ids = []
+
+            while remaining_fragment_ids:
+                queued_fragment_ids = set(remaining_fragment_ids)
+
+                for index, fragment_id in enumerate(remaining_fragment_ids):
+                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                        ordered_fragment_ids.append(fragment_id)
+                        del remaining_fragment_ids[index]
+                        break
+                else:
+                    # Preserve the original order if the parent mapping is malformed.
+                    ordered_fragment_ids.extend(remaining_fragment_ids)
+                    break
+
+            return ordered_fragment_ids
 
     def delete(self, key: str) -> None:
         with self._lock:

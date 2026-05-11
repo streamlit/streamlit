@@ -423,6 +423,29 @@ class ScriptRunnerTest(unittest.TestCase):
         inner.assert_not_called()
         assert not scriptrunner._fragment_storage.contains("inner")
 
+    def test_fragment_queue_preserves_fifo_for_unrelated_fragments(self):
+        """Unrelated queued fragments keep FIFO ordering across fragment trees."""
+        execution_order = []
+        outer_a = MagicMock()
+        inner_a = MagicMock(side_effect=lambda: execution_order.append("inner_a"))
+        outer_b = MagicMock(side_effect=lambda: execution_order.append("outer_b"))
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("outer_a", outer_a, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set(
+            "inner_a", inner_a, parent_fragment_id="outer_a"
+        )
+        scriptrunner._fragment_storage.set("outer_b", outer_b, parent_fragment_id=None)
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner_a", "outer_b"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert execution_order == ["inner_a", "outer_b"]
+        outer_a.assert_not_called()
+        inner_a.assert_called_once()
+        outer_b.assert_called_once()
+
     def test_fragment_queue_child_first_keeps_reregistered_inner(self):
         """Parent reruns before a queued child and preserves its re-registration."""
         scriptrunner = TestScriptRunner("good_script.py")
