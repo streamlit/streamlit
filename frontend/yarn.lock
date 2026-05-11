@@ -11703,12 +11703,21 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jiti@npm:^2.6.0, jiti@npm:^2.6.1":
+"jiti@npm:^2.6.0":
   version: 2.6.1
   resolution: "jiti@npm:2.6.1"
   bin:
     jiti: lib/jiti-cli.mjs
   checksum: 10c0/79b2e96a8e623f66c1b703b98ec1b8be4500e1d217e09b09e343471bbb9c105381b83edbb979d01cef18318cc45ce6e153571b6c83122170eefa531c64b6789b
+  languageName: node
+  linkType: hard
+
+"jiti@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "jiti@npm:2.7.0"
+  bin:
+    jiti: lib/jiti-cli.mjs
+  checksum: 10c0/1b1e2310a490dce1aeea3da5f5dfe18273516c20ce48be2e98eb8ea452d5f3dcc8fd0cfd6d28b4052a24c5dbab6e3089b2d7e79f0bce7915b10d750929563c42
   languageName: node
   linkType: hard
 
@@ -16803,7 +16812,7 @@ __metadata:
     eslint-plugin-streamlit-custom: "workspace:^"
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.6.0"
-    jiti: "npm:^2.6.1"
+    jiti: "npm:^2.7.0"
     knip: "npm:^6.11.0"
     oxfmt: "npm:^0.47.0"
     oxlint: "npm:^1.60.0"
