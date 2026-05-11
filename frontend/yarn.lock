@@ -11743,7 +11743,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"jiti@npm:^2.6.0, jiti@npm:^2.7.0":
+"jiti@npm:^2.7.0":
   version: 2.7.0
   resolution: "jiti@npm:2.7.0"
   bin:
@@ -12041,14 +12041,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.11.0":
-  version: 6.11.0
-  resolution: "knip@npm:6.11.0"
+"knip@npm:^6.12.0":
+  version: 6.12.2
+  resolution: "knip@npm:6.12.2"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.3.0"
     get-tsconfig: "npm:4.14.0"
-    jiti: "npm:^2.6.0"
+    jiti: "npm:^2.7.0"
     minimist: "npm:^1.2.8"
     oxc-parser: "npm:^0.128.0"
     oxc-resolver: "npm:^11.19.1"
@@ -12062,7 +12062,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/d4951a6336bfdbdf92bdf3df1d55b4f64fe3f7b7078700d53d9e90b0dd1713d1368b6f6b15ea587233bf8ec6c49af8da8cb9dbf871272f6d5e2ff365e0883824
+  checksum: 10c0/b88ecc1c3fc15bcbafbe747767195b7a540e6aa166e023cdda65e660ee64345d16068fd7dbeea961313c44405ea8cddeaa0e5a7ae2504ef05ef9bf8c28192eec
   languageName: node
   linkType: hard
 
@@ -16843,7 +16843,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.6.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.11.0"
+    knip: "npm:^6.12.0"
     oxfmt: "npm:^0.48.0"
     oxlint: "npm:^1.63.0"
     typescript: "npm:^6.0.3"
