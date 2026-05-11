@@ -24,7 +24,7 @@ import pytest
 from streamlit.elements.lib import utils
 from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
-from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadSafeSet
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from streamlit.runtime.state.common import TESTING_KEY
 
 

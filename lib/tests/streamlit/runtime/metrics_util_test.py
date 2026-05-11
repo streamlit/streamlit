@@ -954,6 +954,36 @@ def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
     ]
 
 
+def test_detect_installed_skills_detects_symlinked_skill_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked skill directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    # Create a real skill directory elsewhere
+    real_skill = tmp_path / "external" / "developing-with-streamlit"
+    real_skill.mkdir(parents=True)
+    (real_skill / "SKILL.md").write_text("---\nname: developing-with-streamlit\n---\n")
+
+    # Symlink it into the .claude/skills directory
+    skills_dir = app / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+    try:
+        (skills_dir / "developing-with-streamlit").symlink_to(
+            real_skill, target_is_directory=True
+        )
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
+
+
 @pytest.mark.parametrize(
     "detected",
     [[], ["home:claude:developing-with-streamlit"]],
@@ -1029,6 +1059,27 @@ def test_detect_installed_agents_returns_sorted_deduped_tokens(
 
     monkeypatch.setenv("HOME", str(home))
     assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+
+
+def test_detect_installed_agents_detects_symlinked_harness_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked harness directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    # Create a real .claude directory elsewhere
+    real_claude = tmp_path / "external" / ".claude"
+    real_claude.mkdir(parents=True)
+
+    # Symlink it into the home directory
+    try:
+        (home / ".claude").symlink_to(real_claude, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude"]
 
 
 @pytest.mark.parametrize(

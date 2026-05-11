@@ -23,9 +23,6 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
-from collections.abc import (
-    Set as AbstractSet,
-)
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -247,7 +244,7 @@ class WStates(MutableMapping[str, Any]):
 
     def remove_stale_widgets(
         self,
-        active_widget_ids: AbstractSet[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
@@ -915,7 +912,7 @@ class SessionState:
                 }:
                     self._old_state[state_id] = None
 
-    def _remove_stale_widgets(self, active_widget_ids: AbstractSet[str]) -> None:
+    def _remove_stale_widgets(self, active_widget_ids: frozenset[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -1312,7 +1309,7 @@ def _is_internal_key(key: str) -> bool:
 
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
-    active_widget_ids: AbstractSet[str],
+    active_widget_ids: frozenset[str],
     fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:
