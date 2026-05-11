@@ -26,7 +26,6 @@ from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
 from streamlit.web.server.starlette.starlette_auth_routes import (
-    _get_cookie_path,
     _get_origin_from_secrets,
     _get_provider_by_state,
     _parse_provider_token,
@@ -35,6 +34,7 @@ from streamlit.web.server.starlette.starlette_auth_routes import (
 from streamlit.web.server.starlette.starlette_server_config import (
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
+    get_cookie_path,
 )
 from tests.testutil import patch_config_options
 
@@ -211,32 +211,32 @@ def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> N
 
 
 class TestCookiePath:
-    """Tests for _get_cookie_path function."""
+    """Tests for get_cookie_path function."""
 
     @patch_config_options({"server.baseUrlPath": ""})
     def test_returns_root_when_no_base_path(self) -> None:
         """Test that root path is returned when no base URL is configured."""
-        assert _get_cookie_path() == "/"
+        assert get_cookie_path() == "/"
 
     @patch_config_options({"server.baseUrlPath": "myapp"})
     def test_returns_base_path_with_leading_slash(self) -> None:
         """Test that base path is returned with leading slash."""
-        assert _get_cookie_path() == "/myapp"
+        assert get_cookie_path() == "/myapp"
 
     @patch_config_options({"server.baseUrlPath": "/myapp"})
     def test_handles_leading_slash_in_config(self) -> None:
         """Test that leading slash in config is handled correctly."""
-        assert _get_cookie_path() == "/myapp"
+        assert get_cookie_path() == "/myapp"
 
     @patch_config_options({"server.baseUrlPath": "myapp/"})
     def test_removes_trailing_slash(self) -> None:
         """Test that trailing slash is removed from path."""
-        assert _get_cookie_path() == "/myapp"
+        assert get_cookie_path() == "/myapp"
 
     @patch_config_options({"server.baseUrlPath": "/myapp/"})
     def test_handles_both_leading_and_trailing_slashes(self) -> None:
         """Test that both leading and trailing slashes are handled."""
-        assert _get_cookie_path() == "/myapp"
+        assert get_cookie_path() == "/myapp"
 
 
 class TestAuthCookieFlags:
@@ -714,3 +714,88 @@ class TestLogoutWithProviderRedirect:
             response = client.get("/auth/logout", follow_redirects=False)
             assert response.status_code == 302
             assert response.headers["location"].endswith("/")
+
+
+class TestTokenExchangeFailure:
+    """Tests for token exchange failure handling."""
+
+    def test_token_exchange_failure_redirects_to_base(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Test that token exchange failure redirects to base URL instead of raising."""
+
+        class _DummyClient:
+            async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+                raise Exception("Token exchange failed")
+
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_create_oauth_client",
+            lambda provider: (_DummyClient(), "/redirect"),
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_provider_by_state",
+            lambda request, state: "default",
+        )
+        monkeypatch.setattr(
+            starlette_auth_routes,
+            "_get_origin_from_secrets",
+            lambda: "http://testserver",
+        )
+
+        app = Starlette(routes=create_auth_routes(""))
+        with TestClient(app) as client:
+            # Should redirect to base URL, not raise an error
+            response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+            assert response.status_code == 302
+            assert response.headers["location"].endswith("/")
+
+
+class TestSessionMiddlewareCookiePath:
+    """Tests for SessionMiddleware cookie path configuration."""
+
+    @patch_config_options({"server.baseUrlPath": ""})
+    def test_session_middleware_uses_root_path_by_default(self) -> None:
+        """Test that SessionMiddleware uses root path when no baseUrlPath is set."""
+        from streamlit.web.server.starlette.starlette_app import (
+            create_streamlit_middleware,
+        )
+
+        middleware = create_streamlit_middleware()
+        # Find the SessionMiddleware in the stack
+        session_mw = next(
+            (m for m in middleware if "SessionMiddleware" in str(m.cls)), None
+        )
+        assert session_mw is not None, "SessionMiddleware not found in middleware stack"
+        assert session_mw.kwargs.get("path") == "/"
+
+    @patch_config_options({"server.baseUrlPath": "myapp"})
+    def test_session_middleware_uses_base_url_path(self) -> None:
+        """Test that SessionMiddleware cookie path matches baseUrlPath."""
+        from streamlit.web.server.starlette.starlette_app import (
+            create_streamlit_middleware,
+        )
+
+        middleware = create_streamlit_middleware()
+        # Find the SessionMiddleware in the stack
+        session_mw = next(
+            (m for m in middleware if "SessionMiddleware" in str(m.cls)), None
+        )
+        assert session_mw is not None, "SessionMiddleware not found in middleware stack"
+        assert session_mw.kwargs.get("path") == "/myapp"
+
+    @patch_config_options({"server.baseUrlPath": "/app/subpath/"})
+    def test_session_middleware_normalizes_path(self) -> None:
+        """Test that SessionMiddleware path handles leading/trailing slashes."""
+        from streamlit.web.server.starlette.starlette_app import (
+            create_streamlit_middleware,
+        )
+
+        middleware = create_streamlit_middleware()
+        # Find the SessionMiddleware in the stack
+        session_mw = next(
+            (m for m in middleware if "SessionMiddleware" in str(m.cls)), None
+        )
+        assert session_mw is not None, "SessionMiddleware not found in middleware stack"
+        assert session_mw.kwargs.get("path") == "/app/subpath"
