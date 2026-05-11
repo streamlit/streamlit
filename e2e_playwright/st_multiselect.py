@@ -160,7 +160,7 @@ many_options = (
 st.multiselect(
     "multiselect 17 - show maxHeight",
     options=many_options,
-    default=many_options[0:28],
+    default=many_options,
 )
 
 st.multiselect(
