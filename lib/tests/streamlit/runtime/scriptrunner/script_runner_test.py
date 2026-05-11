@@ -50,6 +50,7 @@ from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequests,
     ScriptRequestType,
 )
+from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
@@ -403,6 +404,54 @@ class ScriptRunnerTest(unittest.TestCase):
 
         outer.assert_called_once()
         inner.assert_not_called()
+
+    def test_fragment_queue_child_first_still_skips_removed_inner(self):
+        """Parent reruns before a queued stale child descendant."""
+        outer = MagicMock()
+        inner = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_not_called()
+        assert not scriptrunner._fragment_storage.contains("inner")
+
+    def test_fragment_queue_child_first_keeps_reregistered_inner(self):
+        """Parent reruns before a queued child and preserves its re-registration."""
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        def run_inner() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("inner")
+
+        inner = MagicMock(side_effect=run_inner)
+
+        def rerender_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.set(
+                "inner", inner, parent_fragment_id="outer"
+            )
+
+        outer = MagicMock(side_effect=rerender_outer)
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_called_once()
+        assert scriptrunner._fragment_storage.contains("inner")
 
     def test_fragment_queue_inner_only_preserves_outer_registration(self):
         """Running only a child fragment must not delete the parent from storage."""

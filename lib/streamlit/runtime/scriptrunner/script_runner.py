@@ -666,7 +666,12 @@ class ScriptRunner:
                     ctx.on_script_start()
 
                     if rerun_data.fragment_id_queue:
-                        for fragment_id in rerun_data.fragment_id_queue:
+                        ordered_fragment_ids = (
+                            self._fragment_storage.order_fragment_ids(
+                                rerun_data.fragment_id_queue
+                            )
+                        )
+                        for fragment_id in ordered_fragment_ids:
                             snapshot_before = ctx.new_fragment_ids.snapshot()
                             try:
                                 wrapped_fragment = self._fragment_storage.lookup(
