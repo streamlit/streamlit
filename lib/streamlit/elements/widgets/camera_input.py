@@ -270,6 +270,14 @@ class CameraInputMixin:
         )
 
         if size is not None:
+            if len(size) != 2:
+                raise StreamlitAPIException(
+                    "size must be a tuple of exactly 2 integers (width, height)."
+                )
+            if size[0] <= 0 or size[1] <= 0:
+                raise StreamlitAPIException(
+                    "size must be a tuple of positive integers (width, height)."
+                )
             if size[0] <= 0 or size[1] <= 0:
                 raise StreamlitAPIException(
                     "size must be a tuple of positive integers (width, height)."
