@@ -265,9 +265,22 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
+    # Extract code_challenge_method from client_kwargs if present.
+    # Authlib's config loading doesn't handle this parameter, so we need to
+    # set it manually on the client after creation.
+    code_challenge_method = provider_client_kwargs.pop("code_challenge_method", None)
+
     oauth = starlette_client.OAuth(config=_AuthlibConfig(config))
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
+    client = oauth.create_client(provider)  # type: ignore[no-untyped-call]
+
+    # Apply PKCE code_challenge_method if specified in config.
+    # This enables PKCE (Proof Key for Code Exchange) which is required by
+    # some OIDC providers like pocket-id.
+    if code_challenge_method:
+        client.code_challenge_method = code_challenge_method
+
+    return client, redirect_uri
 
 
 def _parse_provider_token(provider_token: str | None) -> str | None:
@@ -418,6 +431,7 @@ async def _auth_login(request: Request, base_url: str) -> Response:
 
     client, redirect_uri = _create_oauth_client(provider)
     try:
+        _LOGGER.debug("Starting OAuth login for provider '%s'", provider)
         response = await client.authorize_redirect(request, redirect_uri)
         return cast("Response", response)
     except Exception:  # pragma: no cover - error path
@@ -451,6 +465,10 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     """Handle the OAuth callback from the authentication provider."""
 
     state = request.query_params.get("state")
+    _LOGGER.debug(
+        "OAuth callback received. State: %s",
+        state[:20] + "..." if state and len(state) > 20 else state,
+    )
     provider = _get_provider_by_state(request, state)
     origin = _get_origin_from_secrets()
     if origin is None:
@@ -485,7 +503,11 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
         return await _redirect_to_base(base_url)
 
     client, _ = _create_oauth_client(provider)
-    token = await client.authorize_access_token(request)
+    try:
+        token = await client.authorize_access_token(request)
+    except Exception:
+        _LOGGER.exception("Token exchange failed for provider '%s'", provider)
+        raise
     user = token.get("userinfo") or {}
 
     response = await _redirect_to_base(base_url)
