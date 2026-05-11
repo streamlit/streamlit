@@ -372,8 +372,19 @@ class ScriptRunnerTest(unittest.TestCase):
         fragment.assert_has_calls([call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
-    def test_fragment_queue_prunes_stale_descendants_after_outer_run(self):
-        """Orphan nested fragment registrations are removed after the parent runs."""
+    @parameterized.expand(
+        [
+            ("outer_only", ["outer"]),
+            ("outer_then_inner", ["outer", "inner"]),
+            ("inner_then_outer", ["inner", "outer"]),
+        ]
+    )
+    def test_fragment_queue_skips_stale_inner_after_parent_rerun(
+        self,
+        _: str,
+        fragment_id_queue: list[str],
+    ) -> None:
+        """A parent rerun removes queued stale descendants before they execute."""
         outer = MagicMock()
         inner = MagicMock()
 
@@ -381,7 +392,7 @@ class ScriptRunnerTest(unittest.TestCase):
         scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
         scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
 
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer"]))
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=fragment_id_queue))
         scriptrunner.start()
         scriptrunner.join()
 
@@ -389,39 +400,6 @@ class ScriptRunnerTest(unittest.TestCase):
         inner.assert_not_called()
         assert not scriptrunner._fragment_storage.contains("inner")
         assert scriptrunner._fragment_storage.contains("outer")
-
-    def test_fragment_queue_coalesced_skips_removed_inner(self):
-        """Stale inner id in the same queue is dropped before it can run."""
-        outer = MagicMock()
-        inner = MagicMock()
-
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
-
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer", "inner"]))
-        scriptrunner.start()
-        scriptrunner.join()
-
-        outer.assert_called_once()
-        inner.assert_not_called()
-
-    def test_fragment_queue_child_first_still_skips_removed_inner(self):
-        """Parent reruns before a queued stale child descendant."""
-        outer = MagicMock()
-        inner = MagicMock()
-
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
-
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
-        scriptrunner.start()
-        scriptrunner.join()
-
-        outer.assert_called_once()
-        inner.assert_not_called()
-        assert not scriptrunner._fragment_storage.contains("inner")
 
     def test_fragment_queue_preserves_fifo_for_unrelated_fragments(self):
         """Unrelated queued fragments keep FIFO ordering across fragment trees."""

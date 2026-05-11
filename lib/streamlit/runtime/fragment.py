@@ -18,7 +18,7 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
@@ -166,18 +166,36 @@ class MemoryFragmentStorage(FragmentStorage):
         self._registration_sequence_by_id: dict[str, int] = {}
         self._registration_sequence = 0
 
+    def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
+        """Yield ancestors from the immediate parent outward.
+
+        Stops on missing parents or malformed cycles.
+        """
+        seen_ids = {fragment_id}
+        current = fragment_id
+
+        while True:
+            parent_id = self._parent_by_id.get(current)
+            if parent_id is None or parent_id in seen_ids:
+                return
+
+            yield parent_id
+            seen_ids.add(parent_id)
+            current = parent_id
+
+    def _remove(self, fragment_id: str) -> None:
+        del self._fragments[fragment_id]
+        self._parent_by_id.pop(fragment_id, None)
+        self._registration_sequence_by_id.pop(fragment_id, None)
+
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
             if new_fragment_ids is None:
                 new_fragment_ids = frozenset()
 
-            fragment_ids = list(self._fragments.keys())
-
-            for fid in fragment_ids:
-                if fid not in new_fragment_ids:
-                    del self._fragments[fid]
-                    self._parent_by_id.pop(fid, None)
-                    self._registration_sequence_by_id.pop(fid, None)
+            for fragment_id in list(self._fragments):
+                if fragment_id not in new_fragment_ids:
+                    self._remove(fragment_id)
 
     def lookup(self, key: str) -> Fragment:
         with self._lock:
@@ -213,30 +231,15 @@ class MemoryFragmentStorage(FragmentStorage):
         """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
 
         with self._lock:
-
-            def is_strict_descendant_of(fid: str, ancestor_id: str) -> bool:
-                # Guard against malformed parent cycles even though parents should
-                # always be registered before children in normal operation.
-                seen_ids = {fid}
-                current = self._parent_by_id.get(fid)
-                while current is not None and current not in seen_ids:
-                    if current == ancestor_id:
-                        return True
-                    seen_ids.add(current)
-                    current = self._parent_by_id.get(current)
-                return False
-
             to_remove = [
-                fid
-                for fid in self._fragments
-                if fid != root_fragment_id
-                and fid not in newly_registered_ids
-                and is_strict_descendant_of(fid, root_fragment_id)
+                fragment_id
+                for fragment_id in self._fragments
+                if fragment_id != root_fragment_id
+                and fragment_id not in newly_registered_ids
+                and root_fragment_id in self._iter_ancestor_ids(fragment_id)
             ]
-            for fid in to_remove:
-                del self._fragments[fid]
-                self._parent_by_id.pop(fid, None)
-                self._registration_sequence_by_id.pop(fid, None)
+            for fragment_id in to_remove:
+                self._remove(fragment_id)
 
     def registration_sequence(self) -> int:
         with self._lock:
@@ -259,18 +262,10 @@ class MemoryFragmentStorage(FragmentStorage):
             def has_queued_ancestor(
                 fragment_id: str, queued_fragment_ids: set[str]
             ) -> bool:
-                seen_ids = {fragment_id}
-                current = fragment_id
-
-                while True:
-                    parent_id = self._parent_by_id.get(current)
-                    if parent_id is None or parent_id in seen_ids:
-                        return False
-                    if parent_id in queued_fragment_ids:
-                        return True
-
-                    seen_ids.add(parent_id)
-                    current = parent_id
+                return any(
+                    ancestor_id in queued_fragment_ids
+                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
+                )
 
             remaining_fragment_ids = list(fragment_ids)
             ordered_fragment_ids = []
@@ -293,9 +288,7 @@ class MemoryFragmentStorage(FragmentStorage):
     def delete(self, key: str) -> None:
         with self._lock:
             try:
-                del self._fragments[key]
-                self._parent_by_id.pop(key, None)
-                self._registration_sequence_by_id.pop(key, None)
+                self._remove(key)
             except KeyError as e:
                 raise FragmentStorageKeyError(str(e))
 
