@@ -26,6 +26,7 @@ from unittest.mock import MagicMock, call, patch
 import pytest
 from parameterized import parameterized
 
+import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
@@ -452,6 +453,77 @@ class ScriptRunnerTest(unittest.TestCase):
         outer.assert_called_once()
         inner.assert_called_once()
         assert scriptrunner._fragment_storage.contains("inner")
+
+    def test_fragment_scoped_rerun_child_first_does_not_rerun_parent(self):
+        """A child-scoped rerun must not requeue an already-run parent."""
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        def rerun_inner() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+
+            previous_fragment_id = ctx.current_fragment_id
+            ctx.current_fragment_id = "inner"
+            try:
+                if inner.call_count == 1:
+                    st.rerun(scope="fragment")
+            finally:
+                ctx.current_fragment_id = previous_fragment_id
+
+        inner = MagicMock(side_effect=rerun_inner)
+
+        def rerender_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.set(
+                "inner", inner, parent_fragment_id="outer"
+            )
+
+        outer = MagicMock(side_effect=rerender_outer)
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        assert inner.call_count == 2
+        self._assert_no_exceptions(scriptrunner)
+
+    def test_fragment_scoped_rerun_child_first_keeps_pending_child(self):
+        """A parent-scoped rerun must preserve children that have not run yet."""
+        scriptrunner = TestScriptRunner("good_script.py")
+        inner = MagicMock()
+
+        def rerun_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.set(
+                "inner", inner, parent_fragment_id="outer"
+            )
+
+            previous_fragment_id = ctx.current_fragment_id
+            ctx.current_fragment_id = "outer"
+            try:
+                if outer.call_count == 1:
+                    st.rerun(scope="fragment")
+            finally:
+                ctx.current_fragment_id = previous_fragment_id
+
+        outer = MagicMock(side_effect=rerun_outer)
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        assert outer.call_count == 2
+        inner.assert_called_once()
+        self._assert_no_exceptions(scriptrunner)
 
     def test_fragment_queue_inner_only_preserves_outer_registration(self):
         """Running only a child fragment must not delete the parent from storage."""

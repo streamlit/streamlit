@@ -571,9 +571,11 @@ class ScriptRunner:
                 # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)
 
-            fragment_ids_this_run: list[str] | None = (
-                rerun_data.fragment_id_queue or None
-            )
+            fragment_ids_this_run: list[str] | None = None
+            if rerun_data.fragment_id_queue:
+                fragment_ids_this_run = self._fragment_storage.order_fragment_ids(
+                    rerun_data.fragment_id_queue
+                )
 
             ctx.reset(
                 query_string=rerun_data.query_string,
@@ -652,6 +654,7 @@ class ScriptRunner:
                 module: types.ModuleType = module,
                 ctx: ScriptRunContext = ctx,
                 rerun_data: RerunData = rerun_data,
+                fragment_ids_this_run: list[str] | None = fragment_ids_this_run,
             ) -> None:
                 with (
                     modified_sys_path(self._main_script_path),
@@ -665,13 +668,8 @@ class ScriptRunner:
 
                     ctx.on_script_start()
 
-                    if rerun_data.fragment_id_queue:
-                        ordered_fragment_ids = (
-                            self._fragment_storage.order_fragment_ids(
-                                rerun_data.fragment_id_queue
-                            )
-                        )
-                        for fragment_id in ordered_fragment_ids:
+                    if fragment_ids_this_run:
+                        for fragment_id in fragment_ids_this_run:
                             snapshot_before = ctx.new_fragment_ids.snapshot()
                             try:
                                 wrapped_fragment = self._fragment_storage.lookup(
