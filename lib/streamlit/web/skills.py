@@ -197,26 +197,36 @@ def _install_skill(
 def _print_result(result: _InstallResult) -> None:
     """Print the installation result summary."""
     if result.installed:
-        click.secho("\nInstalled:", fg="green")
+        click.secho("\n✓ Installed:", fg="green", bold=True)
         for path in result.installed:
-            click.echo(f"  - {path}")
+            click.echo(
+                f"  {click.style('→', fg='green')} {click.style(path, fg='cyan')}"
+            )
 
     if result.up_to_date:
-        click.secho("\nUp to date:", fg="blue")
+        click.secho("\n● Up to date:", fg="blue", bold=True)
         for path in result.up_to_date:
-            click.echo(f"  - {path}")
+            click.echo(
+                f"  {click.style('→', fg='blue')} {click.style(path, fg='cyan')}"
+            )
 
     if result.skipped:
-        click.secho("\nSkipped due to conflicts:", fg="yellow")
+        click.secho("\n⚠ Skipped due to conflicts:", fg="yellow", bold=True)
         for path in result.skipped:
-            click.echo(f"  - {path}")
+            click.echo(f"  {click.style('→', fg='yellow')} {path}")
 
 
 def _prompt_install_mode() -> str:
     """Prompt user to select install mode."""
-    click.echo("\nStreamlit Skills Installer\n")
+    click.echo()
+    click.secho("Streamlit Skills Installer", fg="magenta", bold=True)
+    click.echo()
     click.echo("Install mode:")
-    click.echo("  [p] Project (recommended) - skills available in this project only")
+    click.echo(
+        f"  {click.style('[p]', fg='cyan', bold=True)} "
+        f"Project {click.style('(recommended)', fg='green')} - "
+        "skills available in this project only"
+    )
     click.echo()
 
     while True:
@@ -232,15 +242,23 @@ def _confirm_installation(
     target_dirs: list[Path],
 ) -> bool:
     """Show installation plan and confirm with user."""
-    click.echo(f"\nInstalling to project: {project_root}")
-    click.echo("\nSkills to install:")
-    for skill in skills:
-        click.echo(f"  - {skill}")
+    click.echo()
+    click.echo(
+        f"Installing to project: {click.style(str(project_root), fg='bright_blue')}"
+    )
 
-    click.echo("\nTarget directories:")
+    click.secho("\nSkills to install:", bold=True)
+    for skill in skills:
+        click.echo(
+            f"  {click.style('•', fg='magenta')} {click.style(skill, fg='cyan')}"
+        )
+
+    click.secho("\nTarget directories:", bold=True)
     for target_dir in target_dirs:
         rel_path = target_dir.relative_to(project_root)
-        click.echo(f"  - {rel_path}/")
+        click.echo(
+            f"  {click.style('•', fg='magenta')} {click.style(str(rel_path) + '/', fg='cyan')}"
+        )
 
     click.echo()
     return click.confirm("Proceed with installation?", default=True)
@@ -294,11 +312,19 @@ def install_skills(*, yes: bool = False) -> None:
     _print_result(result)
 
     if result.installed or result.up_to_date:
-        click.secho(f"\nSuccessfully installed to {project_root}", fg="green")
+        click.echo()
+        click.secho("✨ Successfully installed to ", fg="green", bold=True, nl=False)
+        click.secho(str(project_root), fg="bright_blue")
         if result.installed:
-            click.echo(
-                "\nNote: Installed skills are symlinks to your local Streamlit "
-                "environment.\nThey generally should not be committed to git."
+            click.echo()
+            click.secho("Note: ", fg="bright_black", bold=True, nl=False)
+            click.secho(
+                "Installed skills are symlinks to your local Streamlit environment.",
+                fg="bright_black",
+            )
+            click.secho(
+                "      They generally should not be committed to git.",
+                fg="bright_black",
             )
     elif result.skipped:
         raise click.ClickException(
