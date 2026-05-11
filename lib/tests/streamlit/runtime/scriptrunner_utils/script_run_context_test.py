@@ -229,3 +229,65 @@ class ScriptRunContextTest(unittest.TestCase):
             assert ThreadState.get().active_script_hash == "new_hash"
 
         assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
+
+    def test_add_script_run_ctx_self_attach_seeds_thread_state(self):
+        """Worker thread self-attach: ``add_script_run_ctx(ctx=...)`` from
+        inside a worker thread (with no prior ThreadState bound) should seed
+        ThreadState from ``ctx`` so subsequent ``ThreadState.get()`` calls
+        don't crash. ``fragment_id`` / ``delta_path`` are not recoverable in
+        this mode and must remain at their defaults.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})  # populate main_script_hash
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        result: dict[str, object] = {}
+
+        def worker() -> None:
+            try:
+                add_script_run_ctx(ctx=ctx)
+                ts = ThreadState.get()
+                result["ts"] = ts
+                result["attached_ctx"] = getattr(
+                    threading.current_thread(),
+                    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+                    None,
+                )
+            except Exception as exc:
+                result["exc"] = exc
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+
+        assert result.get("exc") is None, f"worker raised: {result.get('exc')!r}"
+        ts = result["ts"]
+        assert ts.active_script_hash == pages_manager.main_script_hash
+        assert ts.fragment_id is None
+        assert ts.delta_path is None
+        assert ts.in_fragment_callback is False
+        assert result["attached_ctx"] is ctx
+
+    def test_add_script_run_ctx_self_attach_does_not_propagate_fragment_id(self):
+        """Behavior contract: a worker that attaches its own ctx (Pattern B)
+        does NOT inherit the parent's ``fragment_id``. Pre-PR, this stamping
+        was racy on a shared mutable field; post-PR it is consistently absent.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+        # Parent has a fragment_id bound — would have been "visible" to the
+        # worker pre-PR via the shared ctx field.
+        ThreadState.update(fragment_id="parent_fragment")
+
+        result: dict[str, object] = {}
+
+        def worker() -> None:
+            add_script_run_ctx(ctx=ctx)
+            result["fragment_id"] = ThreadState.get().fragment_id
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+
+        assert result["fragment_id"] is None

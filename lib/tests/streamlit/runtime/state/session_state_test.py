@@ -469,7 +469,9 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
 
     mock_ctx = MagicMock()
-    ThreadState.update(in_fragment_callback=False)
+    # Self-contained: initialize ThreadState so this test doesn't depend on
+    # test ordering or another fixture having seeded the ContextVar.
+    ThreadState.initialize(in_fragment_callback=False)
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

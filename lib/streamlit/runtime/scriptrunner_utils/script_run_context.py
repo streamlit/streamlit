@@ -282,10 +282,17 @@ def add_script_run_ctx(
 ) -> threading.Thread:
     """Adds the current ScriptRunContext to a newly-created thread.
 
-    This should be called from this thread's parent thread,
-    before the new thread starts. Propagates both the ScriptRunContext
-    (via threading.local) and the FragmentThreadState (via ContextVar
-    initialization in the child thread's run method).
+    This should be called from this thread's parent thread, before the new
+    thread starts. Propagates both the ScriptRunContext (via threading.local)
+    and the FragmentThreadState (via ContextVar initialization in the child
+    thread's run method).
+
+    If instead called from inside the thread it is attaching to (i.e.
+    ``thread`` is the current thread, or ``thread`` is omitted and ``ctx`` is
+    explicit), the function falls back to seeding ``ThreadState`` from the
+    given ``ctx`` directly. In that mode only ``active_script_hash`` can be
+    recovered — ``fragment_id`` / ``delta_path`` are not propagated because
+    they live in the parent's ContextVar.
 
     Parameters
     ----------
@@ -324,6 +331,25 @@ def add_script_run_ctx(
             original_run()
 
         thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
+    elif ctx is not None and thread is threading.current_thread():
+        # The caller is attaching ctx to the current (already-running) thread
+        # from inside the thread itself. The thread.run wrap above is moot
+        # because run() is already executing. Seed ThreadState directly so
+        # subsequent ThreadState.get() / enqueue_message() calls don't crash.
+        #
+        # This handles two callers:
+        #   1. ScriptRunner._run_script_thread, which attaches before ctx.reset()
+        #      seeds ThreadState. reset() will overwrite this seed shortly.
+        #   2. User code that does `add_script_run_ctx(ctx=saved_ctx)` from
+        #      inside a worker thread (documented against, but a real pattern).
+        #      fragment_id / delta_path live in the parent's ContextVar and
+        #      cannot be recovered from a different thread, so deltas from
+        #      such a worker will not be stamped with fragment_id. Pre-PR,
+        #      this stamping was racy on a shared mutable field; see PR #15072
+        #      discussion for the behavior-change rationale.
+        ThreadState.initialize(
+            active_script_hash=ctx.pages_manager.main_script_hash,
+        )
 
     return thread
 
