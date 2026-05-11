@@ -83,9 +83,7 @@ export const useResizeObserver = <T extends HTMLDivElement>(
     setValues(getValues())
   }, [getValues])
 
-  // Hooks cannot be called conditionally, so we always call useThrottledCallback.
-  // When throttleMs=0, we pass 1ms as a defensive placeholder; the throttled path
-  // is never executed because the `if (throttleMs > 0)` guard below routes around it.
+  // Hook must be called unconditionally; throttled path only used when throttleMs > 0
   const { throttledCallback: throttledUpdateValues, cancel: cancelThrottle } =
     useThrottledCallback(updateValues, Math.max(throttleMs, 1))
 
