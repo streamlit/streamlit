@@ -670,7 +670,9 @@ class ScriptRunner:
 
                     if fragment_ids_this_run:
                         for fragment_id in fragment_ids_this_run:
-                            snapshot_before = ctx.new_fragment_ids.snapshot()
+                            registration_sequence_before = (
+                                self._fragment_storage.registration_sequence()
+                            )
                             try:
                                 wrapped_fragment = self._fragment_storage.lookup(
                                     fragment_id
@@ -712,11 +714,14 @@ class ScriptRunner:
                                 # fragment.
                                 pass
                             finally:
-                                snapshot_after = ctx.new_fragment_ids.snapshot()
-                                newly_registered_ids = snapshot_after - snapshot_before
+                                registered_ids = (
+                                    self._fragment_storage.ids_registered_after(
+                                        registration_sequence_before
+                                    )
+                                )
                                 self._fragment_storage.clear_stale_descendants(
                                     fragment_id,
-                                    newly_registered_ids,
+                                    registered_ids,
                                 )
 
                     else:

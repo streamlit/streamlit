@@ -454,6 +454,50 @@ class ScriptRunnerTest(unittest.TestCase):
         inner.assert_called_once()
         assert scriptrunner._fragment_storage.contains("inner")
 
+    def test_fragment_queue_keeps_live_grandchild_for_later_queued_run(self):
+        """A queued child rerun must not prune a live grandchild fragment."""
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        grandchild = MagicMock()
+
+        def rerender_middle() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("grandchild")
+            scriptrunner._fragment_storage.set(
+                "grandchild", grandchild, parent_fragment_id="middle"
+            )
+            grandchild()
+
+        middle = MagicMock(side_effect=rerender_middle)
+
+        def rerender_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("middle")
+            scriptrunner._fragment_storage.set(
+                "middle", middle, parent_fragment_id="outer"
+            )
+            middle()
+
+        outer = MagicMock(side_effect=rerender_outer)
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("middle", middle, parent_fragment_id="outer")
+        scriptrunner._fragment_storage.set(
+            "grandchild", grandchild, parent_fragment_id="middle"
+        )
+
+        scriptrunner.request_rerun(
+            RerunData(fragment_id_queue=["grandchild", "middle", "outer"])
+        )
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        assert middle.call_count == 2
+        assert grandchild.call_count == 3
+        assert scriptrunner._fragment_storage.contains("grandchild")
+
     def test_fragment_scoped_rerun_child_first_does_not_rerun_parent(self):
         """A child-scoped rerun must not requeue an already-run parent."""
         scriptrunner = TestScriptRunner("good_script.py")

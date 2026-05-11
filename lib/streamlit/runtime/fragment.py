@@ -113,6 +113,16 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    def registration_sequence(self) -> int:
+        """Return a cursor for registrations written via ``set``."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def ids_registered_after(self, registration_sequence: int) -> frozenset[str]:
+        """Return fragment ids whose current registration was written later."""
+        raise NotImplementedError
+
+    @abstractmethod
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Return a stable ancestor-first ordering for the given fragment ids."""
         raise NotImplementedError
@@ -153,6 +163,8 @@ class MemoryFragmentStorage(FragmentStorage):
         self._fragments: dict[str, Fragment] = {}
         # Enclosing fragment id for nested fragments; top-level fragments use None.
         self._parent_by_id: dict[str, str | None] = {}
+        self._registration_sequence_by_id: dict[str, int] = {}
+        self._registration_sequence = 0
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -165,6 +177,7 @@ class MemoryFragmentStorage(FragmentStorage):
                 if fid not in new_fragment_ids:
                     del self._fragments[fid]
                     self._parent_by_id.pop(fid, None)
+                    self._registration_sequence_by_id.pop(fid, None)
 
     def lookup(self, key: str) -> Fragment:
         with self._lock:
@@ -184,8 +197,10 @@ class MemoryFragmentStorage(FragmentStorage):
         parent_fragment_id: str | None = None,
     ) -> None:
         with self._lock:
+            self._registration_sequence += 1
             self._fragments[key] = value
             self._parent_by_id[key] = parent_fragment_id
+            self._registration_sequence_by_id[key] = self._registration_sequence
 
     def clear_stale_descendants(
         self,
@@ -198,9 +213,13 @@ class MemoryFragmentStorage(FragmentStorage):
 
             def is_strict_descendant_of(fid: str, ancestor_id: str) -> bool:
                 current = self._parent_by_id.get(fid)
+                seen_ids = {fid}
                 while current is not None:
                     if current == ancestor_id:
                         return True
+                    if current in seen_ids:
+                        return False
+                    seen_ids.add(current)
                     current = self._parent_by_id.get(current)
                 return False
 
@@ -214,40 +233,57 @@ class MemoryFragmentStorage(FragmentStorage):
             for fid in to_remove:
                 del self._fragments[fid]
                 self._parent_by_id.pop(fid, None)
+                self._registration_sequence_by_id.pop(fid, None)
+
+    def registration_sequence(self) -> int:
+        with self._lock:
+            return self._registration_sequence
+
+    def ids_registered_after(self, registration_sequence: int) -> frozenset[str]:
+        with self._lock:
+            return frozenset(
+                fragment_id
+                for fragment_id, fragment_registration_sequence in (
+                    self._registration_sequence_by_id.items()
+                )
+                if fragment_registration_sequence > registration_sequence
+            )
 
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
         """Run ancestors before descendants while preserving sibling order."""
-        original_positions = {
-            fragment_id: index for index, fragment_id in enumerate(fragment_ids)
-        }
+        with self._lock:
+            original_positions = {
+                fragment_id: index for index, fragment_id in enumerate(fragment_ids)
+            }
 
-        def get_depth(fragment_id: str) -> int:
-            depth = 0
-            seen_ids = {fragment_id}
-            current = fragment_id
+            def get_depth(fragment_id: str) -> int:
+                depth = 0
+                seen_ids = {fragment_id}
+                current = fragment_id
 
-            while True:
-                parent_id = self._parent_by_id.get(current)
-                if parent_id is None or parent_id in seen_ids:
-                    return depth
+                while True:
+                    parent_id = self._parent_by_id.get(current)
+                    if parent_id is None or parent_id in seen_ids:
+                        return depth
 
-                seen_ids.add(parent_id)
-                current = parent_id
-                depth += 1
+                    seen_ids.add(parent_id)
+                    current = parent_id
+                    depth += 1
 
-        return sorted(
-            fragment_ids,
-            key=lambda fragment_id: (
-                get_depth(fragment_id),
-                original_positions[fragment_id],
-            ),
-        )
+            return sorted(
+                fragment_ids,
+                key=lambda fragment_id: (
+                    get_depth(fragment_id),
+                    original_positions[fragment_id],
+                ),
+            )
 
     def delete(self, key: str) -> None:
         with self._lock:
             try:
                 del self._fragments[key]
                 self._parent_by_id.pop(key, None)
+                self._registration_sequence_by_id.pop(key, None)
             except KeyError as e:
                 raise FragmentStorageKeyError(str(e))
 

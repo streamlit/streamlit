@@ -19,7 +19,8 @@ import streamlit as st
 
 @st.fragment(run_every=1.0)
 def my_auto_updating_fragment():
-    st.write(f"uuid in fragment: {uuid4()}")
+    with st.container(key="standalone_auto_fragment"):
+        st.write(f"uuid in fragment: {uuid4()}")
 
 
 my_auto_updating_fragment()
@@ -41,7 +42,8 @@ def outer_nested_demo():
         def middle():
             @st.fragment(run_every=1.0)
             def nested_auto():
-                st.write(f"nested uuid: {uuid4()}")
+                with st.container(key="nested_auto_fragment"):
+                    st.write(f"nested uuid: {uuid4()}")
 
             nested_auto()
 
