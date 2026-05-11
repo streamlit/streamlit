@@ -76,7 +76,7 @@
     "jiti": "^2.6.1",
     "knip": "^6.11.0",
     "oxfmt": "^0.48.0",
-    "oxlint": "^1.60.0",
+    "oxlint": "^1.63.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.58.2",
     "vitest": "^4.1.5"
