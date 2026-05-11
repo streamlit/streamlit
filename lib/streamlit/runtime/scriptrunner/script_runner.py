@@ -714,6 +714,12 @@ class ScriptRunner:
                                 # fragment.
                                 pass
                             finally:
+                                # Cleanup always uses what was actually re-registered
+                                # during this attempt, regardless of how the fragment
+                                # exited (normal return, RerunException, StopException,
+                                # or a swallowed user exception). Children that the
+                                # fragment did not get a chance to re-register will be
+                                # dropped here and re-created on the next rerun.
                                 registered_ids = (
                                     self._fragment_storage.ids_registered_after(
                                         registration_sequence_before
