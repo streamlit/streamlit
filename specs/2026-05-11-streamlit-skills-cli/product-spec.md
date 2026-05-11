@@ -42,7 +42,7 @@ streamlit skills --yes
 **Related:**
 
 - [library-skills GitHub](https://github.com/tiangolo/library-skills)
-- [library-skills SPEC](https://github.com/lukasmasuch/library-skills/blob/main/SPEC.md)
+- [library-skills SPEC](https://github.com/tiangolo/library-skills/blob/main/SPEC.md)
 
 ## Proposal
 
@@ -59,8 +59,9 @@ streamlit skills --yes
 streamlit skills --global --yes
 ```
 
-`--yes` skips prompts and confirms project installation. `--global` should not be
-enabled until `finding-streamlit-skills` is bundled.
+`--yes` skips prompts and confirms project installation. `--global` is reserved
+for future use; in v1 the flag should be hidden from help output and, if passed,
+should exit with a clear "not yet available" error message and non-zero status.
 
 ### Alternatives Considered
 
@@ -128,6 +129,8 @@ Choice [p]:
 Accepted input is case-insensitive:
 
 - `Enter`, `p`, `project` -> project install
+- Invalid input -> re-prompt with "Invalid choice, please enter 'p' or press Enter"
+- `Ctrl+C` or EOF -> cancel gracefully with "Aborted." message (exit 1)
 
 **Step 2: Confirm installation**
 
@@ -202,6 +205,10 @@ user's home directory. This mode requires Claude Code (`~/.claude` must exist).
   "up to date"; broken Streamlit-owned links are repaired; regular files,
   regular directories, or links that appear user-managed are skipped with a clear
   conflict message.
+- **Streamlit-owned symlink detection:** A symlink is considered Streamlit-owned
+  if its target path resolves inside the active `streamlit` package directory
+  (i.e., where `import streamlit; streamlit.__file__` points). Symlinks pointing
+  elsewhere are treated as user-managed and skipped with a conflict warning.
 - **Non-interactive usage:** Automation should pass `--yes`. If prompts cannot
   be shown, the command should fail with an actionable message rather than
   hanging.
