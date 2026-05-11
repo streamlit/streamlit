@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import sys
 import threading
 import types
@@ -105,7 +106,6 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 def test_has_lock() -> None:
     """MemoryFragmentStorage should expose a threading.Lock for concurrent register/clear."""
     storage = MemoryFragmentStorage()
-    assert hasattr(storage, "_lock")
     # threading.Lock is a class in Python 3.13+ and a factory function in 3.10-3.12,
     # so we compare against type(threading.Lock()) for portability across both.
     assert isinstance(storage._lock, type(threading.Lock()))
@@ -133,8 +133,10 @@ def test_concurrent_register() -> None:
     assert len(storage._fragments) == num_threads * ids_per_thread
 
 
-def test_register_clear_interleaving() -> None:
-    """clear() should correctly retain fragments listed in new_fragment_ids."""
+def test_clear_preserves_kept_fragments_after_register() -> None:
+    """clear() should retain fragments listed in new_fragment_ids when the storage was
+    populated via register() (rather than the internal dict directly).
+    """
     storage = MemoryFragmentStorage()
     keep_ids: set[str] = set()
 
@@ -176,6 +178,26 @@ def test_lock_contention_under_load() -> None:
     for t in threads:
         t.join()
     # No assertion on final count — the point is no deadlock or crash.
+
+
+def test_deepcopy_raises_type_error() -> None:
+    """deepcopy should raise TypeError, not silently produce a half-broken clone."""
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+
+    with pytest.raises(TypeError, match="does not support deepcopy"):
+        copy.deepcopy(storage)
+
+
+def test_shallow_copy_raises_type_error() -> None:
+    """copy.copy should raise TypeError so callers don't end up sharing _fragments
+    while allocating a fresh _lock.
+    """
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+
+    with pytest.raises(TypeError, match="does not support copy"):
+        copy.copy(storage)
 
 
 class FragmentTest(unittest.TestCase):
@@ -248,8 +270,9 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        # MagicMock fragment_storage so deepcopy of ctx.cursors doesn't walk into
-        # MemoryFragmentStorage._lock (unpickleable).
+        # Override the auto-generated MagicMock for fragment_storage with an explicit
+        # one so that deepcopy(ctx.cursors) cannot reach a real MemoryFragmentStorage,
+        # which holds a threading.Lock and is therefore not deepcopy-able.
         ctx.fragment_storage = MagicMock()
 
         patched_get_script_run_ctx.return_value = ctx
@@ -276,8 +299,9 @@ class FragmentTest(unittest.TestCase):
         dg = MagicMock()
         dg.my_random_field = 7
         context_dg_stack.set((dg,))
-        # SimpleNamespace breaks the MagicMock parent-walk so deepcopy(ctx.cursors)
-        # doesn't reach fragment_storage._lock.
+        # Use a plain SimpleNamespace (not the auto-generated MagicMock) so that
+        # deepcopy(ctx.cursors) does not traverse back to the real fragment_storage
+        # above, whose threading.Lock cannot be deepcopied.
         ctx.cursors = types.SimpleNamespace()
         ctx.cursors.my_other_random_field = 8
 
@@ -406,8 +430,9 @@ class FragmentTest(unittest.TestCase):
         ctx.pages_manager = PagesManager("")
         ctx.pages_manager.set_pages({})  # Migrate to MPAv2
         ctx.active_script_hash = "some_hash"
-        # Plain dict cursors break the MagicMock parent-walk so deepcopy(ctx.cursors)
-        # doesn't reach fragment_storage._lock.
+        # Use a plain dict (not the auto-generated MagicMock) so that deepcopy(ctx.cursors)
+        # does not traverse back to the real fragment_storage above, whose threading.Lock
+        # cannot be deepcopied.
         ctx.cursors = {}
         patched_get_script_run_ctx.return_value = ctx
 

@@ -84,12 +84,20 @@ class FragmentStorage(Protocol):
 
     @abstractmethod
     def delete(self, key: str) -> None:
-        """Delete the fragment corresponding to the given key."""
+        """Delete the fragment corresponding to the given key.
+
+        Implementations are not required to be thread-safe; callers should
+        only invoke this from the script thread.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def contains(self, key: str) -> bool:
-        """Return whether the given key is present in this FragmentStorage."""
+        """Return whether the given key is present in this FragmentStorage.
+
+        May be called from non-script threads (e.g. the event loop). Implementations
+        should be safe to call without external synchronization.
+        """
         raise NotImplementedError
 
 
@@ -139,10 +147,15 @@ class MemoryFragmentStorage(FragmentStorage):
     def contains(self, key: str) -> bool:
         return key in self._fragments
 
-    # Mirrors ThreadSafeSet.__deepcopy__ — fail loudly rather than detach silently.
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
-        raise NotImplementedError(
+        raise TypeError(
             "MemoryFragmentStorage does not support deepcopy; "
+            "it holds a threading.Lock and shared mutable state."
+        )
+
+    def __copy__(self) -> NoReturn:
+        raise TypeError(
+            "MemoryFragmentStorage does not support copy; "
             "it holds a threading.Lock and shared mutable state."
         )
 
