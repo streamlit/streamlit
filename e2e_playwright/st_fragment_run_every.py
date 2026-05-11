@@ -23,3 +23,29 @@ def my_auto_updating_fragment():
 
 
 my_auto_updating_fragment()
+
+
+# Regression for https://github.com/streamlit/streamlit/issues/15084: nested
+# ``run_every`` under an outer fragment must not crash when the outer fragment
+# stops rendering the inner chain (stale auto-rerun + invalid delta path).
+@st.fragment
+def outer_nested_demo():
+    show_nested = st.checkbox(
+        "Show nested auto fragment",
+        value=True,
+        key="show_nested_auto_fragment",
+    )
+    if show_nested:
+
+        @st.fragment
+        def middle():
+            @st.fragment(run_every=1.0)
+            def nested_auto():
+                st.write(f"nested uuid: {uuid4()}")
+
+            nested_auto()
+
+        middle()
+
+
+outer_nested_demo()

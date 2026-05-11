@@ -667,13 +667,12 @@ class ScriptRunner:
 
                     if rerun_data.fragment_id_queue:
                         for fragment_id in rerun_data.fragment_id_queue:
+                            snapshot_before = ctx.new_fragment_ids.snapshot()
                             try:
                                 wrapped_fragment = self._fragment_storage.lookup(
                                     fragment_id
                                 )
-                                wrapped_fragment()
-
-                            except FragmentStorageKeyError:  # noqa: PERF203
+                            except FragmentStorageKeyError:
                                 # This can happen if the fragment_id is removed from the
                                 # storage before the script runner gets to it. In this
                                 # case, the fragment is simply skipped.
@@ -694,6 +693,10 @@ class ScriptRunner:
                                         " required, so its mainly for debugging.",
                                         fragment_id,
                                     )
+                                continue
+
+                            try:
+                                wrapped_fragment()
                             except (RerunException, StopException):
                                 # The wrapped_fragment function is executed
                                 # inside of a exec_func_with_error_handling call, so
@@ -705,6 +708,13 @@ class ScriptRunner:
                                 # error itself is already rendered within the wrapped
                                 # fragment.
                                 pass
+                            finally:
+                                snapshot_after = ctx.new_fragment_ids.snapshot()
+                                newly_registered_ids = snapshot_after - snapshot_before
+                                self._fragment_storage.clear_stale_descendants(
+                                    fragment_id,
+                                    newly_registered_ids,
+                                )
 
                     else:
                         if PagesManager.uses_pages_directory:

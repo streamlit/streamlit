@@ -83,6 +83,36 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
+    def set(
+        self,
+        key: str,
+        value: Fragment,
+        *,
+        parent_fragment_id: str | None = None,
+    ) -> None:
+        """Saves a fragment under the given key.
+
+        parent_fragment_id
+            The fragment id of the enclosing ``@st.fragment`` when this fragment is
+            nested, or ``None`` for a top-level fragment.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_stale_descendants(
+        self,
+        root_fragment_id: str,
+        newly_registered_ids: frozenset[str],
+    ) -> None:
+        """Remove stored fragments that are strict descendants of ``root_fragment_id``
+        but were not re-registered during the latest run of that root.
+
+        Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
+        removed ``run_every`` child) do not keep stale closures in storage.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def delete(self, key: str) -> None:
         """Delete the fragment corresponding to the given key.
 
@@ -116,6 +146,8 @@ class MemoryFragmentStorage(FragmentStorage):
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._fragments: dict[str, Fragment] = {}
+        # Enclosing fragment id for nested fragments; top-level fragments use None.
+        self._parent_by_id: dict[str, str | None] = {}
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
@@ -127,25 +159,68 @@ class MemoryFragmentStorage(FragmentStorage):
             for fid in fragment_ids:
                 if fid not in new_fragment_ids:
                     del self._fragments[fid]
+                    self._parent_by_id.pop(fid, None)
 
     def lookup(self, key: str) -> Fragment:
-        try:
-            return self._fragments[key]
-        except KeyError as e:
-            raise FragmentStorageKeyError(str(e))
+        with self._lock:
+            try:
+                return self._fragments[key]
+            except KeyError as e:
+                raise FragmentStorageKeyError(str(e))
 
     def register(self, key: str, fragment: Fragment) -> None:
+        self.set(key, fragment)
+
+    def set(
+        self,
+        key: str,
+        value: Fragment,
+        *,
+        parent_fragment_id: str | None = None,
+    ) -> None:
         with self._lock:
-            self._fragments[key] = fragment
+            self._fragments[key] = value
+            self._parent_by_id[key] = parent_fragment_id
+
+    def clear_stale_descendants(
+        self,
+        root_fragment_id: str,
+        newly_registered_ids: frozenset[str],
+    ) -> None:
+        """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
+
+        with self._lock:
+
+            def is_strict_descendant_of(fid: str, ancestor_id: str) -> bool:
+                current = self._parent_by_id.get(fid)
+                while current is not None:
+                    if current == ancestor_id:
+                        return True
+                    current = self._parent_by_id.get(current)
+                return False
+
+            to_remove = [
+                fid
+                for fid in self._fragments
+                if fid != root_fragment_id
+                and fid not in newly_registered_ids
+                and is_strict_descendant_of(fid, root_fragment_id)
+            ]
+            for fid in to_remove:
+                del self._fragments[fid]
+                self._parent_by_id.pop(fid, None)
 
     def delete(self, key: str) -> None:
-        try:
-            del self._fragments[key]
-        except KeyError as e:
-            raise FragmentStorageKeyError(str(e))
+        with self._lock:
+            try:
+                del self._fragments[key]
+                self._parent_by_id.pop(key, None)
+            except KeyError as e:
+                raise FragmentStorageKeyError(str(e))
 
     def contains(self, key: str) -> bool:
-        return key in self._fragments
+        with self._lock:
+            return key in self._fragments
 
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
@@ -191,6 +266,8 @@ def _fragment(
         ctx = get_script_run_ctx()
         if ctx is None:
             return None
+
+        parent_fragment_id_at_def = ctx.current_fragment_id
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
@@ -279,7 +356,11 @@ def _fragment(
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        ctx.fragment_storage.register(fragment_id, wrapped_fragment)
+        ctx.fragment_storage.set(
+            fragment_id,
+            wrapped_fragment,
+            parent_fragment_id=parent_fragment_id_at_def,
+        )
 
         if run_every:
             msg = ForwardMsg()

@@ -370,6 +370,58 @@ class ScriptRunnerTest(unittest.TestCase):
         fragment.assert_has_calls([call(), call()])
         Runtime._instance.media_file_mgr.clear_session_refs.assert_not_called()
 
+    def test_fragment_queue_prunes_stale_descendants_after_outer_run(self):
+        """Orphan nested fragment registrations are removed after the parent runs."""
+        outer = MagicMock()
+        inner = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_not_called()
+        assert not scriptrunner._fragment_storage.contains("inner")
+        assert scriptrunner._fragment_storage.contains("outer")
+
+    def test_fragment_queue_coalesced_skips_removed_inner(self):
+        """Stale inner id in the same queue is dropped before it can run."""
+        outer = MagicMock()
+        inner = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["outer", "inner"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_not_called()
+
+    def test_fragment_queue_inner_only_preserves_outer_registration(self):
+        """Running only a child fragment must not delete the parent from storage."""
+        outer = MagicMock()
+        inner = MagicMock()
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        inner.assert_called_once()
+        outer.assert_not_called()
+        assert scriptrunner._fragment_storage.contains("outer")
+        assert scriptrunner._fragment_storage.contains("inner")
+
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
     @patch("streamlit.runtime.fragment.handle_user_script_exception")
     def test_regular_KeyError_is_rethrown(

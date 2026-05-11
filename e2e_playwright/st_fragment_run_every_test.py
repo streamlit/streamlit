@@ -14,6 +14,8 @@
 
 from playwright.sync_api import Page, expect
 
+from e2e_playwright.shared.app_utils import click_checkbox
+
 
 def test_fragment_runs_at_interval(app: Page):
     fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
@@ -25,3 +27,25 @@ def test_fragment_runs_at_interval(app: Page):
         expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(fragment_text)
         fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
         assert fragment_text is not None
+
+
+def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
+    """Hiding a nested ``run_every`` fragment must not white-screen (issue #15084)."""
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    standalone_text = app.get_by_test_id("stMarkdown").first.text_content()
+    assert standalone_text is not None
+
+    click_checkbox(app, "Show nested auto fragment")
+
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    # Standalone auto fragment keeps ticking; no frontend exception across ticks.
+    for _ in range(3):
+        expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(standalone_text)
+        standalone_text = app.get_by_test_id("stMarkdown").first.text_content()
+        assert standalone_text is not None
+        expect(app.get_by_test_id("stException")).to_have_count(0)
+
+    click_checkbox(app, "Show nested auto fragment")
+    expect(app.get_by_test_id("stException")).to_have_count(0)

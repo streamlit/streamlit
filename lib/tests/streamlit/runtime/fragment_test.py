@@ -58,7 +58,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
     def setUp(self):
         self._storage = MemoryFragmentStorage()
-        self._storage._fragments["some_key"] = "some_fragment"
+        self._storage.set("some_key", "some_fragment", parent_fragment_id=None)
 
     def test_lookup(self):
         assert self._storage.lookup("some_key") == "some_fragment"
@@ -77,26 +77,127 @@ class MemoryFragmentStorageTest(unittest.TestCase):
     def test_delete(self):
         self._storage.delete("some_key")
         with pytest.raises(FragmentStorageKeyError):
-            self._storage.lookup("nonexistent_key")
+            self._storage.lookup("some_key")
 
     def test_del_FragmentStorageKeyError(self):
         with pytest.raises(FragmentStorageKeyError):
             self._storage.delete("nonexistent_key")
 
     def test_clear(self):
-        self._storage._fragments["some_other_key"] = "some_other_fragment"
+        self._storage.set(
+            "some_other_key", "some_other_fragment", parent_fragment_id=None
+        )
         assert len(self._storage._fragments) == 2
 
         self._storage.clear()
         assert len(self._storage._fragments) == 0
+        assert len(self._storage._parent_by_id) == 0
 
     def test_clear_with_new_fragment_ids(self):
-        self._storage._fragments["some_other_key"] = "some_other_fragment"
+        self._storage.set(
+            "some_other_key", "some_other_fragment", parent_fragment_id=None
+        )
         assert len(self._storage._fragments) == 2
 
         self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
+        assert "some_other_key" not in self._storage._parent_by_id
+
+    def test_clear_stale_descendants_removes_orphan_nested(self):
+        """Descendants of root not re-registered this run are removed."""
+
+        def outer() -> None:
+            return None
+
+        def inner() -> None:
+            return None
+
+        def leaf() -> None:
+            return None
+
+        self._storage.set("outer", outer, parent_fragment_id=None)
+        self._storage.set("inner", inner, parent_fragment_id="outer")
+        self._storage.set("leaf", leaf, parent_fragment_id="inner")
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert self._storage.contains("outer")
+        assert not self._storage.contains("inner")
+        assert not self._storage.contains("leaf")
+
+    def test_clear_stale_descendants_keeps_reregistered_child(self):
+        def outer() -> None:
+            return None
+
+        def inner() -> None:
+            return None
+
+        self._storage.set("outer", outer, parent_fragment_id=None)
+        self._storage.set("inner", inner, parent_fragment_id="outer")
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer", "inner"}))
+
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_preserves_sibling_branch(self):
+        def outer() -> None:
+            return None
+
+        def inner_a() -> None:
+            return None
+
+        def inner_b() -> None:
+            return None
+
+        self._storage.set("outer", outer, parent_fragment_id=None)
+        self._storage.set("inner_a", inner_a, parent_fragment_id="outer")
+        self._storage.set("inner_b", inner_b, parent_fragment_id="outer")
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer", "inner_a"}))
+
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner_a")
+        assert not self._storage.contains("inner_b")
+
+    def test_clear_stale_descendants_child_only_does_not_remove_parent(self):
+        def outer() -> None:
+            return None
+
+        def inner() -> None:
+            return None
+
+        self._storage.set("outer", outer, parent_fragment_id=None)
+        self._storage.set("inner", inner, parent_fragment_id="outer")
+
+        self._storage.clear_stale_descendants("inner", frozenset({"inner"}))
+
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_does_not_remove_unrelated_top_level(self):
+        def a() -> None:
+            return None
+
+        def b() -> None:
+            return None
+
+        self._storage.set("a", a, parent_fragment_id=None)
+        self._storage.set("b", b, parent_fragment_id=None)
+
+        self._storage.clear_stale_descendants("a", frozenset({"a"}))
+
+        assert self._storage.contains("a")
+        assert self._storage.contains("b")
+
+    def test_delete_removes_parent_metadata(self):
+        def k() -> None:
+            return None
+
+        self._storage.set("k", k, parent_fragment_id="p")
+        self._storage.delete("k")
+        assert "k" not in self._storage._parent_by_id
 
     def test_contains(self):
         assert self._storage.contains("some_key")
@@ -296,7 +397,7 @@ class FragmentTest(unittest.TestCase):
         # fragment a single time.
         my_fragment()
         my_fragment()
-        assert ctx.fragment_storage.register.call_count == 2
+        assert ctx.fragment_storage.set.call_count == 2
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
