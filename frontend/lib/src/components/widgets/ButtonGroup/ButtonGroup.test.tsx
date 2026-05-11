@@ -505,7 +505,6 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: "bar",
       iconSize: "base",
-      useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)
@@ -523,7 +522,6 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: undefined,
       iconSize: "base",
-      useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
     expect(size).toBe(BaseButtonSize.MEDIUM)
