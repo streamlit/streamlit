@@ -129,7 +129,6 @@ function Tooltip({
   const theme = useEmotionTheme()
 
   // This section of code is to work around a timing issue with BaseWeb's Tooltip component
-  // eslint-disable-next-line @eslint-react/no-unused-state -- Used in useTooltipMeasurementSideEffect
   const [tooltipElement, setTooltipElement] = useState<HTMLDivElement | null>(
     null
   )
