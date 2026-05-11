@@ -24,7 +24,7 @@ import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
-import importPlugin from "eslint-plugin-import"
+import importX from "eslint-plugin-import-x"
 import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
@@ -209,7 +209,7 @@ export default defineConfig([
   tseslint.configs.recommendedTypeChecked,
   reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
-  importPlugin.flatConfigs.recommended,
+  importX.flatConfigs.recommended,
   // Global configuration for all files
   {
     languageOptions: {
@@ -347,7 +347,7 @@ export default defineConfig([
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
-      "import/extensions": [
+      "import-x/extensions": [
         "error",
         "ignorePackages",
         {
@@ -357,7 +357,7 @@ export default defineConfig([
           tsx: "never",
         },
       ],
-      "import/prefer-default-export": "off",
+      "import-x/prefer-default-export": "off",
       "max-classes-per-file": "off",
       "no-shadow": "off",
       "no-param-reassign": "off",
@@ -383,7 +383,7 @@ export default defineConfig([
           ignoreDeclarationSort: true,
         },
       ],
-      "import/order": [
+      "import-x/order": [
         "error",
         {
           pathGroups: [
@@ -449,7 +449,7 @@ export default defineConfig([
       "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
-      "import/resolver": {
+      "import-x/resolver": {
         typescript: {
           // Use project service for import resolution as well
           project: path.resolve(__dirname, "./tsconfig.json"),

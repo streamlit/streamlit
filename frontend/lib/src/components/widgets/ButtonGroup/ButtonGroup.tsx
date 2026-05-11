@@ -246,12 +246,7 @@ export function getContentElement(
 
   return {
     element: (
-      <DynamicButtonLabel
-        icon={icon}
-        label={content}
-        iconSize="base"
-        useSmallerFont
-      />
+      <DynamicButtonLabel icon={icon} label={content} iconSize="base" />
     ),
     kind,
     size: BaseButtonSize.MEDIUM,
