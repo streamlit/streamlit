@@ -416,6 +416,25 @@ def test_prog_name() -> None:
         )
 
 
+@main.command("skills")
+@click.option("-y", "--yes", is_flag=True, help="Skip confirmation prompts.")
+def main_skills(yes: bool) -> None:
+    r"""Install Streamlit AI-agent skills.
+
+    Installs bundled Streamlit skills from the active Streamlit package to
+    the current project. Skills are installed as symlinks so they stay in
+    sync when Streamlit is upgraded.
+
+    \b
+    Examples:
+        $ streamlit skills           # Interactive install
+        $ streamlit skills --yes     # Non-interactive install
+    """
+    from streamlit.web.skills import install_skills
+
+    install_skills(yes=yes)
+
+
 @main.command("init")
 @click.argument("directory", required=False)
 def main_init(directory: str | None = None) -> None:
