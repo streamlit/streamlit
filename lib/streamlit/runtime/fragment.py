@@ -124,7 +124,7 @@ class FragmentStorage(Protocol):
 
     @abstractmethod
     def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
-        """Return a stable ancestor-first ordering for the given fragment ids."""
+        """Return a stable ordering that keeps queued ancestors before descendants."""
         raise NotImplementedError
 
     @abstractmethod
@@ -186,6 +186,9 @@ class MemoryFragmentStorage(FragmentStorage):
             except KeyError as e:
                 raise FragmentStorageKeyError(str(e))
 
+    def get(self, key: str) -> Fragment:
+        return self.lookup(key)
+
     def register(self, key: str, fragment: Fragment) -> None:
         self.set(key, fragment)
 
@@ -212,13 +215,13 @@ class MemoryFragmentStorage(FragmentStorage):
         with self._lock:
 
             def is_strict_descendant_of(fid: str, ancestor_id: str) -> bool:
-                current = self._parent_by_id.get(fid)
+                # Guard against malformed parent cycles even though parents should
+                # always be registered before children in normal operation.
                 seen_ids = {fid}
-                while current is not None:
+                current = self._parent_by_id.get(fid)
+                while current is not None and current not in seen_ids:
                     if current == ancestor_id:
                         return True
-                    if current in seen_ids:
-                        return False
                     seen_ids.add(current)
                     current = self._parent_by_id.get(current)
                 return False
