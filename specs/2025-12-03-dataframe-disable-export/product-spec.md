@@ -7,8 +7,8 @@ created: 2025-12-03
 
 ## Summary
 
-Add a `disable_export: bool = False` parameter to `st.dataframe` that disables data export
-functionality, including CSV download and clipboard copy operations.
+Add a `client.disableDataExport` config option that controls whether data export functionality
+(CSV download and clipboard copy) is disabled in `st.dataframe`.
 
 ## Problem
 
@@ -35,34 +35,55 @@ can still extract data from the frontend.
 
 ## Proposal
 
-### API
+### Config Option
 
-```python
-st.dataframe(
-    ...,
-    disable_export: bool = False,  # NEW
-)
+```toml
+# .streamlit/config.toml
+[client]
+disableDataExport = true  # default: false
 ```
 
-**Parameters:**
+Or via command line:
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `disable_export` | `bool` | `False` | Whether to disable data export (CSV download and copying to clipboard) |
+```bash
+streamlit run app.py --client.disableDataExport=true
+```
+
+Or programmatically:
+
+```python
+import streamlit as st
+
+st.set_option("client.disableDataExport", True)
+```
+
+**Config Option:**
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `client.disableDataExport` | `bool` | `false` | Whether to disable data export (CSV download and copying to clipboard) in `st.dataframe` |
 
 ### Behavior
 
-When `disable_export=True`:
+When `client.disableDataExport = true`:
 
 - **Download button**: Hidden from the toolbar
-- **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while the dataframe is
+- **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while a dataframe is
   focused will not copy any cell data to the clipboard (applies to both single and multi-cell
   selections)
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
+This applies to all `st.dataframe` instances in the app.
+
 ### Examples
 
-#### Basic Usage
+#### Disable Export App-Wide
+
+```toml
+# .streamlit/config.toml
+[client]
+disableDataExport = true
+```
 
 ```python
 import pandas as pd
@@ -70,44 +91,67 @@ import streamlit as st
 
 df = pd.DataFrame({"Name": ["Alice", "Bob"], "Salary": [100000, 120000]})
 
-# Standard dataframe with export enabled
+# Export is disabled for all dataframes
 st.dataframe(df)
-
-# Dataframe with export disabled
-st.dataframe(df, disable_export=True)
 ```
 
-## Alternatives Considered
+#### Enterprise Deployment
 
-### Alternative Parameter Names
+Organizations can enforce this setting across all deployed apps via command-line flags
+or environment variables, preventing accidental data leakage:
 
-| Name | Pros | Cons |
-|------|------|------|
-| `disable_export` (chosen) | Clear intent, matches `disabled` pattern | Negative phrasing |
-| `allow_export` | Positive phrasing | Default would be `True`, inconsistent with other `allow_*` patterns |
-| `exportable` | Concise, adjective form | Less explicit about what's being controlled |
-| `enable_download` | Descriptive | Doesn't cover clipboard copy; narrower scope than actual behavior |
+```bash
+streamlit run app.py --client.disableDataExport=true
+```
 
-### Global Config Option
+## Out of Scope (Future Work)
 
-Instead of a per-dataframe parameter, this could be a global config option:
-`client.disable_data_export`
+### Per-Dataframe Parameter
 
-**Rejected because:**
+A per-dataframe `disable_export` parameter could be added later if users need granular control
+(similar to how `st.file_uploader` has both `server.maxUploadSize` config and a per-widget
+`max_upload_size` parameter):
 
-- In many applications, only some dataframes contain sensitive information
-- A parameter provides granular control without impacting other parts of the app
+```python
+# Future: override config for specific dataframes
+st.dataframe(df, disable_export=False)  # re-enable for this dataframe
+```
+
+This would allow the config option to set the default while still permitting exceptions.
+Adding this later based on user feedback avoids premature API expansion.
 
 ### Adding to `st.data_editor`
 
-This parameter is intentionally scoped to `st.dataframe` only and not planned for
-`st.data_editor`.
+This config option is intentionally scoped to `st.dataframe` only.
 
 **Reasoning:**
 
 - `st.data_editor` relies on copy/paste for core editing workflows (e.g., pasting data into
   cells, copying rows for duplication)
-- Could be added later if there's strong user demand
+- Could be extended later if there's strong user demand
+
+## Alternatives Considered
+
+### Per-Dataframe Parameter Only
+
+Adding `disable_export: bool = False` directly to `st.dataframe`.
+
+**Rejected because:**
+
+- `st.dataframe` already has many parameters; adding more for niche use cases adds clutter
+- Most use cases want to disable export for all dataframes in an app, not selectively
+- Easy to forget setting the parameter on one dataframe, creating inconsistent behavior
+- Cannot be enforced at the deployment/organization level
+
+### Positive Naming (`enableDataExport`)
+
+Using `client.enableDataExport = false` instead of `client.disableDataExport = true`.
+
+**Rejected because:**
+
+- This is a niche feature where users are specifically looking to disable export
+- Users searching for this functionality will search for "disable", not "enable"
+- More intuitive: `disableDataExport = true` clearly states the intent
 
 ## Checklist
 
