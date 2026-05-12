@@ -184,6 +184,13 @@ export interface Props {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * When true, sanitizes URLs in links to block dangerous protocols like
+   * javascript: and data:. Use this for content from untrusted sources
+   * (like dataframe cells) to prevent XSS attacks.
+   */
+  sanitizeLinks?: boolean
 }
 
 /**
@@ -294,6 +301,50 @@ function transformLinkUri(href: string): string {
     return "#"
   }
   return href
+}
+
+/**
+ * Safe URL protocols for link sanitization.
+ * These are the protocols that react-markdown allows by default.
+ */
+const SAFE_URL_PROTOCOLS = ["http:", "https:", "mailto:", "tel:"]
+
+/**
+ * Sanitizes a URL by blocking dangerous protocols like javascript: and data:.
+ * Returns the original URL if it uses a safe protocol, otherwise returns an empty string.
+ *
+ * This is used for content from untrusted sources (like dataframe cells) where
+ * XSS via javascript: or data: URLs is a risk.
+ *
+ * @param href - The URL to sanitize
+ * @returns The original URL if safe, empty string otherwise
+ */
+export function sanitizeLinkUri(href: string): string {
+  if (!href) {
+    return href
+  }
+
+  try {
+    // Try to parse as an absolute URL
+    const url = new URL(href)
+    if (SAFE_URL_PROTOCOLS.includes(url.protocol)) {
+      return href
+    }
+    // Block javascript:, data:, and other dangerous protocols
+    return ""
+  } catch {
+    // If URL parsing fails, it might be a relative URL (e.g., "/page", "#anchor")
+    // which is safe. Check if it starts with a dangerous protocol.
+    const lowerHref = href.toLowerCase().trim()
+    if (
+      lowerHref.startsWith("javascript:") ||
+      lowerHref.startsWith("data:") ||
+      lowerHref.startsWith("vbscript:")
+    ) {
+      return ""
+    }
+    return href
+  }
 }
 
 // wrapping in `once` ensures we only scroll once
@@ -485,6 +536,13 @@ interface RenderedMarkdownProps {
    * Enables unterminated markdown completion (via remend) during streaming.
    */
   unterminatedParsing?: boolean
+
+  /**
+   * When true, sanitizes URLs in links to block dangerous protocols like
+   * javascript: and data:. Use this for content from untrusted sources
+   * (like dataframe cells) to prevent XSS attacks.
+   */
+  sanitizeLinks?: boolean
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -1100,6 +1158,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   disableLinks,
   helpText,
   unterminatedParsing,
+  sanitizeLinks,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1265,7 +1324,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
           remarkPlugins={remarkPlugins}
           rehypePlugins={rehypePlugins}
           components={renderers}
-          urlTransform={transformLinkUri}
+          urlTransform={sanitizeLinks ? sanitizeLinkUri : transformLinkUri}
           disallowedElements={disallowed}
           // unwrap and render children from invalid markdown
           unwrapDisallowed={true}
@@ -1294,6 +1353,7 @@ const StreamlitMarkdown: FC<Props> = ({
   helpText,
   truncate,
   unterminatedParsing,
+  sanitizeLinks,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1316,6 +1376,7 @@ const StreamlitMarkdown: FC<Props> = ({
         disableLinks={disableLinks}
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
+        sanitizeLinks={sanitizeLinks}
       />
     </StyledStreamlitMarkdown>
   )
