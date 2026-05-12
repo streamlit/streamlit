@@ -197,18 +197,18 @@ class ScriptRunContextTest(unittest.TestCase):
         def fake_enqueue(msg: ForwardMsg):
             fake_enqueue_result["msg"] = msg
 
-            ThreadState.update(fragment_id="my_fragment_id")
-            ctx = _create_script_run_context(fake_enqueue)
-            add_script_run_ctx(ctx=ctx)
-            msg = ForwardMsg()
-            msg.delta.new_element.markdown.body = "foo"
-            enqueue_message(msg)
-            assert fake_enqueue_result is not None
-            assert (
-                fake_enqueue_result["msg"].delta.new_element.markdown.body
-                == msg.delta.new_element.markdown.body
-            )
-            assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
+        ctx = _create_script_run_context(fake_enqueue)
+        add_script_run_ctx(ctx=ctx)
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+        enqueue_message(msg)
+        assert fake_enqueue_result is not None
+        assert (
+            fake_enqueue_result["msg"].delta.new_element.markdown.body
+            == msg.delta.new_element.markdown.body
+        )
+        assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
 
     def test_run_with_active_hash(self):
         """Ensure the active script is set correctly"""
