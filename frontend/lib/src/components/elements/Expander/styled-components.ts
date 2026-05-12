@@ -136,15 +136,13 @@ export const StyledSummary = styled.summary<StyledSummaryProps>(
           // is rendered as markdown and may contain mixed colors, icons, or
           // other styled components. Opacity uniformly mutes all content
           // while preserving relative contrast within the label.
-          // Note: 0.6 matches st.caption styling. This is below WCAG AA
-          // contrast recommendations and may be adjusted in a future update.
           paddingLeft: 0,
           paddingRight: 0,
           paddingTop: theme.spacing.twoXS,
           paddingBottom: theme.spacing.twoXS,
           backgroundColor: "transparent",
           borderRadius: theme.radii.default,
-          opacity: 0.6,
+          opacity: theme.opacities.secondary,
           transition: "opacity 150ms ease",
           "&:hover, &:focus-visible": {
             // On hover, remove opacity for normal appearance (no background)

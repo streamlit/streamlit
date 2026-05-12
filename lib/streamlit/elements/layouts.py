@@ -1124,7 +1124,7 @@ class LayoutsMixin:
         type : "default" or "compact"
             The visual style of the expander. If ``"default"`` (default), the
             expander is displayed with a border and background. If ``"compact"``,
-            the expander is rendered as a minimal inline toggle—ideal for
+            the expander is rendered as a minimal inline toggle, ideal for
             displaying AI reasoning, thoughts, or collapsible metadata without
             visual clutter.
 
@@ -1769,7 +1769,7 @@ class LayoutsMixin:
             The visual style of the status container. If ``"default"`` (default),
             the container is displayed with a border and background. If
             ``"compact"``, the container is rendered as a minimal inline
-            toggle—ideal for displaying AI reasoning or task progress without
+            toggle, ideal for displaying AI reasoning or task progress without
             visual clutter.
 
         Returns
