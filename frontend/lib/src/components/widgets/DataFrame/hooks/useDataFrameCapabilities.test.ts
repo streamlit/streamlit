@@ -23,7 +23,7 @@ import useDataFrameCapabilities, {
   LARGE_TABLE_ROWS_THRESHOLD,
 } from "./useDataFrameCapabilities"
 
-const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
+const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY, FIXED } =
   DataframeProto.EditingMode
 
 describe("useDataFrameCapabilities", () => {
@@ -59,6 +59,16 @@ describe("useDataFrameCapabilities", () => {
         useDataFrameCapabilities({
           ...defaultParams,
           editingMode: DELETE_ONLY,
+        })
+      )
+      expect(result.current.canSort).toBe(true)
+    })
+
+    it("returns true for FIXED editing mode", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          editingMode: FIXED,
         })
       )
       expect(result.current.canSort).toBe(true)
@@ -125,6 +135,7 @@ describe("useDataFrameCapabilities", () => {
       ["DYNAMIC", DYNAMIC],
       ["ADD_ONLY", ADD_ONLY],
       ["DELETE_ONLY", DELETE_ONLY],
+      ["FIXED", FIXED],
     ])("returns true for %s mode", (_name, editingMode) => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({
@@ -190,6 +201,16 @@ describe("useDataFrameCapabilities", () => {
       expect(result.current.canAddRows).toBe(false)
     })
 
+    it("returns false for FIXED mode", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          editingMode: FIXED,
+        })
+      )
+      expect(result.current.canAddRows).toBe(false)
+    })
+
     it("returns false when disabled", () => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({
@@ -228,6 +249,16 @@ describe("useDataFrameCapabilities", () => {
         useDataFrameCapabilities({
           ...defaultParams,
           editingMode: ADD_ONLY,
+        })
+      )
+      expect(result.current.canDeleteRows).toBe(false)
+    })
+
+    it("returns false for FIXED mode", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          editingMode: FIXED,
         })
       )
       expect(result.current.canDeleteRows).toBe(false)
