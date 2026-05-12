@@ -3489,7 +3489,7 @@ __metadata:
     hoist-non-react-statics: "npm:^3.3.2"
     humanize-string: "npm:^3.1.0"
     iframe-resizer: "npm:4.3.11"
-    immer: "npm:^11.1.4"
+    immer: "npm:^11.1.7"
     jsdom: "npm:24.1.3"
     lighthouse: "npm:^13.2.0"
     lodash-es: "npm:^4.18.1"
@@ -3625,7 +3625,7 @@ __metadata:
     deck.gl: "npm:^9.3.2"
     dompurify: "npm:^3.4.1"
     hoist-non-react-statics: "npm:^3.3.2"
-    immer: "npm:^11.1.4"
+    immer: "npm:^11.1.7"
     json5: "npm:^2.2.3"
     katex: "npm:^0.16.45"
     lodash-es: "npm:^4.18.1"
@@ -11054,10 +11054,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"immer@npm:^11.1.4":
-  version: 11.1.4
-  resolution: "immer@npm:11.1.4"
-  checksum: 10c0/77beca6b0a4e361b30414189d63c64beb7df40ac1d8cbf524308fcbabe755e9aa49db3c6e95a6e412911416fec621f2c8470be5ec79feedc6abd6e4f7f18a9ce
+"immer@npm:^11.1.7":
+  version: 11.1.8
+  resolution: "immer@npm:11.1.8"
+  checksum: 10c0/df971d8a8f6a5312c6dca4a8437e20b3185d6c9cd6830ad526c18ffd50f4037ef8db4f332b0adbcb9f8c5ee2fbe117cf0623e8554e24777105b3cc9faf866d34
   languageName: node
   linkType: hard
 
