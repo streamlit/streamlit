@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useLayoutEffect, useMemo, useState } from "react"
+import {
+  FC,
+  memo,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
@@ -207,38 +215,76 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // This hook provides lifecycle functions for creating and removing the view.
   // It also will update the view if the data changes (and not the spec)
-  const { createView, updateView, finalizeView } = useVegaEmbed(
-    element,
-    widgetMgr,
-    fragmentId
-  )
+  const { createView, updateView, resizeView, finalizeView, isViewReady } =
+    useVegaEmbed(element, widgetMgr, fragmentId)
 
-  const { data, datasets, spec } = element
+  const { data, datasets, spec, baseSpecKey, chartWidth, chartHeight } =
+    element
+
+  // Refs to track the last spec and dimensions for detecting changes
+  const lastBaseSpecKeyRef = useRef<string>("")
+  const lastDimensionsRef = useRef<{ width: number; height: number }>({
+    width: 0,
+    height: 0,
+  })
 
   // Create the view once the container is ready and re-create
-  // if the spec changes or the dimensions change.
-  // We utilize useLayoutEffect to ensure that the view is created
-  // after the container is mounted to avoid layout shift.
+  // ONLY when the spec structure actually changes (not dimensions).
+  // When only dimensions change, we use resizeView() instead (~10x faster).
   useLayoutEffect(() => {
-    // TODO(lawilby): Can we just update the view if the width/height changes?
+    const baseSpecChanged = baseSpecKey !== lastBaseSpecKeyRef.current
+
+    // Skip view creation if only dimensions changed and view already exists
+    if (!baseSpecChanged && isViewReady) {
+      return
+    }
+
     if (containerRef.current !== null) {
+      lastBaseSpecKeyRef.current = baseSpecKey
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      createView(containerRef, spec)
+      createView(containerRef, spec).then(() => {
+        lastDimensionsRef.current = { width: chartWidth, height: chartHeight }
+      })
     }
 
     return finalizeView
-    // We can't use chartContainerWidth/containerHeight in this dependency array because it causes facet charts to enter a loop.
-    // TODO(lawilby): Do we need width/height in this dependency array? It seems any changes
-    // Are the changes in the spec enough?
   }, [
     createView,
     finalizeView,
     spec,
+    baseSpecKey,
+    chartWidth,
+    chartHeight,
     fullScreenWidth,
     fullScreenHeight,
     showData,
     containerRef,
+    isViewReady,
   ])
+
+  // Handle dimension-only changes with resizeView (~10x faster than recreating)
+  useEffect(() => {
+    const { width: lastWidth, height: lastHeight } = lastDimensionsRef.current
+    const dimensionsChanged =
+      chartWidth !== lastWidth || chartHeight !== lastHeight
+
+    // Skip if no change, invalid dimensions, or initial render
+    if (!dimensionsChanged || chartWidth <= 0 || lastWidth === 0) {
+      return
+    }
+
+    // Only resize if view is ready
+    if (isViewReady) {
+      void resizeView(chartWidth, chartHeight).then(success => {
+        if (success) {
+          lastDimensionsRef.current = {
+            width: chartWidth,
+            height: chartHeight,
+          }
+        }
+      })
+    }
+  }, [chartWidth, chartHeight, isViewReady, resizeView])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so

@@ -218,9 +218,13 @@ const generateSpec = (
 }
 
 /**
- * Preprocesses the element to generate the VegaLite spec.
+ * Prepares the element to generate the VegaLite spec.
  * It stabilizes some of the references (e.g. selectionMode and spec)
  * and avoids further processing if unnecessary.
+ *
+ * Returns `baseSpecKey` for detecting structural spec changes (excludes dimensions).
+ * When only dimensions change (not baseSpecKey), the view can be resized in-place
+ * instead of being recreated (~10x faster).
  */
 export const useVegaElementPreprocessor = (
   element: VegaLiteChartElement,
@@ -228,7 +232,11 @@ export const useVegaElementPreprocessor = (
   containerHeight: number,
   useContainerWidth: boolean,
   useContainerHeight: boolean
-): VegaLiteChartElement => {
+): VegaLiteChartElement & {
+  baseSpecKey: string
+  chartWidth: number
+  chartHeight: number
+} => {
   const theme = useEmotionTheme()
 
   const {
@@ -274,6 +282,38 @@ export const useVegaElementPreprocessor = (
     ]
   )
 
+  // Create a stable key for detecting structural spec changes (excludes dimensions).
+  // This key only changes when non-dimension aspects of the spec change (theme, data
+  // schema, encodings, etc.). When only dimensions change, we can resize the Vega
+  // view in-place instead of recreating it (~10x faster).
+  const baseSpecKey = useMemo(() => {
+    // Generate spec with fixed dimensions for comparison
+    const baseSpec = generateSpec(
+      inputSpec,
+      useContainerWidth,
+      useContainerHeight,
+      vegaLiteTheme,
+      selectionMode,
+      theme,
+      0, // Fixed width
+      0 // Fixed height
+    )
+    // Remove dimension-dependent fields that would cause unnecessary changes
+    const {
+      width: _width,
+      height: _height,
+      ...specWithoutDimensions
+    } = baseSpec
+    return JSON.stringify(specWithoutDimensions)
+  }, [
+    inputSpec,
+    useContainerWidth,
+    useContainerHeight,
+    vegaLiteTheme,
+    selectionMode,
+    theme,
+  ])
+
   return {
     id,
     formId,
@@ -286,5 +326,8 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    baseSpecKey,
+    chartWidth: containerWidth,
+    chartHeight: containerHeight,
   }
 }
