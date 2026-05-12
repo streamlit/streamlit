@@ -19,9 +19,6 @@ useful, but should be a separate small spec before implementation.
 
 ## 1. Component-Owned Arrow Data Derivations
 
-Status: specified in
-`specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`.
-
 Move `Quiver`/Vega-Lite wrapper construction out of `ElementNode` and into `Table`,
 `DataFrame`, and `ArrowVegaLiteChart`.
 

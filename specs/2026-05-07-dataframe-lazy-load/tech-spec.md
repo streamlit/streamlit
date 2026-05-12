@@ -56,8 +56,7 @@ See `preparations.md` in this directory for recommended frontend/dataframe clean
 before the lazy-loading implementation starts. Key refactors:
 
 1. **Component-owned Arrow data derivations**: Move `Quiver` construction out of `ElementNode` and
-   into `DataFrame`, `Table`, and `ArrowVegaLiteChart`. Specified in
-   `specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`.
+   into `DataFrame`, `Table`, and `ArrowVegaLiteChart`. See `preparations.md` section 1 for details.
 
 2. **Dataframe capability/mode layer**: Add `useDataFrameCapabilities(...)` returning explicit
    feature gates (`canSort`, `canSearch`, `canExportCsv`, `canEdit`, etc.). Lazy loading adds one
@@ -348,8 +347,8 @@ deferred-file plumbing:
 - `DataFrame` sends `BackMsg.dataframe_chunk_request` through that context instead of reaching
   into connection state directly.
 
-This spec assumes the component-owned Arrow data refactor described in
-`specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`. Lazy dataframe handling
+This spec assumes the component-owned Arrow data refactor described in `preparations.md` section 1
+has landed. Lazy dataframe handling
 should stay inside the dataframe component/hooks rather than adding a lazy branch to
 `frontend/lib/src/render-tree/ElementNode.ts`:
 
@@ -828,8 +827,7 @@ annotations. Explicit capabilities are easier to validate and document.
 
 ## References
 
-- Component-owned Arrow data refactor:
-  `specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`
+- Component-owned Arrow data refactor: see `preparations.md` section 1
 - Prior prototype PR #11032: https://github.com/streamlit/streamlit/pull/11032
 - Snowflake `LIMIT / FETCH`: https://docs.snowflake.com/en/sql-reference/constructs/limit
 - Snowpark `DataFrame.limit`: https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/api/snowflake.snowpark.DataFrame.limit
