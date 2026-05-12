@@ -298,3 +298,30 @@ else:
         accept_multiple_files=False,
     )
     st.write("Initial uploader value:", dynamic_file.name if dynamic_file else "None")
+
+# Test file type shortcuts and MIME types
+st.file_uploader(
+    "Image shortcut type:",
+    type="image",
+    key="image_shortcut",
+)
+
+st.file_uploader(
+    "Mixed types (shortcut, MIME, extension):",
+    type=["audio", "application/pdf", ".json"],
+    key="mixed_types",
+)
+
+# Test extension deduplication (Issue #11991)
+# Backend normalization sends both ".jpg" and ".jpeg" when either "jpg" or "jpeg" is specified
+st.file_uploader(
+    "JPG deduplication test:",
+    type=["jpg"],
+    key="jpg_dedup",
+)
+
+st.file_uploader(
+    "Multiple paired extensions:",
+    type=["jpg", "tif", "pdf"],
+    key="multiple_paired_dedup",
+)

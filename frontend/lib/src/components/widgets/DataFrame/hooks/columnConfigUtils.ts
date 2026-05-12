@@ -36,15 +36,15 @@ export const updateColumnConfigTypeProps = ({
   const existingConfig = newColumnConfigMapping.get(columnId)
 
   const baseConfig = {
-    ...(existingConfig || {}),
-    ...(updatedProps || {}),
+    ...existingConfig,
+    ...updatedProps,
   }
 
   // Only add type_config if either existing or updated config has it
   if (existingConfig?.type_config || updatedProps?.type_config) {
     baseConfig.type_config = {
-      ...(existingConfig?.type_config || {}),
-      ...(updatedProps?.type_config || {}),
+      ...existingConfig?.type_config,
+      ...updatedProps?.type_config,
     }
   }
 

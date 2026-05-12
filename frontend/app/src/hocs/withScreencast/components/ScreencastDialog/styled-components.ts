@@ -20,6 +20,6 @@ export const StyledRecordAudioLabel = styled.label({
   margin: 0,
 })
 
-export const StyledInstruction = styled.p({
+export const StyledInstruction = styled.div({
   margin: 0,
 })

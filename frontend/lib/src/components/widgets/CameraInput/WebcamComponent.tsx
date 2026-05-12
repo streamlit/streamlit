@@ -26,7 +26,7 @@ import {
 import { Video } from "@emotion-icons/open-iconic"
 import Webcam from "react-webcam"
 
-import Icon from "~lib/components/shared/Icon"
+import Icon from "~lib/components/shared/Icon/Icon"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import themeColors from "~lib/theme/emotionBaseTheme/themeColors"
 import { CAMERA_PERMISSION_URL } from "~lib/urls"
@@ -64,7 +64,7 @@ interface AskForCameraPermissionProps {
   width: number
 }
 
-export const AskForCameraPermission = ({
+const AskForCameraPermission = ({
   width,
 }: AskForCameraPermissionProps): ReactElement => {
   return (
@@ -101,8 +101,9 @@ const WebcamComponent = ({
 
   const [debouncedWidth, setDebouncedWidth] = useState(width)
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- debounce returns a function; stable across renders
   const memoizedSetDebouncedCallback = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- debounce factory pattern
     debounce(1000, setDebouncedWidth),
     []
   )

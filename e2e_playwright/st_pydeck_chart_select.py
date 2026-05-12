@@ -148,7 +148,7 @@ elif st.session_state.selected_chart == "scatterplot":
         ],
     )
 
-    st.pydeck_chart(
+    selection = st.pydeck_chart(
         pdk.Deck(
             pdk.Layer(
                 "ScatterplotLayer",
@@ -170,6 +170,12 @@ elif st.session_state.selected_chart == "scatterplot":
         ),
         on_select="rerun",
         selection_mode="single-object",
+        key="scatterplot_map",
+    )
+    st.write("scatterplot_map selection:", str(selection))
+    st.write(
+        "session_state.scatterplot_map:",
+        str(st.session_state.get("scatterplot_map") or ""),
     )
 
 elif st.session_state.selected_chart == "dynamic":

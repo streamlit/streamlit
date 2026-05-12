@@ -17,6 +17,7 @@ from __future__ import annotations
 import math
 from collections.abc import Iterable, Iterator, Mapping, MutableMapping
 from dataclasses import dataclass, field
+from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, cast
 from urllib import parse
 
@@ -54,6 +55,97 @@ class WidgetBinding:
     script_hash: str  # For MPA: identifies main vs page script
 
 
+def _to_non_empty_list(value: str | list[str]) -> list[str]:
+    """Convert URL param value to list, filtering out empty strings.
+
+    Empty strings are reserved to represent "cleared/empty" state, so they
+    are not valid as individual array elements.
+    """
+    parts = list(value) if isinstance(value, list) else [value]
+    return [p for p in parts if p != ""]
+
+
+def is_empty_url_value(value: str | list[str]) -> bool:
+    """Check if URL value represents an empty parameter (e.g., ?foo= with no value).
+
+    Parameters
+    ----------
+    value : str | list[str]
+        The URL parameter value(s).
+
+    Returns
+    -------
+    bool
+        True if all values are empty strings ("" or [""] or ["", ""], etc.).
+        Returns False for mixed values like ["a", ""] which contain valid data.
+    """
+    if isinstance(value, list):
+        return len(value) > 0 and all(v == "" for v in value)
+    return value == ""
+
+
+_UTC_EPOCH: Final = datetime(1970, 1, 1, tzinfo=timezone.utc)
+_SECONDS_TO_MICROS: Final = 1000 * 1000
+_DAYS_TO_MICROS: Final = 24 * 60 * 60 * _SECONDS_TO_MICROS
+
+# Base date for time values must match slider.py's _time_to_datetime.
+_TIME_BASE_DATE: Final = date(2000, 1, 1)
+
+
+def _delta_to_micros(delta: timedelta) -> int:
+    # Uses component-based calculation instead of int(delta.total_seconds() * 1e6)
+    # to avoid floating-point precision loss on large timedeltas.
+    return (
+        delta.microseconds
+        + delta.seconds * _SECONDS_TO_MICROS
+        + delta.days * _DAYS_TO_MICROS
+    )
+
+
+def _try_parse_iso_to_micros(s: str) -> float | None:
+    """Try to parse an ISO date/time/datetime string to microsecond timestamp.
+
+    Supports the same ISO formats used by date/time slider URL parameters:
+    - DATE: ``YYYY-MM-DD``
+    - TIME: ``HH:MM`` or ``HH:MM:SS``
+    - DATETIME: ``YYYY-MM-DDTHH:MM`` or ``YYYY-MM-DDTHH:MM:SS``
+
+    Returns the microsecond float if parsing succeeds, or ``None`` if the
+    string doesn't match any recognized format.
+    """
+    # Try datetime first (contains 'T' separator)
+    if "T" in s:
+        try:
+            dt = datetime.fromisoformat(s)
+            if dt.tzinfo is not None:
+                return None
+            return float(_delta_to_micros(dt.replace(tzinfo=timezone.utc) - _UTC_EPOCH))
+        except ValueError:
+            return None
+
+    # Try date (contains '-')
+    if "-" in s:
+        try:
+            d = date.fromisoformat(s)
+            dt = datetime.combine(d, time(), tzinfo=timezone.utc)
+            return float(_delta_to_micros(dt - _UTC_EPOCH))
+        except ValueError:
+            return None
+
+    # Try time (contains ':')
+    if ":" in s:
+        try:
+            t = time.fromisoformat(s)
+            if t.tzinfo is not None:
+                return None
+            dt = datetime.combine(_TIME_BASE_DATE, t, tzinfo=timezone.utc)
+            return float(_delta_to_micros(dt - _UTC_EPOCH))
+        except ValueError:
+            return None
+
+    return None
+
+
 def parse_url_param(value: str | list[str], value_type: str) -> Any:
     """Convert URL param to Python value based on WidgetState value type.
 
@@ -68,6 +160,10 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
     -------
     Any
         The parsed Python value appropriate for the widget type.
+        For empty URL params (e.g., ?foo=):
+        - Array types return []
+        - string_value returns "" (empty string is valid)
+        - Other types return None (signaling "cleared" state)
 
     Raises
     ------
@@ -76,6 +172,17 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
     """
     # For single-value types, get the last value if it's a list
     val = value[-1] if isinstance(value, list) else value
+
+    # Handle empty string values (e.g., ?foo= in URL)
+    if is_empty_url_value(value):
+        match value_type:
+            case "string_array_value" | "int_array_value" | "double_array_value":
+                return []  # Empty array
+            case "string_value":
+                return ""  # Empty string is a valid value for text inputs
+            case _:
+                # For other types (bool, int, double), empty signals "cleared"
+                return None
 
     match value_type:
         case "bool_value":
@@ -101,32 +208,72 @@ def parse_url_param(value: str | list[str], value_type: str) -> Any:
             return val
         case "string_array_value":
             # Repeated params: ?foo=a&foo=b -> ["a", "b"]
-            return list(value) if isinstance(value, list) else [value]
+            # Note: Empty strings are filtered - "" is reserved for "cleared/empty" state
+            return _to_non_empty_list(value)
         case "double_array_value":
             # Repeated params: ?foo=1.5&foo=2.5 -> [1.5, 2.5]
-            # Also handles string values for select_slider option matching
-            parts = list(value) if isinstance(value, list) else [value]
+            # Strings kept for select_slider option matching; empty strings filtered
             result_double: list[float | str] = []
-            for part in parts:
+            for part in _to_non_empty_list(value):
                 try:
                     result_double.append(float(part))
                 except ValueError:  # noqa: PERF203
-                    result_double.append(part)  # Keep as string for select_slider
+                    # Try ISO date/time/datetime parsing for date/time sliders.
+                    # Converts human-readable ISO strings to microsecond floats.
+                    micros = _try_parse_iso_to_micros(part)
+                    if micros is not None:
+                        result_double.append(micros)
+                    else:
+                        result_double.append(part)
             return result_double
         case "int_array_value":
             # Repeated params: ?foo=1&foo=2 -> [1, 2]
-            # Also handles string values for option matching (pills, etc.)
-            parts = list(value) if isinstance(value, list) else [value]
+            # Strings kept for option matching (pills, etc.); empty strings filtered
             result_int: list[int | str] = []
-            for part in parts:
+            for part in _to_non_empty_list(value):
                 try:
                     result_int.append(int(part))
                 except ValueError:  # noqa: PERF203
-                    result_int.append(part)  # Keep as string
+                    result_int.append(part)
             return result_int
         case _:
             # Unknown type, return as-is
             return val
+
+
+def _format_number_for_query_url(v: Any) -> str:
+    """Format a number for the query string (matches set_corrected_value rules).
+
+    Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5".
+    NaN and Inf are returned via str() without int coercion.
+    """
+    if isinstance(v, float) and math.isfinite(v) and v == int(v):
+        return str(int(v))
+    return str(v)
+
+
+def _coerce_value_for_query_url(value: Any, value_type: str) -> str | list[str]:
+    """Convert a widget/serializer value to the form stored in ``_query_params``."""
+    if value_type in {
+        "string_array_value",
+        "int_array_value",
+        "double_array_value",
+    }:
+        if isinstance(value, (list, tuple)):
+            return [
+                _format_number_for_query_url(v)
+                if value_type == "double_array_value"
+                else str(v)
+                for v in value
+            ]
+        return (
+            _format_number_for_query_url(value)
+            if value_type == "double_array_value"
+            else str(value)
+        )
+    if value_type == "bool_value" and isinstance(value, bool):
+        return str(value).lower()
+    return str(value)
 
 
 @dataclass
@@ -166,8 +313,7 @@ class QueryParams(MutableMapping[str, str]):
             if isinstance(value, list):
                 if len(value) == 0:
                     return ""
-                # Return the last value to mimic Tornado's behavior
-                # https://www.tornadoweb.org/en/stable/web.html#tornado.web.RequestHandler.get_query_argument
+                # Return the last value when multiple values exist
                 return value[-1]
             return value
         except KeyError:
@@ -201,7 +347,7 @@ class QueryParams(MutableMapping[str, str]):
         except KeyError:
             raise KeyError(missing_key_error_message(key))
 
-    def update(  # ty: ignore[invalid-method-override]
+    def update(
         self,
         other: Iterable[tuple[str, str | Iterable[str]]]
         | SupportsKeysAndGetItem[str, str | Iterable[str]] = (),
@@ -378,6 +524,29 @@ class QueryParams(MutableMapping[str, str]):
         if binding:
             self._bindings_by_param.pop(binding.param_key, None)
 
+    def unbind_and_clear_param(self, widget_id: str) -> None:
+        """Remove a widget binding and its associated query param from the URL.
+
+        Unlike ``unbind_widget`` which only removes the internal tracking, this
+        method also deletes the query parameter value and sends a forward
+        message so the frontend URL is updated. It is a no-op when no binding
+        exists for *widget_id*.
+
+        Parameters
+        ----------
+        widget_id : str
+            The unique widget ID.
+        """
+        binding = self._bindings_by_widget.get(widget_id)
+        if binding is None:
+            return
+
+        param_key = binding.param_key
+        self.unbind_widget(widget_id)
+        if param_key in self._query_params:
+            del self._query_params[param_key]
+            self._send_query_param_msg()
+
     def is_bound(self, param_key: str) -> bool:
         """Check if a query parameter is bound to a widget.
 
@@ -429,6 +598,10 @@ class QueryParams(MutableMapping[str, str]):
         """
         return self._bindings_by_widget.get(widget_id)
 
+    def has_param(self, param_key: str) -> bool:
+        """Return whether a query parameter currently exists."""
+        return param_key in self._query_params
+
     def remove_param(self, param_key: str) -> bool:
         """Remove a query parameter without protection checks.
 
@@ -449,6 +622,18 @@ class QueryParams(MutableMapping[str, str]):
         if param_key in self._query_params:
             del self._query_params[param_key]
             self._send_query_param_msg()
+            return True
+        return False
+
+    def discard_param_no_forward_msg(self, param_key: str) -> bool:
+        """Remove a query parameter without sending a forward message.
+
+        This is used for backend-only cache cleanup when the frontend URL has
+        already removed the parameter (for example, default-value collapse on a
+        same-page rerun).
+        """
+        if param_key in self._query_params:
+            del self._query_params[param_key]
             return True
         return False
 
@@ -499,7 +684,20 @@ class QueryParams(MutableMapping[str, str]):
             return values[0]
         return values
 
-    def _set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
+    def stored_param_matches_corrected_value(
+        self, param_key: str, value: Any, value_type: str
+    ) -> bool:
+        """Return True if the stored URL param equals ``set_corrected_value`` output.
+
+        Used to skip redundant ``page_info_changed`` messages when programmatic
+        session state already matches the backend query-param snapshot.
+        """
+        if param_key not in self._query_params:
+            return False
+        coerced = _coerce_value_for_query_url(value, value_type)
+        return coerced == self._query_params[param_key]
+
+    def set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
         """Set a corrected value for a query parameter.
 
         This is called when URL auto-correction is needed (e.g., after clamping
@@ -515,44 +713,12 @@ class QueryParams(MutableMapping[str, str]):
         value_type : str
             The WidgetState value type (e.g., "double_value", "int_value").
         """
-
-        def format_number(v: Any) -> str:
-            """Format a number, using integer format if value is a whole number.
-
-            Examples: 5.0 -> "5", 5.5 -> "5.5", 5 -> "5"
-            Handles special float values (NaN, Inf) by returning them as-is.
-            """
-            # math.isfinite returns False for NaN, inf, -inf
-            # which would raise ValueError/OverflowError when converting to int
-            if isinstance(v, float) and math.isfinite(v) and v == int(v):
-                return str(int(v))
-            return str(v)
-
-        # Convert the value to a string representation for the URL
-        # All array types use repeated params: ?foo=a&foo=b
-        if value_type in {
-            "string_array_value",
-            "int_array_value",
-            "double_array_value",
-        }:
-            if isinstance(value, (list, tuple)):
-                # Store as list for repeated params
-                self._query_params[param_key] = [
-                    format_number(v) if value_type == "double_array_value" else str(v)
-                    for v in value
-                ]
-                self._send_query_param_msg()
-                return
-            str_value = (
-                format_number(value)
-                if value_type == "double_array_value"
-                else str(value)
-            )
-        else:
-            str_value = str(value)
-
-        self._query_params[param_key] = str_value
+        self._query_params[param_key] = _coerce_value_for_query_url(value, value_type)
         self._send_query_param_msg()
+
+    # Keep alias for compatibility with existing internal call sites/tests.
+    def _set_corrected_value(self, param_key: str, value: Any, value_type: str) -> None:
+        self.set_corrected_value(param_key, value, value_type)
 
     def populate_from_query_string(
         self,
@@ -612,7 +778,7 @@ class QueryParams(MutableMapping[str, str]):
 
     def remove_stale_bindings(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None = None,
         widget_metadata: dict[str, Any] | None = None,
     ) -> None:
@@ -626,7 +792,7 @@ class QueryParams(MutableMapping[str, str]):
 
         Parameters
         ----------
-        active_widget_ids : set[str]
+        active_widget_ids : frozenset[str]
             Set of widget IDs that are currently active/rendered.
         fragment_ids_this_run : list[str] | None
             List of fragment IDs being run, or None for full script runs.

@@ -32,7 +32,8 @@ import {
 } from "baseui/tooltip"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme, hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import { StyledTooltipContentWrapper } from "./styled-components"
 import { useTooltipMeasurementSideEffect } from "./useTooltipMeasurementSideEffect"
@@ -128,6 +129,7 @@ function Tooltip({
   const theme = useEmotionTheme()
 
   // This section of code is to work around a timing issue with BaseWeb's Tooltip component
+
   const [tooltipElement, setTooltipElement] = useState<HTMLDivElement | null>(
     null
   )
@@ -149,7 +151,7 @@ function Tooltip({
   }, [])
 
   const handleKeyDownCapture = useCallback(
-    (event: React.KeyboardEvent<HTMLDivElement>) => {
+    (event: React.KeyboardEvent<HTMLElement>) => {
       if (event.key !== "Escape" || !isOpen) {
         return
       }
@@ -178,6 +180,7 @@ function Tooltip({
   useTooltipMeasurementSideEffect(tooltipElement, isOpen)
 
   const tooltipOverrides = generateDefaultTooltipOverrides(theme, overrides)
+  const TooltipTargetTag = inline ? "span" : "div"
 
   const renderContent = useCallback(
     ({ close }: { close: () => void }) => {
@@ -208,7 +211,7 @@ function Tooltip({
       overrides={tooltipOverrides}
     >
       {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <div
+      <TooltipTargetTag
         style={{
           display: "flex",
           flexDirection: "row",
@@ -225,7 +228,7 @@ function Tooltip({
         }
       >
         {children}
-      </div>
+      </TooltipTargetTag>
     </StatefulTooltip>
   )
 }

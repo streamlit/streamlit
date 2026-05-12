@@ -236,3 +236,38 @@ markdown_select_slider_value = st.select_slider(
     key="markdown_options_select_slider",
 )
 st.write("Markdown option selection:", markdown_select_slider_value)
+
+# --- Query Param Binding Select Sliders ---
+
+COLORS = ["red", "orange", "yellow", "green", "blue", "indigo", "violet"]
+
+# Select Slider 17 - Single value with bind
+bound_color = st.select_slider(
+    "Bound color",
+    options=COLORS,
+    value="green",
+    key="bound_color",
+    bind="query-params",
+)
+st.write("Bound color:", bound_color)
+
+# Select Slider 18 - Range with bind
+bound_color_range = st.select_slider(
+    "Bound color range",
+    options=COLORS,
+    value=("orange", "indigo"),
+    key="bound_color_range",
+    bind="query-params",
+)
+st.write("Bound color range:", bound_color_range)
+
+# Select Slider 19 - With format_func and bind
+bound_formatted = st.select_slider(
+    "Bound formatted",
+    options=["sm", "md", "lg", "xl"],
+    value="md",
+    format_func=str.upper,
+    key="bound_formatted",
+    bind="query-params",
+)
+st.write("Bound formatted:", bound_formatted)

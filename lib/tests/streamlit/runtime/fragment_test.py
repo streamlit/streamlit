@@ -14,6 +14,10 @@
 
 from __future__ import annotations
 
+import copy
+import sys
+import threading
+import types
 import unittest
 from collections.abc import Callable
 from unittest.mock import MagicMock, patch
@@ -36,6 +40,7 @@ from streamlit.runtime.fragment import (
 )
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -55,24 +60,24 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage = MemoryFragmentStorage()
         self._storage._fragments["some_key"] = "some_fragment"
 
-    def test_get(self):
-        assert self._storage.get("some_key") == "some_fragment"
+    def test_lookup(self):
+        assert self._storage.lookup("some_key") == "some_fragment"
 
-    def test_get_FragmentStorageKeyError(self):
+    def test_lookup_FragmentStorageKeyError(self):
         with pytest.raises(FragmentStorageKeyError):
-            self._storage.get("nonexistent_key")
+            self._storage.lookup("nonexistent_key")
 
-    def test_set(self):
-        self._storage.set("some_key", "new_fragment")
-        self._storage.set("some_other_key", "some_other_fragment")
+    def test_register(self):
+        self._storage.register("some_key", "new_fragment")
+        self._storage.register("some_other_key", "some_other_fragment")
 
-        assert self._storage.get("some_key") == "new_fragment"
-        assert self._storage.get("some_other_key") == "some_other_fragment"
+        assert self._storage.lookup("some_key") == "new_fragment"
+        assert self._storage.lookup("some_other_key") == "some_other_fragment"
 
     def test_delete(self):
         self._storage.delete("some_key")
         with pytest.raises(FragmentStorageKeyError):
-            self._storage.get("nonexistent_key")
+            self._storage.lookup("nonexistent_key")
 
     def test_del_FragmentStorageKeyError(self):
         with pytest.raises(FragmentStorageKeyError):
@@ -89,13 +94,121 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage._fragments["some_other_key"] = "some_other_fragment"
         assert len(self._storage._fragments) == 2
 
-        self._storage.clear(new_fragment_ids={"some_key"})
+        self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
 
     def test_contains(self):
         assert self._storage.contains("some_key")
         assert not self._storage.contains("some_other_key")
+
+
+def test_has_lock() -> None:
+    """MemoryFragmentStorage should expose a threading.Lock for concurrent register/clear."""
+    storage = MemoryFragmentStorage()
+    # threading.Lock is a class in Python 3.13+ and a factory function in 3.10-3.12,
+    # so we compare against type(threading.Lock()) for portability across both.
+    assert isinstance(storage._lock, type(threading.Lock()))
+
+
+def test_concurrent_register_smoke() -> None:
+    """Smoke test: many threads calling register() concurrently with distinct
+    keys do not deadlock and do not drop entries.
+
+    Note: under CPython's GIL, ``dict[key] = value`` is already atomic, and the
+    free-threaded build (PEP 703) preserves that via per-object locking on
+    built-in dicts. With distinct keys per thread, this test would therefore
+    pass even without ``self._lock``. The value of this test is as a regression
+    guard against a wildly broken register() that loses writes or deadlocks. The
+    lock's real purpose — serializing register() with clear()'s multi-op
+    snapshot-then-delete sequence — is exercised more directly by
+    ``test_lock_contention_under_load`` below.
+    """
+    storage = MemoryFragmentStorage()
+    num_threads = 10
+    ids_per_thread = 100
+    barrier = threading.Barrier(num_threads)
+
+    def worker(thread_idx: int) -> None:
+        barrier.wait()
+        for i in range(ids_per_thread):
+            fid = f"fragment_{thread_idx}_{i}"
+            storage.register(fid, lambda: None)
+
+    threads = [threading.Thread(target=worker, args=(t,)) for t in range(num_threads)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(storage._fragments) == num_threads * ids_per_thread
+
+
+def test_clear_preserves_kept_fragments_after_register() -> None:
+    """clear() should retain fragments listed in new_fragment_ids when the storage was
+    populated via register() (rather than the internal dict directly).
+    """
+    storage = MemoryFragmentStorage()
+    keep_ids: set[str] = set()
+
+    for i in range(100):
+        fid = f"fragment_{i}"
+        storage.register(fid, lambda: None)
+        if i % 2 == 0:
+            keep_ids.add(fid)
+
+    storage.clear(new_fragment_ids=frozenset(keep_ids))
+    assert len(storage._fragments) == 50
+    for fid in keep_ids:
+        assert storage.contains(fid)
+
+
+def test_lock_contention_under_load() -> None:
+    """register() and clear() should not deadlock under concurrent access."""
+    storage = MemoryFragmentStorage()
+    num_threads = 5
+    ops_per_thread = 200
+    barrier = threading.Barrier(num_threads + 1)
+
+    def register_worker(idx: int) -> None:
+        barrier.wait()
+        for i in range(ops_per_thread):
+            storage.register(f"frag_{idx}_{i}", lambda: None)
+
+    def clear_worker() -> None:
+        barrier.wait()
+        for _ in range(ops_per_thread):
+            storage.clear(new_fragment_ids=frozenset())
+
+    threads: list[threading.Thread] = [
+        threading.Thread(target=register_worker, args=(t,)) for t in range(num_threads)
+    ]
+    threads.append(threading.Thread(target=clear_worker))
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    # No assertion on final count — the point is no deadlock or crash.
+
+
+def test_deepcopy_raises_type_error() -> None:
+    """deepcopy should raise TypeError, not silently produce a half-broken clone."""
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+
+    with pytest.raises(TypeError, match="does not support deepcopy"):
+        copy.deepcopy(storage)
+
+
+def test_shallow_copy_raises_type_error() -> None:
+    """copy.copy should raise TypeError so callers don't end up sharing _fragments
+    while allocating a fresh _lock.
+    """
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+
+    with pytest.raises(TypeError, match="does not support copy"):
+        copy.copy(storage)
 
 
 class FragmentTest(unittest.TestCase):
@@ -168,8 +281,10 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
-        ctx.fragment_storage.set = MagicMock(wraps=ctx.fragment_storage.set)
+        # Override the auto-generated MagicMock for fragment_storage with an explicit
+        # one so that deepcopy(ctx.cursors) cannot reach a real MemoryFragmentStorage,
+        # which holds a threading.Lock and is therefore not deepcopy-able.
+        ctx.fragment_storage = MagicMock()
 
         patched_get_script_run_ctx.return_value = ctx
 
@@ -181,7 +296,7 @@ class FragmentTest(unittest.TestCase):
         # fragment a single time.
         my_fragment()
         my_fragment()
-        assert ctx.fragment_storage.set.call_count == 2
+        assert ctx.fragment_storage.register.call_count == 2
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
@@ -195,7 +310,10 @@ class FragmentTest(unittest.TestCase):
         dg = MagicMock()
         dg.my_random_field = 7
         context_dg_stack.set((dg,))
-        ctx.cursors = MagicMock()
+        # Use a plain SimpleNamespace (not the auto-generated MagicMock) so that
+        # deepcopy(ctx.cursors) does not traverse back to the real fragment_storage
+        # above, whose threading.Lock cannot be deepcopied.
+        ctx.cursors = types.SimpleNamespace()
         ctx.cursors.my_other_random_field = 8
 
         call_count = 0
@@ -239,8 +357,9 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = set()
+        ctx.new_fragment_ids = ThreadSafeSet()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -256,11 +375,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
-        assert len(ctx.new_fragment_ids) == 0
+        assert len(ctx.new_fragment_ids.snapshot()) == 0
         my_fragment()
 
         # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
-        assert len(ctx.new_fragment_ids) == 1
+        assert len(ctx.new_fragment_ids.snapshot()) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -291,7 +410,7 @@ class FragmentTest(unittest.TestCase):
         called = False
 
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment(run_every=run_every)
@@ -322,6 +441,10 @@ class FragmentTest(unittest.TestCase):
         ctx.pages_manager = PagesManager("")
         ctx.pages_manager.set_pages({})  # Migrate to MPAv2
         ctx.active_script_hash = "some_hash"
+        # Use a plain dict (not the auto-generated MagicMock) so that deepcopy(ctx.cursors)
+        # does not traverse back to the real fragment_storage above, whose threading.Lock
+        # cannot be deepcopied.
+        ctx.cursors = {}
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
@@ -350,7 +473,7 @@ class FragmentTest(unittest.TestCase):
         patched_get_script_run_ctx,
     ):
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
@@ -368,7 +491,7 @@ class FragmentTest(unittest.TestCase):
         fragment-only rerun) is raised in the main execution context.
         """
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
@@ -387,7 +510,7 @@ class FragmentTest(unittest.TestCase):
             "streamlit.runtime.fragment.get_script_run_ctx"
         ) as patched_get_script_run_ctx:
             ctx = MagicMock()
-            ctx.fragment_storage = MemoryFragmentStorage()
+            ctx.fragment_storage = MagicMock()
             patched_get_script_run_ctx.return_value = ctx
 
             @fragment
@@ -416,6 +539,96 @@ class FragmentTest(unittest.TestCase):
         # countercheck
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
+
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_called_with_exception(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+    ):
+        """Test that the on_script_error handler is called with the exception in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MagicMock()
+        handler = MagicMock(return_value=None)
+        ctx.on_script_error = handler
+        patched_get_script_run_ctx.return_value = ctx
+
+        test_exception = ValueError("fragment error")
+
+        @fragment
+        def my_fragment():
+            raise test_exception
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        handler.assert_called_once_with(test_exception)
+        mock_log.assert_called_once_with(test_exception)
+        mock_show.assert_called_once_with(test_exception)
+
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_returns_true_suppresses_ui(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+    ):
+        """Test that returning True from handler suppresses UI display in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MagicMock()
+        handler = MagicMock(return_value=True)
+        ctx.on_script_error = handler
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            raise ValueError("fragment error")
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        handler.assert_called_once()
+        mock_log.assert_called_once()
+        mock_show.assert_not_called()
+
+    @patch("streamlit.error_util._LOGGER")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_exception_logged_and_ui_shown(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+        mock_logger: MagicMock,
+    ):
+        """Test that handler exceptions are logged and default UI is shown in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MagicMock()
+        patched_get_script_run_ctx.return_value = ctx
+
+        def raising_handler(exc: Exception) -> bool | None:
+            raise RuntimeError("handler error")
+
+        ctx.on_script_error = raising_handler
+        test_exception = ValueError("original error")
+
+        @fragment
+        def my_fragment():
+            raise test_exception
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        mock_logger.exception.assert_called_once_with(
+            "on_script_error handler raised an exception"
+        )
+        mock_show.assert_called_once_with(test_exception)
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
@@ -561,6 +774,12 @@ def get_test_tuples(
 
 
 class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
+    # Suppress unawaited coroutine warning from MagicMock(spec=Runtime). This occurs
+    # when rich's exception formatter accesses auto-created AsyncMock attributes.
+    pytestmark = pytest.mark.filterwarnings(
+        "ignore:coroutine.*was never awaited:RuntimeWarning"
+    )
+
     @parameterized.expand(
         get_test_tuples(outside_container_writing_apps, WIDGET_ELEMENTS)
     )
@@ -602,3 +821,58 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         element_producer: ELEMENT_PRODUCER,
     ):
         _app(element_producer)
+
+
+@pytest.mark.skipif(
+    sys.version_info < (3, 14),
+    reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
+)
+def test_fragment_decorator_handles_pep649_annotations() -> None:
+    """Handles PEP 649 deferred annotations when preserving function signature.
+
+    On Python 3.14+, inspect.signature() raises NameError for annotations
+    referencing types imported under TYPE_CHECKING. Our fix catches NameError
+    via contextlib.suppress when setting __signature__ on decorated functions.
+
+    See: https://github.com/streamlit/streamlit/issues/14324
+    """
+    import inspect
+    from unittest.mock import MagicMock
+
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.delta_generator_singletons import context_dg_stack
+    from streamlit.runtime.fragment import fragment
+    from tests.testutil import create_pep649_function
+
+    def base_func(items: object) -> None:
+        pass
+
+    func = create_pep649_function(
+        base_func, {"items": "UndefinedType", "return": "None"}
+    )
+
+    # Verify that inspect.signature() without STRING format raises NameError
+    with pytest.raises(NameError, match="UndefinedType"):
+        inspect.signature(func)
+
+    # Set up the required context for fragment to work
+    root_container = MagicMock()
+    original_dg_stack = context_dg_stack.get()
+    context_dg_stack.set(
+        (
+            DeltaGenerator(
+                root_container=root_container,
+                cursor=MagicMock(root_container=root_container),
+            ),
+        )
+    )
+
+    try:
+        # Apply the fragment decorator - should not raise NameError
+        decorated = fragment(func)
+
+        # The decorator should complete without error, even though __signature__
+        # couldn't be set due to NameError. The function should still work.
+        assert decorated.__name__ == "base_func"
+    finally:
+        context_dg_stack.set(original_dg_stack)

@@ -17,6 +17,7 @@
 
 from __future__ import annotations
 
+import builtins
 import textwrap
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator, Sequence
@@ -47,6 +48,7 @@ from streamlit.elements.widgets.time_widgets import (
     _parse_date_value,
 )
 from streamlit.proto.Alert_pb2 import Alert as AlertProto
+from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.GapSize_pb2 import GapSize
 from streamlit.proto.Markdown_pb2 import Markdown as MarkdownProto
@@ -59,7 +61,6 @@ if TYPE_CHECKING:
 
     from streamlit.proto.Block_pb2 import Block as BlockProto
     from streamlit.proto.Button_pb2 import Button as ButtonProto
-    from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
     from streamlit.proto.ChatInput_pb2 import ChatInput as ChatInputProto
     from streamlit.proto.Code_pb2 import Code as CodeProto
     from streamlit.proto.ColorPicker_pb2 import ColorPicker as ColorPickerProto
@@ -69,9 +70,11 @@ if TYPE_CHECKING:
     from streamlit.proto.Element_pb2 import Element as ElementProto
     from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
     from streamlit.proto.Feedback_pb2 import Feedback as FeedbackProto
+    from streamlit.proto.FileUploader_pb2 import FileUploader as FileUploaderProto
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Heading_pb2 import Heading as HeadingProto
     from streamlit.proto.Json_pb2 import Json as JsonProto
+    from streamlit.proto.MenuButton_pb2 import MenuButton as MenuButtonProto
     from streamlit.proto.Metric_pb2 import Metric as MetricProto
     from streamlit.proto.MultiSelect_pb2 import MultiSelect as MultiSelectProto
     from streamlit.proto.NumberInput_pb2 import NumberInput as NumberInputProto
@@ -367,7 +370,7 @@ class ChatInput(Widget):
         ws = WidgetState()
         ws.id = self.id
         if self._value is not None:
-            ws.string_trigger_value.data = self._value
+            ws.chat_input_value.data = self._value
         return ws
 
     @property
@@ -499,10 +502,11 @@ class Dataframe(Element):
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
-        self.key = None
         self.proto = proto
         self.root = root
         self.type = "dataframe"
+        # Extract user key from the element id if present
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
 
     @property
     def value(self) -> PandasDataframe:
@@ -532,8 +536,8 @@ class DateInput(Widget):
         super().__init__(proto, root)
         self._value = InitialValue()
         self.type = "date_input"
-        self.min = datetime.strptime(proto.min, "%Y/%m/%d").date()
-        self.max = datetime.strptime(proto.max, "%Y/%m/%d").date()
+        self.min = datetime.strptime(proto.min, "%Y-%m-%d").date()
+        self.max = datetime.strptime(proto.max, "%Y-%m-%d").date()
 
     def set_value(self, v: DateValue) -> DateInput:
         """Set the value of the widget."""
@@ -717,16 +721,22 @@ class Metric(Element):
 class ButtonGroup(Widget, Generic[T]):
     """A representation of ``st.pills`` and ``st.segmented_control``."""
 
-    _value: list[T] | None
+    _value: T | list[T] | None
 
     proto: ButtonGroupProto = field(repr=False)
-    options: list[ButtonGroupProto.Option]
+    options: list[str]
     form_id: str
 
     def __init__(self, proto: ButtonGroupProto, root: ElementTree) -> None:
         super().__init__(proto, root)
         self.type = "button_group"
-        self.options = list(proto.options)
+        # Store formatted content strings for value serialization
+        self.options = [opt.content for opt in proto.options]
+
+    @property
+    def _is_single_select(self) -> bool:
+        """Check if this is a single-select widget."""
+        return self.proto.click_mode == ButtonGroupProto.ClickMode.SINGLE_SELECT
 
     @property
     def _widget_state(self) -> WidgetState:
@@ -736,22 +746,39 @@ class ButtonGroup(Widget, Generic[T]):
         """
         ws = WidgetState()
         ws.id = self.id
-        ws.int_array_value.data[:] = self.indices
+        ws.string_array_value.data[:] = self.formatted_values
         return ws
 
     @property
-    def value(self) -> list[T]:
-        """The currently selected values from the options. (list)"""  # noqa: D400
+    def value(self) -> T | list[T] | None:
+        """The currently selected value(s) from the options.
+
+        For single-select mode, returns a single value (or None if nothing selected).
+        For multi-select mode, returns a list of values.
+        """
         if self._value is not None:
             return self._value
         state = self.root.session_state
         assert state
-        return cast("list[T]", state[self.id])
+        return cast("T | list[T]", state[self.id])
 
     @property
     def indices(self) -> Sequence[int]:
         """The indices of the currently selected values from the options. (list)"""  # noqa: D400
-        return [self.options.index(self.format_func(v)) for v in self.value]
+        return [self.options.index(v) for v in self.formatted_values]
+
+    @property
+    def formatted_values(self) -> Sequence[str]:
+        """The formatted string values for the current selection."""
+        format_func = self.format_func
+        value = self.value
+        if self._is_single_select:
+            # Single-select: value is a single item or None
+            if value is None:
+                return []
+            return [format_func(value)]
+        # Multi-select: value is a list
+        return [format_func(v) for v in cast("list[T]", value)]
 
     @property
     def format_func(self) -> Callable[[Any], Any]:
@@ -759,40 +786,49 @@ class ButtonGroup(Widget, Generic[T]):
         ss = self.root.session_state
         return cast("Callable[[Any], Any]", ss[TESTING_KEY][self.id])
 
-    def set_value(self, v: list[T]) -> ButtonGroup[T]:
-        """Set the value of the multiselect widget. (list)"""  # noqa: D400
+    def set_value(self, v: T | list[T] | None) -> ButtonGroup[T]:
+        """Set the value of the widget.
 
+        For single-select mode, pass a single value or None to clear the selection.
+        For multi-select mode, pass a list of values (use empty list to clear).
+        """
         self._value = v
         return self
 
     def select(self, v: T) -> ButtonGroup[T]:
+        """Add a selection to the widget.
+
+        For single-select mode, this sets the value to v.
+        For multi-select mode, this adds v to the selection if not already selected.
         """
-        Add a selection to the widget. Do nothing if the value is already selected.\
-        If testing a multiselect widget with repeated options, use ``set_value``\
-        instead.
-        """
-        current = self.value
+        if self._is_single_select:
+            return self.set_value(v)
+        # Multi-select: add to list
+        current = cast("list[T]", self.value)
         if v in current:
             return self
         new = current.copy()
         new.append(v)
-        self.set_value(new)
-        return self
+        return self.set_value(new)
 
     def unselect(self, v: T) -> ButtonGroup[T]:
+        """Remove a selection from the widget.
+
+        For single-select mode, this sets the value to None if v is the current value.
+        For multi-select mode, this removes v from the selection.
         """
-        Remove a selection from the widget. Do nothing if the value is not\
-        already selected. If a value is selected multiple times, the first\
-        instance is removed.
-        """
-        current = self.value
+        if self._is_single_select:
+            if self.value == v:
+                return self.set_value(None)
+            return self
+        # Multi-select: remove from list
+        current = cast("list[T]", self.value)
         if v not in current:
             return self
         new = current.copy()
         while v in new:
             new.remove(v)
-        self.set_value(new)
-        return self
+        return self.set_value(new)
 
 
 @dataclass(repr=False)
@@ -845,6 +881,285 @@ class Feedback(Widget):
         """Set the value of the feedback widget. (int or None)"""  # noqa: D400
         self._value = v
         return self
+
+
+@dataclass(repr=False)
+class FileUploader(Widget):
+    r"""A representation of ``st.file_uploader``.
+
+    Files are provided as tuples of (filename, content, mime_type).
+
+    Example
+    -------
+    >>> at = AppTest.from_string('''
+    ...     import streamlit as st
+    ...     uploaded = st.file_uploader("Upload a file")
+    ...     if uploaded:
+    ...         st.write(f"Uploaded: {uploaded.name}")
+    ... ''')
+    >>> at.run()
+    >>> at.file_uploader[0].set_value(("data.csv", b"col1,col2\n1,2", "text/csv"))
+    >>> at.run()
+    >>> at.markdown[0].value
+    'Uploaded: data.csv'
+    """
+
+    # Stores list of (file_id, filename, content, mime_type) tuples
+    # InitialValue means no explicit set_value/upload/clear was called
+    _files: list[tuple[str, str, bytes, str]] | InitialValue | None
+
+    proto: FileUploaderProto = field(repr=False)
+    label: str
+    help: str
+    form_id: str
+
+    def __init__(self, proto: FileUploaderProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._files = InitialValue()
+        self.type = "file_uploader"
+
+    @property
+    def accept_multiple_files(self) -> bool:
+        """Whether multiple files can be uploaded. (bool)"""  # noqa: D400
+        return self.proto.multiple_files
+
+    @property
+    def accept_directory(self) -> bool:
+        """Whether directory uploads are accepted. (bool)"""  # noqa: D400
+        return self.proto.accept_directory
+
+    @property
+    def allowed_type(self) -> list[str]:
+        """Allowed file types for upload. (list of str)"""  # noqa: D400
+        return list(self.proto.type)
+
+    def set_value(  # ty: ignore[invalid-method-override]
+        self,
+        files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
+    ) -> Self:
+        """Set the uploaded file(s) for testing.
+
+        Parameters
+        ----------
+        files
+            A tuple of (filename, content, mime_type) for single file upload,
+            or a sequence of such tuples for multiple file upload.
+            Set to ``None`` to clear uploaded files.
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        from uuid import uuid4
+
+        if files is None:
+            self._files = None
+        elif isinstance(files, tuple) and len(files) == 3 and isinstance(files[0], str):
+            # Single file as tuple (filename, content, mime_type)
+            single_file = cast(  # type: ignore[redundant-cast]
+                "tuple[str, bytes, str]", files
+            )
+            filename, content, mime_type = single_file
+            self._files = [(str(uuid4()), filename, content, mime_type)]
+        else:
+            # Multiple files
+            files_list = cast("Sequence[tuple[str, bytes, str]]", files)
+            self._files = [
+                (str(uuid4()), filename, content, mime_type)
+                for filename, content, mime_type in files_list
+            ]
+        return self
+
+    def upload(
+        self,
+        filename: str,
+        content: bytes,
+        mime_type: str = "application/octet-stream",
+    ) -> Self:
+        """Upload a single file for testing.
+
+        Parameters
+        ----------
+        filename
+            The name of the file.
+        content
+            The file content as bytes.
+        mime_type
+            The MIME type of the file. Defaults to "application/octet-stream".
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        from uuid import uuid4
+
+        if self._files is None or isinstance(self._files, InitialValue):
+            self._files = []
+        self._files.append((str(uuid4()), filename, content, mime_type))
+        return self
+
+    def clear(self) -> Self:
+        """Clear all uploaded files.
+
+        Returns
+        -------
+        FileUploader
+            The FileUploader instance for method chaining.
+        """
+        self._files = None
+        return self
+
+    def _get_files_to_register(self) -> list[tuple[str, str, bytes, str]]:
+        """Return files to register: list of (file_id, filename, content, mime_type).
+
+        If no explicit set_value/upload/clear was called, derive from existing
+        UploadedFile(s) in session_state to persist files across runs.
+        """
+        # If explicitly set, use that value
+        if not isinstance(self._files, InitialValue):
+            return self._files or []
+
+        # Fall back to existing UploadedFile(s) in session_state
+        from streamlit.runtime.uploaded_file_manager import UploadedFile
+
+        state = self.root.session_state
+        if not state:
+            return []
+
+        try:
+            current_value = state[self.id]
+        except KeyError:
+            return []
+
+        if current_value is None:
+            return []
+
+        # Handle both single file and multiple files
+        files_list: list[UploadedFile] = []
+        if isinstance(current_value, list):
+            files_list = current_value
+        elif isinstance(current_value, UploadedFile):
+            files_list = [current_value]
+
+        return [
+            (f.file_id, f.name, f.getvalue(), f.type)
+            for f in files_list
+            if isinstance(f, UploadedFile)
+        ]
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget."""
+        from streamlit.proto.Common_pb2 import (
+            FileUploaderState as FileUploaderStateProto,
+        )
+
+        ws = WidgetState()
+        ws.id = self.id
+
+        # Use _get_files_to_register which handles fallback to session_state
+        files_to_use = self._get_files_to_register()
+
+        if not files_to_use:
+            # Return empty state only if explicitly cleared (not InitialValue)
+            # or if there are no files in session_state
+            return ws
+
+        # Create file uploader state proto with pre-generated file IDs
+        state_proto = FileUploaderStateProto()
+
+        for file_id, filename, content, _mime_type in files_to_use:
+            file_info = state_proto.uploaded_file_info.add()
+            file_info.file_id = file_id
+            file_info.name = filename
+            file_info.size = len(content)
+            file_info.file_urls.file_id = file_id
+            file_info.file_urls.upload_url = f"/mock/upload/test session id/{file_id}"
+            file_info.file_urls.delete_url = f"/mock/upload/test session id/{file_id}"
+
+        ws.file_uploader_state_value.CopyFrom(state_proto)
+        return ws
+
+    @property
+    def value(self) -> Any:
+        """The current uploaded file(s).
+
+        Returns the UploadedFile object(s) or None, depending on the
+        ``accept_multiple_files`` setting.
+        """
+        state = self.root.session_state
+        assert state
+        return state[self.id]
+
+
+@dataclass(repr=False)
+class MenuButton(Widget, Generic[T]):
+    """A representation of ``st.menu_button``."""
+
+    _value: T | None
+
+    proto: MenuButtonProto = field(repr=False)
+    label: str
+    options: list[str]
+    help: str
+
+    def __init__(self, proto: MenuButtonProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
+        self._value = None
+        self.type = "menu_button"
+        self.options = list(proto.options)
+
+    @property
+    def _widget_state(self) -> WidgetState:
+        """Protobuf message representing the state of the widget, including
+        any interactions that have happened.
+        Should be the same as the frontend would produce for those interactions.
+        """
+        ws = WidgetState()
+        ws.id = self.id
+        if self._value is not None:
+            try:
+                ws.string_trigger_value.data = self.format_func(self._value)
+            except builtins.Exception:
+                ws.string_trigger_value.data = str(self._value)
+        return ws
+
+    @property
+    def value(self) -> T | None:
+        """The selected option value, or None if no option was clicked. (Any)"""  # noqa: D400
+        if self._value is not None:
+            return self._value
+        state = self.root.session_state
+        assert state
+        # For trigger widgets, the value is stored in TESTING_KEY along with format_func
+        testing_data = state[TESTING_KEY][self.id]
+        return cast("T | None", testing_data["value"])
+
+    @property
+    def format_func(self) -> Callable[[Any], str]:
+        """The widget's formatting function for displaying options. (callable)"""  # noqa: D400
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        return cast("Callable[[Any], str]", testing_data["format_func"])
+
+    def set_value(self, v: T | None) -> MenuButton[T]:
+        """Set the selected option value."""
+        self._value = v
+        return self
+
+    def click(self, v: T) -> MenuButton[T]:
+        """Click an option by value, simulating user selection."""
+        return self.set_value(v)
+
+    def click_index(self, index: int) -> MenuButton[T]:
+        """Click an option by index, simulating user selection."""
+        # Use original unformatted options from testing data to preserve the correct type
+        ss = self.root.session_state
+        testing_data = ss[TESTING_KEY][self.id]
+        original_options = testing_data["options"]
+        return self.set_value(cast("T", original_options[index]))
 
 
 @dataclass(repr=False)
@@ -1157,10 +1472,10 @@ class SelectSlider(Widget, Generic[T]):
     @property
     def _widget_state(self) -> WidgetState:
         # Build formatted options mapping
+        # Note: self.options already contains formatted strings from the proto,
+        # so we should NOT apply format_func to them again
         format_func = self.format_func
-        formatted_option_to_index = {
-            format_func(opt): idx for idx, opt in enumerate(self.options)
-        }
+        formatted_option_to_index = {opt: idx for idx, opt in enumerate(self.options)}
 
         # Determine if this is a range value
         is_range = isinstance(self.value, (list, tuple)) and len(self.value) == 2
@@ -1238,7 +1553,7 @@ class Slider(Widget, Generic[SliderValueT]):
     @property
     def _widget_state(self) -> WidgetState:
         data_type = self.proto.data_type
-        serde = SliderSerde([], data_type, True, None)
+        serde = SliderSerde([], data_type, True, None, self.proto.min, self.proto.max)
         v = serde.serialize(self.value)
 
         ws = WidgetState()
@@ -1490,14 +1805,18 @@ class DateTimeInput(Widget):
     def _widget_state(self) -> WidgetState:
         from datetime import datetime
 
-        datetime_ui_format = "%Y/%m/%d, %H:%M"
+        def _parse_dt(value: str) -> datetime:
+            try:
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M")
+            except ValueError:
+                return datetime.strptime(value, "%Y/%m/%d, %H:%M")
 
         ws = WidgetState()
         ws.id = self.id
 
         # Parse min and max values for validation
-        min_dt = datetime.strptime(self.min, datetime_ui_format)
-        max_dt = datetime.strptime(self.max, datetime_ui_format)
+        min_dt = _parse_dt(self.min)
+        max_dt = _parse_dt(self.max)
 
         serde = DateTimeInputSerde(value=None, min=min_dt, max=max_dt)
         serialized_value = serde.serialize(self.value)
@@ -1630,6 +1949,28 @@ class Block:
         return WidgetList(self.get("button_group"))  # type: ignore
 
     @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """st.pills widgets (subset of button_group with PILLS style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.PILLS
+            ]
+        )
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """st.segmented_control widgets (subset of button_group with SEGMENTED_CONTROL style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.SEGMENTED_CONTROL
+            ]
+        )
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))  # type: ignore
 
@@ -1686,6 +2027,10 @@ class Block:
         return WidgetList(self.get("feedback"))  # type: ignore
 
     @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        return WidgetList(self.get("file_uploader"))  # type: ignore
+
+    @property
     def expander(self) -> Sequence[Expander]:
         return self.get("expander")  # type: ignore
 
@@ -1712,6 +2057,10 @@ class Block:
     @property
     def metric(self) -> ElementList[Metric]:
         return ElementList(self.get("metric"))  # type: ignore
+
+    @property
+    def menu_button(self) -> WidgetList[MenuButton[Any]]:
+        return WidgetList(self.get("menu_button"))  # type: ignore
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:
@@ -2145,6 +2494,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Exception(elt.exception, root=root)
             elif ty == "feedback":
                 new_node = Feedback(elt.feedback, root=root)
+            elif ty == "file_uploader":
+                new_node = FileUploader(elt.file_uploader, root=root)
             elif ty == "heading":
                 if elt.heading.tag == HeadingProtoTag.TITLE_TAG.value:
                     new_node = Title(elt.heading, root=root)
@@ -2169,6 +2520,8 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                     raise ValueError(
                         f"Unknown markdown type {elt.markdown.element_type}"
                     )
+            elif ty == "menu_button":
+                new_node = MenuButton(elt.menu_button, root=root)
             elif ty == "metric":
                 new_node = Metric(elt.metric, root=root)
             elif ty == "multiselect":
@@ -2214,8 +2567,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
+        elif delta.WhichOneof("type") == "new_transient":
+            # new_transient (e.g. spinner) - skip these in the element tree
+            continue
         else:
-            # add_rows
+            # Unknown delta type - skip to avoid silently swallowing future types
             continue
 
         current_node: Block = root

@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/AppPage.proto";
 import "streamlit/proto/SessionStatus.proto";
 
@@ -138,35 +137,16 @@ message CustomThemeConfig {
     DARK = 1;
   }
 
-  // DEPRECATED: Use body_font instead:
-  enum FontFamily {
-    SANS_SERIF = 0;
-    SERIF = 1;
-    MONOSPACE = 2;
-  }
-
   string primary_color = 1;
   string secondary_background_color = 2;
   string background_color = 3;
   string text_color = 4;
-  // DEPRECATED: Use body_font instead:
-  FontFamily font = 5 [deprecated = true];
   BaseTheme base = 6;
-  // DEPRECATED: This color is not applied anymore:
-  string widget_background_color = 7 [deprecated = true];
-  // DEPRECATED: Use the border_color and show_widget_border instead:
-  string widget_border_color = 8 [deprecated = true];
-  // DEPRECATED: Please use the base_radius theme config instead:
-  Radii radii = 9 [deprecated = true];
   string heading_font = 12;
   string body_font = 13;
   string code_font = 14;
   repeated FontFace font_faces = 15;
   repeated FontSource font_sources = 37;
-  // DEPRECATED: Please use the base_font_size theme config instead:
-  FontSizes font_sizes = 16 [deprecated = true];
-  // DEPRECATED: This color is not applied anymore:
-  string skeleton_background_color = 17 [deprecated = true];
   optional string base_radius = 18;
   optional string button_radius = 26;
   optional string border_color = 19;
@@ -215,26 +195,31 @@ message CustomThemeConfig {
   optional string violet_text_color = 57;
   optional string gray_text_color = 58;
 
+  // Metric value styling:
+  optional string metric_value_font_size = 64;
+  optional int32 metric_value_font_weight = 65;
+
   // Theme sections:
   optional CustomThemeConfig sidebar = 24;
   optional CustomThemeConfig light = 60;
   optional CustomThemeConfig dark = 61;
 
-  // Next ID: 63
+  reserved 5, 7, 8, 9, 16, 17;
+  // Next ID: 66
 }
 
 message FontFace {
   string url = 1;
   // Equivalent to font-family @font-face CSS property.
   string family = 2;
-  // DEPRECATED: Use weight_range instead which supports single weights & weight ranges.
-  int32 weight = 3 [deprecated = true];
   // Equivalent to font-weight @font-face CSS property.
   string weight_range = 5;
   // Equivalent to font-style @font-face CSS property.
   string style = 4;
   // Equivalent to unicode-range @font-face CSS property.
   string unicode_range = 6;
+
+  reserved 3;
 }
 
 message FontSource {
@@ -242,21 +227,6 @@ message FontSource {
   // used in the <link> tag (href) to embed the font in html
   string config_name = 1;
   string source_url = 2;
-}
-
-// DEPRECATED: Please use the base_radius theme config instead.
-message Radii {
-  // In pixels.
-  int32 base_widget_radius = 1;
-  int32 checkbox_radius = 2;
-}
-
-// DEPRECATED: Please use the base_font_size theme config instead:
-message FontSizes {
-  // In pixels.
-  int32 tiny_font_size = 1;
-  int32 small_font_size = 2;
-  int32 base_font_size = 3;
 }
 
 // Data that identifies the Streamlit app creator.

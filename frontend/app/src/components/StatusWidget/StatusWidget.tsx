@@ -13,14 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-import {
-  ReactElement,
-  ReactNode,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react"
+import { ReactElement, ReactNode, useEffect, useRef, useState } from "react"
 
 import Hotkeys from "react-hot-keys"
 import { CSSTransition } from "react-transition-group"
@@ -34,9 +27,9 @@ import {
   isKeyboardEventFromEditableTarget,
   Placement,
   ScriptRunState,
-  Timer,
   Tooltip,
   useEmotionTheme,
+  useTimeout,
 } from "@streamlit/lib"
 import { isNullOrUndefined, notNullOrUndefined } from "@streamlit/utils"
 
@@ -116,11 +109,18 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   showScriptChangedActions,
 }) => {
   const [showRunningMan, setShowRunningMan] = useState(false)
-  const minimizePromptTimerRef: React.MutableRefObject<Timer | null> =
-    useRef(null)
-  const delayShowRunningManTimerRef: React.MutableRefObject<Timer | null> =
-    useRef(null)
   const theme = useEmotionTheme()
+
+  const {
+    clear: clearShowRunningManTimeout,
+    restart: restartShowRunningManTimeout,
+  } = useTimeout(
+    () => {
+      setShowRunningMan(true)
+    },
+    RUNNING_MAN_DISPLAY_DELAY_TIME_MS,
+    { autoStart: false }
+  )
 
   const handleAlwaysRerunClick = (): void => {
     if (allowRunOnSave) {
@@ -142,17 +142,6 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
 
   const isConnected = connectionState === ConnectionState.CONNECTED
 
-  const showRunningManAfterInitialDelay = useCallback(
-    (delay: number): void => {
-      if (delayShowRunningManTimerRef.current !== null) {
-        delayShowRunningManTimerRef.current.setTimeout(() => {
-          setShowRunningMan(true)
-        }, delay)
-      }
-    },
-    []
-  )
-
   const handleStopScriptClick = (): void => {
     stopScript()
   }
@@ -162,35 +151,25 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   }
 
   useEffect(() => {
-    if (minimizePromptTimerRef.current === null) {
-      minimizePromptTimerRef.current = new Timer()
-    }
-    if (delayShowRunningManTimerRef.current === null) {
-      delayShowRunningManTimerRef.current = new Timer()
+    if (
+      isConnected &&
+      (scriptRunState === ScriptRunState.RUNNING ||
+        scriptRunState === ScriptRunState.RERUN_REQUESTED)
+    ) {
+      restartShowRunningManTimeout()
+    } else {
+      clearShowRunningManTimeout()
     }
 
-    const minimizePromptTimerCurr = minimizePromptTimerRef.current
-    const delayShowRunningManTimerCurr = minimizePromptTimerRef.current
-
-    return () => {
-      minimizePromptTimerCurr.cancel()
-      delayShowRunningManTimerCurr.cancel()
-    }
-  }, [])
-
-  useEffect(() => {
-    if (isConnected) {
-      if (
-        scriptRunState === ScriptRunState.RUNNING ||
-        scriptRunState === ScriptRunState.RERUN_REQUESTED
-      ) {
-        showRunningManAfterInitialDelay(RUNNING_MAN_DISPLAY_DELAY_TIME_MS)
-      }
-    }
     if (scriptRunState === ScriptRunState.NOT_RUNNING) {
       setShowRunningMan(false)
     }
-  }, [scriptRunState, showRunningManAfterInitialDelay, isConnected])
+  }, [
+    clearShowRunningManTimeout,
+    isConnected,
+    restartShowRunningManTimeout,
+    scriptRunState,
+  ])
 
   const renderScriptIsRunning = (): ReactNode => {
     const stopRequested = scriptRunState === ScriptRunState.STOP_REQUESTED
@@ -281,22 +260,23 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
   // via `this.curView`, so that we can fade out our previous state
   // if `renderWidget` returns null after returning a non-null value.
   const curViewRef = useRef<ReactNode>()
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+  // nodeRef is passed to CSSTransition to avoid deprecated findDOMNode usage
+  const nodeRef = useRef<HTMLDivElement>(null)
+
   const prevView = curViewRef.current
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   curViewRef.current = renderWidget()
 
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
   if (isNullOrUndefined(curViewRef.current) && isNullOrUndefined(prevView)) {
     return <></>
   }
 
   let animateIn: boolean
   let renderView: ReactNode
-  // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
   if (notNullOrUndefined(curViewRef.current)) {
     animateIn = true
-    // eslint-disable-next-line react-hooks/refs -- TODO: Do not access ref during render
+
     renderView = curViewRef.current
   } else {
     animateIn = false
@@ -312,8 +292,10 @@ const StatusWidget: React.FC<StatusWidgetProps> = ({
       timeout={200}
       unmountOnExit={true}
       classNames="StatusWidget"
+      nodeRef={nodeRef}
     >
       <StyledStatusWidget
+        ref={nodeRef}
         key="StatusWidget"
         className="stStatusWidget"
         data-testid="stStatusWidget"

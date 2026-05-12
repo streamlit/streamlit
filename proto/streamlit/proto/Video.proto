@@ -16,12 +16,11 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/WidthConfig.proto";
 
 message SubtitleTrack {
-    string label = 1;  // Label for the subtitle e.g. "English" or "Spanish".
-    string url = 2;
+  string label = 1; // Label for the subtitle e.g. "English" or "Spanish".
+  string url = 2;
 }
 
 message Video {
@@ -29,7 +28,7 @@ message Video {
   string url = 6;
 
   enum Type {
-    UNUSED = 0;  // This should always exist.
+    UNUSED = 0; // This should always exist.
     NATIVE = 1;
     YOUTUBE_IFRAME = 2;
   }
@@ -57,5 +56,5 @@ message Video {
 
   optional streamlit.WidthConfig width_config = 13;
 
-  reserved 1,2,4;
+  reserved 1, 2, 4;
 }

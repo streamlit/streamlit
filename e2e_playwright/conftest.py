@@ -33,13 +33,16 @@ from io import BytesIO, TextIOWrapper
 from pathlib import Path
 from random import randint
 from tempfile import TemporaryFile
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Final, Literal, Protocol
 from urllib import parse
 
 import pytest
 import requests
 from PIL import Image
 from playwright.sync_api import (
+    Browser,
+    BrowserContext,
+    BrowserType,
     ElementHandle,
     FrameLocator,
     Locator,
@@ -50,6 +53,10 @@ from playwright.sync_api import (
 )
 from typing_extensions import Self
 
+from e2e_playwright.shared.app_target import (
+    AppTarget,
+    wait_for_app_target_loaded,
+)
 from e2e_playwright.shared.git_utils import get_git_root
 from e2e_playwright.shared.performance import (
     is_supported_browser,
@@ -61,6 +68,9 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from types import ModuleType, TracebackType
 
+# Register pytest plugins
+pytest_plugins = ["e2e_playwright.shared.stats_reporter"]
+
 
 # Used for static app testing
 class StaticPage(Page):
@@ -69,13 +79,38 @@ class StaticPage(Page):
 
 def pytest_addoption(parser: pytest.Parser) -> None:
     """Register custom command-line options."""
-    # Temporary option for testing the Starlette server migration.
-    # This can be removed once Tornado is fully replaced by Starlette.
     parser.addoption(
-        "--use-starlette",
-        action="store_true",
-        default=False,
-        help="Run tests with the experimental Starlette server instead of Tornado",
+        "--external-app-url",
+        action="store",
+        default=None,
+        help="Run tests against an externally hosted app URL instead of localhost",
+    )
+    parser.addoption(
+        "--external-host-url",
+        action="store",
+        default=None,
+        help=(
+            "Optional host page URL for externally hosted apps. "
+            "If provided, tests can load the host page (e.g. Snowsight) and target the app iframe."
+        ),
+    )
+    parser.addoption(
+        "--external-iframe-selector",
+        action="store",
+        default=None,
+        help=(
+            "CSS selector for the iframe element that contains the app when using --external-host-url. "
+            "Defaults to 'iframe'."
+        ),
+    )
+    parser.addoption(
+        "--browser-state-path",
+        action="store",
+        default=None,
+        help=(
+            "Path to a Playwright storage state JSON file "
+            "(for example, to preload an authenticated browser session)."
+        ),
     )
 
 
@@ -86,6 +121,14 @@ def pytest_configure(config: pytest.Config) -> None:
     )
     config.addinivalue_line(
         "markers", "app_hash(hash): mark test to open the app with a URL hash"
+    )
+    config.addinivalue_line(
+        "markers",
+        "external_test(upload_test_assets=False): "
+        "mark test as compatible with external app execution mode. "
+        "Set upload_test_assets=True when the hosted app needs "
+        "`e2e_playwright/static/` to be available. "
+        "Only the documented keyword arguments are supported (unknown kwargs error).",
     )
 
 
@@ -107,6 +150,132 @@ def reorder_early_fixtures(metafunc: pytest.Metafunc) -> None:
 
 def pytest_generate_tests(metafunc: pytest.Metafunc) -> None:
     reorder_early_fixtures(metafunc)
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """Validate external app mode configuration during collection.
+
+    When external app / host mode is enabled, we expect at least one collected
+    test to be marked with ``@pytest.mark.external_test``. Without that marker,
+    all tests will be skipped (see ``skip_non_external_tests_in_external_mode``)
+    which is usually not what the user intended.
+    """
+    for item in items:
+        marker = item.get_closest_marker("external_test")
+        if marker is None:
+            continue
+
+        if marker.args:
+            raise pytest.UsageError(
+                "external_test marker does not accept positional arguments. "
+                "Use keyword arguments only, e.g. "
+                "@pytest.mark.external_test(upload_test_assets=True)."
+            )
+
+        allowed_kwargs = {"upload_test_assets"}
+        unknown_kwargs = sorted(set(marker.kwargs) - allowed_kwargs)
+        if unknown_kwargs:
+            raise pytest.UsageError(
+                "external_test marker received unknown keyword arguments: "
+                f"{', '.join(unknown_kwargs)}. "
+                "Allowed keyword arguments: upload_test_assets."
+            )
+
+        if "upload_test_assets" in marker.kwargs and not isinstance(
+            marker.kwargs["upload_test_assets"], bool
+        ):
+            raise pytest.UsageError(
+                "external_test marker keyword argument upload_test_assets "
+                "must be a boolean."
+            )
+
+    external_app = _get_config_option_or_env(
+        config, "--external-app-url", "STREAMLIT_E2E_EXTERNAL_APP_URL"
+    )
+    external_host = _get_config_option_or_env(
+        config, "--external-host-url", "STREAMLIT_E2E_EXTERNAL_HOST_URL"
+    )
+    if not (external_app or external_host):
+        return
+
+    if any(item.get_closest_marker("external_test") is not None for item in items):
+        return
+
+    raise pytest.UsageError(
+        "External app mode was enabled, but no collected tests were marked "
+        "with @pytest.mark.external_test. Mark at least one compatible test "
+        "with 'external_test', or run without --external-app-url/--external-host-url "
+        "(and the corresponding STREAMLIT_E2E_EXTERNAL_* env vars)."
+    )
+
+
+def _get_config_option_or_env(
+    pytestconfig: pytest.Config, option_name: str, env_name: str
+) -> str | None:
+    # `pytestconfig.getoption` is typed as `Any` in pytest, but for our `store`
+    # options (e.g. `--external-app-url`) we expect `str | None`.
+    raw_value = pytestconfig.getoption(option_name)
+    if raw_value is not None:
+        if not isinstance(raw_value, str):
+            raise pytest.UsageError(
+                f"Expected {option_name} to be a string, got {type(raw_value).__name__}."
+            )
+        value = raw_value.strip()
+        if value:
+            return value
+
+    env_raw_value = os.getenv(env_name)
+    if env_raw_value is not None:
+        env_value = env_raw_value.strip()
+        if env_value:
+            return env_value
+
+    return None
+
+
+def _build_app_url(base_url: str, *, fragment: str | None) -> str:
+    """Build an app navigation URL from ``base_url`` and an optional fragment.
+
+    This preserves the user-provided path (including any trailing slash) to
+    avoid altering routing semantics for externally hosted apps.
+
+    The only normalization we do is mapping an empty path to ``"/"`` so that
+    ``https://example.com#foo`` and ``https://example.com/#foo`` both navigate
+    to the root path with the given fragment.
+    """
+    split = parse.urlsplit(base_url)
+    path = _normalize_empty_path(split.path)
+
+    if fragment is not None:
+        frag = fragment.lstrip("#")
+        return parse.urlunsplit((split.scheme, split.netloc, path, split.query, frag))
+
+    return parse.urlunsplit((split.scheme, split.netloc, path, split.query, ""))
+
+
+def _normalize_empty_path(path: str) -> str:
+    """Normalize an empty URL path to ``"/"``.
+
+    This intentionally does not change ``"/"`` or any non-empty path, including
+    trailing slashes, to preserve user-provided routing semantics.
+    """
+    return "/" if path == "" else path
+
+
+def _with_query_params(url: str, params: dict[str, str]) -> str:
+    """Return ``url`` with the provided query params set.
+
+    This preserves the original path (including any trailing slash) and only
+    normalizes the empty-path case to ``"/"``.
+    """
+    split = parse.urlsplit(url)
+    path = _normalize_empty_path(split.path)
+    existing = dict(parse.parse_qsl(split.query, keep_blank_values=True))
+    existing.update(params)
+    query = parse.urlencode(existing, doseq=True)
+    return parse.urlunsplit((split.scheme, split.netloc, path, query, split.fragment))
 
 
 class AsyncSubprocess:
@@ -283,13 +452,99 @@ def app_port(worker_id: str) -> int:
     return find_available_port()
 
 
+@pytest.fixture(scope="session")
+def external_app_url(pytestconfig: pytest.Config) -> str | None:
+    """Return the external app URL if configured, otherwise None.
+
+    The URL can be configured via CLI option or environment variable.
+    """
+    value = _get_config_option_or_env(
+        pytestconfig, "--external-app-url", "STREAMLIT_E2E_EXTERNAL_APP_URL"
+    )
+    if value is None:
+        return None
+
+    parsed = parse.urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise pytest.UsageError(
+            "Invalid value for --external-app-url / STREAMLIT_E2E_EXTERNAL_APP_URL: "
+            f"{value!r}. Expected an absolute HTTP(S) URL, e.g. "
+            "'http://localhost:8501' or 'https://example.com/app'."
+        )
+
+    return value
+
+
+@pytest.fixture(scope="session")
+def external_host_url(
+    pytestconfig: pytest.Config, external_app_url: str | None
+) -> str | None:
+    """Return the external host page URL if configured via CLI or environment.
+
+    When configured, this must be an absolute HTTP(S) URL. It also requires that
+    ``external_app_url`` is configured, since the app server will not be started
+    locally in that mode.
+    """
+    value = _get_config_option_or_env(
+        pytestconfig, "--external-host-url", "STREAMLIT_E2E_EXTERNAL_HOST_URL"
+    )
+    if value is None:
+        return None
+
+    if external_app_url is None:
+        raise pytest.UsageError(
+            "Invalid configuration: --external-host-url / "
+            "STREAMLIT_E2E_EXTERNAL_HOST_URL was set without also setting "
+            "--external-app-url / STREAMLIT_E2E_EXTERNAL_APP_URL. Please "
+            "configure both options, or remove the external host URL."
+        )
+
+    parsed = parse.urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise pytest.UsageError(
+            "Invalid value for --external-host-url / STREAMLIT_E2E_EXTERNAL_HOST_URL: "
+            f"{value!r}. Expected an absolute HTTP(S) URL, e.g. "
+            "'http://localhost:3000/host-page' or 'https://example.com/host'."
+        )
+
+    return value
+
+
+@pytest.fixture(scope="session")
+def external_iframe_selector(pytestconfig: pytest.Config) -> str:
+    """Return the iframe selector to use when targeting an externally hosted app inside a host page."""
+    return (
+        _get_config_option_or_env(
+            pytestconfig,
+            "--external-iframe-selector",
+            "STREAMLIT_E2E_EXTERNAL_IFRAME_SELECTOR",
+        )
+        or "iframe"
+    )
+
+
+@pytest.fixture(scope="session")
+def browser_state_path(pytestconfig: pytest.Config) -> Path | None:
+    """Return a Path to a valid Playwright storage state file, otherwise None.
+
+    The path can be configured via CLI option or environment variable.
+    Raises ``pytest.UsageError`` if the configured path does not exist.
+    """
+    value = _get_config_option_or_env(
+        pytestconfig, "--browser-state-path", "STREAMLIT_E2E_BROWSER_STATE_PATH"
+    )
+    if not value:
+        return None
+    path = Path(value).expanduser()
+    if not path.exists():
+        raise pytest.UsageError(f"Playwright storage state file not found at: {path}")
+    return path
+
+
 @pytest.fixture(scope="module")
-def app_server_extra_args(request: pytest.FixtureRequest) -> list[str]:
+def app_server_extra_args() -> list[str]:
     """Fixture that returns extra arguments to pass to the Streamlit app server."""
-    args: list[str] = []
-    if request.config.getoption("--use-starlette"):
-        args.extend(["--server.useStarlette", "true"])
-    return args
+    return []
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -297,8 +552,18 @@ def app_server(
     app_port: int,
     app_server_extra_args: list[str],
     request: pytest.FixtureRequest,
-) -> Generator[AsyncSubprocess, None, None]:
-    """Fixture that starts and stops the Streamlit app server."""
+    external_app_url: str | None,
+    external_host_url: str | None,
+) -> Generator[AsyncSubprocess | None, None, None]:
+    """Fixture that starts and stops the Streamlit app server.
+
+    When ``external_app_url`` or ``external_host_url`` is configured, yields
+    ``None`` and skips server startup, assuming the app is already running
+    externally (either directly or embedded in a host page).
+    """
+    if external_app_url or external_host_url:
+        yield None
+        return
     streamlit_proc = start_app_server(
         app_port,
         request.module,
@@ -309,51 +574,245 @@ def app_server(
     print(streamlit_stdout, flush=True)
 
 
-@pytest.fixture
-def app(page: Page, app_port: int, request: pytest.FixtureRequest) -> Page:
-    """Fixture that opens the app."""
+@pytest.fixture(autouse=True)
+def skip_non_external_tests_in_external_mode(
+    request: pytest.FixtureRequest,
+    external_app_url: str | None,
+    external_host_url: str | None,
+) -> None:
+    """Automatically skip tests that are not marked as external-compatible.
+
+    When running in external app mode (for example, when ``--external-app-url``
+    is provided and ``external_app_url`` is not ``None``), only tests marked
+    with ``@pytest.mark.external_test`` are executed. All other tests are
+    skipped, since they rely on a locally started Streamlit app server that is
+    not used in external app mode.
+
+    This also applies when running in external host mode (for example, when
+    ``--external-host-url`` is provided and ``external_host_url`` is not
+    ``None``), where the app is embedded within another host page.
+    """
+    if not (external_app_url or external_host_url):
+        return
+    if request.node.get_closest_marker("external_test") is None:
+        pytest.skip("External app mode only supports tests marked 'external_test'.")
+
+
+def _get_app_hash_fragment(request: pytest.FixtureRequest) -> str:
+    """Return the fragment from `@pytest.mark.app_hash(...)`, or "" if unset."""
     marker = request.node.get_closest_marker("app_hash")
-    hash_fragment = ""
-    if marker:
-        hash_fragment = f"#{marker.args[0]}"
+    if marker is None:
+        return ""
 
-    response: Response | None = None
-    try:
-        response = page.goto(f"http://localhost:{app_port}/{hash_fragment}")
-    except Exception as e:
-        print(e, flush=True)
+    if len(marker.args) != 1:
+        raise pytest.UsageError(
+            "app_hash marker requires a single string argument, e.g. "
+            "@pytest.mark.app_hash('my-fragment')"
+        )
 
+    marker_arg = marker.args[0]
+    if not isinstance(marker_arg, str):
+        raise pytest.UsageError(
+            f"app_hash marker argument must be a string, got {type(marker_arg).__name__}."
+        )
+
+    return marker_arg
+
+
+def _open_app(page: Page, app_base_url: str, *, hash_fragment: str) -> None:
+    url = build_app_url(app_base_url, fragment=hash_fragment)
+    response = page.goto(url)
     if response is None:
-        raise RuntimeError("Unable to load page")
-    if response.status != 200:
-        print(f"Unsuccessful in loading page. Status: {response.status}", flush=True)
-        if response.status == 404:
-            print(
-                "404 error: try building the frontend with make frontend-fast",
-                flush=True,
-            )
-        raise RuntimeError("Unable to load page")
-    print("Successfully loaded page", flush=True)
+        raise RuntimeError(f"Unable to load {url!r}")
+    if response.status == 404:
+        raise RuntimeError(
+            "App returned 404. Try building the frontend with `make frontend-fast`."
+        )
+    if not response.ok:
+        raise RuntimeError(f"Unable to load {url!r}. Status: {response.status}")
 
+
+@pytest.fixture
+def app(
+    page: Page,
+    app_base_url: str,
+    request: pytest.FixtureRequest,
+) -> Page:
+    """Fixture that opens the app."""
+    hash_fragment = _get_app_hash_fragment(request)
+
+    _open_app(page, app_base_url, hash_fragment=hash_fragment)
     start_capture_traces(page)
     wait_for_app_loaded(page)
     return page
 
 
 @pytest.fixture
+def app_target(
+    page: Page,
+    app_base_url: str,
+    request: pytest.FixtureRequest,
+    external_app_url: str | None,
+    external_host_url: str | None,
+    external_iframe_selector: str,
+) -> AppTarget:
+    """Return an AppTarget that abstracts where the app is hosted.
+
+    Tests should use this fixture (instead of receiving a bare FrameLocator) for
+    external-compatible scenarios. This keeps iframe-vs-top-level an internal
+    implementation detail of our test infrastructure.
+    """
+    hash_fragment = _get_app_hash_fragment(request)
+
+    if external_host_url:
+        page.goto(external_host_url)
+        start_capture_traces(page)
+        page.wait_for_load_state()
+
+        # External host mode embeds the app in an iframe. If a test requests a
+        # specific fragment via `@pytest.mark.app_hash(...)`, propagate it to
+        # the iframe's URL before we start interacting with the DOM.
+        if hash_fragment:
+            iframe = page.locator(external_iframe_selector).first
+            iframe_src = iframe.get_attribute("src")
+            iframe_base_url = iframe_src or external_app_url or app_base_url
+            iframe_url = build_app_url(iframe_base_url, fragment=hash_fragment)
+            if iframe_src != iframe_url:
+                iframe.evaluate("(el, src) => { el.src = src; }", iframe_url)
+
+        frame_locator = page.frame_locator(external_iframe_selector)
+        target = AppTarget(
+            page=page,
+            dom=frame_locator,
+            base_url=app_base_url,
+            mode="external_host",
+        )
+        wait_for_app_target_loaded(target)
+        return target
+
+    _open_app(page, app_base_url, hash_fragment=hash_fragment)
+    start_capture_traces(page)
+    target = AppTarget(
+        page=page,
+        dom=page,
+        base_url=app_base_url,
+        mode="external_direct" if external_app_url else "local",
+    )
+    wait_for_app_target_loaded(target)
+    return target
+
+
+@pytest.fixture(scope="module")
+def app_base_url(app_port: int, external_app_url: str | None) -> str:
+    """Return the base URL to use for app navigation.
+
+    Returns ``external_app_url`` if configured; otherwise constructs a localhost
+    URL using ``app_port``.
+    """
+    return external_app_url or f"http://localhost:{app_port}"
+
+
+def build_app_url(
+    base_url: str,
+    *,
+    path: str = "",
+    query: dict[str, Any] | str | None = None,
+    fragment: str = "",
+) -> str:
+    """Build a URL relative to the provided base URL.
+
+    Notes
+    -----
+    Passing ``path=""`` (the default) is treated the same as not providing a
+    path at all.
+    """
+    split_url = parse.urlsplit(base_url)
+    base_path = split_url.path or ""
+    if path:
+        # Always preserve any existing base path, even when `path` starts with "/".
+        #
+        # Examples:
+        # - base_url="https://host/prefix", path="/_stcore/health"
+        #   -> "/prefix/_stcore/health"
+        # - base_url="https://host/prefix", path="//some-path"
+        #   -> "/prefix//some-path"
+        # - base_url="https://host", path="/_stcore/health"
+        #   -> "/_stcore/health"
+        if path.startswith("/"):
+            full_path = f"{base_path.rstrip('/')}{path}" if base_path else path
+        elif base_path:
+            full_path = f"{base_path.rstrip('/')}/{path}"
+        else:
+            full_path = f"/{path}"
+    # Preserve the base URL as-is when no additional parts are provided:
+    #
+    # - base_url="http://localhost:8501" -> "http://localhost:8501"
+    #
+    # But when adding a query string or fragment to a host-only base URL,
+    # add a "/" so parameters attach to the root path:
+    #
+    # - base_url="http://localhost:8501", query="a=1" -> "http://localhost:8501/?a=1"
+    # - base_url="http://localhost:8501", fragment="foo" -> "http://localhost:8501/#foo"
+    elif base_path:
+        full_path = base_path
+    else:
+        full_path = "/" if (query is not None or fragment) else ""
+
+    base_query = parse.parse_qsl(split_url.query, keep_blank_values=True)
+    if query is None:
+        combined_query = base_query
+    else:
+        if isinstance(query, str):
+            # Allow callers to pass either "a=1&b=2" or "?a=1&b=2".
+            query_items = parse.parse_qsl(query.lstrip("?"), keep_blank_values=True)
+        else:
+            query_items = parse.parse_qsl(
+                parse.urlencode(query, doseq=True), keep_blank_values=True
+            )
+        combined_query = base_query + query_items
+
+    query_string = parse.urlencode(combined_query, doseq=True)
+    # Allow callers to pass either "foo" or "#foo".
+    final_fragment = fragment.lstrip("#") if fragment else split_url.fragment
+
+    return parse.urlunsplit(
+        (split_url.scheme, split_url.netloc, full_path, query_string, final_fragment)
+    )
+
+
+def _ensure_nonempty_path(url: str) -> str:
+    """Ensure the URL has a non-empty path (at least '/')."""
+    split_url = parse.urlsplit(url)
+    if split_url.path:
+        return url
+    return parse.urlunsplit(
+        (split_url.scheme, split_url.netloc, "/", split_url.query, split_url.fragment)
+    )
+
+
+def _normalize_url_for_compare(url: str) -> str:
+    """Normalize a URL for reliable comparison across browsers."""
+    split_url = parse.urlsplit(url)
+    normalized_path = split_url.path.rstrip("/") or "/"
+    return parse.urlunsplit(
+        (split_url.scheme, split_url.netloc, normalized_path, split_url.query, "")
+    )
+
+
+@pytest.fixture
 def static_app(
     page: Page,
-    app_port: int,
+    app_base_url: str,
     request: pytest.FixtureRequest,
 ) -> Page:
     """Fixture that opens the app."""
     query_param = request.node.get_closest_marker("query_param")
     query_string = query_param.args[0] if query_param else ""
 
-    # Indicate this is a StaticPage
+    # Indicate this is a static app page.
     page.__class__ = StaticPage
 
-    page.goto(f"http://localhost:{app_port}/{query_string}")
+    page.goto(build_app_url(app_base_url, path=query_string))
     start_capture_traces(page)
     wait_for_app_loaded(page)
     return page
@@ -361,15 +820,14 @@ def static_app(
 
 @pytest.fixture
 def app_with_query_params(
-    page: Page, app_port: int, request: pytest.FixtureRequest
+    page: Page, app_base_url: str, request: pytest.FixtureRequest
 ) -> tuple[Page, dict[str, Any]]:
     """Fixture that opens the app with additional query parameters.
     The query parameters are passed as a dictionary in the 'param' key of the request.
     """
     query_params = request.param
     query_string = parse.urlencode(query_params, doseq=True)
-    url = f"http://localhost:{app_port}/?{query_string}"
-    page.goto(url)
+    page.goto(build_app_url(app_base_url, query=query_string))
     wait_for_app_loaded(page)
 
     return page, query_params
@@ -398,7 +856,7 @@ class IframedPage:
 
 
 @pytest.fixture
-def iframed_app(page: Page, app_port: int) -> IframedPage:
+def iframed_app(page: Page, app_base_url: str) -> IframedPage:
     """Fixture that returns an IframedPage.
 
     The page object can be used to configure additional routes, for example to override
@@ -408,8 +866,27 @@ def iframed_app(page: Page, app_port: int) -> IframedPage:
     # chosen and does not even exist
     fake_iframe_server_origin = "http://localhost:1345"
     fake_iframe_server_route = f"{fake_iframe_server_origin}/iframed_app.html"
-    # the url where the Streamlit server is reachable
-    app_url = f"http://localhost:{app_port}"
+    # The URL where the Streamlit server is reachable (used to build CSP endpoints).
+    # This must not include query params or fragments, since we later append paths.
+    split_base_url = parse.urlsplit(app_base_url)
+
+    normalized_path = (split_base_url.path or "").rstrip("/")
+    app_url_for_endpoints = parse.urlunsplit(
+        (split_base_url.scheme, split_base_url.netloc, normalized_path, "", "")
+    )
+    app_url_for_iframe = _ensure_nonempty_path(app_url_for_endpoints)
+
+    # Compute the websocket stream URL from the configured app base URL.
+    # This is required because the iframe page applies a strict CSP that must allow the
+    # app's websocket endpoint, otherwise the app will never reach CONNECTED.
+    split_app_url = parse.urlsplit(app_url_for_endpoints)
+    ws_scheme = "wss" if split_app_url.scheme == "https" else "ws"
+    base_path = (split_app_url.path or "").rstrip("/")
+    ws_stream_path = f"{base_path}/_stcore/stream" if base_path else "/_stcore/stream"
+    ws_stream_url = parse.urlunsplit(
+        (ws_scheme, split_app_url.netloc, ws_stream_path, "", "")
+    )
+
     # the CSP header returned for the Streamlit index.html loaded in the iframe. This is
     # similar to a common CSP we have seen in the wild.
     app_csp_header = f"""
@@ -417,18 +894,18 @@ default-src 'none';
 worker-src blob:;
 form-action 'none';
 frame-ancestors {fake_iframe_server_origin};
-frame-src data: {app_url}/_stcore/component/ {app_url}/component/;
+frame-src data: {app_url_for_endpoints}/_stcore/component/ {app_url_for_endpoints}/component/;
 img-src 'self' https: data: blob:;
 media-src 'self' https: data: blob:;
-connect-src ws://localhost:{app_port}/_stcore/stream
-    {app_url}/_stcore/component/
-    {app_url}/_stcore/bidi-components/
-    {app_url}/component/
-    {app_url}/_stcore/upload_file/
-    {app_url}/_stcore/host-config
-    {app_url}/_stcore/health
-    {app_url}/_stcore/message
-    {app_url}/media/
+connect-src {ws_stream_url}
+    {app_url_for_endpoints}/_stcore/component/
+    {app_url_for_endpoints}/_stcore/bidi-components/
+    {app_url_for_endpoints}/component/
+    {app_url_for_endpoints}/_stcore/upload_file/
+    {app_url_for_endpoints}/_stcore/host-config
+    {app_url_for_endpoints}/_stcore/health
+    {app_url_for_endpoints}/_stcore/message
+    {app_url_for_endpoints}/media/
     https://some-prefix.com/somethingelse/_stcore/upload_file/
     https://events.mapbox.com/
     https://api.mapbox.com/v4/
@@ -448,12 +925,12 @@ connect-src ws://localhost:{app_port}/_stcore/stream
     data: blob:;
 style-src 'unsafe-inline'
     https://api.mapbox.com/mapbox-gl-js/
-    {app_url}/static/css/
+    {app_url_for_endpoints}/static/css/
     blob:;
 script-src 'unsafe-inline' 'wasm-unsafe-eval' blob:
     https://api.mapbox.com/mapbox-gl-js/
-    {app_url}/static/js/;
-font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
+    {app_url_for_endpoints}/static/js/;
+font-src {app_url_for_endpoints}/static/fonts/ {app_url_for_endpoints}/static/media/ https: data: blob:;
 """.replace("\n", " ").strip()
 
     def _open_app(iframe_element_attrs: IframedPageAttrs | None = None) -> FrameLocator:
@@ -461,11 +938,11 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
         if _iframe_element_attrs is None:
             _iframe_element_attrs = IframedPageAttrs()
 
-        query_params = ""
-        if _iframe_element_attrs.src_query_params:
-            query_params = "?" + parse.urlencode(_iframe_element_attrs.src_query_params)
-
-        src = f"{app_url}/{query_params}"
+        src = build_app_url(
+            app_url_for_iframe, query=_iframe_element_attrs.src_query_params
+        )
+        if not parse.urlsplit(src).path:
+            raise RuntimeError(f"Iframe src must include a path: {src!r}")
         additional_html_head = _iframe_element_attrs.additional_html_head or ""
         _iframed_body = (
             f"""
@@ -490,7 +967,9 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
             </html>
             """
             if _iframe_element_attrs.html_content is None
-            else _iframe_element_attrs.html_content.replace("$APP_URL", app_url)
+            else _iframe_element_attrs.html_content.replace(
+                "$APP_URL", app_url_for_iframe
+            )
         )
 
         def fulfill_iframe_request(route: Route) -> None:
@@ -510,7 +989,7 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
                 body=_iframed_body,
                 headers={
                     "Content-Type": "text/html",
-                    "Content-Security-Policy": f"frame-src {frame_src_blob} {app_url};",
+                    "Content-Security-Policy": f"frame-src {frame_src_blob} {app_url_for_iframe};",
                 },
             )
 
@@ -537,7 +1016,8 @@ font-src {app_url}/static/fonts/ {app_url}/static/media/ https: data: blob:;
             """
 
             return (
-                response.url == src
+                _normalize_url_for_compare(response.url)
+                == _normalize_url_for_compare(src)
                 and response.headers["content-security-policy"] == app_csp_header
             )
 
@@ -593,6 +1073,18 @@ def browser_type_launch_args(
                 "layout.css.devPixelsPerPx": "1.0",
                 "browser.display.use_system_colors": False,
                 "gfx.font_rendering.cleartype_params.rendering_mode": 5,
+                # Stability preferences to prevent unexpected browser closures
+                # (see Playwright 1.58+ Firefox 146 issues):
+                "toolkit.startup.max_resumed_crashes": -1,  # Disable crash recovery
+                "browser.sessionstore.resume_from_crash": False,
+                "browser.shell.checkDefaultBrowser": False,
+                "browser.tabs.crashReporting.sendReport": False,
+                "dom.ipc.reportProcessHangs": False,
+                # Disable features that can cause instability in automation:
+                "browser.safebrowsing.enabled": False,
+                "browser.safebrowsing.malware.enabled": False,
+                "datareporting.policy.dataSubmissionEnabled": False,
+                "toolkit.telemetry.enabled": False,
             },
         }
     return browser_type_launch_args
@@ -600,9 +1092,20 @@ def browser_type_launch_args(
 
 @pytest.fixture(scope="session")
 def browser_context_args(
-    browser_context_args: dict[str, Any], browser_name: str
+    browser_context_args: dict[str, Any],
+    browser_name: str,
+    browser_state_path: Path | None,
 ) -> dict[str, Any]:
-    """Fixture that adds clipboard permissions to the browser context for Chromium."""
+    """Fixture that configures browser context.
+
+    Sets ``storage_state`` if ``browser_state_path`` is provided, and adds
+    clipboard permissions for Chromium browsers.
+    """
+    if browser_state_path is not None:
+        browser_context_args = {
+            **browser_context_args,
+            "storage_state": str(browser_state_path),
+        }
     # Clipboard permissions are only supported in Chromium-based browsers
     if browser_name == "chromium":
         return {
@@ -613,6 +1116,103 @@ def browser_context_args(
     return browser_context_args
 
 
+class ResilientBrowser:
+    """Wrapper around Browser that can recover from unexpected browser closures.
+
+    This is a workaround for Firefox stability issues in Playwright 1.58+ (Firefox 146).
+    When the browser closes unexpectedly, subsequent tests fail with TargetClosedError.
+    This wrapper detects the closure and relaunches the browser automatically.
+    """
+
+    def __init__(
+        self,
+        browser_type: BrowserType,
+        launch_args: dict[str, Any],
+    ):
+        self._browser_type = browser_type
+        self._launch_args = launch_args
+        self._browser: Browser | None = None
+        # Launch browser eagerly to match pytest-playwright behavior
+        self._ensure_connected()
+
+    def _launch(self) -> Browser:
+        """Launch a new browser instance."""
+        return self._browser_type.launch(**self._launch_args)
+
+    def _ensure_connected(self) -> Browser:
+        """Ensure browser is connected, relaunching if necessary."""
+        if self._browser is None or not self._browser.is_connected():
+            if self._browser is not None:
+                print(
+                    "Firefox browser disconnected unexpectedly. Relaunching...",
+                    flush=True,
+                )
+            self._browser = self._launch()
+        return self._browser
+
+    def new_context(self, **kwargs: Any) -> BrowserContext:
+        """Create a new browser context, relaunching browser if needed."""
+        browser = self._ensure_connected()
+        return browser.new_context(**kwargs)
+
+    def close(self) -> None:
+        """Close the browser."""
+        if self._browser is not None and self._browser.is_connected():
+            try:
+                self._browser.close()
+            except Exception as exc:
+                # Browser may disconnect between is_connected() and close().
+                # Log the error but continue cleanup.
+                print(
+                    f"Error while closing browser in ResilientBrowser.close: {exc}",
+                    flush=True,
+                )
+        self._browser = None
+
+    @property
+    def contexts(self) -> list[BrowserContext]:
+        """Return list of browser contexts."""
+        if self._browser is None or not self._browser.is_connected():
+            return []
+        try:
+            return self._browser.contexts
+        except Exception:
+            # The browser may disconnect between the connectivity check and accessing
+            # the contexts attribute. In that case, behave as if there are no contexts.
+            return []
+
+    @property
+    def browser_type(self) -> BrowserType:
+        """Return the browser type."""
+        return self._browser_type
+
+    def is_connected(self) -> bool:
+        """Check if browser is connected."""
+        return self._browser is not None and self._browser.is_connected()
+
+
+@pytest.fixture(scope="session")
+def browser(
+    browser_type: BrowserType,
+    browser_type_launch_args: dict[str, Any],
+    browser_name: str,
+    launch_browser: Callable[[], Browser],
+) -> Generator[Browser | ResilientBrowser, None, None]:
+    """Override pytest-playwright's browser fixture to handle Firefox crashes.
+
+    For Firefox, we use a ResilientBrowser wrapper that can recover from unexpected
+    browser closures. For other browsers, we use the standard launch_browser callable.
+    """
+    if browser_name == "firefox":
+        resilient = ResilientBrowser(browser_type, browser_type_launch_args)
+        yield resilient
+        resilient.close()
+    else:
+        browser = launch_browser()
+        yield browser
+        browser.close()
+
+
 @pytest.fixture(params=["light_theme", "dark_theme"])
 def app_theme(request: pytest.FixtureRequest) -> str:
     """Fixture that returns the theme name."""
@@ -620,16 +1220,16 @@ def app_theme(request: pytest.FixtureRequest) -> str:
 
 
 @pytest.fixture
-def themed_app(page: Page, app_port: int, app_theme: str) -> Page:
+def themed_app(page: Page, app_base_url: str, app_theme: str) -> Page:
     """Fixture that opens the app with the given theme."""
-    page.goto(f"http://localhost:{app_port}/?embed_options={app_theme}")
+    page.goto(build_app_url(app_base_url, query={"embed_options": app_theme}))
     start_capture_traces(page)
     wait_for_app_loaded(page)
     return page
 
 
 @pytest.fixture
-def app_with_microphone_permission_denied(page: Page, app_port: int) -> Page:
+def app_with_microphone_permission_denied(page: Page, app_base_url: str) -> Page:
     """Fixture that opens the app with getUserMedia mocked to deny microphone permissions.
 
     This fixture is used for testing microphone permission denied error handling in audio
@@ -654,9 +1254,12 @@ def app_with_microphone_permission_denied(page: Page, app_port: int) -> Page:
     """)
 
     # Now navigate to the app
-    page.goto(f"http://localhost:{app_port}/")
+    page.goto(build_app_url(app_base_url, path="/"))
     wait_for_app_loaded(page)
     return page
+
+
+_MAX_PIXEL_THRESHOLD: Final[float] = 0.10
 
 
 class ImageCompareFunction(Protocol):
@@ -679,7 +1282,9 @@ class ImageCompareFunction(Protocol):
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
-            The allowed percentage of difference for a single pixel.
+            Per-pixel comparison threshold passed to ``pixelmatch`` (0.0-1.0).
+            Values above 0.10 are disallowed because they make snapshot comparisons
+            too permissive.
         name : str | None, optional
             The name of the screenshot without an extension. If not provided, the name
             of the test function will be used.
@@ -808,8 +1413,9 @@ def assert_snapshot(
         image_threshold : float, optional
             The allowed percentage of different pixels in the image.
         pixel_threshold : float, optional
-            The allowed percentage of difference for a single pixel to be considered
-            different.
+            Per-pixel comparison threshold passed to ``pixelmatch`` (0.0-1.0).
+            Values above 0.10 are disallowed because they make snapshot comparisons
+            too permissive.
         name : str | None, optional
             The name of the screenshot without an extension. If not provided, the name
             of the test function will be used.
@@ -828,6 +1434,14 @@ def assert_snapshot(
             module_snapshot_updates_dir, \
             module_snapshot_failures_dir, \
             snapshot_file_suffix
+
+        if not (0.0 <= pixel_threshold <= _MAX_PIXEL_THRESHOLD):
+            raise ValueError(
+                f"pixel_threshold must be between 0.0 and {_MAX_PIXEL_THRESHOLD:.2f} "
+                f"(got {pixel_threshold}). This value is passed to pixelmatch's "
+                "per-pixel comparison threshold; higher values make snapshot "
+                "comparisons too permissive."
+            )
 
         if show_app_header is False or (
             show_app_header is None and not isinstance(element, Page)

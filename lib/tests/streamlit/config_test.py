@@ -73,6 +73,8 @@ class ConfigTest(unittest.TestCase):
             "baseFontSize",
             "baseFontWeight",
             "fontFaces",
+            "metricValueFontSize",
+            "metricValueFontWeight",
             "showSidebarBorder",
             "chartCategoricalColors",
             "chartSequentialColors",
@@ -229,19 +231,18 @@ class ConfigTest(unittest.TestCase):
         assert config_option.value == 12345
         assert config_option.env_var == "STREAMLIT__TEST_COMPLEX_PARAM"
 
-    def test_complex_config_option_must_have_doc_strings(self):
-        """Test that complex config options use funcs with doc stringsself.
+    def test_complex_config_option_with_missing_docstring(self):
+        """Test that missing docstrings default to empty string.
 
-        This is because the doc string forms the option's description.
+        This supports PYTHONOPTIMIZE=2 where docstrings are stripped.
         """
-        with pytest.raises(
-            RuntimeError,
-            match=r"Complex config options require doc strings for their description.",
-        ):
+        c = ConfigOption("_test.noDocString")
 
-            @ConfigOption("_test.noDocString")
-            def no_doc_string():
-                pass
+        @c
+        def no_doc_string():
+            pass
+
+        assert c.description == ""
 
     def test_invalid_config_name(self):
         """Test setting an invalid config section."""
@@ -737,6 +738,7 @@ class ConfigTest(unittest.TestCase):
                 "browser.gatherUsageStats",
                 "browser.serverAddress",
                 "browser.serverPort",
+                "client.allowedOrigins",
                 "client.showErrorDetails",
                 "client.showErrorLinks",
                 "client.showSidebarNavigation",
@@ -763,6 +765,7 @@ class ConfigTest(unittest.TestCase):
                 "global.suppressDeprecationWarnings",
                 "global.unitTest",
                 "logger.enableRich",
+                "logger.hideWelcomeMessage",
                 "logger.level",
                 "logger.messageFormat",
                 "runner.enforceSerializableSessionState",
@@ -800,7 +803,6 @@ class ConfigTest(unittest.TestCase):
                 "server.sslCertFile",
                 "server.sslKeyFile",
                 "server.trustedUserHeaders",
-                "server.useStarlette",
                 "ui.hideTopBar",
             ]
         )
@@ -984,6 +986,8 @@ class ConfigTest(unittest.TestCase):
             "fontFaces": None,
             "baseFontSize": None,
             "baseFontWeight": None,
+            "metricValueFontSize": None,
+            "metricValueFontWeight": None,
             "codeTextColor": None,
             "codeBackgroundColor": None,
             "dataframeHeaderBackgroundColor": None,
@@ -1054,6 +1058,8 @@ class ConfigTest(unittest.TestCase):
         config._set_option("theme.codeFontWeight", 300, "test")
         config._set_option("theme.baseFontSize", 14, "test")
         config._set_option("theme.baseFontWeight", 300, "test")
+        config._set_option("theme.metricValueFontSize", "32px", "test")
+        config._set_option("theme.metricValueFontWeight", 600, "test")
         config._set_option("theme.headingFontWeights", [700, 600, 500], "test")
         config._set_option(
             "theme.headingFontSizes",
@@ -1131,6 +1137,8 @@ class ConfigTest(unittest.TestCase):
             ],
             "baseFontSize": 14,
             "baseFontWeight": 300,
+            "metricValueFontSize": "32px",
+            "metricValueFontWeight": 600,
             "showSidebarBorder": True,
             "chartCategoricalColors": ["#000000", "#111111", "#222222"],
             "chartSequentialColors": ["#000000", "#111111", "#222222"],
@@ -1396,7 +1404,6 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
-
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
@@ -1422,7 +1429,6 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == local_config_path
-
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
 
@@ -1459,10 +1465,13 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in {
-            global_config_path,
-            local_config_path,
-        }
+        pathexists_patch.side_effect = lambda path: (
+            path
+            in {
+                global_config_path,
+                local_config_path,
+            }
+        )
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options()
@@ -1507,10 +1516,13 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch = patch("streamlit.config.os.makedirs")
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
-        pathexists_patch.side_effect = lambda path: path in {
-            global_config_path,
-            local_config_path,
-        }
+        pathexists_patch.side_effect = lambda path: (
+            path
+            in {
+                global_config_path,
+                local_config_path,
+            }
+        )
 
         with open_patch, makedirs_patch, pathexists_patch:
             config.get_config_options(options_from_flags={"theme.font": "monospace"})
@@ -1534,7 +1546,6 @@ class ConfigLoadingTest(unittest.TestCase):
         makedirs_patch.return_value = True
         pathexists_patch = patch("streamlit.config.os.path.exists")
         pathexists_patch.side_effect = lambda path: path == global_config_path
-
         global_config = """
         [theme]
         base = "dark"
@@ -1991,10 +2002,13 @@ class ThemeInheritanceIntegrationTest(unittest.TestCase):
 
                 with self._config_patches(config_toml):
                     with patch("streamlit.config.os.path.exists") as mock_exists:
-                        mock_exists.side_effect = lambda path: path in {
-                            env_theme_file,
-                            cli_theme_file,
-                        }
+                        mock_exists.side_effect = lambda path: (
+                            path
+                            in {
+                                env_theme_file,
+                                cli_theme_file,
+                            }
+                        )
 
                         # First simulate env var processing
                         config.get_config_options(force_reparse=True)

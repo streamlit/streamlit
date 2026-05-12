@@ -2,22 +2,21 @@
 applyTo: "**/*.proto"
 ---
 
+<!-- Generated from proto/streamlit/proto/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
 # Protobuf
 
 Protobuf messages are used for communication between the Streamlit backend and frontend via WebSocket connections.
-
-**Note**: Messages are "released" once shipped in any Streamlit version.
 
 ## Compile Protobuf
 
 Changes requiring compilation:
 
-- Adding a field
-- **Unreleased messages only:** Modifying/removing fields
+- Adding, modifying, or removing fields
 
 Changes not requiring compilation:
 
-- Comments and `[deprecated=true]` notation
+- Comments
 
 Run this command to recompile the protobufs:
 

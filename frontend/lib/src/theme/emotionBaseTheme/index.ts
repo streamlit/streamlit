@@ -16,19 +16,20 @@
 
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
+import { breakpoints } from "~lib/theme/primitives/breakpoints"
+import { iconSizes } from "~lib/theme/primitives/iconSizes"
+import { opacities } from "~lib/theme/primitives/opacities"
+import { radii } from "~lib/theme/primitives/radii"
+import { sizes } from "~lib/theme/primitives/sizes"
+import { spacing } from "~lib/theme/primitives/spacing"
 import {
-  breakpoints,
   fonts,
   fontSizes,
   fontWeights,
   genericFonts,
-  iconSizes,
   lineHeights,
-  radii,
-  sizes,
-  spacing,
-  zIndices,
-} from "~lib/theme/primitives"
+} from "~lib/theme/primitives/typography"
+import { zIndices } from "~lib/theme/primitives/zIndices"
 
 import genericColors from "./themeColors"
 
@@ -50,6 +51,7 @@ export default {
   genericFonts,
   iconSizes,
   lineHeights,
+  opacities,
   radii,
   shadows,
   sizes,

@@ -212,8 +212,8 @@ def set_page_config(
         item that was specified in a previous call to ``st.set_page_config``,
         set its value to ``None`` in the dictionary.
 
-    Example
-    -------
+    Examples
+    --------
     >>> import streamlit as st
     >>>
     >>> st.set_page_config(

@@ -25,6 +25,7 @@ import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
     StreamlitValueBelowMinError,
@@ -557,3 +558,76 @@ class SliderStableIdTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.slider
             id2 = c2.id
             assert id1 != id2
+
+
+class SliderBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for slider bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.slider("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.slider("the label", bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.slider("the label", key="my_key")
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.slider("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_with_int_slider(self):
+        """Test that bind works with integer slider."""
+        st.slider(
+            "the label",
+            min_value=0,
+            max_value=100,
+            value=50,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert c.data_type == 0  # INT
+
+    def test_bind_with_float_slider(self):
+        """Test that bind works with float slider."""
+        st.slider(
+            "the label",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.5,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert c.data_type == 1  # FLOAT
+
+    def test_bind_with_range_slider(self):
+        """Test that bind works with range slider."""
+        st.slider(
+            "the label",
+            min_value=0,
+            max_value=100,
+            value=(25, 75),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == [25, 75]

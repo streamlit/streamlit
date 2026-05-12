@@ -33,7 +33,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol
 
 if TYPE_CHECKING:
-    from streamlit.components.v2.bidi_component.state import BidiComponentResult
+    from streamlit.components.v2.bidi_component.state import ComponentResult
     from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.runtime.state.common import WidgetCallback
 
@@ -49,7 +49,7 @@ class ComponentRenderer(Protocol):
     '''Signature of the mounting command returned by ``st.components.v2.component``.
 
     This callable mounts a bidirectional component in a Streamlit app and
-    returns a ``BidiComponentResult`` object that exposes the component's
+    returns a ``ComponentResult`` object that exposes the component's
     state and trigger values.
 
     For published components, this callable is often wrapped in a user-friendly
@@ -157,7 +157,7 @@ class ComponentRenderer(Protocol):
 
     Returns
     -------
-    BidiComponentResult
+    ComponentResult
         Component state object that exposes state and trigger values.
 
     Examples
@@ -305,7 +305,7 @@ class ComponentRenderer(Protocol):
         width: Width = "stretch",
         height: Height = "content",
         **on_callbacks: WidgetCallback | None,
-    ) -> BidiComponentResult: ...
+    ) -> ComponentResult: ...
 
 
 __all__ = [

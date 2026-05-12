@@ -19,15 +19,51 @@ import { FC } from "react"
 import { act, renderHook, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import Form from "~lib/components/widgets/Form"
+import Form from "~lib/components/widgets/Form/Form"
 import { RootStyleProvider } from "~lib/RootStyleProvider"
 import { renderWithContexts } from "~lib/test_util"
-import { getDefaultTheme } from "~lib/theme"
+import { getDefaultTheme } from "~lib/theme/utils"
 import { createFormsData, WidgetStateManager } from "~lib/WidgetStateManager"
 
 import useWidgetManagerElementState from "./useWidgetManagerElementState"
 
 const elementId = "elementId"
+
+/** Test component that wires useWidgetManagerElementState to a form input for integration testing. */
+const FormStateTestComponent: FC<{
+  widgetMgr: WidgetStateManager
+  formId: string
+  stateKey: string
+  defaultValue: string
+  testInputAriaLabel: string
+}> = ({ widgetMgr, formId, stateKey, defaultValue, testInputAriaLabel }) => {
+  const [state, setState] = useWidgetManagerElementState<string>({
+    widgetMgr,
+    id: elementId,
+    formId,
+    key: stateKey,
+    defaultValue,
+  })
+
+  return (
+    <RootStyleProvider theme={getDefaultTheme()}>
+      <Form
+        formId={formId}
+        clearOnSubmit={true}
+        enterToSubmit={false}
+        widgetMgr={widgetMgr}
+        border={false}
+      >
+        <input
+          aria-label={testInputAriaLabel}
+          type="text"
+          value={state}
+          onChange={e => setState(e.currentTarget.value)}
+        />
+      </Form>
+    </RootStyleProvider>
+  )
+}
 
 describe("useWidgetManagerElementState hook", () => {
   it("should initialize correctly with initial state", () => {
@@ -91,38 +127,18 @@ describe("useWidgetManagerElementState hook", () => {
       sendRerunBackMsg: vi.fn(),
     })
 
-    const TestComponent: FC = () => {
-      const [state, setState] = useWidgetManagerElementState<string>({
-        widgetMgr,
-        id: elementId,
-        formId,
-        key: stateKey,
-        defaultValue,
-      })
-
-      return (
-        <RootStyleProvider theme={getDefaultTheme()}>
-          <Form
-            formId={formId}
-            clearOnSubmit={true}
-            enterToSubmit={false}
-            widgetMgr={widgetMgr}
-            border={false}
-          >
-            <input
-              aria-label={testInputAriaLabel}
-              type="text"
-              value={state}
-              onChange={e => setState(e.currentTarget.value)}
-            />
-          </Form>
-        </RootStyleProvider>
-      )
-    }
-
-    renderWithContexts(<TestComponent />, {
-      formsContext: { formsData: createFormsData() },
-    })
+    renderWithContexts(
+      <FormStateTestComponent
+        widgetMgr={widgetMgr}
+        formId={formId}
+        stateKey={stateKey}
+        defaultValue={defaultValue}
+        testInputAriaLabel={testInputAriaLabel}
+      />,
+      {
+        formsContext: { formsData: createFormsData() },
+      }
+    )
 
     // verify default value
     const inputElement: HTMLInputElement =

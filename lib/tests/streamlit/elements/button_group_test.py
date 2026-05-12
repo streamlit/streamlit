@@ -30,15 +30,21 @@ from streamlit.elements.widgets.button_group import (
     _MultiSelectButtonGroupSerde,
     _SingleSelectButtonGroupSerde,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.ButtonGroup_pb2 import ButtonGroup as ButtonGroupProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.runtime.state.session_state import get_script_run_ctx
+from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+
+def _failing_format_func(_: object) -> str:
+    """Always raise; used to exercise serde ``format_func`` error paths."""
+    raise RuntimeError("format failed")
 
 
 class TestButtonGroupSerde:
@@ -1098,3 +1104,331 @@ class ButtonGroupCommandTests(DeltaGeneratorTestCase):
 
             # IDs should be the SAME because options is not in key_as_main_identity
             assert id1 == id2
+
+
+class TestButtonGroupAppTest:
+    """AppTest tests for st.pills and st.segmented_control."""
+
+    def test_pills_with_format_func(self):
+        """Test st.pills with format_func works correctly in AppTest.
+
+        This is a regression test for the format_func issue where
+        the testing framework would fail on subsequent runs.
+        """
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "single pills",
+                options=["a", "b", "c"],
+                format_func=lambda x: x.upper(),
+                key="sp",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be None for single-select
+        assert at.button_group("sp").value is None
+
+        # Select a value and run again
+        at.button_group("sp").select("a").run()
+        assert at.button_group("sp").value == "a"
+        assert not at.exception
+
+        # Select a different value - this would fail before the fix
+        at.button_group("sp").select("b").run()
+        assert at.button_group("sp").value == "b"
+        assert not at.exception
+
+    def test_pills_multi_select_with_format_func(self):
+        """Test st.pills multi-select with format_func works correctly in AppTest."""
+
+        def script():
+            import streamlit as st
+
+            st.pills(
+                "multi pills",
+                options=[1, 2, 3],
+                selection_mode="multi",
+                format_func=lambda x: f"Num: {x}",
+                key="mp",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be empty list for multi-select
+        assert at.button_group("mp").value == []
+
+        # Select multiple values
+        at.button_group("mp").select(1).select(2).run()
+        assert at.button_group("mp").value == [1, 2]
+        assert not at.exception
+
+        # Unselect a value
+        at.button_group("mp").unselect(1).run()
+        assert at.button_group("mp").value == [2]
+        assert not at.exception
+
+    def test_segmented_control_with_format_func(self):
+        """Test st.segmented_control with format_func works correctly in AppTest."""
+
+        def script():
+            import streamlit as st
+
+            st.segmented_control(
+                "segmented",
+                options=["x", "y", "z"],
+                format_func=lambda x: x.upper(),
+                key="sc",
+            )
+
+        at = AppTest.from_function(script).run()
+        assert not at.exception
+
+        # Initial value should be None
+        assert at.button_group("sc").value is None
+
+        # Select a value
+        at.button_group("sc").select("x").run()
+        assert at.button_group("sc").value == "x"
+        assert not at.exception
+
+        # Select a different value - this would fail before the fix
+        at.button_group("sc").select("y").run()
+        assert at.button_group("sc").value == "y"
+        assert not at.exception
+
+
+class PillsBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for st.pills bind='query-params' functionality."""
+
+    def test_bind_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.pills("label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.pills("label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind, query_param_key is not set."""
+        st.pills("label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.pills("label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.pills(
+            "label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_multi_mode(self):
+        """Test that bind works with selection_mode='multi'."""
+        st.pills(
+            "label",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+
+class SegmentedControlBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for st.segmented_control bind='query-params' functionality."""
+
+    def test_bind_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.segmented_control(
+            "label", ["a", "b", "c"], key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+    def test_bind_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.segmented_control("label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind, query_param_key is not set."""
+        st.segmented_control("label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == ""
+
+    def test_bind_multi_mode(self):
+        """Test that bind works with selection_mode='multi'."""
+        st.segmented_control(
+            "label",
+            ["a", "b", "c"],
+            selection_mode="multi",
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.query_param_key == "my_key"
+
+
+class RequiredParameterTest(DeltaGeneratorTestCase):
+    """Tests for the required parameter on st.pills and st.segmented_control."""
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_default_is_false(self, command: Callable[..., Any]):
+        """Test that required defaults to False."""
+        command("label", ["a", "b", "c"])
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+    @parameterized.expand(
+        [
+            (st.pills, True),
+            (st.pills, False),
+            (st.segmented_control, True),
+            (st.segmented_control, False),
+        ]
+    )
+    def test_required_sets_proto_field(
+        self, command: Callable[..., Any], required: bool
+    ):
+        """Test that the required argument sets the proto field correctly."""
+        command("label", ["a", "b", "c"], required=required)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is required
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_default(self, command: Callable[..., Any]):
+        """Test that required works with a default value."""
+        command("label", ["a", "b", "c"], default="b", required=True)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is True
+        assert c.default == [1]
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_with_multi_select_raises_exception(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=True with selection_mode='multi' raises an exception."""
+        with pytest.raises(
+            StreamlitAPIException,
+            match=r"cannot be used with.*selection_mode='multi'",
+        ):
+            command("label", ["a", "b", "c"], selection_mode="multi", required=True)
+
+    @parameterized.expand([(st.pills,), (st.segmented_control,)])
+    def test_required_false_with_multi_select_allowed(
+        self, command: Callable[..., Any]
+    ):
+        """Test that required=False with selection_mode='multi' is allowed."""
+        command("label", ["a", "b", "c"], selection_mode="multi", required=False)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is False
+
+
+def test_single_serde_serialize_empty_options_with_value() -> None:
+    """Return empty list when options are empty but value is not None.
+
+    Covers the early exit in ``_SingleSelectButtonGroupSerde.serialize`` when
+    there are no options to map to formatted wire strings.
+    """
+    serde = _SingleSelectButtonGroupSerde[str](
+        [],
+        formatted_options=[],
+        formatted_option_to_option_index={},
+    )
+    assert serde.serialize("anything") == []
+
+
+def test_single_serde_serialize_format_func_exception() -> None:
+    """Fall back to ``str(v)`` when ``format_func`` raises for an unmatched value."""
+    serde = _SingleSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["a", "b"],
+        formatted_option_to_option_index={"a": 0, "b": 1},
+        format_func=_failing_format_func,
+    )
+    assert serde.serialize("unknown") == ["unknown"]
+
+
+def test_single_serde_serialize_value_matched_by_format_func() -> None:
+    """Return ``[format_func(v)]`` when ``v`` is not matched by equality.
+
+    After direct option comparison fails, a successful ``format_func`` result
+    is sent as the single wire string.
+    """
+    serde = _SingleSelectButtonGroupSerde[int](
+        [1, 2],
+        formatted_options=["one", "two"],
+        formatted_option_to_option_index={"one": 0, "two": 1},
+        format_func=lambda x: f"num:{x}",
+    )
+    assert serde.serialize(99) == ["num:99"]
+
+
+def test_multi_serde_serialize_none_returns_empty_list() -> None:
+    """Serialize ``None`` for multi-select returns an empty list."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+    )
+    assert serde.serialize(None) == []
+
+
+def test_multi_serde_serialize_format_func_exception() -> None:
+    """Append ``str(v)`` when ``format_func`` raises for an unmatched value."""
+    serde = _MultiSelectButtonGroupSerde[str](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=_failing_format_func,
+    )
+    assert serde.serialize(["a", "not-in-options"]) == ["A", "not-in-options"]
+
+
+@pytest.mark.parametrize(
+    ("values", "expected"),
+    [
+        (["ghost"], ["LABEL:ghost"]),
+        (["a", 42], ["A", "LABEL:42"]),
+    ],
+)
+def test_multi_serde_serialize_value_matched_by_format_func(
+    values: list[Any], expected: list[str]
+) -> None:
+    """Append ``format_func(v)`` when ``v`` is not matched by equality."""
+    serde = _MultiSelectButtonGroupSerde[str | int](
+        ["a", "b"],
+        formatted_options=["A", "B"],
+        formatted_option_to_option_index={"A": 0, "B": 1},
+        format_func=lambda x: f"LABEL:{x}",
+    )
+    assert serde.serialize(values) == expected

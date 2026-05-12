@@ -27,15 +27,13 @@ if TYPE_CHECKING:
 
 from pathlib import Path
 
-TEST_ASSETS_DIR: Final[Path] = Path(__file__).parent / "test_assets"
+STATIC_DIR: Final[Path] = Path(__file__).parent / "static"
 
 # we read the iframeResizer script from the assets file and inject the content within a
 # <script>{content}</script> tag to the iframe. I wasn't able to load the script from a
 # url in the playwright, which is why we do it inline (I also didn't spend a ton of time
 # so it might easily be possible).
-IFRAME_RESIZER_SCRIPT: Final[str] = (
-    TEST_ASSETS_DIR / "iframerResizer.min.js"
-).read_text()
+IFRAME_RESIZER_SCRIPT: Final[str] = (STATIC_DIR / "iframerResizer.min.js").read_text()
 
 
 def _open_with_resize_script(

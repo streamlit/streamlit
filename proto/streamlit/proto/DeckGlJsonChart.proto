@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message DeckGlJsonChart {
   // The json of the pydeck object (https://deckgl.readthedocs.io/en/latest/deck.html)
   string json = 1;

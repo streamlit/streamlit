@@ -51,6 +51,11 @@ all: init frontend
 # Install all dependencies and editable Streamlit, but do not build the frontend.
 all-dev: init
 	uv run pre-commit install
+	@# Clone wiki repo for agent artifacts if not present
+	@if [ ! -d "agent-wiki" ]; then \
+		echo "Cloning streamlit.wiki into agent-wiki/..."; \
+		git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki; \
+	fi
 	@echo ""
 	@echo "    The frontend has *not* been rebuilt."
 	@echo "    If you need to make a wheel file, run:"
@@ -118,6 +123,16 @@ protobuf:
 	@# JS/TS protobuf generation
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
+.PHONY: protobuf-lint
+# Lint and check formatting of protobuf files (buf).
+protobuf-lint:
+	cd frontend && yarn buf format ../proto --diff --exit-code
+	cd frontend && yarn buf lint ../proto
+
+.PHONY: protobuf-format
+# Format protobuf files (buf).
+protobuf-format:
+	cd frontend && yarn buf format ../proto -w
 
 .PHONY: python-init
 # Install Python dependencies and Streamlit in editable mode.
@@ -192,12 +207,29 @@ python-types:
 	uv run ty check
 	# Run mypy type checker (reads config from pyproject.toml):
 	uv run mypy
-
+	# Template apps under lib/streamlit/.agents/ are skipped by the bare mypy
+	# run above (no __init__.py chain + dot-prefix directory). Run mypy per-
+	# template with MYPYPATH=lib so each file is checked against the real
+	# streamlit package. Per-file (not batched) because templates share the
+	# module name `streamlit_app`.
+	@for tpl in lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/*/streamlit_app.py; do \
+		echo "# mypy: $$tpl" && \
+		MYPYPATH=lib uv run mypy "$$tpl" || exit 1; \
+	done
 
 .PHONY: frontend-init
 # Install all frontend dependencies.
 frontend-init:
 	@cd frontend/ && { \
+		EXPECTED_NODE_MAJOR=$$(sed -E 's/^v?([0-9]+).*/\1/' ../.nvmrc); \
+		CURRENT_NODE_MAJOR=$$(node -p "process.versions.node.split('.')[0]"); \
+		CURRENT_NODE_VERSION=$$(node -p "process.versions.node"); \
+		if [ "$$CURRENT_NODE_MAJOR" != "$$EXPECTED_NODE_MAJOR" ]; then \
+			echo "Error: Unsupported Node.js version v$$CURRENT_NODE_VERSION."; \
+			echo "Expected Node.js major version v$$EXPECTED_NODE_MAJOR from .nvmrc."; \
+			echo "Please switch Node versions (e.g. via 'nvm use')."; \
+			exit 1; \
+		fi; \
 		corepack enable yarn; \
 		if [ $$? -ne 0 ]; then \
 			echo "Error: 'corepack' command not found or failed to enable."; \
@@ -213,7 +245,7 @@ frontend:
 	cd frontend/ ; yarn workspaces foreach --all --topological --parallel run build
 	rsync -av --delete --delete-excluded --exclude=reports \
 		frontend/app/build/ lib/streamlit/static/
-	# Move manifest.json to a location that can actually be served by the Tornado
+	# Move manifest.json to a location that can actually be served by the
 	# server's static asset handler.
 	mv lib/streamlit/static/.vite/manifest.json lib/streamlit/static
 
@@ -252,65 +284,157 @@ debug:
 		echo "Error: Script '$$SCRIPT' not found"; \
 		exit 1; \
 	fi; \
-	PORT_3000_PID=$$(lsof -ti:3000 2>/dev/null | tr '\n' ' '); \
-	PORT_8501_PID=$$(lsof -ti:8501 2>/dev/null | tr '\n' ' '); \
-	if [[ -n "$$PORT_3000_PID" ]] || [[ -n "$$PORT_8501_PID" ]]; then \
-		echo "Error: Required ports are already in use."; \
-		if [[ -n "$$PORT_3000_PID" ]]; then \
-			echo "  Port 3000 (Vite): PID(s) $$PORT_3000_PID"; \
-		fi; \
-		if [[ -n "$$PORT_8501_PID" ]]; then \
-			echo "  Port 8501 (Streamlit): PID(s) $$PORT_8501_PID"; \
-		fi; \
-		echo ""; \
-		echo "Please stop these processes and try again."; \
-		echo "To kill them: kill $$PORT_3000_PID$$PORT_8501_PID"; \
-		exit 1; \
+	if [[ ! -f "frontend/utils/dist/streamlit-utils.es.js" ]]; then \
+		echo "Frontend workspace build artifacts are missing. Building required frontend packages..."; \
+		( \
+			cd frontend && \
+			yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build \
+		) || exit 1; \
 	fi; \
-	DEBUG_DIR="$$(pwd)/work-tmp/debug"; \
+	DEBUG_ROOT="$$(pwd)/work-tmp/debug"; \
+	mkdir -p "$$DEBUG_ROOT"; \
+	SCRIPT_SAFE_NAME="$$(basename "$$SCRIPT" | sed 's/[^[:alnum:]._-]/_/g')"; \
+	SESSION_STAMP="$$(date +%Y%m%d-%H%M%S)-$$SCRIPT_SAFE_NAME-$$$$"; \
+	DEBUG_DIR="$$DEBUG_ROOT/$$SESSION_STAMP"; \
 	mkdir -p "$$DEBUG_DIR"; \
+	ln -sfn "$$DEBUG_DIR" "$$DEBUG_ROOT/latest"; \
 	> "$$DEBUG_DIR/backend.log"; \
 	> "$$DEBUG_DIR/frontend.log"; \
+	BACKEND_PID=""; \
+	FRONTEND_PID=""; \
+	BACKEND_PORT=""; \
+	FRONTEND_PORT=""; \
+	REQUESTED_BACKEND_PORT="$${STREAMLIT_SERVER_PORT:-}"; \
+	if [[ -n "$$REQUESTED_BACKEND_PORT" ]]; then \
+		echo "Error: STREAMLIT_SERVER_PORT is not supported by make debug."; \
+		echo "Reason: global.developmentMode=true forbids manual server.port overrides."; \
+		echo "Unset STREAMLIT_SERVER_PORT and rerun make debug."; \
+		exit 1; \
+	fi; \
+	if [[ -n "$$VITE_PORT" ]]; then \
+		if [[ ! "$$VITE_PORT" =~ ^[0-9]+$$ ]] || (( $$VITE_PORT < 1 || $$VITE_PORT > 65535 )); then \
+			echo "Error: VITE_PORT must be an integer between 1 and 65535."; \
+			exit 1; \
+		fi; \
+		FRONTEND_PORT=$$VITE_PORT; \
+		if lsof -nP -iTCP:$$FRONTEND_PORT -sTCP:LISTEN > /dev/null 2>&1; then \
+			echo "Error: Requested VITE_PORT=$$FRONTEND_PORT is already in use."; \
+			exit 1; \
+		fi; \
+	else \
+		for candidate_port in $$(seq 3001 3100); do \
+			if ! lsof -nP -iTCP:$$candidate_port -sTCP:LISTEN > /dev/null 2>&1; then \
+				FRONTEND_PORT=$$candidate_port; \
+				break; \
+			fi; \
+		done; \
+	fi; \
+	if [[ -z "$$FRONTEND_PORT" ]]; then \
+		echo "Error: Could not find a free frontend port in range 3001-3100."; \
+		exit 1; \
+	fi; \
 	cleanup() { \
 		echo ""; \
-		echo "Stopping servers... logs saved to work-tmp/debug/"; \
-		lsof -ti:3000 | xargs kill 2>/dev/null || true; \
-		lsof -ti:8501 | xargs kill 2>/dev/null || true; \
+		echo "Stopping servers... logs saved to $$DEBUG_DIR/"; \
+		if [[ -n "$$FRONTEND_PID" ]]; then \
+			pkill -P "$$FRONTEND_PID" 2>/dev/null || true; \
+			kill "$$FRONTEND_PID" 2>/dev/null || true; \
+			wait "$$FRONTEND_PID" 2>/dev/null || true; \
+		fi; \
+		if [[ -n "$$BACKEND_PID" ]]; then \
+			pkill -P "$$BACKEND_PID" 2>/dev/null || true; \
+			kill "$$BACKEND_PID" 2>/dev/null || true; \
+			wait "$$BACKEND_PID" 2>/dev/null || true; \
+		fi; \
 	}; \
 	trap cleanup EXIT; \
-	uv run streamlit run "$$SCRIPT" \
+	VITE_PORT="$$FRONTEND_PORT" uv run streamlit run "$$SCRIPT" \
 		--server.headless=true \
 		--server.runOnSave=true \
 		--browser.gatherUsageStats=false \
 		--global.developmentMode=true \
 		>> "$$DEBUG_DIR/backend.log" 2>&1 & \
-	cd frontend && DEBUG_TO_CONSOLE=1 yarn start >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
+	BACKEND_PID=$$!; \
 	echo ""; \
 	echo "Starting debug session: $$SCRIPT"; \
 	BACKEND_READY=false; \
-	FRONTEND_READY=false; \
 	for i in $$(seq 1 60); do \
-		if [[ "$$BACKEND_READY" == "false" ]] && curl -s http://localhost:8501/_stcore/health > /dev/null 2>&1; then \
+		if ! kill -0 "$$BACKEND_PID" > /dev/null 2>&1; then \
+			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
+			exit 1; \
+		fi; \
+		if [[ -z "$$BACKEND_PORT" ]]; then \
+			BACKEND_PORT=$$(awk '/[Ss]erver started on/ { n=split($$NF, a, ":"); print a[n]; exit }' "$$DEBUG_DIR/backend.log"); \
+		fi; \
+		if [[ -n "$$BACKEND_PORT" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
+			BACKEND_READY=true; \
+			break; \
+		fi; \
+		sleep 1; \
+	done; \
+	if [[ -z "$$BACKEND_PORT" ]]; then \
+		echo "Error: Could not determine backend port for debug session. Check $$DEBUG_DIR/backend.log"; \
+		exit 1; \
+	fi; \
+	if [[ "$$BACKEND_READY" == "false" ]]; then \
+		echo "Error: Streamlit backend did not become healthy on port $$BACKEND_PORT. Check $$DEBUG_DIR/backend.log"; \
+		exit 1; \
+	fi; \
+	if lsof -nP -iTCP:$$FRONTEND_PORT -sTCP:LISTEN > /dev/null 2>&1; then \
+		if [[ -n "$$VITE_PORT" ]]; then \
+			echo "Error: Requested VITE_PORT=$$FRONTEND_PORT became unavailable before frontend startup."; \
+		else \
+			echo "Error: Selected frontend port $$FRONTEND_PORT became unavailable before frontend startup."; \
+		fi; \
+		echo "Please rerun make debug."; \
+		exit 1; \
+	fi; \
+	( \
+		cd frontend && \
+		DEBUG_TO_CONSOLE=1 \
+		DEV_SERVER_BACKEND_URL="http://localhost:$$BACKEND_PORT" \
+		VITE_PORT="$$FRONTEND_PORT" yarn start -- --strictPort \
+	) >> "$$DEBUG_DIR/frontend.log" 2>&1 & \
+	FRONTEND_PID=$$!; \
+	BACKEND_READY=true; \
+	FRONTEND_READY=false; \
+	PROXY_READY=false; \
+	for i in $$(seq 1 60); do \
+		if ! kill -0 "$$BACKEND_PID" > /dev/null 2>&1; then \
+			echo "Error: Streamlit backend exited before startup completed. Check $$DEBUG_DIR/backend.log"; \
+			exit 1; \
+		fi; \
+		if [[ "$$FRONTEND_READY" == "false" ]] && ! kill -0 "$$FRONTEND_PID" > /dev/null 2>&1; then \
+			echo "Error: Frontend dev server exited before startup completed. Check $$DEBUG_DIR/frontend.log"; \
+			exit 1; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "false" ]] && curl -fsS "http://localhost:$$BACKEND_PORT/_stcore/health" > /dev/null 2>&1; then \
 			BACKEND_READY=true; \
 		fi; \
-		if [[ "$$FRONTEND_READY" == "false" ]] && curl -s http://localhost:3000 > /dev/null 2>&1; then \
+		if [[ "$$FRONTEND_READY" == "false" ]] && curl -fsS "http://localhost:$$FRONTEND_PORT" > /dev/null 2>&1; then \
 			FRONTEND_READY=true; \
 		fi; \
-		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]]; then \
+		if [[ "$$PROXY_READY" == "false" ]] && curl -fsS "http://localhost:$$FRONTEND_PORT/_stcore/health" > /dev/null 2>&1; then \
+			PROXY_READY=true; \
+		fi; \
+		if [[ "$$BACKEND_READY" == "true" ]] && [[ "$$FRONTEND_READY" == "true" ]] && [[ "$$PROXY_READY" == "true" ]]; then \
 			break; \
 		fi; \
 		sleep 1; \
 	done; \
 	echo ""; \
-	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]]; then \
+	if [[ "$$BACKEND_READY" == "false" ]] || [[ "$$FRONTEND_READY" == "false" ]] || [[ "$$PROXY_READY" == "false" ]]; then \
 		echo "Warning: Servers may not have started correctly. Check log files."; \
 		echo ""; \
 	fi; \
-	echo "  App URL: http://localhost:3000"; \
+	echo "  App URL:      http://localhost:$$FRONTEND_PORT"; \
+	echo "  Backend URL:  http://localhost:$$BACKEND_PORT"; \
+	echo "  Proxy target: http://localhost:$$FRONTEND_PORT -> http://localhost:$$BACKEND_PORT"; \
 	echo ""; \
 	echo "  Log files:"; \
-	echo "    work-tmp/debug/backend.log  - Streamlit/Python output"; \
-	echo "    work-tmp/debug/frontend.log - Vite/browser console output"; \
+	echo "    $$DEBUG_DIR/backend.log  - Streamlit/Python output"; \
+	echo "    $$DEBUG_DIR/frontend.log - Vite/browser console output"; \
+	echo "    $$DEBUG_ROOT/latest      - Symlink to latest debug session"; \
 	echo ""; \
 	echo "Press Ctrl+C to stop."; \
 	echo ""; \
@@ -319,8 +443,8 @@ debug:
 .PHONY: frontend-lint
 # Lint and check formatting of frontend files.
 frontend-lint:
-	cd frontend/ ; yarn workspaces foreach --all --parallel run formatCheck
-	cd frontend/ ; yarn workspaces foreach --all --parallel run lint
+	cd frontend/ ; yarn formatCheck
+	cd frontend/ ; yarn lint
 
 .PHONY: frontend-types
 # Run the frontend type checker.
@@ -330,12 +454,17 @@ frontend-types:
 .PHONY: frontend-format
 # Format frontend files.
 frontend-format:
-	cd frontend/ ; yarn workspaces foreach --all --parallel run format
+	cd frontend/ ; yarn format
 
 .PHONY: frontend-tests
 # Run frontend unit tests and generate coverage report.
 frontend-tests:
 	cd frontend; TESTPATH=$(TESTPATH) yarn testCoverage
+
+.PHONY: frontend-knip
+# Run Knip with default reporter.
+frontend-knip:
+	cd frontend/ ; yarn knip
 
 .PHONY: frontend-typesync
 # Check for unsynced frontend types.
@@ -350,8 +479,6 @@ frontend-typesync:
 update-frontend-typesync:
 	cd frontend/ ; yarn workspaces foreach --all --exclude @streamlit/typescript-config run typesync
 	cd frontend/ ; yarn
-	cd component-lib/ ; yarn typesync
-	cd component-lib/ ; yarn
 
 .PHONY: update-snapshots
 # Update e2e playwright snapshots based on the latest completed CI run.
@@ -485,6 +612,13 @@ bare-execution-tests:
 cli-smoke-tests:
 	uv run python scripts/cli_smoke_tests.py
 
+# Template apps under lib/streamlit/.agents/ need per-template mypy invocation:
+# (a) they all use the module name `streamlit_app`, so batching triggers a
+#     "duplicate module" error;
+# (b) they live under a dot-prefixed directory (`.agents/`), which confuses
+#     mypy's package-root resolution and prevents `import streamlit` from
+#     resolving — `MYPYPATH=lib` points at the real streamlit package.
+# `make python-types` applies the same per-template treatment to the full set.
 .PHONY: check
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
@@ -497,24 +631,36 @@ check:
 	echo "Changed files:"; \
 	echo "$$CHANGED" | tr ' ' '\n' | sed 's/^/  /'; \
 	echo ""
-	@# Start frontend (format, lint, types, tests) in background, run Python + pre-commit + Python tests in foreground
+	@# Start frontend (format, lint, knip, types, tests) in background, run Python + pre-commit + Python tests in foreground
 	@# Set FAST_CHECK=true to skip mypy, frontend-types, and unit tests
+	@# Set E2E_CHECK=true to also run changed e2e tests (in background, parallel to frontend)
+	@# Note: ty runs on all files (not just changed) because include/exclude config is ignored for single files, and ty is fast
 	@FE_OUT=$$(mktemp) || { echo "Failed to create temp file"; exit 1; }; \
+	E2E_OUT=""; \
 	FE_FILES=$$(uv run python scripts/get_changed_files.py --frontend --strip-prefix frontend/); \
 	FE_CHECK=$$(uv run python scripts/get_changed_files.py --frontend); \
 	FE_TESTS=$$(uv run python scripts/get_changed_files.py --frontend-tests --strip-prefix frontend/); \
 	( \
 		if [ -n "$$FE_FILES" ]; then \
-			echo "=== Frontend: format (prettier) ===" && \
-			cd frontend && yarn exec prettier --write $$FE_FILES && \
+			echo "=== Frontend: format (oxfmt) ===" && \
+			cd frontend && yarn exec oxfmt --config ./.oxfmtrc.json $$FE_FILES && \
+			cd .. && \
+			echo "" && \
+			echo "=== Frontend: lint (oxlint) ===" && \
+			cd frontend && yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings $$FE_FILES && \
 			cd .. && \
 			echo "" && \
 			echo "=== Frontend: lint (eslint) ===" && \
-			cd frontend && ./node_modules/.bin/eslint --fix $$FE_FILES && \
+			cd frontend && yarn exec eslint --fix $$FE_FILES && \
 			cd .. && \
 			echo ""; \
 		else \
 			echo "No frontend files changed." && \
+			echo ""; \
+		fi && \
+		if [ -n "$$FE_CHECK" ]; then \
+			echo "=== Frontend: dependency check (knip) ===" && \
+			$(MAKE) frontend-knip && \
 			echo ""; \
 		fi && \
 		if [ -n "$$FE_CHECK" ] && [ "$$FAST_CHECK" != "true" ]; then \
@@ -528,22 +674,45 @@ check:
 			cd frontend && yarn vitest run $$FE_TESTS; \
 		fi \
 	) > "$$FE_OUT" 2>&1 & FE_PID=$$!; \
+	E2E_PID=""; \
+	if [ "$$E2E_CHECK" = "true" ]; then \
+		E2E_OUT=$$(mktemp) || { echo "Failed to create E2E temp file"; exit 1; }; \
+		E2E_TESTS=$$(uv run python scripts/get_changed_files.py --e2e --strip-prefix e2e_playwright/); \
+		if [ -n "$$E2E_TESTS" ]; then \
+			( \
+				echo "=== E2E: tests (playwright) ===" && \
+				echo "Running: $$E2E_TESTS" && \
+				cd e2e_playwright && uv run pytest $$E2E_TESTS --tracing retain-on-failure --reruns 0 \
+			) > "$$E2E_OUT" 2>&1 & E2E_PID=$$!; \
+		fi; \
+	fi; \
 	PY_FILES=$$(uv run python scripts/get_changed_files.py --python); \
 	PY_EXIT=0; \
 	if [ -n "$$PY_FILES" ]; then \
-		echo "=== Python: format (ruff) ===" && \
-		uv run ruff format $$PY_FILES && \
-		echo "" && \
 		echo "=== Python: lint (ruff) ===" && \
 		uv run ruff check --fix $$PY_FILES && \
 		echo "" && \
+		echo "=== Python: format (ruff) ===" && \
+		uv run ruff format $$PY_FILES && \
+		echo "" && \
 		echo "=== Python: type check (ty) ===" && \
-		uv run ty check $$PY_FILES && \
+		uv run ty check && \
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
-			uv run mypy $$PY_FILES && \
-			echo "" || PY_EXIT=1; \
+			PY_MYPY_NON_TEMPLATE=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			PY_MYPY_TEMPLATES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			if [ -n "$$(echo "$$PY_MYPY_NON_TEMPLATE" | tr -d ' ')" ]; then \
+				uv run mypy $$PY_MYPY_NON_TEMPLATE && \
+				echo "" || PY_EXIT=1; \
+			fi; \
+			if [ $$PY_EXIT -eq 0 ] && [ -n "$$(echo "$$PY_MYPY_TEMPLATES" | tr -d ' ')" ]; then \
+				echo "# Per-template mypy with MYPYPATH=lib (see 'make check' docstring for why)" && \
+				for tpl in $$PY_MYPY_TEMPLATES; do \
+					MYPYPATH=lib uv run mypy "$$tpl" || PY_EXIT=1; \
+				done; \
+				echo ""; \
+			fi; \
 		fi; \
 	else \
 		echo "No Python files changed."; \
@@ -551,17 +720,19 @@ check:
 	fi; \
 	if [ $$PY_EXIT -ne 0 ]; then \
 		kill $$FE_PID 2>/dev/null; \
-		rm -f "$$FE_OUT"; \
+		[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+		rm -f "$$FE_OUT" "$$E2E_OUT"; \
 		echo "=== Python checks failed! ==="; \
 		exit 1; \
 	fi; \
 	CHANGED=$$(uv run python scripts/get_changed_files.py --all); \
 	if [ -n "$$CHANGED" ]; then \
 		echo "=== Pre-commit hooks ===" && \
-		SKIP=prettier-frontend uv run pre-commit run --files $$CHANGED && \
+		SKIP=oxlint-frontend,oxfmt-frontend uv run pre-commit run --files $$CHANGED && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
-			rm -f "$$FE_OUT"; \
+			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+			rm -f "$$FE_OUT" "$$E2E_OUT"; \
 			echo "=== Pre-commit hooks failed! ==="; \
 			exit 1; \
 		}; \
@@ -573,7 +744,8 @@ check:
 		uv run pytest -c lib/pyproject.toml -v $$PY_TESTS && \
 		echo "" || { \
 			kill $$FE_PID 2>/dev/null; \
-			rm -f "$$FE_OUT"; \
+			[ -n "$$E2E_PID" ] && kill $$E2E_PID 2>/dev/null; \
+			rm -f "$$FE_OUT" "$$E2E_OUT"; \
 			echo "=== Python tests failed! ==="; \
 			exit 1; \
 		}; \
@@ -582,8 +754,20 @@ check:
 	wait $$FE_PID || FE_EXIT=1; \
 	cat "$$FE_OUT"; \
 	rm -f "$$FE_OUT"; \
+	E2E_EXIT=0; \
+	if [ -n "$$E2E_PID" ]; then \
+		wait $$E2E_PID || E2E_EXIT=1; \
+		cat "$$E2E_OUT"; \
+	fi; \
+	rm -f "$$E2E_OUT"; \
 	if [ $$FE_EXIT -ne 0 ]; then \
 		echo "=== Frontend checks failed! ==="; \
+		exit 1; \
+	fi; \
+	if [ $$E2E_EXIT -ne 0 ]; then \
+		echo "=== E2E tests failed! ==="; \
+		echo "If you implemented changes in the frontend, make sure to call 'make frontend-fast' to use the up-to-date frontend build in the test."; \
+		echo "You can find test-results in ./e2e_playwright/test-results"; \
 		exit 1; \
 	fi
 	@echo "=== All checks passed! ==="
@@ -591,13 +775,14 @@ check:
 .PHONY: autofix
 # Autofix linting and formatting errors.
 autofix:
-	# Python fixes:
+	# Python fixes (continue on unfixable errors):
+	uv run ruff check --fix || true
 	make python-format
-	uv run ruff check --fix
 	# JS fixes:
 	make frontend-init
 	make frontend-format
-	cd frontend/ ; yarn workspaces foreach --all --parallel run lint --fix
+	cd frontend/ ; yarn lint:fix || true  # Continue on unfixable errors
+	cd frontend/ ; yarn knip --fix --allow-remove-files || true  # Continue on unfixable errors
 	# Dedupe yarn.lock
 	cd frontend ; yarn dedupe
 	# Other fixes:

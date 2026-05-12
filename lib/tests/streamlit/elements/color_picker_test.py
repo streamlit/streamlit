@@ -20,7 +20,8 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.elements.widgets.color_picker import ColorPickerSerde
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -231,3 +232,76 @@ class ColorPickerTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.color_picker
             id2 = c2.id
             assert id1 == id2
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.color_picker("the label", key="my_color", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        assert c.query_param_key == "my_color"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.color_picker("the label", bind="query-params")
+
+        assert "must have a unique 'key' parameter" in str(exc.value)
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.color_picker("the label", key="my_color")
+
+        c = self.get_delta_from_queue().new_element.color_picker
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            st.color_picker("the label", key="my_color", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)
+
+    def test_empty_key_raises_exception(self) -> None:
+        """Test that an empty key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"`key`.*non-empty"):
+            st.color_picker("the label", key="")
+
+
+class TestColorPickerSerde:
+    """Tests for the ColorPickerSerde serializer/deserializer."""
+
+    def test_invalid_value_falls_back_to_default(self) -> None:
+        """Test that invalid UI values fall back to default."""
+        serde = ColorPickerSerde("#000000")
+
+        assert serde.deserialize("notacolor") == "#000000"
+        assert serde.deserialize("notacolor") != "notacolor"
+
+    def test_value_is_normalized_with_hash_prefix(self) -> None:
+        """Test that valid hex values are normalized with a # prefix."""
+        serde = ColorPickerSerde("#000000")
+
+        assert serde.deserialize("00ff00") == "#00ff00"
+
+    def test_empty_string_returns_default(self) -> None:
+        """Test that empty string returns the default value."""
+        serde = ColorPickerSerde("#ff0000")
+
+        assert serde.deserialize("") == "#ff0000"
+
+    def test_serialize_deserialize_round_trip(self) -> None:
+        """Test that serialize/deserialize round-trips correctly."""
+        serde = ColorPickerSerde("#000000")
+
+        original = "#abcdef"
+        serialized = serde.serialize(original)
+        deserialized = serde.deserialize(serialized)
+
+        assert deserialized == original
+
+    def test_double_hash_falls_back_to_default(self) -> None:
+        """Test that a double hash (##000000) falls back to default."""
+        serde = ColorPickerSerde("#ff0000")
+
+        assert serde.deserialize("##000000") == "#ff0000"

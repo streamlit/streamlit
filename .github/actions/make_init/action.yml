@@ -20,7 +20,7 @@ runs:
     # Install uv and Python using the official astral-sh/setup-uv action.
     # This handles uv installation, Python version management, and venv activation.
     - name: Install uv and Python ${{ inputs.python_version }}
-      uses: astral-sh/setup-uv@v7
+      uses: astral-sh/setup-uv@cec208311dfd045dd5311c1add060b2062131d57 # v8.0.0
       with:
         python-version: ${{ inputs.python_version }}
         enable-cache: ${{ inputs.use_cached_venv }}
@@ -37,7 +37,7 @@ runs:
       run: corepack enable
       shell: bash
     - name: Setup Node
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version-file: ".nvmrc"
         cache: "yarn"
@@ -95,7 +95,7 @@ runs:
     - if: inputs.use_cached_venv == 'true'
       name: Restore virtualenv from cache
       id: cache-virtualenv
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: .venv
         key: v2-python-venv-py${{ inputs.python_version }}-${{ hashFiles('**/python_cache_key.md5') }}

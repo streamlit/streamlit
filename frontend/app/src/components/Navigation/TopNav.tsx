@@ -23,14 +23,19 @@ import { NavigationContext } from "@streamlit/lib"
 import { IAppPage } from "@streamlit/protobuf"
 import { isNullOrUndefined } from "@streamlit/utils"
 
+import SidebarNavLink from "./SidebarNavLink"
 import {
   StyledOverflowContainer,
   StyledTopNavLinkContainer,
 } from "./styled-components"
 import TopNavSection from "./TopNavSection"
-import { groupPagesBySection, processNavigationStructure } from "./utils"
-
-import { SidebarNavLink } from "./index"
+import {
+  filterVisiblePages,
+  getExternalPageUrl,
+  groupPagesBySection,
+  isExternalPage,
+  processNavigationStructure,
+} from "./utils"
 
 export interface Props {
   endpoints: StreamlitEndpoints
@@ -40,18 +45,21 @@ export interface Props {
 const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
   const { pageLinkBaseUrl, currentPageScriptHash, appPages, onPageChange } =
     useContext(NavigationContext)
+
+  // Filter out hidden pages for display
+  const visiblePages = useMemo(() => filterVisiblePages(appPages), [appPages])
+
   const { data, itemKey } = useMemo((): {
     data: (IAppPage | IAppPage[])[]
     itemKey: (item: IAppPage | IAppPage[]) => string
   } => {
-    const navSections = groupPagesBySection(appPages)
+    const navSections = groupPagesBySection(visiblePages)
     const processed = processNavigationStructure(navSections)
 
     // Combine individual pages and sections for the overflow component
-    // Each section's pages should be kept as an array
     const combinedData: (IAppPage | IAppPage[])[] = [
       ...processed.individualPages,
-      ...Object.entries(processed.sections).map(([_, pages]) => pages),
+      ...Object.values(processed.sections),
     ]
 
     const keyFn = (item: IAppPage | IAppPage[]): string =>
@@ -60,7 +68,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
         : (item.pageScriptHash ?? "")
 
     return { data: combinedData, itemKey: keyFn }
-  }, [appPages])
+  }, [visiblePages])
 
   const renderItem = useCallback(
     (item: IAppPage | IAppPage[], _info: unknown) => {
@@ -77,6 +85,7 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
           />
         )
       }
+      const isExternal = isExternalPage(item)
       return (
         <StyledTopNavLinkContainer>
           <SidebarNavLink
@@ -86,12 +95,18 @@ const TopNav: React.FC<Props> = ({ endpoints, widgetsDisabled }) => {
             icon={item.icon}
             pageUrl={endpoints.buildAppPageURL(pageLinkBaseUrl, item)}
             onClick={e => {
+              // External links are handled by the browser (target="_blank")
+              if (isExternal) {
+                return
+              }
               e.preventDefault()
               if (item.pageScriptHash) {
                 onPageChange(item.pageScriptHash)
               }
             }}
             widgetsDisabled={widgetsDisabled}
+            isExternal={isExternal}
+            externalUrl={getExternalPageUrl(item)}
           >
             {String(item.pageName)}
           </SidebarNavLink>

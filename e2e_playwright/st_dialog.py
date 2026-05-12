@@ -219,6 +219,7 @@ def dialog_with_dataframe() -> None:
             "c": st.column_config.Column(width="small"),
         },
         hide_index=True,
+        width="content",
     )
 
 

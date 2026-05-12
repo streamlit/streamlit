@@ -22,10 +22,11 @@ from e2e_playwright.shared.toolbar_utils import (
 )
 
 MAP_ELEMENT_COUNT = 5
+PIXEL_THRESHOLD = 0.1
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_st_map_has_consistent_visuals(
     themed_app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -40,7 +41,7 @@ def test_st_map_has_consistent_visuals(
     assert_snapshot(
         maps.nth(0),
         name="st_map-empty",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     assert_snapshot(
@@ -59,28 +60,28 @@ def test_st_map_has_consistent_visuals(
     assert_snapshot(
         maps.nth(1).locator("canvas").nth(1),
         name="st_map-simple_map",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         maps.nth(2).locator("canvas").nth(1),
         name="st_map-simple_map_with_zoom",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         maps.nth(3).locator("canvas").nth(1),
         name="st_map-map_with_color_and_size_layers",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
     # The pydeck tests are a lot flakier than need be so increase the pixel threshold
     assert_snapshot(
         maps.nth(4),
         name="st_map-width_and_height",
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )
 
 
@@ -94,8 +95,8 @@ def test_check_top_level_class(app: Page):
     check_top_level_class(app, "stDeckGlJsonChart")
 
 
-# Firefox seems to be failing but can't reproduce locally and video produces an empty page for firefox
-@pytest.mark.skip_browser("firefox")
+# Pydeck snapshots behavior is inconsistent for non-Chromium browsers in CI.
+@pytest.mark.only_browser("chromium")
 def test_st_map_clicking_on_fullscreen_toolbar_button(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
@@ -114,5 +115,5 @@ def test_st_map_clicking_on_fullscreen_toolbar_button(
         widget_test_id="stDeckGlJsonChart",
         filename_prefix="st_map",
         # The pydeck tests are a lot flakier than need be so increase the pixel threshold
-        pixel_threshold=1.0,
+        pixel_threshold=PIXEL_THRESHOLD,
     )

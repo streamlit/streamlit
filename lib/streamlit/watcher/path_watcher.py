@@ -60,7 +60,7 @@ def _is_watchdog_available() -> bool:
         import watchdog  # noqa: F401
 
         return True
-    except ImportError:
+    except ImportError:  # pragma: no cover - optional dep
         return False
 
 
@@ -142,7 +142,7 @@ def watch_file(
 ) -> bool:
     """Watch a file for changes.
 
-    The callback is invoked when the file's content changes (detected via MD5).
+    The callback is invoked when the file's content changes (detected via hash).
     If allow_nonexistent is True, the watcher will also detect when the file
     is created.
 

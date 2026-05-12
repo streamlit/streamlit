@@ -28,16 +28,24 @@ import {
   UploadedFileInfo as UploadedFileInfoProto,
 } from "@streamlit/protobuf"
 
+import BaseButton, {
+  BaseButtonKind,
+  BaseButtonSize,
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+  UploadedStatus,
+  UploadFileInfo,
+} from "~lib/components/shared/UploadedFile/UploadFileInfo"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import {
   FileSize,
   getRejectedFileInfo,
+  isFileTypeAllowed,
   sizeConverter,
 } from "~lib/util/FileHelper"
 import {
@@ -49,7 +57,6 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import FileDropzone from "./FileDropzone"
 import { StyledFileUploader } from "./styled-components"
 import UploadedFiles from "./UploadedFiles"
-import { UploadedStatus, UploadFileInfo } from "./UploadFileInfo"
 
 type FilesUpdater =
   | UploadFileInfo[]
@@ -163,14 +170,13 @@ const FileUploader = ({
    * Set the files immediately.
    */
   const setFilesImmediate = useCallback((updater: FilesUpdater): void => {
-    /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+    /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
      * Using flushSync here because we need the state to be immediately updated
      * before any subsequent file upload operations occur. Without this, React
-     * can defer the commit and our upload callbacks (progress, completion, or
-     * abort) may run while filesRef.current still points to the previous state.
-     * Those callbacks rely on filesRef.current to locate the in-flight upload,
-     * so deferring the update would cause them to no-op and break progress
-     * tracking.
+     * can defer the commit and our upload callbacks (completion or abort) may
+     * run while filesRef.current still points to the previous state. Those
+     * callbacks rely on filesRef.current to locate the in-flight upload, so
+     * deferring the update would cause them to no-op.
      */
     flushSync(() => {
       setFiles(prev => {
@@ -183,7 +189,7 @@ const FileUploader = ({
 
   const setForceUpdatingStatus = useCallback(
     (value: boolean): void => {
-      /* eslint-disable-next-line @eslint-react/dom/no-flush-sync --
+      /* eslint-disable-next-line @eslint-react/dom-no-flush-sync --
        * We need the status flag to update synchronously so that subsequent
        * renders treat the widget as updating. Otherwise, the status could
        * briefly report as ready and trigger widget state propagation while
@@ -306,24 +312,7 @@ const FileUploader = ({
     onFormCleared,
   })
 
-  /**
-   * Check if the file type is allowed.
-   */
-  const isFileTypeAllowed = useCallback(
-    (file: File): boolean => {
-      const acceptedExtensions = element.type
-
-      if (!acceptedExtensions || acceptedExtensions.length === 0) {
-        return true
-      }
-
-      const fileName = file.name.toLowerCase()
-      return acceptedExtensions.some(ext =>
-        fileName.endsWith(ext.toLowerCase())
-      )
-    },
-    [element.type]
-  )
+  const acceptedTypes = element.type
 
   const filterDirectoryFiles = useCallback(
     (
@@ -333,7 +322,7 @@ const FileUploader = ({
       const rejected: FileRejection[] = []
 
       filesToFilter.forEach(file => {
-        if (isFileTypeAllowed(file)) {
+        if (isFileTypeAllowed(file, acceptedTypes)) {
           accepted.push(file)
         } else {
           rejected.push({
@@ -350,7 +339,7 @@ const FileUploader = ({
 
       return { accepted, rejected }
     },
-    [isFileTypeAllowed]
+    [acceptedTypes]
   )
 
   /**
@@ -376,33 +365,6 @@ const FileUploader = ({
   )
 
   /**
-   * Update the file status when the upload has progressed.
-   */
-  const onUploadProgress = useCallback(
-    (event: ProgressEvent, fileId: number): void => {
-      const file = getFile(fileId)
-      if (isNullOrUndefined(file) || file.status.type !== "uploading") {
-        return
-      }
-
-      const newProgress = Math.round((event.loaded * 100) / event.total)
-      if (file.status.progress === newProgress) {
-        return
-      }
-
-      updateFile(
-        fileId,
-        file.setStatus({
-          type: "uploading",
-          abortController: file.status.abortController,
-          progress: newProgress,
-        })
-      )
-    },
-    [getFile, updateFile]
-  )
-
-  /**
    * Upload a file to the backend.
    */
   const uploadFile = useCallback(
@@ -417,7 +379,7 @@ const FileUploader = ({
         {
           type: "uploading",
           abortController,
-          progress: 1,
+          progress: 0,
         }
       )
       addFile(uploadingFileInfo)
@@ -427,7 +389,7 @@ const FileUploader = ({
           element,
           fileURLs.uploadUrl as string,
           file,
-          e => onUploadProgress(e, uploadingFileInfo.id),
+          undefined,
           abortController.signal
         )
         .then(() => onUploadComplete(uploadingFileInfo.id, fileURLs))
@@ -448,7 +410,6 @@ const FileUploader = ({
       element,
       nextLocalFileId,
       onUploadComplete,
-      onUploadProgress,
       updateFile,
       uploadClient,
     ]
@@ -577,12 +538,6 @@ const FileUploader = ({
     ]
   )
 
-  const newestToOldestFiles = useMemo(() => {
-    return files.slice().reverse()
-  }, [files])
-
-  const acceptedExtensions = element.type
-
   return (
     <StyledFileUploader
       className="stFileUploader"
@@ -604,21 +559,32 @@ const FileUploader = ({
       <FileDropzone
         onDrop={dropHandler}
         multiple={element.multipleFiles}
-        acceptedExtensions={acceptedExtensions}
+        acceptedTypes={acceptedTypes}
         maxSizeBytes={maxUploadSizeInBytes}
         label={element.label}
         disabled={disabled}
         acceptDirectory={Boolean(element.acceptDirectory)}
+        hasFiles={files.length > 0}
+        uploadedFiles={
+          files.length > 0 ? (
+            <UploadedFiles
+              items={files}
+              onDelete={deleteFile}
+              disabled={disabled}
+              trailingContent={
+                <BaseButton
+                  kind={BaseButtonKind.BORDERLESS_ICON}
+                  disabled={disabled}
+                  size={BaseButtonSize.XSMALL}
+                  aria-label="Add files"
+                >
+                  <DynamicButtonLabel icon=":material/add:" />
+                </BaseButton>
+              }
+            />
+          ) : null
+        }
       />
-      {newestToOldestFiles.length > 0 && (
-        <UploadedFiles
-          items={newestToOldestFiles}
-          pageSize={3}
-          onDelete={deleteFile}
-          resetOnAdd
-          disabled={disabled}
-        />
-      )}
     </StyledFileUploader>
   )
 }

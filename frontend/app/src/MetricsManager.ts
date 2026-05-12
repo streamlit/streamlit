@@ -149,8 +149,7 @@ export class MetricsManager {
   }
 
   // Fallback - Checks if cached in localStorage, otherwise fetches the config from a default URL
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private async requestDefaultMetricsConfig(): Promise<any> {
+  private async requestDefaultMetricsConfig(): Promise<void> {
     const isLocalStoreAvailable = localStorageAvailable()
 
     if (isLocalStoreAvailable) {

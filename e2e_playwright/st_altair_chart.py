@@ -162,7 +162,7 @@ points = base.mark_circle().encode(
 )
 
 top_hist = (
-    base.mark_bar(**bar_args)
+    base.mark_bar(**bar_args)  # type: ignore[arg-type]
     .encode(
         alt.X(
             "sepalLength:Q",
@@ -177,7 +177,7 @@ top_hist = (
 )
 
 right_hist = (
-    base.mark_bar(**bar_args)
+    base.mark_bar(**bar_args)  # type: ignore[arg-type]
     .encode(
         alt.Y(
             "sepalWidth:Q",
@@ -193,3 +193,67 @@ right_hist = (
 
 marginal_hist_chart = top_hist & (points | right_hist)
 st.altair_chart(marginal_hist_chart, theme="streamlit")
+
+# Regression scenario for https://github.com/streamlit/streamlit/issues/13974:
+# layered child inside vconcat with explicit autosize=fit-x and width=stretch.
+st.write("Regression: Layered vconcat chart with autosize=fit-x and width=stretch")
+df_regression = pd.DataFrame(
+    np.random.default_rng(0).standard_normal((60, 2)), columns=["a", "b"]
+)
+base_regression = (
+    alt.Chart(df_regression)
+    .mark_circle()
+    .encode(x="a", y="b")
+    .properties(width=400, height=200)
+)
+text_regression = base_regression.mark_text(dy=-10).encode(
+    text=alt.Text("b:Q", format=".1f")
+)
+regression_chart = (base_regression + text_regression) & base_regression
+regression_chart = regression_chart.properties(autosize="fit-x")
+st.altair_chart(regression_chart, width="stretch")
+
+# Regression scenario for https://github.com/streamlit/streamlit/issues/14050:
+# vconcat of layered + faceted children with width=stretch should render.
+st.write("Regression: vconcat of layered faceted charts with width=stretch")
+df_issue_14050 = pd.DataFrame(
+    {
+        "group": ["x", "x", "x", "y", "y", "y", "z", "z", "z"],
+        "bin": [1, 2, 3, 1, 2, 3, 1, 2, 3],
+        "xval": [10, 20, 30, 12, 22, 32, 14, 24, 34],
+        "y1": [4, 6, 8, 5, 7, 9, 6, 8, 10],
+        "y2": [2, 3, 5, 2.5, 3.5, 5.5, 3, 4, 6],
+        "selected": [False, True, False, False, True, False, False, True, False],
+    }
+)
+
+
+def _faceted_layer(metric: str, title: str) -> alt.FacetChart:
+    base_layer = (
+        alt.Chart(df_issue_14050)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("xval:Q", axis=alt.Axis(title="xval")),
+            y=alt.Y(f"{metric}:Q", axis=alt.Axis(title=title)),
+            color=alt.Color("group:N", legend=alt.Legend(title="Group")),
+            tooltip=["group", "bin", "xval", metric],
+        )
+    )
+    selected_layer = (
+        alt.Chart(df_issue_14050)
+        .mark_point(shape="diamond", color="purple", filled=True, size=90)
+        .encode(x=alt.X("xval:Q"), y=alt.Y(f"{metric}:Q"))
+        .transform_filter(alt.datum.selected)
+    )
+    return alt.layer(base_layer, selected_layer).facet(column=alt.Column("bin:O"))
+
+
+issue_14050_chart = (
+    alt.vconcat(
+        _faceted_layer("y1", "y1"),
+        _faceted_layer("y2", "y2"),
+    )
+    .resolve_scale(x="independent", y="independent")
+    .properties(title="Issue #14050 regression chart")
+)
+st.altair_chart(issue_14050_chart, width="stretch")

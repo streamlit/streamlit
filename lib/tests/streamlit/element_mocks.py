@@ -72,8 +72,10 @@ WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("file_uploader", lambda: st.file_uploader("Upload me")),
     # selectors
     ("feedback", lambda: st.feedback()),
+    ("menu_button", lambda: st.menu_button("Menu", ["a", "b", "c"])),
     ("multiselect", lambda: st.multiselect("Show me", ["a", "b", "c"])),
     ("number_input", lambda: st.number_input("Enter a number")),
+    ("pagination", lambda: st.pagination(10)),
     ("radio", lambda: st.radio("Choose me", ["a", "b", "c"])),
     ("slider", lambda: st.slider("Slide me")),
     ("selectbox", lambda: st.selectbox("Select me", ["a", "b", "c"])),
@@ -199,6 +201,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
         lambda: st.logo("https://streamlit.io/images/brand/streamlit-mark-color.png"),
     ),
     ("pdf", lambda: st.pdf(b"%PDF-1.4")),  # Minimal PDF bytes
+    ("iframe", lambda: st.iframe("<p>Hello</p>")),
     # data elements
     ("json", lambda: st.json({})),
     ("metric", lambda: st.metric("Metric", 100)),

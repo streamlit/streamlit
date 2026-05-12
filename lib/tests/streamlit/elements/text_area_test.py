@@ -23,6 +23,7 @@ from parameterized import parameterized
 import streamlit as st
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidHeightError,
     StreamlitInvalidWidthError,
 )
@@ -95,7 +96,7 @@ class TextAreaTest(DeltaGeneratorTestCase):
 
         st.text_area("foo")
 
-        proto = self.get_delta_from_queue().new_element.color_picker
+        proto = self.get_delta_from_queue().new_element.text_area
         assert proto.form_id == ""
 
     @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
@@ -350,6 +351,51 @@ class TextAreaTest(DeltaGeneratorTestCase):
             c2 = self.get_delta_from_queue().new_element.text_area
             id2 = c2.id
             assert id1 != id2
+
+    def test_bind_query_params_sets_query_param_key(self) -> None:
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.text_area("the label", key="my_text", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == "my_text"
+
+    def test_bind_query_params_without_key_raises_exception(self) -> None:
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            st.text_area("the label", bind="query-params")
+
+        assert "must have a unique 'key' parameter" in str(exc.value)
+
+    def test_no_bind_does_not_set_query_param_key(self) -> None:
+        """Test that without bind parameter, query_param_key is not set."""
+        st.text_area("the label", key="my_text")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self) -> None:
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            st.text_area("the label", key="my_text", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)
+
+    def test_bind_query_params_with_default_value(self) -> None:
+        """Test that bind works with a default value."""
+        st.text_area("the label", value="hello", key="my_text", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == "my_text"
+        assert c.default == "hello"
+
+    def test_bind_query_params_with_max_chars(self) -> None:
+        """Test that bind works with max_chars."""
+        st.text_area("the label", key="my_text", bind="query-params", max_chars=5)
+
+        c = self.get_delta_from_queue().new_element.text_area
+        assert c.query_param_key == "my_text"
+        assert c.max_chars == 5
 
 
 class SomeObj:

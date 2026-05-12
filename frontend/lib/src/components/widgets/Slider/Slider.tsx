@@ -37,11 +37,9 @@ import moment from "moment"
 import { Slider as SliderProto } from "@streamlit/protobuf"
 
 import { withCalculatedWidth } from "~lib/components/core/Layout/withCalculatedWidth"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -147,6 +145,25 @@ function Slider({
   widgetMgr,
   fragmentId,
 }: Props): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: isSelectSlider(element)
+          ? ("string_array_value" as const)
+          : ("double_array_value" as const),
+        clearable: false,
+        urlFormat: "repeated" as const,
+        // select_slider stores indices internally but uses formatted option
+        // strings in URLs, so provide the default in URL-compatible format.
+        urlDefault: isSelectSlider(element)
+          ? indicesToStringValues(element.default, element.options)
+          : undefined,
+        // Date/time/datetime sliders format microsecond timestamps as ISO
+        // strings in URLs (e.g., ?date=2024-06-15 instead of raw micros).
+        dateType: isDateTimeType(element) ? getMomentKind(element) : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     number[],
     SliderProto
@@ -158,6 +175,8 @@ function Slider({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // We tie the UI to `uiValue` rather than `value` because `value` only
@@ -194,7 +213,7 @@ function Slider({
   // When resetting a form, `value` will change so we need to change `uiValue`
   // to match.
   useEffect(() => {
-    setUiValue(value)
+    setUiValue(value) // eslint-disable-line react-hooks/no-deriving-state-in-effects -- Syncs widget manager value to local UI state on form reset
   }, [value])
 
   // For select_slider: when options change, recompute indices from WidgetStateManager.
@@ -235,12 +254,14 @@ function Slider({
     []
   )
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- forwardRef passed to useCallback for BaseUI render prop
   const renderThumb = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- forwardRef passed to useCallback for BaseUI render prop
     forwardRef<HTMLDivElement, StyleProps>(
       function renderThumb(props, ref): ReactElement {
         const { $thumbIndex, $value } = props
         const thumbIndex = $thumbIndex || 0
+        // eslint-disable-next-line react-hooks/immutability -- mutable ref array for BaseUI render prop pattern
         thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
         // eslint-disable-next-line @eslint-react/no-create-ref
         thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
@@ -345,8 +366,9 @@ function Slider({
   // Then we can adjust the padding around the thumbs separately
   // from the dimensions of the track.
   //
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- forwardRef passed to useCallback for BaseUI render prop
   const renderInnerTrack = useCallback(
+    // eslint-disable-next-line react-hooks/use-memo -- forwardRef passed to useCallback for BaseUI render prop
     forwardRef<HTMLDivElement, StylePropsWithChildren>(
       function renderInnerTrack(props, ref): ReactElement {
         const { children: thumbs, ...newProps } = props
@@ -469,7 +491,7 @@ function updateWidgetMgrState(
   element: SliderProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<number[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (isSelectSlider(element)) {
     // For select_slider, convert indices to string values

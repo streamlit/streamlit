@@ -21,8 +21,10 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.js_number import JSNumber
+from streamlit.elements.widgets.number_input import NumberInputSerde
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidWidthError,
     StreamlitValueAboveMaxError,
 )
@@ -728,3 +730,86 @@ def test_dynamic_bounds_with_float_values():
     at = at.run()
     # Now min_value=5.0, so 2.5 is invalid and should reset to default (7.5)
     assert at.number_input[0].value == 7.5
+
+
+class NumberInputBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for number_input bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.number_input("the label", key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.number_input("the label", bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.number_input("the label", key="my_key", value=0)
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+        assert c.default == 0
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.number_input("the label", key="my_key", bind="invalid-value")
+
+    def test_bind_query_params_with_int_value(self):
+        """Test that bind works with integer values."""
+        st.number_input("the label", value=42, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+        assert c.data_type == NumberInput.INT
+
+    def test_bind_query_params_with_float_value(self):
+        """Test that bind works with float values."""
+        st.number_input("the label", value=3.14, key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+        assert c.data_type == NumberInput.FLOAT
+
+    def test_bind_query_params_with_min_max(self):
+        """Test that bind works with min/max constraints."""
+        st.number_input(
+            "the label",
+            min_value=0,
+            max_value=100,
+            value=50,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.number_input
+        assert c.query_param_key == "my_key"
+        assert c.has_min
+        assert c.min == 0
+        assert c.has_max
+        assert c.max == 100
+
+
+@pytest.mark.parametrize(
+    ("ui_value", "expected"),
+    [
+        (150, 50),  # Above max -> reset to default
+        (-50, 50),  # Below min -> reset to default
+        (50, 50),  # In range -> unchanged
+        (0, 0),  # At min -> unchanged
+        (100, 100),  # At max -> unchanged
+        (None, 50),  # None -> returns default value
+    ],
+)
+def test_serde_resets_out_of_range_to_default(ui_value, expected):
+    """Test that NumberInputSerde.deserialize resets out-of-range values to default."""
+    serde = NumberInputSerde(
+        value=50, data_type=NumberInput.INT, min_value=0, max_value=100
+    )
+    assert serde.deserialize(ui_value) == expected

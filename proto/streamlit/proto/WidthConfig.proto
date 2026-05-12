@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 package streamlit;
 
 message WidthConfig {

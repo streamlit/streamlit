@@ -29,7 +29,7 @@ from streamlit.components.v2.bidi_component.main import (
     BidiComponentMixin,
     _make_trigger_id,
 )
-from streamlit.components.v2.bidi_component.state import BidiComponentResult
+from streamlit.components.v2.bidi_component.state import ComponentResult
 from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.components.v2.component_registry import BidiComponentDefinition
 from streamlit.errors import (
@@ -44,7 +44,7 @@ from streamlit.runtime.state.session_state import (
     STREAMLIT_INTERNAL_KEY_PREFIX,
     _is_internal_key,
 )
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
 
@@ -173,15 +173,15 @@ def test_multiple_trigger_ids_are_all_internal() -> None:
     assert len(trigger_ids) == len(set(trigger_ids)), "All trigger IDs should be unique"
 
 
-def test_result_merges_state_and_trigger_values_and_exposes_dg():
-    """BidiComponentResult should behave like a mapping/attribute dict and expose the dg."""
+def test_result_merges_state_and_trigger_values():
+    """ComponentResult should behave like a mapping/attribute dict."""
 
     # Arrange
     state_vals = {"foo": 123, "bar": "abc"}
     trigger_vals = {"clicked": True, "changed": {"value": 42}}
 
     # Act
-    result = BidiComponentResult(state_vals, trigger_vals)
+    result = ComponentResult(state_vals, trigger_vals)
 
     # Assert mapping access
     assert result["foo"] == 123
@@ -251,7 +251,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
     - Parsing of ``on_<event>_change`` kwargs into an event-to-callback mapping
     - Registration of the per-run aggregator trigger widget with
       ``value_type`` equal to ``"json_trigger_value"``
-    - ``BidiComponentResult`` exposes event keys and merges persistent state
+    - ``ComponentResult`` exposes event keys and merges persistent state
       with trigger values
     - Callbacks and widget metadata are correctly stored in ``SessionState``
       for the current run
@@ -295,7 +295,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # ------------------------------------------------------------------
         # Assert - return type & merged keys
         # ------------------------------------------------------------------
-        assert isinstance(result, BidiComponentResult)
+        assert isinstance(result, ComponentResult)
         # No state set yet, but we expect trigger keys to exist with None
         assert "click" in result
         assert result.click is None
@@ -311,7 +311,7 @@ class BidiComponentMixinTest(DeltaGeneratorTestCase):
         # Compute expected aggregator trigger id
         base_id = next(
             wid
-            for wid in ctx.widget_ids_this_run
+            for wid in ctx.widget_ids_this_run.snapshot()
             if wid.startswith("$$ID") and EVENT_DELIM not in wid
         )
         aggregator_id = _make_trigger_id(base_id, "events")
@@ -1274,7 +1274,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["mixed_json"] == calc_md5("{}")
+        assert identity["mixed_json"] == calc_hash("{}")
         assert identity["mixed_arrow_blobs"] == "a,b"
 
     def test_identity_kwargs_json_canonicalizes_order(self):
@@ -1292,7 +1292,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
-        assert identity["json"] == calc_md5(expected)
+        assert identity["json"] == calc_hash(expected)
 
     def test_identity_kwargs_mixed_json_canonicalizes_order(self):
         """MixedData identity must canonicalize JSON portion independently of storage order."""
@@ -1309,7 +1309,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
         )
 
         expected = json.dumps({"a": 1, "b": 2}, sort_keys=True)
-        assert identity["mixed_json"] == calc_md5(expected)
+        assert identity["mixed_json"] == calc_hash(expected)
 
     def test_identity_kwargs_bytes_use_digest(self):
         """Raw byte payloads should contribute content digests, not the full payload."""
@@ -1325,7 +1325,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["bytes"] == calc_md5(b"bytes payload")
+        assert identity["bytes"] == calc_hash(b"bytes payload")
 
     def test_identity_kwargs_arrow_data_use_digest(self):
         """Arrow payloads should contribute digests to avoid hashing large blobs repeatedly."""
@@ -1341,7 +1341,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             proto=proto,
         )
 
-        assert identity["arrow_data"] == calc_md5(b"\x00\x01")
+        assert identity["arrow_data"] == calc_hash(b"\x00\x01")
 
     def test_unkeyed_id_stable_when_json_key_order_changes(self):
         """Without a user key, changing the insertion order of keys in a JSON dict should NOT change the backend id."""
@@ -1419,7 +1419,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
 
             # Verify the result is correct (sorted keys)
             expected_canonical = json.dumps(data, sort_keys=True)
-            assert identity["json"] == calc_md5(expected_canonical)
+            assert identity["json"] == calc_hash(expected_canonical)
 
             # Verify the slow path was skipped
             mock_digest.assert_not_called()
@@ -1440,7 +1440,7 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             )
 
             # Verify result is still correct
-            assert identity["json"] == calc_md5(expected_canonical)
+            assert identity["json"] == calc_hash(expected_canonical)
 
             # Verify the slow path WAS called
             mock_digest.assert_called_once()

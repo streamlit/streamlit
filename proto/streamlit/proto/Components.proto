@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message ComponentInstance {
   // The instance's "widget ID", used to uniquely identify it.
   string id = 1;

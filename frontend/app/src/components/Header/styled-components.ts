@@ -22,7 +22,7 @@ export const StyledLogoContainer = styled.div(({ theme }) => ({
   marginLeft: theme.spacing.lg,
 }))
 
-export interface StyledHeaderProps {
+interface StyledHeaderProps {
   isTransparentBackground?: boolean
 }
 

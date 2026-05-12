@@ -17,7 +17,7 @@
 // eslint-disable-next-line no-restricted-imports -- Expected usage
 import { useTheme } from "@emotion/react"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 /**
  * This hook is a wrapper around the useTheme hook from @emotion/react.

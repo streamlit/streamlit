@@ -15,7 +15,7 @@
 import pytest
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_loaded, wait_until
+from e2e_playwright.conftest import build_app_url, wait_for_app_loaded, wait_until
 
 
 def setup_viewport(page: Page, viewport_type: str) -> None:
@@ -164,7 +164,7 @@ def wait_for_sidebar_stable(
 @pytest.mark.parametrize("viewport", ["desktop", "mobile"])
 @pytest.mark.parametrize("initial_sidebar_state", ["collapsed", "expanded", "auto"])
 def test_sidebar_no_flicker_on_initial_load(
-    page: Page, app_port: int, viewport: str, initial_sidebar_state: str
+    page: Page, app_base_url: str, viewport: str, initial_sidebar_state: str
 ):
     """Test that sidebar doesn't flicker during initial page load.
 
@@ -182,7 +182,7 @@ def test_sidebar_no_flicker_on_initial_load(
     page.add_init_script(create_sidebar_monitor_script())
 
     # Navigate to the page
-    page.goto(f"http://localhost:{app_port}/?test_mode={initial_sidebar_state}")
+    page.goto(build_app_url(app_base_url, query={"test_mode": initial_sidebar_state}))
 
     # Wait for app to load
     wait_for_app_loaded(page)
@@ -191,7 +191,7 @@ def test_sidebar_no_flicker_on_initial_load(
     verify_no_sidebar_flicker(page, initial_sidebar_state, expected_final_state)
 
 
-def test_sidebar_collapsed_state_no_flicker(page: Page, app_port: int):
+def test_sidebar_collapsed_state_no_flicker(page: Page, app_base_url: str):
     """Test that sidebar stays collapsed when configured as collapsed.
 
     This focused test ensures that a sidebar configured as collapsed
@@ -202,13 +202,13 @@ def test_sidebar_collapsed_state_no_flicker(page: Page, app_port: int):
     # Inject monitoring script before page loads
     page.add_init_script(create_sidebar_monitor_script())
 
-    page.goto(f"http://localhost:{app_port}/?test_mode=collapsed")
+    page.goto(build_app_url(app_base_url, query={"test_mode": "collapsed"}))
     wait_for_app_loaded(page)
 
     verify_no_sidebar_flicker(page, "collapsed", "collapsed")
 
 
-def test_sidebar_expanded_state_no_flicker(page: Page, app_port: int):
+def test_sidebar_expanded_state_no_flicker(page: Page, app_base_url: str):
     """Test that sidebar stays expanded when configured as expanded.
 
     This focused test ensures that a sidebar configured as expanded
@@ -219,13 +219,13 @@ def test_sidebar_expanded_state_no_flicker(page: Page, app_port: int):
     # Inject monitoring script before page loads
     page.add_init_script(create_sidebar_monitor_script())
 
-    page.goto(f"http://localhost:{app_port}/?test_mode=expanded")
+    page.goto(build_app_url(app_base_url, query={"test_mode": "expanded"}))
     wait_for_app_loaded(page)
 
     verify_no_sidebar_flicker(page, "expanded", "expanded")
 
 
-def test_sidebar_auto_state_desktop(page: Page, app_port: int):
+def test_sidebar_auto_state_desktop(page: Page, app_base_url: str):
     """Test that sidebar auto state works correctly on desktop.
 
     On desktop, auto state should result in an expanded sidebar.
@@ -235,13 +235,13 @@ def test_sidebar_auto_state_desktop(page: Page, app_port: int):
     # Inject monitoring script before page loads
     page.add_init_script(create_sidebar_monitor_script())
 
-    page.goto(f"http://localhost:{app_port}/?test_mode=auto")
+    page.goto(build_app_url(app_base_url, query={"test_mode": "auto"}))
     wait_for_app_loaded(page)
 
     verify_no_sidebar_flicker(page, "auto", "expanded")
 
 
-def test_sidebar_auto_state_mobile(page: Page, app_port: int):
+def test_sidebar_auto_state_mobile(page: Page, app_base_url: str):
     """Test that sidebar auto state works correctly on mobile.
 
     On mobile, auto state should result in a collapsed sidebar.
@@ -251,13 +251,13 @@ def test_sidebar_auto_state_mobile(page: Page, app_port: int):
     # Inject monitoring script before page loads
     page.add_init_script(create_sidebar_monitor_script())
 
-    page.goto(f"http://localhost:{app_port}/?test_mode=auto")
+    page.goto(build_app_url(app_base_url, query={"test_mode": "auto"}))
     wait_for_app_loaded(page)
 
     verify_no_sidebar_flicker(page, "auto", "collapsed")
 
 
-def test_sidebar_no_flicker_without_page_config(page: Page, app_port: int):
+def test_sidebar_no_flicker_without_page_config(page: Page, app_base_url: str):
     """Test sidebar behavior when set_page_config is not called.
 
     Should default to auto behavior (expanded on desktop).
@@ -267,7 +267,7 @@ def test_sidebar_no_flicker_without_page_config(page: Page, app_port: int):
     # Inject monitoring script before page loads
     page.add_init_script(create_sidebar_monitor_script())
 
-    page.goto(f"http://localhost:{app_port}/?test_mode=no_config")
+    page.goto(build_app_url(app_base_url, query={"test_mode": "no_config"}))
     wait_for_app_loaded(page)
 
     # Without page config, should behave like auto (expanded on desktop)
@@ -290,7 +290,7 @@ def test_sidebar_no_flicker_without_page_config(page: Page, app_port: int):
                 )
 
 
-def test_sidebar_stability_after_initial_load(page: Page, app_port: int):
+def test_sidebar_stability_after_initial_load(page: Page, app_base_url: str):
     """Test that sidebar state remains stable after initial load.
 
     Verifies that the sidebar doesn't change state unexpectedly
@@ -301,7 +301,7 @@ def test_sidebar_stability_after_initial_load(page: Page, app_port: int):
     # Inject monitoring script before page loads
     page.add_init_script(create_sidebar_monitor_script())
 
-    page.goto(f"http://localhost:{app_port}/?test_mode=collapsed")
+    page.goto(build_app_url(app_base_url, query={"test_mode": "collapsed"}))
     wait_for_app_loaded(page)
 
     # Verify initial state

@@ -69,6 +69,9 @@ describe("VideoRecordedDialog", () => {
 
   it("should render a download button", async () => {
     const user = userEvent.setup()
+    const anchorClickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(() => {})
     render(
       <BaseProvider theme={LightTheme}>
         <VideoRecordedDialog {...props} />
@@ -80,6 +83,9 @@ describe("VideoRecordedDialog", () => {
 
     expect(downloadButton).toBeInTheDocument()
     await user.click(downloadButton)
+    expect(anchorClickSpy).toHaveBeenCalledOnce()
     expect(props.onClose).toHaveBeenCalled()
+
+    anchorClickSpy.mockRestore()
   })
 })

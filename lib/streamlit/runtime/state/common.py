@@ -154,11 +154,35 @@ class WidgetMetadata(Generic[T]):
     # Optional binding for the widget's value to external state (e.g. query params)
     bind: BindOption = None
 
-    # TODO(query-params): Remove formatted_options once all selection widgets use
-    # string-based wire formats (string_value/string_array_value).
-    # Currently used for query param binding to convert indices back to human-readable
-    # option strings in URLs when auto-correcting filtered values.
+    # The list of valid formatted option strings for selection widgets.
+    # When set, _seed_widget_from_url validates URL values against this list and
+    # rejects any that aren't valid options (e.g., ?foo=invalid). Widgets with a fixed set
+    # of options (radio, selectbox) pass this; widgets that accept arbitrary values (selectbox
+    # with accept_new_options=True) should not, since any string is valid.
     formatted_options: list[str] | None = None
+
+    # Whether the widget can be cleared to an empty state (reflects widget's UI behavior).
+    # When True, an empty URL param (e.g., ?foo=) will seed the widget with an empty value.
+    # When False, an empty URL param will be ignored and the widget uses its default.
+    # Examples:
+    #   - multiselect: always clearable (users can remove all selections)
+    #   - checkbox: never clearable (always has a boolean value)
+    #   - selectbox: clearable only if index=None (allows "no selection" state)
+    clearable: bool = False
+
+    # Maximum number of elements allowed in array-valued widgets (e.g. multiselect
+    # max_selections). When set, _seed_widget_from_url truncates URL-seeded arrays
+    # that exceed this limit to the first max_array_length values, preventing URL
+    # params from triggering selection-count errors.
+    max_array_length: int | None = None
+
+    # Whether duplicate values in URL array params are semantically valid for this
+    # widget. When False (default), _sanitize_url_array deduplicates URL values
+    # (e.g., ?tags=Red&tags=Red → ["Red"]) because the UI prevents duplicate
+    # selections (multiselect). When True, duplicates are preserved because the UI
+    # allows them (e.g., select_slider range mode: ?color=red&color=red is a valid
+    # zero-width range).
+    allow_url_duplicates: bool = False
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -224,6 +248,8 @@ def is_keyed_element_id(key: str) -> bool:
 
 def require_valid_user_key(key: str) -> None:
     """Raise an Exception if the given user_key is invalid."""
+    if key == "":
+        raise StreamlitAPIException("The `key` argument must be non-empty.")
     if is_element_id(key):
         raise StreamlitAPIException(
             f"Keys beginning with {GENERATED_ELEMENT_ID_PREFIX} are reserved."

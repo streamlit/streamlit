@@ -15,7 +15,7 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_loaded
-from e2e_playwright.shared.app_utils import click_button
+from e2e_playwright.shared.app_utils import click_button, reset_hovering
 from e2e_playwright.shared.theme_utils import apply_theme_via_window
 
 
@@ -74,6 +74,7 @@ def test_expanded_toast_rendering(
         "🦄Random toast message that is a really really really really really really "
         "really long message, going way past the 3 line limitview lessClose"
     )
+    reset_hovering(themed_app)
     assert_snapshot(toasts.nth(1), name="toast-expanded")
 
 

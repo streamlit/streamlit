@@ -21,7 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.lib.policies import _LOGGER
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.Checkbox_pb2 import Checkbox as CheckboxProto
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -359,3 +359,64 @@ hello
             == WidthConfigFields.USE_CONTENT.value
         )
         assert el.width_config.use_content is True
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_bind_query_params_sets_query_param_key(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        widget_func("the label", key="my_widget", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.query_param_key == "my_widget"
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_bind_query_params_without_key_raises_exception(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException) as exc:
+            widget_func("the label", bind="query-params")
+
+        assert "must have a unique 'key' parameter" in str(exc.value)
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_no_bind_does_not_set_query_param_key(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that without bind parameter, query_param_key is not set."""
+        widget_func("the label", key="my_widget")
+
+        c = self.get_delta_from_queue().new_element.checkbox
+        assert c.query_param_key == ""
+
+    @parameterized.expand(
+        [
+            ("checkbox", st.checkbox),
+            ("toggle", st.toggle),
+        ]
+    )
+    def test_invalid_bind_value_raises_exception(
+        self, _name: str, widget_func: object
+    ) -> None:
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError) as exc:
+            widget_func("the label", key="my_widget", bind="invalid-value")
+
+        assert "invalid-value" in str(exc.value)
+        assert "query-params" in str(exc.value)

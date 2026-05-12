@@ -63,6 +63,14 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
         assert "Welcome to Streamlit. Check out our demo in your browser." in out
         assert "URL: http://the-address" in out
 
+    def test_print_url_hidden_when_config_set(self):
+        """Test that _print_url outputs nothing when logger.hideWelcomeMessage is True."""
+        with patch_config_options({"logger.hideWelcomeMessage": True}):
+            bootstrap._print_url(True)
+
+        out = sys.stdout.getvalue()
+        assert out == ""
+
     def test_print_urls_configured(self):
         mock_is_manually_set = testutil.build_mock_config_is_manually_set(
             {"browser.serverAddress": True}
@@ -491,10 +499,12 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
         Runtime._instance = None
 
     def test_bootstrap_run(self):
+        """Bootstrap run starts server and exits immediately for testing."""
         with testutil.patch_config_options({"server.headless": True}):
             bootstrap.run("", False, [], {}, stop_immediately_for_testing=True)
 
     def test_bootstrap_run_in_existing_event_loop(self):
+        """Bootstrap run works within an existing event loop."""
         import asyncio
 
         event_loop = asyncio.new_event_loop()
@@ -507,6 +517,7 @@ class BootstrapRunTest(IsolatedAsyncioTestCase):
             event_loop.run_until_complete(_run())
 
     def test_bootstrap_run_without_existing_event_loop(self):
+        """Bootstrap run creates event loop when none exists."""
         import asyncio
 
         # Remove the existing event loop

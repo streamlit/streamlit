@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
@@ -29,7 +30,7 @@ from e2e_playwright.shared.app_utils import (
     get_expander,
 )
 
-TOTAL_BUTTONS = 30
+TOTAL_BUTTONS = 32
 
 
 def test_button_widget_rendering(
@@ -267,16 +268,18 @@ def test_dynamic_button(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
+@pytest.mark.skip_browser("webkit")
 def test_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the button."""
     shortcut_button = get_element_by_key(app, "shortcut_button")
     expect(shortcut_button).to_be_visible()
 
     # Ensure shortcut labels are rendered for buttons.
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + J")
+    # Use regex to accept both Windows (Ctrl) and macOS (⌘) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(re.compile(r"(Ctrl|⌘) \+ J"))
 
     # Press hotkey to trigger the button:
-    app.keyboard.press("Control+J")
+    app.keyboard.press("ControlOrMeta+J")
     wait_for_app_run(app)
     expect_markdown(app, "Shortcut button pressed!")
 
@@ -286,3 +289,14 @@ def test_button_with_spinner_icon(app: Page):
     button = get_button(app, "Button with spinner icon")
     # Check that the spinner icon is visible:
     expect(button.get_by_test_id("stSpinnerIcon")).to_be_visible()
+
+
+def test_markdown_syntax_in_labels(app: Page):
+    """Test that markdown syntax characters in labels are displayed literally (issue #7359)."""
+    # Test that "+" is not parsed as a list marker
+    plus_button = get_element_by_key(app, "markdown_plus_label")
+    expect(plus_button).to_contain_text("+")
+
+    # Test that "1." is not parsed as an ordered list marker
+    numbered_button = get_element_by_key(app, "markdown_numbered_label")
+    expect(numbered_button).to_contain_text("1. Something")

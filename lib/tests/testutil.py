@@ -118,3 +118,63 @@ def create_snowpark_session() -> Session:
         yield session
     finally:
         session.close()
+
+
+def create_pep649_function(
+    base_func: object, string_annotations: dict[str, str]
+) -> object:
+    """Create a function with PEP 649-style annotations that raise NameError.
+
+    This helper creates a function with a custom __annotate__ that simulates
+    PEP 649 deferred annotation behavior: raises NameError when annotations
+    are evaluated in VALUE format (like types imported under TYPE_CHECKING).
+
+    Parameters
+    ----------
+    base_func
+        The base function to copy. Its code, globals, name, defaults, and
+        closure will be preserved.
+    string_annotations
+        A dict mapping parameter/return names to their string representations.
+        E.g., {"items": "UndefinedType", "return": "None"}
+
+    Returns
+    -------
+    object
+        A new function with a custom __annotate__ that:
+        - Raises NameError("name 'UndefinedType' is not defined") for VALUE format
+        - Returns string_annotations for STRING format
+        - Returns ForwardRef-wrapped values for FORWARDREF format
+
+    Examples
+    --------
+    >>> def my_func(items: object) -> None:
+    ...     pass
+    >>> pep649_func = create_pep649_function(
+    ...     my_func, {"items": "UndefinedType", "return": "None"}
+    ... )
+    >>> import inspect
+    >>> inspect.signature(pep649_func)  # Raises NameError
+    """
+    import types
+
+    from annotationlib import Format, ForwardRef
+
+    def annotate_raises(format: Format) -> dict[str, object]:
+        """Annotate function that raises NameError like PEP 649 with undefined types."""
+        if format == Format.VALUE:
+            raise NameError("name 'UndefinedType' is not defined")
+        if format == Format.STRING:
+            return string_annotations
+        # FORWARDREF format
+        return {k: ForwardRef(v) for k, v in string_annotations.items()}
+
+    func = types.FunctionType(
+        base_func.__code__,  # type: ignore[union-attr]
+        base_func.__globals__,  # type: ignore[union-attr]
+        base_func.__name__,  # type: ignore[union-attr]
+        base_func.__defaults__,  # type: ignore[union-attr]
+        base_func.__closure__,  # type: ignore[union-attr]
+    )
+    func.__annotate__ = annotate_raises  # type: ignore[attr-defined]
+    return func

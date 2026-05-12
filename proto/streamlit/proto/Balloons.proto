@@ -16,9 +16,8 @@
 
 syntax = "proto3";
 
-
 message Balloons {
-  bool show = 3;  // Dummy boolean because protos need to have something.
+  bool show = 3; // Dummy boolean because protos need to have something.
 
   reserved 1, 2;
 }

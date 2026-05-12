@@ -18,11 +18,10 @@ import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
-export interface CameraInputButtonProps {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+interface CameraInputButtonProps {
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   children: ReactNode
   progress?: number | null
@@ -68,7 +67,7 @@ export const StyledCameraInput = styled.div({
   objectFit: "contain",
 })
 
-export interface StyledBoxProps {
+interface StyledBoxProps {
   width: number
 }
 
@@ -88,7 +87,7 @@ export const StyledDescription = styled.p(({ theme }) => ({
   textAlign: "center",
 }))
 
-export interface StyledImgProps {
+interface StyledImgProps {
   opacity: string
 }
 
@@ -116,12 +115,8 @@ export const StyledSwitchFacingModeButton = styled.div(({ theme }) => ({
   zIndex: theme.zIndices.priority,
   color: theme.colors.fadedText40,
   mixBlendMode: "difference",
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
 }))
-
-export const StyledWebcamWrapper = styled.div({
-  display: "flex",
-})
 
 export const StyledProgressBar = styled.div({
   height: "fit-content",

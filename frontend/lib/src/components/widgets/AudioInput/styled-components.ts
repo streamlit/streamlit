@@ -156,7 +156,3 @@ export const StyledActionButtonContainerDiv = styled.div(({ theme }) => ({
   gap: theme.spacing.twoXS,
   marginRight: theme.spacing.twoXS,
 }))
-
-export const StyledWidgetLabelHelp = styled.div(({ theme }) => ({
-  marginLeft: theme.spacing.sm,
-}))

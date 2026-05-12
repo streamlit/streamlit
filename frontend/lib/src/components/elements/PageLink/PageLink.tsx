@@ -19,11 +19,11 @@ import { memo, ReactElement, useContext } from "react"
 import { PageLink as PageLinkProto } from "@streamlit/protobuf"
 
 import { NavigationContext } from "~lib/components/core/NavigationContext"
-import { BaseButtonTooltip } from "~lib/components/shared/BaseButton"
+import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { mapProtoIconPosition } from "~lib/components/shared/BaseButton/iconPosition"
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
 import {
@@ -113,7 +113,7 @@ function PageLink(props: Readonly<Props>): ReactElement {
           >
             {element.icon && iconPosition === "left" && (
               <DynamicIcon
-                size="lg"
+                size="base"
                 color={disabled ? colors.fadedText40 : colors.bodyText}
                 iconValue={element.icon}
               />
@@ -124,13 +124,12 @@ function PageLink(props: Readonly<Props>): ReactElement {
                 allowHTML={false}
                 isLabel
                 boldLabel={isCurrentPage}
-                largerLabel
                 disableLinks
               />
             </StyledNavLinkText>
             {element.icon && iconPosition === "right" && (
               <DynamicIcon
-                size="lg"
+                size="base"
                 color={disabled ? colors.fadedText40 : colors.bodyText}
                 iconValue={element.icon}
               />

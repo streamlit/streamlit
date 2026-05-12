@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 import {
   type DeckProps,
@@ -36,7 +36,7 @@ import {
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -128,7 +128,10 @@ function getDefaultState(
     return EMPTY_STATE
   }
 
-  const initialFigureState = widgetMgr.getElementState(element.id, "selection")
+  const initialFigureState = widgetMgr.getElementState<DeckGlElementState>(
+    element.id,
+    "selection"
+  )
 
   return initialFigureState ?? EMPTY_STATE
 }
@@ -153,7 +156,7 @@ function updateWidgetMgrState(
   element: DeckGlJsonChartProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<DeckGlElementState>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   if (!element.id) {
     return
@@ -339,10 +342,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
         ?.height || theme.sizes.defaultMapHeight,
   })
 
-  const [initialViewState, setInitialViewState] = useState<Record<
-    string,
-    unknown
-  > | null>(null)
+  const initialViewStateRef = useRef<DeckObject["initialViewState"] | null>(
+    null
+  )
 
   /**
    * Our proto for selectionMode is an array in order to support future-looking
@@ -486,7 +488,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
           if (shouldUseOriginalFillFunction || !originalFillFunction) {
             // If we aren't changing the fill color, we don't need to change the fillFunction
-            return clonedLayer
+            return
           }
 
           const selectedOpacity = 255
@@ -530,7 +532,7 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
     delete jsonCopy?.views // We are not using views. This avoids a console warning.
 
-    return jsonConverter.convert(jsonCopy)
+    return jsonConverter.convert(jsonCopy) as DeckObject
   }, [
     data.selection.indices,
     isLightTheme,
@@ -542,28 +544,26 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
 
   useEffect(() => {
     // If the ViewState on the server has changed, apply the diff to the current state
-    if (!isEqual(deck.initialViewState, initialViewState)) {
-      const diff = Object.keys(deck.initialViewState).reduce(
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        (diffArg, key): any => {
-          // @ts-expect-error
-          if (deck.initialViewState[key] === initialViewState?.[key]) {
-            return diffArg
-          }
+    if (!isEqual(deck.initialViewState, initialViewStateRef.current)) {
+      const diff = Object.keys(deck.initialViewState).reduce<
+        Record<string, unknown>
+      >((diffArg, key): Record<string, unknown> => {
+        if (
+          deck.initialViewState[key] === initialViewStateRef.current?.[key]
+        ) {
+          return diffArg
+        }
 
-          return {
-            ...diffArg,
-            // @ts-expect-error
-            [key]: deck.initialViewState[key],
-          }
-        },
-        {}
-      )
+        return {
+          ...diffArg,
+          [key]: deck.initialViewState[key],
+        }
+      }, {})
 
       setViewState(existing => ({ ...existing, ...diff }))
-      setInitialViewState(deck.initialViewState)
+      initialViewStateRef.current = deck.initialViewState
     }
-  }, [deck.initialViewState, initialViewState, viewState])
+  }, [deck.initialViewState])
 
   const createTooltip = useCallback(
     (info: PickingInfo | null): TooltipContent => {

@@ -28,6 +28,7 @@ import {
   IFileUploaderState,
   SInt64Array,
   StringArray,
+  StringTriggerValue,
   Button as SubmitButtonProto,
   WidgetState,
   WidgetStates,
@@ -65,14 +66,15 @@ export type WidgetValueType =
 /**
  * Binding information for a widget that syncs to URL query parameters.
  */
-export interface QueryParamBinding {
+interface QueryParamBinding {
   paramKey: string
   valueType: WidgetValueType
   defaultValue: unknown
+  // Whether the widget allows clearing to empty state.
+  // When true, empty values write ?foo= to URL; when false, empty clears the param.
+  clearable: boolean
   urlFormat?: "comma" | "repeated" // How to serialize arrays
-  // TODO(query-params): Remove options field after wire format changes from
-  // index-based to string-based values for applicable widgets (selectbox, pills, etc.)
-  options?: string[] // For index-based widgets, the formatted option strings
+  dateType?: DateType
 }
 
 /**
@@ -104,6 +106,38 @@ export function createFormsData(): FormsData {
 }
 
 const LOG = getLogger("WidgetStateManager")
+
+// Structurally identical to MomentKind in formatMoment.ts, but kept separate:
+// MomentKind is for display formatting (moment.js), DateType is for URL
+// serialization (ISO strings). Coupling them would create an unrelated
+// dependency between URL binding logic and the display formatting layer.
+export type DateType = "date" | "time" | "datetime"
+
+/**
+ * Convert a microsecond timestamp (as used by date/time sliders) to an ISO
+ * string suitable for URL query parameters. The format matches the ISO
+ * conventions used by st.date_input and st.time_input.
+ *
+ * Python datetime microseconds → JS milliseconds → Date UTC → ISO substring.
+ */
+export function microsToIsoString(micros: number, dateType: DateType): string {
+  // micros are UTC-based; Date constructor interprets ms as UTC.
+  const iso = new Date(micros / 1000).toISOString()
+  switch (dateType) {
+    case "date":
+      return iso.slice(0, 10) // "YYYY-MM-DD"
+    case "time": {
+      // Include seconds when non-zero to preserve sub-minute precision.
+      const hhmmss = iso.slice(11, 19) // "HH:mm:ss"
+      return hhmmss.endsWith(":00") ? hhmmss.slice(0, 5) : hhmmss
+    }
+    case "datetime": {
+      // Include seconds when non-zero to preserve sub-minute precision.
+      const secs = iso.slice(17, 19)
+      return secs === "00" ? iso.slice(0, 16) : iso.slice(0, 19)
+    }
+  }
+}
 
 /**
  * A Dictionary that maps widgetID -> WidgetState, and provides some utility
@@ -225,8 +259,7 @@ export class WidgetStateManager {
   // A dictionary that maps elementId -> element state keys -> element state values.
   // This is used to store frontend-only state for elements.
   // This state is not never sent to the server.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  private readonly elementStates = new Map<string, Map<string, any>>()
+  private readonly elementStates = new Map<string, Map<string, unknown>>()
 
   /**
    * Debouncing helpers for trigger widgets.
@@ -394,6 +427,25 @@ export class WidgetStateManager {
     // 3. Schedule (or reuse) a macrotask-level flush so that ChatInput
     //    updates are coalesced with other trigger/value updates that happen
     //    during the same event loop tick.
+    this.scheduleFlush(fragmentId)
+  }
+
+  /**
+   * Sets a string trigger value for a widget. String trigger values behave
+   * like boolean triggers - they are sent to the backend once and then
+   * auto-reset to null after each script run. Use this for trigger-based
+   * widgets that need to return a string value (e.g., menu button selections).
+   */
+  public setStringTriggerValue(
+    widget: WidgetInfo,
+    value: string,
+    source: Source,
+    fragmentId: string | undefined
+  ): void {
+    this.createWidgetState(widget, source).stringTriggerValue =
+      new StringTriggerValue({ data: value })
+
+    this.pendingTriggerIds.add(widget.id)
     this.scheduleFlush(fragmentId)
   }
 
@@ -663,8 +715,7 @@ export class WidgetStateManager {
 
   public setJsonValue(
     widget: WidgetInfo,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    value: any,
+    value: unknown,
     source: Source,
     fragmentId: string | undefined
   ): void {
@@ -965,9 +1016,11 @@ export class WidgetStateManager {
    * Get the element state value for the given element ID and key, if it exists.
    * This is a frontend-only state that is never sent to the server.
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public getElementState(elementId: string, key: string): any {
-    return this.elementStates.get(elementId)?.get(key)
+  public getElementState<T = unknown>(
+    elementId: string,
+    key: string
+  ): T | undefined {
+    return this.elementStates.get(elementId)?.get(key) as T | undefined
   }
 
   /**
@@ -978,19 +1031,23 @@ export class WidgetStateManager {
    *
    * @param {string} elementId - The unique identifier of the element.
    * @param {string} key - The key to set
-   * @param {any} value - The value to set for the element's state.
+   * @param {unknown} value - The value to set for the element's state.
    * @returns {void}
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  public setElementState(elementId: string, key: string, value: any): void {
+  public setElementState(
+    elementId: string,
+    key: string,
+    value: unknown
+  ): void {
     if (!this.elementStates.has(elementId)) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      this.elementStates.set(elementId, new Map<string, any>())
+      this.elementStates.set(elementId, new Map<string, unknown>())
     }
 
     // It's expected here that there is always an initialized map for an elementId
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    ;(this.elementStates.get(elementId) as Map<string, any>).set(key, value)
+    const stateMap = this.elementStates.get(elementId)
+    if (stateMap) {
+      stateMap.set(key, value)
+    }
   }
 
   /**
@@ -1045,6 +1102,7 @@ export class WidgetStateManager {
 
     this.flushScheduled = true
 
+    // eslint-disable-next-line no-restricted-globals -- Batching widget flushes is non-React scheduling logic.
     setTimeout(() => {
       // Send a *single* widgets update containing **all** pending updates.
       this.sendUpdateWidgetsMessage(this.scheduledFragmentId)
@@ -1074,16 +1132,17 @@ export class WidgetStateManager {
    * mirrors the backend behavior in QueryParams.bind_widget() which also
    * handles duplicate paramKey cleanup.
    *
-   * @param options - For index-based widgets, the formatted option strings.
-   *   TODO(query-params): Remove options param after wire format changes.
+   * @param clearable - Whether the widget allows clearing to empty state.
+   *   Required - widget components must explicitly pass this based on their UI behavior.
    */
   public registerQueryParamBinding(
     widgetId: string,
     paramKey: string,
     valueType: WidgetValueType,
     defaultValue: unknown,
+    clearable: boolean,
     urlFormat?: "comma" | "repeated",
-    options?: string[]
+    dateType?: DateType
   ): void {
     // Clean up old binding if a different widget was bound to this paramKey.
     // This keeps boundWidgets and paramKeyToWidgetId consistent.
@@ -1092,28 +1151,17 @@ export class WidgetStateManager {
       this.boundWidgets.delete(existingWidgetId)
     }
 
-    // TODO(query-params): Remove options normalization after wire format changes
-    // from index-based to string-based values for applicable widgets.
-    // Normalize defaultValue to URL-compatible format for index-based widgets.
-    // This ensures default comparison works correctly (e.g., "Red" === "Red"
-    // instead of "Red" === "0").
+    // For date/time sliders, convert microsecond defaults to ISO strings so
+    // that shouldClearUrlParam / isDefaultArrayValue comparisons match the
+    // ISO strings produced by convertToUrlValue.
     let normalizedDefault = defaultValue
-    if (options && options.length > 0) {
-      if (
-        typeof defaultValue === "number" &&
-        options[defaultValue] !== undefined
-      ) {
-        // Scalar index -> option string
-        normalizedDefault = options[defaultValue]
-      } else if (Array.isArray(defaultValue)) {
-        // Array of indices -> array of option strings
-        normalizedDefault = defaultValue
-          .map(idx =>
-            typeof idx === "number" && options[idx] !== undefined
-              ? options[idx]
-              : String(idx)
-          )
-          .filter((s): s is string => s !== undefined)
+    if (dateType) {
+      if (Array.isArray(normalizedDefault)) {
+        normalizedDefault = normalizedDefault.map(n =>
+          typeof n === "number" ? microsToIsoString(n, dateType) : String(n)
+        )
+      } else if (typeof normalizedDefault === "number") {
+        normalizedDefault = microsToIsoString(normalizedDefault, dateType)
       }
     }
 
@@ -1122,7 +1170,8 @@ export class WidgetStateManager {
       valueType,
       defaultValue: normalizedDefault,
       urlFormat,
-      options,
+      clearable,
+      dateType,
     })
     this.paramKeyToWidgetId.set(paramKey, widgetId)
   }
@@ -1172,10 +1221,13 @@ export class WidgetStateManager {
       }
     })
 
-    // Build query string using query-string library
-    const boundParamsStr = queryString.stringify(boundParamsObj, {
-      arrayFormat: "none",
-    })
+    // Build query string using query-string library.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const boundParamsStr = queryString
+      .stringify(boundParamsObj, {
+        arrayFormat: "none",
+      })
+      .replaceAll("%20", "+")
 
     // Combine embed params with bound widget params
     if (!boundParamsStr) {
@@ -1203,55 +1255,42 @@ export class WidgetStateManager {
   /**
    * Convert widget value to URL-safe format based on binding type.
    * Returns null to indicate the param should be removed from URL.
+   * Returns "" or [] to indicate an empty value that should be preserved as ?foo=
    */
   private convertToUrlValue(
     value: unknown,
     binding: QueryParamBinding
   ): string | string[] | null {
-    // Null values should clear the param
+    // Null values - check if empty is valid for this widget
     if (value === null) {
-      return null
+      // If empty is valid, return "" to preserve ?foo= in URL
+      // If empty is not valid, return null to signal removal
+      return this.isEmptyValueValid(binding) ? "" : null
     }
 
     switch (binding.valueType) {
       case "bool_value":
-        return String(value as boolean)
-
       case "double_value":
-        return String(value as number)
-
-      // TODO(query-params): Remove options lookup after wire format changes.
-      case "int_value": {
-        const num = value as number
-        return binding.options?.[num] ?? String(num)
-      }
+      case "int_value":
+        // eslint-disable-next-line @typescript-eslint/no-base-to-string -- value is a primitive (boolean/number) here
+        return String(value)
 
       case "string_value":
         return value as string
 
-      case "string_array_value": {
-        const arr = (value as string[]).filter(v => v !== "")
-        return arr
-      }
+      case "string_array_value":
+        return (value as string[]).filter(v => v !== "")
 
-      // TODO(query-params): Remove options lookup after wire format changes.
-      case "int_array_value": {
-        const arr = value as number[]
-        return binding.options
-          ? arr
-              .map(idx => binding.options?.[idx])
-              .filter((s): s is string => s !== undefined)
-          : arr.map(n => String(n))
-      }
+      case "int_array_value":
+        return (value as number[]).map(n => String(n))
 
-      // TODO(query-params): Remove options lookup after wire format changes.
       case "double_array_value": {
         const arr = value as number[]
-        return binding.options && binding.options.length > 0
-          ? arr
-              .map(idx => binding.options?.[idx])
-              .filter((s): s is string => s !== undefined)
-          : arr.map(n => String(n))
+        if (binding.dateType) {
+          const dt = binding.dateType
+          return arr.map(n => microsToIsoString(n, dt))
+        }
+        return arr.map(n => String(n))
       }
 
       default:
@@ -1260,20 +1299,48 @@ export class WidgetStateManager {
   }
 
   /**
-   * Check if value should clear the URL param (is default or empty).
+   * Check if empty/cleared is a valid state for this widget.
+   * Used to determine whether to write ?foo= (empty value) or remove the param entirely.
+   *
+   * Returns binding.clearable, which is explicitly set by each widget component.
+   */
+  private isEmptyValueValid(binding: QueryParamBinding): boolean {
+    return binding.clearable
+  }
+
+  /**
+   * Check if value should clear the URL param (remove it from URL entirely).
+   *
+   * Returns true to indicate the param should be removed when:
+   * - Empty value AND empty is not valid for this widget
+   * - Empty value AND empty equals the widget's default (hide at default)
+   * - Non-empty value matches the widget's default
+   *
+   * When empty IS valid AND differs from default (e.g., multiselect with
+   * default=["Python"] cleared to []), we preserve ?foo= in the URL.
    */
   private shouldClearUrlParam(
     urlValue: string | string[] | null,
     binding: QueryParamBinding
   ): boolean {
-    if (urlValue === null) return true
+    // Check if value is empty (null, [], or "")
+    const isEmpty =
+      urlValue === null ||
+      (Array.isArray(urlValue) && urlValue.length === 0) ||
+      urlValue === ""
 
-    if (Array.isArray(urlValue)) {
-      return (
-        urlValue.length === 0 || this.isDefaultArrayValue(urlValue, binding)
-      )
+    // Empty value that's not valid for this widget should always be cleared
+    if (isEmpty && !this.isEmptyValueValid(binding)) {
+      return true
     }
 
+    // Check if value matches default (hide at default)
+    // This applies to both empty values (when empty is valid) and non-empty values
+    // Note: urlValue cannot be null here - convertToUrlValue only returns null when
+    // isEmptyValueValid is false, and we already returned true for that case above.
+    if (Array.isArray(urlValue)) {
+      return this.isDefaultArrayValue(urlValue, binding)
+    }
     return this.isDefaultValue(urlValue, binding)
   }
 
@@ -1295,7 +1362,11 @@ export class WidgetStateManager {
       // Remove the param
       delete currentParams[paramKey]
     } else if (Array.isArray(value)) {
-      if (urlFormat === "comma") {
+      if (value.length === 0) {
+        // Empty array: write as empty string to produce ?key= in URL
+        // (queryString.stringify omits empty arrays, so we use "" instead)
+        currentParams[paramKey] = ""
+      } else if (urlFormat === "comma") {
         // Comma-separated: store as single joined string
         currentParams[paramKey] = value.join(",")
       } else {
@@ -1307,13 +1378,16 @@ export class WidgetStateManager {
       currentParams[paramKey] = value
     }
 
-    // Build new URL using query-string
-    // arrayFormat: "none" produces ?key=a&key=b for arrays
-    const newSearch = queryString.stringify(currentParams, {
-      arrayFormat: "none",
-      skipNull: true,
-      skipEmptyString: false,
-    })
+    // Build new URL using query-string.
+    // arrayFormat: "none" produces ?key=a&key=b for arrays.
+    // Replace %20 with + to match backend urllib.parse.urlencode encoding.
+    const newSearch = queryString
+      .stringify(currentParams, {
+        arrayFormat: "none",
+        skipNull: true,
+        skipEmptyString: false,
+      })
+      .replaceAll("%20", "+")
 
     // Skip replaceState if the URL wouldn't actually change
     const currentSearch = window.location.search.replace(/^\?/, "")
@@ -1356,9 +1430,11 @@ export class WidgetStateManager {
   }
 
   /**
-   * Convert a primitive value to string safely.
-   * @returns The string representation, or undefined if value is not a primitive
-   *          (e.g., null, undefined, object, array).
+   * Convert a value to its URL-comparable string form.
+   * Handles primitives (string, number, boolean) and Date objects.
+   * Date is formatted as local-time ISO (YYYY-MM-DD) to match the wire
+   * format used by date_input URL values.
+   * @returns The string representation, or undefined for unsupported types.
    */
   private toStringPrimitive(value: unknown): string | undefined {
     if (
@@ -1368,14 +1444,34 @@ export class WidgetStateManager {
     ) {
       return String(value)
     }
+    if (value instanceof Date) {
+      const y = value.getFullYear()
+      const m = String(value.getMonth() + 1).padStart(2, "0")
+      const d = String(value.getDate()).padStart(2, "0")
+      return `${y}-${m}-${d}`
+    }
     return undefined
   }
 
-  /** Check if value equals the widget's default (with type coercion). */
+  /**
+   * Check if value equals the widget's default (with type coercion).
+   *
+   * Note: For clearable scalar widgets, convertToUrlValue(null) returns "".
+   * If such a widget has an empty array default (unusual), "" should match [].
+   */
   private isDefaultValue(value: unknown, binding: QueryParamBinding): boolean {
     const defaultValue = binding.defaultValue
     if (isNullOrUndefined(defaultValue)) {
       return isNullOrUndefined(value) || value === ""
+    }
+    // Defensive: treat "" (cleared scalar) as matching [] (empty array default)
+    // This is an edge case - scalar widgets typically don't have array defaults
+    if (
+      value === "" &&
+      Array.isArray(defaultValue) &&
+      defaultValue.length === 0
+    ) {
+      return true
     }
     const valueStr = this.toStringPrimitive(value)
     const defaultStr = this.toStringPrimitive(defaultValue)
@@ -1389,8 +1485,10 @@ export class WidgetStateManager {
    * Check if array equals the widget's default array (with type coercion).
    *
    * Handles edge cases where the widget's default may be a scalar but the
-   * current value is an array (e.g., slider with value=[5] and defaultValue=5),
-   * or where an empty array should match a non-array default (cleared state).
+   * current value is an array (e.g., slider with value=[5] and defaultValue=5).
+   *
+   * Note: For widgets that allow clearing (clearable=true), empty arrays that
+   * differ from default are handled by shouldClearUrlParam before this is called.
    */
   private isDefaultArrayValue(
     values: string[],
@@ -1398,13 +1496,12 @@ export class WidgetStateManager {
   ): boolean {
     const defaultValue = binding.defaultValue
     if (!Array.isArray(defaultValue)) {
-      // Empty array matches non-array default (widget cleared to empty state)
-      if (values.length === 0) return true
       // Single-element array matches scalar default (e.g., slider: [5] == 5)
       if (values.length === 1 && defaultValue !== null) {
         const defaultStr = this.toStringPrimitive(defaultValue)
         return defaultStr !== undefined && values[0] === defaultStr
       }
+      // Empty array or multi-element array cannot match scalar default
       return false
     }
     if (values.length !== defaultValue.length) return false
@@ -1438,7 +1535,7 @@ function requireNumberInt(value: number | Long): number {
   }
 
   throw new Error(
-    // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-    `value ${value} cannot be converted to number without a loss of precision!`
+    // eslint-disable-next-line @typescript-eslint/no-base-to-string -- Long has a toString() method
+    `value ${value.toString()} cannot be converted to number without a loss of precision!`
   )
 }

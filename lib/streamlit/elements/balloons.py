@@ -28,8 +28,8 @@ class BalloonsMixin:
     def balloons(self) -> DeltaGenerator:
         """Draw celebratory balloons.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.balloons()
@@ -39,7 +39,7 @@ class BalloonsMixin:
         """
         balloons_proto = BalloonsProto()
         balloons_proto.show = True
-        return self.dg._enqueue("balloons", balloons_proto)
+        return self.dg._enqueue("balloons", balloons_proto, has_one_shot_effect=True)
 
     @property
     def dg(self) -> DeltaGenerator:

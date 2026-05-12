@@ -30,9 +30,15 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,
 )
+from streamlit.elements.arrow import (
+    DataframeSelectionSerde,
+    _validate_selection_state,
+    parse_selection_mode,
+)
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+from streamlit.testing.v1 import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.data_test_cases import SHARED_TEST_CASES, CaseMetadata
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -243,7 +249,7 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
     def test_dataframe_on_select_initial_returns(self):
         """Test st.dataframe returns an empty selection as initial result."""
 
-        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
         selection = st.dataframe(df, on_select="rerun", key="selectable_df")
 
         assert selection.selection.rows == []
@@ -286,15 +292,6 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
 
         with pytest.raises(StreamlitAPIException), st.form("form"):
             st.dataframe(df, on_select=lambda: None)
-
-    def test_selectable_df_throws_exception_with_modified_sessions_state(self):
-        """Test that an exception is thrown if the session state is modified."""
-        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-        st.session_state.selectable_df = {
-            "selection": {"rows": [1], "columns": ["col1"]},
-        }
-        with pytest.raises(StreamlitAPIException):
-            st.dataframe(df, on_select="rerun", key="selectable_df")
 
     def test_shows_cached_widget_replay_warning(self):
         """Test that a warning is shown when selections are activated and
@@ -355,6 +352,17 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
                 ],
             ),
             ("single-row", [DataframeProto.SelectionMode.SINGLE_ROW]),
+            (
+                "single-row-required",
+                [DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED],
+            ),
+            (
+                ("single-row-required", "multi-column"),
+                [
+                    DataframeProto.SelectionMode.SINGLE_ROW_REQUIRED,
+                    DataframeProto.SelectionMode.MULTI_COLUMN,
+                ],
+            ),
             ("multi-column", [DataframeProto.SelectionMode.MULTI_COLUMN]),
             ("single-cell", [DataframeProto.SelectionMode.SINGLE_CELL]),
             ("multi-cell", [DataframeProto.SelectionMode.MULTI_CELL]),
@@ -367,12 +375,15 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         st.dataframe(df, on_select="rerun", selection_mode=input_modes)
 
         el = self.get_delta_from_queue().new_element
-        assert el.dataframe.selection_mode == expected_modes
+        # Use set comparison since the order of modes is not guaranteed
+        assert set(el.dataframe.selection_mode) == set(expected_modes)
 
     @parameterized.expand(
         [
             (["invalid", "single-row"],),
             (["single-row", "multi-row"],),
+            (["single-row-required", "single-row"],),
+            (["single-row-required", "multi-row"],),
             (["single-column", "multi-column"],),
             (["single-cell", "multi-cell"],),
         ]
@@ -393,6 +404,63 @@ class ArrowDataFrameProtoTest(DeltaGeneratorTestCase):
         )
         el = self.get_delta_from_queue().new_element
         assert len(el.dataframe.selection_mode) == 0
+
+    def test_selection_mode_iterator_is_not_consumed(self) -> None:
+        """Test that iterator-based selection modes are consumed only once."""
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
+        selection_mode_iter = iter(["multi-row"])
+
+        st.dataframe(
+            df,
+            on_select="rerun",
+            selection_mode=selection_mode_iter,
+            selection_default={"selection": {"rows": [0, 2]}},
+        )
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.selection_mode == [DataframeProto.SelectionMode.MULTI_ROW]
+        assert proto.selection_mode != []
+        assert proto.selection_default == json.dumps(
+            {"selection": {"rows": [0, 2], "columns": [], "cells": []}}
+        )
+
+    def test_selection_default_sets_proto(self) -> None:
+        """Test that selection_default is validated and stored in the proto."""
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
+        st.dataframe(
+            df,
+            on_select="rerun",
+            selection_mode="multi-row",
+            selection_default={"selection": {"rows": [0, 2, 5]}},
+        )
+
+        proto = self.get_delta_from_queue().new_element.dataframe
+        assert proto.selection_default == json.dumps(
+            {"selection": {"rows": [0, 2], "columns": [], "cells": []}}
+        )
+        assert proto.selection_default != json.dumps(
+            {"selection": {"rows": [0, 2, 5], "columns": [], "cells": []}}
+        )
+
+    def test_selection_default_returns_default_on_first_render(self) -> None:
+        """Test that selection_default is reflected in the Python return value on first render."""
+        df = pd.DataFrame([[1, 2], [3, 4], [5, 6]], columns=["col1", "col2"])
+        result = st.dataframe(
+            df,
+            on_select="rerun",
+            selection_mode="multi-row",
+            selection_default={"selection": {"rows": [0, 2]}},
+        )
+        assert result["selection"]["rows"] == [0, 2]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_selection_default_requires_on_select(self) -> None:
+        """Test that selection_default requires on_select to be activated."""
+        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
+
+        with pytest.raises(StreamlitAPIException):
+            st.dataframe(df, selection_default={"selection": {"rows": [0]}})
 
     def test_row_selection_auto_hides_range_index(self):
         """Test that a RangeIndex is auto-hidden when row selection is enabled.
@@ -671,18 +739,620 @@ class DataframeSelectionsStableIdTest(DeltaGeneratorTestCase):
             assert id1 != id2
 
 
-class StArrowTableAPITest(DeltaGeneratorTestCase):
-    """Test Public Streamlit Public APIs."""
+class TestValidateSelectionState:
+    """Tests for _validate_selection_state function."""
 
-    def test_table(self):
-        """Test st.table."""
-        from streamlit.dataframe_util import convert_arrow_bytes_to_pandas_df
-
-        df = pd.DataFrame([[1, 2], [3, 4]], columns=["col1", "col2"])
-
-        st.table(df)
-
-        proto = self.get_delta_from_queue().new_element.table
-        pd.testing.assert_frame_equal(
-            convert_arrow_bytes_to_pandas_df(proto.arrow_data.data), df
+    def test_valid_row_selection(self) -> None:
+        """Test that valid row indices are preserved."""
+        value = {"selection": {"rows": [0, 2, 4], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-row"},
         )
+        assert result["selection"]["rows"] == [0, 2, 4]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_invalid_row_indices_filtered(self) -> None:
+        """Test that row indices outside valid range are filtered out."""
+        value = {"selection": {"rows": [0, 10, 20], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        # Only row 0 is valid (0 <= 0 < 5)
+        assert result["selection"]["rows"] == [0]
+
+    def test_negative_row_indices_filtered(self) -> None:
+        """Test that negative row indices are filtered out."""
+        value = {"selection": {"rows": [-1, 0, 2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        assert result["selection"]["rows"] == [0, 2]
+
+    def test_valid_column_selection(self) -> None:
+        """Test that valid column names are preserved."""
+        value = {"selection": {"rows": [], "columns": ["col1", "col3"], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2", "col3"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == ["col1", "col3"]
+
+    def test_invalid_column_names_filtered(self) -> None:
+        """Test that non-existent column names are filtered out."""
+        value = {
+            "selection": {"rows": [], "columns": ["col1", "nonexistent"], "cells": []}
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == ["col1"]
+
+    @parameterized.expand(
+        [
+            (
+                "single_row",
+                {"rows": [1, 2, 3], "columns": [], "cells": []},
+                ["col1"],
+                {"single-row"},
+                "rows",
+                [1],
+            ),
+            (
+                "single_column",
+                {"rows": [], "columns": ["col1", "col2"], "cells": []},
+                ["col1", "col2", "col3"],
+                {"single-column"},
+                "columns",
+                ["col1"],
+            ),
+        ]
+    )
+    def test_single_mode_limits_selection(
+        self,
+        _name: str,
+        selection: dict[str, Any],
+        column_names: list[str],
+        mode_set: set[str],
+        field: str,
+        expected: list[Any],
+    ) -> None:
+        """Test that single-selection mode limits to first item only."""
+        value = {"selection": selection}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=column_names,
+            selection_mode_set=mode_set,
+        )
+        assert result["selection"][field] == expected
+
+    def test_cell_selection_validation(self) -> None:
+        """Test that cell selections are validated correctly in single-cell mode."""
+        value = {"selection": {"rows": [], "columns": [], "cells": [[0, "col1"]]}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_invalid_cell_selections_filtered(self) -> None:
+        """Test that invalid cell selections are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [
+                    [0, "col1"],  # Valid
+                    [10, "col1"],  # Invalid row
+                    [0, "nonexistent"],  # Invalid column
+                ],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_single_cell_mode_limits_selection(self) -> None:
+        """Test that single-cell mode limits selection to first cell."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[0, "col1"], [1, "col2"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-cell"},
+        )
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    @parameterized.expand(
+        [
+            (
+                "rows_ignored_without_row_mode",
+                {"rows": [0, 1], "columns": [], "cells": []},
+                {"multi-column"},
+                "rows",
+            ),
+            (
+                "columns_ignored_without_column_mode",
+                {"rows": [], "columns": ["col1"], "cells": []},
+                {"multi-row"},
+                "columns",
+            ),
+        ]
+    )
+    def test_selection_ignored_without_mode(
+        self,
+        _name: str,
+        selection: dict[str, Any],
+        mode_set: set[str],
+        field: str,
+    ) -> None:
+        """Test that selections are ignored when corresponding mode is not active."""
+        value = {"selection": selection}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set=mode_set,
+        )
+        assert result["selection"][field] == []
+
+    @parameterized.expand(
+        [
+            ("string", "hello"),
+            ("int", 42),
+            ("list", [1, 2]),
+            ("none", None),
+            ("bool", True),
+        ]
+    )
+    def test_non_dict_value_raises_error(self, _name: str, invalid_value: Any) -> None:
+        """Test that non-dict value raises StreamlitAPIException with clear message."""
+        with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
+            _validate_selection_state(
+                invalid_value,
+                num_rows=5,
+                column_names=["col1"],
+                selection_mode_set={"multi-row"},
+            )
+
+    @parameterized.expand(
+        [
+            ("string", "rows"),
+            ("int", 123),
+            ("list", [0, 1]),
+            ("none", None),
+        ]
+    )
+    def test_non_dict_selection_raises_error(
+        self, _name: str, invalid_selection: Any
+    ) -> None:
+        """Test that non-dict 'selection' value raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="must be a dictionary"):
+            _validate_selection_state(
+                {"selection": invalid_selection},
+                num_rows=5,
+                column_names=["col1"],
+                selection_mode_set={"multi-row"},
+            )
+
+    @parameterized.expand(
+        [
+            (
+                "rows",
+                {"rows": "not-a-list", "columns": [], "cells": []},
+                {"multi-row"},
+                "rows",
+            ),
+            (
+                "columns",
+                {"rows": [], "columns": 42, "cells": []},
+                {"multi-column"},
+                "columns",
+            ),
+            (
+                "cells",
+                {"rows": [], "columns": [], "cells": True},
+                {"multi-cell"},
+                "cells",
+            ),
+        ]
+    )
+    def test_non_list_field_ignored_gracefully(
+        self,
+        _name: str,
+        selection: dict[str, Any],
+        mode_set: set[str],
+        field: str,
+    ) -> None:
+        """Test that non-list field values are ignored without crashing."""
+        value = {"selection": selection}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set=mode_set,
+        )
+        assert result["selection"][field] == []
+
+    def test_missing_selection_key_raises_error(self) -> None:
+        """Test that missing 'selection' key raises StreamlitAPIException."""
+        value: dict[str, Any] = {"invalid": {}}
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            _validate_selection_state(
+                value,
+                num_rows=5,
+                column_names=["col1"],
+                selection_mode_set={"multi-row"},
+            )
+        assert "selection" in str(exc_info.value)
+
+    def test_empty_selection_returns_empty(self) -> None:
+        """Test that empty selection returns empty validated selection."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row", "multi-column"},
+        )
+        assert result["selection"]["rows"] == []
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_duplicate_row_indices_deduplicated(self) -> None:
+        """Test that duplicate row indices are deduplicated while preserving order."""
+        value = {"selection": {"rows": [2, 0, 2, 1, 0], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"multi-row"},
+        )
+        assert result["selection"]["rows"] == [2, 0, 1]
+
+    def test_duplicate_column_names_deduplicated(self) -> None:
+        """Test that duplicate column names are deduplicated while preserving order."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": ["col2", "col1", "col2", "col1"],
+                "cells": [],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-column"},
+        )
+        assert result["selection"]["columns"] == ["col2", "col1"]
+
+    def test_duplicate_cells_deduplicated(self) -> None:
+        """Test that duplicate cells are deduplicated while preserving order."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[0, "col1"], [1, "col2"], [0, "col1"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-cell"},
+        )
+        # Single-cell mode: only first unique cell is kept
+        assert result["selection"]["cells"] == [(0, "col1")]
+
+    def test_non_string_column_names_filtered(self) -> None:
+        """Test that non-string column names are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [123, ["bad"], None, "col1"],
+                "cells": [],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-column"},
+        )
+        # Only the valid string column name should remain
+        assert result["selection"]["columns"] == ["col1"]
+
+    def test_non_string_cell_column_name_filtered(self) -> None:
+        """Test that non-string column names in cells are filtered out."""
+        value = {
+            "selection": {
+                "rows": [],
+                "columns": [],
+                "cells": [[0, 123], [1, "col1"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1"],
+            selection_mode_set={"single-cell"},
+        )
+        # Cell with non-string column name should be filtered out
+        assert result["selection"]["cells"] == [(1, "col1")]
+
+    def test_combined_selection_modes(self) -> None:
+        """Test validation with multiple selection modes active."""
+        value = {
+            "selection": {
+                "rows": [0, 1],
+                "columns": ["col1"],
+                "cells": [[2, "col2"]],
+            }
+        }
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"multi-row", "multi-column", "single-cell"},
+        )
+        assert result["selection"]["rows"] == [0, 1]
+        assert result["selection"]["columns"] == ["col1"]
+        assert result["selection"]["cells"] == [(2, "col2")]
+
+    def test_single_row_required_auto_selects_first_row(self) -> None:
+        """Test that single-row-required mode auto-selects row 0 when selection is empty."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [0]
+        assert result["selection"]["columns"] == []
+        assert result["selection"]["cells"] == []
+
+    def test_single_row_required_does_not_override_valid_selection(self) -> None:
+        """Test that single-row-required mode preserves existing valid selection."""
+        value = {"selection": {"rows": [2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [2]
+
+    def test_single_row_required_empty_dataframe(self) -> None:
+        """Test that single-row-required mode returns empty selection for empty dataframe."""
+        value = {"selection": {"rows": [], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=0,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == []
+
+    def test_single_row_required_limits_to_single_row(self) -> None:
+        """Test that single-row-required mode limits selection to a single row."""
+        value = {"selection": {"rows": [0, 1, 2], "columns": [], "cells": []}}
+        result = _validate_selection_state(
+            value,
+            num_rows=5,
+            column_names=["col1", "col2"],
+            selection_mode_set={"single-row-required"},
+        )
+        assert result["selection"]["rows"] == [0]
+
+
+_EMPTY_SELECTION = {"rows": [], "columns": [], "cells": []}
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "ui_value", "expected_rows"),
+    [
+        # ``selection_default`` is used when no UI value is provided.
+        (
+            {"selection_default": {"selection": {**_EMPTY_SELECTION, "rows": [3]}}},
+            None,
+            [3],
+        ),
+        # No UI value and no default => empty selection.
+        ({}, None, []),
+        # ``is_required_row_mode`` auto-selects row 0 when nothing is selected.
+        ({"is_required_row_mode": True, "num_rows": 5}, None, [0]),
+        # ``is_required_row_mode`` does not override an explicit selection.
+        (
+            {"is_required_row_mode": True, "num_rows": 5},
+            '{"selection": {"rows": [2], "columns": [], "cells": []}}',
+            [2],
+        ),
+        # ``is_required_row_mode`` with empty dataframe must NOT auto-select row 0.
+        ({"is_required_row_mode": True, "num_rows": 0}, None, []),
+    ],
+    ids=[
+        "default_used_when_ui_none",
+        "empty_when_no_default",
+        "required_row_mode_auto_selects_first",
+        "required_row_mode_preserves_selection",
+        "required_row_mode_skips_when_empty_df",
+    ],
+)
+def test_dataframe_selection_serde_deserialize_rows(
+    kwargs: dict[str, Any],
+    ui_value: str | None,
+    expected_rows: list[int],
+) -> None:
+    """``DataframeSelectionSerde.deserialize`` resolves ``selection.rows`` across configurations."""
+    serde = DataframeSelectionSerde(**kwargs)
+    assert serde.deserialize(ui_value)["selection"]["rows"] == expected_rows
+
+
+def test_dataframe_selection_serde_deserialize_returns_attribute_dictionary() -> None:
+    """``deserialize`` wraps the result in a read-only ``ReadOnlyAttributeDictionary``."""
+    result = DataframeSelectionSerde().deserialize(None)
+
+    # Attribute access must work for users (regression: #14454).
+    assert result.selection.rows == []  # type: ignore[attr-defined]
+    # The dict is read-only; mutating the top-level mapping must raise.
+    with pytest.raises(TypeError):
+        result["selection"] = {"rows": [99], "columns": [], "cells": []}  # type: ignore[index]
+
+
+def test_dataframe_selection_serde_returns_empty_when_no_default() -> None:
+    """``DataframeSelectionSerde.deserialize`` returns the empty selection when neither UI value nor default exists."""
+    assert DataframeSelectionSerde().deserialize(None)["selection"] == _EMPTY_SELECTION
+
+
+def test_dataframe_selection_serde_fills_missing_keys() -> None:
+    """``DataframeSelectionSerde.deserialize`` adds missing ``rows``/``columns``/``cells`` keys."""
+    result = DataframeSelectionSerde().deserialize('{"selection": {}}')
+
+    assert result["selection"] == _EMPTY_SELECTION
+
+
+def test_dataframe_selection_serde_replaces_state_without_selection_key() -> None:
+    """``DataframeSelectionSerde.deserialize`` resets to empty state when ``selection`` key is missing."""
+    result = DataframeSelectionSerde().deserialize('{"foo": "bar"}')
+
+    assert result == {"selection": _EMPTY_SELECTION}
+
+
+def test_dataframe_selection_serde_converts_cells_to_tuples() -> None:
+    """JSON cells (lists) are converted to tuples after deserialization."""
+    result = DataframeSelectionSerde().deserialize(
+        '{"selection": {"rows": [], "columns": [], "cells": [[1, "col1"]]}}'
+    )
+
+    assert result["selection"]["cells"] == [(1, "col1")]
+
+
+def test_dataframe_selection_serde_serialize_roundtrip() -> None:
+    """``serialize`` produces JSON parseable by ``deserialize`` to the equivalent state."""
+    serde = DataframeSelectionSerde()
+    state = {"selection": {"rows": [1], "columns": ["c1"], "cells": []}}
+
+    result = serde.deserialize(serde.serialize(state))  # type: ignore[arg-type]
+
+    assert result["selection"] == {"rows": [1], "columns": ["c1"], "cells": []}
+
+
+def test_parse_selection_mode_with_invalid_mode_raises() -> None:
+    """``parse_selection_mode`` raises ``StreamlitAPIException`` for unknown modes."""
+    with pytest.raises(StreamlitAPIException, match="Invalid selection mode"):
+        parse_selection_mode("not-a-real-mode")  # type: ignore[arg-type]
+
+
+def test_parse_selection_mode_accepts_iterable_of_modes() -> None:
+    """``parse_selection_mode`` maps user-facing mode names to the corresponding proto values."""
+    result = parse_selection_mode(["multi-row", "multi-column"])
+
+    assert result == {
+        DataframeProto.SelectionMode.MULTI_ROW,
+        DataframeProto.SelectionMode.MULTI_COLUMN,
+    }
+
+
+def test_programmatic_selection_returns_attribute_dictionary() -> None:
+    """Test that programmatic selection via session state returns AttributeDictionary.
+
+    Regression test for #14454: When setting dataframe selection state
+    programmatically via st.session_state, the returned value must be an
+    AttributeDictionary so users can access selection attributes (e.g.,
+    event.selection) without getting an AttributeError.
+    """
+
+    def script() -> None:
+        import pandas as pd
+
+        import streamlit as st
+
+        df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+
+        if "run_count" not in st.session_state:
+            st.session_state["run_count"] = 0
+        st.session_state["run_count"] += 1
+
+        # Programmatically set selection on second run
+        if st.session_state["run_count"] == 2:
+            st.session_state["df_key"] = {
+                "selection": {"rows": [1], "columns": [], "cells": []}
+            }
+
+        result = st.dataframe(
+            df, key="df_key", on_select="rerun", selection_mode="multi-row"
+        )
+        # Attribute access would raise AttributeError if result is a plain dict.
+        st.text(f"rows: {result.selection.rows}")
+
+    at = AppTest.from_function(script).run()
+    assert at.text[0].value == "rows: []"
+
+    at = at.run()
+    assert at.text[0].value == "rows: [1]"
+
+    # Third run without modifying session state: selection should persist
+    # as AttributeDictionary (verifies the fix applies across subsequent reruns).
+    at = at.run()
+    assert at.text[0].value == "rows: [1]"
+
+
+def test_selection_state_is_read_only() -> None:
+    """Test that dataframe selection state is read-only.
+
+    When users try to modify the selection state via nested assignment
+    (e.g., st.session_state.key.selection = {...}), a TypeError should be
+    raised with a helpful error message guiding them to use full assignment.
+    """
+    df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
+    result = st.dataframe(
+        df, key="df_key", on_select="rerun", selection_mode="multi-row"
+    )
+
+    # Verify the result is read-only and raises TypeError on modification attempts
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection = {"rows": [0]}
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"] = {"rows": [0]}
+
+    # Verify nested access is also read-only (both attribute and bracket style)
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result.selection.rows = [0]
+
+    with pytest.raises(TypeError, match="Widget state is read-only"):
+        result["selection"]["rows"] = [0]
+
+    # Verify read access still works
+    assert result.selection.rows == []
+    assert result.selection.columns == []
+    assert result.selection.cells == []

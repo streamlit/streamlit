@@ -31,6 +31,7 @@ from streamlit.connections.util import (
     load_from_snowsql_config_file,
     running_in_sis,
 )
+from streamlit.deprecation_util import show_deprecation_warning
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cache_data
 
@@ -59,9 +60,22 @@ class SnowparkConnection(BaseConnection["Session"]):
         We don't expect this iteration of SnowparkConnection to be able to scale
         well in apps with many concurrent users due to the lock contention that will occur
         over the single underlying Session object under high load.
+
+    .. deprecated::
+        ``SnowparkConnection`` is deprecated and will be removed in a future release.
+        Please use ``st.connection("<name>", type="snowflake")`` with
+        ``SnowflakeConnection`` instead, which provides the same functionality
+        with better support and additional features.
+
     """
 
     def __init__(self, connection_name: str, **kwargs: Any) -> None:
+        show_deprecation_warning(
+            "`SnowparkConnection` is deprecated and will be removed in a future release. "
+            'Please use `st.connection("<name>", type="snowflake")` with '
+            "`SnowflakeConnection` instead.",
+            show_once=True,
+        )
         self._lock = threading.RLock()
         super().__init__(connection_name, **kwargs)
 

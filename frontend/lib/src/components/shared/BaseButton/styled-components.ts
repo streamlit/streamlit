@@ -19,7 +19,7 @@ import { MouseEvent, ReactNode } from "react"
 import styled, { CSSObject } from "@emotion/styled"
 import { darken, transparentize } from "color2k"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
@@ -51,8 +51,7 @@ export enum BaseButtonSize {
 export interface BaseButtonProps {
   kind: BaseButtonKind
   size?: BaseButtonSize
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  onClick?: (event: MouseEvent<HTMLButtonElement>) => any
+  onClick?: (event: MouseEvent<HTMLButtonElement>) => void
   disabled?: boolean
   // If true, the button should take up container's full width
   containerWidth?: boolean
@@ -60,9 +59,16 @@ export interface BaseButtonProps {
   autoFocus?: boolean
   "data-testid"?: string
   "aria-label"?: string
+  "aria-haspopup"?: "menu" | "true" | "dialog" | "listbox" | "tree" | "grid"
+  "aria-expanded"?: boolean
 }
 
-type RequiredBaseButtonProps = Required<BaseButtonProps>
+// Most props become required via defaults in BaseButton, but ARIA popup
+// attributes stay optional so they only appear in the DOM when explicitly set.
+type RequiredBaseButtonProps = Required<
+  Omit<BaseButtonProps, "aria-haspopup" | "aria-expanded">
+> &
+  Pick<BaseButtonProps, "aria-haspopup" | "aria-expanded">
 
 function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   switch (size) {
@@ -86,7 +92,7 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
   }
 }
 
-export const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
+const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
   ({ containerWidth, size, theme }) => {
     return {
       display: "inline-flex",
@@ -310,6 +316,19 @@ export const StyledPillsButtonActive = styled(
   }
 })
 
+// Segmented control border model:
+// neighboring buttons overlap by 1 border width, so each shared edge needs a
+// single "owner" to avoid double-width seams. We treat active/interactive
+// (hover/focus-visible) buttons as raised and let them own shared borders.
+const SEGMENTED_CONTROL_ACTIVE_ENABLED =
+  "button[kind='segmented_controlActive']:not(:disabled)"
+const SEGMENTED_CONTROL_INACTIVE_ENABLED =
+  "button[kind='segmented_control']:not(:disabled)"
+const SEGMENTED_CONTROL_INTERACTIVE_ENABLED =
+  "button[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible)"
+const SEGMENTED_CONTROL_NEUTRAL_ENABLED =
+  "button[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible)"
+
 export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
@@ -330,6 +349,31 @@ export const StyledSegmentedControlButton = styled(
       borderBottomRightRadius: theme.radii.button,
       marginRight: theme.spacing.none, // Reset margin for the last child
     },
+    [`&[kind='segmented_controlActive']:not(:disabled), &[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible)`]:
+      {
+        // Raised segments should render above neutral neighbors.
+        zIndex: theme.zIndices.priority,
+      },
+    // Active has strongest precedence: keep its border visible against both
+    // neutral and interactive neighbors.
+    [`&[kind='segmented_controlActive']:not(:disabled) + ${SEGMENTED_CONTROL_INACTIVE_ENABLED}`]:
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    [`&[kind='segmented_control']:not(:disabled):has(+ ${SEGMENTED_CONTROL_ACTIVE_ENABLED})`]:
+      {
+        borderRightColor: theme.colors.transparent,
+      },
+    // Hover/focus ownership is only applied between neutral neighbors so we
+    // never hide the active border in active+hover adjacency.
+    [`&[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible) + ${SEGMENTED_CONTROL_NEUTRAL_ENABLED}`]:
+      {
+        borderLeftColor: theme.colors.transparent,
+      },
+    [`&[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible):has(+ ${SEGMENTED_CONTROL_INTERACTIVE_ENABLED})`]:
+      {
+        borderRightColor: theme.colors.transparent,
+      },
     "&:focus-visible": {
       // Make sure the focus ring isn't below the previous/next button.
       zIndex: theme.zIndices.priority,
@@ -541,7 +585,7 @@ export const StyledButtonShortcut = styled.kbd(({ theme }) => ({
   justifyContent: "center",
   whiteSpace: "nowrap",
   fontSize: theme.fontSizes.sm,
-  opacity: 0.6,
+  opacity: theme.opacities.secondary,
   fontFamily: "inherit",
   lineHeight: theme.lineHeights.tight,
   letterSpacing: "0.01em",

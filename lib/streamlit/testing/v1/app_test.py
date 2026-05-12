@@ -22,6 +22,7 @@ from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
 from urllib import parse
 
+from streamlit.components.v2.component_manager import BidiComponentManager
 from streamlit.runtime import Runtime
 from streamlit.runtime.caching.storage.dummy_cache_storage import (
     MemoryCacheStorageManager,
@@ -56,11 +57,13 @@ from streamlit.testing.v1.element_tree import (
     Exception,  # noqa: A004
     Expander,
     Feedback,
+    FileUploader,
     Header,
     Info,
     Json,
     Latex,
     Markdown,
+    MenuButton,
     Metric,
     Multiselect,
     Node,
@@ -87,7 +90,7 @@ from streamlit.testing.v1.element_tree import (
 )
 from streamlit.testing.v1.local_script_runner import LocalScriptRunner
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator, Sequence
@@ -128,9 +131,10 @@ class AppTest:
 
     .. note::
         ``AppTest`` only supports testing a single page of an app per
-        instance. For multipage apps, each page will need to be tested
-        separately. ``AppTest`` is not yet compatible with multipage apps
-        using ``st.navigation`` and ``st.Page``.
+        instance. For multipage apps using ``st.navigation``, ``AppTest``
+        will render the default page. To test other pages, you can use
+        ``AppTest.switch_page()`` within your test or modify query parameters
+        before running.
 
     .. |st.testing.v1.AppTest.from_file| replace:: ``st.testing.v1.AppTest.from_file``
     .. _st.testing.v1.AppTest.from_file: #apptestfrom_file
@@ -215,7 +219,7 @@ class AppTest:
         args: tuple[Any, ...] | None = None,
         kwargs: dict[str, Any] | None = None,
     ) -> AppTest:
-        script_name = calc_md5(bytes(script, "utf-8"))
+        script_name = calc_hash(bytes(script, "utf-8"))
 
         path = Path(TMP_DIR.name, script_name)
         aligned_script = textwrap.dedent(script)
@@ -337,8 +341,11 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
+        mock_runtime.bidi_component_registry = BidiComponentManager()
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
+        # Reset to ensure st.navigation works correctly regardless of prior test state.
+        PagesManager.uses_pages_directory = None
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )
@@ -357,6 +364,10 @@ class AppTest:
             args=self.args,
             kwargs=self.kwargs,
         )
+
+        # Register any files from FileUploader widgets with the file manager
+        self._register_uploaded_files(script_runner)
+
         with patch_config_options({"global.appTest": True}):
             self._tree = script_runner.run(
                 widget_state, self.query_params, timeout, self._page_hash
@@ -373,6 +384,25 @@ class AppTest:
         Runtime._instance = None
 
         return self
+
+    def _register_uploaded_files(self, script_runner: LocalScriptRunner) -> None:
+        """Register files from FileUploader widgets with the file manager."""
+        from streamlit.runtime.uploaded_file_manager import UploadedFileRec
+
+        for widget in self._tree.file_uploader:
+            for (
+                file_id,
+                filename,
+                content,
+                mime_type,
+            ) in widget._get_files_to_register():
+                file_rec = UploadedFileRec(
+                    file_id=file_id,
+                    name=filename,
+                    type=mime_type,
+                    data=content,
+                )
+                script_runner.register_file(file_rec)
 
     def run(self, *, timeout: float | None = None) -> AppTest:
         """Run the script from the current state.
@@ -423,7 +453,7 @@ class AppTest:
             )
         page_path_str = str(full_page_path.resolve())
         _, page_name = page_icon_and_name(Path(page_path_str))
-        self._page_hash = calc_md5(page_name)
+        self._page_hash = calc_hash(page_name)
         return self
 
     @property
@@ -481,6 +511,36 @@ class AppTest:
             with a given key.
         """
         return self._tree.button_group
+
+    @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.pills`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.pills`` widgets (filtered by style).
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.pills[0]`` for
+            the first widget or ``at.pills(key="my_key")`` for a widget
+            with a given key.
+        """
+        return self._tree.pills
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """Sequence of all ``st.segmented_control`` widgets.
+
+        Returns
+        -------
+        WidgetList of ButtonGroup
+            Sequence of all ``st.segmented_control`` widgets (filtered by style).
+            Individual widgets can be accessed from a WidgetList by index
+            (order on the page) or key. For example, ``at.segmented_control[0]``
+            for the first widget or ``at.segmented_control(key="my_key")``
+            for a widget with a given key.
+        """
+        return self._tree.segmented_control
 
     @property
     def caption(self) -> ElementList[Caption]:
@@ -682,6 +742,20 @@ class AppTest:
         return self._tree.feedback
 
     @property
+    def file_uploader(self) -> WidgetList[FileUploader]:
+        """Sequence of all ``st.file_uploader`` widgets.
+
+        Returns
+        -------
+        WidgetList of FileUploader
+            Sequence of all ``st.file_uploader`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.file_uploader[0]`` for the first widget or
+            ``at.file_uploader(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.file_uploader
+
+    @property
     def expander(self) -> Sequence[Expander]:
         """Sequence of all ``st.expander`` elements.
 
@@ -778,6 +852,20 @@ class AppTest:
             extension of the Element class.
         """
         return self._tree.metric
+
+    @property
+    def menu_button(self) -> WidgetList[MenuButton[Any]]:
+        """Sequence of all ``st.menu_button`` widgets.
+
+        Returns
+        -------
+        WidgetList of MenuButton
+            Sequence of all ``st.menu_button`` widgets. Individual widgets can
+            be accessed from a WidgetList by index (order on the page) or key.
+            For example, ``at.menu_button[0]`` for the first widget or
+            ``at.menu_button(key="my_key")`` for a widget with a given key.
+        """
+        return self._tree.menu_button
 
     @property
     def multiselect(self) -> WidgetList[Multiselect[Any]]:

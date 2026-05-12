@@ -36,7 +36,7 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import { CustomGridTheme } from "./useCustomTheme"
 
-export type AutoSizerReturn = {
+type AutoSizerReturn = {
   // The minimum height that the data grid can be resized to
   minHeight: number
   // The maximum height of the data grid can be resized to
@@ -263,7 +263,7 @@ function useTableSizer(
   }, [initialWidth])
 
   // Reset the height if the element height parameter was changed or
-  // if the number of rows changes (e.g. via add_rows):
+  // if the number of rows changes:
   useLayoutEffect(() => {
     setResizableSize(prev => ({
       ...prev,

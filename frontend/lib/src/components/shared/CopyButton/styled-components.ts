@@ -17,13 +17,13 @@
 import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 
-export interface StyledCopyButtonProps {
+interface StyledCopyButtonProps {
   buttonSize: string
 }
 
-export const getCopyButtonBaseStyles = (
+const getCopyButtonBaseStyles = (
   theme: EmotionTheme,
   { buttonSize, focusRing }: { buttonSize?: string; focusRing?: string } = {}
 ): CSSObject => ({
@@ -36,7 +36,7 @@ export const getCopyButtonBaseStyles = (
   backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText60,
   cursor: "pointer",
-  borderRadius: theme.radii.md,
+  borderRadius: theme.radii.sm,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

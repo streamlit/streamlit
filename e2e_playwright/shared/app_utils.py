@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import platform
 import re
-from typing import Literal, cast
+from typing import Literal, Protocol, cast
 
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import Frame, FrameLocator, Locator, Page, expect
@@ -25,6 +25,36 @@ from e2e_playwright.conftest import wait_for_app_loaded, wait_for_app_run
 
 # Meta = Apple's Command Key; for complete list see https://developer.mozilla.org/en-US/docs/Web/API/UI_Events/Keyboard_event_key_values#special_values
 COMMAND_KEY = "Meta" if platform.system() == "Darwin" else "Control"  # ty: ignore[unresolved-attribute]
+
+
+class LocatorContext(Protocol):
+    """A minimal DOM-query context for Playwright tests.
+
+    This is intentionally structural (duck-typed) so helpers can accept:
+    - `Page` (local mode)
+    - `FrameLocator` (external host mode; DOM is inside an iframe)
+    - `AppTarget` (our stable abstraction that forwards to `dom`)
+    - `Locator` (occasionally useful for scoped queries)
+    """
+
+    def get_by_test_id(self, test_id: str) -> Locator: ...
+
+
+def _resolve_app_root_context(locator: LocatorContext) -> LocatorContext:
+    """Resolve a context suitable for querying the app root.
+
+    If callers pass a `Locator`, we want to reset hover/focus relative to the
+    owning page rather than within the locator subtree.
+
+    Notes
+    -----
+    For iframe-hosted apps, prefer passing a `FrameLocator` (or `AppTarget`)
+    instead of a `Locator`, since a locator only provides access to the top-level
+    `Page` and cannot reliably target the iframe DOM.
+    """
+    if isinstance(locator, Locator):
+        return locator.page
+    return locator
 
 
 def get_chat_input(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator:
@@ -215,20 +245,26 @@ def select_selectbox_option(
     option : str
         The exact text of the option to select.
     """
-    selectbox = get_selectbox(locator, label)
-
-    # Get the page from the locator
     page = locator.page if isinstance(locator, Locator) else locator
+
+    # Wait for at least one selectbox to be visible before trying to find ours
+    page.get_by_test_id("stSelectbox").first.wait_for(state="visible")
+    selectbox = get_selectbox(locator, label)
 
     # Type to filter the dropdown (handles virtualized lists where options
     # may not be rendered until scrolled into view)
     selectbox_input = selectbox.locator("input")
     selectbox_input.click()
+
+    # Wait for dropdown to be visible before typing
+    dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
+    expect(dropdown).to_be_visible()
+
     selectbox_input.fill(option)
 
-    # Select the option by exact text from the filtered virtual dropdown
+    # Select the option by role from the filtered virtual dropdown
     dropdown = page.get_by_test_id("stSelectboxVirtualDropdown")
-    dropdown.get_by_text(option, exact=True).click()
+    dropdown.get_by_role("option", name=option, exact=True).click()
 
     wait_for_app_run(page)
 
@@ -944,7 +980,7 @@ def click_form_button(
 
 
 def expect_help_tooltip(
-    app: Locator | Page,
+    app: LocatorContext,
     element_with_help_tooltip: Locator,
     tooltip_text: str | re.Pattern[str],
 ) -> None:
@@ -957,8 +993,9 @@ def expect_help_tooltip(
 
     Parameters
     ----------
-    app : Page
-        The page to search for the tooltip.
+    app : LocatorContext
+        The Playwright context to search for the tooltip (page, frame, or
+        `AppTarget`).
 
     element_with_help_tooltip : Locator
         The locator of the element with the help tooltip.
@@ -985,23 +1022,22 @@ def expect_help_tooltip(
     expect(tooltip_content).not_to_be_attached()
 
 
-def reset_hovering(locator: Locator | Page) -> None:
+def reset_hovering(locator: LocatorContext) -> None:
     """Reset the hovering of the app.
 
     This can be used to ensure that there aren't unexpected UI elements visible
     based on the current mouse position.
     """
-    page = locator.page if isinstance(locator, Locator) else locator
-
-    page.get_by_test_id("stApp").hover(
+    app_root = _resolve_app_root_context(locator)
+    app_root.get_by_test_id("stApp").hover(
         position={"x": 0, "y": 0}, no_wait_after=True, force=True
     )
 
 
-def reset_focus(locator: Locator | Page) -> None:
+def reset_focus(locator: LocatorContext) -> None:
     """Reset the focus of the app."""
-    page = locator.page if isinstance(locator, Locator) else locator
-    page.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
+    app_root = _resolve_app_root_context(locator)
+    app_root.get_by_test_id("stApp").click(position={"x": 0, "y": 0}, force=True)
 
 
 def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
@@ -1010,13 +1046,6 @@ def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
     This is a small utility to make keyboard navigation tests resilient.
     Hard-coding an exact number of <Tab> presses tends to be brittle because tab
     order can change when unrelated UI gains/removes focusable elements.
-
-    Notes
-    -----
-    This helper assumes the page already has a reasonable starting focus state
-    (for example, by clicking in the app first or calling `reset_focus()`). If
-    nothing in the document is focused, initial <Tab> behavior can vary and the
-    test may become flaky.
 
     Parameters
     ----------
@@ -1028,6 +1057,13 @@ def tab_until_focused(page: Page, locator: Locator, max_tabs: int = 50) -> None:
 
     max_tabs : int
         The maximum number of Tab presses before failing the test.
+
+    Notes
+    -----
+    This helper assumes the page already has a reasonable starting focus state
+    (for example, by clicking in the app first or calling `reset_focus()`). If
+    nothing in the document is focused, initial <Tab> behavior can vary and the
+    test may become flaky.
     """
     expect(locator).to_be_attached()
 
@@ -1460,3 +1496,45 @@ def get_metric(locator: Locator | Page, label: str | re.Pattern[str]) -> Locator
     element = locator.get_by_test_id("stMetric").filter(has_text=label)
     expect(element).to_be_visible()
     return element
+
+
+def wait_for_images_loaded(locator: Locator, timeout: int = 5000) -> None:
+    """Wait for all images within a locator to be fully loaded and decoded.
+
+    This is useful for stabilizing snapshot tests that include images,
+    especially in browsers like webkit that may have timing variations
+    in image loading/decoding.
+
+    Parameters
+    ----------
+    locator : Locator
+        The locator containing the images to wait for.
+
+    timeout : int
+        Maximum time to wait in milliseconds. Defaults to 5000ms.
+    """
+    locator.evaluate(
+        """(element) => {
+            const images = element.querySelectorAll('img');
+            return Promise.all(
+                Array.from(images).map(async img => {
+                    // Wait for image to load if not complete yet
+                    if (!img.complete) {
+                        await new Promise((resolve, reject) => {
+                            img.addEventListener('load', resolve, { once: true });
+                            img.addEventListener('error', reject, { once: true });
+                        });
+                    }
+                    // Check for already-failed images (complete but no content)
+                    if (img.naturalWidth === 0) {
+                        throw new Error('Image failed to load: ' + img.src);
+                    }
+                    // Wait for the image to be decoded (ready for rendering)
+                    // This is important for webkit which may have timing variations
+                    // between load and decode completion
+                    await img.decode();
+                })
+            );
+        }""",
+        timeout=timeout,
+    )

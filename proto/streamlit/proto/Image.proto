@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // An image which can be displayed on the screen.
 message Image {
   string url = 3;
@@ -28,6 +27,10 @@ message Image {
 // A set of images.
 message ImageList {
   repeated Image imgs = 1;
+
+  // External URL to open when the image is clicked.
+  // Only supported when there is exactly one image in the list.
+  string link = 3;
 
   reserved 2;
 }

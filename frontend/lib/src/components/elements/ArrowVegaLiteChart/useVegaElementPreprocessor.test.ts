@@ -15,7 +15,7 @@
  */
 
 import { renderHook } from "~lib/components/shared/ElementFullscreen/testUtils"
-import { lightTheme } from "~lib/theme"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import { VegaLiteChartElement } from "./arrowUtils"
 import { useVegaElementPreprocessor } from "./useVegaElementPreprocessor"
@@ -513,21 +513,37 @@ describe("useVegaElementPreprocessor", () => {
         expectedWidths: [undefined, 400],
       },
       {
-        name: "layer",
+        name: "concat",
         spec: {
           vconcat: [
-            { layer: [{ mark: "line" }, { mark: "point" }] },
+            { concat: [{ mark: "bar" }, { mark: "point" }] },
+            { mark: "line" },
+          ],
+        },
+        expectedWidths: [undefined, 400],
+      },
+      {
+        name: "facet",
+        spec: {
+          vconcat: [
+            {
+              facet: { column: { field: "group" } },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
             { mark: "bar" },
           ],
         },
         expectedWidths: [undefined, 400],
       },
       {
-        name: "concat",
+        name: "repeat",
         spec: {
           vconcat: [
-            { concat: [{ mark: "bar" }, { mark: "point" }] },
-            { mark: "line" },
+            {
+              repeat: { row: ["a", "b"] },
+              spec: { mark: "line", encoding: { x: { field: "a" } } },
+            },
+            { mark: "bar" },
           ],
         },
         expectedWidths: [undefined, 400],
@@ -552,6 +568,31 @@ describe("useVegaElementPreprocessor", () => {
         expect(spec.vconcat[1].width).toBe(expectedWidths[1])
       }
     )
+
+    it("sets width on vconcat children that contain layer", () => {
+      const layerVconcatSpec = {
+        vconcat: [
+          { layer: [{ mark: "line" }, { mark: "point" }] },
+          { mark: "bar" },
+        ],
+      }
+
+      const { result } = renderHook(
+        (element: VegaLiteChartElement) =>
+          useVegaElementPreprocessor(element, 400, 300, true, false),
+        {
+          initialProps: getElement({
+            spec: JSON.stringify(layerVconcatSpec),
+          }),
+        }
+      )
+
+      const spec = result.current.spec as unknown as {
+        vconcat: { width?: number }[]
+      }
+      expect(spec.vconcat[0].width).toBe(400)
+      expect(spec.vconcat[1].width).toBe(400)
+    })
   })
 
   describe("builtin color name resolution", () => {

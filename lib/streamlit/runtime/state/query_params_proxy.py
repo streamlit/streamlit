@@ -134,13 +134,7 @@ class QueryParamsProxy(MutableMapping[str, str]):
 
     @gather_metrics("query_params.clear")
     def clear(self) -> None:
-        """
-        Clear all query parameters from the URL of the app.
-
-        Returns
-        -------
-        None
-        """
+        """Clear all query parameters from the URL of the app."""
         with get_session_state().query_params() as qp:
             qp.clear()
 
@@ -201,8 +195,8 @@ class QueryParamsProxy(MutableMapping[str, str]):
         params: dict
             A dictionary used to replace the current query parameters.
 
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> st.query_params.from_dict({"foo": "bar", "baz": [1, "two"]})

@@ -33,20 +33,22 @@ import { DateInput as DateInputProto } from "@streamlit/protobuf"
 
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
-import Icon from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip"
 import {
-  WidgetLabel,
-  WidgetLabelHelpIcon,
-} from "~lib/components/widgets/BaseWidget"
+  getBorderColor,
+  getPopoverContainerStyle,
+} from "~lib/components/shared/Base/styled-components"
+import Icon from "~lib/components/shared/Icon/Icon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme"
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { convertRemToPx } from "~lib/theme/utils"
 import {
   isNullOrUndefined,
   labelVisibilityProtoValueToEnum,
@@ -62,12 +64,12 @@ export interface Props {
   fragmentId?: string
 }
 
-// Date format for communication (protobuf) support
-const DATE_FORMAT = "YYYY/MM/DD"
+// Date format for protobuf communication (ISO 8601)
+const DATE_FORMAT = "YYYY-MM-DD"
 
 /** Convert an array of strings to an array of dates. */
 function stringsToDates(strings: string[]): Date[] {
-  return strings.map(val => new Date(val))
+  return strings.map(val => moment(val, DATE_FORMAT).toDate())
 }
 
 /** Convert an array of dates to an array of strings. */
@@ -92,11 +94,31 @@ function DateInput({
 }: Props): ReactElement {
   const theme = useEmotionTheme()
   const isInSidebar = useContext(IsSidebarContext)
+  const [isEmpty, setIsEmpty] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const resetError = useCallback(() => {
+    setError(null)
+  }, [])
+
+  const handleFormCleared = useCallback(() => {
+    resetError()
+    setIsEmpty(false)
+  }, [resetError])
 
   /**
    * An array with start and end date specified by the user via the UI. If the user
    * didn't touch this widget's UI, the default value is used. End date is optional.
    */
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: element.default.length === 0,
+        urlFormat: element.isRange ? ("repeated" as const) : undefined,
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     Date[],
     DateInputProto
@@ -108,13 +130,20 @@ function DateInput({
     element,
     widgetMgr,
     fragmentId,
+    queryParamBinding,
+    formClearBehavior: "resetValueAndRunCallback",
+    onFormCleared: handleFormCleared,
   })
 
-  const [isEmpty, setIsEmpty] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  const { colors, fontSizes, fontWeights, lineHeights, spacing, sizes } =
-    useEmotionTheme()
+  const {
+    colors,
+    fontSizes,
+    fontWeights,
+    lineHeights,
+    spacing,
+    sizes,
+    zIndices,
+  } = useEmotionTheme()
 
   const { locale } = useContext(LibConfigContext)
   const loadedLocale = useIntlLocale(locale)
@@ -196,8 +225,7 @@ function DateInput({
     }: {
       date: Date | (Date | null | undefined)[] | null | undefined
     }): void => {
-      // Reset our error state
-      setError(null)
+      resetError()
 
       if (isNullOrUndefined(date)) {
         setValueWithSource({ value: [], fromUi: true })
@@ -232,7 +260,14 @@ function DateInput({
       setValueWithSource({ value: newDates, fromUi: true })
       setIsEmpty(!newDates)
     },
-    [setValueWithSource, createErrorMessage, setError, minDate, maxDate]
+    [
+      createErrorMessage,
+      maxDate,
+      minDate,
+      resetError,
+      setError,
+      setValueWithSource,
+    ]
   )
 
   const handleClose = useCallback((): void => {
@@ -275,10 +310,17 @@ function DateInput({
             props: {
               ignoreBoundary: isInSidebar,
               placement: PLACEMENT.bottomLeft,
+              popoverMargin: convertRemToPx(theme.spacing.twoXS),
               overrides: {
                 Body: {
                   style: {
-                    marginTop: spacing.px,
+                    ...getPopoverContainerStyle(theme),
+                    // Override: zero border in light mode because the
+                    // calendar header's shaded background conflicts with
+                    // the background-color border trick.
+                    ...(hasLightBackgroundColor(theme) && {
+                      borderWidth: theme.spacing.none,
+                    }),
                   },
                 },
               },
@@ -291,6 +333,8 @@ function DateInput({
               paddingLeft: spacing.sm,
               paddingBottom: spacing.sm,
               paddingTop: spacing.sm,
+              // Remove default border
+              borderWidth: theme.spacing.none,
             },
           },
           Week: {
@@ -447,10 +491,14 @@ function DateInput({
                 },
                 Input: {
                   style: {
+                    // Input overlays Placeholder - position relative + zIndex ensures
+                    // input is clickable above the absolutely positioned placeholder
+                    position: "relative",
+                    zIndex: zIndices.priority,
                     fontWeight: fontWeights.normal,
                     // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
                     paddingRight: spacing.sm,
-                    paddingLeft: spacing.md,
+                    paddingLeft: `calc(${spacing.sm} + ${sizes.tagMarginInsideBorder})`,
                     paddingBottom: spacing.sm,
                     paddingTop: spacing.sm,
                     lineHeight: lineHeights.inputWidget,
@@ -501,14 +549,12 @@ function DateInput({
 function getStateFromWidgetMgr(
   widgetMgr: WidgetStateManager,
   element: DateInputProto
-): Date[] {
-  // If WidgetStateManager knew a value for this widget, initialize to that.
-  // Otherwise, use the default value from the widget protobuf.
+): Date[] | undefined {
   const storedValue = widgetMgr.getStringArrayValue(element)
-  const stringArray =
-    storedValue !== undefined ? storedValue : element.default || []
-
-  return stringsToDates(stringArray)
+  if (storedValue === undefined) {
+    return undefined
+  }
+  return stringsToDates(storedValue)
 }
 
 function getDefaultStateFromProto(element: DateInputProto): Date[] {
@@ -523,7 +569,7 @@ function updateWidgetMgrState(
   element: DateInputProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<Date[]>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   const minDate = moment(element.min, DATE_FORMAT).toDate()
   const maxDate = getMaxDate(element)

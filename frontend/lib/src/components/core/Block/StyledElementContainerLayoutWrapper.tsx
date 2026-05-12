@@ -20,60 +20,9 @@ import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { useLayoutStyles } from "~lib/components/core/Layout/useLayoutStyles"
-import { MinFlexElementWidth } from "~lib/components/core/Layout/utils"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
-const LARGE_STRETCH_BEHAVIOR = [
-  "graphvizChart",
-  "arrowVegaLiteChart",
-  "deckGlJsonChart",
-  "plotlyChart",
-  "docString",
-  "dataframe",
-  "json",
-  "audioInput",
-  "fileUploader",
-  "cameraInput",
-  "audio",
-  "video",
-  "code", // also includes st.echo
-  "buttonGroup",
-  "iframe",
-]
-
-const MEDIUM_STRETCH_BEHAVIOR = [
-  "dateInput",
-  "radio",
-  "slider", // also includes st.select_slider
-  "textArea",
-  "progress",
-  "multiselect",
-  "selectbox",
-  "timeInput",
-  "numberInput",
-  "textInput",
-]
-
-const WIDTH_STRETCH_OVERRIDE = [
-  // Because of how width is handled for custom components, we need the
-  // element wrapper to be full width.
-  "componentInstance",
-  // Without this style, the skeleton width relies on the flex container that
-  // wraps the page contents having align-items: stretch. There was a regression
-  // where this default was changed. It is more robust to ensure that the skeleton
-  // has this width.
-  "skeleton",
-]
-
-const VISIBLE_OVERFLOW_OVERRIDE = [
-  // TODO(lwilby): Some elements need overflow to be visible in webkit. Will investigate
-  // if we can remove this custom handling in future layouts work.
-  "iframe",
-  "dataframe",
-  "deckGlJsonChart",
-  "arrowVegaLiteChart",
-  "graphvizChart",
-]
+import { ElementContainerConfig } from "./ElementContainerConfig"
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
@@ -81,91 +30,19 @@ export const StyledElementContainerLayoutWrapper: FC<
     "width" | "height" | "overflow" | "minWidth" | "flex"
   > & {
     node: ElementNode
+    config: ElementContainerConfig
   }
-> = ({ node, ...rest }) => {
-  const { isInHorizontalLayout, isInRoot } = useRequiredContext(FlexContext)
+> = ({ node, config, ...rest }) => {
+  const { isInHorizontalLayout } = useRequiredContext(FlexContext)
 
-  let minStretchBehavior: MinFlexElementWidth
-  if (LARGE_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
-    minStretchBehavior = "14rem"
-  } else if (MEDIUM_STRETCH_BEHAVIOR.includes(node.element.type ?? "")) {
-    minStretchBehavior = "8rem"
-  }
-
-  const styleOverrides = useMemo(() => {
-    const styles: React.CSSProperties = {}
-
-    if (WIDTH_STRETCH_OVERRIDE.includes(node.element.type ?? "")) {
-      styles.width = "100%"
-    }
-
-    if (VISIBLE_OVERFLOW_OVERRIDE.includes(node.element.type ?? "")) {
-      styles.overflow = "visible"
-    }
-
-    if (node.element.type === "textArea") {
-      // The st.text_area element has a legacy implementation where the height
-      // is measuring only the input box so the pixel height must be set in the element
-      // and the container must be allowed to expand. Additionally, we don't want the
-      // flex with height to be set on the element container.
-      if (node.element.heightConfig?.useStretch) {
-        return {
-          height: "100%",
-          flex: "1 1 8rem",
-        }
-      } else if (isInHorizontalLayout) {
-        return {
-          height: "auto",
-        }
-      }
-      return {
-        height: "auto",
-        // Content height text area in vertical layout cannot have flex.
-        flex: "",
-      }
-    } else if (node.element.type === "arrowVegaLiteChart") {
-      if (node.element.widthConfig?.useContent && isInRoot) {
-        // VegaLite charts with embedded dataframes need a defined parent width
-        // (not fit-content) for proper measurement and rendering due to the resize feature.
-        // Resize is disabled in nested containers, so this is only necessary in the root container.
-        styles.width = "100%"
-      }
-      if (isInHorizontalLayout && !node.element.widthConfig) {
-        // TODO (lawilby): This can be removed once the new width style is implemented for all of the vega charts.
-        styles.flex = "1 1 14rem"
-      }
-      return styles
-    } else if (node.element.type === "dataframe") {
-      if (node.element.widthConfig?.useContent && isInRoot) {
-        // Resizable dataframes measure parent container width for the resize feature.
-        // Parent needs defined width (not fit-content) for measurement to work.
-        // Only needed in root where resize is enabled; disabled in nested containers.
-        styles.width = "100%"
-      }
-      return styles
-    } else if (node.element.type === "imgs") {
-      // The st.image element is potentially a list of images, so we defer the sizing to the ImageList component.
-      // This also covers st.pyplot() which is a special case of st.image.
-      //
-      // Use "auto" when image has explicit non-stretch size (content/pixel/rem) to enable horizontal alignment (#12435).
-      // Use "100%" when using stretch or when no width config is set to ensure container has dimensions for width calculation (#12678).
-      //
-      // Legacy behavior: When widthConfig is not set, the default is to stretch (use container width).
-      // This is consistent with how useLayoutStyles handles missing config for other elements.
-      const isUsingStretch =
-        !node.element.widthConfig || node.element.widthConfig.useStretch
-
-      styles.width = isUsingStretch ? "100%" : "auto"
-    }
-
-    return styles
-  }, [
-    node.element.type,
-    node.element.heightConfig?.useStretch,
-    isInHorizontalLayout,
-    isInRoot,
-    node.element.widthConfig,
-  ])
+  const styleOverrides = useMemo(
+    () => config.computeStyleOverrides(),
+    [config]
+  )
+  const minStretchBehavior = useMemo(
+    () => config.getMinStretchBehavior(),
+    [config]
+  )
 
   let styles = useLayoutStyles({
     element: node.element,

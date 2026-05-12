@@ -17,7 +17,8 @@
 import { render, screen } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 
-import { TestAppWrapper } from "~lib/test_util"
+import ThemeProvider from "~lib/components/core/ThemeProvider"
+import { mockTheme } from "~lib/mocks/mockTheme"
 
 import OverflowTooltip from "./OverflowTooltip"
 import { Placement } from "./Tooltip"
@@ -36,6 +37,24 @@ vi.mock("react", async () => {
     useEffect: useEffectMock,
   }
 })
+
+// Mock useWindowDimensionsContext to avoid WindowDimensionsProvider,
+// which uses hooks that conflict with the global useRef/useEffect mocks.
+vi.mock(
+  "~lib/components/shared/WindowDimensions/useWindowDimensionsContext",
+  () => ({
+    useWindowDimensionsContext: () => ({
+      fullWidth: 1000,
+      fullHeight: 700,
+      innerWidth: 1024,
+      innerHeight: 768,
+    }),
+  })
+)
+
+const wrapper = ({ children }: { children: React.ReactNode }): JSX.Element => (
+  <ThemeProvider theme={mockTheme.emotion}>{children}</ThemeProvider>
+)
 
 describe("Tooltip component", () => {
   afterEach(() => {
@@ -60,9 +79,7 @@ describe("Tooltip component", () => {
       >
         the child
       </OverflowTooltip>,
-      {
-        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
-      }
+      { wrapper }
     )
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")
@@ -91,9 +108,7 @@ describe("Tooltip component", () => {
       >
         the child
       </OverflowTooltip>,
-      {
-        wrapper: ({ children }) => <TestAppWrapper>{children}</TestAppWrapper>,
-      }
+      { wrapper }
     )
 
     const tooltip = screen.getByTestId("stTooltipHoverTarget")

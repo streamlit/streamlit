@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  forwardRef,
-  memo,
-  ReactElement,
-  Ref,
-  useCallback,
-  useMemo,
-} from "react"
+import { forwardRef, memo, ReactElement, useCallback, useMemo } from "react"
 
 import { ButtonGroup as BasewebButtonGroup, MODE } from "baseui/button-group"
 
@@ -36,20 +29,18 @@ import BaseButton, {
   BaseButtonKind,
   BaseButtonProps,
   BaseButtonSize,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { StyledButtonGroup } from "~lib/components/shared/BaseButton/styled-components"
-import { Placement } from "~lib/components/shared/Tooltip"
-import {
-  WidgetLabel,
-  WidgetLabelHelpIconInline,
-} from "~lib/components/widgets/BaseWidget"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
+import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
+import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIconInline"
 import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { EmotionTheme } from "~lib/theme"
+import type { EmotionTheme } from "~lib/theme/types"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -119,13 +110,18 @@ function handleMultiSelection(
 function handleSelection(
   mode: ButtonGroupProto.ClickMode,
   clickedContent: string,
-  currentSelection: string[]
+  currentSelection: string[],
+  required: boolean
 ): string[] {
   if (mode === ButtonGroupProto.ClickMode.MULTI_SELECT) {
     return handleMultiSelection(clickedContent, currentSelection)
   }
 
-  // For single-select, toggle off if already selected
+  // Prevent deselection when required
+  if (required && currentSelection.includes(clickedContent)) {
+    return currentSelection
+  }
+
   return currentSelection.includes(clickedContent) ? [] : [clickedContent]
 }
 
@@ -158,6 +154,45 @@ function getSingleSelection(currentSelection: number[]): number {
  */
 type ButtonGroupValue = string[]
 
+interface ButtonGroupOptionProps extends Partial<BaseButtonProps> {
+  option: ButtonGroupProto.IOption
+  index: number
+  selected: number[]
+  style?: ButtonGroupProto.Style
+  containerWidth: boolean
+}
+
+// BaseWeb's ButtonGroup passes refs to each child button, so the option renderer
+// needs to be a stable forwardRef component rather than a render-time factory.
+const ButtonGroupOption = memo(
+  forwardRef<HTMLButtonElement, ButtonGroupOptionProps>(
+    function ButtonGroupOption(
+      { option, index, selected, style, containerWidth, ...props },
+      ref
+    ): ReactElement {
+      const isSelected = selected.includes(index)
+      const { element, kind, size } = getContentElement(
+        option.content ?? "",
+        option.contentIcon ?? undefined,
+        style
+      )
+      const buttonKind = getButtonKindAndSize(isSelected, kind)
+
+      return (
+        <BaseButton
+          {...props}
+          ref={ref}
+          size={size}
+          kind={buttonKind}
+          containerWidth={containerWidth}
+        >
+          {element}
+        </BaseButton>
+      )
+    }
+  )
+)
+
 function getInitialValue(
   widgetMgr: WidgetStateManager,
   element: ButtonGroupProto
@@ -188,7 +223,7 @@ function syncWithWidgetManager(
   element: ButtonGroupProto,
   widgetMgr: WidgetStateManager,
   valueWithSource: ValueWithSource<ButtonGroupValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   // Store content strings directly (no index suffix needed)
   widgetMgr.setStringArrayValue(
@@ -211,12 +246,7 @@ export function getContentElement(
 
   return {
     element: (
-      <DynamicButtonLabel
-        icon={icon}
-        label={content}
-        iconSize="base"
-        useSmallerFont
-      />
+      <DynamicButtonLabel icon={icon} label={content} iconSize="base" />
     ),
     kind,
     size: BaseButtonSize.MEDIUM,
@@ -272,45 +302,20 @@ function getButtonGroupOverridesStyle(
   }
 }
 
-function createOptionChild(
-  option: ButtonGroupProto.IOption,
-  index: number,
-  selected: number[],
-  style: ButtonGroupProto.Style,
-  containerWidth: boolean
-): React.FunctionComponent {
-  const isSelected = selected.includes(index)
-
-  // we have to use forwardRef here because BasewebButtonGroup passes the ref down to its children
-  // and we see a console.error otherwise
-  return forwardRef(function BaseButtonGroup(
-    // Accept only the props compatible with BaseButton to improve type safety
-    props: Partial<BaseButtonProps>,
-    _: Ref<BasewebButtonGroup>
-  ): ReactElement {
-    const { element, kind, size } = getContentElement(
-      option.content ?? "",
-      option.contentIcon ?? undefined,
-      style
-    )
-    const buttonKind = getButtonKindAndSize(isSelected, kind)
-    return (
-      <BaseButton
-        {...props}
-        size={size}
-        kind={buttonKind}
-        containerWidth={containerWidth}
-      >
-        {element}
-      </BaseButton>
-    )
-  })
-}
-
 function ButtonGroup(props: Readonly<Props>): ReactElement {
   const { disabled, element, fragmentId, widgetMgr, widthConfig } = props
-  const { clickMode, options, style, label, labelVisibility, help } = element
+  const { clickMode, options, style, label, labelVisibility, help, required } =
+    element
   const theme = useEmotionTheme()
+
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_array_value" as const,
+        clearable: true,
+        urlFormat: "repeated" as const,
+      }
+    : undefined
 
   // State stores base content strings (e.g., ["Apple", "Banana"])
   const [value, setValueWithSource] = useBasicWidgetState<
@@ -324,6 +329,8 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   // Derive indices from content strings + current options (like Radio)
@@ -338,10 +345,20 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const onClick = useCallback(
     (_event: React.SyntheticEvent<HTMLButtonElement>, index: number): void => {
       const clickedContent = getOptionBaseContent(options[index])
-      const newSelected = handleSelection(clickMode, clickedContent, value)
+      const newSelected = handleSelection(
+        clickMode,
+        clickedContent,
+        value,
+        required
+      )
+      // Skip state update if selection didn't change (e.g., clicking already-selected
+      // option when required=true). This prevents unnecessary backend reruns.
+      if (newSelected === value) {
+        return
+      }
       setValueWithSource({ value: newSelected, fromUi: true })
     },
-    [clickMode, options, value, setValueWithSource]
+    [clickMode, options, value, required, setValueWithSource]
   )
 
   const mode = getSelectionMode(clickMode)
@@ -349,16 +366,17 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
   const optionElements = useMemo(
     () =>
       options.map((option, index) => {
-        const Element = createOptionChild(
-          option,
-          index,
-          selectedIndices,
-          style,
-          containerWidth
+        const optionKey = `${option.content}-${index}`
+        return (
+          <ButtonGroupOption
+            key={optionKey}
+            option={option}
+            index={index}
+            selected={selectedIndices}
+            style={style}
+            containerWidth={containerWidth}
+          />
         )
-        // TODO: Update to match React best practices
-        // eslint-disable-next-line @eslint-react/no-array-index-key
-        return <Element key={`${option.content}-${index}`} />
       }),
     [options, style, selectedIndices, containerWidth]
   )
@@ -396,6 +414,9 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         }
         overrides={{
           Root: {
+            props: {
+              "aria-required": required || undefined,
+            },
             style: useCallback(
               () =>
                 getButtonGroupOverridesStyle(

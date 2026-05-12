@@ -19,7 +19,7 @@ import { useCallback } from "react"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-export type SubmitFormKeyboardEvent = Pick<
+type SubmitFormKeyboardEvent = Pick<
   React.KeyboardEvent<HTMLElement>,
   "metaKey" | "ctrlKey" | "keyCode" | "key" | "nativeEvent" | "preventDefault"
 >

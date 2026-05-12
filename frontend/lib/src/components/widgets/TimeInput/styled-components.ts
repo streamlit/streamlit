@@ -26,16 +26,19 @@ export const StyledClearIconContainer = styled.div({
 
 export const StyledTimeDropdownListItem = styled(StyledDropdownListItem, {
   shouldForwardProp: isPropValid,
-})(({ theme, $isHighlighted }) => {
+})(({ theme }) => {
   return {
-    paddingRight: theme.spacing.lg,
-    paddingLeft: theme.spacing.lg,
-    paddingTop: theme.spacing.sm,
-    paddingBottom: theme.spacing.sm,
-    background: $isHighlighted ? theme.colors.darkenedBgMix15 : undefined,
-
-    "&:hover, &:active, &:focus-visible": {
-      background: theme.colors.darkenedBgMix15,
-    },
+    position: "relative",
+    display: "flex",
+    alignItems: "center",
+    padding: theme.spacing.none,
+    margin: theme.spacing.none,
+    height: theme.sizes.dropdownItemHeight,
+    // Inset from edges (xs - borderWidth to account for popover border)
+    marginLeft: theme.sizes.tagMarginInsideBorder,
+    // Right padding also accounts for scrollbar gutter when present
+    marginRight: `max(0px, calc(${theme.sizes.tagMarginInsideBorder} - var(--scrollbar-gutter-size, 0px)))`,
+    background: "transparent",
+    fontWeight: theme.fontWeights.normal,
   }
 })

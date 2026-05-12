@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { forwardRef, useImperativeHandle } from "react"
+
 import { act, screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
 import createFetchMock from "vitest-fetch-mock"
@@ -34,7 +36,21 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 import CameraInput, { Props } from "./CameraInput"
 import { WebcamPermission } from "./WebcamComponent"
 
-vi.mock("react-webcam")
+vi.mock("react-webcam", () => {
+  const MockWebcam = forwardRef((_props, ref) => {
+    useImperativeHandle(ref, () => {
+      return {
+        getScreenshot: () => "data:image/jpeg;base64,mocked-photo",
+      }
+    })
+
+    return <div data-testid="mockReactWebcam" />
+  })
+
+  return {
+    default: MockWebcam,
+  }
+})
 const fetchMocker = createFetchMock(vi)
 
 const buildFileUploaderStateProto = (
@@ -308,6 +324,27 @@ describe("CameraInput widget", () => {
       })
       // Button should be enabled when webcam permission is granted
       expect(takePhotoButton).not.toBeDisabled()
+    })
+
+    it("coalesces overlapping captures into a single upload flow", async () => {
+      const props = getProps({}, { testOverride: WebcamPermission.SUCCESS })
+      fetchMocker.mockResponse("")
+
+      render(<CameraInput {...props} />)
+
+      const takePhotoButton = screen.getByRole("button", {
+        name: "Take Photo",
+      })
+
+      await act(async () => {
+        // Trigger two captures in one turn before React applies UI transition.
+        takePhotoButton.click()
+        takePhotoButton.click()
+        await vi.runAllTimersAsync()
+      })
+
+      expect(props.uploadClient.fetchFileURLs).toHaveBeenCalledTimes(1)
+      expect(props.uploadClient.uploadFile).toHaveBeenCalledTimes(1)
     })
   })
 

@@ -29,7 +29,10 @@ if TYPE_CHECKING:
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
+    from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
+    from streamlit.elements.lib.mutable_tab_container import TabContainer
 
 
 class DeltaGeneratorSingleton:
@@ -54,6 +57,9 @@ class DeltaGeneratorSingleton:
         delta_generator_cls: type[DeltaGenerator],
         status_container_cls: type[StatusContainer],
         dialog_container_cls: type[Dialog],
+        expander_container_cls: type[ExpanderContainer],
+        tab_container_cls: type[TabContainer],
+        popover_container_cls: type[PopoverContainer],
     ) -> None:
         """Registers and initializes all delta-generator classes.
 
@@ -64,7 +70,14 @@ class DeltaGeneratorSingleton:
         status_container_cls : type[StatusContainer]
             The delta-generator class that is used as return value for `st.status`.
         dialog_container_cls : type[Dialog]
-            The delta-generator class used is used as return value for `st.dialog`.
+            The delta-generator class is used as return value for `st.dialog`.
+        expander_container_cls : type[ExpanderContainer]
+            The delta-generator class used as return value for `st.expander`.
+        tab_container_cls : type[TabContainer]
+            The delta-generator class used as return value for individual tabs
+            in `st.tabs`.
+        popover_container_cls : type[PopoverContainer]
+            The delta-generator class used as return value for `st.popover`.
 
         Raises
         ------
@@ -87,6 +100,9 @@ class DeltaGeneratorSingleton:
         )
         self._status_container_cls = status_container_cls
         self._dialog_container_cls = dialog_container_cls
+        self._expander_container_cls = expander_container_cls
+        self._tab_container_cls = tab_container_cls
+        self._popover_container_cls = popover_container_cls
 
     @property
     def main_dg(self) -> DeltaGenerator:
@@ -119,6 +135,27 @@ class DeltaGeneratorSingleton:
         this is used to avoid circular imports.
         """
         return self._dialog_container_cls
+
+    @property
+    def expander_container_cls(self) -> type[ExpanderContainer]:
+        """Stub for ExpanderContainer. Since ExpanderContainer inherits from
+        DeltaGenerator, this is used to avoid circular imports.
+        """
+        return self._expander_container_cls
+
+    @property
+    def tab_container_cls(self) -> type[TabContainer]:
+        """Stub for TabContainer. Since TabContainer inherits from
+        DeltaGenerator, this is used to avoid circular imports.
+        """
+        return self._tab_container_cls
+
+    @property
+    def popover_container_cls(self) -> type[PopoverContainer]:
+        """Stub for PopoverContainer. Since PopoverContainer inherits from
+        DeltaGenerator, this is used to avoid circular imports.
+        """
+        return self._popover_container_cls
 
 
 def get_dg_singleton_instance() -> DeltaGeneratorSingleton:

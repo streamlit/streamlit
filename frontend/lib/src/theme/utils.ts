@@ -29,16 +29,6 @@ import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 import { localStorageAvailable, StreamlitConfig } from "@streamlit/utils"
 
 import { CircularBuffer } from "~lib/components/shared/Profiler/CircularBuffer"
-import {
-  baseTheme,
-  CachedTheme,
-  darkTheme,
-  EmotionTheme,
-  lightTheme,
-  ThemeConfig,
-  ThemeSelection,
-  ThemeSpacing,
-} from "~lib/theme"
 import { LocalStore } from "~lib/util/storageUtils"
 import {
   isDarkThemeInQueryParams,
@@ -50,6 +40,14 @@ import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
 import { fonts } from "./primitives/typography"
+import { baseTheme, darkTheme, lightTheme } from "./themeConfigs"
+import type {
+  CachedTheme,
+  EmotionTheme,
+  ThemeConfig,
+  ThemeSelection,
+  ThemeSpacing,
+} from "./types"
 import { DerivedColors, EmotionThemeColors } from "./types"
 
 export const AUTO_THEME_NAME = "Use system setting"
@@ -130,10 +128,10 @@ export const getMergedDarkTheme = once(() =>
 )
 
 export const getSystemThemePreference = (): "light" | "dark" => {
-  return window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
+  const prefersDark =
+    window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false
+
+  return prefersDark ? "dark" : "light"
 }
 
 export const getSystemTheme = (): ThemeConfig => {
@@ -481,6 +479,7 @@ export const parseFontSize = (
   LOG.warn(
     `Invalid size passed for ${configName} in ${themeSection}: ${fontSize}. Falling back to default ${configName}.`
   )
+  return undefined
 }
 
 /**
@@ -707,6 +706,9 @@ export const createEmotionTheme = (
     chartCategoricalColors,
     chartSequentialColors,
     chartDivergingColors,
+    // Metric value styling
+    metricValueFontSize,
+    metricValueFontWeight,
     ...customColors
   } = themeInput
 
@@ -731,7 +733,6 @@ export const createEmotionTheme = (
     textColor: bodyText,
     dataframeBorderColor,
     dataframeHeaderBackgroundColor,
-    widgetBorderColor,
     borderColor,
     linkColor,
     codeTextColor,
@@ -812,12 +813,9 @@ export const createEmotionTheme = (
     conditionalOverrides.colors.dataframeBorderColor = dataframeBorderColor
   }
 
-  if (showWidgetBorder || widgetBorderColor) {
-    // widgetBorderColor from the themeInput is deprecated. For compatibility
-    // with older SiS theming, we still apply it here if provided, but we should
-    // consider full removing it at some point.
+  if (showWidgetBorder) {
     conditionalOverrides.colors.widgetBorderColor =
-      widgetBorderColor || conditionalOverrides.colors.borderColor
+      conditionalOverrides.colors.borderColor
   }
 
   // Apply background color overrides based on configured background color or main color as fallback
@@ -915,8 +913,12 @@ export const createEmotionTheme = (
       // Adapt all the other radii sizes based on the base radii:
       // We make sure that the value is rounded to 2 decimal places to avoid
       // floating point precision issues.
-      conditionalOverrides.radii.md = addCssUnit(
+      conditionalOverrides.radii.sm = addCssUnit(
         roundToTwoDecimals(radiusValue * 0.5),
+        cssUnit
+      )
+      conditionalOverrides.radii.md2 = addCssUnit(
+        roundToTwoDecimals(radiusValue * 0.75),
         cssUnit
       )
       conditionalOverrides.radii.xl = addCssUnit(
@@ -976,6 +978,27 @@ export const createEmotionTheme = (
     headingFontSizes
   )
 
+  // Conditional Overrides - Metric Value Font Size
+  if (metricValueFontSize) {
+    // Use parseFontSize for format validation
+    const parsedSize = parseFontSize(
+      "metricValueFontSize",
+      metricValueFontSize,
+      inSidebar
+    )
+    if (parsedSize) {
+      // Additional validation: must be greater than 0
+      const numericValue = parseFloat(parsedSize)
+      if (numericValue <= 0) {
+        LOG.warn(
+          `Invalid metricValueFontSize: ${metricValueFontSize} in theme. The metricValueFontSize must be greater than 0. Falling back to default metricValueFontSize.`
+        )
+      } else {
+        conditionalOverrides.fontSizes.metricValueFontSize = parsedSize
+      }
+    }
+  }
+
   // Conditional Overrides - Font Weights
 
   // Set the font weights based on the font weight configs provided
@@ -986,6 +1009,18 @@ export const createEmotionTheme = (
     codeFontWeight,
     headingFontWeights
   )
+
+  // Conditional Overrides - Metric Value Font Weight
+  if (metricValueFontWeight) {
+    if (metricValueFontWeight >= 100 && metricValueFontWeight <= 900) {
+      conditionalOverrides.fontWeights.metricValueFontWeight =
+        metricValueFontWeight
+    } else {
+      LOG.warn(
+        `Invalid metricValueFontWeight: ${metricValueFontWeight}. Must be between 100 and 900.`
+      )
+    }
+  }
 
   // Font Overrides
 

@@ -24,9 +24,8 @@ from typing import (
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
@@ -166,10 +165,24 @@ class FeedbackMixin:
             - ``"stars"``: Streamlit displays a row of star icons, allowing the
               user to select a rating from one to five stars.
 
-        key : str or int
-            An optional string or integer to use as the unique key for the widget.
-            If this is omitted, a key will be generated for the widget
-            based on its content. No two widgets may have the same key.
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key. Assigning
+            a key stabilizes the widget's identity and preserves its
+            state across reruns even when other parameters change.
+
+            .. note::
+               Changing ``options`` resets the widget even when a key is
+               provided.
+
+            A key lets you read or update the widget's value via
+            ``st.session_state[key]``. For more details, see `Widget
+            behavior <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
 
         default : int or None
             Default feedback value. This must be consistent with the feedback
@@ -263,8 +276,7 @@ class FeedbackMixin:
             )
 
         key = to_key(key)
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=default)
 
@@ -312,7 +324,12 @@ class FeedbackMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, None)
 
-        self.dg._enqueue("feedback", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "feedback",
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
 
         return widget_state.value
 

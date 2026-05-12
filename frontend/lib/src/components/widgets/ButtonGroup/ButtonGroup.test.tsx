@@ -25,8 +25,8 @@ import {
 import {
   BaseButtonKind,
   BaseButtonSize,
-  DynamicButtonLabel,
-} from "~lib/components/shared/BaseButton"
+} from "~lib/components/shared/BaseButton/BaseButton"
+import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -39,13 +39,12 @@ const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
-  // eslint-disable-next-line vitest/valid-expect, @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  let expectCheck: any = expect(element)
-  if (!should_exist) {
-    expectCheck = expect.not
+  if (should_exist) {
+    // Active/selected buttons have the primary color (rgb(255, 75, 75))
+    expect(element).toHaveStyle("color: rgb(255, 75, 75);")
+  } else {
+    expect(element).not.toHaveStyle("color: rgb(255, 75, 75);")
   }
-  // Active/selected buttons have the primary color (rgb(255, 75, 75))
-  expectCheck.toHaveStyle("color: rgb(255, 75, 75);")
 }
 
 const getButtonGroupButtons = (): HTMLElement[] => {
@@ -506,7 +505,6 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: "bar",
       iconSize: "base",
-      useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.PILLS)
     expect(size).toBe(BaseButtonSize.MEDIUM)
@@ -524,9 +522,205 @@ describe("ButtonGroup getContentElement", () => {
       label: "foo",
       icon: undefined,
       iconSize: "base",
-      useSmallerFont: true,
     })
     expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
     expect(size).toBe(BaseButtonSize.MEDIUM)
+  })
+})
+
+describe("ButtonGroup query param binding", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "cat" }),
+    ButtonGroupProto.Option.create({ content: "dog" }),
+    ButtonGroupProto.Option.create({ content: "bird" }),
+  ]
+
+  it("registers query param binding when queryParamKey is set", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_pills",
+      "string_array_value",
+      ["cat"],
+      true,
+      "repeated"
+    )
+  })
+
+  it("unregisters query param binding on unmount", () => {
+    const props = getProps({
+      queryParamKey: "my_pills",
+      options: simpleOptions,
+      default: [0],
+    })
+    const unregisterSpy = vi.spyOn(
+      props.widgetMgr,
+      "unregisterQueryParamBinding"
+    )
+
+    const { unmount } = render(<ButtonGroup {...props} />)
+
+    unregisterSpy.mockClear()
+
+    unmount()
+
+    expect(props.widgetMgr.unregisterQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id
+    )
+  })
+
+  it("registers query param binding for multi-select with same config", () => {
+    const props = getProps({
+      queryParamKey: "my_multi_pills",
+      options: simpleOptions,
+      default: [0, 2],
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      style: ButtonGroupProto.Style.PILLS,
+    })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).toHaveBeenCalledWith(
+      props.element.id,
+      "my_multi_pills",
+      "string_array_value",
+      ["cat", "bird"],
+      true,
+      "repeated"
+    )
+  })
+
+  it("does not register query param binding when queryParamKey is not set", () => {
+    const props = getProps({ options: simpleOptions, default: [0] })
+    vi.spyOn(props.widgetMgr, "registerQueryParamBinding")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.registerQueryParamBinding).not.toHaveBeenCalled()
+  })
+})
+
+describe("ButtonGroup required parameter", () => {
+  const simpleOptions = [
+    ButtonGroupProto.Option.create({ content: "apple" }),
+    ButtonGroupProto.Option.create({ content: "banana" }),
+    ButtonGroupProto.Option.create({ content: "cherry" }),
+  ]
+
+  it("allows deselection when required=false (default)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    // Click the already-selected button (apple) to deselect it
+    await user.click(buttons[0])
+
+    // Should have been called with empty array (deselected)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      [],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("prevents deselection when required=true in single-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    // Initial mount call
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["apple"],
+      { fromUi: false },
+      undefined
+    )
+
+    const buttons = getButtonGroupButtons()
+
+    // Click the already-selected button (apple) to try to deselect it
+    await user.click(buttons[0])
+
+    // No additional call should have been made - click was a no-op
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+  })
+
+  it("allows changing selection when required=true in single-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.SINGLE_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    // Click a different button (banana) - this should work
+    await user.click(buttons[1])
+
+    // Should have changed to "banana"
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["banana"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("sets aria-required attribute when required=true", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).toHaveAttribute("aria-required", "true")
+  })
+
+  it("does not set aria-required attribute when required=false", () => {
+    const props = getProps({
+      options: simpleOptions,
+      default: [0],
+      required: false,
+    })
+
+    render(<ButtonGroup {...props} />)
+
+    const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).not.toHaveAttribute("aria-required")
   })
 })

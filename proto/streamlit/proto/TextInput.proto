@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/LabelVisibility.proto";
 
 message TextInput {
@@ -42,4 +41,6 @@ message TextInput {
   bool disabled = 12;
   LabelVisibility label_visibility = 13;
   string icon = 14;
+  // If set, widget value is bound to this query parameter key
+  optional string query_param_key = 15;
 }

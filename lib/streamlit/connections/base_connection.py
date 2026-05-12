@@ -15,11 +15,12 @@
 from __future__ import annotations
 
 import json
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Generic, Literal, TypeVar, cast
 
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 RawConnectionT = TypeVar("RawConnectionT")
 
@@ -66,15 +67,14 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
             ``[connections.<connection_name>]`` config section in ``st.secrets``.
         kwargs : dict
             Any other kwargs to pass to this connection class' ``_connect`` method.
-
-        Returns
-        -------
-        None
         """
         self._connection_name = connection_name
         self._kwargs = kwargs
+        # A per-instance unique ID. Guaranteed unique for the lifetime of a process,
+        # unlike Python's id() builtin.
+        self._connection_instance_id = uuid.uuid4()
 
-        self._config_section_hash = calc_md5(json.dumps(self._secrets.to_dict()))
+        self._config_section_hash = calc_hash(json.dumps(self._secrets.to_dict()))
         secrets_singleton.file_change_listener.connect(self._on_secrets_changed)
 
         self._raw_instance: RawConnectionT | None = self._connect(**kwargs)
@@ -100,7 +100,7 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         We don't expect either user scripts or connection authors to have to use or
         overwrite this method.
         """
-        new_hash = calc_md5(json.dumps(self._secrets.to_dict()))
+        new_hash = calc_hash(json.dumps(self._secrets.to_dict()))
 
         # Only reset the connection if the secrets file section specific to this
         # connection has changed.
@@ -135,12 +135,8 @@ class BaseConnection(ABC, Generic[RawConnectionT]):
         reinitializing it. Note that some connection methods may already use ``reset()``
         in their error handling code.
 
-        Returns
-        -------
-        None
-
-        Example
-        -------
+        Examples
+        --------
         >>> import streamlit as st
         >>>
         >>> conn = st.connection("my_conn")

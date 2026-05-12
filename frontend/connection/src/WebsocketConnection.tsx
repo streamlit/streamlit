@@ -116,8 +116,7 @@ export interface Args {
 }
 
 interface MessageQueue {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  [index: number]: any
+  [index: number]: ForwardMsg
 }
 
 const LOG = getLogger("WebsocketConnection")
@@ -244,6 +243,19 @@ export class WebsocketConnection {
 
   public disconnect(): void {
     this.setFsmState(ConnectionState.DISCONNECTED_FOREVER)
+  }
+
+  /**
+   * Close the current connection and attempt to reconnect.
+   * Unlike disconnect(), this does not permanently close the connection.
+   * Instead, it sends a CONNECTION_CLOSED event, which causes the FSM to
+   * transition to PINGING_SERVER and attempt reconnection.
+   */
+  public reconnect(): void {
+    if (this.state === ConnectionState.CONNECTED) {
+      this.closeConnection()
+      this.stepFsm("CONNECTION_CLOSED")
+    }
   }
 
   // This should only be called inside stepFsm().
@@ -586,6 +598,7 @@ export class WebsocketConnection {
 
     const localWebsocket = this.websocket
 
+    // eslint-disable-next-line no-restricted-properties -- Non-React connection timeout requires a raw timer.
     this.wsConnectionTimeout = globalThis.setTimeout(() => {
       if (localWebsocket !== this.websocket) {
         return
@@ -597,7 +610,8 @@ export class WebsocketConnection {
         return
       }
 
-      if (isNullOrUndefined(this.websocket)) {
+      const websocket = this.websocket
+      if (isNullOrUndefined(websocket)) {
         // This should never happen! The only place we call
         // setConnectionTimeout() should be immediately before setting
         // this.websocket.
@@ -606,7 +620,7 @@ export class WebsocketConnection {
         return
       }
 
-      if (this.websocket.readyState === 0 /* CONNECTING */) {
+      if (websocket.readyState === 0 /* CONNECTING */) {
         LOG.info(`Client error: ${uri} timed out`)
         this.args.sendClientError(
           "Websocket connection timed out",
@@ -655,7 +669,13 @@ export class WebsocketConnection {
 
     const msg = BackMsg.create(obj)
     const buffer = BackMsg.encode(msg).finish()
-    this.websocket.send(buffer)
+    const encodedMessage = new Uint8Array(
+      buffer.buffer as ArrayBuffer,
+      buffer.byteOffset,
+      buffer.byteLength
+    )
+
+    this.websocket.send(encodedMessage)
   }
 
   /**

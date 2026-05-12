@@ -102,6 +102,9 @@ describe("BidiComponent/utils/theme", () => {
       greenTextColor: "#00ff00",
       violetTextColor: "#aa00ff",
       grayTextColor: "#888888",
+
+      metricValueFontSize: "2.25rem",
+      metricValueFontWeight: 400,
       ...overrides,
     })
 
@@ -270,12 +273,8 @@ describe("BidiComponent/utils/theme", () => {
     const protoFieldsToIgnore: Array<keyof ICustomThemeConfig> = [
       "base",
       "bodyFont",
-      "widgetBackgroundColor",
-      "radii",
       "fontFaces",
       "fontSources",
-      "fontSizes",
-      "skeletonBackgroundColor",
       "showWidgetBorder",
       "showSidebarBorder",
       "sidebar",
@@ -294,7 +293,6 @@ describe("BidiComponent/utils/theme", () => {
       textColor: null,
       linkColor: null,
       linkUnderline: null,
-      font: null,
       headingFont: null,
       bodyFont: null,
       codeFont: null,
@@ -307,12 +305,12 @@ describe("BidiComponent/utils/theme", () => {
       codeFontSize: null,
       headingFontSizes: null,
       headingFontWeights: null,
+      metricValueFontSize: null,
+      metricValueFontWeight: null,
 
       borderColor: null,
       dataframeBorderColor: null,
       dataframeHeaderBackgroundColor: null,
-      widgetBorderColor: null,
-      widgetBackgroundColor: null,
       showWidgetBorder: null,
       redColor: null,
       orangeColor: null,
@@ -346,11 +344,8 @@ describe("BidiComponent/utils/theme", () => {
       chartDivergingColors: null,
 
       fontFaces: null,
-      fontSizes: null,
       fontSources: null,
-      radii: null,
       showSidebarBorder: null,
-      skeletonBackgroundColor: null,
 
       sidebar: null,
       light: null,
@@ -375,7 +370,7 @@ describe("BidiComponent/utils/theme", () => {
       protoFieldsToIgnore.forEach(ignoredKey => {
         expect(
           extractedThemeKeys,
-          `Expected ignored protobuf theme field "${ignoredKey}" to be omitted from extracted theme keys.`
+          `Expected ignored protobuf theme field "${String(ignoredKey)}" to be omitted from extracted theme keys.`
         ).not.toContain(ignoredKey)
       })
     })

@@ -16,7 +16,7 @@
 
 import { transparentize } from "color2k"
 
-import { darkTheme, lightTheme } from "~lib/theme/index"
+import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
   getDividerColors,

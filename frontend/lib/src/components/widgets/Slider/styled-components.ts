@@ -24,7 +24,7 @@ export const StyledSlider = styled.div({
   },
 })
 
-export interface StyledThumbProps {
+interface StyledThumbProps {
   disabled: boolean
   isDragged: boolean
 }
@@ -55,7 +55,7 @@ export const StyledThumb = styled.div<StyledThumbProps>(
   })
 )
 
-export interface StyledThumbValueProps {
+interface StyledThumbValueProps {
   disabled: boolean
 }
 
@@ -89,7 +89,7 @@ export const StyledThumbWrapper = styled.div<StyleProps>(({ theme }) => {
   }
 })
 
-export interface StyledSliderTickBarProps {
+interface StyledSliderTickBarProps {
   isHovered: boolean
   isDisabled: boolean
 }

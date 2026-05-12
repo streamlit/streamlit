@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 package streamlit;
 
 // Text alignment configuration for text elements

@@ -19,8 +19,8 @@ import { memo, ReactElement } from "react"
 import { Progress as ProgressProto } from "@streamlit/protobuf"
 
 import { StyledProgressLabelContainer } from "~lib/components/elements/Progress/styled-components"
-import ProgressBar from "~lib/components/shared/ProgressBar"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import ProgressBar from "~lib/components/shared/ProgressBar/ProgressBar"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 
 export interface ProgressProps {
   element: ProgressProto

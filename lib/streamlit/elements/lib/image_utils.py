@@ -203,7 +203,7 @@ def _ensure_image_size_and_format(
         # below.
         pil_image = pil_image.resize(
             (target_width, new_height),
-            resample=Image.BILINEAR,  # type: ignore[attr-defined]
+            resample=Image.BILINEAR,  # type: ignore[attr-defined] # ty: ignore[unresolved-attribute]
         )
         return _pil_to_bytes(pil_image, format=image_format, quality=90)
 
@@ -257,10 +257,11 @@ def image_to_url(
 
     # Strings
     if isinstance(image, str):
-        if not os.path.isfile(image) and url_util.is_url(
-            image, allowed_schemas=("http", "https", "data")
+        # If it's an absolute URL or relative static URL, return it directly.
+        if not os.path.isfile(image) and (
+            url_util.is_url(image, allowed_schemas=("http", "https", "data"))
+            or url_util.is_relative_static_url(image)
         ):
-            # If it's a url, return it directly.
             return image
 
         if image.endswith(".svg") and os.path.isfile(image):
@@ -315,7 +316,7 @@ def image_to_url(
 
     # Numpy Arrays (ie opencv)
     elif isinstance(image, np.ndarray):
-        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type]
+        image = _clip_image(_verify_np_shape(image), clamp)  # ty: ignore[invalid-argument-type, unused-ignore-comment]
 
         if channels == "BGR":
             if len(image.shape) == 3:
@@ -371,11 +372,8 @@ def marshall_images(
     caption
         Image caption. If displaying multiple images, caption should be a
         list of captions (one for each image).
-    width
-        The desired width of the image or images. This parameter will be
-        passed to the frontend.
-        Positive values set the image width explicitly.
-        Negative values has some special. For details, see: `WidthBehaviour`
+    layout_config
+        The layout configuration for the image, including width settings.
     proto_imgs
         The ImageListProto to fill in.
     clamp
@@ -403,9 +401,9 @@ def marshall_images(
     # Turn single image and caption into one element list.
     images: Sequence[AtomicImage]
     if isinstance(image, (list, set, tuple)):
-        images = list(image)
+        images = list(image)  # ty: ignore[invalid-assignment]
     elif isinstance(image, np.ndarray) and len(image.shape) == 4:
-        images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type]
+        images = _4d_to_list_3d(image)  # ty: ignore[invalid-argument-type, unused-ignore-comment]
     else:
         images = cast("Sequence[AtomicImage]", [image])
 

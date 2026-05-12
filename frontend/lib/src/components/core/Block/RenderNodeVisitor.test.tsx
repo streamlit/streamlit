@@ -17,15 +17,19 @@
 import { isValidElement } from "react"
 
 import { BlockNode, TransientNode } from "~lib/AppNode"
-import { ComponentRegistry } from "~lib/components/widgets/CustomComponent"
+import { ComponentRegistry } from "~lib/components/widgets/CustomComponent/ComponentRegistry"
 import { FileUploadClient } from "~lib/FileUploadClient"
 import { mockEndpoints, mockSessionInfo } from "~lib/mocks/mocks"
-import { block, text, textInput } from "~lib/render-tree/test-utils"
+import {
+  block,
+  blockWithId,
+  text,
+  textInput,
+} from "~lib/render-tree/test-utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
+import { BlockPropsWithoutWidth } from "./Block"
 import { RenderNodeVisitor } from "./RenderNodeVisitor"
-
-import { BlockPropsWithoutWidth } from "./index"
 
 // Mock props for testing
 const sessionInfo = mockSessionInfo()
@@ -158,7 +162,7 @@ describe("RenderNodeVisitor", () => {
       expect(visitor.reactElements[1]).toBe(result2)
     })
 
-    it("uses index as key for BlockNode", () => {
+    it("uses index as key for BlockNode without id", () => {
       const blockNode = block([])
       const mockBlock = block([])
       const mockProps = createMockProps(mockBlock)
@@ -168,8 +172,20 @@ describe("RenderNodeVisitor", () => {
 
       expect(result).not.toBeNull()
       expect(isValidElement(result)).toBe(true)
-      // The key should be "0" for the first block
       expect((result as React.ReactElement).key).toBe("0")
+    })
+
+    it("uses blockId as key for BlockNode with id", () => {
+      const blockNode = blockWithId("$$ID-abc123-my_key")
+      const mockBlock = block([])
+      const mockProps = createMockProps(mockBlock)
+      const visitor = new RenderNodeVisitor(mockProps)
+
+      const result = visitor.visitBlockNode(blockNode)
+
+      expect(result).not.toBeNull()
+      expect(isValidElement(result)).toBe(true)
+      expect((result as React.ReactElement).key).toBe("$$ID-abc123-my_key")
     })
 
     it("passes disableFullscreenMode prop from props correctly", () => {

@@ -16,7 +16,9 @@
 
 import styled from "@emotion/styled"
 
-export interface StyledResizableContainerProps {
+import { getPopoverContainerStyle } from "~lib/components/shared/Base/styled-components"
+
+interface StyledResizableContainerProps {
   isInHorizontalLayout: boolean
   minHeight: number
   disableResize: boolean
@@ -40,12 +42,11 @@ export const StyledResizableContainer =
       },
 
       "& .dvn-scroller": {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        ["overflowX" as any]: "auto !important",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        ["overflowY" as any]: "auto !important",
+        ["overflowX" as unknown as string]: "auto !important",
+        ["overflowY" as unknown as string]: "auto !important",
       },
       "& .gdg-search-bar": {
+        ...getPopoverContainerStyle(theme),
         // Make the search field more responsive to the grid width and use
         // rem units for everything.
         // 19rem is the closest rem without decimals to the original size:
@@ -56,7 +57,6 @@ export const StyledResizableContainer =
         top: theme.spacing.sm,
         right: theme.spacing.sm,
         padding: theme.spacing.sm,
-        borderRadius: theme.radii.default,
         "& .gdg-search-status": {
           paddingTop: theme.spacing.twoXS,
           fontSize: theme.fontSizes.twoSm,

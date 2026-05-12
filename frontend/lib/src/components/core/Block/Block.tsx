@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import { ReactElement, useContext, useMemo } from "react"
 
 import classNames from "classnames"
 
@@ -34,12 +34,13 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
-import ChatMessage from "~lib/components/elements/ChatMessage"
-import Dialog from "~lib/components/elements/Dialog"
-import Expander from "~lib/components/elements/Expander"
-import Popover from "~lib/components/elements/Popover"
-import Tabs, { TabProps } from "~lib/components/elements/Tabs"
-import Form from "~lib/components/widgets/Form"
+import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
+import Dialog from "~lib/components/elements/Dialog/Dialog"
+import Expander from "~lib/components/elements/Expander/Expander"
+import Popover from "~lib/components/elements/Popover/Popover"
+import Tabs from "~lib/components/elements/Tabs/Tabs"
+import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
+import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
 import { notNullOrUndefined } from "~lib/util/utils"
@@ -69,7 +70,43 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  return <>{RenderNodeVisitor.collectReactElements(props)}</>
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  } = props
+
+  // Memoize traversal to avoid recomputing during resize events.
+  // All props are included in deps to satisfy exhaustive-deps lint rule.
+  // The singleton props (endpoints, widgetMgr, etc.) never change references,
+  // so including them doesn't cause unnecessary recomputation.
+  const elements = useMemo(
+    () =>
+      RenderNodeVisitor.collectReactElements({
+        node,
+        widgetsDisabled,
+        disableFullscreenMode,
+        endpoints,
+        widgetMgr,
+        uploadClient,
+        componentRegistry,
+      }),
+    [
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    ]
+  )
+
+  return <>{elements}</>
 }
 
 /**
@@ -132,7 +169,6 @@ export const ContainerContentsWrapper = (
     border: false,
   }
 
-  const userKey = getKeyFromId(props.node.deltaBlock.id)
   return (
     <FlexContextProvider
       direction={Direction.VERTICAL}
@@ -141,10 +177,7 @@ export const ContainerContentsWrapper = (
     >
       <StyledFlexContainerBlock
         {...defaultStyles}
-        className={classNames(
-          getClassnamePrefix(Direction.VERTICAL),
-          convertKeyToClassName(userKey)
-        )}
+        className={getClassnamePrefix(Direction.VERTICAL)}
         data-testid={getClassnamePrefix(Direction.VERTICAL)}
       >
         <ChildRenderer {...props} />
@@ -282,7 +315,7 @@ export const BlockNodeRenderer = (
     fragmentIdsThisRun
   )
 
-  const childProps = { ...props, ...{ node } }
+  const childProps = { ...props, node }
 
   // Disable fullscreen mode if already disabled by parent
   // (e.g., via libConfig or ancestor dialog/popover),
@@ -293,6 +326,13 @@ export const BlockNodeRenderer = (
     notNullOrUndefined(node.deltaBlock.popover)
 
   let containerElement: ReactElement | undefined
+  // Whether the CSS key class (st-key-*) is applied on StyledLayoutWrapper.
+  // Gating this per container so we can analyze each one to confirm that
+  // applying it on the wrapper makes sense. Currently enabled for expander
+  // and popover only.
+  let keyClassOnWrapper = false
+
+  const userKey = getKeyFromId(node.deltaBlock.id)
   const child: ReactElement = (
     <ContainerContentsWrapper
       {...childProps}
@@ -319,10 +359,14 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.expandable) {
+    keyClassOnWrapper = true
     containerElement = (
       <Expander
         isStale={isStale}
         element={node.deltaBlock.expandable as BlockProto.Expandable}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Expander>
@@ -330,11 +374,15 @@ export const BlockNodeRenderer = (
   }
 
   if (node.deltaBlock.popover) {
+    keyClassOnWrapper = true
     containerElement = (
       <Popover
         empty={node.isEmpty}
         element={node.deltaBlock.popover as BlockProto.Popover}
         stretchWidth={shouldWidthStretch(node.deltaBlock.widthConfig)}
+        widgetMgr={props.widgetMgr}
+        blockId={node.deltaBlock.id || undefined}
+        fragmentId={node.fragmentId}
       >
         {child}
       </Popover>
@@ -402,13 +450,20 @@ export const BlockNodeRenderer = (
       renderTabContent,
       width: styles.width,
       flex: styles.flex,
+      fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
   }
 
   if (containerElement) {
     return (
-      <StyledLayoutWrapper data-testid="stLayoutWrapper" {...styles}>
+      <StyledLayoutWrapper
+        data-testid="stLayoutWrapper"
+        className={convertKeyToClassName(
+          keyClassOnWrapper ? userKey : undefined
+        )}
+        {...styles}
+      >
         {containerElement}
       </StyledLayoutWrapper>
     )

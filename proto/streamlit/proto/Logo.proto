@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 // Handle the logo for an app
 message Logo {
   // Type of the logo image (image file, emoji, or material icon)

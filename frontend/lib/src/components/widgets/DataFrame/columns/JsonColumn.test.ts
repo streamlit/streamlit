@@ -92,8 +92,7 @@ describe("JsonColumn", () => {
     [undefined, null, ""],
   ])(
     "handles different JSON-compatible values (%p)",
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    (input: any, expected: any, displayValue: string) => {
+    (input: unknown, expected: unknown, displayValue: string) => {
       const mockColumn = JsonColumn(MOCK_JSON_COLUMN_PROPS)
       const cell = mockColumn.getCell(input) as JsonCell
       expect(mockColumn.getCellValue(cell)).toEqual(expected)

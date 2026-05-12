@@ -193,8 +193,7 @@ describe("arrayToCopyValue", () => {
     [["hello,world", 42, true], "hello world,42,true"],
     [[{ foo: "bar" }], "[object Object]"],
   ])("converts %s to copy string '%s'", (input, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect(arrayToCopyValue(input as any)).toBe(expected)
+    expect(arrayToCopyValue(input as unknown[])).toBe(expected)
   })
 })
 
@@ -582,15 +581,13 @@ describe("toJsonString", () => {
     // Circular reference (should use toSafeString fallback)
     [
       (() => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-        const circular: any = { a: 1 }
+        const circular: Record<string, unknown> = { a: 1 }
         circular.self = circular
         return circular
       })(),
       "[object Object]",
     ],
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-  ])("converts %o to JSON string %s", (input: any, expected: string) => {
+  ])("converts %o to JSON string %s", (input: unknown, expected: string) => {
     expect(toJsonString(input)).toBe(expected)
   })
 })
@@ -653,9 +650,9 @@ describe("isMaybeJson", () => {
     }
   )
 
-  it("returns undefined for null and undefined values", () => {
-    expect(isMaybeJson(null)).toBeUndefined()
-    expect(isMaybeJson(undefined)).toBeUndefined()
+  it("returns false for null and undefined values", () => {
+    expect(isMaybeJson(null)).toBe(false)
+    expect(isMaybeJson(undefined)).toBe(false)
   })
 })
 

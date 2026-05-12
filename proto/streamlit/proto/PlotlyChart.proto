@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 message PlotlyChart {
   // override the properties with a theme. Currently, only "streamlit" or None are accepted.
   string theme = 6;
@@ -38,9 +37,9 @@ message PlotlyChart {
 
   // Available selection modes:
   enum SelectionMode {
-      POINTS = 0; // Point selection mode
-      BOX = 1; // Box selection mode
-      LASSO = 2; // Lasso selection mode
+    POINTS = 0; // Point selection mode
+    BOX = 1; // Box selection mode
+    LASSO = 2; // Lasso selection mode
   }
 
   reserved 1, 2, 3, 4, 5;

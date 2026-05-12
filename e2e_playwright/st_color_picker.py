@@ -124,3 +124,21 @@ if "runs" not in st.session_state:
     st.session_state.runs = 0
 st.session_state.runs += 1
 st.write("Runs:", st.session_state.runs)
+
+# Query param binding color picker (no provided default = black)
+st.markdown("Query param binding:")
+bound_color = st.color_picker(
+    "Bound color (no provided default)",
+    key="bound_color",
+    bind="query-params",
+)
+st.write("bound color value:", bound_color)
+
+# Query param binding color picker with custom default
+bound_color_custom = st.color_picker(
+    "Bound color (default red)",
+    value="#ff0000",
+    key="bound_red",
+    bind="query-params",
+)
+st.write("bound color red value:", bound_color_custom)

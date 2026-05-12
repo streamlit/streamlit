@@ -16,10 +16,10 @@
 
 import { useMemo } from "react"
 
-import { DynamicIcon } from "~lib/components/shared/Icon"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown"
+import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { formatShortcutForDisplay } from "~lib/hooks/useRegisterShortcut"
-import { IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
 import { isFromMac } from "~lib/util/utils"
 
 import {
@@ -32,7 +32,6 @@ export interface DynamicButtonLabelProps {
   icon?: string
   label?: string
   iconSize?: IconSize
-  useSmallerFont?: boolean
   iconPosition?: "left" | "right"
   shortcut?: string | null
 }
@@ -41,7 +40,6 @@ export const DynamicButtonLabel = ({
   icon,
   label,
   iconSize,
-  useSmallerFont = false,
   iconPosition = "left",
   shortcut,
 }: DynamicButtonLabelProps): React.ReactElement | null => {
@@ -53,19 +51,18 @@ export const DynamicButtonLabel = ({
     <StyledButtonLabel>
       <StyledButtonMainLabel data-has-shortcut={Boolean(displayShortcut)}>
         {icon && iconPosition === "left" && (
-          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+          <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {label && (
           <StreamlitMarkdown
             source={label}
             allowHTML={false}
             isLabel
-            largerLabel={!useSmallerFont}
             disableLinks
           />
         )}
         {icon && iconPosition === "right" && (
-          <DynamicIcon size={iconSize ?? "lg"} iconValue={icon} />
+          <DynamicIcon size={iconSize ?? "base"} iconValue={icon} />
         )}
         {displayShortcut && (
           <StyledButtonShortcut aria-label={`Shortcut ${displayShortcut}`}>

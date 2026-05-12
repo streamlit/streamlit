@@ -20,8 +20,15 @@ import { userEvent } from "@testing-library/user-event"
 import { Block as BlockProto } from "@streamlit/protobuf"
 
 import { render } from "~lib/test_util"
+import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import Popover, { PopoverProps } from "./Popover"
+
+const createWidgetMgr = (): WidgetStateManager =>
+  new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
 
 const getProps = (
   elementProps: Partial<BlockProto.Popover> = {},
@@ -35,6 +42,7 @@ const getProps = (
   }),
   empty: false,
   stretchWidth: false,
+  widgetMgr: createWidgetMgr(),
   ...props,
 })
 
@@ -123,5 +131,365 @@ describe("Popover container", () => {
 
     const popoverButtonWidget = screen.getByRole("button")
     expect(popoverButtonWidget).toHaveStyle("width: 100%")
+  })
+})
+
+describe("Dynamic popover (widget mode)", () => {
+  it("calls widgetMgr.setBoolValue on toggle for widget popovers", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+    const props = getProps({ id: widgetId }, { widgetMgr, fragmentId })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: true },
+      fragmentId
+    )
+  })
+
+  it("does NOT call widgetMgr.setBoolValue for non-widget popovers", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const props = getProps({}, { widgetMgr })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("sends false when closing a widget popover", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+    const props = getProps({ id: widgetId }, { widgetMgr, fragmentId })
+
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: true },
+      fragmentId
+    )
+
+    await user.click(screen.getByText("label"))
+    expect(setBoolValueSpy).toHaveBeenLastCalledWith(
+      { id: widgetId },
+      false,
+      { fromUi: true },
+      fragmentId
+    )
+  })
+
+  it("does NOT sync element.open for non-widget popovers", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const props = getProps({ open: false }, { widgetMgr })
+
+    const { rerender } = render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+
+    const updatedProps = getProps({ open: true }, { widgetMgr })
+
+    rerender(
+      <Popover {...updatedProps}>
+        <div>content</div>
+      </Popover>
+    )
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    expect(setBoolValueSpy).not.toHaveBeenCalled()
+  })
+
+  it("syncs open state when element.open changes programmatically", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+    const props = getProps(
+      { open: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+
+    const updatedProps = getProps(
+      { open: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Popover {...updatedProps}>
+        <div>content</div>
+      </Popover>
+    )
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+    // The widget manager state should also be updated (with fromUi: false
+    // to avoid triggering a rerun) so that subsequent reruns send the
+    // correct value back to the backend.
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: false },
+      fragmentId
+    )
+  })
+
+  it("syncs widget manager state on programmatic close to prevent stale reopens", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+
+    // Start with the popover open (simulating it was opened by the user)
+    const props = getProps(
+      { open: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+
+    // Backend programmatically closes the popover (e.g. st.session_state.key = False)
+    const closedProps = getProps(
+      { open: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Popover {...closedProps}>
+        <div>content</div>
+      </Popover>
+    )
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    // The widget manager must be updated with false so that the next rerun
+    // (triggered by e.g. another popover) does not send stale "true" back.
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      false,
+      { fromUi: false },
+      fragmentId
+    )
+  })
+})
+
+describe("passive state persistence", () => {
+  it("restores open state from elementStates on mount", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    widgetMgr.setElementState(blockId, "open", true)
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    // Stored state (true) overrides proto default (false)
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+  })
+
+  it("uses proto default when no stored state exists", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+  })
+
+  it("persists open state on toggle", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({}, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    expect(widgetMgr.getElementState(blockId, "open")).toBe(true)
+  })
+
+  it("does NOT persist state when no blockId is set", async () => {
+    const user = userEvent.setup()
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({}, { widgetMgr })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    // No blockId → toggled state (true) should NOT have been stored
+    expect(widgetMgr.getElementState("", "open")).not.toBe(true)
+  })
+
+  it("does NOT persist state for widget-mode popovers", async () => {
+    const user = userEvent.setup()
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    const props = getProps({ id: "widget-123" }, { widgetMgr, blockId })
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    await user.click(screen.getByText("label"))
+
+    // Widget mode: persistence should not write open state
+    expect(widgetMgr.getElementState(blockId, "open")).toBeUndefined()
+  })
+
+  it("uses server state even when elementStates has a stale value (widget mode)", () => {
+    const blockId = "$$ID-abc123-my_popover"
+    const widgetMgr = createWidgetMgr()
+
+    // Pre-populate elementStates with stale "open = true"
+    widgetMgr.setElementState(blockId, "open", true)
+
+    // Widget mode (element.id set → on_change="rerun"): server says closed
+    const props = getProps(
+      { open: false, id: "widget-123" },
+      { widgetMgr, blockId }
+    )
+
+    render(
+      <Popover {...props}>
+        <div>popover content</div>
+      </Popover>
+    )
+
+    // Server value should win — popover should be closed
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+  })
+})
+
+describe("Popover chevron visibility", () => {
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when label is menu-style icon %s", async label => {
+    const user = userEvent.setup()
+    const props = getProps({ label })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+
+    // Chevron should not be present when closed
+    expect(button).not.toHaveTextContent("expand_more")
+
+    // Open popover and check chevron is still not shown
+    await user.click(button)
+    expect(button).not.toHaveTextContent("expand_less")
+  })
+
+  it("shows chevron for regular labels", () => {
+    const props = getProps({ label: "Actions" })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent("expand_more")
+  })
+
+  it("shows chevron when label is menu icon but icon prop is also set", () => {
+    const props = getProps({
+      label: ":material/menu:",
+      icon: ":material/edit:",
+    })
+    render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const button = screen.getByTestId("stPopoverButton")
+    expect(button).toHaveTextContent("expand_more")
   })
 })

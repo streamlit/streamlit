@@ -232,7 +232,6 @@ def mapbox_subtest():
 
     st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/satellite-v9",
             map_provider="mapbox",
             tooltip={"text": "Count: {count}"},
             initial_view_state=pdk.ViewState(

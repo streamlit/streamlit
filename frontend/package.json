@@ -1,9 +1,10 @@
 {
   "name": "streamlit",
-  "version": "1.53.1",
+  "version": "1.57.0",
   "private": true,
   "workspaces": [
     "app",
+    "component-lib",
     "component-v2-lib",
     "connection",
     "eslint-plugin-streamlit-custom",
@@ -17,18 +18,30 @@
     "buildWithProfiler": "yarn workspace @streamlit/app buildWithProfiler",
     "test": "vitest run",
     "testWatch": "vitest",
-    "testCoverage": "vitest run --coverage"
+    "testCoverage": "vitest run --coverage",
+    "format": "yarn workspaces foreach --all --parallel run format",
+    "formatCheck": "yarn workspaces foreach --all --parallel run formatCheck",
+    "oxlint": "yarn exec oxlint --config ./.oxlintrc.json --deny-warnings app/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
+    "oxlint:fix": "yarn exec oxlint --config ./.oxlintrc.json --fix --deny-warnings app/src component-v2-lib/src connection/src eslint-plugin-streamlit-custom/src lib/src utils/src",
+    "lint": "yarn oxlint && yarn workspaces foreach --all --parallel run lint",
+    "lint:fix": "yarn oxlint:fix && yarn workspaces foreach --all --parallel run lint:fix",
+    "knip": "knip"
   },
   "resolutions": {
+    "minimatch@~3.0.3": "^3.1.3",
+    "minimatch@^9.0.0": "^9.0.6",
+    "minimatch@^9.0.3": "^9.0.6",
+    "minimatch@^9.0.4": "^9.0.6",
     "@types/node": ">=24 <25",
+    "color2k@npm:^2.0.2": "patch:color2k@npm%3A2.0.3#~/.yarn/patches/color2k-npm-2.0.3-41f760285e.patch",
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
     "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch",
     "@swc/core": "^1.15.3",
-    "@typescript-eslint/utils": "^8.52.0",
-    "@typescript-eslint/scope-manager": "^8.52.0",
-    "@typescript-eslint/types": "^8.52.0"
+    "@typescript-eslint/utils": "^8.58.2",
+    "@typescript-eslint/scope-manager": "^8.58.2",
+    "@typescript-eslint/types": "^8.58.2"
   },
   "browserslist": [
     ">0.2%",
@@ -36,12 +49,36 @@
     "not ie <= 11",
     "not op_mini all"
   ],
-  "packageManager": "yarn@4.5.3",
+  "packageManager": "yarn@4.13.0",
   "devDependencies": {
-    "@playwright/cli": "^0.0.62",
-    "@vitest/coverage-v8": "^4.0.18",
+    "@bufbuild/buf": "^1.68.1",
+    "@eslint-react/eslint-plugin": "^5.7.3",
+    "@eslint/compat": "^2.0.5",
+    "@eslint/eslintrc": "^3.3.5",
+    "@eslint/js": "^10.0.1",
+    "@playwright/cli": "^0.1.11",
+    "@types/eslint": "^9.6.1",
+    "@types/eslint-plugin-jsx-a11y": "~6.10.1",
+    "@types/node": ">=24 <25",
+    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/eslint-plugin": "^1.6.16",
     "concurrently": "^9.2.1",
-    "jiti": "^2.6.1",
-    "vitest": "^4.0.18"
+    "eslint": "^10.3.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import-x": "^4.16.2",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-lodash": "^8.0.0",
+    "eslint-plugin-no-relative-import-paths": "^1.6.1",
+    "eslint-plugin-react-hooks": "^7.1.0",
+    "eslint-plugin-streamlit-custom": "workspace:^",
+    "eslint-plugin-testing-library": "^7.16.2",
+    "globals": "^17.6.0",
+    "jiti": "^2.7.0",
+    "knip": "^6.12.0",
+    "oxfmt": "^0.48.0",
+    "oxlint": "^1.63.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vitest": "^4.1.5"
   }
 }

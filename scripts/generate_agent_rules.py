@@ -32,11 +32,18 @@ List of all `make` commands available for execution from the repository root fol
 ```
 """
 
+GENERATED_FILE_NOTICE: Final[str] = (
+    "<!-- Generated from {agents_md}. Edit that file instead, "
+    "then run: uv run python scripts/generate_agent_rules.py -->"
+)
+
 CURSOR_RULE_TEMPLATE_GLOBS: Final[str] = """---
 description:
 globs: {globs}
 alwaysApply: false
 ---
+
+{notice}
 
 {agents_md_content}
 """
@@ -48,6 +55,8 @@ globs:
 alwaysApply: true
 ---
 
+{notice}
+
 {agents_md_content}
 """
 
@@ -55,11 +64,17 @@ GITHUB_COPILOT_RULE_TEMPLATE_GLOBS: Final[str] = """---
 applyTo: "{globs}"
 ---
 
+{notice}
+
 {agents_md_content}
 """
 
-GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{agents_md_content}
+GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL: Final[str] = """{notice}
+
+{agents_md_content}
 """
+
+CLAUDE_MD_CONTENT: Final[str] = "@./AGENTS.md\n"
 
 
 class AgentRuleFile(TypedDict):
@@ -114,6 +129,41 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": False,
     },
     {
+        "cursor_mdc": ".cursor/rules/skills.mdc",
+        "github_copilot": ".github/instructions/skills.instructions.md",
+        "agents_md": ".claude/skills/AGENTS.md",
+        "globs": ".claude/skills/**/*",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/agents.mdc",
+        "github_copilot": ".github/instructions/agents.instructions.md",
+        "agents_md": ".claude/agents/AGENTS.md",
+        "globs": ".claude/agents/**/*",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/workflows.mdc",
+        "github_copilot": ".github/instructions/workflows.instructions.md",
+        "agents_md": ".github/workflows/AGENTS.md",
+        "globs": ".github/workflows/**/*.yml",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/scripts.mdc",
+        "github_copilot": ".github/instructions/scripts.instructions.md",
+        "agents_md": "scripts/AGENTS.md",
+        "globs": "scripts/**/*",
+        "always_apply": False,
+    },
+    {
+        "cursor_mdc": ".cursor/rules/specs.mdc",
+        "github_copilot": ".github/instructions/specs.instructions.md",
+        "agents_md": "specs/AGENTS.md",
+        "globs": "specs/**/*",
+        "always_apply": False,
+    },
+    {
         "cursor_mdc": ".cursor/rules/overview.mdc",
         # Use repository-wide instructions file:
         "github_copilot": ".github/copilot-instructions.md",
@@ -122,6 +172,67 @@ AGENT_RULE_FILES: Final[list[AgentRuleFile]] = [
         "always_apply": True,
     },
 ]
+
+
+CODE_REVIEW_INSTRUCTIONS_SOURCE: Final[str] = (
+    "scripts/assets/code-review-instructions.md"
+)
+
+# Files to sync the code review instructions into, starting from the
+# "## Review Checklist" section header.
+CODE_REVIEW_SYNC_TARGETS: Final[list[str]] = [
+    ".claude/agents/reviewing-local-changes.md",
+]
+
+REVIEW_CHECKLIST_HEADER: Final[str] = "## Review Checklist"
+
+
+def sync_code_review_instructions() -> None:
+    """Sync the code review instructions into agent files.
+
+    Reads the shared code review instructions from
+    ``scripts/assets/code-review-instructions.md`` and replaces everything
+    starting from the ``## Review Checklist`` section in each target file.
+    """
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    source_path = os.path.join(workspace_root, CODE_REVIEW_INSTRUCTIONS_SOURCE)
+    if not os.path.isfile(source_path):
+        raise FileNotFoundError(
+            f"Missing code review instructions source at '{source_path}'."
+        )
+
+    with open(source_path, encoding="utf-8") as f:
+        source_content = f.read()
+
+    # The source file should start with the review checklist header
+    if not source_content.startswith(REVIEW_CHECKLIST_HEADER):
+        raise ValueError(
+            f"Source file '{source_path}' must start with '{REVIEW_CHECKLIST_HEADER}'."
+        )
+
+    for target_rel_path in CODE_REVIEW_SYNC_TARGETS:
+        target_path = os.path.join(workspace_root, target_rel_path)
+        if not os.path.isfile(target_path):
+            raise FileNotFoundError(f"Missing sync target file at '{target_path}'.")
+
+        with open(target_path, encoding="utf-8") as f:
+            target_content = f.read()
+
+        # Find the position of the review checklist header in the target
+        header_pos = target_content.find(REVIEW_CHECKLIST_HEADER)
+        if header_pos == -1:
+            raise ValueError(
+                f"Target file '{target_path}' does not contain "
+                f"'{REVIEW_CHECKLIST_HEADER}'."
+            )
+
+        # Replace everything from the header onwards with the source content
+        updated_content = target_content[:header_pos] + source_content.rstrip() + "\n"
+
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(updated_content)
+        print(f"Synced code review instructions into: {target_path}")
 
 
 def generate_make_commands_skill() -> None:
@@ -178,15 +289,20 @@ def generate_agent_rules() -> None:
         with open(agents_md_path, encoding="utf-8") as f:
             agents_md_content = f.read()
 
+        notice = GENERATED_FILE_NOTICE.format(agents_md=rule["agents_md"])
+
         # Write cursor rule file:
 
         if always_apply:
             content = CURSOR_RULE_TEMPLATE_GLOBAL.format(
+                notice=notice,
                 agents_md_content=agents_md_content.strip(),
             )
         else:
             content = CURSOR_RULE_TEMPLATE_GLOBS.format(
-                globs=globs, agents_md_content=agents_md_content.strip()
+                globs=globs,
+                notice=notice,
+                agents_md_content=agents_md_content.strip(),
             )
 
         with open(cursor_mdc_path, "w", encoding="utf-8") as f:
@@ -197,11 +313,14 @@ def generate_agent_rules() -> None:
 
         if always_apply:
             content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBAL.format(
+                notice=notice,
                 agents_md_content=agents_md_content.strip(),
             )
         else:
             content = GITHUB_COPILOT_RULE_TEMPLATE_GLOBS.format(
-                globs=globs, agents_md_content=agents_md_content.strip()
+                globs=globs,
+                notice=notice,
+                agents_md_content=agents_md_content.strip(),
             )
 
         with open(github_copilot_path, "w", encoding="utf-8") as f:
@@ -209,6 +328,38 @@ def generate_agent_rules() -> None:
         print(f"Generated GitHub Copilot rule file: {github_copilot_path}")
 
 
+def generate_claude_md_files() -> None:
+    """Generate CLAUDE.md files alongside AGENTS.md files.
+
+    Creates a CLAUDE.md file in the same directory as each AGENTS.md file,
+    containing a reference to the AGENTS.md file. Skips the root-level
+    AGENTS.md since the root CLAUDE.md is maintained manually.
+    """
+    workspace_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    for rule in AGENT_RULE_FILES:
+        agents_md_rel_path = rule["agents_md"]
+
+        # Skip root-level AGENTS.md - the root CLAUDE.md is maintained manually
+        if agents_md_rel_path == "AGENTS.md":
+            continue
+
+        agents_md_path = os.path.join(workspace_root, agents_md_rel_path)
+        if not os.path.isfile(agents_md_path):
+            # Skip if AGENTS.md doesn't exist (will be caught by generate_agent_rules)
+            continue
+
+        # Create CLAUDE.md in the same directory as AGENTS.md
+        agents_md_dir = os.path.dirname(agents_md_path)
+        claude_md_path = os.path.join(agents_md_dir, "CLAUDE.md")
+
+        with open(claude_md_path, "w", encoding="utf-8") as f:
+            f.write(CLAUDE_MD_CONTENT)
+        print(f"Generated CLAUDE.md file: {claude_md_path}")
+
+
 if __name__ == "__main__":
     generate_make_commands_skill()
     generate_agent_rules()
+    generate_claude_md_files()
+    sync_code_review_instructions()

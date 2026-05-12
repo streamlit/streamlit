@@ -29,11 +29,11 @@ function isPermissionDeniedError(error: Error): boolean {
   )
 }
 
-export interface RecordBackendOptions {
+interface RecordBackendOptions {
   sampleRate?: number | null
 }
 
-export interface RecordBackendEvents {
+interface RecordBackendEvents {
   onRecordStart?: () => void
   onRecordEnd?: (blob: Blob) => void
   onRecordProgress?: (ms: number) => void
@@ -79,7 +79,7 @@ export class WaveSurferRecordBackend {
       const err = error instanceof Error ? error : new Error(String(error))
       if (isPermissionDeniedError(err)) {
         this.events.onPermissionDenied?.()
-        throw new Error("Microphone permission denied")
+        throw new Error("Microphone permission denied", { cause: error })
       }
       this.events.onError?.(err)
       throw err
@@ -165,7 +165,7 @@ export class WaveSurferRecordBackend {
 
       if (isPermissionDeniedError(err)) {
         this.events.onPermissionDenied?.()
-        throw new Error("Microphone permission denied")
+        throw new Error("Microphone permission denied", { cause: error })
       }
 
       const isConstraintError =

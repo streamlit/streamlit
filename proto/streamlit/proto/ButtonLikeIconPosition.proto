@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 package streamlit;
 
 // Shared enum for icon positions used by button-like elements.

@@ -14,6 +14,7 @@
 
 """radio unit tests."""
 
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -23,7 +24,7 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -624,6 +625,57 @@ def test_dynamic_format_func_preserves_value() -> None:
     assert "Selected: B" in at.text[0].value
 
 
+def test_custom_objects_with_eq_format_func_survives_rerun() -> None:
+    """Regression for #14814: selection must not reset when using format_func.
+
+    ``validate_and_sync_value_with_options`` must receive ``format_func`` so
+    validation compares stable formatted labels, not ``str()`` of instances
+    (which embed object id and changes across reruns).
+    """
+
+    def script():
+        import streamlit as st
+
+        class MyOption:
+            def __init__(self, label: str, value: int) -> None:
+                self.label = label
+                self.value = value
+
+            def __eq__(self, other: object) -> bool:
+                if not isinstance(other, MyOption):
+                    return False
+                return self.value == other.value
+
+            def __hash__(self) -> int:
+                return hash(self.value)
+
+        options = [
+            MyOption("Option A", 1),
+            MyOption("Option B", 2),
+            MyOption("Option C", 3),
+        ]
+        selected = st.radio(
+            "Pick",
+            options=options,
+            format_func=lambda x: x.label,
+            key="bug_radio",
+        )
+        st.text(f"gh14814 value: {selected.value}")
+        st.button("Rerun")
+
+    at = AppTest.from_function(script).run()
+    assert at.radio[0].value.value == 1
+    assert "gh14814 value: 1" in at.text[0].value
+
+    at = at.radio[0].set_value(SimpleNamespace(label="Option B")).run()
+    assert at.radio[0].value.value == 2
+    assert "gh14814 value: 2" in at.text[0].value
+
+    at = at.button[0].click().run()
+    assert at.radio[0].value.value == 2
+    assert "gh14814 value: 2" in at.text[0].value
+
+
 def test_custom_objects_without_eq() -> None:
     """Test that custom class objects without __eq__ work with format_func.
 
@@ -677,3 +729,56 @@ def test_custom_objects_without_eq() -> None:
     # Verify it didn't reset to None or become invalid
     assert at.radio[0].value is not None
     assert "Selected: opt_a" in at.text[0].value
+
+
+class RadioBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for radio bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.radio("the label", ["a", "b", "c"], key="my_key", bind="query-params")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.radio("the label", ["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.radio("the label", ["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == ""
+        assert c.label == "the label"
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.radio("the label", ["a", "b"], key="my_key", bind="invalid-value")
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.radio(
+            "the label",
+            ["cat", "dog"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG"]
+
+    def test_bind_with_index_none(self):
+        """Test that bind works with index=None (clearable)."""
+        st.radio(
+            "the label", ["a", "b", "c"], index=None, key="my_key", bind="query-params"
+        )
+
+        c = self.get_delta_from_queue().new_element.radio
+        assert c.query_param_key == "my_key"
+        assert not c.HasField("default")

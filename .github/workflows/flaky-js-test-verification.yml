@@ -43,9 +43,14 @@ jobs:
       - name: Compute inputs and matrix
         id: compute
         shell: bash
+        env:
+          INPUT_RUNS: ${{ inputs.runs }}
+          INPUT_PR_NUMBER: ${{ inputs.pr_number }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR_NUMBER: ${{ github.event.pull_request.number }}
         run: |
           # Resolve runs
-          runs_input="${{ inputs.runs }}"
+          runs_input="$INPUT_RUNS"
           if [[ -z "$runs_input" ]]; then
             runs_input="25"
           fi
@@ -56,17 +61,17 @@ jobs:
           echo "runs=$runs_input" >> "$GITHUB_OUTPUT"
 
           # Resolve PR number from input or event
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            if [[ -n "${{ inputs.pr_number }}" ]]; then
-              pr_number="${{ inputs.pr_number }}"
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            if [[ -n "$INPUT_PR_NUMBER" ]]; then
+              pr_number="$INPUT_PR_NUMBER"
             else
               echo "::error::No PR number provided. When using workflow_dispatch, the pr_number input is required."
               exit 1
             fi
-          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            pr_number="${{ github.event.pull_request.number }}"
+          elif [[ "$EVENT_NAME" == "pull_request" ]]; then
+            pr_number="$EVENT_PR_NUMBER"
           else
-            echo "::error::Unsupported event type: ${{ github.event_name }}"
+            echo "::error::Unsupported event type: $EVENT_NAME"
             exit 1
           fi
 

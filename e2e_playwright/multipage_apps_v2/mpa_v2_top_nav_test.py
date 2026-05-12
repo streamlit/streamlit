@@ -15,7 +15,11 @@
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
-from e2e_playwright.shared.app_utils import click_checkbox, goto_app
+from e2e_playwright.shared.app_utils import (
+    click_checkbox,
+    goto_app,
+    reset_hovering,
+)
 
 
 def test_desktop_top_nav(app: Page):
@@ -174,6 +178,48 @@ def test_top_nav_with_single_section(app: Page):
     expect(app.get_by_test_id("stHeading").filter(has_text="Page 1")).to_be_visible()
 
 
+def test_top_nav_section_headers_support_markdown(app: Page):
+    """Test that top nav section headers render markdown formatting."""
+    app.set_viewport_size({"width": 1280, "height": 800})
+
+    # Enable markdown section headers test mode
+    click_checkbox(app, "Test Markdown Section Headers")
+    wait_for_app_run(app)
+
+    # Verify bold rendering for "**Bold** Section"
+    bold_section_trigger = app.get_by_text("Bold Section").first
+    expect(bold_section_trigger).to_be_visible()
+    expect(bold_section_trigger.locator("strong")).to_have_text("Bold")
+
+    # Verify italic rendering for "*Italic* Section"
+    italic_section_trigger = app.get_by_text("Italic Section").first
+    expect(italic_section_trigger).to_be_visible()
+    expect(italic_section_trigger.locator("em")).to_have_text("Italic")
+
+    # Verify material icon rendering for ":material/settings: Icon Section"
+    icon_section_trigger = app.get_by_text("Icon Section").first
+    expect(icon_section_trigger).to_be_visible()
+    # The StreamlitMarkdown component renders material icons as <span role="img">
+    expect(
+        icon_section_trigger.get_by_role("img", name="settings icon")
+    ).to_be_visible()
+
+    # Test that clicking a markdown section opens its popover correctly
+    bold_section_trigger.click()
+
+    # Wait for popover with pages
+    page1_in_popover = app.get_by_role("link", name="Page 1")
+    page2_in_popover = app.get_by_role("link", name="Page 2")
+    expect(page1_in_popover).to_be_visible()
+    expect(page2_in_popover).to_be_visible()
+
+    # Navigate to verify functionality
+    page2_in_popover.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_test_id("stHeading").filter(has_text="Page 2")).to_be_visible()
+
+
 def test_hidden_navigation_mode(app: Page):
     """Test hidden navigation mode."""
     app.set_viewport_size({"width": 1280, "height": 800})
@@ -251,6 +297,11 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
     logo = app.get_by_test_id("stHeaderLogo")
     expect(logo).to_be_visible()
 
+    # Reset hovering so the mouse cursor doesn't trigger hover styles on top
+    # nav links after the sidebar collapses (otherwise the snapshot can flake
+    # depending on where the close button ended up).
+    reset_hovering(app)
+
     # Take snapshot of the header with logo at full width
     header = app.locator("header").first
     assert_snapshot(header, name="st_navigation-top_nav_with_logo")
@@ -261,6 +312,7 @@ def test_top_nav_with_logo(app: Page, assert_snapshot: ImageCompareFunction):
 
     # Logo should still be visible and maintain its size
     expect(logo).to_be_visible()
+    reset_hovering(app)
     assert_snapshot(header, name="st_navigation-top_nav_with_logo_narrow_viewport")
 
 

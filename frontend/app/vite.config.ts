@@ -21,7 +21,7 @@ import terminal from "vite-plugin-terminal"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import viteTsconfigPaths from "vite-tsconfig-paths"
+import path from "path"
 
 const BASE = "./"
 const HASH = process.env.OMIT_HASH_FROM_MAIN_FILES ? "" : ".[hash]"
@@ -32,6 +32,41 @@ const IS_PROFILER_BUILD = Boolean(process.env.IS_PROFILER_BUILD)
 const ANALYZE_BUNDLE = Boolean(process.env.ANALYZE_BUNDLE)
 // Enable terminal plugin to pipe browser console logs to terminal (for coding agents)
 const DEBUG_TO_CONSOLE = Boolean(process.env.DEBUG_TO_CONSOLE)
+// Default frontend dev server port for local development.
+const DEFAULT_DEV_SERVER_PORT = 3000
+// Valid TCP/UDP user port range.
+const MIN_PORT = 1
+const MAX_PORT = 65535
+
+/**
+ * Resolve the frontend dev-server port from environment variables.
+ *
+ * Precedence:
+ * 1) VITE_PORT
+ * 2) PORT
+ *
+ * If the value is missing, non-integer, or out of range, we safely fall back
+ * to `DEFAULT_DEV_SERVER_PORT` to avoid passing invalid values to Vite.
+ */
+const getDevServerPort = (): number => {
+  const rawPort = process.env.VITE_PORT ?? process.env.PORT
+  if (!rawPort) {
+    return DEFAULT_DEV_SERVER_PORT
+  }
+
+  const parsedPort = Number(rawPort)
+  if (
+    !Number.isInteger(parsedPort) ||
+    parsedPort < MIN_PORT ||
+    parsedPort > MAX_PORT
+  ) {
+    return DEFAULT_DEV_SERVER_PORT
+  }
+
+  return parsedPort
+}
+// Frontend dev server port used by Vite.
+const DEV_SERVER_PORT = getDevServerPort()
 // The URL of the backend server to proxy to:
 // Can be changed to run against a remote server or different port:
 const DEV_SERVER_BACKEND_URL =
@@ -69,7 +104,6 @@ export default defineConfig(({ command }) => ({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
     }),
-    viteTsconfigPaths(),
     // Log browser console output to terminal for debugging by coding agents
     // Enable with: DEBUG_TO_CONSOLE=1 make frontend-dev
     ...(command === "serve" && DEBUG_TO_CONSOLE
@@ -98,7 +132,12 @@ export default defineConfig(({ command }) => ({
       : []),
   ],
   resolve: {
+    tsconfigPaths: true,
     alias: [
+      {
+        find: /^react-uid$/,
+        replacement: path.resolve(__dirname, "src/util/reactUidCompat.ts"),
+      },
       // Alias react-syntax-highlighter to the cjs version to avoid
       // issues with the esm version causing a bug in rendering
       // See https://github.com/react-syntax-highlighter/react-syntax-highlighter/issues/565
@@ -116,7 +155,7 @@ export default defineConfig(({ command }) => ({
   },
   server: {
     open: true,
-    port: 3000,
+    port: DEV_SERVER_PORT,
     host: true,
     proxy: {
       // These endpoints need to be kept in sync with the endpoints in
@@ -155,15 +194,22 @@ export default defineConfig(({ command }) => ({
     assetsDir: "static",
     sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
-    rollupOptions: {
+    reportCompressedSize: false,
+    rolldownOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
         chunkFileNames: `static/js/[name]${HASH}.js`,
         entryFileNames: `static/js/[name]${HASH}.js`,
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
+          const assetNames = assetInfo.names || []
+          const hasAssetExtension = (extensions: string[]): boolean =>
+            assetNames.some(name =>
+              extensions.some(extension => name.endsWith(extension))
+            )
+
           // For CSS files, place them in the /static/css/ directory
-          if (assetInfo.name?.endsWith(".css")) {
+          if (hasAssetExtension([".css"])) {
             // If OMIT_HASH_FROM_MAIN_FILES is set, we don't want to include the
             // hash in the filename of the entry file at the minimum. There could
             // be other files with the same name that cause a conflict, which would
@@ -193,6 +239,18 @@ export default defineConfig(({ command }) => ({
           runtime: `(window.__WEBPACK_PUBLIC_PATH_OVERRIDE || "/") + ${JSON.stringify(
             filename
           )}`,
+        }
+      }
+
+      // Keep CSS font URLs stable under Rolldown by ensuring they point to
+      // the media directory where font assets are emitted.
+      if (hostType === "css" && /\.(woff2?|ttf|otf|eot)$/i.test(filename)) {
+        if (filename.startsWith("static/media/")) {
+          return filename.replace("static/media/", "../media/")
+        }
+
+        if (!filename.includes("/")) {
+          return `../media/${filename}`
         }
       }
 

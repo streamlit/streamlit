@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-import { ReactElement } from "react"
+import { memo, ReactElement } from "react"
 
-import { StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown"
-import { Placement } from "~lib/components/shared/Tooltip"
+import type { Props as StreamlitMarkdownProps } from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import TooltipIcon, {
   getHelpTooltipAriaLabel,
-} from "~lib/components/shared/TooltipIcon"
+} from "~lib/components/shared/TooltipIcon/TooltipIcon"
 
 import { StyledWidgetLabelHelp } from "./styled-components"
 
-export type WidgetLabelHelpIconProps = {
+type WidgetLabelHelpIconProps = {
   /** Tooltip contents (markdown). */
   content: string
   /**
@@ -42,7 +42,7 @@ export type WidgetLabelHelpIconProps = {
   containerWidth?: boolean
 }
 
-export function WidgetLabelHelpIcon({
+export const WidgetLabelHelpIcon = memo(function WidgetLabelHelpIcon({
   content,
   label,
   ariaLabel,
@@ -65,4 +65,4 @@ export function WidgetLabelHelpIcon({
       />
     </StyledWidgetLabelHelp>
   )
-}
+})

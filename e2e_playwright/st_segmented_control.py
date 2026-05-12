@@ -14,6 +14,7 @@
 
 
 import time
+from typing import Literal
 
 import streamlit as st
 
@@ -27,6 +28,7 @@ with st.sidebar:
         - [Disabled - Segmented Control](#disabled-segmented-control)
         - [Segmented Control in form](#segmented-control-in-form)
         - [Segmented Control in fragment](#segmented-control-in-fragment)
+        - [Hover border regression - Segmented Control](#hover-border-regression-segmented-control)
         - [Unmounted - Segmented Control](#unmounted-segmented-control)
         """
     )
@@ -154,6 +156,59 @@ def test_fragment():
 
 test_fragment()
 
+_HOVER_BORDER_OPTIONS = ["North", "East", "South", "West"]
+
+
+def _render_hover_border_regression_case(
+    *,
+    label: str,
+    key: str,
+    selection_mode: Literal["single", "multi"],
+    default: str | None = None,
+) -> None:
+    selection: str | list[str] | None
+    if selection_mode == "single":
+        selection = st.segmented_control(
+            label,
+            _HOVER_BORDER_OPTIONS,
+            key=key,
+            selection_mode="single",
+            default=default,
+        )
+    else:
+        selection = st.segmented_control(
+            label,
+            _HOVER_BORDER_OPTIONS,
+            key=key,
+            selection_mode="multi",
+        )
+    st.write(f"{label} selection: {selection}")
+
+
+st.header(
+    "Hover border regression - Segmented Control",
+    anchor="hover-border-regression-segmented-control",
+)
+_render_hover_border_regression_case(
+    label="Hover border multi",
+    key="segmented_control_hover_border_multi",
+    selection_mode="multi",
+)
+_render_hover_border_regression_case(
+    label="Hover border single",
+    key="segmented_control_hover_border_single",
+    selection_mode="single",
+    default="North",
+)
+adjacent_selected_border_multi = st.segmented_control(
+    "Adjacent selected border multi",
+    _HOVER_BORDER_OPTIONS,
+    key="segmented_control_adjacent_selected_border_multi",
+    selection_mode="multi",
+    default=["North", "East"],
+)
+st.write(f"Adjacent selected border multi selection: {adjacent_selected_border_multi}")
+
 
 st.header("Unmounted - Segmented Control", anchor="unmounted-segmented-control")
 if st.button("Create some elements to unmount component"):
@@ -263,3 +318,64 @@ else:
         format_func=lambda text: text.capitalize(),
     )
     st.write("Initial segmented control value:", dyn_val)
+
+# --- Bound segmented control widgets (query-params) ---
+
+st.header("Segmented control - bound to query params")
+
+bound_sc_single = st.segmented_control(
+    "Bound single segmented control",
+    ["cat", "dog", "bird"],
+    key="bound_sc",
+    bind="query-params",
+)
+st.text(f"bound_sc: {bound_sc_single}")
+
+bound_sc_default = st.segmented_control(
+    "Bound single segmented control with default",
+    ["Red", "Green", "Blue"],
+    default="Red",
+    key="bound_sc_default",
+    bind="query-params",
+)
+st.text(f"bound_sc_default: {bound_sc_default}")
+
+bound_sc_multi = st.segmented_control(
+    "Bound multi segmented control",
+    ["Red", "Green", "Blue", "Yellow"],
+    selection_mode="multi",
+    key="bound_sc_multi",
+    bind="query-params",
+)
+st.text(f"bound_sc_multi: {bound_sc_multi}")
+
+
+# --- Required parameter tests ---
+
+st.header("Segmented control - required parameter")
+
+required_sc_with_default = st.segmented_control(
+    "Required with default",
+    ["Mode A", "Mode B", "Mode C"],
+    default="Mode A",
+    required=True,
+    key="sc_required_with_default",
+)
+st.text(f"required_sc_with_default: {required_sc_with_default}")
+
+required_sc_without_default = st.segmented_control(
+    "Required without default",
+    ["View", "Edit", "Admin"],
+    required=True,
+    key="sc_required_without_default",
+)
+st.text(f"required_sc_without_default: {required_sc_without_default}")
+
+not_required_sc = st.segmented_control(
+    "Not required",
+    ["Item 1", "Item 2", "Item 3"],
+    default="Item 1",
+    required=False,
+    key="sc_not_required",
+)
+st.text(f"not_required_sc: {not_required_sc}")

@@ -344,11 +344,11 @@ def _test_shift_click_point_selection_scatter_chart_displays_selection(
     chart.scroll_into_view_if_needed()
     chart.click(position={"x": 264, "y": 162})
     wait_for_app_run(app)
-    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
+    chart.click(position={"x": 310, "y": 175}, modifiers=["Shift"])
     wait_for_app_run(app)
-    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
+    chart.click(position={"x": 402, "y": 194}, modifiers=["Shift"])
     wait_for_app_run(app)
-    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])  # ty: ignore[invalid-argument-type]
+    chart.click(position={"x": 181, "y": 94}, modifiers=["Shift"])
     wait_for_app_run(app)
 
     # move the mouse away so that we do not have any hover-menu effects on the chart when taking the screenshot.

@@ -41,7 +41,6 @@ def get_pydeck_chart(
 ) -> PydeckState:
     return st.pydeck_chart(
         pdk.Deck(
-            map_style="mapbox://styles/mapbox/outdoors-v12",
             initial_view_state=pdk.ViewState(
                 latitude=37.7749295,
                 longitude=-122.4194155,
@@ -94,3 +93,20 @@ def click_point(click_handling_div: Locator, coords: Position) -> None:
     # Use force=True since it seems like another div sometimes intercepts events
     # in CI, causing the click to fail
     click_handling_div.click(position=coords, force=True)
+
+
+def wait_for_chart_canvas(chart: Locator) -> None:
+    """Wait for a pydeck chart's canvas to be visible before snapshotting.
+
+    Try mapbox canvas first, fall back to deckgl-overlay canvas.
+    """
+    chart.scroll_into_view_if_needed()
+    # Try mapbox canvas first (used by most map styles)
+    mapbox_canvas = chart.locator(".mapboxgl-canvas")
+    deckgl_canvas = chart.locator("canvas")
+    # Wait for either canvas type to be visible
+    try:
+        expect(mapbox_canvas.or_(deckgl_canvas)).to_be_visible(timeout=15000)
+    except AssertionError:
+        # If no canvas found, wait a bit for the chart to stabilize
+        chart.page.wait_for_timeout(2000)

@@ -16,7 +16,12 @@ import re
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
+from e2e_playwright.conftest import (
+    ImageCompareFunction,
+    build_app_url,
+    wait_for_app_loaded,
+    wait_for_app_run,
+)
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
     click_button,
@@ -26,11 +31,59 @@ from e2e_playwright.shared.app_utils import (
     expect_help_tooltip,
     expect_markdown,
     expect_prefixed_markdown,
+    expect_text,
     get_button_group,
     get_element_by_key,
     get_markdown,
     get_segment_button,
 )
+
+
+def _assert_hover_border_snapshot(
+    *,
+    page: Page,
+    key: str,
+    hovered_option: str,
+    expected_selection_text: str,
+    snapshot_name: str,
+    assert_snapshot: ImageCompareFunction,
+) -> None:
+    button_group = get_button_group(page, key)
+    button_group.scroll_into_view_if_needed()
+
+    expect_markdown(page, expected_selection_text)
+    get_segment_button(button_group, hovered_option).hover()
+    # Negative regression check: Hovering must not change widget state.
+    expect_markdown(page, expected_selection_text)
+    assert_snapshot(button_group, name=snapshot_name)
+
+
+def _assert_focus_visible_border_snapshot(
+    *,
+    page: Page,
+    key: str,
+    focused_option: str,
+    expected_selection_text: str,
+    snapshot_name: str,
+    assert_snapshot: ImageCompareFunction,
+) -> None:
+    button_group = get_button_group(page, key)
+    button_group.scroll_into_view_if_needed()
+
+    expect_markdown(page, expected_selection_text)
+    # Ensure keyboard modality before moving focus to capture :focus-visible styles.
+    page.keyboard.press("Tab")
+    focused_button = get_segment_button(button_group, focused_option)
+    focused_button.focus()
+    expect(focused_button).to_be_focused()
+    # Negative regression check: Keyboard focus must not change widget state.
+    expect_markdown(page, expected_selection_text)
+    class_name = re.sub(r"[^a-zA-Z0-9_-]", "-", key.strip())
+    # Add a small bottom padding so focus-visible ring overflow is fully captured.
+    style = (
+        f".st-key-{class_name} [data-testid='stButtonGroup'] {{ padding-bottom: 4px; }}"
+    )
+    assert_snapshot(button_group, name=snapshot_name, style=style)
 
 
 def test_click_multiple_segmented_control_button_and_take_snapshot(
@@ -95,6 +148,67 @@ def test_click_single_segment_and_take_snapshot(
     get_segment_button(segmented_control, "Foobar").click()
     text = get_markdown(themed_app, "Single selection: None")
     expect(text).to_be_visible()
+
+
+def test_hovered_segmented_control_border_regression_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test border layering for hovered segmented control buttons.
+
+    Covers neutral, edge, active-adjacent hover states and keyboard focus-visible.
+    """
+    _assert_hover_border_snapshot(
+        page=themed_app,
+        key="segmented_control_hover_border_multi",
+        hovered_option="East",
+        expected_selection_text="Hover border multi selection: []",
+        snapshot_name="st_segmented_control-hover_border_multi",
+        assert_snapshot=assert_snapshot,
+    )
+    _assert_hover_border_snapshot(
+        page=themed_app,
+        key="segmented_control_hover_border_single",
+        hovered_option="East",
+        expected_selection_text="Hover border single selection: North",
+        snapshot_name="st_segmented_control-hover_border_single_selected_adjacent",
+        assert_snapshot=assert_snapshot,
+    )
+    _assert_hover_border_snapshot(
+        page=themed_app,
+        key="segmented_control_hover_border_multi",
+        hovered_option="West",
+        expected_selection_text="Hover border multi selection: []",
+        snapshot_name="st_segmented_control-hover_border_multi_last",
+        assert_snapshot=assert_snapshot,
+    )
+    _assert_focus_visible_border_snapshot(
+        page=themed_app,
+        key="segmented_control_hover_border_single",
+        focused_option="East",
+        expected_selection_text="Hover border single selection: North",
+        snapshot_name="st_segmented_control-focus_visible_single_selected_adjacent",
+        assert_snapshot=assert_snapshot,
+    )
+
+
+def test_adjacent_selected_segmented_control_inner_border_regression_snapshot(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Ensure adjacent selected segments keep their inner border visible."""
+    button_group = get_button_group(
+        themed_app, "segmented_control_adjacent_selected_border_multi"
+    )
+    button_group.scroll_into_view_if_needed()
+
+    expect_markdown(
+        themed_app,
+        "Adjacent selected border multi selection: ['North', 'East']",
+    )
+
+    assert_snapshot(
+        button_group,
+        name="st_segmented_control-adjacent_selected_inner_border",
+    )
 
 
 def test_click_single_icon_segment_and_take_snapshot(
@@ -308,3 +422,142 @@ def test_dynamic_segmented_control_props(
     # Selection should be PRESERVED since "mango" is in both option sets
     # If this was reset, it would show "apple" (initial default), not "mango"
     expect_prefixed_markdown(app, "Initial segmented control value:", "mango")
+
+
+# --- Query parameter binding tests ---
+
+
+def test_segmented_control_query_param_seeding_single(page: Page, app_base_url: str):
+    """Test that single-select segmented control can be seeded from URL."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc": "dog"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc: dog")
+    expect(page).to_have_url(re.compile(r"\?bound_sc=dog"))
+
+
+def test_segmented_control_query_param_updates_url(app: Page):
+    """Test that selecting a segment updates the URL."""
+    bound_group = get_element_by_key(app, "bound_sc")
+    get_segment_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_sc: cat")
+    expect(app).to_have_url(re.compile(r"\?bound_sc=cat"))
+
+    # Deselect (toggle off) clears URL param
+    get_segment_button(bound_group, "cat").click()
+    wait_for_app_run(app)
+
+    expect_text(app, "bound_sc: None")
+    expect(app).not_to_have_url(re.compile(r"bound_sc="))
+
+
+def test_segmented_control_query_param_edge_cases(page: Page, app_base_url: str):
+    """Smoke test: invalid value handling for single and multi-select."""
+    # Single-select: invalid URL reverts to default (None when no default)
+    page.goto(build_app_url(app_base_url, query={"bound_sc": "Invalid"}))
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_sc: None")
+    expect(page).not_to_have_url(re.compile(r"bound_sc="))
+
+    # Multi-select: partial invalid values filtered, valid ones kept
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_sc_multi": ["Red", "Invalid", "Blue"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_sc_multi: ['Red', 'Blue']")
+    expect(page).to_have_url(re.compile(r"bound_sc_multi=Red&bound_sc_multi=Blue"))
+    expect(page).not_to_have_url(re.compile(r"Invalid"))
+
+    # Multi-select: all-invalid clears to empty list
+    page.goto(
+        build_app_url(
+            app_base_url,
+            query={"bound_sc_multi": ["Invalid1", "Invalid2"]},
+        )
+    )
+    wait_for_app_loaded(page)
+    expect_text(page, "bound_sc_multi: []")
+    expect(page).not_to_have_url(re.compile(r"bound_sc_multi="))
+
+
+def test_segmented_control_query_param_default_override(page: Page, app_base_url: str):
+    """Test that URL overrides default, and reverting to default clears URL param."""
+    page.goto(build_app_url(app_base_url, query={"bound_sc_default": "Blue"}))
+    wait_for_app_loaded(page)
+
+    expect_text(page, "bound_sc_default: Blue")
+    expect(page).to_have_url(re.compile(r"bound_sc_default=Blue"))
+
+    bound_group = get_element_by_key(page, "bound_sc_default")
+    get_segment_button(bound_group, "Red").click()
+    wait_for_app_run(page)
+
+    expect_text(page, "bound_sc_default: Red")
+    expect(page).not_to_have_url(re.compile(r"bound_sc_default="))
+
+
+# --- Required parameter tests ---
+
+
+def test_required_segmented_control_behavior(app: Page):
+    """Test required parameter behavior: deselection prevention, selection changes, and not-required baseline.
+
+    Tests three scenarios in one aggregated test to reduce browser loads:
+    1. required=True with default: prevents deselection but allows selection changes
+    2. required=True without default: allows initial selection, then prevents deselection
+    3. required=False (baseline): allows deselection
+    """
+    # --- Scenario 1: required=True with default ---
+    required_sc = get_element_by_key(app, "sc_required_with_default")
+
+    # Initial state: "Mode A" is selected (from default)
+    expect_text(app, "required_sc_with_default: Mode A")
+
+    # Click on the selected option to try to deselect it - should be prevented
+    get_segment_button(required_sc, "Mode A").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_with_default: Mode A")
+
+    # Click on a different option - changing selection should work
+    get_segment_button(required_sc, "Mode B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_with_default: Mode B")
+
+    # Try to deselect "Mode B" by clicking it again - should be prevented
+    get_segment_button(required_sc, "Mode B").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_with_default: Mode B")
+
+    # --- Scenario 2: required=True without default ---
+    required_sc_no_default = get_element_by_key(app, "sc_required_without_default")
+
+    # Initial state: no selection (None)
+    expect_text(app, "required_sc_without_default: None")
+
+    # Click to select an option
+    get_segment_button(required_sc_no_default, "View").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_without_default: View")
+
+    # Try to deselect by clicking again - should be prevented
+    get_segment_button(required_sc_no_default, "View").click()
+    wait_for_app_run(app)
+    expect_text(app, "required_sc_without_default: View")
+
+    # --- Scenario 3: required=False allows deselection ---
+    not_required_sc = get_element_by_key(app, "sc_not_required")
+
+    # Initial state: "Item 1" is selected (from default)
+    expect_text(app, "not_required_sc: Item 1")
+
+    # Click on the selected option to deselect it
+    get_segment_button(not_required_sc, "Item 1").click()
+    wait_for_app_run(app)
+
+    # Value should be None - deselection is allowed
+    expect_text(app, "not_required_sc: None")

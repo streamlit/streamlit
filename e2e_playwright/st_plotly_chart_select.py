@@ -167,3 +167,46 @@ if len(event_data["selection"]["points"]) > 0:
     st.write(f"Selected points: {len(filtered_df)}")
 else:
     st.write("Nothing is selected")
+
+
+# Treemap chart for hierarchical selection
+st.header("Treemap with Selection")
+df_gapminder = px.data.gapminder().query("year == 2007")
+fig_treemap = px.treemap(
+    df_gapminder, path=["continent", "country"], values="pop", title="World Population"
+)
+event_treemap = st.plotly_chart(
+    fig_treemap, on_select="rerun", key="treemap_chart", selection_mode="points"
+)
+if (
+    event_treemap and len(event_treemap.selection.get("points", [])) > 0  # type: ignore
+):
+    st.write("Treemap selection:")
+    point = event_treemap.selection["points"][0]  # type: ignore
+    st.write(f"Selected: {point.get('label', 'N/A')}")
+    st.write(f"ID: {point.get('id', 'N/A')}")
+    st.write(f"Parent: {point.get('parent', 'N/A')}")
+else:
+    st.write("No treemap selection")
+
+
+# Sunburst chart for hierarchical selection
+st.header("Sunburst with Selection")
+fig_sunburst = px.sunburst(
+    df_gapminder,
+    path=["continent", "country"],
+    values="pop",
+    title="World Population Sunburst",
+)
+event_sunburst = st.plotly_chart(
+    fig_sunburst, on_select="rerun", key="sunburst_chart", selection_mode="points"
+)
+if (
+    event_sunburst and len(event_sunburst.selection.get("points", [])) > 0  # type: ignore
+):
+    st.write("Sunburst selection:")
+    point = event_sunburst.selection["points"][0]  # type: ignore
+    st.write(f"Selected: {point.get('label', 'N/A')}")
+    st.write(f"ID: {point.get('id', 'N/A')}")
+else:
+    st.write("No sunburst selection")

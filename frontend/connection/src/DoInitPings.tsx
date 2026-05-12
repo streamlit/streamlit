@@ -107,6 +107,7 @@ export function doInitPings(
       return
     }
     // Use globalThis to ensure timers can be cleared even if window is undefined later
+    // eslint-disable-next-line no-restricted-properties -- Ping retry scheduler requires a raw timer outside React.
     timeout = globalThis.setTimeout(retryImmediately, retryTimeout)
   }
 
@@ -143,8 +144,7 @@ If you are trying to access a Streamlit app running on another server, this coul
     if (url) {
       try {
         source = new URL(url).pathname
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (e) {
+      } catch {
         LOG.error(`unrecognized url: ${url}`)
       }
     }

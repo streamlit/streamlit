@@ -38,6 +38,7 @@ from streamlit.errors import (
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
 from streamlit.runtime.state.session_state import (
@@ -46,6 +47,7 @@ from streamlit.runtime.state.session_state import (
     Value,
     WStates,
     _is_stale_widget,
+    _sanitize_url_array,
 )
 from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
@@ -71,6 +73,8 @@ def _create_test_widget_metadata(
     deserializer=None,
     serializer=None,
     formatted_options: list[str] | None = None,
+    clearable: bool = False,
+    max_array_length: int | None = None,
 ) -> WidgetMetadata:
     """Helper to create widget metadata for query param binding tests."""
     return WidgetMetadata(
@@ -80,6 +84,8 @@ def _create_test_widget_metadata(
         value_type=value_type,
         bind="query-params",
         formatted_options=formatted_options,
+        clearable=clearable,
+        max_array_length=max_array_length,
     )
 
 
@@ -808,7 +814,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = {"widget_id"}
+        mock_ctx.widget_ids_this_run = ThreadSafeSet()
+        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -823,7 +830,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
-        mock_ctx.form_ids_this_run = {"form_id"}
+        mock_ctx.form_ids_this_run = ThreadSafeSet()
+        mock_ctx.form_ids_this_run.check_and_add("form_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -848,7 +856,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_reset_state_value_allows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = {"widget_id"}
+        mock_ctx.widget_ids_this_run = ThreadSafeSet()
+        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -878,7 +887,11 @@ class SessionStateMethodTests(unittest.TestCase):
         self.session_state._new_widget_state.set_from_value("foo", "bar")
         assert not self.session_state._widget_changed("foo")
 
-    def test_remove_stale_widgets(self):
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MagicMock(fragment_ids_this_run=None),
+    )
+    def test_remove_stale_widgets(self, mock_ctx: MagicMock):
         existing_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-existing_widget"
         generated_widget_key = f"{GENERATED_ELEMENT_ID_PREFIX}-removed_widget"
 
@@ -1454,6 +1467,7 @@ class MockScriptRunCtx:
     """Mock script run context for testing."""
 
     active_script_hash: str = "main_hash"
+    fragment_ids_this_run: list[str] | None = None
 
 
 class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
@@ -1567,6 +1581,628 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert self.session_state._new_session_state["my_widget"] == "url_value"
 
 
+class RegisterWidgetQueryParamProgrammaticSyncTest(DeltaGeneratorTestCase):
+    """Programmatic session_state updates sync bound widgets to the URL."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def _page_info_msg_count(self) -> int:
+        return sum(
+            1 for m in self.forward_msg_queue._queue if m.HasField("page_info_changed")
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_syncs_query_params_and_forward_msg(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.session_state._new_session_state["my_widget"] = "arbitrary value"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self.query_params.get("my_widget") == "arbitrary value"
+        assert self._page_info_msg_count() == 1
+        msg = self.get_message_from_queue(-1)
+        assert "my_widget=arbitrary+value" in msg.page_info_changed.query_string
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_reset_to_default_sends_forward_msg(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("my_widget", "stale")
+        self.session_state._new_session_state["my_widget"] = "default"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+        assert self._page_info_msg_count() == 1
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_skips_forward_msg_when_url_already_matches(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("my_widget", "same")
+        self.session_state._new_session_state["my_widget"] = "same"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_ui_driven_value_does_not_trigger_programmatic_url_sync(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.session_state._new_widget_state.set_from_value(widget_id, "from_ui")
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_float_scalar_matches_url_string_form(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-num"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="double_value",
+            deserializer=lambda x: float(x) if x is not None else 0.0,
+            serializer=lambda x: float(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="num")
+        self.session_state._compact_state()
+        # Scalar double_value uses str() in set_corrected_value, not whole-number collapse.
+        self.query_params.set_with_no_forward_msg("num", "5.0")
+        self.session_state._new_session_state["num"] = 5.0
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="num")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_bool_coercion_matches_url(self, mock_ctx: MagicMock) -> None:
+        widget_id = "$$ID-hash-bool"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            serializer=lambda x: bool(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="flag")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("flag", "true")
+        self.session_state._new_session_state["flag"] = True
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="flag")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_string_array_coercion_matches_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-arr"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: list(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="arr")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("arr", ["a", "b"])
+        self.session_state._new_session_state["arr"] = ["a", "b"]
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="arr")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_initial_load_preseeding_does_not_sync_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Session state pre-seeded before first register must not push to URL.
+
+        The widget_id is absent from _old_state (never compacted), so
+        the programmatic-sync branch must not fire on first render.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state._new_session_state["my_widget"] = "preseed_value"
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_url_seeded_initial_load_does_not_trigger_programmatic_sync(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """URL-seeded initial load must not emit a redundant page_info_changed.
+
+        _seed_widget_from_url writes the URL value into _new_session_state,
+        so the not url_value_seeded guard in Branch 1b is the only protection.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("my_widget=url_value")
+        self.clear_queue()
+
+        with patch.object(self.query_params, "set_corrected_value") as mock_set:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set.assert_not_called()
+
+        assert self._page_info_msg_count() == 0
+
+
+class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
+    """Tests for register_widget cleaning up stale bindings when bind is removed."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_unbinds_when_bind_removed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that re-registering a widget without bind clears the stale binding."""
+        widget_id = "$$ID-hash-my_widget"
+
+        # Simulate first run with bind="query-params"
+        bound_metadata = _create_test_widget_metadata(widget_id)
+        self.session_state.register_widget(bound_metadata, user_key="my_widget")
+
+        self.query_params.set_with_no_forward_msg("my_widget", "42")
+        assert self.query_params.is_bound("my_widget")
+
+        # Simulate second run with bind=None (developer removed bind)
+        unbound_metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+        self.session_state.register_widget(unbound_metadata, user_key="my_widget")
+
+        assert not self.query_params.is_bound("my_widget")
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_register_widget_without_bind_is_noop_when_never_bound(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Test that registering a widget that was never bound does nothing extra."""
+        widget_id = "$$ID-hash-plain"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="plain")
+
+        assert not self.query_params.is_bound("plain")
+        assert len(self.query_params._bindings_by_widget) == 0
+
+
+class RemoveStaleWidgetsPreservationTest(DeltaGeneratorTestCase):
+    """Tests for preserving bound values during stale-widget cleanup."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_preserves_bound_widget_value_when_metadata_and_binding_are_gone(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Preserve stale bound keyed values in realistic MPA cleanup order."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Run 1 on source page: bind and set a non-default value.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+
+        # Compaction stores under widget_id in _old_state and clears _new_widget_state.
+        self.session_state._compact_state()
+        assert widget_id in self.session_state._old_state
+        assert "my_widget" not in self.session_state._old_state
+        # On page transitions, current-run metadata may not contain stale widgets.
+        self.session_state._new_widget_state.widget_metadata.clear()
+        assert widget_id not in self.session_state._new_widget_state.widget_metadata
+
+        # MPA filtering unbinds stale page widgets before stale cleanup runs.
+        self.query_params.unbind_widget(widget_id)
+        assert self.query_params.get_binding_for_widget(widget_id) is None
+
+        # Cleanup should still preserve value under user key.
+        self.session_state._remove_stale_widgets(set())
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_does_not_preserve_unbound_widget_value(self, mock_ctx: MagicMock) -> None:
+        """Unbound stale keyed widgets should not preserve user-key value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        assert widget_id not in self.session_state._old_state
+        assert "my_widget" not in self.session_state._old_state
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_preserves_current_value_from_new_widget_state(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When _old_state has a stale value but _new_widget_state has the current
+        value (from user interaction after compaction), preservation should capture
+        the more recent _new_widget_state value, not the stale _old_state value."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Run 1: register with default.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        # Compact (stores default in _old_state).
+        self.session_state._compact_state()
+        assert self.session_state._old_state[widget_id] == "default"
+
+        # User interaction updates _new_widget_state (simulates set_widgets_from_proto).
+        self.session_state._new_widget_state.set_from_value(widget_id, "user_value")
+        self.session_state._set_widget_metadata(metadata)
+
+        # Stale cleanup (MPA page change) — _old_state has "default" but
+        # _new_widget_state has "user_value". Preservation should capture
+        # "user_value".
+        self.session_state._remove_stale_widgets(set())
+
+        assert widget_id not in self.session_state._old_state
+        assert self.session_state._old_state["my_widget"] == "user_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_prunes_unmapped_bound_widget_ids(self, mock_ctx: MagicMock) -> None:
+        """Stale bound-intent IDs without a key mapping are pruned."""
+        kept_widget_id = "$$ID-hash-kept"
+        stale_widget_id = "$$ID-hash-stale"
+        self.session_state._set_key_widget_mapping(kept_widget_id, "kept")
+        self.session_state._query_param_bound_widget_ids.update(
+            {kept_widget_id, stale_widget_id}
+        )
+
+        self.session_state._remove_stale_widgets(set())
+
+        assert self.session_state._query_param_bound_widget_ids == {kept_widget_id}
+
+
+class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
+    """Tests for URL sync in register_widget for bound widgets."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def _setup_remount_state(self, value: str = "custom_value") -> WidgetMetadata:
+        """Create remount state where value persists but URL param is missing."""
+        self.session_state._old_state["my_widget"] = value
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        return _create_test_widget_metadata("$$ID-hash-my_widget")
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_syncs_persisted_value_to_url_when_param_missing(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Remount with persisted non-default value restores missing URL param."""
+        metadata = self._setup_remount_state("custom_value")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self.query_params._query_params["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_when_param_already_present(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Skip redundant URL writes when param already exists."""
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+        metadata = self._setup_remount_state("custom_value")
+
+        with patch.object(
+            self.query_params, "set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_not_called()
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_for_default_value(self, mock_ctx: MagicMock) -> None:
+        """Default value should remain collapsed from URL."""
+        metadata = self._setup_remount_state("default")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_removes_stale_param_when_value_is_default(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Stale URL param for a default-valued widget is cleaned up.
+
+        The backend's _query_params is not updated on same-page reruns, so it
+        can hold entries the frontend already cleared.  register_widget must
+        remove these to prevent _send_query_param_msg from re-broadcasting
+        stale params when another widget's sync fires.
+        """
+        self.query_params.set_with_no_forward_msg("my_widget", "old_non_default")
+        metadata = self._setup_remount_state("default")
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_syncs_url_when_session_state_set(self, mock_ctx: MagicMock) -> None:
+        """Programmatic st.session_state set this run syncs to URL."""
+        metadata = self._setup_remount_state("old_value")
+        self.session_state._new_session_state["my_widget"] = "programmatic_value"
+
+        with patch.object(
+            self.query_params, "set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_called_once_with(
+                "my_widget", "programmatic_value", "string_value"
+            )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_skips_url_sync_for_compacted_programmatic_set(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Value from a previous programmatic set (compacted under widget ID only)
+        should not sync to URL.  Only values preserved under user keys by
+        _remove_stale_widgets trigger URL restore."""
+        widget_id = "$$ID-hash-my_widget"
+        self.session_state._old_state[widget_id] = "programmatic_value"
+        self.session_state._set_key_widget_mapping(widget_id, "my_widget")
+        metadata = _create_test_widget_metadata(widget_id)
+
+        with patch.object(
+            self.query_params, "set_corrected_value"
+        ) as mock_set_corrected:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set_corrected.assert_not_called()
+
+        assert "my_widget" not in self.query_params._query_params
+
+
+class RegisterWidgetValueChangedTest(DeltaGeneratorTestCase):
+    """Tests for widget_value_changed when bound values are restored."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_true_when_bound_value_restored(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """When a preserved bound value is restored to URL, value_changed
+        should be True so the frontend proto carries the correct value."""
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is True
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_value_changed_false_when_no_restore_needed(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """On normal same-page rerun with param already present, value_changed
+        should be False (no restore needed)."""
+        self.session_state._old_state["my_widget"] = "custom_value"
+        self.session_state._set_key_widget_mapping("$$ID-hash-my_widget", "my_widget")
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+        metadata = _create_test_widget_metadata("$$ID-hash-my_widget")
+
+        result = self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert result.value == "custom_value"
+        assert result.value_changed is False
+
+
+class ConditionalRemountBoundBehaviorTest(DeltaGeneratorTestCase):
+    """Tests conditional remount behavior for bound vs unbound widgets."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_bound_conditional_remount_restores_value_and_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Bound remount restores persisted value and re-syncs URL."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+
+        # Initial mount and user-set value.
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+        self.query_params.set_with_no_forward_msg("my_widget", "custom_value")
+
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        assert "my_widget" in self.session_state._old_state
+        assert "my_widget" not in self.query_params._query_params
+
+        remounted = self.session_state.register_widget(metadata, user_key="my_widget")
+        assert remounted.value == "custom_value"
+        assert self.query_params._query_params["my_widget"] == "custom_value"
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_unbound_conditional_remount_still_resets(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Unbound remount behavior remains reset to default."""
+        widget_id = "$$ID-hash-my_widget"
+        metadata = WidgetMetadata(
+            id=widget_id,
+            deserializer=lambda x: x if x is not None else "default",
+            serializer=lambda x: x,
+            value_type="string_value",
+            bind=None,
+        )
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._new_widget_state.set_from_value(widget_id, "custom_value")
+
+        self.session_state._compact_state()
+        self.session_state._remove_stale_widgets(set())
+
+        assert "my_widget" not in self.session_state._old_state
+
+        remounted = self.session_state.register_widget(metadata, user_key="my_widget")
+        assert remounted.value == "default"
+        assert "my_widget" not in self.query_params._query_params
+
+
 class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
     """Tests for _seed_widget_from_url method."""
 
@@ -1629,6 +2265,48 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
         assert seeded is False
         assert "my_bool" not in self.query_params._query_params
 
+    def test_seed_widget_clears_invalid_value_that_falls_back_to_default(self) -> None:
+        """Test that invalid URL values are cleared when deserializer falls back."""
+        self.query_params._query_params["color"] = "invalid"
+
+        def color_deserializer(value):
+            default = "#000000"
+            if value is None:
+                return default
+            return value if value.startswith("#") else default
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_value",
+            deserializer=color_deserializer,
+            serializer=lambda x: x,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "color", "widget_1", "invalid"
+        )
+
+        assert seeded is False
+        assert "color" not in self.query_params._query_params
+
+    def test_seed_widget_clears_valid_value_that_equals_default(self) -> None:
+        """Test that valid URL values matching the default are cleared from the URL."""
+        self.query_params._query_params["my_bool"] = "false"
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            serializer=bool,
+        )
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "my_bool", "widget_1", "false"
+        )
+
+        assert seeded is False
+        assert "my_bool" not in self.query_params._query_params
+
     def test_seed_widget_clears_when_all_options_filtered(self) -> None:
         """Test that URL is cleared when all options are invalid."""
         self.query_params._query_params["tags"] = ["InvalidA", "InvalidB"]
@@ -1654,6 +2332,411 @@ class SeedWidgetFromUrlTest(DeltaGeneratorTestCase):
 
         assert seeded is False
         assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_url_and_clearable_true(self) -> None:
+        """Test that empty URL values matching the default are cleared, even for clearable widgets."""
+        self.query_params._query_params["tags"] = ""
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            clearable=True,
+        )
+
+        # Empty string from URL (e.g., ?tags=) — default is also [], so param is cleared
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ""
+        )
+
+        assert seeded is False
+        assert "tags" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_url_and_clearable_true_non_empty_default(
+        self,
+    ) -> None:
+        """Test that empty URL seeds widget when clearable=True and default is non-empty."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else ["Python"],
+            clearable=True,
+        )
+
+        # Empty string from URL (e.g., ?tags=) — default is ["Python"], so [] differs
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ""
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == []
+
+    def test_seed_widget_with_empty_url_and_clearable_false(self) -> None:
+        """Test that empty URL values are ignored and cleared when clearable=False."""
+        # First, set the URL param so we can verify it gets cleared
+        self.query_params._query_params["toggle"] = ""
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            clearable=False,
+        )
+
+        # Empty string from URL (e.g., ?toggle=)
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "toggle", "widget_1", ""
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        # URL param should be cleared (not left as stale ?toggle=)
+        assert "toggle" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_list_and_clearable_true(self) -> None:
+        """Test that empty list [''] matching the default is cleared, even for clearable widgets."""
+        self.query_params._query_params["items"] = [""]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="int_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            clearable=True,
+        )
+
+        # Empty list from URL parsing (e.g., ?items=) — default is also [], so param is cleared
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "items", "widget_1", [""]
+        )
+
+        assert seeded is False
+        assert "items" not in self.query_params._query_params
+
+    def test_seed_widget_with_empty_list_and_clearable_false(self) -> None:
+        """Test that empty list [''] is ignored and cleared when clearable=False."""
+        # First, set the URL param so we can verify it gets cleared
+        self.query_params._query_params["range"] = [""]
+
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="double_array_value",
+            deserializer=lambda x: x if x is not None else [0.0, 100.0],
+            clearable=False,
+        )
+
+        # Empty list from URL parsing (e.g., ?range=)
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "range", "widget_1", [""]
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        # URL param should be cleared (not left as stale ?range=)
+        assert "range" not in self.query_params._query_params
+
+    def test_formatted_options_rejects_invalid_option(self) -> None:
+        """Test that invalid option is rejected when formatted_options is set."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            formatted_options=["Small", "Medium", "Large"],
+        )
+        self.query_params._query_params["size"] = "Random"
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "size", "widget_1", "Random"
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "size" not in self.query_params._query_params
+
+    def test_formatted_options_accepts_valid_option(self) -> None:
+        """Test that valid option is accepted when formatted_options is set."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            formatted_options=["Small", "Medium", "Large"],
+        )
+        self.query_params._query_params["size"] = "Medium"
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "size", "widget_1", "Medium"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == "Medium"
+
+    def test_no_formatted_options_accepts_any_string(self) -> None:
+        """Test that any string is accepted when formatted_options is None.
+
+        This is the behavior for widgets like text_input, or selectbox
+        with accept_new_options=True.
+        """
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            formatted_options=None,
+        )
+        self.query_params._query_params["text"] = "anything"
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "text", "widget_1", "anything"
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == "anything"
+
+    def test_no_formatted_options_accepts_novel_array_values(self) -> None:
+        """Test that novel values pass through for string_array_value when
+        formatted_options is None (e.g. multiselect with accept_new_options)."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=None,
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["tags"] = ["Red", "NewTag", "AnotherNew"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["Red", "NewTag", "AnotherNew"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == [
+            "Red",
+            "NewTag",
+            "AnotherNew",
+        ]
+
+    def test_no_formatted_options_still_deduplicates_array_values(self) -> None:
+        """Test that deduplication applies even when formatted_options is None."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=None,
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["tags"] = ["NewTag", "Red", "NewTag"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "tags", "widget_1", ["NewTag", "Red", "NewTag"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["NewTag", "Red"]
+
+    def test_formatted_options_filters_invalid_array_values(self) -> None:
+        """Test that invalid values are filtered from string_array_value URL params."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            # Deserializer returns the list as-is (valid values pass through)
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Invalid", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Invalid", "Blue"]
+        )
+
+        assert seeded is True
+        # Only valid values should be stored
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_formatted_options_clears_all_invalid_array_values(self) -> None:
+        """Test that all-invalid array URL values clear the URL param."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Invalid1", "Invalid2"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Invalid1", "Invalid2"]
+        )
+
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "colors" not in self.query_params._query_params
+
+    def test_formatted_options_accepts_all_valid_array_values(self) -> None:
+        """Test that all-valid array URL values pass through without filtering."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_max_array_length_truncates_excess_values(self) -> None:
+        """Test that arrays exceeding max_array_length are truncated."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+            max_array_length=2,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Green", "Blue", "Yellow"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Green", "Blue", "Yellow"]
+        )
+
+        assert seeded is True
+        # Only the first 2 values should be kept
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Green"]
+
+    def test_max_array_length_no_truncation_when_within_limit(self) -> None:
+        """Test that arrays within max_array_length are not truncated."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+            max_array_length=3,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_max_array_length_with_filtering_and_truncation(self) -> None:
+        """Test that filtering and truncation compose: filter first, then truncate."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue", "Yellow"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+            max_array_length=2,
+        )
+        # 5 URL values: 2 invalid + 3 valid = after filtering 3, truncate to 2
+        self.query_params._query_params["colors"] = [
+            "Red",
+            "Invalid1",
+            "Green",
+            "Invalid2",
+            "Blue",
+        ]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata,
+            "colors",
+            "widget_1",
+            ["Red", "Invalid1", "Green", "Invalid2", "Blue"],
+        )
+
+        assert seeded is True
+        # After filtering: ["Red", "Green", "Blue"], then truncated to 2
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Green"]
+
+    def test_max_array_length_truncation_clears_when_equals_default(self) -> None:
+        """Test that truncated value matching default clears the URL param."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            # Default is ["Red"] — truncation to 1 should match default
+            deserializer=lambda x: x if x is not None else ["Red"],
+            serializer=lambda x: x,
+            max_array_length=1,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue"]
+        )
+
+        # Truncated to ["Red"] which equals default — should clear
+        assert seeded is False
+        assert "widget_1" not in self.session_state._new_widget_state
+        assert "colors" not in self.query_params._query_params
+
+    def test_duplicate_array_values_deduplicated(self) -> None:
+        """Test that duplicate URL values are deduplicated, preserving order."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Blue", "Red"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Blue", "Red"]
+        )
+
+        assert seeded is True
+        # Duplicate "Red" should be removed, keeping first occurrence
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Blue"]
+
+    def test_duplicate_array_values_with_filtering_and_truncation(self) -> None:
+        """Test that dedup composes with filtering and truncation."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+            max_array_length=2,
+        )
+        # After filter: ["Red", "Green", "Red", "Blue"] (Invalid removed)
+        # After dedup: ["Red", "Green", "Blue"]
+        # After truncate: ["Red", "Green"]
+        self.query_params._query_params["colors"] = [
+            "Red",
+            "Invalid",
+            "Green",
+            "Red",
+            "Blue",
+        ]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata,
+            "colors",
+            "widget_1",
+            ["Red", "Invalid", "Green", "Red", "Blue"],
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red", "Green"]
+
+    def test_all_duplicate_values_collapse_to_single(self) -> None:
+        """Test that all-duplicate URL values collapse to a single value."""
+        metadata = _create_test_widget_metadata(
+            "widget_1",
+            value_type="string_array_value",
+            formatted_options=["Red", "Green", "Blue"],
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: x,
+        )
+        self.query_params._query_params["colors"] = ["Red", "Red", "Red"]
+
+        seeded = self.session_state._seed_widget_from_url(
+            metadata, "colors", "widget_1", ["Red", "Red", "Red"]
+        )
+
+        assert seeded is True
+        assert self.session_state._new_widget_state["widget_1"] == ["Red"]
 
 
 class AutoCorrectUrlTest(DeltaGeneratorTestCase):
@@ -1693,30 +2776,79 @@ class AutoCorrectUrlTest(DeltaGeneratorTestCase):
 
         assert self.query_params._query_params["my_slider"] == "50"
 
-    def test_preserve_strings_when_no_filtering_for_selection_widgets(self) -> None:
-        """Test that human-readable strings are preserved when valid."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="int_value",
-            serializer=lambda x: 0,
-            formatted_options=["Red", "Green", "Blue"],
+
+class SanitizeUrlArrayTest(unittest.TestCase):
+    """Tests for the _sanitize_url_array helper function."""
+
+    def test_deduplicates_by_default(self):
+        """By default, duplicate values are removed."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue", "Red"],
+            valid_options=None,
+            max_length=None,
         )
+        assert result == ["Red", "Blue"]
 
-        self.session_state._auto_correct_url_if_needed(metadata, "color", "Red", "Red")
+    def test_allows_duplicates_when_enabled(self):
+        """When allow_duplicates=True, duplicate values are preserved."""
 
-        assert "color" not in self.query_params._query_params
-
-    def test_use_formatted_options_when_filtering(self) -> None:
-        """Test that formatted_options are used when values are filtered."""
-        metadata = _create_test_widget_metadata(
-            "widget_1",
-            value_type="int_array_value",
-            serializer=lambda x: [0],
-            formatted_options=["Apple", "Banana", "Cherry"],
+        result = _sanitize_url_array(
+            ["Red", "Red"],
+            valid_options=None,
+            max_length=None,
+            allow_duplicates=True,
         )
+        # No changes needed, so returns None
+        assert result is None
 
-        self.session_state._auto_correct_url_if_needed(
-            metadata, "tags", ["Apple", "Invalid"], ["Apple"]
+    def test_allows_duplicates_preserves_order(self):
+        """When allow_duplicates=True, order and duplicates are preserved."""
+
+        result = _sanitize_url_array(
+            ["Blue", "Red", "Blue"],
+            valid_options=None,
+            max_length=None,
+            allow_duplicates=True,
         )
+        assert result is None
 
-        assert self.query_params._query_params["tags"] == ["Apple"]
+    def test_filters_invalid_options(self):
+        """Invalid options are filtered out."""
+
+        result = _sanitize_url_array(
+            ["Red", "Invalid", "Blue"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=None,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_truncates_to_max_length(self):
+        """Arrays exceeding max_length are truncated."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue", "Green"],
+            valid_options=None,
+            max_length=2,
+        )
+        assert result == ["Red", "Blue"]
+
+    def test_returns_none_when_no_changes(self):
+        """Returns None when no sanitization is needed."""
+
+        result = _sanitize_url_array(
+            ["Red", "Blue"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=None,
+        )
+        assert result is None
+
+    def test_combined_filter_dedup_truncate(self):
+        """All sanitization steps work together."""
+
+        result = _sanitize_url_array(
+            ["Red", "Invalid", "Blue", "Red", "Green"],
+            valid_options=["Red", "Blue", "Green"],
+            max_length=2,
+        )
+        assert result == ["Red", "Blue"]

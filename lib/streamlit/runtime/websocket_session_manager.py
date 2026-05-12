@@ -42,7 +42,10 @@ if TYPE_CHECKING:
 
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 _LOGGER: Final = get_logger(__name__)
@@ -73,11 +76,13 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         self._session_storage = session_storage
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
         self._message_enqueued_callback = message_enqueued_callback
+        self._on_script_error = on_script_error
 
         # Mapping of AppSession.id -> ActiveSessionInfo.
         self._active_session_info_by_id: dict[str, ActiveSessionInfo] = {}
@@ -100,7 +105,7 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
         existing_session_id: str | None = None,
         session_id_override: str | None = None,
     ) -> str:
-        if existing_session_id and session_id_override:
+        if existing_session_id and session_id_override:  # pragma: no cover - defensive
             raise RuntimeError(
                 "Only one of existing_session_id and session_id_override should be truthy. "
                 "This should never happen."
@@ -141,13 +146,16 @@ class WebsocketSessionManager(SessionManager, StatsProvider):
             message_enqueued_callback=self._message_enqueued_callback,
             user_info=user_info,
             session_id_override=session_id_override,
+            on_script_error=self._on_script_error,
         )
 
         _LOGGER.debug(
             "Created new session for client %s. Session ID: %s", id(client), session.id
         )
 
-        if session.id in self._active_session_info_by_id:
+        if (
+            session.id in self._active_session_info_by_id
+        ):  # pragma: no cover - defensive
             raise RuntimeError(
                 f"session.id '{session.id}' registered multiple times. "
                 "This should never happen."

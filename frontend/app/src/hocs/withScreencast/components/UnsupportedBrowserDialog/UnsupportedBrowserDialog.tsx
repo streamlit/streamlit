@@ -24,7 +24,7 @@ import {
   StyledUnsupportedScreenCastIcon,
 } from "./styled-components"
 
-export interface Props {
+interface Props {
   /** Callback to close the dialog */
   onClose: () => void
 }

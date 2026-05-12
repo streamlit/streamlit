@@ -141,3 +141,56 @@ else:
         max_chars=100,
     )
     st.write("Initial text input value:", txt_value)
+
+# Query param binding text inputs
+st.markdown("Query param binding:")
+bound_text = st.text_input(
+    "Bound no default",
+    key="bound_text",
+    bind="query-params",
+)
+st.write("bound text value:", bound_text)
+
+bound_text_default = st.text_input(
+    "Bound with default",
+    value="hello",
+    key="bound_text_default",
+    bind="query-params",
+)
+st.write("bound text default value:", bound_text_default)
+
+bound_text_max = st.text_input(
+    "Bound max chars",
+    key="bound_max",
+    bind="query-params",
+    max_chars=5,
+)
+st.write("bound text max value:", bound_text_max)
+
+# Programmatic st.session_state updates must sync the browser URL for bound widgets
+if runtime.exists():
+    st.markdown("Bound widget + session_state sync:")
+    if st.button("Set bound_text_ss via session_state", key="set_bound_text_ss_btn"):
+        st.session_state["bound_text_ss"] = "arbitrary value"
+    if st.button("Reset bound_text_ss to default", key="reset_bound_text_ss_btn"):
+        st.session_state["bound_text_ss"] = "default"
+    st.text_input(
+        "bound text session state input",
+        value="default",
+        key="bound_text_ss",
+        bind="query-params",
+    )
+    st.write("bound text ss value:", st.session_state["bound_text_ss"])
+
+# --- setValue one-shot test (element hash memo regression) ---
+if "setvalue_counter" not in st.session_state:
+    st.session_state.setvalue_counter = 0
+
+st.session_state.setvalue_counter += 1
+
+st.text_input(
+    "Programmatic value input", value="fixed_value", key="setvalue_test_input"
+)
+st.write(f"Text input counter: {st.session_state.setvalue_counter}")
+
+st.button("Trigger text input rerun")

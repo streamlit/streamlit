@@ -1,0 +1,460 @@
+---
+applyTo: "specs/**/*"
+---
+
+<!-- Generated from specs/AGENTS.md. Edit that file instead, then run: uv run python scripts/generate_agent_rules.py -->
+
+# Streamlit Specs Guide
+
+This directory contains product and tech specs for Streamlit features.
+
+Key files:
+
+- `YYYY-MM-DD-template/product-spec.md` — Template for product specs
+- `YYYY-MM-DD-template/tech-spec.md` — Template for tech specs
+- `README.md` — Full process documentation
+
+## When to Write a Spec
+
+**Product spec** — focuses on _what_ and _why_: user-facing problem, proposed API, design
+mockups, and behavior. Write one when:
+
+- Proposing a new user-facing feature or significant API change
+- The _what_ and _why_ need alignment before implementation begins
+- Design mockups or UX decisions need sign-off
+
+**Tech spec** — focuses on _how_: internal architecture, proto changes, frontend/backend
+design, state management, and alternatives considered. Write one when:
+
+- The feature is non-user-facing but architecturally significant
+- The _how_ needs alignment before implementation (e.g., proto design, state management)
+- Multiple implementation paths exist with meaningful trade-offs to document
+
+**Does not require a spec:**
+
+- Bug fixes, DevOps improvements, small non-controversial enhancements
+
+A single spec directory can contain both a `product-spec.md` and a `tech-spec.md` if the
+feature warrants both. The directory can also include other assets relevant to the spec
+(e.g., design mockups, diagrams, supporting documents).
+
+## Creating a Spec
+
+1. Copy `specs/YYYY-MM-DD-template/` → `specs/YYYY-MM-DD-feature-name/`
+2. Fill in `product-spec.md` and/or `tech-spec.md` following the template
+3. Create PR titled `[spec] Feature name` (keep in Draft until ready for review)
+
+## Spec Guidelines
+
+### Problem First, Solution Second
+
+Never start with what you want to build. Start with **why**:
+
+- Link GitHub issues
+- Show concrete user pain points and current workarounds
+- Include use cases
+
+### Present Options, Not Edicts
+
+For non-trivial APIs, show 2-3 options with tradeoffs:
+
+```markdown
+**Option 1: New parameter** ✅ PREFERRED
+- Pros: Clear, explicit
+- Cons: New param on every widget
+
+**Option 2: Extend existing parameter**
+- Pros: No new params
+- Cons: Overloads existing meaning
+```
+
+### Start Minimal, Document Out-of-Scope
+
+Ship the smallest useful API. Explicitly list what you're NOT including:
+
+```markdown
+## Out of Scope (Future Work)
+- `sparkline_type` parameter — can add later based on user feedback
+- Clickable cards — only 3 upvotes, revisit if demand grows
+```
+
+### Show Code, Not Just Words
+
+Every API needs concrete examples showing simplest usage first, then progressive complexity.
+
+### Keep It Concise
+
+Specs should cover the most important aspects without redundancy. Avoid repeating the same
+information in multiple sections. If something is explained once, reference it rather than
+restating it. Reviewers' time is valuable—make every sentence count.
+
+## Reference Existing Specs
+
+**Always review existing specs before writing a new one.** Study specs in `specs/` to match
+the established style and structure.
+
+---
+
+# Principles of Streamlit API Design
+
+These principles guide the design of Streamlit's public API. Follow them when proposing
+new features or modifying existing commands.
+
+## 1. Simplicity First
+
+The most common use case should require the fewest arguments. A user should be able to
+call `st.button("Click")` and have it work beautifully without reading documentation.
+
+## 2. Progressive Disclosure
+
+Start with what's essential, reveal complexity only when needed. Parameters flow from
+required to common to advanced, with the `*` separator marking the boundary to
+keyword-only arguments.
+
+## 3. Sensible Defaults
+
+Every optional parameter should have a default that works for 80% of use cases. Users
+shouldn't need to specify `disabled=False` or `width="stretch"` explicitly.
+
+## 4. Start Minimal, Ship Fast
+
+Launch with the smallest useful API. You can always add `sparkline_type="bar"` later,
+but you can never remove it. Every parameter is a maintenance burden. When in doubt,
+leave it out—user feedback will tell you what's actually needed.
+
+## 5. Consistency Over Novelty
+
+Similar elements should have similar APIs. Once a user learns `st.selectbox`, they
+should intuitively understand `st.radio` and `st.multiselect`. Resist the urge to
+innovate on parameter names or orders.
+
+## 6. Explicit Over Implicit
+
+Use clear, descriptive parameter names. Prefer `selection_mode="multi-row"` over a
+cryptic `multi=True`. Use `Literal` types to enumerate valid options rather than
+accepting arbitrary strings.
+
+## 7. Standardized Vocabulary
+
+Use consistent parameter names across the API:
+
+- `label` (not `title`)
+- `key` (not `id`)
+- `help` (not `tooltip`)
+- `on_change` (not `callback`)
+
+This vocabulary is sacred.
+
+## 8. Semantic Names Over Geeky Names
+
+Names should be understood by typical English speakers, not just developers. Prefer
+human-readable terms over technical jargon.
+
+```python
+# Good: Semantic, obvious
+st.title("Welcome")
+st.sidebar
+st.columns(3)
+
+# Bad: Geeky, requires HTML knowledge
+st.h1("Welcome")
+st.aside
+st.grid(cols=3)
+```
+
+## 9. Match User Expectations
+
+If `st.file_uploader` has `accept_multiple_files`, then `st.selectbox` should have
+`accept_new_options`, not `allow_custom` or `creatable`. Users learn patterns, and new
+features should leverage (not fight) that learning.
+
+## 10. Same Name, Same Behavior
+
+When a parameter name appears in multiple commands, it must behave identically. If
+`help` shows a tooltip in `st.button`, it must show a tooltip in `st.selectbox`. If
+`disabled` accepts a boolean in one widget, every other `disabled` parameter should
+also accept a boolean with the same semantics. Users shouldn't need to re-learn
+parameters per command.
+
+```python
+# These should all work the same way
+st.button("Go", help="Click me", disabled=False)
+st.selectbox("Pick", options, help="Pick one", disabled=False)
+st.text_input("Name", help="Enter name", disabled=False)
+```
+
+## 11. Patterns Are Sacred
+
+When a pattern exists, follow it religiously. If callbacks use `on_change`, `args`,
+`kwargs` everywhere, don't introduce `callback`, `callback_args` in a new widget. If
+containers use `border=True`, don't use `show_border=True`. Pattern violations create
+cognitive load that compounds across the API.
+
+## 12. Type Safety Without Burden
+
+Provide precise type annotations that enable IDE autocompletion and catch errors early.
+Use `@overload` to narrow return types based on input, but never sacrifice usability for
+type purity.
+
+## 13. Predictable Return Types
+
+Users should know what to expect: display elements return `DeltaGenerator` (for
+chaining), widgets return their value type, and control flow commands use `NoReturn`.
+
+## 14. Type Preservation
+
+Generic types flow through the API. When a user passes `options=["a", "b", "c"]` to
+`st.selectbox`, the return type is `str`. When they pass a list of custom objects, they
+get their object type back. The type system should help, not hinder.
+
+## 15. Default Null Over Default Error
+
+When a value can't be determined, return `None` rather than raising an exception.
+`st.context.ip_address` returns `None` behind a proxy rather than failing. This lets
+users write `if st.context.ip_address:` rather than wrapping everything in try/except.
+
+## 16. Prefer Enums Over Booleans
+
+Booleans limit future expansion. Use `Literal` types (string enums) for any parameter
+that might grow beyond two states. A boolean locks you into adding more booleans; an
+enum extends gracefully.
+
+```python
+# Bad: Boolean limits expansion
+st.text_input("Password", password=True)
+# What if we want "email" type later? Another boolean?
+
+# Good: Enum allows expansion
+st.text_input("Password", type="password")
+st.text_input("Email", type="email")  # Easy to add later
+st.text_input("Phone", type="tel")    # And again
+```
+
+Exception: `disabled=True/False` is fine because there will never be a third state.
+
+## 17. Positional Arguments Are Precious
+
+Only the 1-3 most essential parameters should be usable positionally. Everything else
+goes after the `*` separator as keyword-only. Positional slots are limited; once taken,
+they can never change order. Reserve them for `label`, `body`, `options`—not `disabled`
+or `icon`.
+
+```python
+def selectbox(
+    self,
+    label: str,           # Positional OK - essential
+    options: Sequence,    # Positional OK - essential
+    index: int = 0,       # Positional OK - very common
+    *,                    # KEYWORD-ONLY BELOW
+    format_func: ...,     # Keyword-only - less common
+    key: ...,             # Keyword-only - advanced
+    help: ...,            # Keyword-only - optional enhancement
+    disabled: ...,        # Keyword-only - edge case
+) -> T:
+```
+
+## 18. Extend Before Inventing
+
+Prefer adding parameters to existing commands over creating new ones. Adding `sparkline`
+to `st.metric` is better than a new `st.metric_with_sparkline`. Adding
+`accept_new_options` to `st.selectbox` is better than `st.creatable_selectbox`.
+Extension preserves user mental models.
+
+## 19. Design for Composition
+
+Features should work together naturally. `st.badge` doesn't need a `multiple` parameter
+because `st.container(horizontal=True)` handles layout. Don't duplicate functionality
+across commands—let users compose primitives.
+
+## 20. One Use Case, One Command
+
+Each command should serve a specific, well-defined use case. If you're trying to cover
+two distinct use cases, you probably need two commands. `st.tabs` is for paginating
+content within a page, not for navigation—that's what `st.navigation` is for.
+
+## 21. Flat Namespace, Rare Submodules
+
+Keep most commands in the flat `st.*` namespace—it's what makes Streamlit feel easy.
+Only use submodules for:
+
+- Extension APIs developers won't use directly (`st.components.v1`)
+- Peripheral APIs used around apps, not in them (`st.testing.v1`)
+- Large groups (10+) of specialized commands (`st.column_config`)
+
+## 22. User-Focused Documentation
+
+Docstrings are for users, not implementers. Document what each parameter does and when
+to use it, not how it's implemented internally. Every `Literal` value deserves its own
+bullet point explanation.
+
+## 23. Fail Fast, Fail Helpfully
+
+Validate parameters immediately and raise clear, actionable exceptions. Users should
+never see cryptic errors or silent failures. Error messages should explain what went
+wrong AND how to fix it.
+
+## 24. Leverage Markdown Everywhere
+
+Wherever text is displayed, support Streamlit's markdown rendering. Labels, help
+tooltips, captions, and body text should all accept markdown syntax including bold,
+italics, links, code, emoji, and Material icons. This gives users rich formatting
+without separate styling APIs.
+
+```python
+# Users get formatting for free
+st.button("**Submit** :material/send:", help="Click to *submit* your data")
+st.metric(label="Revenue :material/trending_up:", value="$1.2M")
+```
+
+## 25. Graceful Evolution
+
+APIs age; deprecate thoughtfully. Provide 3+ months warning, clear migration paths, and
+helpful error messages. Never break working code without ample notice and documentation.
+
+## 26. Minimize Migration Distance
+
+New features should require minimal changes to existing apps. When users upgrade, their
+code should mostly just work. If a feature requires significant refactoring (like early
+Multipage Apps did), it creates adoption friction and fragments the ecosystem between
+"old style" and "new style" apps.
+
+```python
+# Good: Additive feature
+# Old code still works:
+st.selectbox("Pick", options)
+# New feature is opt-in:
+st.selectbox("Pick", options, accept_new_options=True)
+
+# Bad: Breaking change requiring refactor
+# Old: st.experimental_memo  ->  New: @st.cache_data (migration required)
+```
+
+## 27. Pythonic Idioms
+
+Embrace Python's native patterns: context managers for scoping (`with st.container():`),
+decorators for behavior modification (`@st.cache_data`), generators for streaming
+(`st.write_stream`). Don't invent new paradigms when Python already has elegant
+solutions.
+
+## 28. Composable Containers
+
+Containers return `DeltaGenerator` objects that can be used with `with` statements OR
+via method chaining. Both patterns should work identically: `with st.sidebar:` and
+`st.sidebar.write()` are equally valid.
+
+## 29. Embrace the Python Ecosystem
+
+Accept the data types users already work with. If it's array-like, accept NumPy arrays,
+Pandas Series, lists, tuples, and sets. If it's dataframe-like, accept Pandas, Polars,
+PyArrow, and anything with a compatible interface. Don't force users to convert their
+data.
+
+```python
+# All of these should work for options:
+st.selectbox("Pick", ["a", "b", "c"])            # list
+st.selectbox("Pick", ("a", "b", "c"))            # tuple
+st.selectbox("Pick", {"a", "b", "c"})            # set
+st.selectbox("Pick", np.array(["a", "b", "c"]))  # numpy
+st.selectbox("Pick", pd.Series(["a", "b", "c"])) # pandas
+```
+
+## 30. Drop-In Replacement for Scripts
+
+Streamlit code should feel like a natural evolution of a Python script. Converting from
+script to app should require minimal changes—swap a variable for a slider, swap
+`open(file)` for `st.file_uploader()`.
+
+```python
+# Regular Python script:
+your_number = 10
+with open("data.csv") as f:
+    process(f)
+
+# Streamlit app (minimal changes):
+your_number = st.slider("Pick a number", value=10)
+f = st.file_uploader("Pick a file")
+if f:
+    process(f)
+```
+
+## 31. Declarative Over Imperative
+
+Streamlit is a declarative framework—users describe *what* they want, not *how* to build
+it. Command names should be nouns (`st.button`, `st.chart`, `st.container`) that declare
+UI elements, not verbs that describe actions. Reserve verbs for true actions (`st.rerun`,
+`st.stop`, `st.write`).
+
+## 32. Commands Are Non-Blocking
+
+Streamlit commands never block script execution. Code after an `st.text_input()` always
+runs, even before the user types anything. This differs from traditional `input()` which
+halts until the user responds. Users must learn to think in terms of "the script runs
+top-to-bottom on every interaction."
+
+```python
+name = st.text_input("Name")  # Does NOT block
+st.write(f"Hello {name}")     # Always runs (name may be "")
+```
+
+## 33. Deterministic Output
+
+Given the same code and state, the UI should be identical. Streamlit reruns the entire
+script on each interaction, so commands must produce consistent output when called with
+the same arguments and session state. Avoid hidden state, random defaults, or
+time-dependent behavior that would make reruns unpredictable.
+
+```python
+# Good: Deterministic - same inputs produce same UI
+st.selectbox("Pick", ["a", "b", "c"], index=0)
+
+# Bad: Non-deterministic - UI changes on each rerun
+st.selectbox("Pick", ["a", "b", "c"], index=random.randint(0, 2))
+```
+
+Note: The UI *can* change based on `st.session_state` or widget values—that's expected.
+The principle is that the *same* state should always produce the *same* output.
+
+## 34. One Rerun Per Interaction
+
+Each user interaction should trigger at most one script rerun. Uploading 10 files at
+once = one rerun. Uploading 10 files one at a time = 10 reruns. Dragging a slider = one
+rerun when released, not continuous reruns while dragging. (Exception: explicit
+`st.rerun()` calls in code can trigger additional reruns.)
+
+## 35. Avoid "Clever But Too Clever"
+
+An API like `key="?foo"` to bind to query params is elegant but hard to discover and
+confusing in programmatic use. Explicit parameters like `bind="query-params"` are more
+verbose but clearer. When weighing options, bias toward discoverability over cleverness.
+
+## 36. Design for All Platforms
+
+Every feature needs to work (or gracefully degrade) on: local development, Community
+Cloud, SiS (SPCS), embedded iframes, and mobile. Document platform-specific behavior
+explicitly. `st.context.ip_address` returns `None` on SiS—that's a valid design choice.
+
+## 37. Consider the Frontend-Backend Split
+
+Some data lives in the browser (theme type, viewport size) and some on the server
+(config, session state). APIs like `st.context.theme.type` require frontend-to-backend
+communication on every rerun. Understand the performance implications before committing
+to an API shape.
+
+## 38. Config vs Code: Environment vs Behavior
+
+Use `config.toml` for settings that vary by deployment environment or apply across
+multiple apps. Use `st.*` commands for everything else.
+
+```toml
+# config.toml: Environment/deployment settings
+[server]
+port = 8501
+
+[theme]
+primaryColor = "#FF6B6B"
+```
+
+```python
+# Code: App-specific behavior
+st.set_page_config(page_title="My App", layout="wide")
+```

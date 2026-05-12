@@ -16,13 +16,14 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import threading
 from abc import abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
 
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -33,7 +34,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
-from streamlit.util import calc_md5
+from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from datetime import timedelta
@@ -54,12 +55,10 @@ class FragmentStorage(Protocol):
     protocols.
     """
 
-    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
-    # with the `set` type of `new_fragments_ids`.
     @abstractmethod
     def clear(
         self,
-        new_fragment_ids: set[str] | None = None,  # ty: ignore[invalid-type-form]
+        new_fragment_ids: frozenset[str] | None = None,
     ) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
@@ -67,23 +66,38 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, key: str) -> Fragment:
-        """Returns the stored fragment for the given key."""
+    def lookup(self, key: str) -> Fragment:
+        """Look up a fragment to re-execute.
+
+        Called during fragment reruns from the script thread.
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def set(self, key: str, value: Fragment) -> None:
-        """Saves a fragment under the given key."""
+    def register(self, key: str, fragment: Fragment) -> None:
+        """Store a fragment definition.
+
+        Called during script execution from the main thread or worker threads
+        (nested fragments in parallel execution).
+        """
         raise NotImplementedError
 
     @abstractmethod
     def delete(self, key: str) -> None:
-        """Delete the fragment corresponding to the given key."""
+        """Delete the fragment corresponding to the given key.
+
+        Implementations are not required to be thread-safe; callers should
+        only invoke this from the script thread.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def contains(self, key: str) -> bool:
-        """Return whether the given key is present in this FragmentStorage."""
+        """Return whether the given key is present in this FragmentStorage.
+
+        May be called from non-script threads (e.g. the event loop). Implementations
+        should be safe to call without external synchronization.
+        """
         raise NotImplementedError
 
 
@@ -100,28 +114,29 @@ class MemoryFragmentStorage(FragmentStorage):
     """
 
     def __init__(self) -> None:
+        self._lock = threading.Lock()
         self._fragments: dict[str, Fragment] = {}
 
-    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
-    # with the `set` type of `new_fragments_ids`.
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty: ignore[invalid-type-form]
-        if new_fragment_ids is None:
-            new_fragment_ids = set()
+    def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
+        with self._lock:
+            if new_fragment_ids is None:
+                new_fragment_ids = frozenset()
 
-        fragment_ids = list(self._fragments.keys())
+            fragment_ids = list(self._fragments.keys())
 
-        for fid in fragment_ids:
-            if fid not in new_fragment_ids:
-                del self._fragments[fid]
+            for fid in fragment_ids:
+                if fid not in new_fragment_ids:
+                    del self._fragments[fid]
 
-    def get(self, key: str) -> Fragment:
+    def lookup(self, key: str) -> Fragment:
         try:
             return self._fragments[key]
         except KeyError as e:
             raise FragmentStorageKeyError(str(e))
 
-    def set(self, key: str, value: Fragment) -> None:
-        self._fragments[key] = value
+    def register(self, key: str, fragment: Fragment) -> None:
+        with self._lock:
+            self._fragments[key] = fragment
 
     def delete(self, key: str) -> None:
         try:
@@ -131,6 +146,18 @@ class MemoryFragmentStorage(FragmentStorage):
 
     def contains(self, key: str) -> bool:
         return key in self._fragments
+
+    def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
+        raise TypeError(
+            "MemoryFragmentStorage does not support deepcopy; "
+            "it holds a threading.Lock and shared mutable state."
+        )
+
+    def __copy__(self) -> NoReturn:
+        raise TypeError(
+            "MemoryFragmentStorage does not support copy; "
+            "it holds a threading.Lock and shared mutable state."
+        )
 
 
 def _fragment(
@@ -167,7 +194,7 @@ def _fragment(
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
-        fragment_id = calc_md5(
+        fragment_id = calc_hash(
             f"{non_optional_func.__module__}.{get_object_name(non_optional_func)}{dg_stack_snapshot[-1]._get_delta_path_str()}{additional_hash_info}"
         )
 
@@ -183,7 +210,7 @@ def _fragment(
             # fragment runs will generally run in a new script run, thus we'll have a
             # new ctx.
             ctx = get_script_run_ctx(suppress_warning=True)
-            if ctx is None:
+            if ctx is None:  # pragma: no cover - defensive
                 raise RuntimeError("ctx is None. This should never happen.")
 
             if ctx.fragment_ids_this_run:
@@ -197,7 +224,7 @@ def _fragment(
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.add(fragment_id)
+            ctx.new_fragment_ids.check_and_add(fragment_id)
             # Set ctx.current_fragment_id so that elements corresponding to this
             # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
             # reset after the fragment function finishes running to either return to the
@@ -243,20 +270,16 @@ def _fragment(
                             # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
-                            # render error here so that the delta path is correct
-                            # for full app runs, the error will be displayed by the
-                            # main code handler
-                            # if not is_full_app_run:
-                            handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
+                            handle_user_script_exception(e, ctx.on_script_error)
+                            # Raise FragmentHandledException to signal that the error
+                            # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
             finally:
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        ctx.fragment_storage.register(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()
@@ -267,9 +290,11 @@ def _fragment(
         # Immediate execute the wrapped fragment since we are in a full app run
         return wrapped_fragment()
 
-    with contextlib.suppress(AttributeError):
+    with contextlib.suppress(AttributeError, NameError):
         # Make this a well-behaved decorator by preserving important function
         # attributes.
+        # NameError: Python 3.14 PEP 649 deferred annotation evaluation can raise
+        # NameError for TYPE_CHECKING-only imports in inspect.signature()
         wrap.__dict__.update(non_optional_func.__dict__)
         wrap.__signature__ = inspect.signature(non_optional_func)  # type: ignore
 
@@ -382,7 +407,7 @@ def fragment(
         height: 220px
 
     This next example demonstrates how elements both inside and outside of a
-    fragement update with each app or fragment rerun. In this app, clicking
+    fragment update with each app or fragment rerun. In this app, clicking
     "Rerun full app" will increment both counters and update all values
     displayed in the app. In contrast, clicking "Rerun fragment" will only
     increment the counter within the fragment. In this case, the ``st.write``

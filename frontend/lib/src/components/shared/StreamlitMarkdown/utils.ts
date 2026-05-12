@@ -35,13 +35,13 @@ export type EmojiPlugin = Awaited<
 
 /** Sentinel value for failed plugin loads */
 export const LOAD_FAILED = Symbol("plugin_load_failed")
-export type FailedPlugin = typeof LOAD_FAILED
+type FailedPlugin = typeof LOAD_FAILED
 
 /** Represents a plugin's loading state: loaded, failed, or not yet attempted */
 export type PluginState<T> = T | FailedPlugin | null
 
 /** Keys for the plugin cache */
-export type PluginKey = "katex" | "raw" | "emoji"
+type PluginKey = "katex" | "raw" | "emoji"
 
 /** Union type for all supported plugin types */
 type AnyPlugin = KatexPlugin | RawPlugin | EmojiPlugin
@@ -74,7 +74,7 @@ export type RemarkPluginFactory<Options = unknown> = (
  * Note: `load` and `onBeforeLoad` should be stable references (e.g., module-level
  * functions or wrapped in useCallback) to avoid unnecessary effect re-runs.
  */
-export interface PluginLoaderConfig {
+interface PluginLoaderConfig {
   key: PluginKey
   needed: boolean
   load: () => Promise<Record<string, unknown>>

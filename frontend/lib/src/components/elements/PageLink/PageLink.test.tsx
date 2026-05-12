@@ -20,7 +20,7 @@ import { userEvent } from "@testing-library/user-event"
 import { PageLink as PageLinkProto, streamlit } from "@streamlit/protobuf"
 
 import { render, renderWithContexts } from "~lib/test_util"
-import { lightTheme } from "~lib/theme"
+import { lightTheme } from "~lib/theme/themeConfigs"
 
 import PageLink, { buildHref, Props } from "./PageLink"
 

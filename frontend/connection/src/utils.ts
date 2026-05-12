@@ -186,6 +186,7 @@ export async function fetchWithTimeout(
   timeoutMs: number
 ): Promise<{ data: unknown; url: string }> {
   const controller = new AbortController()
+  // eslint-disable-next-line no-restricted-globals -- Network timeout utility runs outside React and cannot use hooks.
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
   try {

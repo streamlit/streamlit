@@ -16,7 +16,6 @@
 
 syntax = "proto3";
 
-
 import "streamlit/proto/WidthConfig.proto";
 
 // NOTE: This proto type is used by some external services so needs to remain
@@ -30,6 +29,9 @@ message Alert {
 
   // Indicates the width setting: "stetch", "content" or a pixel value.
   streamlit.WidthConfig width_config = 4;
+
+  // Optional title displayed above the body.
+  string title = 5;
 
   // Type of Alert
   enum Format {

@@ -601,3 +601,23 @@ class MetricTest(DeltaGeneratorTestCase):
         assert c.label == "label_test"
         assert c.body == "123"
         assert c.format == expected_proto_value
+
+    @parameterized.expand(
+        [
+            (None, None, "", ""),
+            ("", None, "", ""),
+            ("month over month", "-5%", "-5%", "month over month"),
+            ("since yesterday", None, "", "since yesterday"),
+        ]
+    )
+    def test_delta_description(
+        self, delta_description, delta, expected_delta, expected_description
+    ):
+        """Test that delta_description is correctly set in the proto."""
+        st.metric("label_test", "123", delta=delta, delta_description=delta_description)
+
+        c = self.get_delta_from_queue().new_element.metric
+        assert c.label == "label_test"
+        assert c.body == "123"
+        assert c.delta == expected_delta
+        assert c.delta_description == expected_description

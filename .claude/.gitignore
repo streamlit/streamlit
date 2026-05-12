@@ -1,16 +1,54 @@
-# Ignore all hooks
+# Ignore everything by default
+*
+
+# Allow specific files
+!.gitignore
+!settings.json
+
+# Allow specific hooks
+!hooks/
 hooks/*
-# Only track certain hooks so that we don't track a user's local hooks
-# You can add more hooks to this list as needed!
 !hooks/pre_bash_redirect.py
 !hooks/stop_check.sh
+!hooks/post_edit_autofix.sh
 
-# Ignore all skills
+# Allow specific skills
+!skills/
 skills/*
-# Only track certain skills so that we don't track a user's local skills
-# You can add more skills to this list as needed!
+!skills/AGENTS.md
+!skills/CLAUDE.md
 !skills/checking-changes/
 !skills/debugging-streamlit/
 !skills/discovering-make-commands/
+!skills/finalizing-pr/
 !skills/fixing-streamlit-ci/
-!skills/implementing-new-features/
+!skills/addressing-pr-review-comments/
+!skills/understanding-streamlit-architecture/
+!skills/creating-pull-requests/
+!skills/updating-internal-docs/
+!skills/writing-spec/
+!skills/assessing-external-test-risk/
+!skills/fixing-flaky-e2e-tests/
+!skills/implementing-feature/
+!skills/sharing-pr-agent-artifacts/
+!skills/generating-changelog/
+!skills/improving-frontend-coverage/
+!skills/improving-python-coverage/
+
+# Allow agents
+!agents/
+agents/*
+!agents/AGENTS.md
+!agents/CLAUDE.md
+!agents/reviewing-local-changes.md
+!agents/simplifying-local-changes.md
+!agents/fixing-pr.md
+!agents/qa-testing-feature.md
+
+# Allow commands
+!commands/
+commands/*
+!commands/simplifying-local-changes.md
+!commands/reviewing-local-changes.md
+!commands/fixing-pr.md
+!commands/qa-testing-feature.md

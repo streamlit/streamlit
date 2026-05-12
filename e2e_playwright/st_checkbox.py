@@ -105,3 +105,35 @@ else:
         kwargs={"param": "initial kwarg param"},
     )
     st.write("Initial checkbox state:", state)
+
+# Query param binding checkboxes
+st.markdown("Query param binding:")
+bound_cb = st.checkbox(
+    "Bound checkbox (default False)",
+    key="bound_checkbox",
+    bind="query-params",
+)
+st.write("bound checkbox value:", bound_cb)
+
+bound_cb_true = st.checkbox(
+    "Bound checkbox (default True)",
+    value=True,
+    key="bound_true",
+    bind="query-params",
+)
+st.write("bound checkbox true value:", bound_cb_true)
+
+# Unbind test: checkbox whose bind="query-params" can be removed at runtime
+st.markdown("Unbind test:")
+if st.button("Remove binding"):
+    st.session_state.use_bind = False
+
+use_bind = st.session_state.get("use_bind", True)
+if use_bind:
+    unbind_val = st.checkbox(
+        "Unbindable checkbox", key="unbindable", bind="query-params"
+    )
+else:
+    unbind_val = st.checkbox("Unbindable checkbox", key="unbindable")
+st.write("unbindable value:", unbind_val)
+st.write("bind active:", use_bind)

@@ -68,3 +68,16 @@ if TYPE_CHECKING:
         ),
         Alfred | str | None,
     )
+    assert_type(selectbox("foo", ["foo", "bar"], filter_mode="contains"), str)
+    assert_type(selectbox("foo", ["foo", "bar"], filter_mode=None), str)
+    assert_type(
+        selectbox("foo", ["foo", "bar"], index=None, filter_mode=None), str | None
+    )
+
+    # Check bind parameter
+    assert_type(selectbox("foo", ["a", "b"], bind="query-params"), str)
+    assert_type(selectbox("foo", [1, 2, 3], bind="query-params"), int)
+    assert_type(selectbox("foo", ["a", "b"], bind=None), str)
+    assert_type(
+        selectbox("foo", ["a", "b"], index=None, bind="query-params"), str | None
+    )

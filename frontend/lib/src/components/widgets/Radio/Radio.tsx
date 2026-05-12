@@ -18,7 +18,7 @@ import { memo, ReactElement, useCallback, useMemo } from "react"
 
 import { Radio as RadioProto } from "@streamlit/protobuf"
 
-import UIRadio from "~lib/components/shared/Radio"
+import UIRadio from "~lib/components/shared/Radio/Radio"
 import {
   useBasicWidgetState,
   ValueWithSource,
@@ -49,6 +49,14 @@ function Radio({
   widgetMgr,
   fragmentId,
 }: Readonly<Props>): ReactElement {
+  const queryParamBinding = element.queryParamKey
+    ? {
+        paramKey: element.queryParamKey,
+        valueType: "string_value" as const,
+        clearable: isNullOrUndefined(element.default),
+      }
+    : undefined
+
   const [value, setValueWithSource] = useBasicWidgetState<
     RadioValue,
     RadioProto
@@ -60,6 +68,8 @@ function Radio({
     element,
     widgetMgr,
     fragmentId,
+    formClearBehavior: "resetValueOnly",
+    queryParamBinding,
   })
 
   const { horizontal, options, captions, label, labelVisibility, help } =
@@ -121,7 +131,7 @@ function updateWidgetMgrState(
   element: RadioProto,
   widgetMgr: WidgetStateManager,
   vws: ValueWithSource<RadioValue>,
-  fragmentId?: string
+  fragmentId: string | undefined
 ): void {
   widgetMgr.setStringValue(
     element,

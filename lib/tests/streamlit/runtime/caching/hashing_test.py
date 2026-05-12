@@ -29,6 +29,8 @@ import uuid
 from dataclasses import dataclass
 from enum import Enum, auto
 from io import BytesIO, StringIO
+from typing import TYPE_CHECKING, Any, cast
+from unittest import mock
 from unittest.mock import MagicMock, Mock
 
 import numpy as np
@@ -45,10 +47,16 @@ from streamlit.runtime.caching.hashing import (
     _NP_SIZE_LARGE,
     _PANDAS_ROWS_LARGE,
     UserHashError,
+    _CacheFuncHasher,
+    _HashStack,
+    _HashStacks,
     update_hash,
 )
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.type_util import is_type
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 get_main_script_director = MagicMock(return_value=os.getcwd())
 
@@ -805,3 +813,156 @@ If you think this is actually a Streamlit bug, please
 
         with pytest.raises(UnhashableTypeError):
             get_hash(A().__reduce__())
+
+
+def test_user_hash_error_uses_generic_function_desc_without_hash_source_name() -> None:
+    """UserHashError cites a generic function when hash_source has no ``__name__``."""
+
+    class CallableWithoutName:
+        def __call__(self, x: int) -> int:
+            return x
+
+    hash_source = CallableWithoutName()
+    hasher = hashlib.new("md5", usedforsecurity=False)
+    with pytest.raises(UserHashError) as exc_info:
+        update_hash(
+            1,
+            hasher,
+            cache_type=CacheType.DATA,
+            hash_source=cast("Callable[..., Any]", hash_source),
+            hash_funcs={int: lambda x: "a" + x},  # type: ignore[operator]
+        )
+    msg = str(exc_info.value)
+    assert "decorator of\na function." in msg
+
+
+def test_user_hash_error_names_hash_source_when_it_has_dunder_name() -> None:
+    """UserHashError includes the hash_source callable name when ``__name__`` exists."""
+
+    def user_cached_fn() -> None:
+        return None
+
+    hasher = hashlib.new("md5", usedforsecurity=False)
+    with pytest.raises(UserHashError) as exc_info:
+        update_hash(
+            1,
+            hasher,
+            cache_type=CacheType.DATA,
+            hash_source=user_cached_fn,
+            hash_funcs={int: lambda x: "a" + x},  # type: ignore[operator]
+        )
+    assert "`user_cached_fn()`" in str(exc_info.value)
+
+
+def test_user_hash_error_mentions_cache_resource_decorator() -> None:
+    """UserHashError names ``@st.cache_resource`` when that cache type is used."""
+    hasher = hashlib.new("md5", usedforsecurity=False)
+    with pytest.raises(UserHashError) as exc_info:
+        update_hash(
+            1,
+            hasher,
+            cache_type=CacheType.RESOURCE,
+            hash_funcs={int: lambda x: "a" + x},  # type: ignore[operator]
+        )
+    assert "`@st.cache_resource`" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    ("make_obj", "prefix"),
+    [
+        (lambda: _HashStack(), "_HashStack("),
+        (lambda: _HashStacks(), "_HashStacks("),
+        (lambda: _CacheFuncHasher(CacheType.DATA), "_CacheFuncHasher("),
+    ],
+    ids=["hash_stack", "hash_stacks", "cache_func_hasher"],
+)
+def test_hash_repr_helpers_use_compact_prefix(
+    make_obj: Callable[[], Any], prefix: str
+) -> None:
+    """Internal hash helpers use the shared compact ``__repr__`` style."""
+    assert repr(make_obj()).startswith(prefix)
+
+
+def test_hash_stack_pretty_print_handles_str_conversion_error() -> None:
+    """``pretty_print`` tolerates values whose string conversion raises."""
+
+    class BadStr:
+        def __str__(self) -> str:
+            raise RuntimeError("intentional str failure")
+
+    stack = _HashStack()
+    stack.push(BadStr())
+    try:
+        text = stack.pretty_print()
+    finally:
+        stack.pop()
+    assert "<Unable to convert item to string>" in text
+
+
+def test_pandas_series_hash_pickle_fallback_on_type_error() -> None:
+    """Series that ``hash_pandas_object`` cannot hash fall back to pickling."""
+    series = pd.Series([[1, 2], [3, 4]])
+    assert get_hash(series) == get_hash(series)
+    assert get_hash(series) != get_hash(pd.Series([[1, 2], [3, 5]]))
+
+
+def test_pandas_dataframe_hash_pickle_fallback_on_type_error() -> None:
+    """DataFrame that ``hash_pandas_object`` cannot hash fall back to pickling."""
+    df = pd.DataFrame({"col": [[1], [2]]})
+    assert get_hash(df) == get_hash(df)
+    assert get_hash(df) != get_hash(pd.DataFrame({"col": [[1], [3]]}))
+
+
+def test_numpy_ufunc_hashes_by_encoded_name() -> None:
+    """NumPy ufuncs hash via their ``__name__`` bytes."""
+    assert get_hash(np.add) == get_hash(np.add)
+    assert get_hash(np.add) != get_hash(np.subtract)
+
+
+def test_module_hashes_via_module_name() -> None:
+    """Modules hash consistently using the module's ``__name__`` string."""
+    assert get_hash(re) == get_hash(re)
+    assert get_hash(re) != get_hash(datetime)
+
+
+@pytest.mark.require_integration
+@pytest.mark.parametrize(
+    ("make_obj", "method_name"),
+    [
+        (lambda pl: pl.Series([1, 2, 3]), "hash"),
+        (lambda pl: pl.DataFrame({"a": [1, 2]}), "hash_rows"),
+    ],
+    ids=["series", "dataframe"],
+)
+def test_polars_pickle_fallback_when_hash_raises_typeerror(
+    make_obj: Callable[..., Any],
+    method_name: str,
+) -> None:
+    """Polars objects fall back to pickle when native hashing raises ``TypeError``."""
+    import polars as pl
+
+    obj = make_obj(pl)
+    cls = type(obj)
+    with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
+        digest = get_hash(obj)
+    with mock.patch.object(cls, method_name, side_effect=TypeError("forced")):
+        assert get_hash(obj) == digest
+
+
+@pytest.mark.require_integration
+def test_pydantic_model_unhashable_when_model_dump_json_fails() -> None:
+    """Pydantic models that cannot serialize to JSON raise ``UnhashableTypeError``."""
+    import pydantic
+
+    class Model(pydantic.BaseModel):
+        x: int
+
+    instance = Model(x=1)
+    with mock.patch.object(
+        Model,
+        "model_dump_json",
+        side_effect=TypeError("cannot serialize"),
+    ):
+        with pytest.raises(UnhashableTypeError) as exc_info:
+            get_hash(instance)
+    assert "unhashable members" in str(exc_info.value).lower()

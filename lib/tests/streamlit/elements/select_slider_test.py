@@ -24,7 +24,11 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.errors import StreamlitAPIException, StreamlitInvalidWidthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitInvalidBindValueError,
+    StreamlitInvalidWidthError,
+)
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility
 from streamlit.testing.v1.app_test import AppTest
 from streamlit.testing.v1.util import patch_config_options
@@ -651,3 +655,124 @@ def test_select_slider_dynamic_options_with_enum():
     assert "Selected: GREEN" in at.get("markdown")[-1].value
     # Negative assertion: BLUE should not be preserved
     assert "Selected: BLUE" not in at.get("markdown")[-1].value
+
+
+def test_select_slider_format_func_multiple_runs():
+    """Regression test for GitHub issue #13832.
+
+    Ensures that select_slider with format_func works correctly on subsequent
+    AppTest runs. The bug occurred because the testing framework was applying
+    format_func to options that were already formatted strings in the proto,
+    causing a ValueError on the second run. This test implicitly validates
+    that no ValueError is raised during subsequent runs.
+    """
+
+    def script():
+        import streamlit as st
+
+        st.select_slider(
+            "Percentage",
+            value=0.40,
+            options=(0.00, 0.20, 0.40, 0.45),
+            format_func="{:.0%}".format,
+        )
+        st.select_slider(
+            "Range",
+            value=(0.20, 0.45),
+            options=(0.00, 0.20, 0.40, 0.45),
+            format_func="{:.0%}".format,
+        )
+
+    # First run
+    at = AppTest.from_function(script).run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Second run - this failed before the fix with:
+    # ValueError: Unknown format code '%' for object of type 'str'
+    at = at.run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Third run to ensure stability
+    at = at.run()
+    assert at.select_slider[0].value == 0.40
+    assert at.select_slider[1].value == (0.20, 0.45)
+
+    # Test changing values and re-running
+    at.select_slider[0].set_value(0.20)
+    at.select_slider[1].set_range(0.00, 0.40)
+    at = at.run()
+    assert at.select_slider[0].value == 0.20
+    assert at.select_slider[1].value == (0.00, 0.40)
+
+    # Another run after value change
+    at = at.run()
+    assert at.select_slider[0].value == 0.20
+    assert at.select_slider[1].value == (0.00, 0.40)
+
+
+class SelectSliderBindQueryParamsTest(DeltaGeneratorTestCase):
+    """Tests for select_slider bind='query-params' functionality."""
+
+    def test_bind_query_params_sets_query_param_key(self):
+        """Test that bind='query-params' with a key sets query_param_key in proto."""
+        st.select_slider(
+            "the label",
+            options=["a", "b", "c"],
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+
+    def test_bind_query_params_without_key_raises_exception(self):
+        """Test that bind='query-params' without a key raises an exception."""
+        with pytest.raises(StreamlitAPIException, match=r"must have a unique 'key'"):
+            st.select_slider("the label", options=["a", "b", "c"], bind="query-params")
+
+    def test_no_bind_does_not_set_query_param_key(self):
+        """Test that without bind parameter, query_param_key is not set."""
+        st.select_slider("the label", options=["a", "b", "c"], key="my_key")
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == ""
+
+    def test_invalid_bind_value_raises_exception(self):
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError, match=r"invalid-value"):
+            st.select_slider(
+                "the label",
+                options=["a", "b"],
+                key="my_key",
+                bind="invalid-value",
+            )
+
+    def test_bind_with_format_func(self):
+        """Test that bind works with format_func."""
+        st.select_slider(
+            "the label",
+            options=["cat", "dog", "bird"],
+            format_func=str.upper,
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.options) == ["CAT", "DOG", "BIRD"]
+
+    def test_bind_with_range_value(self):
+        """Test that bind works with range values."""
+        st.select_slider(
+            "the label",
+            options=["a", "b", "c", "d", "e"],
+            value=("b", "d"),
+            key="my_key",
+            bind="query-params",
+        )
+
+        c = self.get_delta_from_queue().new_element.slider
+        assert c.query_param_key == "my_key"
+        assert list(c.default) == [1, 3]

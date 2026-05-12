@@ -16,7 +16,8 @@
 
 import styled from "@emotion/styled"
 
-import { computeSpacingStyle, IconSize } from "~lib/theme"
+import type { IconSize } from "~lib/theme/types"
+import { computeSpacingStyle } from "~lib/theme/utils"
 
 export interface StyledMaterialIconProps {
   size: IconSize

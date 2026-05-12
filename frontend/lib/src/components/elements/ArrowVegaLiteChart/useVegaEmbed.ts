@@ -18,10 +18,10 @@ import { RefObject, useCallback, useEffect, useRef, useState } from "react"
 
 import { getLogger } from "loglevel"
 import { truthy, View as VegaView } from "vega"
-import embed from "vega-embed"
+import embed, { VisualizationSpec } from "vega-embed"
 import { expressionInterpreter } from "vega-interpreter"
 
-import { useFormClearHelper } from "~lib/components/widgets/Form"
+import { useFormClearHelper } from "~lib/components/widgets/Form/FormClearHelper"
 import { Quiver } from "~lib/dataframes/Quiver"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -41,8 +41,7 @@ const LOG = getLogger("useVegaEmbed")
 interface UseVegaEmbedOutput {
   createView: (
     containerRef: RefObject<HTMLDivElement>,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-    spec: any
+    spec: VisualizationSpec | string
   ) => Promise<VegaView | null>
   updateView: (
     data: Quiver | null,
@@ -112,8 +111,7 @@ export function useVegaEmbed(
   const createView = useCallback(
     async (
       containerRef: RefObject<HTMLDivElement>,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Replace 'any' with a more specific type.
-      spec: any
+      spec: VisualizationSpec | string
     ): Promise<VegaView | null> => {
       if (containerRef.current === null) {
         throw new Error("Element missing.")
@@ -211,13 +209,10 @@ export function useVegaEmbed(
         return
       }
 
-      // Check if dataframes have same "shape" but the new one has more rows.
       if (dataArg.hash !== prevData.hash) {
-        // Clean the dataset and insert from scratch.
+        // Data has changed, replace the dataset.
         view.data(name, getDataArray(dataArg))
-        LOG.info(
-          `Had to clear the ${name} dataset before inserting data through Vega view.`
-        )
+        LOG.info(`Replaced the ${name} dataset in Vega view.`)
       }
     },
     []

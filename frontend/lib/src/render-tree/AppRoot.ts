@@ -15,7 +15,6 @@
  */
 
 import {
-  ArrowNamedDataSet,
   Block as BlockProto,
   Delta,
   Element,
@@ -24,13 +23,11 @@ import {
   Transient as TransientProto,
 } from "@streamlit/protobuf"
 
-import { ensureError } from "~lib/util/ErrorHandling"
 import {
   getLoadingScreenType,
   isNullOrUndefined,
   LoadingScreenType,
   makeAppSkeletonElement,
-  makeElementWithErrorText,
   makeElementWithInfoText,
 } from "~lib/util/utils"
 
@@ -45,6 +42,28 @@ import { ElementsSetVisitor } from "./visitors/ElementsSetVisitor"
 import { FilterMainScriptElementsVisitor } from "./visitors/FilterMainScriptElementsVisitor"
 import { GetNodeByDeltaPathVisitor } from "./visitors/GetNodeByDeltaPathVisitor"
 import { SetNodeByDeltaPathVisitor } from "./visitors/SetNodeByDeltaPathVisitor"
+
+/**
+ * Determine if we can reuse the element payload from an existing node.
+ * Returns true only when:
+ * - elementHash is non-empty and matches the existing node's hash
+ * - The element type matches
+ * - The element doesn't have a one-shot effect flag set by the backend
+ */
+function canReuseElementPayload(
+  existingNode: AppNode | undefined,
+  elementHash: string | undefined,
+  nextElement: Element
+): existingNode is ElementNode {
+  return (
+    Boolean(elementHash) &&
+    nextElement.type !== undefined &&
+    existingNode instanceof ElementNode &&
+    existingNode.elementHash === elementHash &&
+    existingNode.element.type === nextElement.type &&
+    !nextElement.hasOneShotEffect
+  )
+}
 
 interface LogoMetadata {
   // Associated scriptHash that created the logo
@@ -181,8 +200,7 @@ export class AppRoot {
       isNullOrUndefined(this.event) ||
       isNullOrUndefined(this.bottom)
     ) {
-      // eslint-disable-next-line @typescript-eslint/no-base-to-string, @typescript-eslint/restrict-template-expressions -- TODO: Fix this
-      throw new Error(`Invalid root node children! ${root}`)
+      throw new Error(`Invalid root node children! ${root.debug()}`)
     }
   }
 
@@ -220,21 +238,35 @@ export class AppRoot {
   public applyDelta(
     scriptRunId: string,
     delta: Delta,
-    metadata: ForwardMsgMetadata
+    metadata: ForwardMsgMetadata,
+    elementHash?: string
   ): AppRoot {
     // The full path to the AppNode within the element tree.
     // Used to find and update the element node specified by this Delta.
     const { deltaPath, activeScriptHash } = metadata
     switch (delta.type) {
       case "newElement": {
-        const element = delta.newElement as Element
+        const nextElement = delta.newElement as Element
+        const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+          this.root,
+          deltaPath
+        )
+
+        // Check if we can reuse the payload from an existing node
+        const canReuse = canReuseElementPayload(
+          existingNode,
+          elementHash,
+          nextElement
+        )
+
         return this.addElement(
           deltaPath,
           scriptRunId,
-          element,
+          canReuse ? existingNode.element : nextElement,
           metadata,
           activeScriptHash,
-          delta.fragmentId
+          delta.fragmentId,
+          elementHash
         )
       }
 
@@ -260,27 +292,6 @@ export class AppRoot {
           activeScriptHash,
           delta.fragmentId
         )
-      }
-
-      case "arrowAddRows": {
-        try {
-          return this.arrowAddRows(
-            deltaPath,
-            delta.arrowAddRows as ArrowNamedDataSet,
-            scriptRunId
-          )
-        } catch (error) {
-          const errorElement = makeElementWithErrorText(
-            ensureError(error).message
-          )
-          return this.addElement(
-            deltaPath,
-            scriptRunId,
-            errorElement,
-            metadata,
-            activeScriptHash
-          )
-        }
       }
 
       default: {
@@ -377,15 +388,27 @@ export class AppRoot {
 
   /** Return a Set containing all Elements in the tree. */
   public getElements(): Set<Element> {
+    return this.getActiveIds().elements
+  }
+
+  /**
+   * Return all active element IDs and block IDs in the tree.
+   * Block IDs are collected from blocks that have a stable identity
+   * (e.g. keyed layout containers), and are needed to prevent
+   * elementStates entries from being garbage-collected.
+   */
+  public getActiveIds(): {
+    elements: Set<Element>
+    blockIds: Set<string>
+  } {
     const visitor = new ElementsSetVisitor()
 
-    // Visit each major section of the app
     this.main.accept(visitor)
     this.sidebar.accept(visitor)
     this.event.accept(visitor)
     this.bottom.accept(visitor)
 
-    return visitor.elements
+    return { elements: visitor.elements, blockIds: visitor.blockIds }
   }
 
   private addElement(
@@ -394,14 +417,16 @@ export class AppRoot {
     element: Element,
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string
   ): AppRoot {
     const elementNode = new ElementNode(
       element,
       metadata,
       scriptRunId,
       activeScriptHash,
-      fragmentId
+      fragmentId,
+      elementHash
     )
     return new AppRoot(
       this.mainScriptHash,
@@ -423,10 +448,16 @@ export class AppRoot {
     fragmentId?: string,
     deltaMsgReceivedAt?: number
   ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
+    const existingNodeAtPath = GetNodeByDeltaPathVisitor.getNodeAtPath(
       this.root,
       deltaPath
     )
+    // Transient nodes are transport wrappers. For child inheritance, operate on
+    // the underlying anchor node when available.
+    const existingNode =
+      existingNodeAtPath instanceof TransientNode
+        ? (existingNodeAtPath.anchor ?? existingNodeAtPath)
+        : existingNodeAtPath
 
     // If we're replacing an existing Block of the same type, this new Block
     // inherits the existing Block's children. This preserves two things:
@@ -502,36 +533,6 @@ export class AppRoot {
         this.root,
         deltaPath,
         transientNode,
-        scriptRunId
-      ) as BlockNode,
-      this.appLogo
-    )
-  }
-
-  private arrowAddRows(
-    deltaPath: number[],
-    namedDataSet: ArrowNamedDataSet,
-    scriptRunId: string
-  ): AppRoot {
-    const existingNode = GetNodeByDeltaPathVisitor.getNodeAtPath(
-      this.root,
-      deltaPath
-    )
-    if (
-      isNullOrUndefined(existingNode) ||
-      !(existingNode instanceof ElementNode)
-    ) {
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      throw new Error(`Can't arrowAddRows: invalid deltaPath: ${deltaPath}`)
-    }
-
-    const elementNode = existingNode.arrowAddRows(namedDataSet, scriptRunId)
-    return new AppRoot(
-      this.mainScriptHash,
-      SetNodeByDeltaPathVisitor.setNodeAtPath(
-        this.root,
-        deltaPath,
-        elementNode,
         scriptRunId
       ) as BlockNode,
       this.appLogo
