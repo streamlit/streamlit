@@ -19,6 +19,6 @@ starlette==0.40.0
 tenacity==8.1.0
 toml==0.10.1
 typing-extensions==4.10.0
-uvicorn==0.30.0
+uvicorn==0.46.0
 watchdog==2.1.5
 wsproto==1.2.0

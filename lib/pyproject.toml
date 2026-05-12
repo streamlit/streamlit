@@ -85,8 +85,8 @@ dependencies = [
   "typing-extensions>=4.10.0,<5",
   # ASGI web-framework:
   "starlette>=0.40.0",
-  # ASGI server:
-  "uvicorn>=0.30.0",
+  # ASGI server (0.46+ required for wsproto ws_max_size/ping support):
+  "uvicorn>=0.46.0",
   # Faster http parsing for Starlette server:
   "httptools>=0.6.3",
   # Required by starlette:

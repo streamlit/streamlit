@@ -83,12 +83,12 @@ class LoggerTest(unittest.TestCase):
     def test_init_uvicorn_logs(self):
         """Test streamlit.logger.init_uvicorn_logs."""
         logger.init_uvicorn_logs()
-        loggers = [x for x in logger._loggers if "uvicorn" in x or "websockets" in x]
+        loggers = [x for x in logger._loggers if "uvicorn" in x or "wsproto" in x]
         expected = [
             "uvicorn",
             "uvicorn.access",
             "uvicorn.asgi",
             "uvicorn.error",
-            "websockets",
+            "wsproto",
         ]
         assert sorted(expected) == sorted(loggers)
