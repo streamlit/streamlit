@@ -360,4 +360,69 @@ describe("useDataFrameCapabilities", () => {
       expect(result.current.isLargeTable).toBe(false)
     })
   })
+
+  describe("touch device capabilities", () => {
+    it("returns isTouchDevice flag", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(typeof result.current.isTouchDevice).toBe("boolean")
+    })
+
+    it("canResizeColumns and supportsRectangleSelection are consistent", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(result.current.canResizeColumns).toBe(
+        result.current.supportsRectangleSelection
+      )
+    })
+
+    it("canResizeColumns equals !isTouchDevice", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(result.current.canResizeColumns).toBe(
+        !result.current.isTouchDevice
+      )
+    })
+
+    it("supportsRectangleSelection equals !isTouchDevice", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities(defaultParams)
+      )
+      expect(result.current.supportsRectangleSelection).toBe(
+        !result.current.isTouchDevice
+      )
+    })
+
+    it("supportsFillHandle is false when canEdit is false", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, editingMode: READ_ONLY })
+      )
+      expect(result.current.canEdit).toBe(false)
+      expect(result.current.supportsFillHandle).toBe(false)
+    })
+
+    it("supportsFillHandle equals canEdit && !isTouchDevice", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, editingMode: DYNAMIC })
+      )
+      expect(result.current.supportsFillHandle).toBe(
+        result.current.canEdit && !result.current.isTouchDevice
+      )
+    })
+
+    it("supportsFillHandle is false when disabled even for editable modes", () => {
+      const { result } = renderHook(() =>
+        useDataFrameCapabilities({
+          ...defaultParams,
+          editingMode: DYNAMIC,
+          disabled: true,
+        })
+      )
+      expect(result.current.canEdit).toBe(false)
+      expect(result.current.supportsFillHandle).toBe(false)
+    })
+  })
 })

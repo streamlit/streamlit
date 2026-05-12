@@ -39,6 +39,14 @@ interface DataFrameCapabilities {
   isEmptyTable: boolean
   /** Whether the table exceeds the large table threshold. */
   isLargeTable: boolean
+  /** Whether the device primarily uses touch input. */
+  isTouchDevice: boolean
+  /** Whether column resizing via drag is supported. Disabled on touch devices. */
+  canResizeColumns: boolean
+  /** Whether the fill handle for bulk editing is supported. Disabled on touch devices. */
+  supportsFillHandle: boolean
+  /** Whether rectangle (multi-cell) selection is supported. Touch devices use cell-only selection. */
+  supportsRectangleSelection: boolean
 }
 
 interface UseDataFrameCapabilitiesParams {
@@ -88,6 +96,10 @@ function useDataFrameCapabilities({
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
       DataframeProto.EditingMode
 
+    const isTouchDevice =
+      typeof window !== "undefined" &&
+      (window.matchMedia?.("(pointer: coarse)").matches ?? false)
+
     const isEmptyTable = computeIsEmptyTable(
       numDataRows,
       numDataColumns,
@@ -117,6 +129,12 @@ function useDataFrameCapabilities({
       (editingMode === DYNAMIC || editingMode === DELETE_ONLY) &&
       !disabled
 
+    const canResizeColumns = !isTouchDevice
+
+    const supportsFillHandle = canEdit && !isTouchDevice
+
+    const supportsRectangleSelection = !isTouchDevice
+
     return {
       canSort,
       canSearch,
@@ -126,6 +144,10 @@ function useDataFrameCapabilities({
       canDeleteRows,
       isEmptyTable,
       isLargeTable,
+      isTouchDevice,
+      canResizeColumns,
+      supportsFillHandle,
+      supportsRectangleSelection,
     }
   }, [editingMode, disabled, numDataRows, numDataColumns])
 }

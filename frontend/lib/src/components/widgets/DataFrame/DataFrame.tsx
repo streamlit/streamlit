@@ -212,12 +212,6 @@ function DataFrame({
     []
   )
 
-  // Determine if the device is primary using touch as input:
-  const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
-    []
-  )
-
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
@@ -239,6 +233,10 @@ function DataFrame({
     canDeleteRows,
     isEmptyTable,
     isLargeTable,
+    isTouchDevice,
+    canResizeColumns,
+    supportsFillHandle,
+    supportsRectangleSelection,
   } = useDataFrameCapabilities({
     editingMode,
     disabled,
@@ -919,7 +917,7 @@ function DataFrame({
           rowHeight={rowHeight}
           headerHeight={gridTheme.defaultHeaderHeight}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-          onColumnResize={isTouchDevice ? undefined : onColumnResize}
+          onColumnResize={canResizeColumns ? onColumnResize : undefined}
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
           // Freeze all index columns:
@@ -933,7 +931,7 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={isTouchDevice ? "cell" : "rect"}
+          rangeSelect={supportsRectangleSelection ? "rect" : "cell"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable interactive column reordering:
@@ -1138,7 +1136,7 @@ function DataFrame({
           // If element is editable, enable editing features:
           {...(canEdit && {
             // Support fill handle for bulk editing:
-            fillHandle: !isTouchDevice,
+            fillHandle: supportsFillHandle,
             // Support editing:
             onCellEdited,
             // Support pasting data for bulk editing:
