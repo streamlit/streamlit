@@ -14,7 +14,10 @@
 
 from __future__ import annotations
 
+import copy
 import sys
+import threading
+import types
 import unittest
 from collections.abc import Callable
 from unittest.mock import MagicMock, patch
@@ -57,24 +60,24 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage = MemoryFragmentStorage()
         self._storage._fragments["some_key"] = "some_fragment"
 
-    def test_get(self):
-        assert self._storage.get("some_key") == "some_fragment"
+    def test_lookup(self):
+        assert self._storage.lookup("some_key") == "some_fragment"
 
-    def test_get_FragmentStorageKeyError(self):
+    def test_lookup_FragmentStorageKeyError(self):
         with pytest.raises(FragmentStorageKeyError):
-            self._storage.get("nonexistent_key")
+            self._storage.lookup("nonexistent_key")
 
-    def test_set(self):
-        self._storage.set("some_key", "new_fragment")
-        self._storage.set("some_other_key", "some_other_fragment")
+    def test_register(self):
+        self._storage.register("some_key", "new_fragment")
+        self._storage.register("some_other_key", "some_other_fragment")
 
-        assert self._storage.get("some_key") == "new_fragment"
-        assert self._storage.get("some_other_key") == "some_other_fragment"
+        assert self._storage.lookup("some_key") == "new_fragment"
+        assert self._storage.lookup("some_other_key") == "some_other_fragment"
 
     def test_delete(self):
         self._storage.delete("some_key")
         with pytest.raises(FragmentStorageKeyError):
-            self._storage.get("nonexistent_key")
+            self._storage.lookup("nonexistent_key")
 
     def test_del_FragmentStorageKeyError(self):
         with pytest.raises(FragmentStorageKeyError):
@@ -98,6 +101,114 @@ class MemoryFragmentStorageTest(unittest.TestCase):
     def test_contains(self):
         assert self._storage.contains("some_key")
         assert not self._storage.contains("some_other_key")
+
+
+def test_has_lock() -> None:
+    """MemoryFragmentStorage should expose a threading.Lock for concurrent register/clear."""
+    storage = MemoryFragmentStorage()
+    # threading.Lock is a class in Python 3.13+ and a factory function in 3.10-3.12,
+    # so we compare against type(threading.Lock()) for portability across both.
+    assert isinstance(storage._lock, type(threading.Lock()))
+
+
+def test_concurrent_register_smoke() -> None:
+    """Smoke test: many threads calling register() concurrently with distinct
+    keys do not deadlock and do not drop entries.
+
+    Note: under CPython's GIL, ``dict[key] = value`` is already atomic, and the
+    free-threaded build (PEP 703) preserves that via per-object locking on
+    built-in dicts. With distinct keys per thread, this test would therefore
+    pass even without ``self._lock``. The value of this test is as a regression
+    guard against a wildly broken register() that loses writes or deadlocks. The
+    lock's real purpose — serializing register() with clear()'s multi-op
+    snapshot-then-delete sequence — is exercised more directly by
+    ``test_lock_contention_under_load`` below.
+    """
+    storage = MemoryFragmentStorage()
+    num_threads = 10
+    ids_per_thread = 100
+    barrier = threading.Barrier(num_threads)
+
+    def worker(thread_idx: int) -> None:
+        barrier.wait()
+        for i in range(ids_per_thread):
+            fid = f"fragment_{thread_idx}_{i}"
+            storage.register(fid, lambda: None)
+
+    threads = [threading.Thread(target=worker, args=(t,)) for t in range(num_threads)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(storage._fragments) == num_threads * ids_per_thread
+
+
+def test_clear_preserves_kept_fragments_after_register() -> None:
+    """clear() should retain fragments listed in new_fragment_ids when the storage was
+    populated via register() (rather than the internal dict directly).
+    """
+    storage = MemoryFragmentStorage()
+    keep_ids: set[str] = set()
+
+    for i in range(100):
+        fid = f"fragment_{i}"
+        storage.register(fid, lambda: None)
+        if i % 2 == 0:
+            keep_ids.add(fid)
+
+    storage.clear(new_fragment_ids=frozenset(keep_ids))
+    assert len(storage._fragments) == 50
+    for fid in keep_ids:
+        assert storage.contains(fid)
+
+
+def test_lock_contention_under_load() -> None:
+    """register() and clear() should not deadlock under concurrent access."""
+    storage = MemoryFragmentStorage()
+    num_threads = 5
+    ops_per_thread = 200
+    barrier = threading.Barrier(num_threads + 1)
+
+    def register_worker(idx: int) -> None:
+        barrier.wait()
+        for i in range(ops_per_thread):
+            storage.register(f"frag_{idx}_{i}", lambda: None)
+
+    def clear_worker() -> None:
+        barrier.wait()
+        for _ in range(ops_per_thread):
+            storage.clear(new_fragment_ids=frozenset())
+
+    threads: list[threading.Thread] = [
+        threading.Thread(target=register_worker, args=(t,)) for t in range(num_threads)
+    ]
+    threads.append(threading.Thread(target=clear_worker))
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    # No assertion on final count — the point is no deadlock or crash.
+
+
+def test_deepcopy_raises_type_error() -> None:
+    """deepcopy should raise TypeError, not silently produce a half-broken clone."""
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+
+    with pytest.raises(TypeError, match="does not support deepcopy"):
+        copy.deepcopy(storage)
+
+
+def test_shallow_copy_raises_type_error() -> None:
+    """copy.copy should raise TypeError so callers don't end up sharing _fragments
+    while allocating a fresh _lock.
+    """
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+
+    with pytest.raises(TypeError, match="does not support copy"):
+        copy.copy(storage)
 
 
 class FragmentTest(unittest.TestCase):
@@ -170,8 +281,10 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
-        ctx.fragment_storage.set = MagicMock(wraps=ctx.fragment_storage.set)
+        # Override the auto-generated MagicMock for fragment_storage with an explicit
+        # one so that deepcopy(ctx.cursors) cannot reach a real MemoryFragmentStorage,
+        # which holds a threading.Lock and is therefore not deepcopy-able.
+        ctx.fragment_storage = MagicMock()
 
         patched_get_script_run_ctx.return_value = ctx
 
@@ -183,7 +296,7 @@ class FragmentTest(unittest.TestCase):
         # fragment a single time.
         my_fragment()
         my_fragment()
-        assert ctx.fragment_storage.set.call_count == 2
+        assert ctx.fragment_storage.register.call_count == 2
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
@@ -197,7 +310,10 @@ class FragmentTest(unittest.TestCase):
         dg = MagicMock()
         dg.my_random_field = 7
         context_dg_stack.set((dg,))
-        ctx.cursors = MagicMock()
+        # Use a plain SimpleNamespace (not the auto-generated MagicMock) so that
+        # deepcopy(ctx.cursors) does not traverse back to the real fragment_storage
+        # above, whose threading.Lock cannot be deepcopied.
+        ctx.cursors = types.SimpleNamespace()
         ctx.cursors.my_other_random_field = 8
 
         call_count = 0
@@ -294,7 +410,7 @@ class FragmentTest(unittest.TestCase):
         called = False
 
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment(run_every=run_every)
@@ -325,6 +441,10 @@ class FragmentTest(unittest.TestCase):
         ctx.pages_manager = PagesManager("")
         ctx.pages_manager.set_pages({})  # Migrate to MPAv2
         ctx.active_script_hash = "some_hash"
+        # Use a plain dict (not the auto-generated MagicMock) so that deepcopy(ctx.cursors)
+        # does not traverse back to the real fragment_storage above, whose threading.Lock
+        # cannot be deepcopied.
+        ctx.cursors = {}
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
@@ -353,7 +473,7 @@ class FragmentTest(unittest.TestCase):
         patched_get_script_run_ctx,
     ):
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
@@ -371,7 +491,7 @@ class FragmentTest(unittest.TestCase):
         fragment-only rerun) is raised in the main execution context.
         """
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
@@ -390,7 +510,7 @@ class FragmentTest(unittest.TestCase):
             "streamlit.runtime.fragment.get_script_run_ctx"
         ) as patched_get_script_run_ctx:
             ctx = MagicMock()
-            ctx.fragment_storage = MemoryFragmentStorage()
+            ctx.fragment_storage = MagicMock()
             patched_get_script_run_ctx.return_value = ctx
 
             @fragment
@@ -431,7 +551,7 @@ class FragmentTest(unittest.TestCase):
     ):
         """Test that the on_script_error handler is called with the exception in fragment."""
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         handler = MagicMock(return_value=None)
         ctx.on_script_error = handler
         patched_get_script_run_ctx.return_value = ctx
@@ -460,7 +580,7 @@ class FragmentTest(unittest.TestCase):
     ):
         """Test that returning True from handler suppresses UI display in fragment."""
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         handler = MagicMock(return_value=True)
         ctx.on_script_error = handler
         patched_get_script_run_ctx.return_value = ctx
@@ -489,7 +609,7 @@ class FragmentTest(unittest.TestCase):
     ):
         """Test that handler exceptions are logged and default UI is shown in fragment."""
         ctx = MagicMock()
-        ctx.fragment_storage = MemoryFragmentStorage()
+        ctx.fragment_storage = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         def raising_handler(exc: Exception) -> bool | None:

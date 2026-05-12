@@ -273,7 +273,7 @@ class ScriptRunnerTest(unittest.TestCase):
         fragment = MagicMock()
 
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("my_fragment", fragment)
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
@@ -297,9 +297,9 @@ class ScriptRunnerTest(unittest.TestCase):
         fragment = MagicMock()
 
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("my_fragment1", fragment)
-        scriptrunner._fragment_storage.set("my_fragment2", fragment)
-        scriptrunner._fragment_storage.set("my_fragment3", fragment)
+        scriptrunner._fragment_storage.register("my_fragment1", fragment)
+        scriptrunner._fragment_storage.register("my_fragment2", fragment)
+        scriptrunner._fragment_storage.register("my_fragment3", fragment)
 
         scriptrunner.request_rerun(
             RerunData(
@@ -342,9 +342,9 @@ class ScriptRunnerTest(unittest.TestCase):
             raised_exception["called"] = True
             raise RuntimeError("this fragment errored out")
 
-        scriptrunner._fragment_storage.set("my_fragment1", raise_exception)
-        scriptrunner._fragment_storage.set("my_fragment2", fragment)
-        scriptrunner._fragment_storage.set("my_fragment3", fragment)
+        scriptrunner._fragment_storage.register("my_fragment1", raise_exception)
+        scriptrunner._fragment_storage.register("my_fragment2", fragment)
+        scriptrunner._fragment_storage.register("my_fragment3", fragment)
 
         scriptrunner.request_rerun(
             RerunData(
@@ -390,7 +390,7 @@ class ScriptRunnerTest(unittest.TestCase):
             _fragment(non_optional_func)()
 
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("my_fragment", fragment)
+        scriptrunner._fragment_storage.register("my_fragment", fragment)
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["my_fragment"]))
         scriptrunner.start()
@@ -883,7 +883,7 @@ class ScriptRunnerTest(unittest.TestCase):
             DeltaGenerator(),
             DeltaGenerator(),
         )
-        scriptrunner._fragment_storage.set(
+        scriptrunner._fragment_storage.register(
             "my_fragment1",
             lambda: context_dg_stack.set(dg_stack_set_by_fragment),
         )
@@ -924,7 +924,7 @@ class ScriptRunnerTest(unittest.TestCase):
             DeltaGenerator(),
             DeltaGenerator(),
         )
-        scriptrunner._fragment_storage.set(
+        scriptrunner._fragment_storage.register(
             "my_fragment1",
             lambda: context_dg_stack.set(dg_stack_set_by_fragment),
         )

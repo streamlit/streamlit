@@ -668,7 +668,7 @@ class ScriptRunner:
                     if rerun_data.fragment_id_queue:
                         for fragment_id in rerun_data.fragment_id_queue:
                             try:
-                                wrapped_fragment = self._fragment_storage.get(
+                                wrapped_fragment = self._fragment_storage.lookup(
                                     fragment_id
                                 )
                                 wrapped_fragment()

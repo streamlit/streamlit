@@ -16,11 +16,12 @@ from __future__ import annotations
 
 import contextlib
 import inspect
+import threading
 from abc import abstractmethod
 from collections.abc import Callable
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
@@ -65,23 +66,38 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def get(self, key: str) -> Fragment:
-        """Returns the stored fragment for the given key."""
+    def lookup(self, key: str) -> Fragment:
+        """Look up a fragment to re-execute.
+
+        Called during fragment reruns from the script thread.
+        """
         raise NotImplementedError
 
     @abstractmethod
-    def set(self, key: str, value: Fragment) -> None:
-        """Saves a fragment under the given key."""
+    def register(self, key: str, fragment: Fragment) -> None:
+        """Store a fragment definition.
+
+        Called during script execution from the main thread or worker threads
+        (nested fragments in parallel execution).
+        """
         raise NotImplementedError
 
     @abstractmethod
     def delete(self, key: str) -> None:
-        """Delete the fragment corresponding to the given key."""
+        """Delete the fragment corresponding to the given key.
+
+        Implementations are not required to be thread-safe; callers should
+        only invoke this from the script thread.
+        """
         raise NotImplementedError
 
     @abstractmethod
     def contains(self, key: str) -> bool:
-        """Return whether the given key is present in this FragmentStorage."""
+        """Return whether the given key is present in this FragmentStorage.
+
+        May be called from non-script threads (e.g. the event loop). Implementations
+        should be safe to call without external synchronization.
+        """
         raise NotImplementedError
 
 
@@ -98,26 +114,29 @@ class MemoryFragmentStorage(FragmentStorage):
     """
 
     def __init__(self) -> None:
+        self._lock = threading.Lock()
         self._fragments: dict[str, Fragment] = {}
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
-        if new_fragment_ids is None:
-            new_fragment_ids = frozenset()
+        with self._lock:
+            if new_fragment_ids is None:
+                new_fragment_ids = frozenset()
 
-        fragment_ids = list(self._fragments.keys())
+            fragment_ids = list(self._fragments.keys())
 
-        for fid in fragment_ids:
-            if fid not in new_fragment_ids:
-                del self._fragments[fid]
+            for fid in fragment_ids:
+                if fid not in new_fragment_ids:
+                    del self._fragments[fid]
 
-    def get(self, key: str) -> Fragment:
+    def lookup(self, key: str) -> Fragment:
         try:
             return self._fragments[key]
         except KeyError as e:
             raise FragmentStorageKeyError(str(e))
 
-    def set(self, key: str, value: Fragment) -> None:
-        self._fragments[key] = value
+    def register(self, key: str, fragment: Fragment) -> None:
+        with self._lock:
+            self._fragments[key] = fragment
 
     def delete(self, key: str) -> None:
         try:
@@ -127,6 +146,18 @@ class MemoryFragmentStorage(FragmentStorage):
 
     def contains(self, key: str) -> bool:
         return key in self._fragments
+
+    def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
+        raise TypeError(
+            "MemoryFragmentStorage does not support deepcopy; "
+            "it holds a threading.Lock and shared mutable state."
+        )
+
+    def __copy__(self) -> NoReturn:
+        raise TypeError(
+            "MemoryFragmentStorage does not support copy; "
+            "it holds a threading.Lock and shared mutable state."
+        )
 
 
 def _fragment(
@@ -248,7 +279,7 @@ def _fragment(
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        ctx.fragment_storage.set(fragment_id, wrapped_fragment)
+        ctx.fragment_storage.register(fragment_id, wrapped_fragment)
 
         if run_every:
             msg = ForwardMsg()
