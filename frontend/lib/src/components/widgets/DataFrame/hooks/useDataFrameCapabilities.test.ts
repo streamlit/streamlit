@@ -54,21 +54,14 @@ describe("useDataFrameCapabilities", () => {
       expect(result.current.canSort).toBe(false)
     })
 
-    it("returns true for DELETE_ONLY editing mode", () => {
+    it.each([
+      ["DELETE_ONLY", DELETE_ONLY],
+      ["FIXED", FIXED],
+    ])("returns true for %s editing mode", (_name, editingMode) => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({
           ...defaultParams,
-          editingMode: DELETE_ONLY,
-        })
-      )
-      expect(result.current.canSort).toBe(true)
-    })
-
-    it("returns true for FIXED editing mode", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities({
-          ...defaultParams,
-          editingMode: FIXED,
+          editingMode,
         })
       )
       expect(result.current.canSort).toBe(true)
@@ -191,21 +184,14 @@ describe("useDataFrameCapabilities", () => {
       expect(result.current.canAddRows).toBe(true)
     })
 
-    it("returns false for DELETE_ONLY mode", () => {
+    it.each([
+      ["DELETE_ONLY", DELETE_ONLY],
+      ["FIXED", FIXED],
+    ])("returns false for %s mode", (_name, editingMode) => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({
           ...defaultParams,
-          editingMode: DELETE_ONLY,
-        })
-      )
-      expect(result.current.canAddRows).toBe(false)
-    })
-
-    it("returns false for FIXED mode", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities({
-          ...defaultParams,
-          editingMode: FIXED,
+          editingMode,
         })
       )
       expect(result.current.canAddRows).toBe(false)
@@ -244,21 +230,14 @@ describe("useDataFrameCapabilities", () => {
       expect(result.current.canDeleteRows).toBe(true)
     })
 
-    it("returns false for ADD_ONLY mode", () => {
+    it.each([
+      ["ADD_ONLY", ADD_ONLY],
+      ["FIXED", FIXED],
+    ])("returns false for %s mode", (_name, editingMode) => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities({
           ...defaultParams,
-          editingMode: ADD_ONLY,
-        })
-      )
-      expect(result.current.canDeleteRows).toBe(false)
-    })
-
-    it("returns false for FIXED mode", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities({
-          ...defaultParams,
-          editingMode: FIXED,
+          editingMode,
         })
       )
       expect(result.current.canDeleteRows).toBe(false)
@@ -362,67 +341,47 @@ describe("useDataFrameCapabilities", () => {
   })
 
   describe("touch device capabilities", () => {
-    it("returns isTouchDevice flag", () => {
+    it("returns isTouchDevice as boolean and touch-dependent flags are inversely related", () => {
       const { result } = renderHook(() =>
         useDataFrameCapabilities(defaultParams)
       )
       expect(typeof result.current.isTouchDevice).toBe("boolean")
-    })
-
-    it("canResizeColumns and supportsRectangleSelection are consistent", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities(defaultParams)
-      )
-      expect(result.current.canResizeColumns).toBe(
-        result.current.supportsRectangleSelection
-      )
-    })
-
-    it("canResizeColumns equals !isTouchDevice", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities(defaultParams)
-      )
+      // canResizeColumns and supportsRectangleSelection are both disabled on touch
       expect(result.current.canResizeColumns).toBe(
         !result.current.isTouchDevice
-      )
-    })
-
-    it("supportsRectangleSelection equals !isTouchDevice", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities(defaultParams)
       )
       expect(result.current.supportsRectangleSelection).toBe(
         !result.current.isTouchDevice
       )
     })
 
-    it("supportsFillHandle is false when canEdit is false", () => {
-      const { result } = renderHook(() =>
+    it("supportsFillHandle requires canEdit and non-touch device", () => {
+      // READ_ONLY: canEdit is false, so supportsFillHandle must be false
+      const readOnly = renderHook(() =>
         useDataFrameCapabilities({ ...defaultParams, editingMode: READ_ONLY })
       )
-      expect(result.current.canEdit).toBe(false)
-      expect(result.current.supportsFillHandle).toBe(false)
-    })
+      expect(readOnly.result.current.canEdit).toBe(false)
+      expect(readOnly.result.current.supportsFillHandle).toBe(false)
 
-    it("supportsFillHandle equals canEdit && !isTouchDevice", () => {
-      const { result } = renderHook(() =>
-        useDataFrameCapabilities({ ...defaultParams, editingMode: DYNAMIC })
-      )
-      expect(result.current.supportsFillHandle).toBe(
-        result.current.canEdit && !result.current.isTouchDevice
-      )
-    })
-
-    it("supportsFillHandle is false when disabled even for editable modes", () => {
-      const { result } = renderHook(() =>
+      // DYNAMIC + disabled: canEdit is false, so supportsFillHandle must be false
+      const disabled = renderHook(() =>
         useDataFrameCapabilities({
           ...defaultParams,
           editingMode: DYNAMIC,
           disabled: true,
         })
       )
-      expect(result.current.canEdit).toBe(false)
-      expect(result.current.supportsFillHandle).toBe(false)
+      expect(disabled.result.current.canEdit).toBe(false)
+      expect(disabled.result.current.supportsFillHandle).toBe(false)
+
+      // DYNAMIC + enabled: supportsFillHandle depends on touch device state
+      const editable = renderHook(() =>
+        useDataFrameCapabilities({ ...defaultParams, editingMode: DYNAMIC })
+      )
+      expect(editable.result.current.canEdit).toBe(true)
+      expect(editable.result.current.supportsFillHandle).toBe(
+        !editable.result.current.isTouchDevice
+      )
     })
   })
 })
