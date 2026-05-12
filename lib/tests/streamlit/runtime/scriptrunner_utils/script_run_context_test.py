@@ -319,3 +319,44 @@ class ScriptRunContextTest(unittest.TestCase):
         t.join()
 
         assert captured["fragment_id"] == "frag2"
+
+    def test_add_script_run_ctx_propagates_thread_state_to_child(self):
+        """Parent → child propagation: a not-yet-started child thread should
+        observe the parent's ``FragmentThreadState`` snapshot once it starts,
+        and any ``ThreadState.update`` in the child must not leak back to the
+        parent's ContextVar (isolation).
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(
+            fragment_id="parent_fragment",
+            delta_path=(1, 2, 3),
+            active_script_hash="parent_hash",
+        )
+
+        captured: dict[str, object] = {}
+
+        def child_target() -> None:
+            ts_before = ThreadState.get()
+            captured["before"] = (
+                ts_before.fragment_id,
+                ts_before.delta_path,
+                ts_before.active_script_hash,
+            )
+            ThreadState.update(fragment_id="child_changed_it")
+            captured["after_child_update"] = ThreadState.get().fragment_id
+
+        t = threading.Thread(target=child_target)
+        add_script_run_ctx(t, ctx)
+        t.start()
+        t.join()
+
+        assert captured["before"] == ("parent_fragment", (1, 2, 3), "parent_hash")
+        assert captured["after_child_update"] == "child_changed_it"
+
+        parent_ts = ThreadState.get()
+        assert parent_ts.fragment_id == "parent_fragment"
+        assert parent_ts.delta_path == (1, 2, 3)
+        assert parent_ts.active_script_hash == "parent_hash"
