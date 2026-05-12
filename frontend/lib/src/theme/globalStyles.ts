@@ -15,8 +15,8 @@
  */
 
 import { css, SerializedStyles } from "@emotion/react"
-import { transparentize } from "color2k"
 
+import { setAlpha } from "./colorUtils"
 import type { EmotionTheme } from "./types"
 
 /**
@@ -63,7 +63,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     color: ${theme.colors.bodyText};
     background-color: ${theme.colors.bgColor}; // 2
     -webkit-text-size-adjust: 100%; // 3
-    -webkit-tap-highlight-color: ${transparentize(theme.colors.black, 1)}; // 4
+    -webkit-tap-highlight-color: ${setAlpha(theme.colors.black, 0)}; // 4
     -webkit-font-smoothing: auto;
   }
 

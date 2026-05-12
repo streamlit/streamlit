@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { darken, lighten, transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
+import { darken, lighten, setAlpha } from "~lib/theme/colorUtils"
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
 import {
@@ -1124,7 +1124,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.colors.borderColor).toBe("blue")
-    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
+    expect(theme.colors.borderColorLight).toBe(setAlpha("blue", 0.45))
     // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
     // not configured
     expect(theme.colors.dataframeBorderColor).toBe(
@@ -1237,25 +1237,25 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
     expect(theme.colors.redBackgroundColor).toBe(
-      transparentize(theme.colors.red80, 0.9)
+      setAlpha(theme.colors.red80, 0.1)
     )
     expect(theme.colors.orangeBackgroundColor).toBe(
-      transparentize(theme.colors.orange70, 0.9)
+      setAlpha(theme.colors.orange70, 0.1)
     )
     expect(theme.colors.yellowBackgroundColor).toBe(
-      transparentize(theme.colors.yellow65, 0.9)
+      setAlpha(theme.colors.yellow65, 0.1)
     )
     expect(theme.colors.blueBackgroundColor).toBe(
-      transparentize(theme.colors.blue65, 0.9)
+      setAlpha(theme.colors.blue65, 0.1)
     )
     expect(theme.colors.greenBackgroundColor).toBe(
-      transparentize(theme.colors.green70, 0.9)
+      setAlpha(theme.colors.green70, 0.1)
     )
     expect(theme.colors.violetBackgroundColor).toBe(
-      transparentize(theme.colors.purple60, 0.9)
+      setAlpha(theme.colors.purple60, 0.1)
     )
     expect(theme.colors.grayBackgroundColor).toBe(
-      transparentize(theme.colors.gray85, 0.9)
+      setAlpha(theme.colors.gray85, 0.1)
     )
   })
 
@@ -1265,25 +1265,25 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, darkTheme)
     expect(theme.colors.redBackgroundColor).toBe(
-      transparentize(theme.colors.red60, 0.8)
+      setAlpha(theme.colors.red60, 0.2)
     )
     expect(theme.colors.orangeBackgroundColor).toBe(
-      transparentize(theme.colors.orange80, 0.8)
+      setAlpha(theme.colors.orange80, 0.2)
     )
     expect(theme.colors.yellowBackgroundColor).toBe(
-      transparentize(theme.colors.yellow65, 0.8)
+      setAlpha(theme.colors.yellow65, 0.2)
     )
     expect(theme.colors.blueBackgroundColor).toBe(
-      transparentize(theme.colors.blue60, 0.8)
+      setAlpha(theme.colors.blue60, 0.2)
     )
     expect(theme.colors.greenBackgroundColor).toBe(
-      transparentize(theme.colors.green60, 0.8)
+      setAlpha(theme.colors.green60, 0.2)
     )
     expect(theme.colors.violetBackgroundColor).toBe(
-      transparentize(theme.colors.purple60, 0.8)
+      setAlpha(theme.colors.purple60, 0.2)
     )
     expect(theme.colors.grayBackgroundColor).toBe(
-      transparentize(theme.colors.gray70, 0.8)
+      setAlpha(theme.colors.gray70, 0.2)
     )
   })
 

@@ -16,9 +16,9 @@
 import { useMemo } from "react"
 
 import { Theme as GlideTheme, SpriteMap } from "@glideapps/glide-data-grid"
-import { lighten, mix, transparentize } from "color2k"
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { lighten, mix, setAlpha } from "~lib/theme/colorUtils"
 import { convertRemToPx } from "~lib/theme/utils"
 
 export type CustomGridTheme = {
@@ -67,18 +67,18 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       // Explanations: https://github.com/glideapps/glide-data-grid/blob/main/packages/core/API.md#theme
       accentColor: theme.colors.primary,
       accentFg: theme.colors.white,
-      accentLight: transparentize(theme.colors.primary, 0.9),
+      accentLight: setAlpha(theme.colors.primary, 0.1),
       borderColor: theme.colors.dataframeBorderColor,
       horizontalBorderColor: theme.colors.dataframeBorderColor,
       fontFamily: theme.genericFonts.bodyFont,
-      bgSearchResult: transparentize(theme.colors.primary, 0.9),
+      bgSearchResult: setAlpha(theme.colors.primary, 0.1),
       resizeIndicatorColor: theme.colors.primary,
       // Header styling:
       bgIconHeader: theme.colors.fadedText60,
       fgIconHeader: theme.colors.white,
       bgHeader: theme.colors.dataframeHeaderBackgroundColor,
-      bgHeaderHasFocus: transparentize(theme.colors.darkenedBgMix100, 0.9),
-      bgHeaderHovered: transparentize(theme.colors.darkenedBgMix100, 0.9),
+      bgHeaderHasFocus: setAlpha(theme.colors.darkenedBgMix100, 0.1),
+      bgHeaderHovered: setAlpha(theme.colors.darkenedBgMix100, 0.1),
       textHeader: theme.colors.fadedText60,
       textHeaderSelected: theme.colors.white,
       textGroupHeader: theme.colors.fadedText60,
@@ -88,7 +88,7 @@ function useCustomTheme(): Readonly<CustomGridTheme> {
       baseFontStyle: `${theme.fontWeights.normal} ${convertRemToPx(theme.fontSizes.sm)}px`,
       editorFontSize: theme.fontSizes.sm,
       textDark: theme.colors.bodyText,
-      textMedium: transparentize(theme.colors.bodyText, 0.2),
+      textMedium: setAlpha(theme.colors.bodyText, 0.8),
       textLight: theme.colors.fadedText40,
       bgCell: theme.colors.bgColor,
       // uses same as bgCell to always have the same background color:

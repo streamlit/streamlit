@@ -17,12 +17,12 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darken } from "color2k"
 
 import {
   BaseButtonKind,
   BaseButtonSize,
 } from "~lib/components/shared/BaseButton/styled-components"
+import { darken } from "~lib/theme/colorUtils"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export { BaseButtonKind, BaseButtonSize }

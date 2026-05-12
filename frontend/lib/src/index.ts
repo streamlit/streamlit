@@ -159,6 +159,7 @@ export {
 } from "./theme/themeConfigs"
 export { globalStyles } from "./theme/globalStyles"
 export { hasLightBackgroundColor } from "./theme/getColors"
+export { setAlpha } from "./theme/colorUtils"
 export type {
   CachedTheme,
   EmotionTheme,

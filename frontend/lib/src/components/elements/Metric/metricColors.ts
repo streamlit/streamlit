@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
-
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
+import { setAlpha } from "~lib/theme/colorUtils"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { EmotionTheme } from "~lib/theme/types"
 
@@ -73,7 +72,7 @@ export function getMetricBackgroundColor(
     case MetricProto.MetricColor.VIOLET:
       return theme.colors.violetBackgroundColor
     case MetricProto.MetricColor.PRIMARY:
-      return transparentize(theme.colors.primary, lightTheme ? 0.9 : 0.7)
+      return setAlpha(theme.colors.primary, lightTheme ? 0.1 : 0.3)
     // this must be grey
     default:
       return theme.colors.grayBackgroundColor

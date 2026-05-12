@@ -17,7 +17,6 @@
 import { ReactElement } from "react"
 
 import { cleanup, screen, within } from "@testing-library/react"
-import { transparentize } from "color2k"
 import type { Element } from "hast"
 import ReactMarkdown from "react-markdown"
 
@@ -25,6 +24,7 @@ import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { mockTheme } from "~lib/mocks/mockTheme"
 import { render, renderWithContexts } from "~lib/test_util"
+import { setAlpha } from "~lib/theme/colorUtils"
 import { getThemeBackgroundColors } from "~lib/theme/getColors"
 import { colors } from "~lib/theme/primitives/colors"
 
@@ -868,7 +868,7 @@ describe("StreamlitMarkdown", () => {
   })
 
   it("colours text properly", () => {
-    const grayTextColor = transparentize(colors.gray85, 0.4)
+    const grayTextColor = setAlpha(colors.gray85, 0.6)
 
     const colorMapping = new Map([
       ["red", colors.red90],

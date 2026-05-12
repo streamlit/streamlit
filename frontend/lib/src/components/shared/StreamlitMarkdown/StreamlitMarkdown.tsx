@@ -32,7 +32,6 @@ import {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
-import { parseToRgba } from "color2k"
 import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
@@ -61,6 +60,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { parseToRgba } from "~lib/theme/colorUtils"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,

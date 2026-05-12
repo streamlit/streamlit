@@ -15,9 +15,12 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+import {
+  EmotionTheme,
+  hasLightBackgroundColor,
+  setAlpha,
+} from "@streamlit/lib"
 
 /**
  * Returns the color of the text in the sidebar nav.
@@ -46,8 +49,8 @@ const getNavTextColor = (
     return theme.colors.bodyText
   }
   return isLightTheme
-    ? transparentize(theme.colors.bodyText, 0.2)
-    : transparentize(theme.colors.bodyText, 0.25)
+    ? setAlpha(theme.colors.bodyText, 0.8)
+    : setAlpha(theme.colors.bodyText, 0.75)
 }
 
 export const StyledSidebarNavContainer = styled.div(({ theme }) => ({

@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
-
+import { setAlpha } from "~lib/theme/colorUtils"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
@@ -191,8 +190,8 @@ describe("getThemeBackgroundColors", () => {
     expect(result.greenbg).toBe(colors.greenBackgroundColor)
     expect(result.violetbg).toBe(colors.violetBackgroundColor)
     expect(result.graybg).toBe(colors.grayBackgroundColor)
-    expect(result.purplebg).toBe(transparentize(colors.purple90, 0.9))
-    expect(result.primarybg).toBe(transparentize(colors.primary, 0.9))
+    expect(result.purplebg).toBe(setAlpha(colors.purple90, 0.1))
+    expect(result.primarybg).toBe(setAlpha(colors.primary, 0.1))
   })
 
   it("returns correct background colors for dark theme", () => {
@@ -206,8 +205,8 @@ describe("getThemeBackgroundColors", () => {
     expect(result.greenbg).toBe(colors.greenBackgroundColor)
     expect(result.violetbg).toBe(colors.violetBackgroundColor)
     expect(result.graybg).toBe(colors.grayBackgroundColor)
-    expect(result.purplebg).toBe(transparentize(colors.purple80, 0.7))
-    expect(result.primarybg).toBe(transparentize(colors.primary, 0.7))
+    expect(result.purplebg).toBe(setAlpha(colors.purple80, 0.3))
+    expect(result.primarybg).toBe(setAlpha(colors.primary, 0.3))
   })
 })
 

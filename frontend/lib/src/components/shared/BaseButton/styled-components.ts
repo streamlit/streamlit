@@ -17,8 +17,8 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darken, transparentize } from "color2k"
 
+import { darken, setAlpha } from "~lib/theme/colorUtils"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export enum BaseButtonKind {
@@ -299,11 +299,11 @@ export const StyledPillsButtonActive = styled(
   StyledPillsButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    backgroundColor: transparentize(theme.colors.primary, 0.9),
+    backgroundColor: setAlpha(theme.colors.primary, 0.1),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
     "&:hover, &:focus-visible": {
-      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      backgroundColor: setAlpha(theme.colors.primary, 0.2),
       borderColor: theme.colors.primary,
       color: theme.colors.primary,
     },
@@ -385,12 +385,12 @@ export const StyledSegmentedControlButtonActive = styled(
   StyledSegmentedControlButton
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
-    backgroundColor: transparentize(theme.colors.primary, 0.9),
+    backgroundColor: setAlpha(theme.colors.primary, 0.1),
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
     zIndex: theme.zIndices.priority,
     "&:hover, &:focus-visible": {
-      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      backgroundColor: setAlpha(theme.colors.primary, 0.2),
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
       borderColor: theme.colors.borderColor,

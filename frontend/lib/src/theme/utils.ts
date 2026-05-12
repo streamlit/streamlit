@@ -14,14 +14,6 @@
  * limitations under the License.
  */
 
-import {
-  darken,
-  getLuminance,
-  lighten,
-  parseToRgba,
-  toHex,
-  transparentize,
-} from "color2k"
 import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
@@ -36,6 +28,14 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
+import {
+  darken,
+  getLuminance,
+  lighten,
+  parseToRgba,
+  setAlpha,
+  toHex,
+} from "./colorUtils"
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
@@ -259,8 +259,9 @@ const resolveBgColor = (
 ): string => {
   if (configBackgroundColor) return configBackgroundColor
   if (configMainColor) {
-    const transparency = isLightTheme ? 0.9 : 0.8
-    return transparentize(configMainColor, transparency)
+    // Set absolute alpha: 10% for light theme, 20% for dark theme
+    const targetAlpha = isLightTheme ? 0.1 : 0.2
+    return setAlpha(configMainColor, targetAlpha)
   }
   return defaultBackgroundColor
 }
@@ -801,7 +802,8 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
 
-    const borderColorLight = transparentize(borderColor, 0.55)
+    // Set absolute alpha to 45% for lighter border variant
+    const borderColorLight = setAlpha(borderColor, 0.45)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
     // Set the fallback here for dataframe & table border color

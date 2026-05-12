@@ -15,8 +15,8 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
+import { setAlpha } from "~lib/theme/colorUtils"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
 
 interface StyledChatMessageContainerProps {
@@ -37,8 +37,8 @@ export const StyledChatMessageContainer =
       ...(background
         ? {
             backgroundColor: lightTheme
-              ? transparentize(theme.colors.gray20, 0.5)
-              : transparentize(theme.colors.gray90, 0.5),
+              ? setAlpha(theme.colors.gray20, 0.5)
+              : setAlpha(theme.colors.gray90, 0.5),
           }
         : {}),
     }

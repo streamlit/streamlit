@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
-
+import { setAlpha } from "~lib/theme/colorUtils"
 import { colors } from "~lib/theme/primitives/colors"
 
 export default {
@@ -36,13 +35,13 @@ export default {
   grayColor: colors.gray80,
 
   // Default background theme colors (dark theme)
-  redBackgroundColor: transparentize(colors.red60, 0.8),
-  orangeBackgroundColor: transparentize(colors.orange80, 0.8),
-  yellowBackgroundColor: transparentize(colors.yellow65, 0.8),
-  blueBackgroundColor: transparentize(colors.blue60, 0.8),
-  greenBackgroundColor: transparentize(colors.green60, 0.8),
-  violetBackgroundColor: transparentize(colors.purple60, 0.8),
-  grayBackgroundColor: transparentize(colors.gray70, 0.8),
+  redBackgroundColor: setAlpha(colors.red60, 0.2),
+  orangeBackgroundColor: setAlpha(colors.orange80, 0.2),
+  yellowBackgroundColor: setAlpha(colors.yellow65, 0.2),
+  blueBackgroundColor: setAlpha(colors.blue60, 0.2),
+  greenBackgroundColor: setAlpha(colors.green60, 0.2),
+  violetBackgroundColor: setAlpha(colors.purple60, 0.2),
+  grayBackgroundColor: setAlpha(colors.gray70, 0.2),
 
   // Default text theme colors (dark theme)
   redTextColor: colors.red60,
@@ -51,5 +50,5 @@ export default {
   blueTextColor: colors.blue60,
   greenTextColor: colors.green50,
   violetTextColor: colors.purple50,
-  grayTextColor: transparentize(colors.gray10, 0.4),
+  grayTextColor: setAlpha(colors.gray10, 0.6),
 }
