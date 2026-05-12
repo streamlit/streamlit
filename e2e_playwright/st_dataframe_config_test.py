@@ -229,7 +229,7 @@ def test_video_cell_overlay(app: Page):
 
 def test_markdown_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that the markdown column overlay works correctly in read-only mode."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(32)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(34)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
