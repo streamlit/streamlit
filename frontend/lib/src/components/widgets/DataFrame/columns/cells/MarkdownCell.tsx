@@ -70,7 +70,8 @@ interface StyledToolbarWrapperProps {
 const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
   ({ theme, locked }) => ({
     opacity: locked ? 1 : 0,
-    visibility: locked ? "visible" : "hidden",
+    // Keep in tab order when hidden (visibility: hidden removes from tab order)
+    // Use opacity for visual hide, which allows keyboard navigation to the button
     padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
     top: 0,
     right: 0,
@@ -78,6 +79,12 @@ const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
     zIndex: theme.zIndices.sidebar + 1,
     pointerEvents: locked ? "auto" : "none",
     transition: locked ? TOOLBAR_SHOW_TRANSITION : TOOLBAR_HIDE_TRANSITION,
+
+    // Make button visible when focused via keyboard
+    "&:focus-within": {
+      opacity: 1,
+      pointerEvents: "auto",
+    },
   })
 )
 
@@ -193,6 +200,11 @@ const StyledTextarea = styled.textarea(({ theme }) => ({
 
   "&:focus": {
     outline: "none",
+  },
+
+  "&:focus-visible": {
+    outline: "2px solid var(--gdg-accent-color)",
+    outlineOffset: "-2px",
   },
 }))
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
