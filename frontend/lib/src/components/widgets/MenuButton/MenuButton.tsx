@@ -116,7 +116,6 @@ const MenuOption = memo(function MenuOption({
             source={text}
             allowHTML={false}
             isLabel
-            largerLabel={false}
             disableLinks
           />
         </StyledMenuOptionLabel>

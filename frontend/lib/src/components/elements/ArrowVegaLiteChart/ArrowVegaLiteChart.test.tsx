@@ -19,6 +19,8 @@ import { useMemo } from "react"
 import { screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 
+import { VegaLiteChart as VegaLiteChartProto } from "@streamlit/protobuf"
+
 // Avoid real Vega embedding side-effects in tests
 vi.mock("./useVegaEmbed", () => ({
   useVegaEmbed: () => {
@@ -32,13 +34,11 @@ vi.mock("./useVegaEmbed", () => ({
   },
 }))
 
-import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { UNICODE } from "~lib/mocks/arrow/types/unicode"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement } from "./arrowUtils"
 import ArrowVegaLiteChart, {
   hasNestedComposition,
   isFacetChart,
@@ -46,11 +46,10 @@ import ArrowVegaLiteChart, {
 } from "./ArrowVegaLiteChart"
 
 const getProps = (
-  elementProps: Partial<VegaLiteChartElement> = {},
+  elementProps: Partial<VegaLiteChartProto> = {},
   props: Partial<Props> = {}
 ): Props => ({
-  element: {
-    data: null,
+  element: VegaLiteChartProto.create({
     id: "1",
     useContainerWidth: false,
     datasets: [],
@@ -76,9 +75,10 @@ const getProps = (
         y: { field: "value", type: "quantitative" },
       },
     }),
-    vegaLiteTheme: "streamlit",
+    theme: "streamlit",
     ...elementProps,
-  },
+  }),
+  elementHash: "test-hash",
   widgetMgr: new WidgetStateManager({
     sendRerunBackMsg: vi.fn(),
     formsDataChanged: vi.fn(),
@@ -106,9 +106,10 @@ describe("ArrowVegaLiteChart", () => {
   it("shows data grid when 'Show data' is clicked for inline data, and toggles back to chart", async () => {
     const user = userEvent.setup()
 
-    const dataQuiver = new Quiver({ data: UNICODE })
     render(
-      <ArrowVegaLiteChart {...getProps({ data: dataQuiver, datasets: [] })} />
+      <ArrowVegaLiteChart
+        {...getProps({ data: { data: UNICODE }, datasets: [] })}
+      />
     )
 
     // Initially, the chart container should be present
@@ -136,7 +137,6 @@ describe("ArrowVegaLiteChart", () => {
   })
 
   it("shows data grid when 'Show data' is clicked for first dataset", () => {
-    const datasetQuiver = new Quiver({ data: UNICODE })
     render(
       <ArrowVegaLiteChart
         {...getProps({
@@ -145,7 +145,7 @@ describe("ArrowVegaLiteChart", () => {
             {
               name: "dataset0",
               hasName: true,
-              data: datasetQuiver,
+              data: { data: UNICODE },
             },
           ],
         })}

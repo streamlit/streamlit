@@ -543,13 +543,15 @@ class ScriptRunner:
                 # interaction). Use the widget ids from the rerun data to
                 # maintain some widget state, as the rerun data should
                 # contain the latest widget ids from the frontend.
-                widget_ids: set[str] = set()
+                widget_ids: frozenset[str] = frozenset()
 
                 if (
                     rerun_data.widget_states is not None
                     and rerun_data.widget_states.widgets is not None
                 ):
-                    widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+                    widget_ids = frozenset(
+                        w.id for w in rerun_data.widget_states.widgets
+                    )
 
                 # For MPA page transitions: filter query params BEFORE cleanup.
                 # This uses existing bindings to remove params from other pages,
@@ -710,7 +712,7 @@ class ScriptRunner:
                         else:
                             exec(code, module.__dict__)  # noqa: S102
                         self._fragment_storage.clear(
-                            new_fragment_ids=ctx.new_fragment_ids
+                            new_fragment_ids=ctx.new_fragment_ids.snapshot()
                         )
 
                     self._session_state.maybe_check_serializable()
@@ -776,7 +778,7 @@ class ScriptRunner:
         """
         # Tell session_state to update itself in response
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run)
+            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)

@@ -65,6 +65,7 @@ import {
   Text as TextProto,
   TimeInput as TimeInputProto,
   Toast as ToastProto,
+  VegaLiteChart as VegaLiteChartProto,
   Video as VideoProto,
 } from "@streamlit/protobuf"
 
@@ -282,7 +283,7 @@ const RawElementNodeRenderer = (
         >
           <Table
             element={tableProto}
-            data={node.quiverElement}
+            elementHash={node.elementHash}
             {...elementProps}
           />
         </ElementContainer>
@@ -693,7 +694,7 @@ const RawElementNodeRenderer = (
             // be undefined.
             key={dataframeProto.id || undefined}
             element={dataframeProto}
-            data={node.quiverElement}
+            elementHash={node.elementHash}
             {...widgetProps}
           />
         </ElementContainer>
@@ -701,7 +702,7 @@ const RawElementNodeRenderer = (
     }
 
     case "vegaLiteChart": {
-      const vegaLiteElement = node.vegaLiteChartElement
+      const vegaLiteProto = node.element.vegaLiteChart as VegaLiteChartProto
 
       // VegaLite charts with embedded dataframes need a defined parent width
       // (not fit-content) for proper measurement and rendering due to the resize feature.
@@ -724,12 +725,13 @@ const RawElementNodeRenderer = (
       return (
         <ElementContainer node={node} config={config} isStale={isStale}>
           <ArrowVegaLiteChart
-            element={vegaLiteElement}
+            element={vegaLiteProto}
+            elementHash={node.elementHash}
             // Vega-lite chart can be used as a widget (when selections are activated) or
             // an element. We only want to set the key in case of it being used as a widget
             // since otherwise it might break some apps that show the same charts multiple times.
             // So we only compute an element ID if it's a widget, otherwise its an empty string.
-            key={vegaLiteElement.id || undefined}
+            key={vegaLiteProto.id || undefined}
             {...widgetProps}
           />
         </ElementContainer>
