@@ -50,6 +50,34 @@ This spec should not copy these prototype details:
 - `fragment_storage` for user chunk callbacks; lazy sources need a dedicated session-scoped
   source manager with explicit lifecycle cleanup.
 
+## Preparatory Refactors
+
+See `preparations.md` in this directory for recommended frontend/dataframe cleanup that can land
+before the lazy-loading implementation starts. Key refactors:
+
+1. **Component-owned Arrow data derivations**: Move `Quiver` construction out of `ElementNode` and
+   into `DataFrame`, `Table`, and `ArrowVegaLiteChart`. Specified in
+   `specs/2026-05-09-component-owned-arrow-data-refactor/tech-spec.md`.
+
+2. **Dataframe capability/mode layer**: Add `useDataFrameCapabilities(...)` returning explicit
+   feature gates (`canSort`, `canSearch`, `canExportCsv`, `canEdit`, etc.). Lazy loading adds one
+   input (`dataMode: "eager" | "lazy"`) instead of sprinkling `if (isLazy)` conditionals.
+
+3. **Sorting strategy split**: Refactor `useColumnSort` into explicit `sortingMode: "client" | "server" | "disabled"`.
+   Client sorting assumes all data is local; server sorting only manages sort state and header UI.
+
+4. **Cell-provider layering**: Split `useDataLoader` into base cell provider, editing overlay, cell
+   formatter, and error boundary. Lazy loading replaces only the base cell provider.
+
+5. **Row-count abstraction**: Decouple displayed row count from `Quiver.dimensions.numDataRows`.
+   Lazy dataframes get `numRows` from source metadata while columns/schema come from the initial chunk.
+
+6. **Toolbar/search/export gates**: Move toolbar visibility to capability layer gates
+   (`capabilities.canSearch`, `capabilities.canExportCsv`) so lazy mode disables these cleanly.
+
+These refactors make the lazy-loading implementation simpler because eager/lazy differences are
+handled through explicit modes and capabilities rather than scattered conditionals.
+
 ## Proposal
 
 ### Backend Data Source Protocol
@@ -339,9 +367,12 @@ should stay inside the dataframe component/hooks rather than adding a lazy branc
 
 ### Server-side Sorting Integration
 
+This section assumes the sorting strategy split from `preparations.md` has landed: `useColumnSort`
+has been refactored to support explicit `sortingMode: "client" | "server" | "disabled"`.
+
 Lazy dataframes cannot use the current client-side `useColumnSort` path because that hook derives
 a complete sorted row mapping by calling `getCellContent` across the full table. For lazy
-sources, sorting must be a separate server-side mode:
+sources, sorting must use `sortingMode: "server"`:
 
 - Split the dataframe sorting hook into eager and lazy branches, or add an explicit
   `sortingMode: "client" | "server" | "disabled"` option.
@@ -365,6 +396,17 @@ sources, sorting must be a separate server-side mode:
 
 ### Frontend Cache and Rendering
 
+This section assumes the following preparatory refactors from `preparations.md` have landed:
+
+- **Component-owned Arrow data derivations**: `DataFrame` owns its `Quiver` construction.
+- **Dataframe capability/mode layer**: `useDataFrameCapabilities(...)` returns explicit feature
+  gates that respect `dataMode: "eager" | "lazy"`.
+- **Cell-provider layering**: `useDataLoader` is split into base cell provider, editing overlay,
+  cell formatter, and error boundary.
+- **Row-count abstraction**: `DataFrameDataShape.numRows` is decoupled from loaded data.
+- **Toolbar/export/search gates**: Search and CSV export visibility use `capabilities.canSearch`
+  and `capabilities.canExportCsv`.
+
 Integrate lazy loading into the existing `DataFrame` component rather than creating a separate
 lazy dataframe component. This keeps all rendering, column configuration, selection, and toolbar
 logic unified. All compatible existing features must continue to work for lazy sources:
@@ -376,10 +418,12 @@ logic unified. All compatible existing features must continue to work for lazy s
 - **Row display**: `row_height` (custom row heights via proto)
 - **Toolbar**: Fullscreen toggle, column visibility (search and CSV download hidden for lazy)
 
-The `useDataLoader` hook should check for lazy metadata and branch accordingly:
+With the cell-provider layering from preparations, lazy loading replaces only the base cell
+provider. The editing overlay, cell formatter, and error boundary layers remain unchanged.
+The base cell provider branches on `dataMode`:
 
-- **Eager path** (existing): Direct `data.getCell()` access on the complete Quiver
-- **Lazy path** (new): Chunk-based lookup with `LoadingCell` fallback for missing ranges
+- **Eager mode** (existing): Direct `data.getCell()` access on the complete Quiver
+- **Lazy mode** (new): Chunk-based lookup with `LoadingCell` fallback for missing ranges
 
 Add a lazy row cache for dataframe elements.
 
