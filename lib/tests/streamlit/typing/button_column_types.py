@@ -19,8 +19,9 @@ from typing import TYPE_CHECKING
 from typing_extensions import assert_type
 
 # Perform type checking tests for st.column_config.ButtonColumn.
-# The return type is ButtonColumnResult | ColumnConfig since the actual type
-# depends on whether a key is provided at runtime.
+# The return type depends on whether a key is provided:
+# - Without key: returns ColumnConfig
+# - With key: returns ButtonColumnResult
 if TYPE_CHECKING:
     from streamlit.elements.lib.column_types import (
         ButtonColumn,
@@ -28,74 +29,71 @@ if TYPE_CHECKING:
         ColumnConfig,
     )
 
-    # Type alias for the ButtonColumn return type
-    ButtonColumnReturn = ButtonColumnResult | ColumnConfig
-
     # =====================================================================
-    # Return type tests
+    # Return type tests - verify overload resolution
     # =====================================================================
 
-    # Without key - returns union type (runtime: ColumnConfig)
-    assert_type(ButtonColumn(), ButtonColumnReturn)
-    assert_type(ButtonColumn("Actions"), ButtonColumnReturn)
-    assert_type(ButtonColumn(label="Actions"), ButtonColumnReturn)
+    # Without key - returns ColumnConfig
+    assert_type(ButtonColumn(), ColumnConfig)
+    assert_type(ButtonColumn("Actions"), ColumnConfig)
+    assert_type(ButtonColumn(label="Actions"), ColumnConfig)
 
-    # With key - returns union type (runtime: ButtonColumnResult)
-    assert_type(ButtonColumn(key="btn_click"), ButtonColumnReturn)
-    assert_type(ButtonColumn("Actions", key="btn_click"), ButtonColumnReturn)
+    # With key - returns ButtonColumnResult
+    assert_type(ButtonColumn(key="btn_click"), ButtonColumnResult)
+    assert_type(ButtonColumn("Actions", key="btn_click"), ButtonColumnResult)
 
     # =====================================================================
-    # Test label parameter (str or None)
+    # Test label parameter (str or None) - without key
     # =====================================================================
 
-    assert_type(ButtonColumn(label=None), ButtonColumnReturn)
-    assert_type(ButtonColumn(label="Actions"), ButtonColumnReturn)
-    assert_type(ButtonColumn(""), ButtonColumnReturn)
+    assert_type(ButtonColumn(label=None), ColumnConfig)
+    assert_type(ButtonColumn(label="Actions"), ColumnConfig)
+    assert_type(ButtonColumn(""), ColumnConfig)
 
     # =====================================================================
     # Test width parameter ("small", "medium", "large", int, or None)
     # =====================================================================
 
-    assert_type(ButtonColumn(width=None), ButtonColumnReturn)
-    assert_type(ButtonColumn(width="small"), ButtonColumnReturn)
-    assert_type(ButtonColumn(width="medium"), ButtonColumnReturn)
-    assert_type(ButtonColumn(width="large"), ButtonColumnReturn)
-    assert_type(ButtonColumn(width=100), ButtonColumnReturn)
+    assert_type(ButtonColumn(width=None), ColumnConfig)
+    assert_type(ButtonColumn(width="small"), ColumnConfig)
+    assert_type(ButtonColumn(width="medium"), ColumnConfig)
+    assert_type(ButtonColumn(width="large"), ColumnConfig)
+    assert_type(ButtonColumn(width=100), ColumnConfig)
 
     # =====================================================================
     # Test help parameter (str or None)
     # =====================================================================
 
-    assert_type(ButtonColumn(help=None), ButtonColumnReturn)
-    assert_type(ButtonColumn(help="Click to perform action"), ButtonColumnReturn)
+    assert_type(ButtonColumn(help=None), ColumnConfig)
+    assert_type(ButtonColumn(help="Click to perform action"), ColumnConfig)
 
     # =====================================================================
     # Test pinned parameter (bool or None)
     # =====================================================================
 
-    assert_type(ButtonColumn(pinned=None), ButtonColumnReturn)
-    assert_type(ButtonColumn(pinned=True), ButtonColumnReturn)
-    assert_type(ButtonColumn(pinned=False), ButtonColumnReturn)
+    assert_type(ButtonColumn(pinned=None), ColumnConfig)
+    assert_type(ButtonColumn(pinned=True), ColumnConfig)
+    assert_type(ButtonColumn(pinned=False), ColumnConfig)
 
     # =====================================================================
     # Test alignment parameter ("left", "center", "right", or None)
     # =====================================================================
 
-    assert_type(ButtonColumn(alignment=None), ButtonColumnReturn)
-    assert_type(ButtonColumn(alignment="left"), ButtonColumnReturn)
-    assert_type(ButtonColumn(alignment="center"), ButtonColumnReturn)
-    assert_type(ButtonColumn(alignment="right"), ButtonColumnReturn)
+    assert_type(ButtonColumn(alignment=None), ColumnConfig)
+    assert_type(ButtonColumn(alignment="left"), ColumnConfig)
+    assert_type(ButtonColumn(alignment="center"), ColumnConfig)
+    assert_type(ButtonColumn(alignment="right"), ColumnConfig)
 
     # =====================================================================
     # Test type parameter ("primary", "secondary", "tertiary")
     # =====================================================================
 
-    assert_type(ButtonColumn(type="primary"), ButtonColumnReturn)
-    assert_type(ButtonColumn(type="secondary"), ButtonColumnReturn)
-    assert_type(ButtonColumn(type="tertiary"), ButtonColumnReturn)
+    assert_type(ButtonColumn(type="primary"), ColumnConfig)
+    assert_type(ButtonColumn(type="secondary"), ColumnConfig)
+    assert_type(ButtonColumn(type="tertiary"), ColumnConfig)
 
     # =====================================================================
-    # Test on_click callback (requires key)
+    # Test on_click callback (requires key for ButtonColumnResult)
     # =====================================================================
 
     def my_callback() -> None:
@@ -104,13 +102,13 @@ if TYPE_CHECKING:
     def callback_with_args(x: int, y: str) -> None:
         pass
 
-    # on_click with key
-    assert_type(ButtonColumn(on_click=my_callback, key="click"), ButtonColumnReturn)
+    # on_click with key - returns ButtonColumnResult
+    assert_type(ButtonColumn(on_click=my_callback, key="click"), ButtonColumnResult)
     assert_type(
-        ButtonColumn(on_click=callback_with_args, key="click"), ButtonColumnReturn
+        ButtonColumn(on_click=callback_with_args, key="click"), ButtonColumnResult
     )
-    assert_type(ButtonColumn(on_click=lambda: None, key="click"), ButtonColumnReturn)
-    assert_type(ButtonColumn(on_click=None, key="click"), ButtonColumnReturn)
+    assert_type(ButtonColumn(on_click=lambda: None, key="click"), ButtonColumnResult)
+    assert_type(ButtonColumn(on_click=None, key="click"), ButtonColumnResult)
 
     # =====================================================================
     # Test args and kwargs (requires key)
@@ -118,26 +116,26 @@ if TYPE_CHECKING:
 
     assert_type(
         ButtonColumn(on_click=callback_with_args, args=(1, "a"), key="click"),
-        ButtonColumnReturn,
+        ButtonColumnResult,
     )
     assert_type(
         ButtonColumn(
             on_click=callback_with_args, kwargs={"x": 1, "y": "a"}, key="click"
         ),
-        ButtonColumnReturn,
+        ButtonColumnResult,
     )
     assert_type(
         ButtonColumn(
             on_click=callback_with_args, args=(1, "a"), kwargs={}, key="click"
         ),
-        ButtonColumnReturn,
+        ButtonColumnResult,
     )
 
     # =====================================================================
     # Test all parameters combined
     # =====================================================================
 
-    # Without key
+    # Without key - returns ColumnConfig
     assert_type(
         ButtonColumn(
             label="Actions",
@@ -147,10 +145,10 @@ if TYPE_CHECKING:
             alignment="center",
             type="primary",
         ),
-        ButtonColumnReturn,
+        ColumnConfig,
     )
 
-    # With key
+    # With key - returns ButtonColumnResult
     assert_type(
         ButtonColumn(
             label="Actions",
@@ -164,5 +162,5 @@ if TYPE_CHECKING:
             kwargs=None,
             key="action_click",
         ),
-        ButtonColumnReturn,
+        ButtonColumnResult,
     )
