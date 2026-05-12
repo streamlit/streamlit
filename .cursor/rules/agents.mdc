@@ -56,7 +56,7 @@ These agents are the **single source of truth** for agent instructions:
 
 **When modifying an existing agent:**
 1. Update the agent file — Codex picks up changes via `developer_instructions` reference
-2. Note: Codex `config.toml` descriptions must be updated manually (they don't auto-sync)
+2. Note: Codex agent descriptions in `.codex/agents/*.toml` must be updated manually (they don't auto-sync from the Claude agent file)
 
 ## Slash Command Support
 
