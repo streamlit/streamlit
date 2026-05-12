@@ -252,7 +252,7 @@ export class AppRoot {
           deltaPath
         )
 
-        // Check if we can reuse the payload (and derived caches) from an existing node
+        // Check if we can reuse the payload from an existing node
         const canReuse = canReuseElementPayload(
           existingNode,
           elementHash,
@@ -266,8 +266,7 @@ export class AppRoot {
           metadata,
           activeScriptHash,
           delta.fragmentId,
-          elementHash,
-          canReuse ? existingNode : undefined
+          elementHash
         )
       }
 
@@ -419,27 +418,16 @@ export class AppRoot {
     metadata: ForwardMsgMetadata,
     activeScriptHash: string,
     fragmentId?: string,
-    elementHash?: string,
-    existingNodeForDerivations?: ElementNode
+    elementHash?: string
   ): AppRoot {
-    // If we have an existing node to preserve derivations from, use its helper method
-    // to create a new node with updated lifecycle metadata but preserved lazy caches
-    const elementNode = existingNodeForDerivations
-      ? existingNodeForDerivations.withPreservedDerivations(
-          metadata,
-          scriptRunId,
-          activeScriptHash,
-          fragmentId,
-          elementHash
-        )
-      : new ElementNode(
-          element,
-          metadata,
-          scriptRunId,
-          activeScriptHash,
-          fragmentId,
-          elementHash
-        )
+    const elementNode = new ElementNode(
+      element,
+      metadata,
+      scriptRunId,
+      activeScriptHash,
+      fragmentId,
+      elementHash
+    )
     return new AppRoot(
       this.mainScriptHash,
       SetNodeByDeltaPathVisitor.setNodeAtPath(

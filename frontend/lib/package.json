@@ -24,6 +24,7 @@
   ],
   "scripts": {
     "build": "env NODE_OPTIONS=--max_old_space_size=8192 vite build",
+    "buildWatch": "env DEV_WATCH=1 NODE_OPTIONS=--max_old_space_size=8192 vite build --watch",
     "typecheck": "yarn run typecheck:all",
     "test": "vitest run",
     "testWatch": "vitest",
@@ -167,7 +168,6 @@
     "vite": "^8.0.9",
     "vite-plugin-dts": "^5.0.0",
     "vite-plugin-svgr": "^5.2.0",
-    "vite-tsconfig-paths": "^6.1.0",
     "vitest": "^4.1.5",
     "vitest-canvas-mock": "^1.1.4",
     "vitest-fetch-mock": "^0.4.5"

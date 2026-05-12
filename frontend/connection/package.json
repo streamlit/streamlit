@@ -43,7 +43,6 @@
     "vite": "^8.0.9",
     "vite-plugin-dts": "^5.0.0",
     "vite-plugin-svgr": "^5.2.0",
-    "vite-tsconfig-paths": "^6.1.0",
     "vitest": "^4.1.5",
     "vitest-websocket-mock": "^0.5.0"
   },
