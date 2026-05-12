@@ -144,6 +144,22 @@ class TestGetWebsocketSettings:
 class TestGetUvicornConfigKwargs:
     """Tests for _get_uvicorn_config_kwargs function."""
 
+    @pytest.mark.parametrize(
+        ("uvicorn_version", "expected_ws"),
+        [
+            # Versions below threshold should use "auto"
+            ("0.30.0", "auto"),
+            ("0.43.0", "auto"),
+            ("0.43.99", "auto"),
+            ("0.44.0rc1", "auto"),  # Pre-releases are less than final release
+            ("0.44.0.dev0", "auto"),  # Dev releases are less than final release
+            # Versions at or above threshold should use "websockets-sansio"
+            ("0.44.0", "websockets-sansio"),
+            ("0.44.1", "websockets-sansio"),
+            ("0.45.0", "websockets-sansio"),
+            ("1.0.0", "websockets-sansio"),
+        ],
+    )
     @patch_config_options(
         {
             "server.sslCertFile": None,
@@ -152,27 +168,14 @@ class TestGetUvicornConfigKwargs:
             "server.enableWebsocketCompression": True,
         }
     )
-    def test_returns_websockets_sansio_for_uvicorn_044_plus(self) -> None:
-        """Test that ws is 'websockets-sansio' for uvicorn >= 0.44.0."""
-        with patch("uvicorn.__version__", "0.44.0"):
+    def test_websocket_protocol_by_uvicorn_version(
+        self, uvicorn_version: str, expected_ws: str
+    ) -> None:
+        """Test that ws protocol is selected correctly based on uvicorn version."""
+        with patch("uvicorn.__version__", uvicorn_version):
             kwargs = _get_uvicorn_config_kwargs()
 
-        assert kwargs["ws"] == "websockets-sansio"
-
-    @patch_config_options(
-        {
-            "server.sslCertFile": None,
-            "server.sslKeyFile": None,
-            "server.websocketPingInterval": None,
-            "server.enableWebsocketCompression": True,
-        }
-    )
-    def test_returns_auto_for_uvicorn_below_044(self) -> None:
-        """Test that ws is 'auto' for uvicorn < 0.44.0."""
-        with patch("uvicorn.__version__", "0.43.0"):
-            kwargs = _get_uvicorn_config_kwargs()
-
-        assert kwargs["ws"] == "auto"
+        assert kwargs["ws"] == expected_ws
 
     @patch_config_options(
         {
@@ -183,15 +186,19 @@ class TestGetUvicornConfigKwargs:
         }
     )
     def test_uvicorn_accepts_config_kwargs(self) -> None:
-        """Test that uvicorn.Config accepts the kwargs without error."""
+        """Test that uvicorn.Config accepts the kwargs without raising.
+
+        This is a smoke test that verifies the kwargs dict structure is valid.
+        The actual protocol resolution and validation happens lazily in
+        uvicorn.Config.load(), not in __init__.
+        """
         import uvicorn
 
         kwargs = _get_uvicorn_config_kwargs()
 
         # Verify uvicorn.Config accepts these kwargs without raising
-        # This ensures the ws value is valid for the installed uvicorn version
-        config = uvicorn.Config(app="test:app", **kwargs)
-        assert config.ws in {"websockets-sansio", "auto"}
+        uvicorn_config = uvicorn.Config(app="test:app", **kwargs)
+        assert uvicorn_config.ws in {"websockets-sansio", "auto"}
 
     @patch_config_options(
         {

@@ -139,9 +139,9 @@ def _get_websocket_protocol() -> str:
     """
     import uvicorn
 
-    if not is_version_less_than(uvicorn.__version__, "0.44.0"):
-        return "websockets-sansio"
-    return "auto"
+    if is_version_less_than(uvicorn.__version__, "0.44.0"):
+        return "auto"
+    return "websockets-sansio"
 
 
 def _get_uvicorn_config_kwargs() -> dict[str, Any]:
