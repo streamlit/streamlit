@@ -21,4 +21,4 @@ toml==0.10.1
 typing-extensions==4.10.0
 uvicorn==0.30.0
 watchdog==2.1.5
-websockets==12.0.0
+wsproto==1.2.0
