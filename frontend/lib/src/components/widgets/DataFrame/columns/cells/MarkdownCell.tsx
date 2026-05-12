@@ -248,7 +248,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
 
   if (isEditing) {
     return (
-      <StyledContainer data-testid="markdown-cell-editor" isEditing>
+      <StyledContainer data-testid="stMarkdownColumnEditor" isEditing>
         <StyledTextareaWrapper>
           <StyledToolbarWrapper locked>
             <StyledCellToolbar>
@@ -280,7 +280,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   const hasContent = (cell.data.value?.length ?? 0) > 0
 
   return (
-    <StyledContainer data-testid="markdown-cell-viewer">
+    <StyledContainer data-testid="stMarkdownColumnViewer">
       <StyledMarkdownViewer>
         {!cell.readonly && (
           <StyledToolbarWrapper className="stMarkdownCellToolbar" locked>

@@ -188,7 +188,7 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     # Get the cell overlay - it starts in view mode showing rendered markdown
     cell_overlay = get_open_cell_overlay(themed_app)
     expect(cell_overlay).to_be_visible()
-    expect(cell_overlay.get_by_test_id("markdown-cell-viewer")).to_be_visible()
+    expect(cell_overlay.get_by_test_id("stMarkdownColumnViewer")).to_be_visible()
     assert_snapshot(cell_overlay, name="st_data_editor-markdown_col_viewer")
 
     # Click the edit button to switch to edit mode
@@ -208,7 +208,7 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     textarea.press(f"{COMMAND_KEY}+Enter")
 
     # After saving, should be back in viewer mode with updated content
-    viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
+    viewer = cell_overlay.get_by_test_id("stMarkdownColumnViewer")
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("New Header")
     expect(viewer).to_contain_text("updated")
@@ -240,7 +240,7 @@ def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     textarea.press(f"{COMMAND_KEY}+Enter")
 
     # After saving via shortcut, should be back in viewer mode with saved content
-    viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
+    viewer = cell_overlay.get_by_test_id("stMarkdownColumnViewer")
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("Shortcut Header")
     expect(viewer).to_contain_text("Saved via keyboard")
@@ -258,7 +258,7 @@ def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
     textarea.press("Escape")
 
     # Should be back in viewer mode without saving
-    viewer = cell_overlay.get_by_test_id("markdown-cell-viewer")
+    viewer = cell_overlay.get_by_test_id("stMarkdownColumnViewer")
     expect(viewer).to_be_visible()
 
     # Re-enter edit mode and verify cancelled content was not saved
