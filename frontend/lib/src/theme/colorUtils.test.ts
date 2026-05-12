@@ -138,6 +138,22 @@ describe("colorUtils", () => {
     it("returns first color if first is unsupported", () => {
       expect(mix("hwb(0 0% 0%)", "#0000ff", 0.5)).toBe("hwb(0 0% 0%)")
     })
+
+    it("mixes semi-transparent colors linearly in RGB space", () => {
+      // chroma.mix uses linear RGB interpolation for alpha.
+      // This differs from color2k's Sass-style alpha-aware algorithm.
+      // The result should have alpha = 0.5 * 0.5 + 0.5 * 0.8 = 0.65
+      const result = mix("rgba(255, 0, 0, 0.5)", "rgba(0, 0, 255, 0.8)", 0.5)
+      expect(result).toBe("rgba(128, 0, 128, 0.65)")
+    })
+
+    it("mixes opaque with transparent color", () => {
+      // Mixing opaque red with 50% transparent blue at 50%
+      // Result: rgb = (255+0)/2, (0+0)/2, (0+255)/2 = 128, 0, 128
+      // Alpha: 1.0 * 0.5 + 0.5 * 0.5 = 0.75
+      const result = mix("#ff0000", "rgba(0, 0, 255, 0.5)", 0.5)
+      expect(result).toBe("rgba(128, 0, 128, 0.75)")
+    })
   })
 
   describe("getLuminance", () => {

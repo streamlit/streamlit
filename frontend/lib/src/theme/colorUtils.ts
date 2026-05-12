@@ -42,8 +42,12 @@ function toCSS(c: chroma.Color): string {
 
 /**
  * Try to parse a color with chroma-js, returning null if parsing fails.
- * This handles modern CSS color formats (HWB, oklch, etc.) that chroma-js
- * doesn't support by returning null instead of throwing.
+ *
+ * Chroma-js v3 natively supports most CSS color formats including:
+ * oklch(), oklab(), lab(), lch(), and modern space-separated rgb()/hsl().
+ * Only hwb() and exotic color(<colorspace> ...) syntaxes fall through to
+ * the catch block. This function returns null instead of throwing for
+ * unsupported formats.
  */
 function tryParse(color: string): chroma.Color | null {
   try {
@@ -81,6 +85,10 @@ export function setAlpha(color: string, alpha: number): string {
 export function darken(color: string, amount = 0.1): string {
   const c = tryParse(color)
   if (!c) return color
+  // Multiply by 5 to roughly match color2k's visual intensity.
+  // color2k used HSL-based darkening with 0-1 range, while chroma-js uses
+  // Lab-space with a different scale. The factor of 5 was empirically
+  // calibrated to produce visually similar results.
   return toCSS(c.darken(amount * 5))
 }
 
@@ -95,6 +103,8 @@ export function darken(color: string, amount = 0.1): string {
 export function lighten(color: string, amount = 0.1): string {
   const c = tryParse(color)
   if (!c) return color
+  // Multiply by 5 to roughly match color2k's visual intensity.
+  // See darken() for the rationale behind this calibration factor.
   return toCSS(c.brighten(amount * 5))
 }
 
@@ -118,13 +128,13 @@ export function mix(color1: string, color2: string, ratio = 0.5): string {
 /**
  * Get the relative luminance of a color (0-1).
  * Used for determining if a background is light or dark.
- * Returns 0.5 if the color cannot be parsed (e.g., HWB format not supported).
+ * Returns 0.5 if the color cannot be parsed (e.g., hwb() format not supported).
  */
 export function getLuminance(color: string): number {
   try {
     return chroma(color).luminance()
   } catch {
-    // Some modern CSS color formats (like HWB) may not be supported by chroma-js.
+    // hwb() and exotic color(<colorspace> ...) syntaxes are not supported.
     // Return a mid-gray luminance as a fallback.
     return 0.5
   }
