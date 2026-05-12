@@ -36,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 23
+TEXT_INPUT_ELEMENTS = 24
 
 
 def test_text_input_widget_rendering(
