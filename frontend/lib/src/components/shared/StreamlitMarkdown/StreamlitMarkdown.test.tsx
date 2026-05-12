@@ -438,7 +438,11 @@ describe("link URL scheme security", () => {
     )
     // Returns "#" to prevent navigation (empty href with target="_blank"
     // would open current page in new tab)
-    expect(screen.getByText("Click me")).toHaveAttribute("href", "#")
+    const link = screen.getByText("Click me")
+    expect(link).toHaveAttribute("href", "#")
+    // Verify blocked links don't open in new tab (LinkWithTargetBlank returns
+    // target="_self" for URLs starting with "#")
+    expect(link).not.toHaveAttribute("target", "_blank")
   })
 
   // Raw HTML links go through rehype-raw and reach transformLinkUri.
@@ -462,6 +466,8 @@ describe("link URL scheme security", () => {
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
     const link = await screen.findByText("link")
     expect(link).toHaveAttribute("href", "#")
+    // Verify blocked links don't open in new tab
+    expect(link).not.toHaveAttribute("target", "_blank")
   })
 
   it.each([
