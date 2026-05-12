@@ -283,7 +283,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     <StyledContainer data-testid="stMarkdownColumnViewer">
       <StyledMarkdownViewer>
         {!cell.readonly && (
-          <StyledToolbarWrapper className="stMarkdownCellToolbar" locked>
+          <StyledToolbarWrapper className="stMarkdownCellToolbar">
             <StyledCellToolbar>
               <ToolbarAction
                 label="Edit"
