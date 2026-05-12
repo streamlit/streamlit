@@ -111,6 +111,7 @@ export function useBasicWidgetClientState<
   // - It only has a value the moment when the user calls setValue (internally
   //   called setNextValueWithSource). And then it's immediately set to null
   //   internally.
+
   const [nextValueWithSource, setNextValueWithSource] =
     useState<ValueWithSource<T> | null>({
       value: currentValue,

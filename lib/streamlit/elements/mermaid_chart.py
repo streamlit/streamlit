@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, cast
 
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -31,7 +31,7 @@ class MermaidChartMixin:
         self,
         body: str,
         *,
-        width: Width | Literal["auto"] = "auto",
+        width: Width = "stretch",
     ) -> DeltaGenerator:
         """Display a Mermaid diagram.
 
@@ -46,15 +46,11 @@ class MermaidChartMixin:
             text-based syntax to define flowcharts, sequence diagrams, class
             diagrams, state diagrams, and more.
 
-        width : "auto", "stretch", "content", or int
+        width : "stretch", "content", or int
             The width of the element. This can be one of the following:
 
-            - ``"auto"`` (default): The width of the element adapts based on
-              the container flex layout. In vertical containers, the element
-              uses ``"stretch"`` width. In horizontal containers, the element
-              uses ``"content"`` width.
-            - ``"stretch"``: The width of the element matches the width of
-              the parent container.
+            - ``"stretch"`` (default): The width of the element matches the
+              width of the parent container.
             - ``"content"``: The width of the element matches the width of its
               content, but doesn't exceed the width of the parent container.
             - An integer specifying the width in pixels: The element has a
