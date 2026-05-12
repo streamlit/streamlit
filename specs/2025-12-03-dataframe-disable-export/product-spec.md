@@ -68,10 +68,13 @@ st.set_option("client.disableDataExport", True)
 
 When `client.disableDataExport = true`:
 
-- **Download button**: Hidden from the toolbar in `st.dataframe` and chart components
-- **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while a dataframe is
-  focused will not copy any cell data to the clipboard (applies to both single and multi-cell
-  selections)
+- **Download button**: Hidden from the toolbar in `st.dataframe`, `st.data_editor`, and chart
+  components
+- **Copy to clipboard** (`st.dataframe`): Completely disabled — pressing Ctrl/Cmd+C while a
+  dataframe is focused will not copy any cell data to the clipboard (applies to both single
+  and multi-cell selections)
+- **Copy to clipboard** (`st.data_editor`): Remains enabled because `st.data_editor` relies on
+  copy/paste for core editing workflows (e.g., pasting data into cells, copying rows)
 - **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
   `st.vega_lite_chart`)
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
@@ -123,16 +126,6 @@ st.dataframe(df, disable_export=False)  # re-enable for this dataframe
 This would allow the config option to set the default while still permitting exceptions.
 Adding this later based on user feedback avoids premature API expansion.
 
-### Adding to `st.data_editor`
-
-This config option intentionally does not affect `st.data_editor`.
-
-**Reasoning:**
-
-- `st.data_editor` relies on copy/paste for core editing workflows (e.g., pasting data into
-  cells, copying rows for duplication)
-- Could be extended later if there's strong user demand
-
 ## Alternatives Considered
 
 ### Per-Dataframe Parameter Only
@@ -145,16 +138,6 @@ Adding `disable_export: bool = False` directly to `st.dataframe`.
 - Most use cases want to disable export for all dataframes in an app, not selectively
 - Easy to forget setting the parameter on one dataframe, creating inconsistent behavior
 - Cannot be enforced at the deployment/organization level
-
-### Positive Naming (`enableDataExport`)
-
-Using `client.enableDataExport = false` instead of `client.disableDataExport = true`.
-
-**Rejected because:**
-
-- This is a niche feature where users are specifically looking to disable export
-- Users searching for this functionality will search for "disable", not "enable"
-- More intuitive: `disableDataExport = true` clearly states the intent
 
 ## Checklist
 
