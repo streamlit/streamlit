@@ -267,10 +267,13 @@ const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
 /**
  * Transforms link URIs for markdown rendering.
  *
- * Note: React Markdown limits hrefs to specific protocols ('http', 'https',
- * 'mailto', 'tel') by default. We allow most URLs including data: URLs, which
- * are intentionally supported for embedding inline content (e.g., images).
+ * Uses a blocklist approach instead of React Markdown's default allowlist
+ * (defaultUrlTransform) to preserve compatibility with data: URLs and other
+ * custom schemes that Streamlit users rely on (e.g., inline images, PDFs).
  * Only explicitly dangerous schemes (javascript:, vbscript:) are blocked.
+ *
+ * Note: data:text/html URLs can execute JavaScript but run in a sandboxed
+ * null-origin context, making them less dangerous than javascript: URLs.
  *
  * Blocked URLs return "#" instead of "" to prevent navigation. An empty href
  * combined with target="_blank" would open the current page in a new tab.

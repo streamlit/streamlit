@@ -441,6 +441,29 @@ describe("link URL scheme security", () => {
     expect(screen.getByText("Click me")).toHaveAttribute("href", "#")
   })
 
+  // Raw HTML links go through rehype-raw and reach transformLinkUri.
+  // Test C0 control characters and internal whitespace bypasses in this context.
+  // The markdown parser already sanitizes these for standard [text](url) links,
+  // but raw HTML needs explicit protection.
+  // Note: Some C0 control characters (like SOH \x01) are converted to Unicode
+  // replacement characters by rehype-raw before reaching transformLinkUri.
+  // This is safe because browsers don't strip replacement characters from URLs.
+  it.each([
+    '<a href="javascript:alert(1)">link</a>',
+    '<a href="vbscript:alert(1)">link</a>',
+    '<a href="JAVASCRIPT:alert(1)">link</a>', // case-insensitive
+    '<a href="  javascript:alert(1)">link</a>', // leading whitespace
+    // HTML entity-encoded bypass attempts (internal tabs/newlines)
+    // These become actual C0 control characters when parsed by the browser
+    '<a href="java&#9;script:alert(1)">link</a>', // tab via HTML entity
+    '<a href="java&#10;script:alert(1)">link</a>', // newline via HTML entity
+    '<a href="java&#13;script:alert(1)">link</a>', // CR via HTML entity
+  ])("blocks dangerous raw HTML URLs: %s", async source => {
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const link = await screen.findByText("link")
+    expect(link).toHaveAttribute("href", "#")
+  })
+
   it.each([
     "https://example.com",
     "http://example.com",
