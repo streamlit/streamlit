@@ -63,6 +63,16 @@ describe("colorUtils", () => {
     it("clamps negative alpha values to 0", () => {
       expect(setAlpha("#ff0000", -0.5)).toBe("rgba(255, 0, 0, 0)")
     })
+
+    it("sets absolute alpha, not subtractive (anti-regression for color2k bug)", () => {
+      // This test locks in the fix for the original bug where color2k's
+      // transparentize() subtracted from existing alpha instead of setting it.
+      // With the old behavior: setAlpha("rgba(255, 0, 0, 0.5)", 0.5) would
+      // have resulted in 0.5 - 0.5 = 0.0 alpha.
+      // With the correct behavior: it sets alpha to exactly 0.5.
+      const result = setAlpha("rgba(255, 0, 0, 0.5)", 0.5)
+      expect(result).toBe("rgba(255, 0, 0, 0.5)")
+    })
   })
 
   describe("darken", () => {
