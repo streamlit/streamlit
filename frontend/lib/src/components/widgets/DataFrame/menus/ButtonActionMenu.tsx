@@ -133,6 +133,8 @@ function ButtonActionMenu({
                 onKeyDown={handleKeyDown(label)}
                 role="menuitem"
                 tabIndex={0}
+                // Provide aria-label for icon-only menu items (where text is empty)
+                aria-label={text || icon || label}
               >
                 {icon && <DynamicIcon size="base" iconValue={icon} />}
                 <StreamlitMarkdown
@@ -149,7 +151,9 @@ function ButtonActionMenu({
       }
       isOpen
       placement={PLACEMENT.bottomRight}
-      onClickOutside={onCloseMenu}
+      // Note: onClickOutside is intentionally not used here. The custom mousedown
+      // listener (lines 71-84) handles click-outside behavior while allowing the
+      // DataFrame's own button handlers to manage state for clicks inside the grid.
       onEsc={onCloseMenu}
       accessibilityType={ACCESSIBILITY_TYPE.menu}
       autoFocus={false}

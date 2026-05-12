@@ -53,7 +53,7 @@ from streamlit.elements.lib.column_config_utils import (
     process_config_mapping,
     update_column_config,
 )
-from streamlit.elements.lib.column_types import ButtonColumnResult
+from streamlit.elements.lib.column_types import ButtonColumnResult, ColumnConfig
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -1039,7 +1039,8 @@ class DataEditorMixin:
         # Process ButtonColumnResult objects and extract callback references
         # Button columns are read-only in data_editor but can still trigger clicks
         button_columns: dict[str, ButtonColumnResult] = {}
-        processed_column_config: ColumnConfigMappingInput | None = None
+        # Use a concrete mutable dict type since we mutate it below
+        processed_column_config: dict[Any, ColumnConfig | str | None] | None = None
         if column_config is not None:
             processed_column_config = {}
             for col_name, config in column_config.items():

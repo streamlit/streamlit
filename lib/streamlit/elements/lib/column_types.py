@@ -3194,9 +3194,10 @@ def ButtonColumn(
           background for subtlety.
 
     on_click : callable or None
-        An optional callback invoked when a button is clicked. The callback
-        receives no arguments directly, but the click information is available
-        in ``st.session_state[key]`` during the callback.
+        An optional callback invoked when a button is clicked. By default, the
+        callback receives no arguments. Use ``args`` and ``kwargs`` to pass
+        extra arguments. The click information is also available in
+        ``st.session_state[key]`` during the callback.
 
     args : tuple or None
         An optional tuple of args to pass to the callback.
