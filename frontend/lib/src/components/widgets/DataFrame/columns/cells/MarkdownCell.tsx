@@ -221,13 +221,25 @@ const StyledEmptyMessage = styled.div`
  */
 const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   value: cell,
+  initialValue,
   onChange,
+  onFinishedEditing,
 }) => {
-  const [isEditing, setIsEditing] = useState(false)
-  const [editValue, setEditValue] = useState(cell.data.value ?? "")
+  const [isEditing, setIsEditing] = useState(() => {
+    // If initialValue is provided (keyboard-started edit), start in edit mode
+    // and prepend the typed character to the edit value
+    return initialValue !== undefined && initialValue !== ""
+  })
+  const [editValue, setEditValue] = useState(() => {
+    // If initialValue is provided (keyboard-started edit), prepend it to the cell value
+    if (initialValue !== undefined && initialValue !== "") {
+      return initialValue + (cell.data.value ?? "")
+    }
+    return cell.data.value ?? ""
+  })
 
   const handleSave = useCallback(() => {
-    onChange({
+    const updatedCell: MarkdownCell = {
       ...cell,
       copyData: editValue,
       data: {
@@ -235,14 +247,17 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
         value: editValue,
         displayValue: removeLineBreaks(editValue),
       },
-    })
-    setIsEditing(false)
-  }, [cell, editValue, onChange])
+    }
+    onChange(updatedCell)
+    // Signal glide-data-grid that editing is finished
+    onFinishedEditing(updatedCell, [0, 1])
+  }, [cell, editValue, onChange, onFinishedEditing])
 
   const handleCancel = useCallback(() => {
     setEditValue(cell.data.value ?? "")
-    setIsEditing(false)
-  }, [cell.data.value])
+    // Signal glide-data-grid that editing is finished without changes
+    onFinishedEditing(cell, [0, 1])
+  }, [cell, onFinishedEditing])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -293,7 +308,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
 
   return (
     <StyledContainer data-testid="stMarkdownColumnViewer">
-      <StyledMarkdownViewer>
+      <StyledMarkdownViewer tabIndex={cell.readonly ? undefined : 0}>
         {!cell.readonly && (
           <StyledToolbarWrapper className="stMarkdownCellToolbar">
             <StyledCellToolbar>
