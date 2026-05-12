@@ -9,6 +9,8 @@ Uploads intermediate files (implementation plans, specs, learnings, explorations
 
 **Important:** The wiki repo uses `master` as its default branch. Always push to `master`, never create other branches.
 
+**Follow the wiki guidelines:** After cloning/updating the wiki repo, read and follow `agent-wiki/AGENTS.md` for the authoritative rules on what to upload and how to organize files.
+
 **Public URL pattern:**
 
 ```
@@ -123,9 +125,34 @@ EOF
 
 Include only top-level documents relevant to reviewers. Assets embedded in those documents (e.g., images) don't need separate entries.
 
+## PR-independent reference files
+
+For documents useful beyond a single PR (deep dives, architecture explorations, research findings), use the `references/` directory instead of `pull-requests/`.
+
+### When to use references
+
+- Codebase explorations not tied to a specific change
+- Architecture deep dives useful for future work
+- Research findings that inform multiple features
+- Decision logs with broader applicability
+
+### Workflow
+
+```bash
+# Create file with date prefix
+mkdir -p agent-wiki/references
+cp <file> agent-wiki/references/YYYY-MM-DD-<description>.md
+```
+
+Example: `2024-03-15-widget-state-deep-dive.md`
+
+Use the same commit/push workflow as PR artifacts (step 5), substituting `references/` for `pull-requests/` in both the `git add` command and the commit message (e.g., `"Add reference: YYYY-MM-DD-<description>"`).
+
+Public URL: `https://issues.streamlit.app/agent_wiki_explorer?file=references/YYYY-MM-DD-<description>.md`
+
 ## Notes
 
 - The `agent-wiki/` directory is gitignored and persists across sessions
 - Always push to `master` — never create feature branches or use `--force`
 - This is a **public repo** — never push sensitive information
-- Only upload files directly relevant to the current PR
+- Only upload files directly relevant to the current PR or general reference materials

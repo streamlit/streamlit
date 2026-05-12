@@ -137,15 +137,11 @@ def _register_element_id(
     if not element_id:
         return
 
-    if user_key := user_key_from_element_id(element_id):
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            raise StreamlitDuplicateElementKey(user_key)
+    user_key = user_key_from_element_id(element_id)
+    if user_key and not ctx.widget_user_keys_this_run.check_and_add(user_key):
+        raise StreamlitDuplicateElementKey(user_key)
 
-    if element_id not in ctx.widget_ids_this_run:
-        ctx.widget_ids_this_run.add(element_id)
-    else:
+    if not ctx.widget_ids_this_run.check_and_add(element_id):
         raise StreamlitDuplicateElementId(element_type)
 
 

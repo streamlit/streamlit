@@ -101,6 +101,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return
     }
     setOpen(element.open)
+    // Also update the widget manager so the frontend sends the correct value
+    // on subsequent reruns. Without this, a programmatic close (e.g.
+    // st.session_state.key = False) would leave a stale "true" in the widget
+    // state, causing the popover to reopen when another widget triggers a rerun.
+    widgetMgr?.setBoolValue(
+      { id: widgetId },
+      element.open,
+      { fromUi: false },
+      fragmentId
+    )
   }, [widgetId, element.open])
 
   // It would be nice to remove this since it uses a resize observer

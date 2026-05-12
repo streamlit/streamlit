@@ -20,6 +20,7 @@ from playwright.sync_api import Page, expect
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import (
     check_top_level_class,
+    click_button,
     click_toggle,
     get_element_by_key,
     get_expander,
@@ -27,7 +28,7 @@ from e2e_playwright.shared.app_utils import (
 
 EXPANDER_HEADER_IDENTIFIER = "summary"
 
-NUMBER_OF_EXPANDERS: Final = 22
+NUMBER_OF_EXPANDERS: Final = 24
 
 
 def test_expander_displays_correctly(
@@ -407,3 +408,36 @@ def test_keyed_expander_persist_expanded_across_remount(app: Page):
     # Still expanded
     keyed_expander = get_element_by_key(app, "persist_expander")
     expect(keyed_expander.get_by_text("Persist expander content")).to_be_visible()
+
+
+def test_programmatic_close_does_not_reopen_other_expander(app: Page):
+    """Test that programmatically closing one expander does not cause it to
+    reopen when another stateful expander is interacted with.
+
+    Regression test for https://github.com/streamlit/streamlit/issues/14943
+    """
+    exp_a = get_element_by_key(app, "multi_exp_a")
+    exp_b = get_element_by_key(app, "multi_exp_b")
+
+    # Open expander A
+    exp_a.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Verify expander A is open
+    expect(exp_a.get_by_text("Expander A content")).to_be_visible()
+
+    # Programmatically close it via the button inside
+    click_button(app, "Close A")
+
+    # Expander A should be closed
+    expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()
+
+    # Open expander B
+    exp_b.locator("summary").click()
+    wait_for_app_run(app)
+
+    # Expander B should be open
+    expect(exp_b.get_by_text("Expander B content")).to_be_visible()
+
+    # Expander A must NOT have reopened (the bug from #14943)
+    expect(exp_a.get_by_text("Expander A content")).not_to_be_visible()
