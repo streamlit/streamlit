@@ -36,6 +36,7 @@ from streamlit.web.server.starlette.starlette_server import (
     RetriesExceededError,
     UvicornRunner,
     _bind_socket,
+    _get_uvicorn_config_kwargs,
     _get_websocket_settings,
     _is_port_manually_set,
     _server_address_is_unix_socket,
@@ -138,6 +139,104 @@ class TestGetWebsocketSettings:
 
         assert interval == 10
         assert timeout == 10
+
+
+class TestGetUvicornConfigKwargs:
+    """Tests for _get_uvicorn_config_kwargs function."""
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_returns_websockets_sansio_for_uvicorn_044_plus(self) -> None:
+        """Test that ws is 'websockets-sansio' for uvicorn >= 0.44.0."""
+        with patch("uvicorn.__version__", "0.44.0"):
+            kwargs = _get_uvicorn_config_kwargs()
+
+        assert kwargs["ws"] == "websockets-sansio"
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_returns_auto_for_uvicorn_below_044(self) -> None:
+        """Test that ws is 'auto' for uvicorn < 0.44.0."""
+        with patch("uvicorn.__version__", "0.43.0"):
+            kwargs = _get_uvicorn_config_kwargs()
+
+        assert kwargs["ws"] == "auto"
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_uvicorn_accepts_config_kwargs(self) -> None:
+        """Test that uvicorn.Config accepts the kwargs without error."""
+        import uvicorn
+
+        kwargs = _get_uvicorn_config_kwargs()
+
+        # Verify uvicorn.Config accepts these kwargs without raising
+        # This ensures the ws value is valid for the installed uvicorn version
+        config = uvicorn.Config(app="test:app", **kwargs)
+        assert config.ws in {"websockets-sansio", "auto"}
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": "/path/to/cert.pem",
+            "server.sslKeyFile": "/path/to/key.pem",
+            "server.websocketPingInterval": 45,
+            "server.enableWebsocketCompression": False,
+        }
+    )
+    def test_returns_all_expected_keys(self) -> None:
+        """Test that all expected configuration keys are returned."""
+        kwargs = _get_uvicorn_config_kwargs()
+
+        expected_keys = {
+            "ssl_certfile",
+            "ssl_keyfile",
+            "ws",
+            "ws_ping_interval",
+            "ws_ping_timeout",
+            "ws_max_size",
+            "ws_per_message_deflate",
+            "use_colors",
+            "access_log",
+        }
+        assert set(kwargs.keys()) == expected_keys
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": "/path/to/cert.pem",
+            "server.sslKeyFile": "/path/to/key.pem",
+            "server.websocketPingInterval": 45,
+            "server.enableWebsocketCompression": False,
+        }
+    )
+    def test_returns_configured_values(self) -> None:
+        """Test that configured values are properly passed through."""
+        kwargs = _get_uvicorn_config_kwargs()
+
+        assert kwargs["ssl_certfile"] == "/path/to/cert.pem"
+        assert kwargs["ssl_keyfile"] == "/path/to/key.pem"
+        assert kwargs["ws_ping_interval"] == 45
+        assert kwargs["ws_ping_timeout"] == 45
+        assert kwargs["ws_per_message_deflate"] is False
+        assert kwargs["use_colors"] is False
+        assert kwargs["access_log"] is False
 
 
 class TestServerPortIsManuallySet:
