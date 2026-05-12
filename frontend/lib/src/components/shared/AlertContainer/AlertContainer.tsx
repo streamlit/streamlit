@@ -16,40 +16,10 @@
 
 import { ReactElement, ReactNode } from "react"
 
-import { KIND, Notification } from "baseui/notification"
+import { StyledAlertContainer, StyledAlertContent } from "./styled-components"
+import { Kind } from "./types"
 
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-
-import { StyledAlertContent } from "./styled-components"
-
-export enum Kind {
-  ERROR = "error",
-  INFO = "info",
-  SUCCESS = "success",
-  WARNING = "warning",
-}
-
-function getNotificationKind(
-  kind: Kind
-):
-  | typeof KIND.negative
-  | typeof KIND.info
-  | typeof KIND.positive
-  | typeof KIND.warning {
-  switch (kind) {
-    case Kind.ERROR:
-      return KIND.negative
-    case Kind.INFO:
-      return KIND.info
-    case Kind.SUCCESS:
-      return KIND.positive
-    case Kind.WARNING:
-      return KIND.warning
-    default:
-      // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-      throw new Error(`Unexpected alert type: ${kind}`)
-  }
-}
+export { Kind }
 
 export interface AlertContainerProps {
   width?: number
@@ -58,7 +28,7 @@ export interface AlertContainerProps {
 }
 
 /**
- * Provides Base Styles for any Alert Type UI. Used in the following cases:
+ * Provides base styles for any Alert Type UI. Used in the following cases:
  *   * Alert is the Streamlit specific alert component that users can use with
  *     any Markdown. Users have API access to generate these.
  *   * ExceptionElement is a special type of alert that formats an exception
@@ -72,47 +42,18 @@ export default function AlertContainer({
   width,
   children,
 }: AlertContainerProps): ReactElement {
-  const theme = useEmotionTheme()
-
   const testid = kind.charAt(0).toUpperCase() + kind.slice(1)
   return (
-    <Notification
-      kind={getNotificationKind(kind)}
-      overrides={{
-        Body: {
-          style: {
-            fontWeight: theme.fontWeights.normal,
-            marginTop: theme.spacing.none,
-            marginBottom: theme.spacing.none,
-            marginLeft: theme.spacing.none,
-            marginRight: theme.spacing.none,
-            width: width ? width.toString() : undefined,
-            border: 0,
-            borderTopRightRadius: theme.radii.default,
-            borderBottomRightRadius: theme.radii.default,
-            borderTopLeftRadius: theme.radii.default,
-            borderBottomLeftRadius: theme.radii.default,
-            paddingTop: theme.spacing.lg,
-            paddingBottom: theme.spacing.lg,
-            paddingRight: theme.spacing.lg,
-            paddingLeft: theme.spacing.lg,
-          },
-          props: {
-            "data-testid": "stAlertContainer",
-            className: `stAlertContainer`,
-          },
-        },
-        InnerContainer: {
-          style: {
-            width: "100%",
-            lineHeight: theme.lineHeights.small,
-          },
-        },
-      }}
+    <StyledAlertContainer
+      $kind={kind}
+      $width={width}
+      data-testid="stAlertContainer"
+      className="stAlertContainer"
+      role={kind === Kind.ERROR || kind === Kind.WARNING ? "alert" : "status"}
     >
       <StyledAlertContent data-testid={`stAlertContent${testid}`}>
         {children}
       </StyledAlertContent>
-    </Notification>
+    </StyledAlertContainer>
   )
 }

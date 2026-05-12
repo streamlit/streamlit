@@ -302,7 +302,7 @@ class AppSessionTest(unittest.TestCase):
     ):
         session = _create_test_session()
         fragment_id = "my_fragment_id"
-        session._fragment_storage.set(fragment_id, lambda: None)
+        session._fragment_storage.register(fragment_id, lambda: None)
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_active_scriptrunner
@@ -329,7 +329,7 @@ class AppSessionTest(unittest.TestCase):
 
         # leaving the following code line in to show that the fragment id
         # is not set in the fragment storage!
-        # session._fragment_storage.set(fragment_id, lambda: None)  # noqa: ERA001
+        # session._fragment_storage.register(fragment_id, lambda: None)  # noqa: ERA001
 
         mock_active_scriptrunner = MagicMock(spec=ScriptRunner)
         session._scriptrunner = mock_active_scriptrunner

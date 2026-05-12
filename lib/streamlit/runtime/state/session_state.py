@@ -1050,25 +1050,50 @@ class SessionState:
         # Compacted programmatic sets (st.session_state["k"] = v) are stored
         # under widget IDs only, so the guard correctly excludes them.
         #
+        # Programmatic set (user_key in _new_session_state): sync URL when the
+        # resolved value differs from the backend query snapshot, so reloads
+        # stay consistent (see issue #14670).
+        #
         # Default collapsing: remove stale params the frontend already cleared.
         # The backend's _query_params is not refreshed on same-page reruns, so
         # it can hold entries the frontend already deleted.  Cleaning them here
         # prevents _send_query_param_msg from re-broadcasting stale params.
+        # Programmatic reset to default uses remove_param so the browser URL
+        # is updated when the frontend still shows the old query string.
         restored_bound_value = False
         if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
-            if (
-                widget_value != default_value
-                and user_key in self._old_state
-                and not self.query_params.has_param(user_key)
-                and user_key not in self._new_session_state
+            if widget_value != default_value:
+                if (
+                    user_key in self._old_state
+                    and not self.query_params.has_param(user_key)
+                    and user_key not in self._new_session_state
+                ):
+                    serialized = metadata.serializer(widget_value)
+                    self.query_params.set_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    )
+                    restored_bound_value = True
+                elif (
+                    user_key in self._new_session_state
+                    and not url_value_seeded
+                    and (widget_id in self._old_state or user_key in self._old_state)
+                ):
+                    serialized = metadata.serializer(widget_value)
+                    if not self.query_params.stored_param_matches_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    ):
+                        self.query_params.set_corrected_value(
+                            user_key, serialized, metadata.value_type
+                        )
+            elif (
+                user_key in self._new_session_state
+                and not url_value_seeded
+                and self.query_params.has_param(user_key)
+                and (widget_id in self._old_state or user_key in self._old_state)
             ):
-                serialized = metadata.serializer(widget_value)
-                self.query_params.set_corrected_value(
-                    user_key, serialized, metadata.value_type
-                )
-                restored_bound_value = True
-            elif widget_value == default_value:
+                self.query_params.remove_param(user_key)
+            else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
         # widget_value_changed indicates to the caller that the widget's

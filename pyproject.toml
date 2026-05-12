@@ -58,7 +58,7 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.33",
+  "ty==0.0.34",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.12",
   # We are pinning the upper version to not break our CI on updates,
@@ -140,9 +140,6 @@ integration = [
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
   "snowflake-connector-python>=3.3.0",
-  # Required for testing the langchain integration:
-  "langchain>=0.2.0,<0.4",
-  "langchain-community>=0.2.0,<0.4",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
