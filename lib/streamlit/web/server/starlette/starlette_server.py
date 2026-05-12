@@ -143,7 +143,7 @@ def _get_uvicorn_config_kwargs() -> dict[str, Any]:
     return {
         "ssl_certfile": cert_file,
         "ssl_keyfile": key_file,
-        "ws": "auto",
+        "ws": "wsproto",
         "ws_ping_interval": ws_ping_interval,
         "ws_ping_timeout": ws_ping_timeout,
         "ws_max_size": ws_max_size,
