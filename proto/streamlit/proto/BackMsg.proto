@@ -54,7 +54,7 @@ message BackMsg {
     bool app_heartbeat = 17;
 
     // Generic backend operation request for server-side operations without script rerun.
-    // Used for deferred downloads, lazy dataframe loading, server-side validation, autocompletion, etc.
+    // Used for server-side operations like deferred downloads, lazy dataframe loading, server-side validation, autocompletion, etc.
     BackendOperationRequest backend_operation_request = 19;
   }
 
