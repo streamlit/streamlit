@@ -107,7 +107,6 @@ message ForwardMsg {
   string debug_last_backmsg_id = 17;
 
   reserved 7, 8, 16, 25;
-  reserved "deferred_file_response";
   // Next: 28
 }
 
