@@ -223,7 +223,9 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   value: cell,
   initialValue,
   onChange,
-  onFinishedEditing,
+  // Note: onFinishedEditing is provided by glide-data-grid but not used here.
+  // The markdown cell has internal view/edit modes, and glide handles overlay
+  // closure on outside clicks. We don't need to signal finish for internal toggles.
 }) => {
   const [isEditing, setIsEditing] = useState(() => {
     // If initialValue is provided (keyboard-started edit), start in edit mode
@@ -239,7 +241,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   })
 
   const handleSave = useCallback(() => {
-    const updatedCell: MarkdownCell = {
+    onChange({
       ...cell,
       copyData: editValue,
       data: {
@@ -247,17 +249,16 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
         value: editValue,
         displayValue: removeLineBreaks(editValue),
       },
-    }
-    onChange(updatedCell)
-    // Signal glide-data-grid that editing is finished
-    onFinishedEditing(updatedCell, [0, 1])
-  }, [cell, editValue, onChange, onFinishedEditing])
+    })
+    // Return to viewer mode (don't call onFinishedEditing - that closes the overlay)
+    setIsEditing(false)
+  }, [cell, editValue, onChange])
 
   const handleCancel = useCallback(() => {
     setEditValue(cell.data.value ?? "")
-    // Signal glide-data-grid that editing is finished without changes
-    onFinishedEditing(cell, [0, 1])
-  }, [cell, onFinishedEditing])
+    // Return to viewer mode (don't call onFinishedEditing - that closes the overlay)
+    setIsEditing(false)
+  }, [cell.data.value])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
