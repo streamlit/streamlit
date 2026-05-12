@@ -111,8 +111,19 @@ def test_has_lock() -> None:
     assert isinstance(storage._lock, type(threading.Lock()))
 
 
-def test_concurrent_register() -> None:
-    """Concurrent register() calls from multiple threads should not lose entries."""
+def test_concurrent_register_smoke() -> None:
+    """Smoke test: many threads calling register() concurrently with distinct
+    keys do not deadlock and do not drop entries.
+
+    Note: under CPython's GIL, ``dict[key] = value`` is already atomic, and the
+    free-threaded build (PEP 703) preserves that via per-object locking on
+    built-in dicts. With distinct keys per thread, this test would therefore
+    pass even without ``self._lock``. The value of this test is as a regression
+    guard against a wildly broken register() that loses writes or deadlocks. The
+    lock's real purpose — serializing register() with clear()'s multi-op
+    snapshot-then-delete sequence — is exercised more directly by
+    ``test_lock_contention_under_load`` below.
+    """
     storage = MemoryFragmentStorage()
     num_threads = 10
     ids_per_thread = 100
