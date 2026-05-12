@@ -78,7 +78,6 @@ message BackendOperationRequest {
   oneof payload {
     // Deferred file download request
     DeferredFileRequestPayload deferred_file = 3;
-    // Future: dataframe_chunk, validation, autocomplete
   }
 }
 

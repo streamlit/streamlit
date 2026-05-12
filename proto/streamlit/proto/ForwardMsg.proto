@@ -121,7 +121,6 @@ message BackendOperationResponse {
   oneof payload {
     // Response for deferred file requests
     DeferredFileResponsePayload deferred_file = 3;
-    // Future: dataframe_chunk, validation, autocomplete
   }
 }
 
