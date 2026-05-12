@@ -246,7 +246,7 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
 _STREAMLIT_SKILL_NAMES: Final = (
     "developing-with-streamlit",
-    "finding-streamlit-skills",
+    "developing-with-streamlit-in-snowflake",
 )
 _SKILL_MARKER_FILENAME: Final = "SKILL.md"
 # (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs

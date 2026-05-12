@@ -71,7 +71,7 @@ def create_fast_hasher() -> _Hash:
 
     Uses BLAKE2b which produces 32-character hex digests (16 bytes).
     """
-    return hashlib.blake2b(digest_size=16)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
+    return hashlib.blake2b(digest_size=16, usedforsecurity=False)  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
 
 
 def calc_hash(s: bytes | str) -> str:

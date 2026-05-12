@@ -813,7 +813,7 @@ def _clear_skills_cache() -> Iterator[None]:
 )
 @pytest.mark.parametrize(
     "skill",
-    ["developing-with-streamlit", "finding-streamlit-skills"],
+    ["developing-with-streamlit", "developing-with-streamlit-in-snowflake"],
 )
 def test_detect_installed_skills_emits_expected_token(
     tmp_path: Path,
@@ -894,12 +894,12 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     home.mkdir()
     app.mkdir(parents=True)
     (repo / ".git").mkdir()
-    _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".agents/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
-    assert tokens == ["repo:agents:finding-streamlit-skills"]
+    assert tokens == ["repo:agents:developing-with-streamlit-in-snowflake"]
 
 
 def test_detect_installed_skills_returns_sorted_deduped_tokens(
@@ -913,14 +913,14 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     app.mkdir(parents=True)
     (repo / ".git").mkdir()
     _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
-    _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(app, ".agents/skills", "developing-with-streamlit-in-snowflake")
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
-        "app:agents:finding-streamlit-skills",
+        "app:agents:developing-with-streamlit-in-snowflake",
         "home:cursor:developing-with-streamlit",
         "repo:claude:developing-with-streamlit",
     ]
@@ -943,14 +943,14 @@ def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
     # Note: no ``~/.claude`` directory is created — the user has never run
     # Claude Code. But the project ships skills under its own .claude dir.
     _make_skill_dir(app, ".claude/skills", "developing-with-streamlit")
-    _make_skill_dir(repo, ".claude/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
         "app:claude:developing-with-streamlit",
-        "repo:claude:finding-streamlit-skills",
+        "repo:claude:developing-with-streamlit-in-snowflake",
     ]
 
 

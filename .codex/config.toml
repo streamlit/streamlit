@@ -11,3 +11,12 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# Codex Multi-Agent Configuration
+# Agents are auto-discovered from .codex/agents/ directory.
+# Each agent's description is defined in its own TOML file.
+# The developer_instructions reference .claude/agents/ as the single source of truth.
+
+[agents]
+max_threads = 3
+max_depth = 2
