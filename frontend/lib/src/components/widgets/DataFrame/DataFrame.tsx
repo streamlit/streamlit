@@ -78,6 +78,7 @@ import useCustomRenderer from "./hooks/useCustomRenderer"
 import useCustomTheme from "./hooks/useCustomTheme"
 import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
+import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
@@ -92,9 +93,6 @@ import Tooltip from "./Tooltip"
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Number of rows that triggers some optimization features
-// for large tables.
-const LARGE_TABLE_ROWS_THRESHOLD = 150000
 // Fallback size for the scrollbar gutter size in rem.
 // If the scrollbar gutter size is 0, it means that we the system is using
 // overlay scrollbars that don't take any space. In this case, we assume
@@ -227,45 +225,26 @@ function DataFrame({
   const editingMode =
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
 
-  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
-    DataframeProto.EditingMode
-
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
   const originalNumRows = Math.max(0, dataDimensions.numDataRows)
 
-  // For empty tables, we show an extra row that
-  // contains "empty" as a way to indicate that the table is empty.
-  const isEmptyTable =
-    originalNumRows === 0 &&
-    // We don't show empty state for modes that allow adding rows
-    // with a table that has data columns defined.
-    !(
-      (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
-      dataDimensions.numDataColumns > 0
-    )
-
-  // For large tables, we apply some optimizations to handle large data
-  const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
-  // Sorting is disabled for modes that allow adding rows (DYNAMIC, ADD_ONLY)
-  // because sorting and row addition can conflict
-  const isSortingEnabled =
-    !isLargeTable &&
-    !isEmptyTable &&
-    editingMode !== DYNAMIC &&
-    editingMode !== ADD_ONLY
-
-  // Check if the editing mode allows adding rows (DYNAMIC or ADD_ONLY)
-  const canAddRows =
-    !isEmptyTable &&
-    (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
-    !disabled
-
-  // Check if the editing mode allows deleting rows (DYNAMIC or DELETE_ONLY)
-  const canDeleteRows =
-    !isEmptyTable &&
-    (editingMode === DYNAMIC || editingMode === DELETE_ONLY) &&
-    !disabled
+  // Centralized capability layer that determines which features are enabled
+  const {
+    canSort: isSortingEnabled,
+    canSearch,
+    canExportCsv,
+    canEdit,
+    canAddRows,
+    canDeleteRows,
+    isEmptyTable,
+    isLargeTable,
+  } = useDataFrameCapabilities({
+    editingMode,
+    disabled,
+    numDataRows: originalNumRows,
+    numDataColumns: dataDimensions.numDataColumns,
+  })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
@@ -859,14 +838,14 @@ function DataFrame({
             />
           </ColumnVisibilityMenu>
         )}
-        {!isLargeTable && !isEmptyTable && (
+        {canExportCsv && (
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
           />
         )}
-        {!isEmptyTable && (
+        {canSearch && (
           <ToolbarAction
             label="Search"
             icon={Search}
@@ -1157,18 +1136,16 @@ function DataFrame({
             rangeSelectionBlending: "additive",
           })}
           // If element is editable, enable editing features:
-          {...(!isEmptyTable &&
-            editingMode !== READ_ONLY &&
-            !disabled && {
-              // Support fill handle for bulk editing:
-              fillHandle: !isTouchDevice,
-              // Support editing:
-              onCellEdited,
-              // Support pasting data for bulk editing:
-              onPaste,
-              // Support deleting cells & rows:
-              onDelete,
-            })}
+          {...(canEdit && {
+            // Support fill handle for bulk editing:
+            fillHandle: !isTouchDevice,
+            // Support editing:
+            onCellEdited,
+            // Support pasting data for bulk editing:
+            onPaste,
+            // Support deleting cells & rows:
+            onDelete,
+          })}
           // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
           // and deactivate sorting:
           {...(canAddRows && {
