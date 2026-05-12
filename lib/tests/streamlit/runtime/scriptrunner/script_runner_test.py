@@ -389,8 +389,10 @@ class ScriptRunnerTest(unittest.TestCase):
         inner = MagicMock()
 
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=fragment_id_queue))
         scriptrunner.start()
@@ -409,11 +411,15 @@ class ScriptRunnerTest(unittest.TestCase):
         outer_b = MagicMock(side_effect=lambda: execution_order.append("outer_b"))
 
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("outer_a", outer_a, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set(
+        scriptrunner._fragment_storage.register(
+            "outer_a", outer_a, parent_fragment_id=None
+        )
+        scriptrunner._fragment_storage.register(
             "inner_a", inner_a, parent_fragment_id="outer_a"
         )
-        scriptrunner._fragment_storage.set("outer_b", outer_b, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "outer_b", outer_b, parent_fragment_id=None
+        )
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner_a", "outer_b"]))
         scriptrunner.start()
@@ -439,13 +445,52 @@ class ScriptRunnerTest(unittest.TestCase):
             ctx = get_script_run_ctx()
             assert ctx is not None
             ctx.new_fragment_ids.check_and_add("inner")
-            scriptrunner._fragment_storage.set(
+            scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
 
         outer = MagicMock(side_effect=rerender_outer)
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
+
+        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
+        scriptrunner.start()
+        scriptrunner.join()
+
+        outer.assert_called_once()
+        inner.assert_called_once()
+        assert scriptrunner._fragment_storage.contains("inner")
+
+    def test_fragment_queue_child_first_keeps_reregistered_inner_via_register(self):
+        """Runner ordering should still work through the renamed register API."""
+        scriptrunner = TestScriptRunner("good_script.py")
+
+        def run_inner() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("inner")
+
+        inner = MagicMock(side_effect=run_inner)
+
+        def rerender_outer() -> None:
+            ctx = get_script_run_ctx()
+            assert ctx is not None
+            ctx.new_fragment_ids.check_and_add("inner")
+            scriptrunner._fragment_storage.register(
+                "inner",
+                inner,
+                parent_fragment_id="outer",
+            )
+
+        outer = MagicMock(side_effect=rerender_outer)
+        scriptrunner._fragment_storage.register("outer", outer)
+        scriptrunner._fragment_storage.register(
+            "inner",
+            inner,
+            parent_fragment_id="outer",
+        )
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
@@ -465,7 +510,7 @@ class ScriptRunnerTest(unittest.TestCase):
             ctx = get_script_run_ctx()
             assert ctx is not None
             ctx.new_fragment_ids.check_and_add("grandchild")
-            scriptrunner._fragment_storage.set(
+            scriptrunner._fragment_storage.register(
                 "grandchild", grandchild, parent_fragment_id="middle"
             )
             grandchild()
@@ -476,15 +521,17 @@ class ScriptRunnerTest(unittest.TestCase):
             ctx = get_script_run_ctx()
             assert ctx is not None
             ctx.new_fragment_ids.check_and_add("middle")
-            scriptrunner._fragment_storage.set(
+            scriptrunner._fragment_storage.register(
                 "middle", middle, parent_fragment_id="outer"
             )
             middle()
 
         outer = MagicMock(side_effect=rerender_outer)
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("middle", middle, parent_fragment_id="outer")
-        scriptrunner._fragment_storage.set(
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "middle", middle, parent_fragment_id="outer"
+        )
+        scriptrunner._fragment_storage.register(
             "grandchild", grandchild, parent_fragment_id="middle"
         )
 
@@ -521,13 +568,15 @@ class ScriptRunnerTest(unittest.TestCase):
             ctx = get_script_run_ctx()
             assert ctx is not None
             ctx.new_fragment_ids.check_and_add("inner")
-            scriptrunner._fragment_storage.set(
+            scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
 
         outer = MagicMock(side_effect=rerender_outer)
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
@@ -546,7 +595,7 @@ class ScriptRunnerTest(unittest.TestCase):
             ctx = get_script_run_ctx()
             assert ctx is not None
             ctx.new_fragment_ids.check_and_add("inner")
-            scriptrunner._fragment_storage.set(
+            scriptrunner._fragment_storage.register(
                 "inner", inner, parent_fragment_id="outer"
             )
 
@@ -559,8 +608,10 @@ class ScriptRunnerTest(unittest.TestCase):
                 ctx.current_fragment_id = previous_fragment_id
 
         outer = MagicMock(side_effect=rerun_outer)
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
         scriptrunner.start()
@@ -576,8 +627,10 @@ class ScriptRunnerTest(unittest.TestCase):
         inner = MagicMock()
 
         scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner._fragment_storage.set("outer", outer, parent_fragment_id=None)
-        scriptrunner._fragment_storage.set("inner", inner, parent_fragment_id="outer")
+        scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
+        scriptrunner._fragment_storage.register(
+            "inner", inner, parent_fragment_id="outer"
+        )
 
         scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner"]))
         scriptrunner.start()

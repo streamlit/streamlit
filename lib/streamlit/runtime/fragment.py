@@ -74,23 +74,17 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def register(self, key: str, fragment: Fragment) -> None:
+    def register(
+        self,
+        key: str,
+        fragment: Fragment,
+        *,
+        parent_fragment_id: str | None = None,
+    ) -> None:
         """Store a fragment definition.
 
         Called during script execution from the main thread or worker threads
         (nested fragments in parallel execution).
-        """
-        raise NotImplementedError
-
-    @abstractmethod
-    def set(
-        self,
-        key: str,
-        value: Fragment,
-        *,
-        parent_fragment_id: str | None = None,
-    ) -> None:
-        """Saves a fragment under the given key.
 
         parent_fragment_id
             The fragment id of the enclosing ``@st.fragment`` when this fragment is
@@ -114,7 +108,7 @@ class FragmentStorage(Protocol):
 
     @abstractmethod
     def registration_sequence(self) -> int:
-        """Return a cursor for registrations written via ``set``."""
+        """Return a cursor for registrations written via ``register``."""
         raise NotImplementedError
 
     @abstractmethod
@@ -155,7 +149,8 @@ class MemoryFragmentStorage(FragmentStorage):
     """A simple, memory-backed implementation of FragmentStorage.
 
     MemoryFragmentStorage is just a wrapper around a plain Python dict that complies with
-    the FragmentStorage protocol.
+    the FragmentStorage protocol. A single lock guards the fragment closures plus the
+    ancestry and registration metadata that need to stay in sync with them.
     """
 
     def __init__(self) -> None:
@@ -204,22 +199,16 @@ class MemoryFragmentStorage(FragmentStorage):
             except KeyError as e:
                 raise FragmentStorageKeyError(str(e))
 
-    def get(self, key: str) -> Fragment:
-        return self.lookup(key)
-
-    def register(self, key: str, fragment: Fragment) -> None:
-        self.set(key, fragment)
-
-    def set(
+    def register(
         self,
         key: str,
-        value: Fragment,
+        fragment: Fragment,
         *,
         parent_fragment_id: str | None = None,
     ) -> None:
         with self._lock:
             self._registration_sequence += 1
-            self._fragments[key] = value
+            self._fragments[key] = fragment
             self._parent_by_id[key] = parent_fragment_id
             self._registration_sequence_by_id[key] = self._registration_sequence
 
@@ -430,7 +419,7 @@ def _fragment(
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        ctx.fragment_storage.set(
+        ctx.fragment_storage.register(
             fragment_id,
             wrapped_fragment,
             parent_fragment_id=parent_fragment_id_at_def,

@@ -68,7 +68,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         value: str | None = None,
     ) -> None:
         fragment_value = fragment_id if value is None else value
-        self._storage.set(
+        self._storage.register(
             fragment_id,
             fragment_value,
             parent_fragment_id=parent_fragment_id,
@@ -96,6 +96,21 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
         assert self._storage.lookup("some_key") == "new_fragment"
         assert self._storage.lookup("some_other_key") == "some_other_fragment"
+
+    def test_register_with_parent_fragment_id_preserves_nesting(self):
+        """register() should support nested fragment ancestry."""
+        self._set_fragment("outer")
+
+        self._storage.register(
+            "inner",
+            "inner_fragment",
+            parent_fragment_id="outer",
+        )
+
+        assert self._storage.order_fragment_ids(["inner", "outer"]) == [
+            "outer",
+            "inner",
+        ]
 
     def test_delete(self):
         self._storage.delete("some_key")
@@ -179,8 +194,8 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage.delete("k")
         assert "k" not in self._storage._parent_by_id
 
-    def test_registration_sequence_advances_monotonically_on_set(self):
-        """Each ``set`` advances ``registration_sequence`` by exactly one."""
+    def test_registration_sequence_advances_monotonically_on_register(self):
+        """Each ``register`` advances ``registration_sequence`` by exactly one."""
         # ``setUp`` already registered ``some_key`` (sequence == 1).
         initial = self._storage.registration_sequence()
         assert initial == 1
@@ -193,7 +208,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         """Read-only operations must not advance ``registration_sequence``."""
         snapshot = self._storage.registration_sequence()
 
-        self._storage.get("some_key")
+        self._storage.lookup("some_key")
         self._storage.contains("some_key")
         self._storage.ids_registered_after(0)
         self._storage.order_fragment_ids(["some_key"])
@@ -202,7 +217,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage.registration_sequence() == snapshot
 
     def test_registration_sequence_advances_on_reset_of_existing_key(self):
-        """Re-setting an existing key still advances ``registration_sequence``."""
+        """Re-registering an existing key still advances ``registration_sequence``."""
         snapshot = self._storage.registration_sequence()
         self._set_fragment("some_key", value="replacement")
         assert self._storage.registration_sequence() == snapshot + 1
@@ -221,7 +236,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         """No registrations after the snapshot yields an empty frozenset."""
         snapshot = self._storage.registration_sequence()
         # Read-only operations must not register anything.
-        self._storage.get("some_key")
+        self._storage.lookup("some_key")
 
         assert self._storage.ids_registered_after(snapshot) == frozenset()
 
@@ -499,11 +514,11 @@ class FragmentTest(unittest.TestCase):
         def my_fragment():
             pass
 
-        # Call the fragment-decorated function twice, and verify that we only save the
-        # fragment a single time.
+        # Call the fragment-decorated function twice, and verify that each execution
+        # refreshes the registered closure.
         my_fragment()
         my_fragment()
-        assert ctx.fragment_storage.set.call_count == 2
+        assert ctx.fragment_storage.register.call_count == 2
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_sets_dg_stack_and_cursor_to_snapshots_if_fragment_ids_this_run(
