@@ -14,11 +14,9 @@
  * limitations under the License.
  */
 
-import { opacities } from "~lib/theme/primitives/opacities"
-
-export const STALE_TRANSITION_PARAMS = "1s ease-in 0.5s"
-
-export const STALE_STYLES = {
-  opacity: opacities.stale,
-  transition: `opacity ${STALE_TRANSITION_PARAMS}`,
+export const opacities = {
+  /** De-emphasized or secondary content (shortcuts, timestamps, blockquotes, captions) */
+  secondary: 0.6,
+  /** Stale or outdated elements during rerun */
+  stale: 0.33,
 }
