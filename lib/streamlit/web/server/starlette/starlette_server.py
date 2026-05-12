@@ -134,8 +134,10 @@ def _get_websocket_protocol() -> str:
     """Get the WebSocket protocol to use based on uvicorn version.
 
     Returns "websockets-sansio" for uvicorn >= 0.44.0, otherwise "auto".
-    The websockets-sansio protocol provides a cleaner separation between I/O
-    and protocol logic. Full ping interval/timeout support was added in 0.44.0.
+    "websockets-sansio" is the newer implementation that provides a cleaner
+    separation between I/O and protocol logic. "auto" chooses the legacy
+    websockets implementation. Full ping interval/timeout support was added
+    in uvicorn 0.44.0.
     """
     import uvicorn
 
