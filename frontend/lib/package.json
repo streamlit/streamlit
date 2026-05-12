@@ -165,7 +165,7 @@
     "timezone-mock": "^1.4.2",
     "tsc-alias": "^1.8.17",
     "typesync": "^0.14.3",
-    "vite": "^8.0.9",
+    "vite": "^8.0.11",
     "vite-plugin-dts": "^5.0.0",
     "vite-plugin-svgr": "^5.2.0",
     "vitest": "^4.1.5",
