@@ -125,4 +125,38 @@ describe("BackendOperationClient", () => {
     await expect(client.requestDeferredFile("file-id")).rejects.toBe(error)
     expect(client.pendingCount).toBe(0)
   })
+
+  it("rejects immediately when getSessionId throws", async () => {
+    const error = new Error("session not initialized")
+    const client = new BackendOperationClient({
+      sendRequest: vi.fn(),
+      getSessionId: () => {
+        throw error
+      },
+    })
+
+    await expect(client.requestDeferredFile("file-id")).rejects.toBe(error)
+    expect(client.pendingCount).toBe(0)
+  })
+
+  it("rejects when response has no recognized payload", async () => {
+    const sendRequest = vi.fn()
+    const client = createClient(sendRequest)
+
+    const promise = client.requestDeferredFile("file-id")
+    const request = sendRequest.mock.calls[0][0] as BackendOperationRequest
+
+    // Send a response with no payload fields set
+    client.onResponse(
+      new BackendOperationResponse({
+        requestId: request.requestId,
+        // No deferredFile or errorMsg set
+      })
+    )
+
+    await expect(promise).rejects.toThrow(
+      "Response contained no recognized payload"
+    )
+    expect(client.pendingCount).toBe(0)
+  })
 })

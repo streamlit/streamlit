@@ -63,7 +63,8 @@ message BackMsg {
   // should only be used for testing.
   string debug_last_backmsg_id = 13;
 
-  reserved 1, 2, 3, 4, 8, 9, 10;
+  reserved 1, 2, 3, 4, 8, 9, 10, 18;
+  reserved "deferred_file_request";
   // Next: 20
 }
 

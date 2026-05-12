@@ -473,6 +473,12 @@ export class App extends PureComponent<Props, State> {
 
     this.backendOperationClient = new BackendOperationClient({
       sendRequest: request => {
+        // Check connection before sending to fail fast instead of timing out
+        if (!this.isServerConnected() || !this.sessionInfo.isSet) {
+          throw new Error(
+            "Cannot send backend operation request: not connected to server"
+          )
+        }
         const backMsg = new BackMsg({ backendOperationRequest: request })
         backMsg.type = "backendOperationRequest"
         this.sendBackMsg(backMsg)

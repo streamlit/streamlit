@@ -82,6 +82,22 @@ export class BackendOperationClient {
 
     const resolver = Promise.withResolvers<TResponse>()
 
+    // Build session ID and request before registering, so any errors
+    // (e.g., session not initialized) don't leave orphan pending requests
+    let sessionId: string
+    let request: BackendOperationRequest
+    try {
+      sessionId = this.getSessionId()
+      request = new BackendOperationRequest({
+        requestId,
+        sessionId,
+        [payloadField]: payload,
+      })
+    } catch (error) {
+      resolver.reject(error)
+      return resolver.promise
+    }
+
     // eslint-disable-next-line no-restricted-globals -- Non-React class managing async request timeouts.
     const timeoutId = setTimeout(() => {
       this.handleTimeout(requestId)
@@ -92,12 +108,6 @@ export class BackendOperationClient {
       timeoutId,
       createdAt: Date.now(),
       requestType: payloadField,
-    })
-
-    const request = new BackendOperationRequest({
-      requestId,
-      sessionId: this.getSessionId(),
-      [payloadField]: payload,
     })
 
     try {
@@ -146,8 +156,12 @@ export class BackendOperationClient {
     if (response.errorMsg) {
       pending.resolver.reject(new Error(response.errorMsg))
     } else {
-      const payload = this.extractResponsePayload(response)
-      pending.resolver.resolve(payload)
+      try {
+        const payload = this.extractResponsePayload(response)
+        pending.resolver.resolve(payload)
+      } catch (error) {
+        pending.resolver.reject(error)
+      }
     }
   }
 
@@ -195,6 +209,8 @@ export class BackendOperationClient {
     // if (response.dataframeChunk) return response.dataframeChunk
     // if (response.validation) return response.validation
     // if (response.autocomplete) return response.autocomplete
-    return null
+
+    LOG.warn("Response contained no recognized payload", response)
+    throw new Error("Response contained no recognized payload")
   }
 }

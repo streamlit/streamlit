@@ -196,6 +196,10 @@ class AppSession:
 
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
 
+        # Store references to background tasks to prevent garbage collection.
+        # Tasks are removed via add_done_callback when they complete.
+        self._background_tasks: set[asyncio.Task[None]] = set()
+
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def __del__(self) -> None:
@@ -359,6 +363,10 @@ class AppSession:
                     )
                 )
                 task.set_name(f"backend_op_{msg.backend_operation_request.request_id}")
+                # Store task reference to prevent garbage collection.
+                # Remove from set when done via callback.
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
