@@ -191,11 +191,19 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Facet charts need the container element to have a width and also
   // do not work well with stretch/container width
   // so they cannot use the width from the StyledVegaLiteChartContainer.
-  const isFacet = isFacetChart(inputElement.spec)
+  // Memoize to avoid repeated JSON.parse on every render.
+  const isFacet = useMemo(
+    () => isFacetChart(inputElement.spec),
+    [inputElement.spec]
+  )
 
   // Nested compositions (vconcat containing hconcat/layer/etc.) also don't work
   // well with forced stretch width, as it can cause "infinite extent" errors.
-  const hasNestedComp = hasNestedComposition(inputElement.spec)
+  // Memoize to avoid repeated JSON.parse on every render.
+  const hasNestedComp = useMemo(
+    () => hasNestedComposition(inputElement.spec),
+    [inputElement.spec]
+  )
 
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
