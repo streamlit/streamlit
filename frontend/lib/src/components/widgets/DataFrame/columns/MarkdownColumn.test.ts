@@ -107,7 +107,7 @@ describe("MarkdownColumn", () => {
     [true, false],
   ])(
     "creates cells with readonly=%s when isEditable=%s",
-    (isEditable, expectedReadonly) => {
+    (expectedReadonly, isEditable) => {
       const mockColumn = MarkdownColumn({
         ...MOCK_MARKDOWN_COLUMN_PROPS,
         isEditable,
@@ -118,11 +118,11 @@ describe("MarkdownColumn", () => {
   )
 
   it.each([
-    [true, "faded"],
-    [false, "normal"],
+    ["faded", true],
+    ["normal", false],
   ])(
     "creates cells with style=%s when isPinned=%s",
-    (isPinned, expectedStyle) => {
+    (expectedStyle, isPinned) => {
       const mockColumn = MarkdownColumn({
         ...MOCK_MARKDOWN_COLUMN_PROPS,
         isPinned,
