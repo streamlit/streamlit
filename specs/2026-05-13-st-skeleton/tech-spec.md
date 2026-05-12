@@ -173,11 +173,11 @@ message Skeleton {
     APP = 1; // internal-only
   }
   SkeletonStyle style = 1;
-  optional int32 height = 2;  // Deprecated: use Element.height_config
+  optional int32 height = 2;  // Legacy: prefer Element.height_config
 }
 ```
 
-The `height` field in the proto is deprecated in favor of `Element.height_config`. The
+The `height` field in the proto is legacy and maintained for backward compatibility. The
 frontend should prefer `Element.height_config` when present, falling back to
 `Skeleton.height` for backward compatibility with internal `_skeleton` usage.
 

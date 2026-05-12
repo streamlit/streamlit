@@ -158,7 +158,8 @@ st.dataframe(data)  # Content appears in normal flow
 - If the block completes within 0.5s, no skeleton is shown (avoids flicker)
 - Uses Streamlit's **transient element mechanism** (same as spinner)
 - Auto-clears when the block exits (success or exception)
-- Content is rendered **after** the block, not inside it
+- Elements written inside the `with` block are queued normally during execution;
+  the skeleton is transient and clears on exit, revealing subsequent content
 - Unlike `st.spinner()`, there is no text label—just the animated placeholder
 
 **Dimension behavior:**
