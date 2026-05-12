@@ -93,20 +93,15 @@ const createBaseUiThemeOverrides = (
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
 
-  // Default font styles used for non-widget BaseWeb components (menus, dialogs, etc.)
-  const fontStyles = {
+  // Font styles applied to all BaseWeb typography tokens that back widget inputs,
+  // labels, and pickers — 14px to align with Streamlit's widget label size.
+  const widgetFontStyles = {
     fontFamily: genericFonts.bodyFont,
-    fontSize: fontSizes.md,
+    fontSize: fontSizes.sm,
     fontSizeSm: fontSizes.sm,
     fontWeight: "normal",
     lineHeight: lineHeights.base,
     lineHeightTight: lineHeights.tight,
-  }
-
-  // Widget-specific font styles — 14px to match Streamlit's widget label size
-  const widgetFontStyles = {
-    ...fontStyles,
-    fontSize: fontSizes.sm,
   }
 
   const widgetBackgroundColor = colors.secondaryBg

@@ -355,6 +355,12 @@ function DateInput({
               $selected,
               $isHovered,
               $isHighlighted,
+            }: {
+              $pseudoHighlighted: boolean
+              $pseudoSelected: boolean
+              $selected: boolean
+              $isHovered: boolean
+              $isHighlighted: boolean
             }) => ({
               fontSize: fontSizes.sm,
               lineHeight: lineHeights.base,
