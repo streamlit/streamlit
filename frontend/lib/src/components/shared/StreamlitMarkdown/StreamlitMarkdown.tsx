@@ -778,6 +778,45 @@ function createRemarkColoringAndSmall(
 }
 
 /**
+ * Factory function to create the hex color swatch plugin.
+ * Detects hex color codes like #RRGGBB or #RGB in plain text and renders
+ * a small color swatch (colored dot) next to them, similar to GitHub.
+ *
+ * Hex codes inside code blocks and inline code are not affected since
+ * they are separate AST nodes by the time this plugin runs.
+ */
+function createRemarkHexColorSwatches() {
+  return () => (tree: MdastRoot) => {
+    // Match standalone hex colors: #RRGGBB or #RGB
+    // Must not be preceded or followed by alphanumeric or # characters
+    // to avoid matching inside URLs (e.g. #section), headings (e.g. ##heading),
+    // or longer color values (e.g. #RRGGBBAA).
+    const hexColorRegex =
+      /(?<![a-zA-Z0-9#])(#[0-9A-Fa-f]{6}|#[0-9A-Fa-f]{3})(?![a-zA-Z0-9])/g
+
+    findAndReplace(tree, [
+      [
+        hexColorRegex,
+        (_fullMatch: string, hexCode: string): MdastTextWithHastData => {
+          return {
+            type: "text",
+            value: hexCode,
+            data: {
+              hName: "span",
+              hProperties: {
+                className: "stHexColor",
+                style: `--hex-color: ${hexCode}`,
+              },
+            },
+          }
+        },
+      ],
+    ])
+    return tree
+  }
+}
+
+/**
  * Factory function to create the unsupported directives cleanup plugin.
  * This plugin should run last to convert any unsupported text directives
  * to plain text, ensuring they are rendered rather than ignored.
@@ -1128,6 +1167,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
       ...BASE_REMARK_PLUGINS,
       createRemarkColoringAndSmall(theme, colorMapping),
       createRemarkMaterialIcons(theme),
+      createRemarkHexColorSwatches(),
     ]
 
     if (needsEmoji && wrappedEmojiPlugin) {

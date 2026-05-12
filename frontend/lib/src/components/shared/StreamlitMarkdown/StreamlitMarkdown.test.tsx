@@ -1110,6 +1110,79 @@ describe("StreamlitMarkdown", () => {
       expect(markdown).not.toHaveClass("stMarkdownColoredBackground")
     })
   })
+
+  // Hex color swatch tests
+  describe("hex color swatches", () => {
+    it("renders 6-digit hex color with swatch", () => {
+      const source = "The color #0969DA is blue."
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const hexSpan = screen.getByText("#0969DA")
+      expect(hexSpan.tagName.toLowerCase()).toBe("span")
+      expect(hexSpan).toHaveClass("stHexColor")
+      expect(hexSpan).toHaveAttribute("style", "--hex-color: #0969DA")
+    })
+
+    it("renders 3-digit hex color with swatch", () => {
+      const source = "The color #F00 is red."
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const hexSpan = screen.getByText("#F00")
+      expect(hexSpan).toHaveClass("stHexColor")
+      expect(hexSpan).toHaveAttribute("style", "--hex-color: #F00")
+    })
+
+    it("renders multiple hex colors in the same text", () => {
+      const source = "Colors: #FF0000, #00FF00, #0000FF."
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // Each hex color should have its own swatch span
+      const hexSpans = [
+        screen.getByText("#FF0000"),
+        screen.getByText("#00FF00"),
+        screen.getByText("#0000FF"),
+      ]
+      for (const span of hexSpans) {
+        expect(span).toHaveClass("stHexColor")
+      }
+    })
+
+    it("does not match hex colors inside inline code", () => {
+      const source = "The color `#0969DA` is in code."
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // #0969DA is inside inline code, should NOT have stHexColor class
+      const codeElement = screen.getByText("#0969DA")
+      expect(codeElement.tagName.toLowerCase()).toBe("code")
+      expect(codeElement).not.toHaveClass("stHexColor")
+    })
+
+    it("does not match hex colors inside code blocks", () => {
+      const source = "```\n#0969DA\n```"
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // The code block text should render inside a pre > code structure
+      const codeBlockText = screen.getByText("#0969DA")
+      // Should be inside a code block, not a swatch span
+      expect(codeBlockText.tagName.toLowerCase()).toBe("code")
+      expect(codeBlockText).not.toHaveClass("stHexColor")
+    })
+
+    it("does not match hashes that are not hex colors", () => {
+      const source = "This is ##a-heading and #not-a-color."
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      // "##a-heading" should render as a heading, not be matched
+      // "#not-a-color" - 'n' is not hex, should not match
+      expect(screen.queryByText("#not-a-color")).toBeTruthy()
+      // Should be no stHexColor spans since neither is a valid hex
+      const hexSpans = document.querySelectorAll(".stHexColor")
+      expect(hexSpans.length).toBe(0)
+    })
+
+    it("renders mixed case hex colors", () => {
+      const source = "Mixed case: #AbC123 and #aBc."
+      render(<StreamlitMarkdown source={source} allowHTML={false} />)
+      const upperHex = screen.getByText("#AbC123")
+      expect(upperHex).toHaveClass("stHexColor")
+      const lowerHex = screen.getByText("#aBc")
+      expect(lowerHex).toHaveClass("stHexColor")
+    })
+  })
 })
 
 const getCustomCodeTagProps = (

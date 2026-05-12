@@ -419,6 +419,24 @@ export const StyledStreamlitMarkdown =
           },
         },
 
+        "span.stHexColor": {
+          // Render a small color swatch dot before hex color codes,
+          // similar to GitHub's hex color rendering.
+          "&::before": {
+            content: "",
+            display: "inline-block",
+            width: "0.75em",
+            height: "0.75em",
+            borderRadius: theme.radii.full,
+            backgroundColor: "var(--hex-color)",
+            marginRight: "0.25em",
+            verticalAlign: "middle",
+            // Subtle border so the swatch is visible even for colors
+            // similar to the background (light or dark themes).
+            border: `1px solid ${theme.colors.fadedText10}`,
+          },
+        },
+
         "p, ol, ul, dl, li": {
           fontSize: "inherit",
         },
