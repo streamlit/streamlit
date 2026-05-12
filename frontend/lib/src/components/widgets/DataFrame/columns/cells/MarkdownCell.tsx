@@ -72,18 +72,18 @@ const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
     opacity: locked ? 1 : 0,
     // Keep in tab order when hidden (visibility: hidden removes from tab order)
     // Use opacity for visual hide, which allows keyboard navigation to the button
+    // pointerEvents remains "auto" so the button can be tabbed to even when visually hidden
     padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
     top: 0,
     right: 0,
     position: "absolute",
     zIndex: theme.zIndices.sidebar + 1,
-    pointerEvents: locked ? "auto" : "none",
+    pointerEvents: "auto",
     transition: locked ? TOOLBAR_SHOW_TRANSITION : TOOLBAR_HIDE_TRANSITION,
 
     // Make button visible when focused via keyboard
     "&:focus-within": {
       opacity: 1,
-      pointerEvents: "auto",
     },
   })
 )
