@@ -291,3 +291,31 @@ class ScriptRunContextTest(unittest.TestCase):
         t.join()
 
         assert result["fragment_id"] is None
+
+    def test_add_script_run_ctx_double_attach_is_last_wins(self):
+        """Two consecutive ``add_script_run_ctx`` calls on the same
+        not-yet-started thread should seed the worker's ThreadState from the
+        *last* call's snapshot, matching the last-wins semantic of the ctx
+        attachment (which overwrites ``streamlit_script_run_ctx`` each call).
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        captured: dict[str, object] = {}
+
+        def worker_target() -> None:
+            captured["fragment_id"] = ThreadState.get().fragment_id
+
+        t = threading.Thread(target=worker_target)
+
+        ThreadState.update(fragment_id="frag1")
+        add_script_run_ctx(t, ctx)
+
+        ThreadState.update(fragment_id="frag2")
+        add_script_run_ctx(t, ctx)
+
+        t.start()
+        t.join()
+
+        assert captured["fragment_id"] == "frag2"

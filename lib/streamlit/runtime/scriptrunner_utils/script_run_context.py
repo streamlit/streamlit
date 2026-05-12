@@ -99,7 +99,8 @@ class ThreadState:
         """Create a fresh FragmentThreadState and bind it in the current context.
 
         Called from ``reset()`` at the start of every script run, and from
-        PR 7's worker setup after ``copy_context()``.
+        parallel fragment worker setup to seed the worker's copied context
+        with the parent's snapshot.
         """
         _thread_state.set(FragmentThreadState(**kwargs))
 
@@ -116,7 +117,7 @@ class ThreadState:
             raise RuntimeError(
                 "FragmentThreadState not initialized — "
                 "reset() must be called before accessing thread state."
-            )
+            ) from None
 
     @staticmethod
     def update(**kwargs: Any) -> None:
@@ -275,6 +276,14 @@ class ScriptRunContext:
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
+# Storage slots on threads attached via add_script_run_ctx. The fields slot
+# holds the latest parent FragmentThreadState snapshot to apply at run() time;
+# the install slot is a sentinel marking that thread.run has been wrapped, so
+# repeat attaches refresh the snapshot rather than stacking new wrappers.
+_FRAGMENT_THREAD_STATE_FIELDS_ATTR: Final = "_streamlit_fragment_thread_state_fields"
+_FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR: Final = (
+    "_streamlit_fragment_thread_state_wrap_installed"
+)
 
 
 def add_script_run_ctx(
@@ -286,6 +295,11 @@ def add_script_run_ctx(
     thread starts. Propagates both the ScriptRunContext (via threading.local)
     and the FragmentThreadState (via ContextVar initialization in the child
     thread's run method).
+
+    Calling this multiple times on the same not-yet-started thread is
+    last-attach-wins for both the attached ``ctx`` and the parent
+    FragmentThreadState snapshot: the run() wrapper is installed only once
+    and reads the latest snapshot at thread-start time.
 
     If instead called from inside the thread it is attaching to (i.e.
     ``thread`` is the current thread, or ``thread`` is omitted and ``ctx`` is
@@ -323,14 +337,26 @@ def add_script_run_ctx(
         parent_ts = None
 
     if parent_ts is not None:
-        original_run = thread.run
-        parent_fields = dataclasses.asdict(parent_ts)
+        # Last-attach wins: store the latest parent snapshot on the thread and
+        # let the (single) run() wrapper read it at thread-start time. This
+        # mirrors how the ctx attachment above overwrites any prior value on
+        # repeat calls to add_script_run_ctx, instead of stacking wrappers.
+        setattr(
+            thread,
+            _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
+            dataclasses.asdict(parent_ts),
+        )
+        if not getattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, False):
+            original_run = thread.run
 
-        def _run_with_thread_state() -> None:
-            ThreadState.initialize(**parent_fields)
-            original_run()
+            def _run_with_thread_state() -> None:
+                fields = getattr(thread, _FRAGMENT_THREAD_STATE_FIELDS_ATTR, None)
+                if fields is not None:
+                    ThreadState.initialize(**fields)
+                original_run()
 
-        thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
+            thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
+            setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)
     elif ctx is not None and thread is threading.current_thread():
         # The caller is attaching ctx to the current (already-running) thread
         # from inside the thread itself. The thread.run wrap above is moot
