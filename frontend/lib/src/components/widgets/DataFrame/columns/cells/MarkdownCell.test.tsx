@@ -77,17 +77,16 @@ describe("MarkdownCell renderer", () => {
 
   describe("onPaste", () => {
     it.each([
-      ["# New Content", "# New Content", "single line content"],
+      ["# New Content", "# New Content"],
       [
         "# Title\n\nParagraph text\n- Item 1\n- Item 2",
         "# Title  Paragraph text - Item 1 - Item 2",
-        "multiline with line breaks removed",
       ],
-      ["", "", "empty string clears content"],
-      ["   ", "   ", "whitespace preserved"],
+      ["", ""],
+      ["   ", "   "],
     ])(
-      "handles paste: %s -> %s (%s)",
-      (pastedValue, expectedDisplay, _desc) => {
+      "handles paste: '%s' -> displayValue: '%s'",
+      (pastedValue, expectedDisplay) => {
         const cellData = {
           kind: "markdown-cell" as const,
           value: null,
