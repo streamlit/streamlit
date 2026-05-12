@@ -361,7 +361,12 @@ function DataFrame({
       actions: string[],
       bounds: Rectangle & { clickX: number; clickY: number }
     ): void => {
-      // Clear existing menu first, then set new one after a frame to ensure clean transition
+      // When clicking between menu items or buttons, we need a clean transition.
+      // The pattern below clears the menu state first, then sets the new state
+      // after a frame. Without rAF, React 18's batching would collapse the
+      // undefined → new-menu updates into a single render, keeping the popover
+      // mounted with stale position. The frame boundary forces BaseUI's Popover
+      // to remount cleanly at the new click coordinates.
       setButtonActionMenu(undefined)
       requestAnimationFrame(() => {
         setButtonActionMenu({

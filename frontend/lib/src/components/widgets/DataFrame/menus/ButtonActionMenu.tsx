@@ -67,13 +67,18 @@ function ButtonActionMenu({
   const { colors, fontSizes, fontWeights } = theme
   const menuRef = useRef<HTMLDivElement>(null)
 
-  // Close menu on click outside (except clicks inside the DataFrame canvas)
+  // Close menu on click outside (except clicks on the menu target or menu itself)
   useEffect(() => {
     function handleMouseDown(event: MouseEvent): void {
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         const target = event.target as Element
-        // Let grid's button handler manage state for DataFrame clicks
-        if (target.closest('[data-testid^="stDataFrame"]')) {
+        // Let grid's button handler manage state for clicks on the menu target
+        // (the invisible anchor element that positions this popover).
+        // Using a specific test-id rather than targeting all dataframes avoids
+        // blocking click-outside when multiple dataframes are on the page.
+        if (
+          target.closest('[data-testid="stDataFrameButtonActionMenuTarget"]')
+        ) {
           return
         }
         onCloseMenu()
@@ -84,18 +89,34 @@ function ButtonActionMenu({
     return () => document.removeEventListener("mousedown", handleMouseDown)
   }, [onCloseMenu])
 
-  // Close menu on scroll (fixed positioning would misalign with cell)
+  // Close menu on scroll of ancestor containers or window (fixed positioning
+  // would misalign with cell). Ignores scroll events from the menu itself
+  // if it ever gets overflow:auto, and ignores unrelated scroll containers.
   useEffect(() => {
-    function handleScroll(): void {
-      onCloseMenu()
+    function handleScroll(event: Event): void {
+      // Ignore if the scroll is on the menu itself
+      if (menuRef.current?.contains(event.target as Node)) {
+        return
+      }
+      // Close on window/document scroll or any ancestor scroll
+      const target = event.target
+      if (
+        target === document ||
+        target === window ||
+        (target instanceof Element && target.contains(menuRef.current))
+      ) {
+        onCloseMenu()
+      }
     }
 
     document.addEventListener("scroll", handleScroll, { capture: true })
-    document.addEventListener("wheel", handleScroll, { passive: true })
+    // Wheel events on window can cause scroll without triggering scroll event
+    // on elements with overflow: hidden
+    window.addEventListener("wheel", handleScroll, { passive: true })
 
     return () => {
       document.removeEventListener("scroll", handleScroll, { capture: true })
-      document.removeEventListener("wheel", handleScroll)
+      window.removeEventListener("wheel", handleScroll)
     }
   }, [onCloseMenu])
 

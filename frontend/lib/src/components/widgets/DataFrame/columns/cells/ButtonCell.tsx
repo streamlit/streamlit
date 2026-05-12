@@ -233,7 +233,12 @@ const renderer: CustomRenderer<ButtonCell> = {
     const { data, onClick, onOpenMenu, rowIndex, alignment } = cell.data
     if (!data || rowIndex === undefined) return undefined
 
-    // Estimate content width without canvas context
+    // Estimate content width without canvas context.
+    // Note: This uses a Latin-tuned character width estimate (CHAR_WIDTH_ESTIMATE).
+    // For non-Latin scripts (CJK, emoji, ligatures), actual widths can vary, causing
+    // click detection to be slightly off. CLICK_TOLERANCE provides a margin to
+    // accommodate estimation errors. A future enhancement could cache measured bounds
+    // from draw() for pixel-perfect click detection.
     const label = getSingleButtonLabel(data)
     const isMultiAction = Array.isArray(data) && data.length > 1
     let estimatedContentWidth: number

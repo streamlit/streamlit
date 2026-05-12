@@ -20,7 +20,7 @@ from __future__ import annotations
 import datetime
 import itertools
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict
+from typing import TYPE_CHECKING, Literal, TypeAlias, TypedDict, overload
 
 from typing_extensions import NotRequired
 
@@ -3119,6 +3119,38 @@ def JsonColumn(
         alignment=alignment,
         type_config=JsonColumnConfig(type="json"),
     )
+
+
+@overload
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: WidgetCallback | None = None,
+    args: WidgetArgs | None = None,
+    kwargs: WidgetKwargs | None = None,
+    key: str,
+) -> ButtonColumnResult: ...
+
+
+@overload
+def ButtonColumn(
+    label: str | None = None,
+    *,
+    width: ColumnWidth | None = None,
+    help: str | None = None,
+    pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
+    type: ButtonType = "secondary",
+    on_click: None = None,
+    args: None = None,
+    kwargs: None = None,
+    key: None = None,
+) -> ColumnConfig: ...
 
 
 @gather_metrics("column_config.ButtonColumn")
