@@ -141,7 +141,6 @@ function ButtonActionMenu({
                   source={text}
                   allowHTML={false}
                   isLabel
-                  largerLabel={false}
                   disableLinks
                 />
               </StyledMenuListItem>
