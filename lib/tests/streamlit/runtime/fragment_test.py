@@ -107,6 +107,11 @@ class MemoryFragmentStorageTest(unittest.TestCase):
             parent_fragment_id="outer",
         )
 
+        # Directly assert the parent map so a regression in the ancestry
+        # bookkeeping is caught independently of order_fragment_ids.
+        assert self._storage._parent_by_id["inner"] == "outer"
+        assert self._storage._parent_by_id["outer"] is None
+
         assert self._storage.order_fragment_ids(["inner", "outer"]) == [
             "outer",
             "inner",

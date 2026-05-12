@@ -463,43 +463,6 @@ class ScriptRunnerTest(unittest.TestCase):
         inner.assert_called_once()
         assert scriptrunner._fragment_storage.contains("inner")
 
-    def test_fragment_queue_child_first_keeps_reregistered_inner_via_register(self):
-        """Runner ordering should still work through the renamed register API."""
-        scriptrunner = TestScriptRunner("good_script.py")
-
-        def run_inner() -> None:
-            ctx = get_script_run_ctx()
-            assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
-
-        inner = MagicMock(side_effect=run_inner)
-
-        def rerender_outer() -> None:
-            ctx = get_script_run_ctx()
-            assert ctx is not None
-            ctx.new_fragment_ids.check_and_add("inner")
-            scriptrunner._fragment_storage.register(
-                "inner",
-                inner,
-                parent_fragment_id="outer",
-            )
-
-        outer = MagicMock(side_effect=rerender_outer)
-        scriptrunner._fragment_storage.register("outer", outer)
-        scriptrunner._fragment_storage.register(
-            "inner",
-            inner,
-            parent_fragment_id="outer",
-        )
-
-        scriptrunner.request_rerun(RerunData(fragment_id_queue=["inner", "outer"]))
-        scriptrunner.start()
-        scriptrunner.join()
-
-        outer.assert_called_once()
-        inner.assert_called_once()
-        assert scriptrunner._fragment_storage.contains("inner")
-
     def test_fragment_queue_keeps_live_grandchild_for_later_queued_run(self):
         """A queued child rerun must not prune a live grandchild fragment."""
         scriptrunner = TestScriptRunner("good_script.py")
