@@ -8,14 +8,15 @@ created: 2025-12-03
 ## Summary
 
 Add a `client.disableDataExport` config option that controls whether data export functionality
-(CSV download and clipboard copy) is disabled in `st.dataframe`.
+(CSV download and clipboard copy) is disabled in `st.dataframe` and other components that
+provide data export capabilities (e.g., Vega charts via the table view).
 
 ## Problem
 
 ### User Requests
 
 - [#8402](https://github.com/streamlit/streamlit/issues/8402) — Possibility to disable the
-  "Download as CSV" button (27+ upvotes)
+  "Download as CSV" button
 - [#11358](https://github.com/streamlit/streamlit/issues/11358) — Disable copying data from a
   dataframe
 
@@ -61,19 +62,21 @@ st.set_option("client.disableDataExport", True)
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `client.disableDataExport` | `bool` | `false` | Whether to disable data export (CSV download and copying to clipboard) in `st.dataframe` |
+| `client.disableDataExport` | `bool` | `false` | Whether to disable data export (CSV download and copying to clipboard) in components that support it |
 
 ### Behavior
 
 When `client.disableDataExport = true`:
 
-- **Download button**: Hidden from the toolbar
+- **Download button**: Hidden from the toolbar in `st.dataframe` and chart components
 - **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while a dataframe is
   focused will not copy any cell data to the clipboard (applies to both single and multi-cell
   selections)
+- **Chart table view**: CSV export disabled in Vega chart table views (e.g., `st.altair_chart`,
+  `st.vega_lite_chart`)
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
-This applies to all `st.dataframe` instances in the app.
+This applies to all components with data export capabilities in the app.
 
 ### Examples
 
@@ -122,7 +125,7 @@ Adding this later based on user feedback avoids premature API expansion.
 
 ### Adding to `st.data_editor`
 
-This config option is intentionally scoped to `st.dataframe` only.
+This config option intentionally does not affect `st.data_editor`.
 
 **Reasoning:**
 
