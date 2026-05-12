@@ -74,19 +74,36 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
     node,
     widgetsDisabled,
     disableFullscreenMode,
-    // Stable app-level instances (not needed in deps):
-    // endpoints, widgetMgr, uploadClient, componentRegistry
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
   } = props
 
   // Memoize traversal to avoid recomputing during resize events.
-  // The node and state-like props that affect child rendering are dependencies.
-  // Other props (endpoints, widgetMgr, uploadClient, componentRegistry) are
-  // stable app-level singletons.
-  // oxlint-disable-next-line react-hooks/exhaustive-deps -- props contains stable singletons; meaningful deps listed
+  // All props are included in deps to satisfy exhaustive-deps lint rule.
+  // The singleton props (endpoints, widgetMgr, etc.) never change references,
+  // so including them doesn't cause unnecessary recomputation.
   const elements = useMemo(
-    () => RenderNodeVisitor.collectReactElements(props),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- props contains stable singletons; meaningful deps listed
-    [node, widgetsDisabled, disableFullscreenMode]
+    () =>
+      RenderNodeVisitor.collectReactElements({
+        node,
+        widgetsDisabled,
+        disableFullscreenMode,
+        endpoints,
+        widgetMgr,
+        uploadClient,
+        componentRegistry,
+      }),
+    [
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    ]
   )
 
   return <>{elements}</>
