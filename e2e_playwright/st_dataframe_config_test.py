@@ -239,7 +239,7 @@ def test_markdown_cell_overlay(app: Page, assert_snapshot: ImageCompareFunction)
     cell_overlay = get_open_cell_overlay(app)
     # The overlay should show the rendered markdown content (no edit button in read-only mode)
     expect(cell_overlay).to_be_visible()
-    expect(cell_overlay.get_by_test_id("markdown-cell-viewer")).to_be_visible()
+    expect(cell_overlay.get_by_test_id("stMarkdownColumnViewer")).to_be_visible()
     # Verify edit button is not shown in read-only mode
     expect(cell_overlay.get_by_label("Edit")).not_to_be_visible()
     assert_snapshot(cell_overlay, name="st_dataframe-markdown_column_overlay")
