@@ -1,10 +1,9 @@
 ---
-author: "@lukasmasuch"
+author: lukasmasuch
 created: 2025-12-03
-status: Draft
 ---
 
-# Disable data export for `st.dataframe`
+# Disable Data Export for `st.dataframe`
 
 ## Summary
 
@@ -12,6 +11,15 @@ Add a `disable_export: bool = False` parameter to `st.dataframe` that disables d
 functionality, including CSV download and clipboard copy operations.
 
 ## Problem
+
+### User Requests
+
+- [#8402](https://github.com/streamlit/streamlit/issues/8402) — Possibility to disable the
+  "Download as CSV" button (27+ upvotes)
+- [#11358](https://github.com/streamlit/streamlit/issues/11358) — Disable copying data from a
+  dataframe
+
+### Pain Points
 
 Some users need to display sensitive data in dataframes while preventing easy bulk export.
 Currently, `st.dataframe` provides:
@@ -21,11 +29,6 @@ Currently, `st.dataframe` provides:
 
 For internal dashboards or applications displaying confidential information, users want to
 restrict these export capabilities to make it less convenient to extract large amounts of data.
-
-**Requests:**
-
-- [#8402](https://github.com/streamlit/streamlit/issues/8402) — Possibility to disable the "Download as CSV" button (27+ upvotes)
-- [#11358](https://github.com/streamlit/streamlit/issues/11358) — Disable copying data from a dataframe
 
 **Note:** This is a convenience feature, not a security control. Technically skilled users
 can still extract data from the frontend.
@@ -41,21 +44,25 @@ st.dataframe(
 )
 ```
 
-### Parameters
+**Parameters:**
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `disable_export` | `bool` | `False` | Whether to disable data export (CSV download and copying to clipboard). |
+| `disable_export` | `bool` | `False` | Whether to disable data export (CSV download and copying to clipboard) |
 
 ### Behavior
 
 When `disable_export=True`:
 
 - **Download button**: Hidden from the toolbar
-- **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while the dataframe is focused will not copy any cell data to the clipboard (applies to both single and multi-cell selections)
+- **Copy to clipboard**: Completely disabled — pressing Ctrl/Cmd+C while the dataframe is
+  focused will not copy any cell data to the clipboard (applies to both single and multi-cell
+  selections)
 - **Other features**: Unaffected (search, fullscreen, sorting, selections all work normally)
 
-### Example
+### Examples
+
+#### Basic Usage
 
 ```python
 import pandas as pd
@@ -70,18 +77,18 @@ st.dataframe(df)
 st.dataframe(df, disable_export=True)
 ```
 
+## Alternatives Considered
+
 ### Alternative Parameter Names
 
 | Name | Pros | Cons |
 |------|------|------|
-| `disable_export` | Clear intent, matches `disabled` pattern | Negative phrasing |
+| `disable_export` (chosen) | Clear intent, matches `disabled` pattern | Negative phrasing |
 | `allow_export` | Positive phrasing | Default would be `True`, inconsistent with other `allow_*` patterns |
 | `exportable` | Concise, adjective form | Less explicit about what's being controlled |
 | `enable_download` | Descriptive | Doesn't cover clipboard copy; narrower scope than actual behavior |
 
-## Considered Alternatives
-
-### Global config option
+### Global Config Option
 
 Instead of a per-dataframe parameter, this could be a global config option:
 `client.disable_data_export`
@@ -93,21 +100,22 @@ Instead of a per-dataframe parameter, this could be a global config option:
 
 ### Adding to `st.data_editor`
 
-This parameter is intentionally scoped to `st.dataframe` only and not planned for `st.data_editor`.
+This parameter is intentionally scoped to `st.dataframe` only and not planned for
+`st.data_editor`.
 
 **Reasoning:**
 
-- `st.data_editor` relies on copy/paste for core editing workflows (e.g., pasting data into cells, copying rows for duplication)
-- Could be added later if there's strong user demand.
+- `st.data_editor` relies on copy/paste for core editing workflows (e.g., pasting data into
+  cells, copying rows for duplication)
+- Could be added later if there's strong user demand
 
 ## Checklist
 
-- [x] Will this work on all deployment platforms?
-- [x] No breaking API changes?
-- [x] No new dependencies?
-- [x] Metrics collected?
-- [x] Any security or legal implications?
-  - Not a security feature; documented as convenience only
-- [x] Anything to keep in mind for docs?
-  - Clarify this doesn't prevent determined data extraction
-- [x] Any other risks?
+| Item                         | ✅ or comment |
+|------------------------------|---------------|
+| Works on SiS, Cloud, etc?    | ✅ |
+| No breaking API changes      | ✅ |
+| No new dependencies          | ✅ |
+| Metrics collected            | ✅ |
+| Any security/legal impact?   | ✅ Not a security feature; documented as convenience only |
+| Any docs changes needed?     | ✅ Clarify this doesn't prevent determined data extraction |
