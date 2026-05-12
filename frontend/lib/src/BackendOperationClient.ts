@@ -28,11 +28,19 @@ const LOG = getLogger("BackendOperationClient")
 /** Default timeout for backend operation requests (30 seconds). */
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 
+/**
+ * Timeout for deferred file requests (60 seconds).
+ *
+ * Note: The previous implementation waited indefinitely. This timeout was
+ * introduced to prevent orphan requests from accumulating. For very large
+ * file generation, callers can pass a custom timeout to `requestDeferredFile`.
+ */
+const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 60_000
+
 /** Information about a pending request. */
 interface PendingRequest<T> {
   resolver: PromiseWithResolvers<T>
   timeoutId: ReturnType<typeof setTimeout>
-  createdAt: number
   requestType: string
 }
 
@@ -106,7 +114,6 @@ export class BackendOperationClient {
     this.pendingRequests.set(requestId, {
       resolver: resolver as PromiseWithResolvers<unknown>,
       timeoutId,
-      createdAt: Date.now(),
       requestType: payloadField,
     })
 
@@ -134,7 +141,7 @@ export class BackendOperationClient {
     return this.request<{ url: string }>(
       "deferredFile",
       { fileId },
-      timeoutMs ?? 60_000 // 60s default for potentially large file generation
+      timeoutMs ?? DEFERRED_FILE_REQUEST_TIMEOUT_MS
     )
   }
 

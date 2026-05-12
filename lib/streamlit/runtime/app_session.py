@@ -998,8 +998,11 @@ class AppSession:
         """
         if request.session_id != self.id:
             _LOGGER.warning(
-                "Rejecting backend operation request %s with invalid session ID",
+                "Rejecting backend operation request %s: session ID mismatch "
+                "(request=%s, expected=%s)",
                 request.request_id,
+                request.session_id[:8] if request.session_id else "<none>",
+                self.id[:8] if self.id else "<none>",
             )
             msg = ForwardMsg()
             msg.backend_operation_response.request_id = request.request_id
