@@ -231,7 +231,7 @@ function DataFrame({
 
   // Centralized capability layer that determines which features are enabled
   const {
-    canSort: isSortingEnabled,
+    canSort,
     canSearch,
     canExportCsv,
     canEdit,
@@ -974,7 +974,7 @@ function DataFrame({
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(columnIdx: number, _event) => {
-            if (!isSortingEnabled || isColumnSelectionActivated) {
+            if (!canSort || isColumnSelectionActivated) {
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
               return
@@ -1190,7 +1190,7 @@ function DataFrame({
             column={originalColumns[showMenu.columnIdx]}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
-              isSortingEnabled
+              canSort
                 ? (direction: "asc" | "desc" | undefined) => {
                     // Hide search before sorting to clear search results
                     if (showSearch) {
