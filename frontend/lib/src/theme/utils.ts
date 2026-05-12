@@ -1349,9 +1349,15 @@ function roundToTwoDecimals(n: number): number {
 
 export function blend(color: string, background: string | undefined): string {
   if (background === undefined) return color
-  const [r, g, b, a] = parseToRgba(color)
+  const parsed = parseToRgba(color)
+  // If color parsing fails, return the original color
+  if (!parsed) return color
+  const [r, g, b, a] = parsed
   if (a === 1) return color
-  const [br, bg, bb, ba] = parseToRgba(background)
+  const bgParsed = parseToRgba(background)
+  // If background parsing fails, return the original color
+  if (!bgParsed) return color
+  const [br, bg, bb, ba] = bgParsed
   const ao = a + ba * (1 - a)
   // (xaA + xaB·(1−aA))/aR
   const ro = Math.round((a * r + ba * br * (1 - a)) / ao)

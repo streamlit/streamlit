@@ -495,14 +495,19 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           const unselectedOpacity = Math.floor(255 * 0.4)
 
           // Fallback colors in case there are issues while parsing the colors for a given object
-          const selectedColorParsed = parseToRgba(theme.colors.primary)
+          // Default to primary-like and gray colors if parsing fails (should not happen with theme colors)
+          const selectedColorParsed = parseToRgba(theme.colors.primary) ?? [
+            255, 75, 75, 1,
+          ]
           const selectedColor: [number, number, number, number] = [
             selectedColorParsed[0],
             selectedColorParsed[1],
             selectedColorParsed[2],
             selectedOpacity,
           ]
-          const unselectedColorParsed = parseToRgba(theme.colors.gray20)
+          const unselectedColorParsed = parseToRgba(theme.colors.gray20) ?? [
+            49, 51, 63, 1,
+          ]
           const unselectedColor: [number, number, number, number] = [
             unselectedColorParsed[0],
             unselectedColorParsed[1],

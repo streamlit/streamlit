@@ -30,11 +30,14 @@ import chroma from "chroma-js"
  * Uses hex for opaque colors and rgba() for transparent colors.
  */
 function toCSS(c: chroma.Color): string {
-  if (c.alpha() === 1) {
+  // Use >= 1 to handle floating point precision issues from Lab-space transforms
+  if (c.alpha() >= 1) {
     return c.hex("rgb")
   }
+  // Round RGB values to integers since chroma can return floats after
+  // Lab-space transformations (darken, brighten, mix in non-RGB mode)
   const [r, g, b] = c.rgb()
-  return `rgba(${r}, ${g}, ${b}, ${c.alpha()})`
+  return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${c.alpha()})`
 }
 
 /**
@@ -56,13 +59,15 @@ function tryParse(color: string): chroma.Color | null {
  * Returns the original color string if parsing fails (e.g., unsupported format).
  *
  * @param color - Any valid CSS color string
- * @param alpha - Target alpha value (0-1)
+ * @param alpha - Target alpha value (0-1), will be clamped to valid range
  * @returns CSS color string with the specified alpha
  */
 export function setAlpha(color: string, alpha: number): string {
   const c = tryParse(color)
   if (!c) return color
-  return toCSS(c.alpha(alpha))
+  // Clamp alpha to valid range [0, 1] to ensure valid CSS output
+  const clampedAlpha = Math.max(0, Math.min(1, alpha))
+  return toCSS(c.alpha(clampedAlpha))
 }
 
 /**
@@ -128,18 +133,24 @@ export function getLuminance(color: string): number {
 /**
  * Parse a color string to RGBA values.
  * Returns [r, g, b, a] where r,g,b are 0-255 and a is 0-1.
+ * Returns null if the color cannot be parsed (e.g., unsupported CSS format).
  */
-export function parseToRgba(color: string): [number, number, number, number] {
-  const c = chroma(color)
+export function parseToRgba(
+  color: string
+): [number, number, number, number] | null {
+  const c = tryParse(color)
+  if (!c) return null
   const [r, g, b] = c.rgb()
-  return [r, g, b, c.alpha()]
+  return [Math.round(r), Math.round(g), Math.round(b), c.alpha()]
 }
 
 /**
  * Convert a color to hex format.
  * If the color has alpha < 1, returns 8-digit hex (#RRGGBBAA).
+ * Returns the original color string if parsing fails (e.g., unsupported format).
  */
 export function toHex(color: string): string {
-  const c = chroma(color)
+  const c = tryParse(color)
+  if (!c) return color
   return c.alpha() < 1 ? c.hex("rgba") : c.hex("rgb")
 }

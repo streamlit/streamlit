@@ -55,6 +55,14 @@ describe("colorUtils", () => {
     it("handles named colors", () => {
       expect(setAlpha("red", 0.5)).toBe("rgba(255, 0, 0, 0.5)")
     })
+
+    it("clamps alpha values greater than 1 to 1", () => {
+      expect(setAlpha("#ff0000", 1.5)).toBe("#ff0000")
+    })
+
+    it("clamps negative alpha values to 0", () => {
+      expect(setAlpha("#ff0000", -0.5)).toBe("rgba(255, 0, 0, 0)")
+    })
   })
 
   describe("darken", () => {
@@ -159,8 +167,12 @@ describe("colorUtils", () => {
       expect(parseToRgba("blue")).toEqual([0, 0, 255, 1])
     })
 
-    it("throws for invalid color", () => {
-      expect(() => parseToRgba("not-a-color")).toThrow()
+    it("returns null for invalid color", () => {
+      expect(parseToRgba("not-a-color")).toBeNull()
+    })
+
+    it("returns null for unsupported format (hwb)", () => {
+      expect(parseToRgba("hwb(120 0% 0%)")).toBeNull()
     })
   })
 
@@ -181,8 +193,12 @@ describe("colorUtils", () => {
       expect(toHex("red")).toBe("#ff0000")
     })
 
-    it("throws for invalid color", () => {
-      expect(() => toHex("not-a-color")).toThrow()
+    it("returns original color for invalid color", () => {
+      expect(toHex("not-a-color")).toBe("not-a-color")
+    })
+
+    it("returns original color for unsupported format (hwb)", () => {
+      expect(toHex("hwb(120 0% 0%)")).toBe("hwb(120 0% 0%)")
     })
   })
 })
