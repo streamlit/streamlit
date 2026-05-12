@@ -436,7 +436,9 @@ describe("link URL scheme security", () => {
     render(
       <StreamlitMarkdown source={`[Click me](${url})`} allowHTML={false} />
     )
-    expect(screen.getByText("Click me")).toHaveAttribute("href", "")
+    // Returns "#" to prevent navigation (empty href with target="_blank"
+    // would open current page in new tab)
+    expect(screen.getByText("Click me")).toHaveAttribute("href", "#")
   })
 
   it.each([
