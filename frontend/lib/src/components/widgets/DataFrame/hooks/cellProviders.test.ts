@@ -99,7 +99,7 @@ describe("cellProviders", () => {
       expect(rawCell?.arrowCell.content).toBe("foo")
     })
 
-    it("returns styled cell info when available", () => {
+    it("returns raw cell data including arrowCell", () => {
       const arrowData: IArrowData = { data: UNICODE }
       const data = new Quiver(arrowData)
       const provider = createQuiverCellProvider(data)
@@ -159,6 +159,42 @@ describe("cellProviders", () => {
       )
     })
 
+    it('returns "edited" type for added row with cell data', () => {
+      const arrowData: IArrowData = { data: UNICODE }
+      const data = new Quiver(arrowData)
+      const numRows = data.dimensions.numDataRows
+      const editingState = new EditingState(numRows)
+      const provider = createQuiverCellProvider(data)
+
+      // Add a row with all required cell data
+      const rowCells = new Map()
+      rowCells.set(0, {
+        kind: GridCellKind.Text,
+        displayData: "new index",
+        data: "new index",
+        allowOverlay: true,
+      })
+      rowCells.set(1, {
+        kind: GridCellKind.Text,
+        displayData: "new value",
+        data: "new value",
+        allowOverlay: true,
+      })
+      editingState.addRow(rowCells)
+
+      const result = applyEditingOverlay(
+        numRows, // This is the added row
+        MOCK_COLUMNS[1],
+        editingState,
+        provider
+      )
+
+      expect(result.type).toBe("edited")
+      expect((result as { type: "edited"; cell: GridCell }).cell.kind).toBe(
+        GridCellKind.Text
+      )
+    })
+
     it('returns "error" type for added row without cell data', () => {
       const arrowData: IArrowData = { data: UNICODE }
       const data = new Quiver(arrowData)
@@ -176,15 +212,8 @@ describe("cellProviders", () => {
       })
       editingState.addRow(rowCells)
 
-      // Mock getCell to return undefined for the missing cell
-      const originalGetCell = editingState.getCell.bind(editingState)
-      editingState.getCell = (col: number, row: number) => {
-        const cell = originalGetCell(col, row)
-        if (col === 1 && editingState.isAddedRow(row)) {
-          return undefined
-        }
-        return cell
-      }
+      // The unpatched getCell(1, numRows) returns undefined for the missing cell
+      // since addedRows[0].get(1) is undefined
 
       const result = applyEditingOverlay(
         numRows, // This is the added row
@@ -258,7 +287,9 @@ describe("cellProviders", () => {
     it.each([
       [99, 0, "column"],
       [0, 99, "row"],
-    ])("returns error cell for %s index out of bounds", (col, row) => {
+      [-1, 0, "column"],
+      [0, -1, "row"],
+    ])("returns error cell for %s index out of bounds (%s)", (col, row) => {
       const arrowData: IArrowData = { data: UNICODE }
       const data = new Quiver(arrowData)
       const numRows = data.dimensions.numDataRows

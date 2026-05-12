@@ -78,6 +78,10 @@ export interface BaseCellProvider {
 
 /**
  * Base cell provider that reads from a Quiver (Arrow) data source.
+ *
+ * Note: `data.getCell()` can throw when the underlying Arrow payload changes
+ * dimensions unexpectedly (see issue #10937). The error boundary in
+ * `resolveCellContent` catches these exceptions.
  */
 export function createQuiverCellProvider(data: Quiver): BaseCellProvider {
   return {
@@ -97,6 +101,13 @@ export function createQuiverCellProvider(data: Quiver): BaseCellProvider {
  * Apply the editing overlay to cell retrieval.
  * Checks if a cell has been edited or is part of an added row,
  * returning the edited cell if so, otherwise delegating to the base provider.
+ *
+ * @param row - The display-space row index as received from glide-data-grid.
+ *              This function handles the mapping to original row indices internally.
+ *              Callers must not pre-map this value.
+ * @param column - The column definition
+ * @param editingState - The editing state for tracking edits and row operations
+ * @param baseCellProvider - The base provider for reading raw cell data
  */
 export function applyEditingOverlay(
   row: number,
@@ -188,14 +199,14 @@ export function resolveCellContent(
   editingState: EditingState,
   baseCellProvider: BaseCellProvider
 ): GridCell {
-  if (col > columns.length - 1) {
+  if (col < 0 || col > columns.length - 1) {
     return getErrorCell(
       "Column index out of bounds",
       "This error should never happen. Please report this bug."
     )
   }
 
-  if (row > numRows - 1) {
+  if (row < 0 || row > numRows - 1) {
     return getErrorCell(
       "Row index out of bounds",
       "This error should never happen. Please report this bug."
