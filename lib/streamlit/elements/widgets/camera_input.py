@@ -278,10 +278,6 @@ class CameraInputMixin:
                 raise StreamlitAPIException(
                     "size must be a tuple of positive integers (width, height)."
                 )
-            if size[0] <= 0 or size[1] <= 0:
-                raise StreamlitAPIException(
-                    "size must be a tuple of positive integers (width, height)."
-                )
             camera_input_proto.camera_width = size[0]
             camera_input_proto.camera_height = size[1]
 
