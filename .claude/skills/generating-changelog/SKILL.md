@@ -138,7 +138,7 @@ Generate the file in the `work-tmp/` directory: `work-tmp/changelog-website-<new
 - **`st.*` command references**: Use backtick formatting and link to the specific API doc subcategory path: [`st.image`](/develop/api-reference/media/st.image), [`st.dataframe`](/develop/api-reference/data/st.dataframe). Only link the first/primary mention of a command. Links are more common in Notable Changes than Other Changes.
 - **PR and issue links**: Include both PR links and related issue links when applicable. Format: `([#14139](https://github.com/streamlit/streamlit/pull/14139), [#9836](https://github.com/streamlit/streamlit/issues/9836))`. Use `/pull/` for PRs and `/issues/` for issues.
 - **Punctuation**: Every entry ends with a period after the closing parenthesis of PR/issue links.
-- **Contributor attribution**: Attribute external (non-Snowflake) contributors. Use `[username]` (no `@` prefix) in link text, placed after the closing paren and period: `([#NNNNN](https://github.com/streamlit/streamlit/pull/NNNNN)). Thanks, [username](https://github.com/username)!`
+- **Contributor attribution**: Attribute external (non-Snowflake) contributors. Use `[username]` (no `@` prefix) in link text, placed after the closing paren and period: `([#NNNNN](https://github.com/streamlit/streamlit/pull/NNNNN)). Thanks, [username](https://github.com/username)`!
 - **Multi-PR grouped entries**: For complex multi-PR features, use a parent bullet with a colon, then indented sub-bullets:
   ```
   - 🎨 Main feature description:

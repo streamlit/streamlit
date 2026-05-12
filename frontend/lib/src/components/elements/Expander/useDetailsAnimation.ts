@@ -278,7 +278,7 @@ export function useDetailsAnimation({
       cancelAnimation()
       const newOpen = backendExpanded ?? false
       isOpenRef.current = newOpen
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- Syncing with external backend state (label change = new expander)
+
       setIsOpen(newOpen)
       if (detailsRef.current) {
         detailsRef.current.style.height = ""

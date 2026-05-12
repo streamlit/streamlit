@@ -133,6 +133,78 @@ describe("test componentUtils", () => {
         undefined
       )
     })
+
+    it("should call widgetManager.setArrowValue when SET_COMPONENT_VALUE has dataframe dataType", () => {
+      const dataframeValue = { data: new Uint8Array([1, 2, 3]) }
+      iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
+        value: dataframeValue,
+        dataType: "dataframe",
+      })
+
+      expect(widgetMgr.setArrowValue).toBeCalledTimes(1)
+      expect(widgetMgr.setArrowValue).toHaveBeenCalledWith(
+        element,
+        dataframeValue,
+        { fromUi: true },
+        undefined
+      )
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+    })
+
+    it("should call widgetManager.setBytesValue when SET_COMPONENT_VALUE has bytes dataType", () => {
+      const bytesValue = new Uint8Array([4, 5, 6])
+      iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
+        value: bytesValue,
+        dataType: "bytes",
+      })
+
+      expect(widgetMgr.setBytesValue).toBeCalledTimes(1)
+      expect(widgetMgr.setBytesValue).toHaveBeenCalledWith(
+        element,
+        bytesValue,
+        { fromUi: true },
+        undefined
+      )
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+    })
+
+    it("should ignore SET_COMPONENT_VALUE messages with undefined value", () => {
+      iframeMessageHandler(ComponentMessageType.SET_COMPONENT_VALUE, {
+        value: undefined,
+        dataType: "json",
+      })
+
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(widgetMgr.setArrowValue).not.toBeCalled()
+      expect(widgetMgr.setBytesValue).not.toBeCalled()
+    })
+
+    it("should not throw or call callbacks when ref.current is null", () => {
+      const emptyRef: RefObject<IframeMessageHandlerProps> = { current: null }
+      const handler = createIframeMessageHandler(emptyRef)
+      expect(() =>
+        handler(ComponentMessageType.COMPONENT_READY, {
+          apiVersion: CUSTOM_COMPONENT_API_VERSION,
+        })
+      ).not.toThrow()
+      expect(componentReadyCallback).not.toBeCalled()
+      expect(frameHeightCallback).not.toBeCalled()
+      expect(setComponentError).not.toBeCalled()
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(widgetMgr.setArrowValue).not.toBeCalled()
+      expect(widgetMgr.setBytesValue).not.toBeCalled()
+    })
+
+    it("should ignore unrecognized message types", () => {
+      iframeMessageHandler("UNKNOWN_TYPE", {
+        foo: "bar",
+      } as unknown as IframeMessage)
+
+      expect(widgetMgr.setJsonValue).not.toBeCalled()
+      expect(componentReadyCallback).not.toBeCalled()
+      expect(frameHeightCallback).not.toBeCalled()
+      expect(setComponentError).not.toBeCalled()
+    })
   })
 
   describe("sendRenderMessage", () => {

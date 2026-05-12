@@ -510,7 +510,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @loaders.gl/3d-tiles, @loaders.gl/compression, @loaders.gl/core, @loaders.gl/crypto, @loaders.gl/csv, @loaders.gl/draco, @loaders.gl/gis, @loaders.gl/gltf, @loaders.gl/images, @loaders.gl/loader-utils, @loaders.gl/math, @loaders.gl/mvt, @loaders.gl/schema, @loaders.gl/schema-utils, @loaders.gl/terrain, @loaders.gl/textures, @loaders.gl/tiles, @loaders.gl/wms, @loaders.gl/worker-utils, @loaders.gl/xml, @loaders.gl/zip. A copy of the source code may be downloaded from https://github.com/visgl/loaders.gl (@loaders.gl/3d-tiles), https://github.com/visgl/loaders.gl (@loaders.gl/compression), https://github.com/visgl/loaders.gl (@loaders.gl/core), https://github.com/visgl/loaders.gl (@loaders.gl/crypto), https://github.com/visgl/loaders.gl (@loaders.gl/csv), https://github.com/visgl/loaders.gl (@loaders.gl/draco), https://github.com/visgl/loaders.gl (@loaders.gl/gis), https://github.com/visgl/loaders.gl (@loaders.gl/gltf), https://github.com/visgl/loaders.gl (@loaders.gl/images), https://github.com/visgl/loaders.gl (@loaders.gl/loader-utils), https://github.com/visgl/loaders.gl (@loaders.gl/math), https://github.com/visgl/loaders.gl (@loaders.gl/mvt), https://github.com/visgl/loaders.gl (@loaders.gl/schema), https://github.com/visgl/loaders.gl (@loaders.gl/schema-utils), https://github.com/visgl/loaders.gl (@loaders.gl/terrain), https://github.com/visgl/loaders.gl (@loaders.gl/textures), https://github.com/visgl/loaders.gl (@loaders.gl/tiles), https://github.com/visgl/loaders.gl (@loaders.gl/wms), https://github.com/visgl/loaders.gl (@loaders.gl/worker-utils), https://github.com/visgl/loaders.gl (@loaders.gl/xml), https://github.com/visgl/loaders.gl (@loaders.gl/zip). This software contains the following license and notice below:
+The following software may be included in this product: @loaders.gl/3d-tiles, @loaders.gl/compression, @loaders.gl/core, @loaders.gl/crypto, @loaders.gl/csv, @loaders.gl/draco, @loaders.gl/geoarrow, @loaders.gl/gis, @loaders.gl/gltf, @loaders.gl/images, @loaders.gl/loader-utils, @loaders.gl/math, @loaders.gl/mvt, @loaders.gl/schema, @loaders.gl/schema-utils, @loaders.gl/terrain, @loaders.gl/textures, @loaders.gl/tiles, @loaders.gl/wms, @loaders.gl/worker-utils, @loaders.gl/xml, @loaders.gl/zip. A copy of the source code may be downloaded from https://github.com/visgl/loaders.gl (@loaders.gl/3d-tiles), https://github.com/visgl/loaders.gl (@loaders.gl/compression), https://github.com/visgl/loaders.gl (@loaders.gl/core), https://github.com/visgl/loaders.gl (@loaders.gl/crypto), https://github.com/visgl/loaders.gl (@loaders.gl/csv), https://github.com/visgl/loaders.gl (@loaders.gl/draco), https://github.com/visgl/loaders.gl (@loaders.gl/geoarrow), https://github.com/visgl/loaders.gl (@loaders.gl/gis), https://github.com/visgl/loaders.gl (@loaders.gl/gltf), https://github.com/visgl/loaders.gl (@loaders.gl/images), https://github.com/visgl/loaders.gl (@loaders.gl/loader-utils), https://github.com/visgl/loaders.gl (@loaders.gl/math), https://github.com/visgl/loaders.gl (@loaders.gl/mvt), https://github.com/visgl/loaders.gl (@loaders.gl/schema), https://github.com/visgl/loaders.gl (@loaders.gl/schema-utils), https://github.com/visgl/loaders.gl (@loaders.gl/terrain), https://github.com/visgl/loaders.gl (@loaders.gl/textures), https://github.com/visgl/loaders.gl (@loaders.gl/tiles), https://github.com/visgl/loaders.gl (@loaders.gl/wms), https://github.com/visgl/loaders.gl (@loaders.gl/worker-utils), https://github.com/visgl/loaders.gl (@loaders.gl/xml), https://github.com/visgl/loaders.gl (@loaders.gl/zip). This software contains the following license and notice below:
 
 loaders.gl is licensed under the MIT license
 
@@ -555,7 +555,7 @@ See the License for the specific language governing permissions and limitations 
 
 -----
 
-The following software may be included in this product: @luma.gl/constants, @luma.gl/core, @luma.gl/engine, @luma.gl/gltf, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/constants), https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/gltf), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
+The following software may be included in this product: @luma.gl/core, @luma.gl/engine, @luma.gl/gltf, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/gltf), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
 
 luma.gl is provided under the MIT license
 
@@ -1289,37 +1289,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
-
------
-
-The following software may be included in this product: @protobufjs/aspromise, @protobufjs/base64, @protobufjs/codegen, @protobufjs/eventemitter, @protobufjs/fetch, @protobufjs/float, @protobufjs/inquire, @protobufjs/path, @protobufjs/pool, @protobufjs/utf8. A copy of the source code may be downloaded from https://github.com/dcodeIO/protobuf.js.git (@protobufjs/aspromise), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/base64), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/codegen), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/eventemitter), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/fetch), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/float), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/inquire), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/path), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/pool), https://github.com/dcodeIO/protobuf.js.git (@protobufjs/utf8). This software contains the following license and notice below:
-
-Copyright (c) 2016, Daniel Wirtz  All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are
-met:
-
-* Redistributions of source code must retain the above copyright
-  notice, this list of conditions and the following disclaimer.
-* Redistributions in binary form must reproduce the above copyright
-  notice, this list of conditions and the following disclaimer in the
-  documentation and/or other materials provided with the distribution.
-* Neither the name of its author, nor the names of its contributors
-  may be used to endorse or promote products derived from this software
-  without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-"AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
@@ -2758,7 +2727,7 @@ THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: bit-twiddle, dup, signum, strongly-connected-components, typedarray-pool. A copy of the source code may be downloaded from git://github.com/mikolalysenko/bit-twiddle.git (bit-twiddle), git://github.com/mikolalysenko/dup.git (dup), git://github.com/mikolalysenko/signum.git (signum), git://github.com/mikolalysenko/strongly-connected-components.git (strongly-connected-components), git://github.com/mikolalysenko/typedarray-pool.git (typedarray-pool). This software contains the following license and notice below:
+The following software may be included in this product: bit-twiddle, dup, strongly-connected-components, typedarray-pool. A copy of the source code may be downloaded from git://github.com/mikolalysenko/bit-twiddle.git (bit-twiddle), git://github.com/mikolalysenko/dup.git (dup), git://github.com/mikolalysenko/strongly-connected-components.git (strongly-connected-components), git://github.com/mikolalysenko/typedarray-pool.git (typedarray-pool). This software contains the following license and notice below:
 
 The MIT License (MIT)
 
@@ -2903,29 +2872,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
------
-
-The following software may be included in this product: canvas-fit, concat-map, defined, element-size, minimist, resolve, right-now, shallow-copy. A copy of the source code may be downloaded from git://github.com/hughsk/canvas-fit.git (canvas-fit), git://github.com/substack/node-concat-map.git (concat-map), git://github.com/inspect-js/defined.git (defined), git://github.com/hughsk/element-size.git (element-size), git://github.com/minimistjs/minimist.git (minimist), git://github.com/substack/node-resolve.git (resolve), git://github.com/hughsk/right-now.git (right-now), git://github.com/substack/shallow-copy.git (shallow-copy). This software contains the following license and notice below:
-
-This software is released under the MIT license:
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of
-this software and associated documentation files (the "Software"), to deal in
-the Software without restriction, including without limitation the rights to
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
-the Software, and to permit persons to whom the Software is furnished to do so,
-subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
-FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
-COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
-IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
-CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
@@ -3515,6 +3461,29 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: concat-map, defined, minimist, resolve, shallow-copy. A copy of the source code may be downloaded from git://github.com/substack/node-concat-map.git (concat-map), git://github.com/inspect-js/defined.git (defined), git://github.com/minimistjs/minimist.git (minimist), git://github.com/substack/node-resolve.git (resolve), git://github.com/substack/shallow-copy.git (shallow-copy). This software contains the following license and notice below:
+
+This software is released under the MIT license:
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER
+IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
+CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
@@ -4965,7 +4934,7 @@ SOFTWARE.
 The following software may be included in this product: dompurify. A copy of the source code may be downloaded from git://github.com/cure53/DOMPurify.git. This software contains the following license and notice below:
 
 DOMPurify
-Copyright 2025 Dr.-Ing. Mario Heiderich, Cure53
+Copyright 2025-2026 Dr.-Ing. Mario Heiderich, Cure53
 
 DOMPurify is free software; you can redistribute it and/or modify it under the
 terms of either:
@@ -5163,7 +5132,7 @@ b) the Mozilla Public License Version 2.0
       same "printed page" as the copyright notice for easier
       identification within third-party archives.
 
-   Copyright [yyyy] [name of copyright owner]
+Copyright 2025-2026 Dr.-Ing. Mario Heiderich, Cure53
 
    Licensed under the Apache License, Version 2.0 (the "License");
    you may not use this file except in compliance with the License.
@@ -6357,7 +6326,33 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: fast-xml-parser. A copy of the source code may be downloaded from https://github.com/NaturalIntelligence/fast-xml-parser. This software contains the following license and notice below:
+The following software may be included in this product: fast-xml-builder. A copy of the source code may be downloaded from git+https://github.com/NaturalIntelligence/fast-xml-builder.git. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2026 Natural Intelligence
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
+The following software may be included in this product: fast-xml-parser. A copy of the source code may be downloaded from git+https://github.com/NaturalIntelligence/fast-xml-parser.git. This software contains the following license and notice below:
 
 MIT License
 
@@ -10290,32 +10285,6 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
-The following software may be included in this product: mouse-change, mouse-event, mouse-wheel, superscript-text, to-px. A copy of the source code may be downloaded from https://github.com/mikolalysenko/mouse-change.git (mouse-change), https://github.com/mikolalysenko/mouse-event.git (mouse-event), https://github.com/mikolalysenko/mouse-wheel.git (mouse-wheel), https://github.com/mikolalysenko/superscript-text.git (superscript-text), https://github.com/mikolalysenko/to-px.git (to-px). This software contains the following license and notice below:
-
-The MIT License (MIT)
-
-Copyright (c) 2015 Mikola Lysenko
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
------
-
 The following software may be included in this product: ms. A copy of the source code may be downloaded from git+https://github.com/zeit/ms.git. This software contains the following license and notice below:
 
 The MIT License (MIT)
@@ -10659,6 +10628,32 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+
+-----
+
+The following software may be included in this product: path-expression-matcher. A copy of the source code may be downloaded from https://github.com/NaturalIntelligence/path-expression-matcher. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2024
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 -----
 
@@ -14817,6 +14812,32 @@ THIS SOFTWARE.
 
 -----
 
+The following software may be included in this product: to-px. A copy of the source code may be downloaded from https://github.com/mikolalysenko/to-px.git. This software contains the following license and notice below:
+
+The MIT License (MIT)
+
+Copyright (c) 2015 Mikola Lysenko
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+-----
+
 The following software may be included in this product: topojson-client. A copy of the source code may be downloaded from https://github.com/topojson/topojson-client.git. This software contains the following license and notice below:
 
 Copyright 2012-2019 Michael Bostock
@@ -15646,32 +15667,6 @@ The MIT License (MIT)
 
 Copyright (c) 2024 Mattias Buelens
 Copyright (c) 2016 Diwank Singh Tomer
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-
------
-
-The following software may be included in this product: wgsl_reflect. A copy of the source code may be downloaded from https://github.com/brendan-duncan/wgsl_reflect. This software contains the following license and notice below:
-
-# MIT License
-
-Copyright (c) 2021 Brendan Duncan
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

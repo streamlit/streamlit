@@ -466,3 +466,21 @@ def test_text_input_query_param_programmatic_session_state_syncs_url(app: Page):
 
     expect(app).not_to_have_url(re.compile(r"[?&]bound_text_ss="))
     expect_prefixed_markdown(app, "bound text ss value:", "default")
+
+
+def test_text_input_setvalue_preserved_on_rerun(app: Page):
+    """Test that setValue=True commands are delivered even when the protobuf hash matches.
+
+    This verifies that text_input with a programmatic value is correctly set
+    on every rerun, not cached/skipped due to hash matching.
+    """
+    expect_markdown(app, "Text input counter: 1")
+    text_input = get_text_input(app, "Programmatic value input")
+    text_input_field = text_input.locator("input").first
+    expect(text_input_field).to_have_value("fixed_value")
+
+    for expected_counter in range(2, 5):
+        app.get_by_role("button", name="Trigger text input rerun", exact=True).click()
+        wait_for_app_run(app)
+        expect_markdown(app, f"Text input counter: {expected_counter}")
+        expect(text_input_field).to_have_value("fixed_value")

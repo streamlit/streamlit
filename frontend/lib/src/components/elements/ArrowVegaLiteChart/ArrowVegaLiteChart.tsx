@@ -14,12 +14,17 @@
  * limitations under the License.
  */
 
-import { FC, memo, useEffect, useLayoutEffect, useState } from "react"
+import { FC, memo, useEffect, useLayoutEffect, useMemo, useState } from "react"
 
 import { Global } from "@emotion/react"
 import { InsertChart, TableChart } from "@emotion-icons/material-outlined"
 
-import { streamlit } from "@streamlit/protobuf"
+import {
+  IArrowData,
+  IArrowNamedDataSet,
+  streamlit,
+  VegaLiteChart as VegaLiteChartProto,
+} from "@streamlit/protobuf"
 
 import {
   shouldHeightStretch,
@@ -30,11 +35,12 @@ import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/with
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
 import Toolbar, { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { ReadOnlyGrid } from "~lib/components/widgets/DataFrame/ReadOnlyGrid"
+import { Quiver } from "~lib/dataframes/Quiver"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { VegaLiteChartElement } from "./arrowUtils"
+import { VegaLiteChartElement, WrappedNamedDataset } from "./arrowUtils"
 import {
   StyledVegaLiteChartContainer,
   StyledVegaLiteChartTooltips,
@@ -98,7 +104,8 @@ export function hasNestedComposition(spec: string | object): boolean {
   }
 }
 export interface Props {
-  element: VegaLiteChartElement
+  element: VegaLiteChartProto
+  elementHash?: string
   widgetMgr: WidgetStateManager
   fragmentId?: string
   disableFullscreenMode?: boolean
@@ -106,14 +113,42 @@ export interface Props {
   heightConfig: streamlit.IHeightConfig | null | undefined
 }
 
+/** Iterates over datasets and converts data to Quiver. */
+function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
+  return datasets.map((dataset: IArrowNamedDataSet) => ({
+    hasName: dataset.hasName as boolean,
+    name: dataset.name as string,
+    data: new Quiver(dataset.data as IArrowData),
+  }))
+}
+
 const ArrowVegaLiteChart: FC<Props> = ({
   disableFullscreenMode,
-  element: inputElement,
+  element: elementProto,
+  elementHash,
   fragmentId,
   widgetMgr,
   widthConfig,
   heightConfig,
 }) => {
+  // Construct the VegaLiteChartElement from the proto's data. The elementHash
+  // serves as the primary memoization key to avoid unnecessary re-parsing when
+  // the payload hasn't changed.
+  const inputElement = useMemo<VegaLiteChartElement>(
+    () => ({
+      data: elementProto.data ? new Quiver(elementProto.data) : null,
+      spec: elementProto.spec,
+      datasets: wrapDatasets(elementProto.datasets),
+      useContainerWidth: elementProto.useContainerWidth,
+      vegaLiteTheme: elementProto.theme,
+      id: elementProto.id,
+      selectionMode: elementProto.selectionMode,
+      formId: elementProto.formId,
+    }),
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [elementHash, elementProto]
+  )
   const [showData, setShowData] = useState(false)
   const [enableShowData, setEnableShowData] = useState(false)
 

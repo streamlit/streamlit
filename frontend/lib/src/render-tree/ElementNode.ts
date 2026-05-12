@@ -14,23 +14,7 @@
  * limitations under the License.
  */
 
-import { produce } from "immer"
-
-import {
-  ArrowNamedDataSet,
-  Dataframe as DataframeProto,
-  Element,
-  ForwardMsgMetadata,
-  IArrowData,
-  IArrowNamedDataSet,
-  VegaLiteChart as VegaLiteChartProto,
-} from "@streamlit/protobuf"
-
-import type {
-  VegaLiteChartElement,
-  WrappedNamedDataset,
-} from "~lib/components/elements/ArrowVegaLiteChart/arrowUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
 import { AppNode } from "./AppNode.interface"
 import { TransientNode } from "./TransientNode"
@@ -50,12 +34,11 @@ export class ElementNode implements AppNode {
 
   public readonly fragmentId?: string
 
-  private lazyQuiverElement?: Quiver
-
-  private lazyVegaLiteChartElement?: VegaLiteChartElement
-
   // The hash of the script that created this element.
   public readonly activeScriptHash: string
+
+  // The hash of this element's payload for content-based deduplication.
+  public readonly elementHash?: string
 
   /** Create a new ElementNode. */
   public constructor(
@@ -63,139 +46,15 @@ export class ElementNode implements AppNode {
     metadata: ForwardMsgMetadata,
     scriptRunId: string,
     activeScriptHash: string,
-    fragmentId?: string
+    fragmentId?: string,
+    elementHash?: string
   ) {
     this.element = element
     this.metadata = metadata
     this.scriptRunId = scriptRunId
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
-  }
-
-  public get quiverElement(): Quiver {
-    if (this.lazyQuiverElement !== undefined) {
-      return this.lazyQuiverElement
-    }
-
-    if (this.element.type !== "table" && this.element.type !== "dataframe") {
-      throw new Error(
-        `elementType '${this.element.type}' is not a valid Quiver element!`
-      )
-    }
-
-    const arrowData =
-      this.element.type === "table"
-        ? (this.element.table?.arrowData as IArrowData)
-        : ((this.element.dataframe as DataframeProto)?.arrowData as IArrowData)
-    const toReturn = new Quiver(arrowData)
-    // TODO (lukasmasuch): Delete element from proto object?
-    this.lazyQuiverElement = toReturn
-    return toReturn
-  }
-
-  public get vegaLiteChartElement(): VegaLiteChartElement {
-    if (this.lazyVegaLiteChartElement !== undefined) {
-      return this.lazyVegaLiteChartElement
-    }
-
-    if (this.element.type !== "vegaLiteChart") {
-      throw new Error(
-        `elementType '${this.element.type}' is not a valid VegaLiteChartElement!`
-      )
-    }
-
-    const proto = this.element.vegaLiteChart as VegaLiteChartProto
-    const modifiedData = proto.data ? new Quiver(proto.data) : null
-    const modifiedDatasets =
-      proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
-
-    const toReturn = {
-      data: modifiedData,
-      spec: proto.spec,
-      datasets: modifiedDatasets,
-      useContainerWidth: proto.useContainerWidth,
-      vegaLiteTheme: proto.theme,
-      id: proto.id,
-      selectionMode: proto.selectionMode,
-      formId: proto.formId,
-    }
-
-    this.lazyVegaLiteChartElement = toReturn
-    return toReturn
-  }
-
-  public arrowAddRows(
-    namedDataSet: ArrowNamedDataSet,
-    scriptRunId: string
-  ): ElementNode {
-    const elementType = this.element.type
-    const newNode = new ElementNode(
-      this.element,
-      this.metadata,
-      scriptRunId,
-      this.activeScriptHash,
-      this.fragmentId
-    )
-
-    switch (elementType) {
-      case "table":
-      case "dataframe": {
-        newNode.lazyQuiverElement = ElementNode.quiverAddRowsHelper(
-          this.quiverElement,
-          namedDataSet
-        )
-        break
-      }
-      case "vegaLiteChart": {
-        newNode.lazyVegaLiteChartElement =
-          ElementNode.vegaLiteChartAddRowsHelper(
-            this.vegaLiteChartElement,
-            namedDataSet
-          )
-        break
-      }
-      default: {
-        // This should never happen!
-        throw new Error(
-          `elementType '${this.element.type}' is not a valid arrowAddRows target!`
-        )
-      }
-    }
-
-    return newNode
-  }
-
-  private static quiverAddRowsHelper(
-    element: Quiver,
-    namedDataSet: ArrowNamedDataSet
-  ): Quiver {
-    if (namedDataSet.hasName) {
-      throw new Error(
-        "Add rows cannot be used with a named dataset for this element."
-      )
-    }
-
-    const newQuiver = new Quiver(namedDataSet.data as IArrowData)
-    return element.addRows(newQuiver)
-  }
-
-  private static vegaLiteChartAddRowsHelper(
-    element: VegaLiteChartElement,
-    namedDataSet: ArrowNamedDataSet
-  ): VegaLiteChartElement {
-    const newDataSetName = namedDataSet.hasName ? namedDataSet.name : null
-    const newDataSetQuiver = new Quiver(namedDataSet.data as IArrowData)
-
-    return produce(element, (draft: VegaLiteChartElement) => {
-      const existingDataSet = getNamedDataSet(draft.datasets, newDataSetName)
-      if (existingDataSet) {
-        existingDataSet.data = existingDataSet.data.addRows(newDataSetQuiver)
-      } else {
-        draft.data = draft.data
-          ? draft.data.addRows(newDataSetQuiver)
-          : newDataSetQuiver
-      }
-    })
+    this.elementHash = elementHash
   }
 
   /**
@@ -256,33 +115,4 @@ export class ElementNode implements AppNode {
       node.deltaMsgReceivedAt
     )
   }
-}
-
-/**
- * If there is only one NamedDataSet, return it.
- * If there is a NamedDataset that matches the given name, return it.
- * Otherwise, return `undefined`.
- */
-function getNamedDataSet(
-  namedDataSets: WrappedNamedDataset[],
-  name: string | null
-): WrappedNamedDataset | undefined {
-  if (namedDataSets.length === 1) {
-    return namedDataSets[0]
-  }
-
-  return namedDataSets.find(
-    (dataset: WrappedNamedDataset) => dataset.hasName && dataset.name === name
-  )
-}
-
-/** Iterates over datasets and converts data to Quiver. */
-function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
-  return datasets.map((dataset: IArrowNamedDataSet) => {
-    return {
-      hasName: dataset.hasName as boolean,
-      name: dataset.name as string,
-      data: new Quiver(dataset.data as IArrowData),
-    }
-  })
 }

@@ -37,6 +37,18 @@ import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { useDeckGl, UseDeckGlProps } from "./useDeckGl"
 
+/** Test component that wires useDeckGl to the ElementFullscreenContext expand button. */
+const DeckGlFullscreenTestComponent: FC<UseDeckGlProps> = props => {
+  useDeckGl(props)
+  const { expand } = useRequiredContext(ElementFullscreenContext)
+
+  return (
+    <button type="button" onClick={expand}>
+      Expand
+    </button>
+  )
+}
+
 const mockInitialViewState = {
   bearing: -27.36,
   latitude: 52.2323,
@@ -229,18 +241,8 @@ describe("useDeckGl", () => {
 
     it("should call JSON5.parse when isFullScreen changes", async () => {
       const user = userEvent.setup()
-      const MyComponent: FC<UseDeckGlProps> = props => {
-        useDeckGl(props)
-        const { expand } = useRequiredContext(ElementFullscreenContext)
 
-        return (
-          <button type="button" onClick={expand}>
-            Expand
-          </button>
-        )
-      }
-
-      render(<MyComponent {...getUseDeckGlProps()} />)
+      render(<DeckGlFullscreenTestComponent {...getUseDeckGlProps()} />)
 
       expect(JSON5.parse).toHaveBeenCalledTimes(1)
 

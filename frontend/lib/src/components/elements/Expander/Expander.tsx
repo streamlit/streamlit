@@ -17,9 +17,11 @@
 import { memo, ReactElement, useCallback, useState } from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -107,6 +109,22 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
 
   const initialExpanded = isPassivelyKeyed ? storedExpanded : element.expanded
 
+  // Sync widget manager state when the backend programmatically changes the
+  // expanded value (e.g. st.session_state.key = False). Without this, the
+  // widget manager retains the stale value and sends it back on the next
+  // rerun, causing the expander to revert to its old state.
+  useExecuteWhenChanged(() => {
+    if (!widgetId || !notNullOrUndefined(element.expanded)) {
+      return
+    }
+    widgetMgr.setBoolValue(
+      { id: widgetId },
+      element.expanded,
+      { fromUi: false },
+      fragmentId
+    )
+  }, [widgetId, element.expanded])
+
   // Callback to notify backend of toggle (only used in widget mode)
   const handleWidgetToggle = useCallback(
     (newOpen: boolean): void => {
@@ -183,12 +201,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
             {showUserIcon && <ExpanderIcon icon={icon} />}
 
             <StyledSummaryLabelWrapper>
-              <StreamlitMarkdown
-                source={label}
-                allowHTML={false}
-                isLabel
-                largerLabel
-              />
+              <StreamlitMarkdown source={label} allowHTML={false} isLabel />
             </StyledSummaryLabelWrapper>
           </StyledSummaryHeading>
         </StyledSummary>

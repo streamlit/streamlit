@@ -22,7 +22,7 @@ from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, Protocol, TypeVar, overload
 
-from streamlit.error_util import handle_uncaught_app_exception
+from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -54,12 +54,10 @@ class FragmentStorage(Protocol):
     protocols.
     """
 
-    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
-    # with the `set` type of `new_fragments_ids`.
     @abstractmethod
     def clear(
         self,
-        new_fragment_ids: set[str] | None = None,  # ty: ignore[invalid-type-form]
+        new_fragment_ids: frozenset[str] | None = None,
     ) -> None:
         """Remove all fragments saved in this FragmentStorage unless listed in
         new_fragment_ids.
@@ -102,11 +100,9 @@ class MemoryFragmentStorage(FragmentStorage):
     def __init__(self) -> None:
         self._fragments: dict[str, Fragment] = {}
 
-    # Weirdly, we have to define this above the `set` method, or mypy gets it confused
-    # with the `set` type of `new_fragments_ids`.
-    def clear(self, new_fragment_ids: set[str] | None = None) -> None:  # ty: ignore[invalid-type-form]
+    def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         if new_fragment_ids is None:
-            new_fragment_ids = set()
+            new_fragment_ids = frozenset()
 
         fragment_ids = list(self._fragments.keys())
 
@@ -197,7 +193,7 @@ def _fragment(
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.add(fragment_id)
+            ctx.new_fragment_ids.check_and_add(fragment_id)
             # Set ctx.current_fragment_id so that elements corresponding to this
             # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
             # reset after the fragment function finishes running to either return to the
@@ -243,13 +239,9 @@ def _fragment(
                             # there is a correct handler for these exceptions.
                             raise
                         except Exception as e:
-                            # render error here so that the delta path is correct
-                            # for full app runs, the error will be displayed by the
-                            # main code handler
-                            # if not is_full_app_run:
-                            handle_uncaught_app_exception(e)
-                            # raise here again in case we are in full app execution
-                            # and some flags have to be set
+                            handle_user_script_exception(e, ctx.on_script_error)
+                            # Raise FragmentHandledException to signal that the error
+                            # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
             finally:
@@ -384,7 +376,7 @@ def fragment(
         height: 220px
 
     This next example demonstrates how elements both inside and outside of a
-    fragement update with each app or fragment rerun. In this app, clicking
+    fragment update with each app or fragment rerun. In this app, clicking
     "Rerun full app" will increment both counters and update all values
     displayed in the app. In contrast, clicking "Rerun fragment" will only
     increment the counter within the fragment. In this case, the ``st.write``

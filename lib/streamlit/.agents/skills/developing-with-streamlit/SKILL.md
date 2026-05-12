@@ -120,6 +120,28 @@ For **building a dashboard**, read:
 1. `references/dashboards.md`
 2. `references/data-display.md`
 
+**IMPORTANT - Use templates:**
+
+When creating a **new dashboard app**, prefer starting from a template in `assets/templates/apps/`:
+- If a template closely matches the request, copy it and adapt:
+  - `dashboard-metrics` — KPI cards with time-series charts
+  - `dashboard-companies` — company/entity comparison
+  - `dashboard-compute` — resource/credit monitoring
+  - `dashboard-feature-usage` — feature adoption tracking
+  - `dashboard-seattle-weather` — public dataset exploration
+  - `dashboard-stock-peers` — financial peer analysis
+- If no template is a close match, start from scratch but borrow relevant patterns from the templates (e.g., caching with `@st.cache_data`, `filter_by_time_range()`, `st.set_page_config()`, chart utilities, layout structure)
+- See `assets/templates/apps/README.md` for template descriptions
+
+When **editing an existing app**, use templates as reference for best practices:
+- Check `assets/templates/apps/` for caching patterns, layout structure, and data-loading patterns
+- Apply consistent patterns from templates to improve the existing code
+
+When applying a **custom theme**, use a config from `assets/templates/themes/configs/`:
+- Copy one config file (dracula, financial-dashboard, fluent, jupyter, material-ui, minimal, nord, one-dark-pro, shadcn, solarized-light, ubuntu, vscode) to the app's `.streamlit/config.toml`
+- Themes include custom fonts via Google Fonts
+- See `assets/templates/themes/README.md` for the theme list
+
 For **performance optimization**, read:
 1. `references/performance.md`
 

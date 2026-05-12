@@ -257,7 +257,7 @@ class CachedFunc(Generic[P, R]):
     def __repr__(self) -> str:
         return f"<CachedFunc: {self._info.func}>"
 
-    def __get__(self, instance: Any, owner: Any | None = None) -> Any:
+    def __get__(self: CachedFunc[P, R], instance: Any, owner: Any | None = None) -> Any:
         """CachedFunc implements descriptor protocol to support cache methods."""
         if instance is None:
             return self

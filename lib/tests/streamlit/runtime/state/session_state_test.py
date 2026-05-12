@@ -38,6 +38,7 @@ from streamlit.errors import (
 from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
 from streamlit.runtime.state.session_state import (
@@ -813,7 +814,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = {"widget_id"}
+        mock_ctx.widget_ids_this_run = ThreadSafeSet()
+        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -828,7 +830,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
-        mock_ctx.form_ids_this_run = {"form_id"}
+        mock_ctx.form_ids_this_run = ThreadSafeSet()
+        mock_ctx.form_ids_this_run.check_and_add("form_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -853,7 +856,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_reset_state_value_allows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = {"widget_id"}
+        mock_ctx.widget_ids_this_run = ThreadSafeSet()
+        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",

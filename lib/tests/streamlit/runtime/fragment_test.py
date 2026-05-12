@@ -37,6 +37,7 @@ from streamlit.runtime.fragment import (
 )
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -90,7 +91,7 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         self._storage._fragments["some_other_key"] = "some_other_fragment"
         assert len(self._storage._fragments) == 2
 
-        self._storage.clear(new_fragment_ids={"some_key"})
+        self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
 
@@ -240,8 +241,9 @@ class FragmentTest(unittest.TestCase):
         self, patched_get_script_run_ctx
     ):
         ctx = MagicMock()
+        ctx.cursors = {}
         ctx.fragment_ids_this_run = []
-        ctx.new_fragment_ids = set()
+        ctx.new_fragment_ids = ThreadSafeSet()
         ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
@@ -257,11 +259,11 @@ class FragmentTest(unittest.TestCase):
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
 
-        assert len(ctx.new_fragment_ids) == 0
+        assert len(ctx.new_fragment_ids.snapshot()) == 0
         my_fragment()
 
         # Verify that `my_fragment`'s id was added to the `new_fragment_id`s set.
-        assert len(ctx.new_fragment_ids) == 1
+        assert len(ctx.new_fragment_ids.snapshot()) == 1
 
         # Reach inside our MemoryFragmentStorage internals to pull out our saved
         # fragment.
@@ -417,6 +419,96 @@ class FragmentTest(unittest.TestCase):
         # countercheck
         fragment_id2 = _fragment(my_function, additional_hash_info="")()
         assert fragment_id1 == fragment_id2
+
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_called_with_exception(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+    ):
+        """Test that the on_script_error handler is called with the exception in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        handler = MagicMock(return_value=None)
+        ctx.on_script_error = handler
+        patched_get_script_run_ctx.return_value = ctx
+
+        test_exception = ValueError("fragment error")
+
+        @fragment
+        def my_fragment():
+            raise test_exception
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        handler.assert_called_once_with(test_exception)
+        mock_log.assert_called_once_with(test_exception)
+        mock_show.assert_called_once_with(test_exception)
+
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_returns_true_suppresses_ui(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+    ):
+        """Test that returning True from handler suppresses UI display in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        handler = MagicMock(return_value=True)
+        ctx.on_script_error = handler
+        patched_get_script_run_ctx.return_value = ctx
+
+        @fragment
+        def my_fragment():
+            raise ValueError("fragment error")
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        handler.assert_called_once()
+        mock_log.assert_called_once()
+        mock_show.assert_not_called()
+
+    @patch("streamlit.error_util._LOGGER")
+    @patch("streamlit.error_util.show_uncaught_app_exception")
+    @patch("streamlit.error_util._log_uncaught_app_exception")
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_on_script_error_handler_exception_logged_and_ui_shown(
+        self,
+        patched_get_script_run_ctx,
+        mock_log: MagicMock,
+        mock_show: MagicMock,
+        mock_logger: MagicMock,
+    ):
+        """Test that handler exceptions are logged and default UI is shown in fragment."""
+        ctx = MagicMock()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        def raising_handler(exc: Exception) -> bool | None:
+            raise RuntimeError("handler error")
+
+        ctx.on_script_error = raising_handler
+        test_exception = ValueError("original error")
+
+        @fragment
+        def my_fragment():
+            raise test_exception
+
+        with pytest.raises(FragmentHandledException):
+            my_fragment()
+
+        mock_logger.exception.assert_called_once_with(
+            "on_script_error handler raised an exception"
+        )
+        mock_show.assert_called_once_with(test_exception)
 
 
 # TESTS FOR WRITING TO CONTAINERS OUTSIDE AND INSIDE OF FRAGMENT
