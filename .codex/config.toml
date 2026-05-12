@@ -13,24 +13,10 @@
 # limitations under the License.
 
 # Codex Multi-Agent Configuration
-# Agents reference instructions from .claude/agents/ to avoid duplication
+# Agents are auto-discovered from .codex/agents/ directory.
+# Each agent's description is defined in its own TOML file.
+# The developer_instructions reference .claude/agents/ as the single source of truth.
 
 [agents]
 max_threads = 3
 max_depth = 2
-
-[agents.reviewing-local-changes]
-description = "Review the current branch's changes for code quality, test coverage, security, and best practices."
-config_file = "./agents/reviewing-local-changes.toml"
-
-[agents.simplifying-local-changes]
-description = "Simplify and refine code for clarity, consistency, and maintainability."
-config_file = "./agents/simplifying-local-changes.toml"
-
-[agents.fixing-pr]
-description = "Fix CI failures and address PR review comments for the current branch."
-config_file = "./agents/fixing-pr.toml"
-
-[agents.qa-testing-feature]
-description = "QA test the feature in the current branch using Playwright."
-config_file = "./agents/qa-testing-feature.toml"

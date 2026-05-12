@@ -31,21 +31,24 @@ System prompt / instructions here...
 
 ## Cross-Platform Compatibility
 
-These agents are the **single source of truth**:
+These agents are the **single source of truth** for agent instructions:
 
 | Platform | How it uses these agents |
 |----------|--------------------------|
-| Claude Code | Native support — reads `.claude/agents/` directly |
-| Cursor | Native support — reads `.claude/agents/` directly |
+| Claude Code | Native support — reads `.claude/agents/` directly as subagents |
+| Cursor | Uses `.cursor/rules/agents.mdc` (generated from this file) for context when editing agent files. Note: Cursor rules provide editing context only — Cursor does not execute these as subagents like Claude Code does. |
 | Codex | `.codex/agents/*.toml` files reference these via `developer_instructions` |
 
 **When adding a new agent:**
 1. Create the agent file in this directory
-2. Create a matching command in `.claude/commands/` (see below)
-3. Add a Codex config in `.codex/agents/` and update `.codex/config.toml`
+2. Add the new file to `.claude/.gitignore` (allowlist pattern: `!agents/<name>.md`)
+3. Create a matching command in `.claude/commands/` and add it to `.claude/.gitignore`
+4. Add a Codex config in `.codex/agents/` and update `.codex/config.toml`
+5. Run `uv run scripts/generate_agent_rules.py` to regenerate Cursor/Copilot rules
 
 **When modifying an existing agent:**
-1. Update the agent file — other platforms will pick up changes automatically
+1. Update the agent file — Codex picks up changes via `developer_instructions` reference
+2. Note: Codex `config.toml` descriptions must be updated manually (they don't auto-sync)
 
 ## Slash Command Support
 
