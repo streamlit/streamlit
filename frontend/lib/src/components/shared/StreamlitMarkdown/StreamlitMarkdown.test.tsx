@@ -424,6 +424,38 @@ describe("linkReference", () => {
   })
 })
 
+describe("link URL scheme security", () => {
+  it.each([
+    "javascript:alert(document.domain)",
+    "JavaScript:alert(1)", // case-insensitive
+    "  javascript:alert(1)", // leading whitespace
+    "javascript:alert(1)  ", // trailing whitespace
+    "vbscript:msgbox(1)",
+    "VBScript:execute()", // case-insensitive
+  ])("blocks dangerous URL: %s", url => {
+    render(
+      <StreamlitMarkdown source={`[Click me](${url})`} allowHTML={false} />
+    )
+    expect(screen.getByText("Click me")).toHaveAttribute("href", "")
+  })
+
+  it.each([
+    "https://example.com",
+    "http://example.com",
+    "mailto:test@example.com",
+    "tel:+1234567890",
+    "data:image/png;base64,abc123",
+    "data:text/plain,hello",
+    "/relative/path",
+    "#anchor",
+  ])("allows safe URL: %s", url => {
+    render(
+      <StreamlitMarkdown source={`[Click me](${url})`} allowHTML={false} />
+    )
+    expect(screen.getByText("Click me")).toHaveAttribute("href", url)
+  })
+})
+
 describe("StreamlitMarkdown", () => {
   let bgColors: ReturnType<typeof getThemeBackgroundColors>
   let backgroundColorMapping: Map<string, string>

@@ -255,10 +255,24 @@ export function createAnchorFromText(text: string | null): string {
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
-// Note: React markdown limits hrefs to specific protocols ('http', 'https',
-// 'mailto', 'tel') We are essentially allowing any URL (a data URL). It can
-// be considered a security flaw, but developers can choose to expose it.
+// Dangerous URL schemes that can execute arbitrary code when clicked
+const DANGEROUS_URL_SCHEMES = ["javascript:", "vbscript:"]
+
+/**
+ * Transforms link URIs for markdown rendering.
+ *
+ * Note: React Markdown limits hrefs to specific protocols ('http', 'https',
+ * 'mailto', 'tel') by default. We allow most URLs including data: URLs, which
+ * are intentionally supported for embedding inline content (e.g., images).
+ * Only explicitly dangerous schemes (javascript:, vbscript:) are blocked.
+ */
 function transformLinkUri(href: string): string {
+  const normalizedHref = href.toLowerCase().trim()
+  if (
+    DANGEROUS_URL_SCHEMES.some(scheme => normalizedHref.startsWith(scheme))
+  ) {
+    return ""
+  }
   return href
 }
 
