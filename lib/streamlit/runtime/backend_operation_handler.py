@@ -90,7 +90,7 @@ class BackendOperationDispatcher:
 
         try:
             return await handler.handle(request, session_id)
-        except Exception as e:
+        except Exception:
             _LOGGER.exception(
                 "Error handling backend operation request %s (type: %s)",
                 request.request_id,
@@ -98,7 +98,7 @@ class BackendOperationDispatcher:
             )
             return BackendOperationResponse(
                 request_id=request.request_id,
-                error_msg=str(e),
+                error_msg="Failed to process backend operation",
             )
 
 
