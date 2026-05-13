@@ -376,18 +376,6 @@ def load_data():
     ...
 ```
 
-## Compatibility Notes
-
-- The internal `_skeleton()` method remains available for internal use but is not part
-  of the public API
-- `SkeletonProto.style` field exists for internal `APP` style skeletons (app loading),
-  but user-facing skeletons always use `ELEMENT` style (the default)
-- The `height` field on `SkeletonProto` is preserved for backward compatibility, but
-  layout config is the preferred mechanism for new code
-- Internal skeleton components (`AppSkeleton`, `SquareSkeleton` styled-component) remain
-  separate from user-facing `st.skeleton()` and serve different purposes (Suspense
-  fallbacks, custom component loading states)
-
 ## Checklist
 
 | Item                       | ✅ or comment                                                        |
