@@ -118,7 +118,7 @@ st.dataframe(
 - `LineChartColumn` → Sparkline charts
 - `LinkColumn` → Clickable links
 - `ListColumn` → Display lists/arrays
-- `MarkdownColumn` → Markdown text (click cell to view rendered)
+- `MarkdownColumn` → Markdown text
 - `MultiselectColumn` → Multi-value selection
 - `NumberColumn` → Numbers with formatting
 - `ProgressColumn` → Progress bars
