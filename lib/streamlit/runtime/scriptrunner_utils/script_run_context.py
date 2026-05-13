@@ -311,43 +311,32 @@ _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR: Final = (
 def add_script_run_ctx(
     thread: threading.Thread | None = None, ctx: ScriptRunContext | None = None
 ) -> threading.Thread:
-    """Adds the current ScriptRunContext to a newly-created thread.
+    """Attach the current ScriptRunContext to a thread and propagate the
+    parent's FragmentThreadState snapshot.
 
-    This should be called from this thread's parent thread, before the new
-    thread starts. Propagates both the ScriptRunContext (via threading.local)
-    and the FragmentThreadState (via ContextVar initialization in the child
-    thread's run method).
+    Normal usage: call from the parent thread, before the child starts.
+    Repeat attaches on the same not-yet-started thread are last-wins for
+    both ``ctx`` and the FragmentThreadState snapshot.
 
-    Calling this multiple times on the same not-yet-started thread is
-    last-attach-wins for both the attached ``ctx`` and the parent
-    FragmentThreadState snapshot: the run() wrapper is installed only once
-    and reads the latest snapshot at thread-start time.
+    Self-attach fallback: when called from inside the thread it is
+    attaching to (current thread, or ``thread`` omitted with explicit
+    ``ctx``), ``ThreadState`` is seeded directly from ``ctx``. The
+    parent's ContextVar is not visible from another thread, so:
 
-    If instead called from inside the thread it is attaching to (i.e.
-    ``thread`` is the current thread, or ``thread`` is omitted and ``ctx`` is
-    explicit), the function falls back to seeding ``ThreadState`` from the
-    given ``ctx`` directly. In that mode:
-
-    - ``fragment_id`` and ``delta_path`` are NOT propagated because they live
-      in the parent's ContextVar and cannot be recovered from a different
-      thread. Deltas from such a worker will not be stamped with the parent's
-      ``fragment_id``.
-    - ``active_script_hash`` is seeded from ``ctx.pages_manager.main_script_hash``,
-      NOT from the parent's current ``ThreadState.active_script_hash``. For
-      MPA v1 (``st.Page``) page bodies that enter ``ctx.run_with_active_hash``,
-      the parent's active hash is the page hash; a self-attaching worker
-      observes the main hash instead. Users hitting this should migrate to
-      MPA v2 / ``st.navigation``, where every page already runs under
-      ``main_script_hash`` and the distinction disappears. See
-      ``test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash``
-      for the intentional contract.
+    - ``fragment_id`` and ``delta_path`` are NOT propagated; worker
+      writes won't be stamped with the parent's ``fragment_id``.
+    - ``active_script_hash`` is seeded from
+      ``ctx.pages_manager.main_script_hash``. MPA v1 page bodies will
+      therefore see the main hash, not the page hash; migrate to MPA v2
+      / ``st.navigation`` if that matters. Locked in by
+      ``test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash``.
 
     Parameters
     ----------
-    thread : threading.Thread
-        The thread to attach the current ScriptRunContext to.
+    thread : threading.Thread or None
+        Thread to attach to. Defaults to the current thread.
     ctx : ScriptRunContext or None
-        The ScriptRunContext to add, or None to use the current thread's
+        Context to attach. Defaults to the caller's current
         ScriptRunContext.
 
     Returns
