@@ -58,7 +58,30 @@ class MemoryFragmentStorageTest(unittest.TestCase):
 
     def setUp(self):
         self._storage = MemoryFragmentStorage()
-        self._storage._fragments["some_key"] = "some_fragment"
+        self._set_fragment("some_key", value="some_fragment")
+
+    def _set_fragment(
+        self,
+        fragment_id: str,
+        *,
+        parent_fragment_id: str | None = None,
+        value: str | None = None,
+    ) -> None:
+        fragment_value = fragment_id if value is None else value
+        self._storage.register(
+            fragment_id,
+            fragment_value,
+            parent_fragment_id=parent_fragment_id,
+        )
+
+    def _set_fragment_chain(self, *fragment_ids: str) -> None:
+        parent_fragment_id = None
+        for fragment_id in fragment_ids:
+            self._set_fragment(
+                fragment_id,
+                parent_fragment_id=parent_fragment_id,
+            )
+            parent_fragment_id = fragment_id
 
     def test_lookup(self):
         assert self._storage.lookup("some_key") == "some_fragment"
@@ -74,29 +97,233 @@ class MemoryFragmentStorageTest(unittest.TestCase):
         assert self._storage.lookup("some_key") == "new_fragment"
         assert self._storage.lookup("some_other_key") == "some_other_fragment"
 
+    def test_register_with_parent_fragment_id_preserves_nesting(self):
+        """register() should support nested fragment ancestry."""
+        self._set_fragment("outer")
+
+        self._storage.register(
+            "inner",
+            "inner_fragment",
+            parent_fragment_id="outer",
+        )
+
+        # Directly assert the parent map so a regression in the ancestry
+        # bookkeeping is caught independently of order_fragment_ids.
+        assert self._storage._parent_by_id["inner"] == "outer"
+        assert self._storage._parent_by_id["outer"] is None
+
+        assert self._storage.order_fragment_ids(["inner", "outer"]) == [
+            "outer",
+            "inner",
+        ]
+
     def test_delete(self):
         self._storage.delete("some_key")
         with pytest.raises(FragmentStorageKeyError):
-            self._storage.lookup("nonexistent_key")
+            self._storage.lookup("some_key")
 
     def test_del_FragmentStorageKeyError(self):
         with pytest.raises(FragmentStorageKeyError):
             self._storage.delete("nonexistent_key")
 
     def test_clear(self):
-        self._storage._fragments["some_other_key"] = "some_other_fragment"
+        self._set_fragment("some_other_key", value="some_other_fragment")
         assert len(self._storage._fragments) == 2
 
         self._storage.clear()
         assert len(self._storage._fragments) == 0
+        assert len(self._storage._parent_by_id) == 0
 
     def test_clear_with_new_fragment_ids(self):
-        self._storage._fragments["some_other_key"] = "some_other_fragment"
+        self._set_fragment("some_other_key", value="some_other_fragment")
         assert len(self._storage._fragments) == 2
 
         self._storage.clear(new_fragment_ids=frozenset({"some_key"}))
         assert len(self._storage._fragments) == 1
         assert self._storage._fragments["some_key"] == "some_fragment"
+        assert "some_other_key" not in self._storage._parent_by_id
+
+    def test_clear_stale_descendants_removes_orphan_nested(self):
+        """Descendants of root not re-registered this run are removed."""
+        self._set_fragment_chain("outer", "inner", "leaf")
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer"}))
+
+        assert self._storage.contains("outer")
+        assert not self._storage.contains("inner")
+        assert not self._storage.contains("leaf")
+
+    def test_clear_stale_descendants_keeps_reregistered_child(self):
+        """Descendants re-registered during this run are preserved."""
+        self._set_fragment_chain("outer", "inner")
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer", "inner"}))
+
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_preserves_sibling_branch(self):
+        """Only siblings missing from this run are removed."""
+        self._set_fragment("outer")
+        self._set_fragment("inner_a", parent_fragment_id="outer")
+        self._set_fragment("inner_b", parent_fragment_id="outer")
+
+        self._storage.clear_stale_descendants("outer", frozenset({"outer", "inner_a"}))
+
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner_a")
+        assert not self._storage.contains("inner_b")
+
+    def test_clear_stale_descendants_child_only_does_not_remove_parent(self):
+        """Cleanup rooted at a child must not evict ancestors."""
+        self._set_fragment_chain("outer", "inner")
+
+        self._storage.clear_stale_descendants("inner", frozenset({"inner"}))
+
+        assert self._storage.contains("outer")
+        assert self._storage.contains("inner")
+
+    def test_clear_stale_descendants_does_not_remove_unrelated_top_level(self):
+        """Top-level fragments in other branches are unaffected."""
+        self._set_fragment("a")
+        self._set_fragment("b")
+
+        self._storage.clear_stale_descendants("a", frozenset({"a"}))
+
+        assert self._storage.contains("a")
+        assert self._storage.contains("b")
+
+    def test_delete_removes_parent_metadata(self):
+        """Deleting a fragment also drops its parent-id bookkeeping."""
+        self._set_fragment("k", parent_fragment_id="p")
+        self._storage.delete("k")
+        assert "k" not in self._storage._parent_by_id
+
+    def test_registration_sequence_advances_monotonically_on_register(self):
+        """Each ``register`` advances ``registration_sequence`` by exactly one."""
+        # ``setUp`` already registered ``some_key`` (sequence == 1).
+        initial = self._storage.registration_sequence()
+        assert initial == 1
+
+        self._set_fragment("a", value="a_value")
+        self._set_fragment("b", value="b_value")
+        assert self._storage.registration_sequence() == initial + 2
+
+    def test_registration_sequence_unchanged_by_reads(self):
+        """Read-only operations must not advance ``registration_sequence``."""
+        snapshot = self._storage.registration_sequence()
+
+        self._storage.lookup("some_key")
+        self._storage.contains("some_key")
+        self._storage.ids_registered_after(0)
+        self._storage.order_fragment_ids(["some_key"])
+        self._storage.clear_stale_descendants("some_key", frozenset({"some_key"}))
+
+        assert self._storage.registration_sequence() == snapshot
+
+    def test_registration_sequence_advances_on_reset_of_existing_key(self):
+        """Re-registering an existing key still advances ``registration_sequence``."""
+        snapshot = self._storage.registration_sequence()
+        self._set_fragment("some_key", value="replacement")
+        assert self._storage.registration_sequence() == snapshot + 1
+
+    def test_ids_registered_after_returns_only_newer_ids(self):
+        """Only ids whose latest registration is strictly newer are returned."""
+        snapshot = self._storage.registration_sequence()
+        self._set_fragment("new_a", value="a")
+        self._set_fragment("new_b", value="b", parent_fragment_id="new_a")
+
+        registered = self._storage.ids_registered_after(snapshot)
+        assert registered == frozenset({"new_a", "new_b"})
+        assert "some_key" not in registered
+
+    def test_ids_registered_after_is_empty_when_nothing_new(self):
+        """No registrations after the snapshot yields an empty frozenset."""
+        snapshot = self._storage.registration_sequence()
+        # Read-only operations must not register anything.
+        self._storage.lookup("some_key")
+
+        assert self._storage.ids_registered_after(snapshot) == frozenset()
+
+    def test_ids_registered_after_includes_replaced_existing_id(self):
+        """Re-registering an existing id surfaces it in ``ids_registered_after``."""
+        snapshot = self._storage.registration_sequence()
+        self._set_fragment("some_key", value="replacement")
+
+        assert self._storage.ids_registered_after(snapshot) == frozenset({"some_key"})
+
+    def test_order_fragment_ids_empty_input_returns_empty_list(self):
+        """An empty input list yields an empty ordering."""
+        assert self._storage.order_fragment_ids([]) == []
+
+    def test_order_fragment_ids_preserves_fifo_for_top_level_ids(self):
+        """All-top-level fragments retain their input order."""
+        self._set_fragment("a")
+        self._set_fragment("b")
+        self._set_fragment("c")
+
+        assert self._storage.order_fragment_ids(["b", "a", "c"]) == ["b", "a", "c"]
+
+    def test_order_fragment_ids_promotes_ancestor_before_descendant(self):
+        """A queued ancestor runs before its queued descendant."""
+        self._set_fragment_chain("outer", "inner")
+
+        # Child queued first must still run after the parent.
+        assert self._storage.order_fragment_ids(["inner", "outer"]) == [
+            "outer",
+            "inner",
+        ]
+
+    def test_order_fragment_ids_keeps_fifo_between_unrelated_branches(self):
+        """Unrelated fragments keep input FIFO while each branch stays ancestor-first."""
+        self._set_fragment("p1")
+        self._set_fragment("c1", parent_fragment_id="p1")
+        self._set_fragment("p2")
+
+        # ``c1`` arrives first but ``p1`` must precede it; ``p2`` is unrelated and
+        # should retain its input position relative to the other roots.
+        assert self._storage.order_fragment_ids(["c1", "p2", "p1"]) == [
+            "p2",
+            "p1",
+            "c1",
+        ]
+
+    def test_order_fragment_ids_unknown_ids_treated_as_roots(self):
+        """Ids with no recorded parent are ordered as if they were roots."""
+        # No registrations beyond ``some_key`` from ``setUp``; both are unknown to
+        # the parent map.
+        assert self._storage.order_fragment_ids(["unknown_b", "unknown_a"]) == [
+            "unknown_b",
+            "unknown_a",
+        ]
+
+    def test_order_fragment_ids_orphan_descendant_uses_input_order(self):
+        """When the queued ancestor isn't itself queued, FIFO is preserved."""
+        self._set_fragment_chain("outer", "inner")
+
+        # ``outer`` isn't in the queue, so ``inner`` has no queued ancestor and
+        # should keep its input position relative to its siblings.
+        self._set_fragment("other")
+        assert self._storage.order_fragment_ids(["inner", "other"]) == [
+            "inner",
+            "other",
+        ]
+
+    def test_clear_stale_descendants_handles_parent_cycle_without_hanging(self):
+        """A malformed parent cycle must not trap ``clear_stale_descendants``."""
+        # Manufacture a cycle a -> b -> a in the parent map. This shouldn't
+        # happen in practice but we guard against it defensively.
+        self._set_fragment("a")
+        self._set_fragment("b", parent_fragment_id="a")
+        self._storage._parent_by_id["a"] = "b"
+
+        # Should terminate (no hang) without removing either fragment, since
+        # neither is a strict descendant of an unrelated root.
+        self._storage.clear_stale_descendants(
+            "unrelated_root", frozenset({"unrelated_root"})
+        )
+        assert self._storage.contains("a")
+        assert self._storage.contains("b")
 
     def test_contains(self):
         assert self._storage.contains("some_key")
@@ -292,8 +519,8 @@ class FragmentTest(unittest.TestCase):
         def my_fragment():
             pass
 
-        # Call the fragment-decorated function twice, and verify that we only save the
-        # fragment a single time.
+        # Call the fragment-decorated function twice, and verify that each execution
+        # refreshes the registered closure.
         my_fragment()
         my_fragment()
         assert ctx.fragment_storage.register.call_count == 2

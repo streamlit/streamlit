@@ -18,7 +18,7 @@ import contextlib
 import inspect
 import threading
 from abc import abstractmethod
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from copy import deepcopy
 from functools import wraps
 from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
@@ -74,12 +74,51 @@ class FragmentStorage(Protocol):
         raise NotImplementedError
 
     @abstractmethod
-    def register(self, key: str, fragment: Fragment) -> None:
+    def register(
+        self,
+        key: str,
+        fragment: Fragment,
+        *,
+        parent_fragment_id: str | None = None,
+    ) -> None:
         """Store a fragment definition.
 
         Called during script execution from the main thread or worker threads
         (nested fragments in parallel execution).
+
+        parent_fragment_id
+            The fragment id of the enclosing ``@st.fragment`` when this fragment is
+            nested, or ``None`` for a top-level fragment.
         """
+        raise NotImplementedError
+
+    @abstractmethod
+    def clear_stale_descendants(
+        self,
+        root_fragment_id: str,
+        newly_registered_ids: frozenset[str],
+    ) -> None:
+        """Remove stored fragments that are strict descendants of ``root_fragment_id``
+        but were not re-registered during the latest run of that root.
+
+        Used after a fragment-only rerun so orphaned nested fragments (e.g. from a
+        removed ``run_every`` child) do not keep stale closures in storage.
+        """
+        raise NotImplementedError
+
+    @abstractmethod
+    def registration_sequence(self) -> int:
+        """Return a cursor for registrations written via ``register``."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def ids_registered_after(self, registration_sequence: int) -> frozenset[str]:
+        """Return fragment ids whose current registration was written later."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
+        """Return a stable ordering that keeps queued ancestors before descendants."""
         raise NotImplementedError
 
     @abstractmethod
@@ -110,23 +149,48 @@ class MemoryFragmentStorage(FragmentStorage):
     """A simple, memory-backed implementation of FragmentStorage.
 
     MemoryFragmentStorage is just a wrapper around a plain Python dict that complies with
-    the FragmentStorage protocol.
+    the FragmentStorage protocol. A single lock guards the fragment closures plus the
+    ancestry and registration metadata that need to stay in sync with them.
     """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._fragments: dict[str, Fragment] = {}
+        # Enclosing fragment id for nested fragments; top-level fragments use None.
+        self._parent_by_id: dict[str, str | None] = {}
+        self._registration_sequence_by_id: dict[str, int] = {}
+        self._registration_sequence = 0
+
+    def _iter_ancestor_ids(self, fragment_id: str) -> Iterator[str]:
+        """Yield ancestors from the immediate parent outward.
+
+        Stops on missing parents or malformed cycles.
+        """
+        seen_ids = {fragment_id}
+        current = fragment_id
+
+        while True:
+            parent_id = self._parent_by_id.get(current)
+            if parent_id is None or parent_id in seen_ids:
+                return
+
+            yield parent_id
+            seen_ids.add(parent_id)
+            current = parent_id
+
+    def _remove(self, fragment_id: str) -> None:
+        del self._fragments[fragment_id]
+        self._parent_by_id.pop(fragment_id, None)
+        self._registration_sequence_by_id.pop(fragment_id, None)
 
     def clear(self, new_fragment_ids: frozenset[str] | None = None) -> None:
         with self._lock:
             if new_fragment_ids is None:
                 new_fragment_ids = frozenset()
 
-            fragment_ids = list(self._fragments.keys())
-
-            for fid in fragment_ids:
-                if fid not in new_fragment_ids:
-                    del self._fragments[fid]
+            for fragment_id in list(self._fragments):
+                if fragment_id not in new_fragment_ids:
+                    self._remove(fragment_id)
 
     def lookup(self, key: str) -> Fragment:
         try:
@@ -134,18 +198,91 @@ class MemoryFragmentStorage(FragmentStorage):
         except KeyError as e:
             raise FragmentStorageKeyError(str(e))
 
-    def register(self, key: str, fragment: Fragment) -> None:
+    def register(
+        self,
+        key: str,
+        fragment: Fragment,
+        *,
+        parent_fragment_id: str | None = None,
+    ) -> None:
         with self._lock:
+            self._registration_sequence += 1
             self._fragments[key] = fragment
+            self._parent_by_id[key] = parent_fragment_id
+            self._registration_sequence_by_id[key] = self._registration_sequence
+
+    def clear_stale_descendants(
+        self,
+        root_fragment_id: str,
+        newly_registered_ids: frozenset[str],
+    ) -> None:
+        """Drop descendant fragments under ``root_fragment_id`` not seen this run."""
+
+        with self._lock:
+            to_remove = [
+                fragment_id
+                for fragment_id in self._fragments
+                if fragment_id != root_fragment_id
+                and fragment_id not in newly_registered_ids
+                and root_fragment_id in self._iter_ancestor_ids(fragment_id)
+            ]
+            for fragment_id in to_remove:
+                self._remove(fragment_id)
+
+    def registration_sequence(self) -> int:
+        with self._lock:
+            return self._registration_sequence
+
+    def ids_registered_after(self, registration_sequence: int) -> frozenset[str]:
+        with self._lock:
+            return frozenset(
+                fragment_id
+                for fragment_id, fragment_registration_sequence in (
+                    self._registration_sequence_by_id.items()
+                )
+                if fragment_registration_sequence > registration_sequence
+            )
+
+    def order_fragment_ids(self, fragment_ids: list[str]) -> list[str]:
+        """Run queued ancestors before descendants while preserving FIFO otherwise."""
+        with self._lock:
+
+            def has_queued_ancestor(
+                fragment_id: str, queued_fragment_ids: set[str]
+            ) -> bool:
+                return any(
+                    ancestor_id in queued_fragment_ids
+                    for ancestor_id in self._iter_ancestor_ids(fragment_id)
+                )
+
+            remaining_fragment_ids = list(fragment_ids)
+            ordered_fragment_ids = []
+
+            while remaining_fragment_ids:
+                queued_fragment_ids = set(remaining_fragment_ids)
+
+                for index, fragment_id in enumerate(remaining_fragment_ids):
+                    if not has_queued_ancestor(fragment_id, queued_fragment_ids):
+                        ordered_fragment_ids.append(fragment_id)
+                        del remaining_fragment_ids[index]
+                        break
+                else:
+                    # Preserve the original order if the parent mapping is malformed.
+                    ordered_fragment_ids.extend(remaining_fragment_ids)
+                    break
+
+            return ordered_fragment_ids
 
     def delete(self, key: str) -> None:
-        try:
-            del self._fragments[key]
-        except KeyError as e:
-            raise FragmentStorageKeyError(str(e))
+        with self._lock:
+            try:
+                self._remove(key)
+            except KeyError as e:
+                raise FragmentStorageKeyError(str(e))
 
     def contains(self, key: str) -> bool:
-        return key in self._fragments
+        with self._lock:
+            return key in self._fragments
 
     def __deepcopy__(self, memo: dict[int, object]) -> NoReturn:
         raise TypeError(
@@ -191,6 +328,8 @@ def _fragment(
         ctx = get_script_run_ctx()
         if ctx is None:
             return None
+
+        parent_fragment_id_at_def = ctx.current_fragment_id
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
@@ -279,7 +418,11 @@ def _fragment(
                 ctx.current_fragment_id = prev_fragment_id
                 ctx.current_fragment_delta_path = []
 
-        ctx.fragment_storage.register(fragment_id, wrapped_fragment)
+        ctx.fragment_storage.register(
+            fragment_id,
+            wrapped_fragment,
+            parent_fragment_id=parent_fragment_id_at_def,
+        )
 
         if run_every:
             msg = ForwardMsg()
