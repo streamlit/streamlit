@@ -710,6 +710,7 @@ def test_column_alignment(alignment: str) -> None:
     assert AudioColumn(alignment=alignment)["alignment"] == alignment
     assert VideoColumn(alignment=alignment)["alignment"] == alignment
     assert JsonColumn(alignment=alignment)["alignment"] == alignment
+    assert MarkdownColumn(alignment=alignment)["alignment"] == alignment
 
 
 def test_column_alignment_none_by_default() -> None:

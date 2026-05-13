@@ -3108,6 +3108,7 @@ def MarkdownColumn(
     disabled: bool | None = None,
     required: bool | None = None,
     pinned: bool | None = None,
+    alignment: ContentAlignment | None = None,
     default: str | None = None,
 ) -> ColumnConfig:
     r"""Configure a markdown column in ``st.dataframe`` or ``st.data_editor``.
@@ -3171,6 +3172,10 @@ def MarkdownColumn(
         (default), Streamlit will decide: index columns are pinned, and data
         columns are not pinned.
 
+    alignment : "left", "center", "right", or None
+        The horizontal alignment of cell content. If this is ``None``
+        (default), text is left-aligned.
+
     default : str or None
         Specifies the default value in this column when a new row is added by
         the user. This defaults to ``None``.
@@ -3216,6 +3221,7 @@ def MarkdownColumn(
         disabled=disabled,
         required=required,
         pinned=pinned,
+        alignment=alignment,
         default=default,
         type_config=MarkdownColumnConfig(type="markdown"),
     )
