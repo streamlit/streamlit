@@ -304,9 +304,21 @@ def add_script_run_ctx(
     If instead called from inside the thread it is attaching to (i.e.
     ``thread`` is the current thread, or ``thread`` is omitted and ``ctx`` is
     explicit), the function falls back to seeding ``ThreadState`` from the
-    given ``ctx`` directly. In that mode only ``active_script_hash`` can be
-    recovered — ``fragment_id`` / ``delta_path`` are not propagated because
-    they live in the parent's ContextVar.
+    given ``ctx`` directly. In that mode:
+
+    - ``fragment_id`` and ``delta_path`` are NOT propagated because they live
+      in the parent's ContextVar and cannot be recovered from a different
+      thread. Deltas from such a worker will not be stamped with the parent's
+      ``fragment_id``.
+    - ``active_script_hash`` is seeded from ``ctx.pages_manager.main_script_hash``,
+      NOT from the parent's current ``ThreadState.active_script_hash``. For
+      MPA v1 (``st.Page``) page bodies that enter ``ctx.run_with_active_hash``,
+      the parent's active hash is the page hash; a self-attaching worker
+      observes the main hash instead. Users hitting this should migrate to
+      MPA v2 / ``st.navigation``, where every page already runs under
+      ``main_script_hash`` and the distinction disappears. See
+      ``test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash``
+      for the intentional contract.
 
     Parameters
     ----------
@@ -368,11 +380,21 @@ def add_script_run_ctx(
         #      seeds ThreadState. reset() will overwrite this seed shortly.
         #   2. User code that does `add_script_run_ctx(ctx=saved_ctx)` from
         #      inside a worker thread (documented against, but a real pattern).
-        #      fragment_id / delta_path live in the parent's ContextVar and
-        #      cannot be recovered from a different thread, so deltas from
-        #      such a worker will not be stamped with fragment_id. Pre-PR,
-        #      this stamping was racy on a shared mutable field; see PR #15072
-        #      discussion for the behavior-change rationale.
+        #
+        # Behaviour for (2):
+        #   - fragment_id / delta_path live in the parent's ContextVar and
+        #     cannot be recovered from a different thread, so deltas from
+        #     such a worker will not be stamped with fragment_id. Pre-PR,
+        #     this stamping was racy on a shared mutable field.
+        #   - active_script_hash is seeded from main_script_hash, NOT from
+        #     the parent's current ThreadState.active_script_hash. For MPA v1
+        #     page bodies executing under `ctx.run_with_active_hash(page_hash)`,
+        #     the parent's active hash is the page hash; the worker still
+        #     observes main_script_hash here. Locked in by
+        #     `test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash`.
+        #     MPA v1 users hitting this should migrate to MPA v2 /
+        #     st.navigation, where every page runs under main_script_hash.
+        # See PR #15072 for the behaviour-change rationale.
         ThreadState.initialize(
             active_script_hash=ctx.pages_manager.main_script_hash,
         )
