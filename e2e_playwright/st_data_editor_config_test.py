@@ -217,14 +217,14 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
 @pytest.mark.only_browser(
     "chromium"
 )  # Cell overlay visibility flaky on webkit and Firefox
-def test_markdown_cell_keyboard_shortcuts(themed_app: Page):
+def test_markdown_cell_keyboard_shortcuts(app: Page):
     """Test that markdown editor keyboard shortcuts (Ctrl+Enter to save, Escape to cancel) work."""
-    markdown_column_df = _get_editor(themed_app, "markdown-column")
+    markdown_column_df = _get_editor(app, "markdown-column")
     expect_canvas_to_be_visible(markdown_column_df)
 
     # Open the second markdown cell (row 2) to avoid conflicts with previous test
     click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
-    cell_overlay = get_open_cell_overlay(themed_app)
+    cell_overlay = get_open_cell_overlay(app)
     expect(cell_overlay).to_be_visible()
 
     edit_button = cell_overlay.get_by_label("Edit")
