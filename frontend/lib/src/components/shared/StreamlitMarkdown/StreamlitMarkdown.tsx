@@ -50,13 +50,11 @@ import { PluggableList } from "unified"
 import { visit } from "unist-util-visit"
 import xxhash from "xxhashjs"
 
-import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-
 import streamlitLogo from "~lib/assets/img/streamlit-logo/streamlit-mark-color.svg"
 import IsDialogContext from "~lib/components/core/IsDialogContext"
 import IsSidebarContext from "~lib/components/core/IsSidebarContext"
 import { StyledInlineCode } from "~lib/components/elements/CodeBlock/styled-components"
-import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
+import { SquareSkeleton } from "~lib/components/elements/Skeleton/styled-components"
 import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
@@ -474,15 +472,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   const language = match?.[1] || ""
   return !inline ? (
     <ErrorBoundary>
-      <Suspense
-        fallback={
-          <Skeleton
-            element={SkeletonProto.create({
-              style: SkeletonProto.SkeletonStyle.ELEMENT,
-            })}
-          />
-        }
-      >
+      <Suspense fallback={<SquareSkeleton />}>
         <StreamlitSyntaxHighlighter
           language={language}
           showLineNumbers={false}
@@ -1215,11 +1205,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <Skeleton
-          element={SkeletonProto.create({
-            style: SkeletonProto.SkeletonStyle.ELEMENT,
-          })}
-        />
+        <SquareSkeleton />
       </ErrorBoundary>
     )
   }

@@ -79,6 +79,7 @@ import { getAlertElementKind } from "~lib/components/elements/AlertElement/utils
 import ExceptionElement from "~lib/components/elements/ExceptionElement/ExceptionElement"
 import Help from "~lib/components/elements/Help/Help"
 import Markdown from "~lib/components/elements/Markdown/Markdown"
+import { AppSkeleton } from "~lib/components/elements/Skeleton/AppSkeleton"
 import { Skeleton } from "~lib/components/elements/Skeleton/Skeleton"
 import TextElement from "~lib/components/elements/TextElement/TextElement"
 import Heading from "~lib/components/shared/StreamlitMarkdown/Heading"
@@ -583,7 +584,11 @@ const RawElementNodeRenderer = (
           }
           isStale={isStale}
         >
-          <Skeleton element={skeletonProto} fillContainer={!isAppSkeleton} />
+          {isAppSkeleton ? (
+            <AppSkeleton />
+          ) : (
+            <Skeleton element={skeletonProto} />
+          )}
         </ElementContainer>
       )
     }
