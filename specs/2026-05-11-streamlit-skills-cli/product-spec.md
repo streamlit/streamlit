@@ -169,7 +169,8 @@ On network failure, exits with clear error message.
 ### Common Behavior
 
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing
-  installs, repairs broken links, skips user-managed files with conflict warning
+  installs, repairs broken links, skips user-managed files with conflict warning,
+  and updates global skill if changed on GitHub
 - **Non-interactive:** Pass `--yes` for automation; fails with actionable message
   if prompts unavailable
 - **Git hygiene:** Does not edit `.gitignore`; CLI output clarifies whether files
