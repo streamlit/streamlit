@@ -14,7 +14,8 @@ Two installation modes are supported:
   environment via symlinks, giving version-matched guidance for the current project.
 - **Global:** Fetches the `developing-with-streamlit` meta skill from the
   [`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) GitHub
-  repository and installs it to the user's global Claude Code skills directory.
+  repository and installs it to the user's global agent skills directories
+  (`~/.agents/skills/` and `~/.claude/skills/` if Claude Code is detected).
   This meta skill includes a discovery script that dynamically locates
   project-specific bundled skills at runtime.
 
@@ -169,12 +170,16 @@ Proceed with installation? [Y/n]:
 For global install:
 
 ```text
-Installing globally to: ~/.claude/skills/  (bright blue path)
+Installing globally  (bright blue)
 
 Skills to install:
   • developing-with-streamlit  (magenta bullet, cyan name)
 
 Source: github.com/streamlit/agent-skills  (muted gray)
+
+Target directories:
+  • ~/.agents/skills/   (magenta bullet, cyan path)
+  • ~/.claude/skills/   (if Claude Code detected)
 
 Proceed with installation? [Y/n]:
 ```
@@ -204,7 +209,8 @@ For global install:
 
 ```text
 ✓ Installed:  (green, bold)
-  → ~/.claude/skills/developing-with-streamlit   (green arrow, cyan path)
+  → ~/.agents/skills/developing-with-streamlit   (green arrow, cyan path)
+  → ~/.claude/skills/developing-with-streamlit   (if Claude Code detected)
 
 ✨ Successfully installed globally  (green bold)
 
@@ -225,7 +231,7 @@ these are local developer files and generally should not be committed.
 | Mode | What's installed | Where | Source |
 |------|------------------|-------|--------|
 | **Project** (default) | Direct Streamlit skills (`developing-with-streamlit`) | `<project>/.agents/skills/` and `.claude/skills/` | Bundled in active Streamlit binary |
-| **Global** | Meta skill with discovery script | `~/.claude/skills/developing-with-streamlit/` | Fetched from GitHub `streamlit/agent-skills` |
+| **Global** | Meta skill with discovery script | `~/.agents/skills/` and `~/.claude/skills/` | Fetched from GitHub `streamlit/agent-skills` |
 
 **Project install:** Installs the direct skills from the invoked `streamlit`
 binary. It should prefer symlinks so skills stay in sync when Streamlit is
@@ -242,18 +248,26 @@ mismatched, overwrite Streamlit-owned copies.
 
 **Global install:** Fetches the `developing-with-streamlit` meta skill from the
 [`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) repository
-and copies it to `~/.claude/skills/`. This mode requires:
+and copies it to the user's global agent skills directories. This mode requires:
 
-- Claude Code installed (`~/.claude` must exist)
 - Network access to GitHub
+
+Target directories:
+- `~/.agents/skills/developing-with-streamlit/` (always)
+- `~/.claude/skills/developing-with-streamlit/` (when `~/.claude` exists)
 
 **What gets installed (global):**
 
 ```
-~/.claude/skills/developing-with-streamlit/
+~/.agents/skills/developing-with-streamlit/
 ├── SKILL.md           # Meta skill instructions
 └── scripts/
     └── discover.py    # Discovery script
+
+~/.claude/skills/developing-with-streamlit/  (if ~/.claude exists)
+├── SKILL.md
+└── scripts/
+    └── discover.py
 ```
 
 The discovery script (`discover.py`) dynamically locates the project's Streamlit
