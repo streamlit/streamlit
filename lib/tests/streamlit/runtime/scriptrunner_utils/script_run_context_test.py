@@ -269,15 +269,12 @@ class ScriptRunContextTest(unittest.TestCase):
         assert result["attached_ctx"] is ctx
 
     def test_add_script_run_ctx_self_attach_does_not_propagate_fragment_id(self):
-        """Behavior contract: a worker that attaches its own ctx (Pattern B)
-        does NOT inherit the parent's ``fragment_id``. Pre-PR, this stamping
-        was racy on a shared mutable field; post-PR it is consistently absent.
+        """Self-attached workers (``add_script_run_ctx(ctx=...)`` from inside
+        the worker) do NOT inherit the parent's ``fragment_id``.
         """
         pages_manager = PagesManager("/main/script/path")
         pages_manager.set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
-        # Parent has a fragment_id bound — would have been "visible" to the
-        # worker pre-PR via the shared ctx field.
         ThreadState.update(fragment_id="parent_fragment")
 
         result: dict[str, object] = {}
@@ -295,21 +292,13 @@ class ScriptRunContextTest(unittest.TestCase):
     def test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash(
         self,
     ):
-        """Pattern B (worker self-attach) seeds ``active_script_hash`` from
-        ``ctx.pages_manager.main_script_hash``, NOT from the parent's current
-        ``ThreadState.active_script_hash``. This is the intentional contract.
+        """Self-attached workers seed ``active_script_hash`` from
+        ``ctx.pages_manager.main_script_hash``, NOT the parent's current
+        ``ThreadState.active_script_hash``.
 
-        Concretely, for MPA v1 (``st.Page``) page bodies executing under
-        ``ctx.run_with_active_hash(page_hash)``, the parent's active hash is
-        the page hash; a self-attaching worker observes the main hash instead.
-        Pre-PR, a self-attaching worker read ``ctx._active_script_hash``
-        (racy, mutated by ``run_with_active_hash``) and could observe the
-        page hash. Post-PR the worker deterministically gets the main hash,
-        which means worker-rendered elements on an MPA v1 page survive page
-        navigation instead of being filtered out by
-        ``FilterMainScriptElementsVisitor``. Users hitting this should
-        migrate to MPA v2 / ``st.navigation``, where every page already runs
-        under ``main_script_hash`` and the distinction disappears.
+        Concretely: inside an MPA v1 ``run_with_active_hash(page_hash)`` scope
+        the parent observes the page hash, but a self-attaching worker still
+        sees the main hash.
         """
         pages_manager = PagesManager("/main/script/path")
         pages_manager.set_pages({})
@@ -318,7 +307,6 @@ class ScriptRunContextTest(unittest.TestCase):
         captured: dict[str, object] = {}
 
         with ctx.run_with_active_hash("page_hash"):
-            # Sanity: parent thread observes the page hash inside this context.
             assert ThreadState.get().active_script_hash == "page_hash"
 
             def worker() -> None:
@@ -330,14 +318,11 @@ class ScriptRunContextTest(unittest.TestCase):
             t.join()
 
         assert captured["active_script_hash"] == pages_manager.main_script_hash
-        # Explicit anti-regression assertion: should NOT be the page hash.
         assert captured["active_script_hash"] != "page_hash"
 
     def test_add_script_run_ctx_double_attach_is_last_wins(self):
-        """Two consecutive ``add_script_run_ctx`` calls on the same
-        not-yet-started thread should seed the worker's ThreadState from the
-        *last* call's snapshot, matching the last-wins semantic of the ctx
-        attachment (which overwrites ``streamlit_script_run_ctx`` each call).
+        """Repeat ``add_script_run_ctx`` calls on a not-yet-started thread
+        are last-wins for the parent ``FragmentThreadState`` snapshot.
         """
         pages_manager = PagesManager("/main/script/path")
         pages_manager.set_pages({})
@@ -362,10 +347,9 @@ class ScriptRunContextTest(unittest.TestCase):
         assert captured["fragment_id"] == "frag2"
 
     def test_add_script_run_ctx_propagates_thread_state_to_child(self):
-        """Parent → child propagation: a not-yet-started child thread should
-        observe the parent's ``FragmentThreadState`` snapshot once it starts,
-        and any ``ThreadState.update`` in the child must not leak back to the
-        parent's ContextVar (isolation).
+        """Child threads observe the parent's ``FragmentThreadState``
+        snapshot on start; child mutations stay isolated from the parent's
+        ContextVar.
         """
         pages_manager = PagesManager("/main/script/path")
         pages_manager.set_pages({})
