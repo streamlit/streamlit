@@ -3115,14 +3115,11 @@ def MarkdownColumn(
 
     This column type displays cell values as plain text within the table cells.
     When a cell is clicked, the content is shown in an overlay where the markdown
-    is rendered. This command needs to be used in the ``column_config`` parameter
-    of ``st.dataframe`` or ``st.data_editor``. When used with ``st.data_editor``,
-    editing will be enabled through a text editor overlay.
-
-    .. note::
-        Markdown syntax is not rendered directly in the table cells for technical
-        reasons. Click on a cell to view or edit the rendered markdown content
-        in an overlay.
+    is rendered. The overlay supports the same Markdown directives as described
+    in the ``body`` parameter of ``st.markdown``. This command needs to be used
+    in the ``column_config`` parameter of ``st.dataframe`` or ``st.data_editor``.
+    When used with ``st.data_editor``, editing will be enabled through a text
+    editor overlay.
 
     Parameters
     ----------
