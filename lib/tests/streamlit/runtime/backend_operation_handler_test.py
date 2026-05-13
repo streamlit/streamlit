@@ -145,5 +145,5 @@ def test_deferred_file_handler_returns_error_response() -> None:
 
     media_file_mgr.execute_deferred.assert_called_once_with("file-123")
     assert response.request_id == "request-id"
-    assert response.error_msg == "download failed"
+    assert response.error_msg == "Failed to generate file for download"
     assert not response.HasField("deferred_file")
