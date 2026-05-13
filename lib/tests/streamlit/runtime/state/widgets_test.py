@@ -568,6 +568,7 @@ class ComputeElementIdTests(DeltaGeneratorTestCase):
 
         # Make some changes to expected_sig unique to st.data_editor.
         expected_sig["column_config_mapping"] = ANY
+        expected_sig["data_signature"] = ANY
         del expected_sig["hide_index"]
         del expected_sig["column_config"]
 
