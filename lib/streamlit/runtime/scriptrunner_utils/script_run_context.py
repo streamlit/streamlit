@@ -295,13 +295,10 @@ class ScriptRunContext:
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
-# Storage slots on threads attached via add_script_run_ctx. The fields slot
-# holds the latest parent FragmentThreadState snapshot to apply at run() time;
-# the install slot is a sentinel marking that thread.run has been wrapped, so
-# repeat attaches refresh the snapshot rather than stacking new wrappers.
-# The sentinel only matters across multiple add_script_run_ctx() calls before
-# Thread.start(), since threading.Thread is single-use (start() raises on a
-# second call), so the wrapped run() never executes more than once.
+# Thread-attached storage used by add_script_run_ctx:
+# - Fields slot: parent FragmentThreadState snapshot, applied at run() time.
+# - Install slot: sentinel that prevents thread.run from being wrapped
+#   more than once across repeated add_script_run_ctx() calls.
 _FRAGMENT_THREAD_STATE_FIELDS_ATTR: Final = "_streamlit_fragment_thread_state_fields"
 _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR: Final = (
     "_streamlit_fragment_thread_state_wrap_installed"
@@ -363,8 +360,6 @@ def add_script_run_ctx(
         # Store the parent snapshot on the thread; the run() wrapper below
         # reads it at start time. Repeat add_script_run_ctx() calls refresh
         # the snapshot — last attach wins, matching the ctx attachment above.
-        # NOTE: dataclasses.asdict preserves tuples, so delta_path survives
-        # the round-trip. Switching delta_path to a list would break this.
         setattr(
             thread,
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
