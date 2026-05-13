@@ -325,8 +325,6 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
           <StreamlitMarkdown
             source={cell.data.value ?? ""}
             allowHTML={false}
-            sanitizeLinks
-            disallowedElements={["img", "audio", "video"]}
           />
         ) : (
           <StyledEmptyMessage>No content</StyledEmptyMessage>
