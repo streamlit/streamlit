@@ -599,7 +599,6 @@ def _compute_data_editor_signature(
     config_dict = {
         (f"_pos:{k}" if isinstance(k, int) else str(k)): v
         for k, v in column_config_mapping.items()
-        if v is not None
     }
     config_json = json.dumps(config_dict, sort_keys=True, default=str)
     h.update(f"config:{config_json}".encode())
@@ -1185,8 +1184,10 @@ class DataEditorMixin:
             )
 
         # If disabled not a boolean, we assume it is a list of columns to disable.
-        # This gets translated into the columns configuration:
+        # Materialize the iterable early to avoid exhaustion issues with generators,
+        # since disabled is iterated multiple times (column config and signature hash).
         if not isinstance(disabled, bool):
+            disabled = list(disabled)
             for column in disabled:
                 update_column_config(column_config_mapping, column, {"disabled": True})
 
