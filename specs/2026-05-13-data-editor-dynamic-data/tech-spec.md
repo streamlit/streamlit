@@ -137,6 +137,18 @@ are no longer safe to apply.
 - Row count (for `num_rows="fixed"`)
 - `disabled` when it disables all editing
 
+**Signature limitations and Phase 1 scope**:
+
+Phase 1 intentionally scopes to cases where **row identity and edit-affecting config stay stable**:
+- **Row reordering**: Same-row-count reorders will preserve stale edits onto different logical rows.
+  Phase 1 does not detect row reorders. Developers must avoid reordering source data for keyed
+  fixed-row editors, or use `apply_edits` (Phase 2) for full control.
+- **Partial `disabled` changes**: Changing which columns are disabled doesn't reset edit state.
+  Edits on previously-editable columns remain even if that column becomes disabled.
+
+These edge cases are acceptable for Phase 1's scope (computed columns, session state round-trip).
+Phase 3 (row identity via meaningful index) could address row reordering if needed.
+
 **Signature should exclude**:
 
 - Cell values
@@ -145,6 +157,14 @@ are no longer safe to apply.
 - `column_order` (only affects initial visibility; users can show hidden columns via UI)
 - `column_config_mapping` (developer's responsibility to not make incompatible changes;
   `DataframeSchema` already captures parsing-relevant types)
+
+**Note on `column_config` exclusion**: While `column_config` can override the displayed/parsed
+type at the UI level (e.g., retyping an integer column as `DatetimeColumn`), the signature
+relies on `DataframeSchema` which captures Arrow/pandas types. If a developer changes
+`column_config` in a way that alters how the frontend parses or renders a cell, stored edit
+deltas may be typed against the old config. This is documented as developer responsibility:
+avoid type-changing `column_config` updates in the same widget key. A future enhancement could
+include a hash of type-affecting `column_config` fields in the signature.
 
 ```python
 def _compute_data_editor_signature(
@@ -283,6 +303,13 @@ useEffect(() => {
 }, [data])  // Or use a stable data hash/version
 ```
 
+**Performance note**: The reconciliation iterates every stored edit and calls `getCellContent` for
+each (which reads from the Arrow-backed table). For editors with many edited cells (e.g., bulk
+paste), this runs on every data update. Consider:
+- Skip reconciliation when data hash/version is unchanged (since `useEffect([data])` fires on
+  identity changes even when bytes are equivalent)
+- Batch reconciliation for large edit sets if profiling shows issues
+
 **Value comparison** (`valuesEqual`):
 
 Using `column.getCellValue()` normalizes both values to the column's native type, handling
@@ -298,10 +325,22 @@ function valuesEqual(a: unknown, b: unknown, column: BaseColumn): boolean {
   if (a == null && b == null) return true
   if (a == null || b == null) return false
 
-  // Type-specific comparison (column can provide custom logic if needed)
-  return a === b  // Or JSON.stringify for complex types
+  // Delegate to column-specific comparison for complex types (dates, lists, objects)
+  // Each BaseColumn subclass can override valuesEqual() for type-appropriate comparison
+  if (column.valuesEqual) {
+    return column.valuesEqual(a, b)
+  }
+
+  // Fallback for primitives (strings, numbers, booleans)
+  return a === b
 }
 ```
+
+**Note**: The `BaseColumn.valuesEqual()` method should be implemented per column type:
+- **DateColumn/TimeColumn**: Compare timestamps or ISO strings
+- **ListColumn**: Deep array comparison
+- **ObjectColumn**: JSON.stringify comparison or deep equality
+- **NumberColumn**: Consider epsilon for floats if needed
 
 **Scope**: Only applies to `edited_rows` (cell edits). Added rows have no source to compare
 against; deleted rows are tracked separately.
@@ -320,10 +359,6 @@ schema-based identity — together they enable true dynamic data updates.
 | Keyed fixed editor, source value matches edit | Clear that edit (source flows through) |
 | Keyed fixed editor, user edits cell back to source value | Clear that edit |
 | Keyed fixed editor, schema/type/row count changes | Reset all edit state |
-| Keyed fixed editor, cosmetic sizing changes | Preserve edit state |
-| Unkeyed editor, values change | Existing reset behavior (unchanged) |
-| `num_rows` is `add`, `delete`, or `dynamic` | Use `apply_edits` callback (Phase 2) |
-| Keyed fixed editor, schema/type/row count changes | Reset edit state |
 | Keyed fixed editor, cosmetic sizing changes | Preserve edit state |
 | Unkeyed editor, values change | Existing reset behavior (unchanged) |
 | `num_rows` is `add`, `delete`, or `dynamic` | Use `apply_edits` callback (Phase 2) |
@@ -536,7 +571,7 @@ If any step is out of order, the user may see a flash of stale state or require 
 
 | Feature | Compatible | Notes |
 |---------|------------|-------|
-| `on_change` | ✅ | Fires first, then `apply_edits` during rerun |
+| `on_change` | ✅ | `on_change` runs in WS handler *before* script rerun; `apply_edits` runs *during* rerun inside `st.data_editor`. This means `on_change` cannot observe post-`apply_edits` state. |
 | `num_rows` modes | ✅ | Callback receives all pending ops |
 | `column_config` | ✅ | Doesn't affect callback |
 | `disabled` | ✅ | No edits = callback not invoked |
@@ -561,6 +596,7 @@ def _data_editor(..., apply_edits: Callable | None = None):
     # Deserialize edit state
     edit_state = _deserialize_edit_state(widget_state.value)
     callback_failed = False
+    edited_df = None  # Initialize outside conditional for proper scoping
 
     if apply_edits is not None and _has_pending_edits(edit_state):
         # Apply edits to get edited_df
@@ -580,6 +616,10 @@ def _data_editor(..., apply_edits: Callable | None = None):
 
         except Exception as e:
             # Preserve edit state, surface error
+            # Note: st.error() places the message at the widget's location in script flow.
+            # Alternative: show error inline in the widget UI (similar to input validation).
+            # Decision point: validation failures vs infrastructure/persistence failures may
+            # warrant different UX. For initial implementation, st.error() is simpler.
             st.error(f"Failed to apply edits: {e}")
             callback_failed = True
             # Return edited_df so downstream code sees user's input
@@ -596,7 +636,11 @@ def _data_editor(..., apply_edits: Callable | None = None):
 
 #### 2.9 Open Questions
 
-1. **Naming**: `apply_edits`, `on_commit`, `persist`, `sync`? Should match Streamlit conventions.
+1. **Naming**: `apply_edits`, `on_commit`, `on_apply`, `persist`, `sync`? Existing widget callbacks
+   use the `on_*` pattern (`on_change`, `on_click`). `on_commit` or `on_apply` may align better with
+   established conventions. However, `apply_edits` reads as imperative (what it does) vs. `on_*`
+   which reads as reactive (when it fires). **Recommendation**: Prefer `on_commit` for consistency
+   with the `on_*` pattern, or `apply_edits` if the imperative name is clearer for this use case.
 
 2. **Async support**: Should the callback support `async def`? Database operations are often async.
 
@@ -807,17 +851,22 @@ def _normalize_editing_state(editing_state, source_data_hash, current_num_rows):
 
 ## Backward Compatibility
 
-### No Breaking Changes
+### Behavioral Changes
 
 - When `key` is **not** provided, behavior is unchanged (full data in element ID).
 - When `key` **is** provided, behavior changes from "reset on any data change" to "reset only on
-  schema change" - this is a pure improvement, not a break.
+  schema change". While this is generally an improvement, apps that rely on edit state being
+  wiped when the source dataframe mutates (e.g., to clear stale edits after a server-side refresh)
+  will observe new behavior.
 
 ### Migration Path
 
-Existing apps that provide `key` will automatically benefit. Apps that rely on the current
-"reset on data change" behavior (unlikely, since it's problematic) would need to remove
-the `key` or change their code structure.
+Existing apps that provide `key` will automatically benefit from edit state preservation. For
+apps that rely on the current "reset on data change" behavior:
+
+1. **Remove `key`**: Without a key, the widget retains current behavior (reset on any data change)
+2. **Switch to `apply_edits`**: Use the Phase 2 callback for explicit control over when edits reset
+3. **Programmatic clear**: Clear `st.session_state[key]` to force edit state reset when needed
 
 ---
 
@@ -855,7 +904,7 @@ would require significant frontend/proto changes.
 
 ## Checklist
 
-| Item | Status |
+| Item | ✅ or comment |
 |------|--------|
 | Works on SiS, Cloud, etc? | Yes — uses standard `compute_and_register_element_id` |
 | Breaking API changes | None — new behavior only when `key` is provided |

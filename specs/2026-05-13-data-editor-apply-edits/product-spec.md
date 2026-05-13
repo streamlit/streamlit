@@ -75,6 +75,12 @@ def data_editor(
 ) -> pd.DataFrame:
 ```
 
+**Note on DataFrame type**: The callback signature uses `pd.DataFrame` for simplicity. `st.data_editor`
+accepts and preserves return types for many dataframe-like inputs (Polars, numpy arrays, etc.),
+but the callback always receives and must return `pd.DataFrame`. The implementation normalizes
+inputs to pandas before invoking the callback and converts the return value back to the original
+`data_format` as needed. This simplifies the callback API while preserving existing type behavior.
+
 **Parameters:**
 
 | Parameter | Type | Description |
@@ -103,6 +109,10 @@ class EditState(TypedDict):
     edited_rows: dict[int, dict[str, Any]]  # row_index -> column_name -> new_value
     added_rows: list[dict[str, Any]]        # list of new row dicts
     deleted_rows: list[int]                 # list of deleted row indices
+
+# Note: The underlying widget state JSON serializes row indices as strings ({"0": {...}}).
+# The implementation converts string keys to int before invoking the callback, so users
+# can access edits with integer indexing: edits["edited_rows"][3] (not edits["edited_rows"]["3"]).
 ```
 
 ### Behavior
@@ -111,7 +121,8 @@ class EditState(TypedDict):
 |--------|----------|
 | **When called** | On rerun when edits are present (not on every render) |
 | **Input** | `source_df` + `edited_df` + `edits` |
-| **Return value** | New source dataframe; becomes the baseline, edit state cleared |
+| **Return value** | New source dataframe; becomes the baseline for *this render*, edit state cleared |
+| **Baseline persistence** | The callback's return value is used for the current render only. For the baseline to persist across reruns, it must be stored externally (session state, database, cache). Button-only reruns with no edits will NOT invoke `apply_edits` — the `data` argument is re-evaluated as the baseline. |
 | **Exception** | See "Error Handling" below |
 | **No edits** | Callback not invoked; widget renders source data as-is |
 | **With forms** | Callback invoked on form submit, not on each cell edit |
@@ -158,8 +169,14 @@ def sync_to_database(source_df, edited_df, edits):
     # Return refreshed data (includes server-side defaults, timestamps)
     return load_from_database()
 
+# Cache the initial load to avoid double DB read on each rerun
+# (data argument is evaluated even when callback isn't invoked)
+@st.cache_data(ttl=60)
+def get_initial_data():
+    return load_from_database()
+
 st.data_editor(
-    load_from_database(),
+    get_initial_data(),
     key="editor",
     num_rows="dynamic",
     apply_edits=sync_to_database,
@@ -200,8 +217,8 @@ st.data_editor(df, key="editor", apply_edits=maybe_save)
 
 | Feature | Interaction |
 |---------|-------------|
-| `on_change` | Fires first (for side effects), then `apply_edits` during rerun |
-| `key` | Required for `apply_edits` to work correctly (widget identity) |
+| `on_change` | `on_change` runs in WS handler *before* script rerun; `apply_edits` runs *during* rerun inside `st.data_editor`. `on_change` cannot observe post-`apply_edits` state. |
+| `key` | **Required** for `apply_edits` to work correctly. Without `key`, the element ID is derived from full Arrow bytes, so every successful `apply_edits` invocation changes the widget ID on the next render — discarding the callback's returned data. **Enforcement**: If `apply_edits` is provided without `key`, raise `StreamlitAPIException("apply_edits requires a key parameter for stable widget identity")`. |
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
 | `column_config` | No interaction; column config affects editing UI, not callback |
@@ -243,7 +260,7 @@ result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 
 ## Checklist
 
-| Item | Status |
+| Item | ✅ or comment |
 |------|--------|
 | Works on SiS, Cloud, etc? | Yes — standard callback execution |
 | No breaking API changes | Yes — new optional parameter only |
