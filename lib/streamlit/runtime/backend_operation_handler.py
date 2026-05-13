@@ -102,7 +102,7 @@ class BackendOperationDispatcher:
             )
 
 
-class DeferredFileHandler:
+class DeferredFileHandler(BackendOperationHandler):
     """Handler for deferred file download requests."""
 
     def __init__(self, get_media_file_mgr: Callable[[], MediaFileManager]) -> None:
