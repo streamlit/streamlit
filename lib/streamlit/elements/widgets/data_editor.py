@@ -73,7 +73,7 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.type_util import is_list_like, is_type
-from streamlit.util import calc_hash
+from streamlit.util import calc_hash, create_fast_hasher
 
 if TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
@@ -509,6 +509,100 @@ def _is_supported_index(df_index: pd.Index[Any]) -> bool:
         or is_type(df_index, "pandas.core.indexes.numeric.Float64Index")
         or is_type(df_index, "pandas.core.indexes.numeric.UInt64Index")
     )
+
+
+def _compute_data_editor_signature(
+    data_df: pd.DataFrame,
+    arrow_schema: pa.Schema,
+    dataframe_schema: DataframeSchema,
+    data_format: dataframe_util.DataFormat,
+    column_config_mapping: ColumnConfigMapping,
+    column_order: list[str] | None,
+    disabled: bool | Iterable[str | int],
+) -> str:
+    """Compute a schema-based signature for the data editor.
+
+    This signature captures the structural aspects of the dataframe (schema)
+    without including the actual data values. This allows the element ID to
+    remain stable when only data values change, preserving edit state.
+
+    The signature includes:
+    - Data format (for return type conversion)
+    - Column names in order
+    - Effective visible/editable columns when column_order is provided
+    - Index type and names
+    - Arrow field types with nullability
+    - DataframeSchema data kinds for parsing
+    - Row count (for fixed mode identity)
+    - Column config mapping (deterministic JSON)
+    - Disabled state when it disables all editing
+
+    Parameters
+    ----------
+    data_df : pd.DataFrame
+        The pandas dataframe being edited.
+    arrow_schema : pa.Schema
+        The Arrow schema of the dataframe.
+    dataframe_schema : DataframeSchema
+        The determined data kinds for each column.
+    data_format : dataframe_util.DataFormat
+        The original format of the input data.
+    column_config_mapping : ColumnConfigMapping
+        The processed column configuration.
+    column_order : list[str] | None
+        The column order if specified.
+    disabled : bool | Iterable[str | int]
+        The disabled state or list of disabled columns.
+
+    Returns
+    -------
+    str
+        A hex digest representing the schema signature.
+    """
+    h = create_fast_hasher()
+
+    # Hash data format (affects return type conversion)
+    h.update(f"format:{data_format.name}".encode())
+
+    # Hash column names in order
+    for col_name in data_df.columns:
+        h.update(f"col:{col_name}".encode())
+
+    # Hash effective column order if specified
+    if column_order is not None:
+        for col_name in column_order:
+            h.update(f"order:{col_name}".encode())
+
+    # Hash index type and name
+    index = data_df.index
+    h.update(f"index_type:{type(index).__name__}".encode())
+    if index.name is not None:
+        h.update(f"index_name:{index.name}".encode())
+
+    # Hash Arrow field types with nullability
+    for field in arrow_schema:
+        h.update(f"arrow_field:{field.name}:{field.type}:{field.nullable}".encode())
+
+    # Hash DataframeSchema data kinds (used for parsing edits)
+    for col_name, data_kind in sorted(dataframe_schema.items()):
+        h.update(f"schema:{col_name}:{data_kind.value}".encode())
+
+    # Hash row count (critical for fixed mode - row count changes should reset state)
+    h.update(f"rows:{len(data_df)}".encode())
+
+    # Hash column config mapping (deterministic JSON sort)
+    config_json = json.dumps(
+        {str(k): v for k, v in column_config_mapping.items()},
+        sort_keys=True,
+        default=str,
+    )
+    h.update(f"config:{config_json}".encode())
+
+    # Hash disabled state when it disables all editing
+    if disabled is True:
+        h.update(b"disabled:all")
+
+    return h.hexdigest()
 
 
 def _fix_column_headers(data_df: pd.DataFrame) -> None:
@@ -1101,6 +1195,22 @@ class DataEditorMixin:
 
         arrow_bytes = dataframe_util.convert_arrow_table_to_arrow_bytes(arrow_table)
 
+        # Compute a schema-based signature for keyed fixed-mode editors.
+        # This allows data values to change without resetting edit state,
+        # while schema changes (columns, types, row count) still reset state.
+        data_signature: str | None = None
+        use_schema_identity = key is not None and num_rows == "fixed"
+        if use_schema_identity:
+            data_signature = _compute_data_editor_signature(
+                data_df=data_df,
+                arrow_schema=arrow_table.schema,
+                dataframe_schema=dataframe_schema,
+                data_format=data_format,
+                column_config_mapping=column_config_mapping,
+                column_order=column_order,
+                disabled=disabled,
+            )
+
         # We want to do this as early as possible to avoid introducing nondeterminism,
         # but it isn't clear how much processing is needed to have the data in a
         # format that will hash consistently, so we do it late here to have it
@@ -1109,9 +1219,12 @@ class DataEditorMixin:
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
-            key_as_main_identity=False,
+            key_as_main_identity={"data_signature", "num_rows"}
+            if use_schema_identity
+            else False,
             dg=self.dg,
             data=arrow_bytes,
+            data_signature=data_signature,
             width=width,
             height=height,
             use_container_width=use_container_width,
