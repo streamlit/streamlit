@@ -33,7 +33,7 @@ interface StyledSpinnerIconProps {
   padding?: string
 }
 
-export const StyledSpinnerIcon = styled("i", {
+export const StyledSpinnerIcon = styled("span", {
   shouldForwardProp: (prop: string) =>
     isPropValid(prop) && !["size"].includes(prop),
 })<StyledSpinnerIconProps>(({
@@ -47,7 +47,6 @@ export const StyledSpinnerIcon = styled("i", {
 
   return {
     display: "block",
-    fontStyle: "normal",
     animationName: spinKeyframe,
     animationDuration: "1000ms",
     animationIterationCount: "infinite",
@@ -64,6 +63,9 @@ export const StyledSpinnerIcon = styled("i", {
     borderWidth: theme.sizes.spinnerThickness,
     flexGrow: 0,
     flexShrink: 0,
+    "@media (prefers-reduced-motion: reduce)": {
+      animation: "none",
+    },
   }
 })
 
