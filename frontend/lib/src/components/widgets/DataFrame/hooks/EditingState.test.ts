@@ -385,4 +385,94 @@ describe("EditingState class", () => {
     // Should have an empty cell since it wasn't specified in the JSON:
     expect(editingState.getCell(2, 3)).toEqual(MOCK_COLUMNS[2].getCell(null))
   })
+
+  it("allows to clear an edited cell", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    // Set some cells
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+    editingState.setCell(1, 0, MOCK_TEXT_CELL_2)
+    editingState.setCell(0, 1, MOCK_TEXT_CELL_1)
+
+    // Verify cells are set
+    expect(editingState.getCell(0, 0)).toEqual(MOCK_TEXT_CELL_1)
+    expect(editingState.getCell(1, 0)).toEqual(MOCK_TEXT_CELL_2)
+    expect(editingState.getCell(0, 1)).toEqual(MOCK_TEXT_CELL_1)
+
+    // Clear one cell
+    const cleared = editingState.clearCell(0, 0)
+    expect(cleared).toBe(true)
+    expect(editingState.getCell(0, 0)).toBeUndefined()
+
+    // Other cells should still exist
+    expect(editingState.getCell(1, 0)).toEqual(MOCK_TEXT_CELL_2)
+    expect(editingState.getCell(0, 1)).toEqual(MOCK_TEXT_CELL_1)
+
+    // Clear a cell that doesn't exist
+    const notCleared = editingState.clearCell(2, 2)
+    expect(notCleared).toBe(false)
+
+    // Cannot clear cells from added rows
+    const rowCells: Map<number, GridCell> = new Map()
+    rowCells.set(0, MOCK_TEXT_CELL_1)
+    editingState.addRow(rowCells)
+    const addedRowCleared = editingState.clearCell(0, 3)
+    expect(addedRowCleared).toBe(false)
+  })
+
+  it("cleans up empty row maps when clearing the last cell", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    // Set a single cell in a row
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+    expect(editingState.getCell(0, 0)).toEqual(MOCK_TEXT_CELL_1)
+
+    // Clear it
+    editingState.clearCell(0, 0)
+    expect(editingState.getCell(0, 0)).toBeUndefined()
+
+    // Verify via getEditedCells that no edits remain
+    const edits = [...editingState.getEditedCells()]
+    expect(edits).toHaveLength(0)
+  })
+
+  it("iterates over edited cells with getEditedCells", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    // Set some cells
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+    editingState.setCell(1, 0, MOCK_TEXT_CELL_2)
+    editingState.setCell(0, 2, MOCK_TEXT_CELL_1)
+
+    const edits = [...editingState.getEditedCells()]
+    expect(edits).toHaveLength(3)
+
+    // Should contain all edited cells (order may vary)
+    const editSet = new Set(edits.map(([row, col]) => `${row},${col}`))
+    expect(editSet.has("0,0")).toBe(true)
+    expect(editSet.has("0,1")).toBe(true)
+    expect(editSet.has("2,0")).toBe(true)
+  })
+
+  it("getEditedCells excludes added rows", () => {
+    const NUM_OF_ROWS = 3
+    const editingState = new EditingState(NUM_OF_ROWS)
+
+    // Edit a cell in existing row
+    editingState.setCell(0, 0, MOCK_TEXT_CELL_1)
+
+    // Add a row
+    const rowCells: Map<number, GridCell> = new Map()
+    rowCells.set(0, MOCK_TEXT_CELL_2)
+    editingState.addRow(rowCells)
+
+    // getEditedCells should only return the edit from existing rows
+    const edits = [...editingState.getEditedCells()]
+    expect(edits).toHaveLength(1)
+    expect(edits[0][0]).toBe(0) // row
+    expect(edits[0][1]).toBe(0) // col
+  })
 })

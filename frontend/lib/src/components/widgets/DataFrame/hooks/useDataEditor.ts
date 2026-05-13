@@ -35,6 +35,33 @@ import { notNullOrUndefined } from "~lib/util/utils"
 import EditingState from "./EditingState"
 
 /**
+ * Checks if an edit matches the source data and should be cleared.
+ * Returns true if the edit was cleared, false otherwise.
+ */
+function tryClearEditIfMatchesSource(
+  editingState: EditingState,
+  getSourceCellValue: (
+    col: number,
+    row: number,
+    column: BaseColumn
+  ) => unknown,
+  column: BaseColumn,
+  originalCol: number,
+  originalRow: number,
+  newValue: unknown
+): boolean {
+  if (editingState.isAddedRow(originalRow)) {
+    return false
+  }
+
+  const sourceValue = getSourceCellValue(originalCol, originalRow, column)
+  if (newValue === sourceValue) {
+    return editingState.clearCell(originalCol, originalRow)
+  }
+  return false
+}
+
+/**
  * Create return type for useDataEditor hook based on the DataEditorProps.
  */
 type DataEditorReturn = Pick<
@@ -61,6 +88,11 @@ interface UseDataEditorParams {
   editingState: MutableRefObject<EditingState>
   /** Function to get a specific cell. */
   getCellContent: ([col, row]: readonly [number, number]) => GridCell
+  /**
+   * Function to get the source cell value (from Arrow data, ignoring edits).
+   * Returns the raw value for comparison, or undefined if unavailable.
+   */
+  getSourceCellValue: (col: number, row: number, column: BaseColumn) => unknown
   /**
    * Function to map a row ID of the current state to the original row ID.
    * This mainly changed by sorting of columns.
@@ -94,6 +126,7 @@ function useDataEditor({
   canDeleteRows,
   editingState,
   getCellContent,
+  getSourceCellValue,
   getOriginalIndex,
   refreshCells,
   updateNumRows,
@@ -130,6 +163,21 @@ function useDataEditor({
       const newCell = column.getCell(newValue, true)
       // Only update the cell if the new cell is not causing any errors:
       if (!isErrorCell(newCell)) {
+        // Clear the edit if it matches the source data value.
+        if (
+          tryClearEditIfMatchesSource(
+            editingState.current,
+            getSourceCellValue,
+            column,
+            originalCol,
+            originalRow,
+            newValue
+          )
+        ) {
+          syncEditState()
+          return
+        }
+
         editingState.current.setCell(originalCol, originalRow, {
           ...newCell,
           lastUpdated: performance.now(),
@@ -142,7 +190,14 @@ function useDataEditor({
         )
       }
     },
-    [columns, editingState, getOriginalIndex, getCellContent, syncEditState]
+    [
+      columns,
+      editingState,
+      getOriginalIndex,
+      getCellContent,
+      getSourceCellValue,
+      syncEditState,
+    ]
   )
 
   /**
@@ -301,6 +356,23 @@ function useDataEditor({
               const newValue = column.getCellValue(newCell)
               // Edit the cell only if the value actually changed:
               if (newValue !== currentValue) {
+                // Clear the edit if it matches the source data value.
+                if (
+                  tryClearEditIfMatchesSource(
+                    editingState.current,
+                    getSourceCellValue,
+                    column,
+                    originalCol,
+                    originalRow,
+                    newValue
+                  )
+                ) {
+                  updatedCells.push({
+                    cell: [colIndex, rowIndex],
+                  })
+                  continue
+                }
+
                 editingState.current.setCell(originalCol, originalRow, {
                   ...newCell,
                   lastUpdated: performance.now(),
@@ -328,6 +400,7 @@ function useDataEditor({
       canAddRows,
       getOriginalIndex,
       getCellContent,
+      getSourceCellValue,
       appendEmptyRow,
       syncEditState,
       refreshCells,

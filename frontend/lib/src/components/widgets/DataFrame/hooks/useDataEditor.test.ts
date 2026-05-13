@@ -102,6 +102,7 @@ const getCellContentMock = vi
     }
     return column.getCell("foo")
   })
+const getSourceCellValueMock = vi.fn().mockReturnValue(undefined)
 
 describe("useDataEditor hook", () => {
   beforeEach(() => {
@@ -120,6 +121,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -165,6 +167,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -209,6 +212,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -259,6 +263,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -304,6 +309,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -349,6 +355,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -381,6 +388,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -445,6 +453,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -492,6 +501,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -524,6 +534,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -577,6 +588,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -622,6 +634,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: false,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -668,6 +681,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -726,6 +740,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: false,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -784,6 +799,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -820,6 +836,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -855,6 +872,7 @@ describe("useDataEditor hook", () => {
         canDeleteRows: true,
         editingState,
         getCellContent: getCellContentMock,
+        getSourceCellValue: getSourceCellValueMock,
         getOriginalIndex: getOriginalIndexMock,
         refreshCells: refreshCellsMock,
         updateNumRows,
@@ -877,5 +895,93 @@ describe("useDataEditor hook", () => {
     )
 
     expect(validResult).toEqual(true)
+  })
+
+  it("clears edit when new value matches source value", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    // First, add an edit
+    editingState.current.setCell(1, 0, MOCK_COLUMNS[1].getCell("edited"))
+
+    // Mock getSourceCellValue to return the original source value
+    const mockSourceValue = vi.fn().mockReturnValue("original")
+
+    const { result } = renderHook(() => {
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
+        editingState,
+        getCellContent: getCellContentMock,
+        getSourceCellValue: mockSourceValue,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
+        updateNumRows,
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
+    })
+
+    if (typeof result.current.onCellEdited !== "function") {
+      throw new Error("onCellEdited is expected to be a function")
+    }
+
+    // Edit the cell to match the source value
+    const columnToEdit = MOCK_COLUMNS[1]
+    result.current.onCellEdited(
+      [1, 0],
+      columnToEdit.getCell("original") as TextCell
+    )
+
+    // The edit should be cleared (since it matches source)
+    expect(editingState.current.getCell(1, 0)).toBeUndefined()
+    expect(syncEditsMock).toHaveBeenCalled()
+  })
+
+  it("stores edit when new value differs from source value", () => {
+    const editingState = {
+      current: new EditingState(INITIAL_NUM_ROWS),
+    }
+
+    // Mock getSourceCellValue to return the original source value
+    const mockSourceValue = vi.fn().mockReturnValue("original")
+
+    const { result } = renderHook(() => {
+      return useDataEditor({
+        columns: MOCK_COLUMNS,
+        allColumns: MOCK_COLUMNS,
+        canAddRows: true,
+        canDeleteRows: true,
+        editingState,
+        getCellContent: getCellContentMock,
+        getSourceCellValue: mockSourceValue,
+        getOriginalIndex: getOriginalIndexMock,
+        refreshCells: refreshCellsMock,
+        updateNumRows,
+        syncEditState: syncEditsMock,
+        clearSelection: clearSelectionMock,
+      })
+    })
+
+    if (typeof result.current.onCellEdited !== "function") {
+      throw new Error("onCellEdited is expected to be a function")
+    }
+
+    // Edit the cell to a different value than source
+    const columnToEdit = MOCK_COLUMNS[1]
+    result.current.onCellEdited(
+      [1, 0],
+      columnToEdit.getCell("different") as TextCell
+    )
+
+    // The edit should be stored
+    const editedCell = editingState.current.getCell(1, 0)
+    expect(notNullOrUndefined(editedCell)).toBe(true)
+    // @ts-expect-error
+    expect(columnToEdit.getCellValue(editedCell)).toEqual("different")
+    expect(syncEditsMock).toHaveBeenCalled()
   })
 })

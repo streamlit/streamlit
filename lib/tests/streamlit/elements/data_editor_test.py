@@ -1233,233 +1233,75 @@ class DataEditorTest(DeltaGeneratorTestCase):
 class DataEditorSignatureTest(unittest.TestCase):
     """Tests for _compute_data_editor_signature function."""
 
+    def _compute_signature(
+        self,
+        df: pd.DataFrame,
+        column_config_mapping: dict[str | int, Any] | None = None,
+        column_order: list[str] | None = None,
+        disabled: bool | list[str] = False,
+    ) -> str:
+        """Helper to compute a signature with default parameters."""
+        schema = _get_arrow_schema(df)
+        dataframe_schema = determine_dataframe_schema(df, schema)
+        return _compute_data_editor_signature(
+            data_df=df,
+            arrow_schema=schema,
+            dataframe_schema=dataframe_schema,
+            data_format=DataFormat.PANDAS_DATAFRAME,
+            column_config_mapping=column_config_mapping or {},
+            column_order=column_order,
+            disabled=disabled,
+        )
+
     def test_same_data_produces_same_signature(self):
         """Test that identical data produces the same signature."""
         df = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
-        schema = _get_arrow_schema(df)
-        dataframe_schema = determine_dataframe_schema(df, schema)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        assert sig1 == sig2
+        assert self._compute_signature(df) == self._compute_signature(df)
 
     def test_different_values_same_schema_produces_same_signature(self):
         """Test that different values with the same schema produce same signature."""
         df1 = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
         df2 = pd.DataFrame({"A": [10, 20, 30], "B": ["a", "b", "c"]})
-        schema1 = _get_arrow_schema(df1)
-        schema2 = _get_arrow_schema(df2)
-        dataframe_schema1 = determine_dataframe_schema(df1, schema1)
-        dataframe_schema2 = determine_dataframe_schema(df2, schema2)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df1,
-            arrow_schema=schema1,
-            dataframe_schema=dataframe_schema1,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df2,
-            arrow_schema=schema2,
-            dataframe_schema=dataframe_schema2,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        assert sig1 == sig2
+        assert self._compute_signature(df1) == self._compute_signature(df2)
 
     def test_different_column_names_produces_different_signature(self):
         """Test that different column names produce different signatures."""
         df1 = pd.DataFrame({"A": [1, 2, 3]})
         df2 = pd.DataFrame({"B": [1, 2, 3]})
-        schema1 = _get_arrow_schema(df1)
-        schema2 = _get_arrow_schema(df2)
-        dataframe_schema1 = determine_dataframe_schema(df1, schema1)
-        dataframe_schema2 = determine_dataframe_schema(df2, schema2)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df1,
-            arrow_schema=schema1,
-            dataframe_schema=dataframe_schema1,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df2,
-            arrow_schema=schema2,
-            dataframe_schema=dataframe_schema2,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        assert sig1 != sig2
+        assert self._compute_signature(df1) != self._compute_signature(df2)
 
     def test_different_column_types_produces_different_signature(self):
         """Test that different column types produce different signatures."""
         df1 = pd.DataFrame({"A": [1, 2, 3]})  # int
         df2 = pd.DataFrame({"A": [1.0, 2.0, 3.0]})  # float
-        schema1 = _get_arrow_schema(df1)
-        schema2 = _get_arrow_schema(df2)
-        dataframe_schema1 = determine_dataframe_schema(df1, schema1)
-        dataframe_schema2 = determine_dataframe_schema(df2, schema2)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df1,
-            arrow_schema=schema1,
-            dataframe_schema=dataframe_schema1,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df2,
-            arrow_schema=schema2,
-            dataframe_schema=dataframe_schema2,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        assert sig1 != sig2
+        assert self._compute_signature(df1) != self._compute_signature(df2)
 
     def test_different_row_count_produces_different_signature(self):
         """Test that different row counts produce different signatures."""
         df1 = pd.DataFrame({"A": [1, 2, 3]})
         df2 = pd.DataFrame({"A": [1, 2, 3, 4]})
-        schema1 = _get_arrow_schema(df1)
-        schema2 = _get_arrow_schema(df2)
-        dataframe_schema1 = determine_dataframe_schema(df1, schema1)
-        dataframe_schema2 = determine_dataframe_schema(df2, schema2)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df1,
-            arrow_schema=schema1,
-            dataframe_schema=dataframe_schema1,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df2,
-            arrow_schema=schema2,
-            dataframe_schema=dataframe_schema2,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        assert sig1 != sig2
+        assert self._compute_signature(df1) != self._compute_signature(df2)
 
     def test_disabled_true_produces_different_signature(self):
         """Test that disabled=True produces different signature than disabled=False."""
         df = pd.DataFrame({"A": [1, 2, 3]})
-        schema = _get_arrow_schema(df)
-        dataframe_schema = determine_dataframe_schema(df, schema)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
+        assert self._compute_signature(df, disabled=False) != self._compute_signature(
+            df, disabled=True
         )
-        sig2 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=True,
-        )
-        assert sig1 != sig2
 
     def test_column_order_affects_signature(self):
         """Test that different column_order produces different signatures."""
         df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-        schema = _get_arrow_schema(df)
-        dataframe_schema = determine_dataframe_schema(df, schema)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=["B", "A"],
-            disabled=False,
-        )
-        assert sig1 != sig2
+        assert self._compute_signature(
+            df, column_order=None
+        ) != self._compute_signature(df, column_order=["B", "A"])
 
     def test_disabled_list_produces_different_signature(self):
         """Test that disabled with list of columns produces different signature."""
         df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-        schema = _get_arrow_schema(df)
-        dataframe_schema = determine_dataframe_schema(df, schema)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=["A"],
-        )
-        sig3 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=["B"],
-        )
+        sig1 = self._compute_signature(df, disabled=False)
+        sig2 = self._compute_signature(df, disabled=["A"])
+        sig3 = self._compute_signature(df, disabled=["B"])
         # All three should be different
         assert sig1 != sig2
         assert sig2 != sig3
@@ -1468,91 +1310,24 @@ class DataEditorSignatureTest(unittest.TestCase):
     def test_disabled_list_order_independent(self):
         """Test that disabled column list is order-independent."""
         df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
-        schema = _get_arrow_schema(df)
-        dataframe_schema = determine_dataframe_schema(df, schema)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=["A", "B"],
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=["B", "A"],
-        )
-        # Order should not matter - signatures should be the same
-        assert sig1 == sig2
+        assert self._compute_signature(
+            df, disabled=["A", "B"]
+        ) == self._compute_signature(df, disabled=["B", "A"])
 
     def test_multiindex_level_names_affect_signature(self):
         """Test that MultiIndex level names are included in signature."""
-        arrays1 = [[1, 1, 2, 2], ["a", "b", "a", "b"]]
-        arrays2 = [[1, 1, 2, 2], ["a", "b", "a", "b"]]
-        index1 = pd.MultiIndex.from_arrays(arrays1, names=["first", "second"])
-        index2 = pd.MultiIndex.from_arrays(arrays2, names=["one", "two"])
+        arrays = [[1, 1, 2, 2], ["a", "b", "a", "b"]]
+        index1 = pd.MultiIndex.from_arrays(arrays, names=["first", "second"])
+        index2 = pd.MultiIndex.from_arrays(arrays, names=["one", "two"])
 
         df1 = pd.DataFrame({"A": [1, 2, 3, 4]}, index=index1)
         df2 = pd.DataFrame({"A": [1, 2, 3, 4]}, index=index2)
-
-        schema1 = _get_arrow_schema(df1)
-        schema2 = _get_arrow_schema(df2)
-        dataframe_schema1 = determine_dataframe_schema(df1, schema1)
-        dataframe_schema2 = determine_dataframe_schema(df2, schema2)
-
-        sig1 = _compute_data_editor_signature(
-            data_df=df1,
-            arrow_schema=schema1,
-            dataframe_schema=dataframe_schema1,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        sig2 = _compute_data_editor_signature(
-            data_df=df2,
-            arrow_schema=schema2,
-            dataframe_schema=dataframe_schema2,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={},
-            column_order=None,
-            disabled=False,
-        )
-        # Different MultiIndex level names should produce different signatures
-        assert sig1 != sig2
+        assert self._compute_signature(df1) != self._compute_signature(df2)
 
     def test_int_column_config_key_no_collision(self):
         """Test that int keys in column_config use _pos: prefix to avoid collision."""
         df = pd.DataFrame({"1": [1, 2, 3], "A": [4, 5, 6]})
-        schema = _get_arrow_schema(df)
-        dataframe_schema = determine_dataframe_schema(df, schema)
-
-        # Config with int key 1 (positional column reference)
-        sig1 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={1: {"hidden": True}},
-            column_order=None,
-            disabled=False,
-        )
-        # Config with string key "1" (column named "1")
-        sig2 = _compute_data_editor_signature(
-            data_df=df,
-            arrow_schema=schema,
-            dataframe_schema=dataframe_schema,
-            data_format=DataFormat.PANDAS_DATAFRAME,
-            column_config_mapping={"1": {"hidden": True}},
-            column_order=None,
-            disabled=False,
-        )
-        # These should be different due to _pos: prefix
-        assert sig1 != sig2
+        # Config with int key 1 (positional) vs string key "1" (column name)
+        assert self._compute_signature(
+            df, column_config_mapping={1: {"hidden": True}}
+        ) != self._compute_signature(df, column_config_mapping={"1": {"hidden": True}})

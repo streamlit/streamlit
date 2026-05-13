@@ -278,12 +278,8 @@ function DataFrame({
     originalColumns,
   })
 
-  const { getCellContent: getOriginalCellContent } = useDataLoader(
-    data,
-    originalColumns,
-    numRows,
-    editingState
-  )
+  const { getCellContent: getOriginalCellContent, getSourceCellValue } =
+    useDataLoader(data, originalColumns, numRows, editingState)
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
@@ -496,12 +492,49 @@ function DataFrame({
       canDeleteRows,
       editingState,
       getCellContent,
+      getSourceCellValue,
       getOriginalIndex,
       refreshCells,
       updateNumRows,
       syncEditState,
       clearSelection,
     })
+
+  // Clean up edits that now match source data when source data changes.
+  // This allows cells to receive updated values when the user has edited
+  // them back to their original values.
+  useEffect(() => {
+    // Build a map from indexNumber to column for efficient lookup
+    const columnsByIndex = new Map(
+      originalColumns.map(col => [col.indexNumber, col])
+    )
+
+    let anyCleared = false
+    // Collect edits to clear to avoid modifying during iteration
+    const editsToCheck = [...editingState.current.getEditedCells()]
+
+    for (const [row, col, cell] of editsToCheck) {
+      const column = columnsByIndex.get(col)
+      if (!column) {
+        continue
+      }
+
+      const editValue = column.getCellValue(cell)
+      const sourceValue = getSourceCellValue(col, row, column)
+
+      if (editValue === sourceValue) {
+        if (editingState.current.clearCell(col, row)) {
+          anyCleared = true
+        }
+      }
+    }
+
+    if (anyCleared) {
+      syncEditState()
+    }
+    // Only run when `data` changes (tracked via getSourceCellValue dependency)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data])
 
   const ignoredRowIndices = useMemo(() => {
     // If empty table, ignore row index 0 which is just a visual gimmick

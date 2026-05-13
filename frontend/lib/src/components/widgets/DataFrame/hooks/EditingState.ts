@@ -277,6 +277,45 @@ class EditingState {
   }
 
   /**
+   * Clears the edit for a specific cell, restoring it to use source data.
+   * This is used when an edit results in the same value as the source data.
+   *
+   * @param col - The column index
+   * @param row - The row index
+   * @returns true if an edit was cleared, false if no edit existed
+   */
+  clearCell(col: number, row: number): boolean {
+    if (this.isAddedRow(row)) {
+      // Cannot clear cells from added rows - they must have values
+      return false
+    }
+
+    const rowCache = this.editedCells.get(row)
+    if (rowCache === undefined) {
+      return false
+    }
+
+    const deleted = rowCache.delete(col)
+    // Clean up empty row maps
+    if (rowCache.size === 0) {
+      this.editedCells.delete(row)
+    }
+    return deleted
+  }
+
+  /**
+   * Returns an iterator over all edited cells (excluding added rows).
+   * Each entry contains [row, col, cell].
+   */
+  *getEditedCells(): Generator<[number, number, GridCell]> {
+    for (const [row, rowMap] of this.editedCells) {
+      for (const [col, cell] of rowMap) {
+        yield [row, col, cell]
+      }
+    }
+  }
+
+  /**
    * Adds a new row to the editing state.
    *
    * @param rowCells - The cells of the row to add

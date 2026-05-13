@@ -29,7 +29,13 @@ import { notNullOrUndefined } from "~lib/util/utils"
 
 import EditingState from "./EditingState"
 
-type DataLoaderReturn = Pick<DataEditorProps, "getCellContent">
+type DataLoaderReturn = Pick<DataEditorProps, "getCellContent"> & {
+  /**
+   * Get the source cell value from Arrow data (ignoring any edits).
+   * Returns undefined if the row is out of bounds or an error occurs.
+   */
+  getSourceCellValue: (col: number, row: number, column: BaseColumn) => unknown
+}
 
 /**
  * Custom hook that handles all data loading capabilities for the interactive data table.
@@ -122,8 +128,36 @@ function useDataLoader(
     [columns, numRows, data, editingState]
   )
 
+  const getSourceCellValue = useCallback(
+    (col: number, row: number, column: BaseColumn): unknown => {
+      const dataDimensions = data.dimensions
+      if (
+        row >= dataDimensions.numDataRows ||
+        col >= dataDimensions.numDataColumns
+      ) {
+        return undefined
+      }
+
+      try {
+        const arrowCell = data.getCell(row, col)
+        const styledCell = getStyledCell(data, row, col)
+        const sourceCell = getCellFromArrow(
+          column,
+          arrowCell,
+          styledCell,
+          data.styler?.cssStyles
+        )
+        return column.getCellValue(sourceCell)
+      } catch {
+        return undefined
+      }
+    },
+    [data]
+  )
+
   return {
     getCellContent,
+    getSourceCellValue,
   }
 }
 
