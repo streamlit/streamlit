@@ -17,32 +17,45 @@
 import { FC, memo } from "react"
 
 import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
-import { notNullOrUndefined } from "@streamlit/utils"
 
 import { AppSkeleton } from "./AppSkeleton"
 import { SquareSkeleton } from "./styled-components"
 
-const RawSkeleton: FC<React.PropsWithChildren<{ element: SkeletonProto }>> = ({
-  element,
-}) => {
+interface SkeletonProps {
+  element: SkeletonProto
+  /**
+   * When true, the skeleton fills its container (100% width and height).
+   * This is used by the public st.skeleton() API path where the parent
+   * ElementContainer is sized via layout config.
+   *
+   * When false/undefined (default), the skeleton uses its default fallback
+   * dimensions. This is used for internal skeleton usages like:
+   * - ComponentInstance loading skeletons (custom components)
+   * - Suspense fallbacks
+   * - StreamlitMarkdown plugin loading
+   *
+   * This separation ensures the public API respects layout config sizing while
+   * internal usages maintain backward-compatible default heights that don't
+   * collapse to 0 in height: auto containers.
+   */
+  fillContainer?: boolean
+}
+
+const RawSkeleton: FC<SkeletonProps> = ({ element, fillContainer }) => {
   if (element.style == SkeletonProto.SkeletonStyle.APP) {
     return <AppSkeleton /> // internal-only, does not use any of the element properties
   }
 
-  // When the skeleton has an explicit height specified (via layout config from st.skeleton()),
-  // it fills its container (100% width and height). When no height is specified
-  // (Suspense fallback, internal usage like custom components), we don't pass height/width
-  // so that SquareSkeleton uses its default fallback values. This avoids height: 100%
-  // collapsing to 0 inside a height: auto container.
-  // Note: element.height is null when not set (proto3 optional), and 0 is a valid explicit value.
-  const useContainerSize =
-    notNullOrUndefined(element.height) && element.height > 0
+  // When fillContainer is true (public st.skeleton() path), the skeleton fills
+  // its container because the parent ElementContainer is sized via layout config.
+  // When false/undefined (internal usage), use default dimensions so the skeleton
+  // doesn't collapse to 0 in height: auto containers.
   return (
     <SquareSkeleton
       className="stSkeleton"
       data-testid="stSkeleton"
-      height={useContainerSize ? "100%" : undefined}
-      width={useContainerSize ? "100%" : undefined}
+      height={fillContainer ? "100%" : undefined}
+      width={fillContainer ? "100%" : undefined}
     />
   )
 }

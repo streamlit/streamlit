@@ -245,8 +245,9 @@ class EmptyMixin:
         )
 
         skeleton_proto = SkeletonProto()
-        # Set pixel height on the proto if an integer is provided
-        if isinstance(height, int):
+        # Set pixel height on the proto if an integer is provided.
+        # Explicitly exclude bool since isinstance(True, int) is True in Python.
+        if isinstance(height, int) and not isinstance(height, bool):
             skeleton_proto.height = height
 
         dg = self.dg._enqueue(

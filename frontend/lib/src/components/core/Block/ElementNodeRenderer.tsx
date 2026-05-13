@@ -567,17 +567,20 @@ const RawElementNodeRenderer = (
       )
 
     case "skeleton":
-      // Without this style, the skeleton width relies on the flex container that
-      // wraps the page contents having align-items: stretch. There was a regression
-      // where this default was changed. It is more robust to ensure that the skeleton
-      // has this width.
+      // Skeleton uses LARGE_ELEMENT config which respects the layout config's
+      // widthConfig and heightConfig from st.skeleton(). This allows explicit
+      // pixel widths/heights to take effect. The element's own 100% sizing fills
+      // whatever container dimensions the layout config computes.
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.FULL_WIDTH}
+          config={ElementContainerConfig.LARGE_ELEMENT}
           isStale={isStale}
         >
-          <Skeleton element={node.element.skeleton as SkeletonProto} />
+          <Skeleton
+            element={node.element.skeleton as SkeletonProto}
+            fillContainer
+          />
         </ElementContainer>
       )
 

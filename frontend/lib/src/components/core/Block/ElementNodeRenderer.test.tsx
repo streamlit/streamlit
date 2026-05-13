@@ -405,7 +405,7 @@ describe("ElementNodeRenderer Block Component", () => {
   })
 
   describe("render Skeleton", () => {
-    it("should render with FULL_WIDTH config", () => {
+    it("should render with LARGE_ELEMENT config", () => {
       const scriptRunId = "SCRIPT_RUN_ID"
       const node = createElementNode(scriptRunId, "skeleton", {
         style: SkeletonProto.SkeletonStyle.ELEMENT,
@@ -417,7 +417,7 @@ describe("ElementNodeRenderer Block Component", () => {
 
       expect(screen.getByTestId("stElementContainer")).toBeVisible()
       const lastCall = mockElementContainer.mock.calls.at(-1)
-      expect(lastCall?.[0].config).toBe(ElementContainerConfig.FULL_WIDTH)
+      expect(lastCall?.[0].config).toBe(ElementContainerConfig.LARGE_ELEMENT)
     })
   })
 
