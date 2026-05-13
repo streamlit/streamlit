@@ -347,10 +347,20 @@ describe("TimeInput clearable behavior", () => {
     )
   })
 
-  it("does not render clear button when widget has a default", () => {
+  it("does not render clear button when widget has a default", async () => {
+    const user = userEvent.setup()
     const props = getProps({ default: "10:30" })
     render(<TimeInput {...props} />)
 
+    // Clear button should not be present at initial render
+    expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
+
+    // Open the combobox and select a different value
+    await user.click(screen.getByRole("combobox"))
+    await user.keyboard("{ArrowDown}{Enter}")
+
+    // Clear button should still not be present after interaction
+    // (clearable is false when a default is set)
     expect(screen.queryByTestId("stTimeInputClearButton")).toBeNull()
   })
 

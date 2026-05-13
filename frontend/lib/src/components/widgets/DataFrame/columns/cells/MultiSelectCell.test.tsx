@@ -643,7 +643,12 @@ describe("Multi Select Editor", () => {
 
     // Enter with text + allowCreation + allowDuplicates falls into the
     // inline-create path: the new value is added and editing stays open.
-    expect(onChange.mock.lastCall?.[0].data.values).toEqual(["new-value"])
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ values: ["new-value"] }),
+      })
+    )
     expect(onFinishedEditing).not.toHaveBeenCalled()
   })
 })

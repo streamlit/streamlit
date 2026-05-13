@@ -290,6 +290,8 @@ describe("Pagination widget", () => {
       render(<Pagination {...props} />)
 
       expect(getPageButtons().map(b => b.textContent)).toEqual(["1", "10"])
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      expect(getActivePageButton()).toHaveTextContent("10")
     })
 
     it("handles max_visible_pages=2 with current page in middle", () => {
@@ -411,18 +413,28 @@ describe("Pagination widget", () => {
   })
 
   describe("Responsive sizing", () => {
-    // Mocks the container width reported by useResizeObserver. With
-    // buttonWidthPx ≈ 36px and arrowsWidthPx ≈ 68px, the number of fittable
-    // page buttons is roughly (width - 68) / 36.
+    // Mocks the container width reported by useResizeObserver.
+    // These tests verify the responsive layout logic, not exact pixel calculations.
+    // The width values are intentionally chosen to exercise distinct layout branches:
+    // - 10000px: large enough to show all buttons (tests full maxVisible)
+    // - 180px: triggers maxVisible=2 collapse (fittable count ~3-4)
+    // - 120px: triggers maxVisible=1 (current page only)
+    // - 40px: triggers maxVisible=0 (no page buttons)
+    // If theme tokens change significantly, tests may need recalibration, but they'll
+    // fail with clear output (wrong button count) rather than silently passing.
+    let resizeObserverSpy: ReturnType<typeof vi.spyOn>
+
     const mockContainerWidth = (width: number): void => {
-      vi.spyOn(useResizeObserverModule, "useResizeObserver").mockReturnValue({
-        values: [width],
-        elementRef: { current: null },
-      })
+      resizeObserverSpy = vi
+        .spyOn(useResizeObserverModule, "useResizeObserver")
+        .mockReturnValue({
+          values: [width],
+          elementRef: { current: null },
+        })
     }
 
     afterEach(() => {
-      vi.restoreAllMocks()
+      resizeObserverSpy?.mockRestore()
     })
 
     it("uses full max visible when container width is large", () => {
