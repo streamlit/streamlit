@@ -149,6 +149,17 @@ Phase 1 intentionally scopes to cases where **row identity and edit-affecting co
 These edge cases are acceptable for Phase 1's scope (computed columns, session state round-trip).
 Phase 3 (row identity via meaningful index) could address row reordering if needed.
 
+**Required docstring callout**: The `key` parameter docstring in `st.data_editor` MUST include a
+prominent warning about the row-reordering limitation. Suggested wording:
+
+> **Warning**: When `key` is provided with `num_rows="fixed"`, edits are tracked by row *position*,
+> not row identity. If the source data is reordered (rows shuffled) without changing the row count,
+> edits may be applied to incorrect rows. Avoid reordering source data for keyed fixed-row editors,
+> or use `apply_edits` for explicit control over edit application.
+
+This ensures users discover the limitation at the point of use (IDE autocomplete, help tooltip)
+rather than only in documentation or after encountering unexpected behavior.
+
 **Signature should exclude**:
 
 - Cell values
@@ -636,21 +647,26 @@ def _data_editor(..., apply_edits: Callable | None = None):
 
 #### 2.9 Open Questions
 
-1. **Naming**: `apply_edits`, `on_commit`, `on_apply`, `persist`, `sync`? Existing widget callbacks
-   use the `on_*` pattern (`on_change`, `on_click`). `on_commit` or `on_apply` may align better with
-   established conventions. However, `apply_edits` reads as imperative (what it does) vs. `on_*`
-   which reads as reactive (when it fires). **Recommendation**: Prefer `on_commit` for consistency
-   with the `on_*` pattern, or `apply_edits` if the imperative name is clearer for this use case.
+1. **Naming** ✅ RESOLVED: `apply_edits`. While existing widget callbacks use the `on_*` pattern
+   (`on_change`, `on_click`), this callback differs semantically: it doesn't just react to changes,
+   it transforms the source data. The imperative `apply_edits` clearly communicates this behavior
+   (callback *applies* edits and returns new baseline) vs. `on_commit` which could be confused
+   with a pure side-effect callback. The product spec and this tech spec now consistently use
+   `apply_edits`.
 
 2. **Async support**: Should the callback support `async def`? Database operations are often async.
+   **Recommendation**: Defer to future work. Initial implementation uses sync callbacks only.
 
 3. **Batching**: For `num_rows="dynamic"`, should adds/deletes be applied incrementally or batched?
-   The current design batches (callback sees all pending ops at once).
+   The current design batches (callback sees all pending ops at once). **Recommendation**: Keep
+   batched semantics — simpler mental model and atomic persistence.
 
 4. **Partial success**: What if some rows persist but others fail? Current design is all-or-nothing
-   (raise to reject all). Fine-grained error handling would need richer return type.
+   (raise to reject all). **Recommendation**: Keep all-or-nothing for MVP. Fine-grained error
+   handling would need richer return type and is out of scope.
 
-5. **Caching**: The callback has side effects and should NOT be cached. Need to document clearly.
+5. **Caching**: The callback has side effects and should NOT be cached. **Recommendation**: Document
+   clearly in docstring that `apply_edits` callbacks should not be wrapped in `@st.cache_*`.
 
 #### 2.10 Relationship to Existing Callbacks
 

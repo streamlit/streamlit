@@ -199,19 +199,38 @@ with col1:
 st.data_editor(df, key="editor", num_rows="dynamic", apply_edits=handle_edits)
 ```
 
-**Example 4: Conditional persistence**
+**Example 4: Conditional persistence (explicit Save button)**
+
+For workflows where edits accumulate across multiple interactions and are only persisted on
+explicit user action (e.g., a "Save" button), store the working dataframe in session state:
 
 ```python
-def maybe_save(source_df, edited_df, edits):
-    if st.session_state.get("save_requested"):
-        st.session_state.save_requested = False
-        save_to_file(edited_df)
-        st.toast("Saved!")
+# Initialize working copy in session state
+if "working_df" not in st.session_state:
+    st.session_state.working_df = load_initial_data()
+
+def handle_edits(source_df, edited_df, edits):
+    # Update working copy with edits (but don't persist yet)
+    st.session_state.working_df = edited_df
     return edited_df
 
-st.button("Save", on_click=lambda: st.session_state.update(save_requested=True))
-st.data_editor(df, key="editor", apply_edits=maybe_save)
+def save_to_file():
+    write_to_file(st.session_state.working_df)
+    st.toast("Saved!")
+
+st.button("Save to File", on_click=save_to_file)
+st.data_editor(
+    st.session_state.working_df,  # Source from session state
+    key="editor",
+    apply_edits=handle_edits,
+)
 ```
+
+**Why this pattern works**: Each edit invokes the callback, which updates `working_df` in session
+state. Since the source (`st.session_state.working_df`) already reflects applied edits, subsequent
+reruns see no new edits (edit state was cleared). The "Save" button reads from session state,
+which accumulates all edits since the last save. This is the recommended pattern for "draft →
+commit" workflows.
 
 ### Interaction with Existing Features
 
