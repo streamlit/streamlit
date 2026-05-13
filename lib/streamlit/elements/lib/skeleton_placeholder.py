@@ -41,9 +41,8 @@ class SkeletonPlaceholder:
 
     This class wraps a ``DeltaGenerator`` and can be used in two modes:
 
-    **Standalone mode**: The skeleton is shown immediately when any method
-    is called. Call methods like ``.write()``, ``.dataframe()``, etc. to
-    replace it with content.
+    **Standalone mode**: The skeleton is shown immediately when created.
+    Call methods like ``.write()``, ``.dataframe()``, etc. to replace it with content.
 
     **Context manager mode**: Uses a 0.5s delay before showing (like ``st.spinner``).
     If the block completes within 0.5s, no skeleton is shown. Auto-clears on exit.
@@ -55,18 +54,10 @@ class SkeletonPlaceholder:
         skeleton_proto: SkeletonProto,
         layout_config: LayoutConfig | None,
     ) -> None:
-        """Initialize the skeleton placeholder.
-
-        The skeleton is NOT enqueued immediately. It will be enqueued either:
-        - With 0.5s delay when used as context manager (``__enter__``)
-        - Immediately when any method is called (standalone mode via ``__getattr__``)
-        """
+        """Initialize the skeleton placeholder and show it immediately."""
         self._parent = parent
         self._skeleton_proto = skeleton_proto
         self._layout_config = layout_config
-
-        # The DeltaGenerator for the skeleton element (created on first use)
-        self._dg: DeltaGenerator | None = None
 
         # State tracking
         self._in_context_manager = False
@@ -78,6 +69,14 @@ class SkeletonPlaceholder:
         self._create_transient: Any = None
         self._clear_transient: Any = None
 
+        # Show skeleton immediately (standalone mode)
+        # This will be cleared and replaced with transient mode if used as context manager
+        self._dg: DeltaGenerator = self._parent._enqueue(
+            "skeleton",
+            self._skeleton_proto,
+            layout_config=self._layout_config,
+        )
+
     @staticmethod
     def _create(
         parent: DeltaGenerator,
@@ -87,36 +86,14 @@ class SkeletonPlaceholder:
         """Create a skeleton placeholder (factory method for singleton compatibility)."""
         return SkeletonPlaceholder(parent, skeleton_proto, layout_config)
 
-    def _ensure_enqueued(self) -> DeltaGenerator:
-        """Ensure the skeleton is enqueued and return the DeltaGenerator."""
-        with self._display_lock:
-            if self._dg is not None:
-                return self._dg
-            if self._in_context_manager:
-                raise RuntimeError(
-                    "Cannot call methods on skeleton while in context manager mode. "
-                    "Use standalone mode (without 'with') to replace the skeleton."
-                )
-
-        # Enqueue the skeleton element
-        dg = self._parent._enqueue(
-            "skeleton",
-            self._skeleton_proto,
-            layout_config=self._layout_config,
-        )
-        with self._display_lock:
-            self._dg = dg
-        return dg
-
     def __getattr__(self, name: str) -> Any:
         # Skip internal attributes
         if name.startswith("_"):
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
-        # For DeltaGenerator methods, ensure skeleton is enqueued first
-        dg = self._ensure_enqueued()
-        return getattr(dg, name)
+        # Delegate to the underlying DeltaGenerator
+        return getattr(self._dg, name)
 
     def __dir__(self) -> list[str]:
         """Return DeltaGenerator methods for IDE autocompletion."""
@@ -125,13 +102,17 @@ class SkeletonPlaceholder:
         return dir(DeltaGenerator)
 
     def __enter__(self) -> Self:
-        """Enter context manager mode with 0.5s delay before showing skeleton."""
+        """Enter context manager mode with 0.5s delay before showing skeleton.
+
+        The skeleton was shown immediately on creation (standalone mode).
+        In context manager mode, we clear it and switch to transient mode
+        with a 0.5s delay before showing.
+        """
         with self._display_lock:
-            if self._dg is not None:
-                # Already in standalone mode - just enter the DG context
-                self._dg.__enter__()
-                return self
             self._in_context_manager = True
+
+        # Clear the immediately-shown skeleton and switch to transient mode
+        self._dg.empty()
 
         # Build the element proto for transient use
         element_proto = ElementProto()
