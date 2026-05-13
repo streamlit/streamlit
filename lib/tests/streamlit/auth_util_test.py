@@ -84,6 +84,26 @@ SECRETS_MOCK = {
 }
 
 
+def _create_test_provider_token(claims: dict[str, Any]) -> str:
+    """Create a provider token with whichever JOSE backend is available."""
+    header = {"alg": "HS256"}
+
+    try:
+        from joserfc import jwt
+
+        return jwt.encode(header, claims, auth_util._get_joserfc_signing_key())
+    except ImportError:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            from authlib.jose import jwt
+
+            token = jwt.encode(header, claims, auth_util.get_signing_secret())
+
+        if isinstance(token, bytes):
+            return token.decode("latin-1")
+        return token
+
+
 class AuthUtilTest(unittest.TestCase):
     """Test auth utils."""
 
@@ -804,11 +824,8 @@ def test_decode_provider_token_invalid_claims_raise_streamlit_auth_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Reject provider tokens when required claims are missing or malformed."""
-    from joserfc import jwt
-
     monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
-
-    token = jwt.encode({"alg": "HS256"}, claims, auth_util._get_joserfc_signing_key())
+    token = _create_test_provider_token(claims)
 
     with pytest.raises(StreamlitAuthError, match=expected_message):
         auth_util.decode_provider_token(token)

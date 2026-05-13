@@ -288,7 +288,9 @@ def _encode_provider_token_with_authlib(provider: str) -> str:
         "provider": provider,
         "exp": _get_provider_token_expiration_timestamp(),
     }
-    provider_token = jwt.encode(header, payload, get_signing_secret())
+    provider_token = cast(
+        "str | bytes", jwt.encode(header, payload, get_signing_secret())
+    )
     if isinstance(provider_token, bytes):
         return provider_token.decode("latin-1")
     return provider_token
