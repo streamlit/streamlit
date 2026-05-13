@@ -992,11 +992,11 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
+        type: Literal["default", "compact"] = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
-        type: Literal["default", "compact"] = "default",
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1076,6 +1076,13 @@ class LayoutsMixin:
 
             - ``"spinner"``: Displays a spinner as an icon.
 
+        type : "default" or "compact"
+            The visual style of the expander. If ``"default"`` (default), the
+            expander is displayed with a border and background. If ``"compact"``,
+            the expander is rendered as a minimal inline toggle, ideal for
+            displaying AI reasoning, thoughts, or collapsible metadata without
+            visual clutter.
+
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
 
@@ -1120,13 +1127,6 @@ class LayoutsMixin:
         kwargs : dict or None
             An optional dict of kwargs to pass to the ``on_change``
             callback.
-
-        type : "default" or "compact"
-            The visual style of the expander. If ``"default"`` (default), the
-            expander is displayed with a border and background. If ``"compact"``,
-            the expander is rendered as a minimal inline toggle, ideal for
-            displaying AI reasoning, thoughts, or collapsible metadata without
-            visual clutter.
 
         Returns
         -------
@@ -1698,8 +1698,8 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
-        width: WidthWithoutContent = "stretch",
         type: Literal["default", "compact"] = "default",
+        width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
 
@@ -1755,6 +1755,13 @@ class LayoutsMixin:
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
 
+        type : "default" or "compact"
+            The visual style of the status container. If ``"default"`` (default),
+            the container is displayed with a border and background. If
+            ``"compact"``, the container is rendered as a minimal inline
+            toggle, ideal for displaying AI reasoning or task progress without
+            visual clutter.
+
         width : "stretch" or int
             The width of the status container. This can be one of the following:
 
@@ -1764,13 +1771,6 @@ class LayoutsMixin:
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the container matches the width
               of the parent container.
-
-        type : "default" or "compact"
-            The visual style of the status container. If ``"default"`` (default),
-            the container is displayed with a border and background. If
-            ``"compact"``, the container is rendered as a minimal inline
-            toggle, ideal for displaying AI reasoning or task progress without
-            visual clutter.
 
         Returns
         -------
@@ -1824,7 +1824,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, width=width, type=type
+            self.dg, label, expanded=expanded, state=state, type=type, width=width
         )
 
     def _dialog(

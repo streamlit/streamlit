@@ -45,8 +45,8 @@ class StatusContainer(DeltaGenerator):
         label: str,
         expanded: bool = False,
         state: States = "running",
-        width: WidthWithoutContent = "stretch",
         type: Literal["default", "compact"] = "default",
+        width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         if type not in {"default", "compact"}:
             raise StreamlitValueError("type", ["'default'", "'compact'"])
