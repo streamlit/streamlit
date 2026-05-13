@@ -132,6 +132,15 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
             with st.skeleton():
                 raise ValueError("Test exception")
 
+    def test_context_manager_after_standalone_raises(self) -> None:
+        """Test that using context manager after standalone mode raises an error."""
+        placeholder = st.skeleton()
+        placeholder.markdown("Hello")  # Use in standalone mode
+
+        with pytest.raises(RuntimeError, match=r"Cannot use st\.skeleton"):
+            with placeholder:  # Try to use as context manager
+                pass
+
 
 class SkeletonPlaceholderTest(DeltaGeneratorTestCase):
     """Test SkeletonPlaceholder standalone functionality."""

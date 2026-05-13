@@ -118,8 +118,23 @@ class SkeletonPlaceholder:
 
         In context manager mode, we don't show the skeleton immediately.
         Instead, we use transient elements with a delay (like st.spinner).
+
+        Raises
+        ------
+        RuntimeError
+            If the placeholder was already used in standalone mode (via method calls
+            like `placeholder.write()`) before entering context manager mode.
         """
         from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+
+        # Disallow mixing standalone and context-manager modes.
+        # If _dg is set, the placeholder was already used in standalone mode.
+        if self._dg is not None:
+            raise RuntimeError(
+                "Cannot use st.skeleton() as a context manager after calling methods "
+                "on it (like .write(), .dataframe(), etc.). Use either standalone mode "
+                "OR context manager mode, not both."
+            )
 
         with self._display_lock:
             self._in_context_manager = True
