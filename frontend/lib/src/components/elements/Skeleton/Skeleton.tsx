@@ -17,6 +17,7 @@
 import { FC, memo } from "react"
 
 import { Skeleton as SkeletonProto } from "@streamlit/protobuf"
+import { notNullOrUndefined } from "@streamlit/utils"
 
 import { AppSkeleton } from "./AppSkeleton"
 import { SquareSkeleton } from "./styled-components"
@@ -28,12 +29,14 @@ const RawSkeleton: FC<React.PropsWithChildren<{ element: SkeletonProto }>> = ({
     return <AppSkeleton /> // internal-only, does not use any of the element properties
   }
 
-  // When the skeleton has a height specified (via layout config from st.skeleton()),
+  // When the skeleton has an explicit height specified (via layout config from st.skeleton()),
   // it fills its container (100% width and height). When no height is specified
-  // (Suspense fallback), we don't pass height/width so that SquareSkeleton uses
-  // its default fallback values. This avoids height: 100% collapsing to 0 inside
-  // a height: auto container.
-  const useContainerSize = element.height !== 0
+  // (Suspense fallback, internal usage like custom components), we don't pass height/width
+  // so that SquareSkeleton uses its default fallback values. This avoids height: 100%
+  // collapsing to 0 inside a height: auto container.
+  // Note: element.height is null when not set (proto3 optional), and 0 is a valid explicit value.
+  const useContainerSize =
+    notNullOrUndefined(element.height) && element.height > 0
   return (
     <SquareSkeleton
       className="stSkeleton"
