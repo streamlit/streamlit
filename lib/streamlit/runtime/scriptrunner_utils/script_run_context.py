@@ -23,10 +23,12 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import (
     TYPE_CHECKING,
-    Any,
     Final,
     TypeAlias,
+    TypedDict,
 )
+
+from typing_extensions import Unpack
 
 from streamlit.errors import (
     NoSessionContext,
@@ -81,6 +83,20 @@ class FragmentThreadState:
     active_script_hash: str = ""
 
 
+class _FragmentThreadStateFields(TypedDict, total=False):
+    """Keyword-arg shape for ``ThreadState.{initialize, update, scoped}``.
+
+    Mirrors ``FragmentThreadState``'s fields. Using ``TypedDict + Unpack``
+    catches typos (e.g., ``fragmentid=`` vs ``fragment_id=``) and wrong
+    value types at type-check time rather than as a runtime ``TypeError``.
+    """
+
+    fragment_id: str | None
+    delta_path: tuple[int, ...] | None
+    in_fragment_callback: bool
+    active_script_hash: str
+
+
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
     "fragment_thread_state",
 )
@@ -95,7 +111,7 @@ class ThreadState:
     """
 
     @staticmethod
-    def initialize(**kwargs: Any) -> None:
+    def initialize(**kwargs: Unpack[_FragmentThreadStateFields]) -> None:
         """Create a fresh FragmentThreadState and bind it in the current context.
 
         Called from ``reset()`` at the start of every script run, and from
@@ -116,11 +132,12 @@ class ThreadState:
         except LookupError:
             raise RuntimeError(
                 "FragmentThreadState not initialized — "
-                "reset() must be called before accessing thread state."
+                "ScriptRunContext.reset() or add_script_run_ctx() must be "
+                "called on this thread first."
             ) from None
 
     @staticmethod
-    def update(**kwargs: Any) -> None:
+    def update(**kwargs: Unpack[_FragmentThreadStateFields]) -> None:
         """Update one or more fields on the current context's state.
 
         Creates a new frozen dataclass via ``dataclasses.replace()`` and
@@ -130,7 +147,9 @@ class ThreadState:
 
     @staticmethod
     @contextlib.contextmanager
-    def scoped(**overrides: Any) -> Generator[None, None, None]:
+    def scoped(
+        **overrides: Unpack[_FragmentThreadStateFields],
+    ) -> Generator[None, None, None]:
         """Temporarily override fields, automatically restore on exit.
 
         Uses ``ContextVar.reset(token)`` to atomically restore the entire
@@ -358,7 +377,13 @@ def add_script_run_ctx(
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
             dataclasses.asdict(parent_ts),
         )
-        if not getattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, False):
+        # Only wrap thread.run for threads that haven't started yet. If the
+        # caller passed in the currently-running thread, run() is already
+        # executing and the wrapper would be dead code while still polluting
+        # the thread's instance attrs across tests.
+        if thread is not threading.current_thread() and not getattr(
+            thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, False
+        ):
             original_run = thread.run
 
             def _run_with_thread_state() -> None:
