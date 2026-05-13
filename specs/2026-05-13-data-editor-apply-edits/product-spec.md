@@ -115,6 +115,25 @@ class EditState(TypedDict):
 # can access edits with integer indexing: edits["edited_rows"][3] (not edits["edited_rows"]["3"]).
 ```
 
+**Type export for callback annotation:**
+
+`EditState` is exported from `streamlit.elements.lib.column_types` (same module as `ColumnConfig`)
+so users can type-annotate their callbacks:
+
+```python
+from streamlit.elements.lib.column_types import EditState
+
+def my_callback(
+    source_df: pd.DataFrame,
+    edited_df: pd.DataFrame,
+    edits: EditState,
+) -> pd.DataFrame:
+    ...
+```
+
+The type is documented in `EditState` shape (post-conversion with int keys) — static type checkers
+will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the runtime behavior.
+
 ### Behavior
 
 | Aspect | Behavior |
@@ -128,6 +147,42 @@ class EditState(TypedDict):
 | **With forms** | Callback invoked on form submit, not on each cell edit |
 | **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
 | **`st.session_state[key]`** | Cleared on success; preserved on exception |
+
+#### How to Persist the Baseline
+
+The callback's return value becomes the baseline **only for the current render**. If you write
+`st.data_editor(st.session_state.df, ...)` and the callback returns a different dataframe, that
+returned dataframe is discarded on the next non-edit rerun because `data` re-evaluates to the
+stale `st.session_state.df`.
+
+**Common footgun**: Button-only reruns (e.g., clicking a "Submit" button elsewhere in the app)
+will NOT invoke `apply_edits` because there are no pending edits — the editor re-renders with
+whatever `data` evaluates to.
+
+**Solution**: Store the callback result in session state so it persists across all reruns:
+
+```python
+# Initialize with baseline data
+if "df" not in st.session_state:
+    st.session_state.df = load_initial_data()
+
+def apply_edits(source_df, edited_df, edits):
+    # Persist edits (e.g., validate, save to DB)
+    save_to_database(edited_df)
+    # Store result in session state for baseline persistence
+    st.session_state.df = edited_df
+    return edited_df
+
+# Use session state as the source — it stays current across reruns
+st.data_editor(
+    st.session_state.df,
+    key="editor",
+    apply_edits=apply_edits,
+)
+```
+
+Alternatively, use `@st.cache_data(ttl=...)` for database-backed data that refreshes periodically
+(see Example 2 below).
 
 ### Examples
 
@@ -237,12 +292,28 @@ commit" workflows.
 | Feature | Interaction |
 |---------|-------------|
 | `on_change` | `on_change` runs in WS handler *before* script rerun; `apply_edits` runs *during* rerun inside `st.data_editor`. `on_change` cannot observe post-`apply_edits` state. |
-| `key` | **Required** for `apply_edits` to work correctly. Without `key`, the element ID is derived from full Arrow bytes, so every successful `apply_edits` invocation changes the widget ID on the next render — discarding the callback's returned data. **Enforcement**: If `apply_edits` is provided without `key`, raise `StreamlitAPIException("apply_edits requires a key parameter for stable widget identity")`. |
+| `key` | **Required** for `apply_edits` to work correctly. See enforcement below. |
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
 | `column_config` | No interaction; column config affects editing UI, not callback |
 | Forms | Callback invoked on form submit only, edits batched until then |
 | Fragments | Works within fragments; callback runs during fragment rerun |
+
+**`key` requirement enforcement:**
+
+Without `key`, the element ID is derived from full Arrow bytes, so every successful `apply_edits`
+invocation changes the widget ID on the next render — discarding the callback's returned data.
+
+If `apply_edits` is provided without `key`, raise `StreamlitAPIException` with an actionable message
+(per API principle #23 "Fail Fast, Fail Helpfully"):
+
+```python
+raise StreamlitAPIException(
+    "st.data_editor's apply_edits parameter requires a unique 'key' to be set. "
+    "Provide a key like st.data_editor(..., key=\"my_editor\", apply_edits=...) "
+    "so edit state can be preserved across reruns."
+)
+```
 
 ### Error Handling
 
@@ -269,7 +340,9 @@ result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 
 ### Out of Scope (Future Work)
 
-- **Async callbacks**: `async def apply_edits(...)` not supported in initial release
+- **Async callbacks**: `async def apply_edits(...)` not supported in initial release. For users
+  with async-only database drivers (e.g., `asyncpg`), use `asyncio.run(...)` inside the callback
+  as a workaround. Native async support may be added in a future version if demand warrants.
 - **Partial success**: All-or-nothing semantics; no per-row error handling
 - **Conflict resolution UI**: If callback returns data that conflicts with pending edits, no
   merge UI is provided — callback's return value wins

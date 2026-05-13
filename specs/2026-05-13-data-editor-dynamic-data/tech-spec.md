@@ -139,26 +139,63 @@ are no longer safe to apply.
 
 **Signature limitations and Phase 1 scope**:
 
-Phase 1 intentionally scopes to cases where **row identity and edit-affecting config stay stable**:
-- **Row reordering**: Same-row-count reorders will preserve stale edits onto different logical rows.
-  Phase 1 does not detect row reorders. Developers must avoid reordering source data for keyed
-  fixed-row editors, or use `apply_edits` (Phase 2) for full control.
-- **Partial `disabled` changes**: Changing which columns are disabled doesn't reset edit state.
-  Edits on previously-editable columns remain even if that column becomes disabled.
+Phase 1 intentionally scopes to cases where **row identity and edit-affecting config stay stable**.
+Because the new behavior is automatic for keyed fixed-row editors, the following safeguards prevent
+silent data corruption:
 
-These edge cases are acceptable for Phase 1's scope (computed columns, session state round-trip).
-Phase 3 (row identity via meaningful index) could address row reordering if needed.
+**Same-row-count reorder detection** (safety mechanism):
+
+When the index is not a default `RangeIndex`, include a lightweight hash of the index values in
+the signature. This detects row reorders even when row count is unchanged:
+
+```python
+# In _compute_data_editor_signature:
+if not isinstance(data_df.index, pd.RangeIndex):
+    # Include index value hash to detect row reorders
+    index_hash = hashlib.md5(
+        str(data_df.index.tolist()).encode("utf-8"),
+        usedforsecurity=False
+    ).hexdigest()[:8]
+    h.update(f"index_values:{index_hash}".encode("utf-8"))
+```
+
+**Rationale**: Apps that re-sort or refetch rows (a common pattern, per #7749) will silently replay
+edits onto the wrong logical records without this detection. A default `RangeIndex` (0, 1, 2, ...)
+is considered identity-stable since it typically means "row positions are the identity." A
+meaningful index (e.g., primary keys, timestamps, categorical labels) signals that row position
+may change while logical identity is stable — exactly the scenario where stale positional edits
+are dangerous.
+
+**Partial `disabled` changes** (documented limitation):
+
+Changing which columns are disabled doesn't reset edit state. Edits on previously-editable columns
+remain even if that column becomes disabled. Include a hash of the normalized `disabled` set
+when `disabled` is an iterable (not just `True`/`False`):
+
+```python
+# Disabled state handling
+if disabled is True:
+    h.update(b"disabled:all")
+elif disabled is not False and disabled is not None:
+    # Hash the set of disabled columns
+    disabled_set = frozenset(str(c) for c in disabled)
+    h.update(f"disabled_cols:{sorted(disabled_set)}".encode("utf-8"))
+```
+
+These safeguards ensure the new behavior is safe by default. Apps with default `RangeIndex` and
+stable row positions will benefit from edit preservation. Apps that reorder rows with meaningful
+indices will see edit state reset (safe fallback). Phase 3 (row identity via meaningful index)
+could enable smarter edit remapping if needed.
 
 **Required docstring callout**: The `key` parameter docstring in `st.data_editor` MUST include a
-prominent warning about the row-reordering limitation. Suggested wording:
+warning about the row-positioning semantics. Suggested wording:
 
-> **Warning**: When `key` is provided with `num_rows="fixed"`, edits are tracked by row *position*,
-> not row identity. If the source data is reordered (rows shuffled) without changing the row count,
-> edits may be applied to incorrect rows. Avoid reordering source data for keyed fixed-row editors,
-> or use `apply_edits` for explicit control over edit application.
+> **Note**: When `key` is provided with `num_rows="fixed"`, edits are tracked by row *position*.
+> If the source data is reordered (rows shuffled), the edit state is cleared to prevent edits
+> from being applied to incorrect rows. For full control over edit application, use `apply_edits`.
 
-This ensures users discover the limitation at the point of use (IDE autocomplete, help tooltip)
-rather than only in documentation or after encountering unexpected behavior.
+This ensures users discover the behavior at the point of use (IDE autocomplete, help tooltip)
+rather than only in documentation.
 
 **Signature should exclude**:
 
@@ -201,9 +238,21 @@ def _compute_data_editor_signature(
 
     # Index type and names
     h.update(f"index_type:{type(data_df.index).__name__}".encode("utf-8"))
-    if hasattr(data_df.index, 'names'):
-        for name in data_df.index.names:
-            h.update(f"index_name:{name}".encode("utf-8"))
+    # Note: All pandas Index objects have .names, including regular Index and MultiIndex.
+    # Use a sentinel for unnamed indices to avoid collisions with literal "None" names.
+    for name in data_df.index.names:
+        name_str = "<unnamed>" if name is None else str(name)
+        h.update(f"index_name:{name_str}".encode("utf-8"))
+
+    # Row reorder detection: include index value hash for non-default indices
+    # A default RangeIndex (0, 1, 2, ...) is position-stable, so we skip it.
+    # A meaningful index suggests row identity may differ from position.
+    if not isinstance(data_df.index, pd.RangeIndex):
+        index_hash = hashlib.md5(
+            str(data_df.index.tolist()).encode("utf-8"),
+            usedforsecurity=False
+        ).hexdigest()[:8]
+        h.update(f"index_values:{index_hash}".encode("utf-8"))
 
     # Arrow field types with nullability
     for field in arrow_schema:
@@ -217,9 +266,13 @@ def _compute_data_editor_signature(
     if num_rows == "fixed":
         h.update(f"rows:{len(data_df)}".encode("utf-8"))
 
-    # Disabled state when it disables all editing
+    # Disabled state handling
     if disabled is True:
         h.update(b"disabled:all")
+    elif disabled is not False and disabled is not None:
+        # Hash the set of disabled columns to detect config changes
+        disabled_set = frozenset(str(c) for c in disabled)
+        h.update(f"disabled_cols:{sorted(disabled_set)}".encode("utf-8"))
 
     return h.hexdigest()
 ```
@@ -240,7 +293,9 @@ element_id = compute_and_register_element_id(
     "data_editor",
     user_key=key,
     # When key is provided AND num_rows="fixed": identity based on signature, not data values
-    key_as_main_identity={"data_signature", "num_rows"}
+    # Note: data_signature already includes row count for fixed mode, so num_rows in
+    # key_as_main_identity is for clarity/intent, not strictly necessary
+    key_as_main_identity={"data_signature"}
     if key is not None and num_rows == "fixed"
     else False,
     dg=self.dg,
@@ -316,10 +371,34 @@ useEffect(() => {
 
 **Performance note**: The reconciliation iterates every stored edit and calls `getCellContent` for
 each (which reads from the Arrow-backed table). For editors with many edited cells (e.g., bulk
-paste), this runs on every data update. Consider:
-- Skip reconciliation when data hash/version is unchanged (since `useEffect([data])` fires on
-  identity changes even when bytes are equivalent)
-- Batch reconciliation for large edit sets if profiling shows issues
+paste), this runs on every data update.
+
+**Early bail-out mechanism**: The `useEffect([data])` dependency fires on React identity changes,
+which may occur even when the underlying Arrow bytes are equivalent (e.g., on reruns with the same
+source data). To avoid unnecessary reconciliation:
+
+1. Use the backend-provided `data_signature` (exposed via proto) as the stable change signal
+2. Compare `elementHash` or the new proto field before starting reconciliation
+3. Only run reconciliation when the signature actually changed
+
+```typescript
+// Use backend-provided signature for stable change detection
+const prevSignatureRef = useRef<string | undefined>()
+const currentSignature = element.dataSignature  // From proto
+
+useEffect(() => {
+  if (prevSignatureRef.current === currentSignature) {
+    // Data identity changed but content is equivalent — skip reconciliation
+    return
+  }
+  prevSignatureRef.current = currentSignature
+
+  // Proceed with reconciliation...
+}, [data, currentSignature])
+```
+
+This ensures reconciliation only runs when the source data actually changed, not on every
+React identity change.
 
 **Value comparison** (`valuesEqual`):
 
@@ -404,17 +483,30 @@ have divergent edit state.
 message Dataframe {
   // ... existing fields (1-12) ...
 
-  // When present, frontend replaces its local EditingState with this value.
-  // Empty string means "clear all edits". Backend sets this after successful
-  // apply_edits callback.
+  // Explicit EditingState control signal from backend to frontend.
+  //
+  // Semantics (mirroring selection_state pattern from Dataframe.proto:44-47):
+  // - ABSENT: Frontend keeps its current EditingState unchanged. This is the
+  //   default for most renders where the backend is not actively controlling state.
+  // - EMPTY STRING (""): Clear all edits. Backend sets this after successful
+  //   apply_edits callback to signal that edits have been committed.
+  // - NON-EMPTY JSON STRING: Replace EditingState with this normalized value.
+  //   Format: {"edited_rows": {...}, "added_rows": [...], "deleted_rows": [...]}
+  //   Use case: Backend-driven partial state reset (future extension).
+  //
+  // Example usage in apply_edits flow:
+  // - User edits -> rerun -> callback succeeds -> backend sets editing_state = ""
+  // - Frontend receives proto, sees non-absent editing_state, replaces local state
+  // - Frontend renders clean (no edit overlay)
   optional string editing_state = 13;
 }
 ```
 
 After a successful `apply_edits` callback:
-1. Backend sets `proto.editing_state = ""` (or normalized state JSON)
-2. Frontend checks `element.editingState` on render
-3. If present, frontend replaces `editingStateRef.current` and syncs to `WidgetStateManager`
+1. Backend sets `proto.editing_state = ""` (clear signal)
+2. Frontend checks if `element.editingState !== undefined` (presence check)
+3. If present, frontend replaces `editingStateRef.current` with parsed value (or empty state for "")
+4. Frontend syncs to `WidgetStateManager` to maintain consistency
 
 This ensures the frontend edit overlay is cleared in the same render that displays the callback's
 returned dataframe.
@@ -505,7 +597,7 @@ When the callback raises an exception, the behavior must be precisely defined:
 
 **Option A: Validation-style UX (recommended for `apply_edits`)**
 
-1. Exception is caught by the widget
+1. Catch validation exceptions (expected failures the user can fix)
 2. Edit state is **preserved** (user's work is not lost)
 3. `st.error(str(exception))` is displayed
 4. `st.data_editor()` returns `edited_df` (the invalid data, so downstream code sees user's input)
@@ -519,9 +611,46 @@ When the callback raises an exception, the behavior must be precisely defined:
 3. User sees standard Streamlit exception UI
 4. `st.data_editor()` return value is never reached
 
-**Recommendation**: Option A for `apply_edits` specifically, since the callback is meant for
-validation workflows. Document that exceptions are caught and shown as errors. Users who want
-propagation can re-raise after logging or use a wrapper.
+**Recommendation**: Hybrid approach — catch **validation exceptions** (Option A) but **propagate
+infrastructure/control-flow exceptions** (Option B for those cases).
+
+**Exception handling hierarchy:**
+
+1. **Always re-raise**: `ScriptControlException` subclasses (`RerunException`, `StopException`)
+   so `st.rerun()` / `st.stop()` work inside callbacks (mirroring `on_change` handler behavior)
+2. **Always propagate**: System exceptions (`KeyboardInterrupt`, `SystemExit`) and infrastructure
+   failures that indicate a broken environment
+3. **Catch and display**: `ValueError`, `TypeError`, and other "user-fixable" validation errors
+   — show `st.error()` and preserve edit state for retry
+
+**Security consideration**: Do NOT call `st.error(str(exception))` blindly — exception messages
+from database drivers, file I/O, or network code can leak backend details (connection strings,
+SQL errors, stack traces). Recommended pattern:
+
+```python
+# Distinguish validation vs infrastructure exceptions
+class DataEditorValidationError(ValueError):
+    """User-fixable validation error — safe to display."""
+    pass
+
+# In the implementation:
+try:
+    new_source_df = apply_edits(data_df, edited_df, edit_state)
+except ScriptControlException:
+    raise  # Let st.rerun() / st.stop() work
+except DataEditorValidationError as e:
+    # Safe to display — raised intentionally by user code
+    st.error(str(e))
+    callback_failed = True
+except Exception:
+    # Infrastructure failure — propagate to normal exception handling
+    # This preserves app-wide error redaction and monitoring
+    raise
+```
+
+**Alternative**: Provide a `DataEditorValidationError` class that users explicitly raise for
+validation failures they want displayed. Any other exception propagates normally. This is
+safer than catching all exceptions but requires users to learn a new pattern.
 
 ```python
 def validate_and_save(source_df, edited_df, edits):
@@ -582,16 +711,37 @@ If any step is out of order, the user may see a flash of stale state or require 
 
 | Feature | Compatible | Notes |
 |---------|------------|-------|
-| `on_change` | ✅ | `on_change` runs in WS handler *before* script rerun; `apply_edits` runs *during* rerun inside `st.data_editor`. This means `on_change` cannot observe post-`apply_edits` state. |
-| `num_rows` modes | ✅ | Callback receives all pending ops |
-| `column_config` | ✅ | Doesn't affect callback |
-| `disabled` | ✅ | No edits = callback not invoked |
-| `column_order` | ✅ | Doesn't affect callback |
-| Forms | ✅ | Callback invoked on form submit only |
-| Fragments | ⚠️ | Should work, needs testing |
+| `on_change` | Yes | `on_change` runs in WS handler *before* script rerun; `apply_edits` runs *during* rerun inside `st.data_editor`. `on_change` cannot observe post-`apply_edits` state. |
+| `num_rows` modes | Yes | Callback receives all pending ops |
+| `column_config` | Yes | Doesn't affect callback |
+| `disabled` | Yes | No edits = callback not invoked |
+| `column_order` | Yes | Doesn't affect callback |
+| Forms | Yes | Callback invoked on form submit only |
+| Fragments | Yes | See details below |
+
+**Fragment compatibility details:**
+
+`apply_edits` works within fragments because:
+
+1. **Fragment reruns**: When a user edits a cell in a `st.data_editor` inside a fragment, only
+   that fragment reruns (not the full app). The `apply_edits` callback executes during the
+   fragment rerun, same as it would in a full rerun.
+
+2. **Proto `editing_state` signal**: The `editing_state = ""` clear signal is included in the
+   fragment's delta response. Streamlit's fragment delta merge preserves per-element proto
+   fields, so the clear signal reaches the frontend correctly.
+
+3. **Parent vs fragment origin**: The callback doesn't distinguish whether the edit originated
+   from a parent rerun or a fragment rerun — it receives the same `edit_state` from the widget
+   state manager in both cases.
+
+**Testing requirement**: Implementation PR must include E2E tests for:
+- `apply_edits` callback inside a fragment (edit → callback → state cleared)
+- Fragment rerun doesn't lose edit state from sibling fragments
+- Parent rerun after fragment edit correctly sees committed state
 
 **Return value**: `st.data_editor()` returns the callback's result (the new source dataframe),
-or `edited_df` if the callback raised an exception.
+or `edited_df` if the callback raised a validation exception.
 
 **`st.session_state[key]`**: Edit state is cleared after successful callback (edits are "committed").
 On exception, edit state is preserved.
@@ -600,6 +750,7 @@ On exception, edit state is preserved.
 
 ```python
 # In data_editor.py
+from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptControlException
 
 def _data_editor(..., apply_edits: Callable | None = None):
     # ... existing setup ...
@@ -615,8 +766,8 @@ def _data_editor(..., apply_edits: Callable | None = None):
 
         try:
             # User callback handles persistence, returns new source
-            # Pass source_df, edited_df, and raw edits
-            new_source_df = apply_edits(data_df, edited_df, edit_state)
+            # Pass source_df.copy() to prevent callback mutations from affecting original
+            new_source_df = apply_edits(data_df.copy(), edited_df, edit_state)
 
             # Success: use returned dataframe as new source
             data_df = new_source_df
@@ -625,16 +776,24 @@ def _data_editor(..., apply_edits: Callable | None = None):
             # Signal frontend to clear edit state
             proto.editing_state = ""
 
-        except Exception as e:
-            # Preserve edit state, surface error
-            # Note: st.error() places the message at the widget's location in script flow.
-            # Alternative: show error inline in the widget UI (similar to input validation).
-            # Decision point: validation failures vs infrastructure/persistence failures may
-            # warrant different UX. For initial implementation, st.error() is simpler.
+        except ScriptControlException:
+            # Re-raise st.rerun() / st.stop() — these are control flow, not errors
+            raise
+        except (ValueError, TypeError) as e:
+            # Validation errors: catch, display, preserve edits for retry
+            # These are typically user-fixable issues
             st.error(f"Failed to apply edits: {e}")
             callback_failed = True
-            # Return edited_df so downstream code sees user's input
             # Do NOT set proto.editing_state — preserve edits for retry
+        except Exception:
+            # Infrastructure/unexpected errors: propagate to normal exception handling
+            # This preserves app-wide error redaction, logging, and monitoring
+            raise
+
+    # When apply_edits is None and there are edits, apply them as existing behavior
+    elif apply_edits is None and _has_pending_edits(edit_state):
+        edited_df = _apply_dataframe_edits(data_df.copy(), edit_state, ...)
+        data_df = edited_df  # Existing pre-Phase-2 behavior
 
     # Serialize proto with (possibly updated) arrow_bytes
     # ...
@@ -644,6 +803,10 @@ def _data_editor(..., apply_edits: Callable | None = None):
         return edited_df  # Invalid data, but user's input
     return data_df
 ```
+
+**Note**: The sketch above shows the delta from existing implementation. When `apply_edits is None`,
+the existing `_apply_dataframe_edits` code path is unchanged — edits are applied and `edited_df`
+is returned. The new callback path only activates when `apply_edits` is provided.
 
 #### 2.9 Open Questions
 
@@ -850,6 +1013,8 @@ def _normalize_editing_state(editing_state, source_data_hash, current_num_rows):
 4. `apply_edits` exception preserves edit state and shows error
 5. Edit state cleared after successful `apply_edits` callback
 6. `apply_edits` receives both `edited_df` and raw `edits` dict
+7. `ScriptControlException` (st.rerun/st.stop) propagates correctly from callback
+8. `source_df` passed to callback is a copy (mutations don't affect original)
 
 **Frontend Unit Tests**:
 
@@ -862,6 +1027,10 @@ def _normalize_editing_state(editing_state, source_data_hash, current_num_rows):
 2. Validation pattern: callback raises, edits preserved, error shown
 3. Revert pattern: callback returns original data, edits discarded
 4. Form integration: callback invoked on form submit only
+5. **Failure-and-retry flow**: Callback raises → `st.error` shown and edit state preserved →
+   user fixes input (edits cell to valid value) → next interaction re-invokes callback
+   successfully → edits cleared and clean state rendered (central UX claim of §2.4)
+6. Fragment integration: callback inside fragment executes on fragment rerun, state cleared
 
 ---
 
