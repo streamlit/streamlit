@@ -212,7 +212,9 @@ def test_context_var_with_lazy_default_is_hashable_and_stable() -> None:
         "lazy_hash_test", default=lambda: 0
     )
 
-    assert hash(var) == hash(var)
+    # Cache the hash to verify stability across calls.
+    h1 = hash(var)
+    assert hash(var) == h1
     # Usable as a dict key without raising.
     container: dict[ContextVarWithLazyDefault[int], str] = {var: "ok"}
     assert container[var] == "ok"

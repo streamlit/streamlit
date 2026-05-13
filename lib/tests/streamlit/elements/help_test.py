@@ -573,17 +573,42 @@ class StHelpAPITest(DeltaGeneratorTestCase):
             st.help(st, width=width)
 
 
-def test_get_signature_returns_none_for_uninspectable_object() -> None:
-    """``_get_signature`` returns ``None`` when ``inspect.signature`` raises ``TypeError``."""
-    # A bare int instance is not callable and ``inspect.signature`` raises ``TypeError``.
+def test_get_signature_returns_none_for_noncallable_nonclass() -> None:
+    """``_get_signature`` returns ``None`` for non-callable, non-class objects.
+
+    The function's early guard ``if not inspect.isclass(obj) and not callable(obj)``
+    filters out objects that cannot have a signature.
+    """
     assert _get_signature(123) is None
+    assert _get_signature("string") is None
+    assert _get_signature([1, 2, 3]) is None
+
+
+def test_get_signature_returns_none_when_inspect_signature_raises_typeerror() -> None:
+    """``_get_signature`` returns ``None`` when ``inspect.signature`` raises ``TypeError``.
+
+    This test exercises the ``except TypeError: return None`` branch by using a
+    callable with a ``__signature__`` property that raises ``TypeError``.
+    """
+
+    class CallableWithBrokenSignature:
+        """A callable whose ``__signature__`` property raises TypeError."""
+
+        def __call__(self) -> None:
+            pass
+
+        @property
+        def __signature__(self) -> None:
+            raise TypeError("cannot get signature")
+
+    obj = CallableWithBrokenSignature()
+    assert _get_signature(obj) is None
 
 
 def test_get_signature_strips_element_prefix_for_delta_generator_callables() -> None:
     """``_get_signature`` rewrites the leading ``(element, ...)`` prefix when the
     callable lives in ``streamlit.delta_generator``.
     """
-    from streamlit.elements.help import _get_signature
 
     def fn(element, x, y):  # type: ignore[no-untyped-def]
         pass

@@ -110,6 +110,27 @@ class RuntimeSingletonTest(unittest.TestCase):
         _ = Runtime(MagicMock())
         assert Runtime.exists()
 
+    def test_cache_storage_manager_property_exposes_config_value(self):
+        """Runtime.cache_storage_manager returns the manager from RuntimeConfig.
+
+        We construct a RuntimeConfig with a sentinel ``MemoryCacheStorageManager``
+        and verify the property returns the same instance.
+        """
+        from streamlit.runtime.caching.storage.dummy_cache_storage import (
+            MemoryCacheStorageManager,
+        )
+
+        sentinel_manager = MemoryCacheStorageManager()
+        config = RuntimeConfig(
+            "/my/script.py",
+            MemoryMediaFileStorage("/mock/media"),
+            MemoryUploadedFileManager("/mock/upload"),
+            cache_storage_manager=sentinel_manager,
+        )
+        runtime = Runtime(config)
+
+        assert runtime.cache_storage_manager is sentinel_manager
+
 
 class RuntimeTest(RuntimeTestCase):
     async def test_start_stop(self):
@@ -515,28 +536,6 @@ class RuntimeTest(RuntimeTestCase):
         await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
         assert self.runtime.state == RuntimeState.STOPPED
 
-    async def test_cache_storage_manager_property_exposes_config_value(self):
-        """Runtime.cache_storage_manager returns the manager from RuntimeConfig.
-
-        We construct a RuntimeConfig with a sentinel ``MemoryCacheStorageManager``
-        and verify the property returns the same instance.
-        """
-        from streamlit.runtime.caching.storage.dummy_cache_storage import (
-            MemoryCacheStorageManager,
-        )
-
-        Runtime._instance = None
-        sentinel_manager = MemoryCacheStorageManager()
-        config = RuntimeConfig(
-            "/my/script.py",
-            MemoryMediaFileStorage("/mock/media"),
-            MemoryUploadedFileManager("/mock/upload"),
-            cache_storage_manager=sentinel_manager,
-        )
-        runtime = Runtime(config)
-
-        assert runtime.cache_storage_manager is sentinel_manager
-
     async def test_stats_mgr_property_exposes_stats_manager(self):
         """Runtime.stats_mgr exposes a StatsManager populated with the default
         providers (data cache, resource cache, session state).
@@ -546,12 +545,10 @@ class RuntimeTest(RuntimeTestCase):
         stats_mgr = self.runtime.stats_mgr
 
         assert isinstance(stats_mgr, StatsManager)
-        # The default registration includes data, resource, and session-state
-        # providers — querying must return non-empty stats.
-        assert any(
-            stats_mgr._providers_by_family.get(family)
-            for family in stats_mgr._providers_by_family
-        )
+        # Verify that the default registration includes providers for at least
+        # one metric family. This checks internal state since StatsManager
+        # doesn't expose a public API for querying registered providers.
+        assert bool(stats_mgr._providers_by_family)
 
     async def test_get_client_returns_session_client_for_known_session(self):
         """get_client returns the SessionClient associated with the session_id."""
