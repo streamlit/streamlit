@@ -75,9 +75,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/${{ env.ISSUE_NUMBER }})
-          echo "html_url=$(echo "$ISSUE_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
-          echo "title=$(echo "$ISSUE_DATA" | jq -r '.title')" >> $GITHUB_OUTPUT
+          ISSUE_DATA=$(gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" --json title,url)
+          echo "html_url=$(echo "$ISSUE_DATA" | jq -r '.url')" >> "$GITHUB_OUTPUT"
+          echo "title=$(echo "$ISSUE_DATA" | jq -r '.title')" >> "$GITHUB_OUTPUT"
 
       # Runs only very basic triage (first-level support) based on the
       # issue information and historical issues. This will detect
