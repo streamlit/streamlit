@@ -240,13 +240,10 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
     def test_when_fragment_id_set_but_delta_path_is_none_then_dont_raise(
         self, patched_get_script_run_ctx: MagicMock
     ):
-        """Locks in the early-return for ``delta_path is None``.
-
-        After the FragmentThreadState refactor (PR #15072), ``delta_path``
-        defaults to ``None`` (was: empty list). The check needs to bail
-        out in that brief window between entering ``ThreadState.scoped(
-        fragment_id=...)`` and the subsequent ``ThreadState.update(
-        delta_path=...)`` rather than raise spuriously.
+        """``check_fragment_path_policy`` must not raise when ``delta_path``
+        is ``None`` — the brief window between entering
+        ``ThreadState.scoped(fragment_id=...)`` and the subsequent
+        ``ThreadState.update(delta_path=...)`` inside the fragment wrapper.
         """
         patched_get_script_run_ctx.return_value = self.ctx
         ThreadState.update(delta_path=None)
