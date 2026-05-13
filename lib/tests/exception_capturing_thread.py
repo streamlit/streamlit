@@ -91,11 +91,9 @@ def call_on_threads(
             setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
             original_run = thread.run
 
-            # The `orig=original_run` default-arg trick captures the
-            # per-iteration value of original_run at function-definition time,
-            # so each thread runs *its own* original run() — not the last
-            # iteration's. Removing the default argument would silently break
-            # per-thread closure binding inside this loop.
+            # Default arg captures original_run per iteration; without it,
+            # all workers would see the last iteration's run() via
+            # late-binding closure.
             def _run_with_init(orig=original_run):
                 ThreadState.initialize()
                 orig()
