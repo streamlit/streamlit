@@ -229,13 +229,13 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
 }) => {
   const [isEditing, setIsEditing] = useState(() => {
     // If initialValue is provided (keyboard-started edit), start in edit mode
-    // and prepend the typed character to the edit value
     return initialValue !== undefined && initialValue !== ""
   })
   const [editValue, setEditValue] = useState(() => {
-    // If initialValue is provided (keyboard-started edit), prepend it to the cell value
+    // If initialValue is provided (keyboard-started edit), use it as the starting value
+    // following glide-data-grid's convention: typed character replaces the cell value
     if (initialValue !== undefined && initialValue !== "") {
-      return initialValue + (cell.data.value ?? "")
+      return initialValue
     }
     return cell.data.value ?? ""
   })
@@ -326,6 +326,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
             source={cell.data.value ?? ""}
             allowHTML={false}
             sanitizeLinks
+            disallowedElements={["img", "audio", "video"]}
           />
         ) : (
           <StyledEmptyMessage>No content</StyledEmptyMessage>

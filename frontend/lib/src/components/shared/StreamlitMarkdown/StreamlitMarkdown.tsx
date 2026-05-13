@@ -191,6 +191,12 @@ export interface Props {
    * (like dataframe cells) to prevent XSS attacks.
    */
   sanitizeLinks?: boolean
+
+  /**
+   * Additional HTML elements to disallow in markdown rendering.
+   * These elements will be stripped from the output.
+   */
+  disallowedElements?: string[]
 }
 
 /**
@@ -543,6 +549,12 @@ interface RenderedMarkdownProps {
    * (like dataframe cells) to prevent XSS attacks.
    */
   sanitizeLinks?: boolean
+
+  /**
+   * Additional HTML elements to disallow in markdown rendering.
+   * These elements will be stripped from the output.
+   */
+  disallowedElements?: string[]
 }
 
 export type CustomCodeTagProps = JSX.IntrinsicElements["code"] &
@@ -1159,6 +1171,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   helpText,
   unterminatedParsing,
   sanitizeLinks,
+  disallowedElements,
 }: Readonly<RenderedMarkdownProps>): ReactElement {
   const theme = useEmotionTheme()
 
@@ -1294,9 +1307,15 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   }, [source, isLabel, allowHTML, unterminatedParsing])
 
   const disallowed = useMemo(() => {
-    if (!isLabel) return []
-    return disableLinks ? LINKS_DISALLOWED_ELEMENTS : LABEL_DISALLOWED_ELEMENTS
-  }, [isLabel, disableLinks])
+    const baseDisallowed = isLabel
+      ? disableLinks
+        ? LINKS_DISALLOWED_ELEMENTS
+        : LABEL_DISALLOWED_ELEMENTS
+      : []
+    return disallowedElements
+      ? [...baseDisallowed, ...disallowedElements]
+      : baseDisallowed
+  }, [isLabel, disableLinks, disallowedElements])
 
   // Show skeleton while required plugins are still loading
   // A plugin is "loading" if it's needed but state is still null (not loaded, not failed)
@@ -1354,6 +1373,7 @@ const StreamlitMarkdown: FC<Props> = ({
   truncate,
   unterminatedParsing,
   sanitizeLinks,
+  disallowedElements,
 }) => {
   const isInDialog = useContext(IsDialogContext)
 
@@ -1377,6 +1397,7 @@ const StreamlitMarkdown: FC<Props> = ({
         helpText={helpText}
         unterminatedParsing={unterminatedParsing}
         sanitizeLinks={sanitizeLinks}
+        disallowedElements={disallowedElements}
       />
     </StyledStreamlitMarkdown>
   )
