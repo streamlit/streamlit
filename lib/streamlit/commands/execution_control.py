@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import os
 import time
 from collections.abc import Iterable, Mapping
 from itertools import dropwhile
@@ -23,7 +22,7 @@ from typing import TYPE_CHECKING, Literal, NoReturn
 
 import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
-from streamlit.file_util import get_main_script_directory, normalize_path_join
+from streamlit.file_util import get_main_script_directory
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
@@ -301,10 +300,10 @@ def switch_page(  # type: ignore[misc]
         if isinstance(page, Path):
             page = str(page)
 
-        main_script_directory = get_main_script_directory(ctx.main_script_path)
-        requested_page = os.path.realpath(
-            normalize_path_join(main_script_directory, page)
-        )
+        # Use Path.resolve() so script_path matching agrees with st.Page registration
+        # (see StreamlitPage.__init__ in navigation/page.py).
+        main_script_directory = Path(get_main_script_directory(ctx.main_script_path))
+        requested_page = str((main_script_directory / page).resolve())
         all_app_pages = ctx.pages_manager.get_pages().values()
 
         matched_pages = [p for p in all_app_pages if p["script_path"] == requested_page]
@@ -312,7 +311,7 @@ def switch_page(  # type: ignore[misc]
         if len(matched_pages) == 0:
             raise StreamlitAPIException(
                 f"Could not find page: `{page}`. Must be the file path relative to the main script, "
-                f"from the directory: `{os.path.basename(main_script_directory)}`. Only the main app file "
+                f"from the directory: `{main_script_directory.name}`. Only the main app file "
                 "and files in the `pages/` directory are supported."
             )
 
