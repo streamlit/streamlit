@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
 import sys
 import unittest
@@ -44,6 +45,17 @@ from streamlit.runtime.secrets import AttrDict
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# ``joserfc`` is a transitive dependency of ``Authlib>=1.7`` but is not yet
+# declared directly by the ``streamlit[auth]`` extra. The affected tests
+# below assert behavior that only holds on the ``joserfc`` decode/encode path
+# (warning suppression and Streamlit's own claim-validation error messages),
+# so we skip them when only the Authlib fallback is available.
+_JOSERFC_AVAILABLE = importlib.util.find_spec("joserfc") is not None
+_REQUIRES_JOSERFC = pytest.mark.skipif(
+    not _JOSERFC_AVAILABLE,
+    reason="requires joserfc; Authlib fallback path uses different error/warning text",
+)
 
 # Simulates realistic cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
@@ -771,6 +783,7 @@ def test_is_authlib_installed_old_version(monkeypatch: pytest.MonkeyPatch) -> No
     assert is_authlib_installed() is False
 
 
+@_REQUIRES_JOSERFC
 def test_provider_token_round_trip_suppresses_auth_warnings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -802,6 +815,7 @@ def test_decode_provider_token_expired_raises_streamlit_auth_error(
         auth_util.decode_provider_token(token)
 
 
+@_REQUIRES_JOSERFC
 @pytest.mark.parametrize(
     ("claims", "expected_message"),
     [
