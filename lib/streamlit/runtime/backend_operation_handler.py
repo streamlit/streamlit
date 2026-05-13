@@ -129,11 +129,11 @@ class DeferredFileHandler(BackendOperationHandler):
                 request_id=request.request_id,
                 deferred_file=DeferredFileResponsePayload(url=url),
             )
-        except Exception as e:
+        except Exception:
             _LOGGER.exception(
                 "Error executing deferred callable for file_id %s", file_id
             )
             return BackendOperationResponse(
                 request_id=request.request_id,
-                error_msg=str(e),
+                error_msg="Failed to generate file for download",
             )
