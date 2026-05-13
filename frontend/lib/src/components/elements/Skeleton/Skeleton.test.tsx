@@ -29,7 +29,7 @@ describe("Skeleton element", () => {
     const skeletonElement = screen.getByTestId("stSkeleton")
     expect(skeletonElement).toBeVisible()
     expect(skeletonElement).toHaveClass("stSkeleton")
-    expect(skeletonElement).toHaveAttribute("height", "100%")
-    expect(skeletonElement).toHaveAttribute("width", "100%")
+    // Use toHaveStyle for Emotion CSS-in-JS styles, not toHaveAttribute
+    expect(skeletonElement).toHaveStyle({ height: "100%", width: "100%" })
   })
 })

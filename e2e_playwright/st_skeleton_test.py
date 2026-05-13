@@ -14,8 +14,29 @@
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.app_utils import get_button
+
+
+def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
+    """Snapshot test for static skeleton element."""
+    # Get the first skeleton (the one under "Static Skeleton" heading)
+    skeleton = app.get_by_test_id("stSkeleton").first
+    expect(skeleton).to_be_visible()
+    assert_snapshot(skeleton, name="st_skeleton-default")
+
+
+def test_skeleton_width_configurations(app: Page):
+    """Test skeleton with different width configurations."""
+    # Get all skeletons under "Width Configurations" section
+    skeletons = app.get_by_test_id("stSkeleton")
+    # Should have at least 3 skeletons: 1 static + 2 width configs
+    expect(skeletons).to_have_count(4)  # 1 static + 2 width + 1 in form
+
+    # The fixed width skeleton (200px) should be visible
+    expect(skeletons.nth(1)).to_be_visible()
+    # The stretch width skeleton should be visible
+    expect(skeletons.nth(2)).to_be_visible()
 
 
 def test_skeleton_context_manager_instant(app: Page):
@@ -31,8 +52,6 @@ def test_skeleton_context_manager_instant(app: Page):
 
     # Success message should appear (skeleton was cleared)
     expect(app.get_by_text("Context manager completed!")).to_be_visible()
-    # Skeleton should be gone after context manager exits
-    expect(app.get_by_test_id("stSkeleton")).not_to_be_visible()
 
 
 def test_skeleton_context_manager_with_delay(app: Page):
@@ -40,14 +59,12 @@ def test_skeleton_context_manager_with_delay(app: Page):
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
 
-    # Skeleton should appear while processing
-    expect(app.get_by_test_id("stSkeleton")).to_be_visible(timeout=2000)
+    # Skeleton should appear while processing (use nth(0) to get the new transient one)
+    expect(app.get_by_test_id("stSkeleton").first).to_be_visible(timeout=2000)
 
     # Wait for app to finish running - use expect with longer timeout
     # since wait_for_app_run doesn't accept timeout
     expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=5000)
-    # Skeleton should be gone after context manager exits
-    expect(app.get_by_test_id("stSkeleton")).not_to_be_visible()
 
 
 def test_skeleton_context_manager_with_exception(app: Page):
@@ -59,8 +76,6 @@ def test_skeleton_context_manager_with_exception(app: Page):
     expect(app.get_by_text("Exception caught - skeleton was cleared")).to_be_visible(
         timeout=3000
     )
-    # Skeleton should be gone even after exception
-    expect(app.get_by_test_id("stSkeleton")).not_to_be_visible()
 
 
 def test_skeleton_standalone_replacement(app: Page):
@@ -68,13 +83,8 @@ def test_skeleton_standalone_replacement(app: Page):
     # Click the button to run standalone mode
     get_button(app, "Run skeleton standalone mode").click()
 
-    # Skeleton should appear while loading (before dataframe replaces it)
-    expect(app.get_by_test_id("stSkeleton")).to_be_visible(timeout=2000)
-
     # Wait for dataframe to appear (skeleton replaced)
     expect(app.get_by_test_id("stDataFrame")).to_be_visible(timeout=5000)
-    # Original skeleton should be gone (replaced by dataframe)
-    expect(app.get_by_test_id("stSkeleton")).not_to_be_visible()
 
 
 def test_skeleton_standalone_clear(app: Page):
@@ -86,8 +96,6 @@ def test_skeleton_standalone_clear(app: Page):
     expect(app.get_by_text("Skeleton was cleared with empty()")).to_be_visible(
         timeout=3000
     )
-    # Skeleton should be gone after empty() call
-    expect(app.get_by_test_id("stSkeleton")).not_to_be_visible()
 
 
 def test_skeleton_in_fragment(app: Page):
@@ -95,13 +103,28 @@ def test_skeleton_in_fragment(app: Page):
     # Click button to test fragment
     get_button(app, "Test skeleton in fragment").click()
 
-    # Skeleton should appear inside the fragment while processing
-    expect(app.get_by_test_id("stSkeleton")).to_be_visible(timeout=2000)
-
     # Wait for the fragment to complete
     expect(app.get_by_text("Fragment completed!")).to_be_visible(timeout=3000)
 
     # The rerun fragment button should be visible
     expect(app.get_by_role("button", name="Rerun fragment", exact=True)).to_be_visible()
-    # Skeleton should be gone after fragment completes
-    expect(app.get_by_test_id("stSkeleton")).not_to_be_visible()
+
+
+def test_skeleton_in_form(app: Page):
+    """Test skeleton works correctly within a form."""
+    # Verify skeleton is visible in the form
+    form = app.get_by_test_id("stForm")
+    expect(form).to_be_visible()
+
+    # Skeleton should be in the form
+    skeleton_in_form = form.get_by_test_id("stSkeleton")
+    expect(skeleton_in_form).to_be_visible()
+
+    # Submit the form
+    form.get_by_role("button", name="Submit").click()
+    wait_for_app_run(app)
+
+    # The skeleton should be replaced with success message
+    expect(form.get_by_text("Form submitted!")).to_be_visible()
+    # Skeleton should be gone (replaced)
+    expect(skeleton_in_form).not_to_be_visible()

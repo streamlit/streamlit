@@ -18,6 +18,15 @@ import streamlit as st
 
 st.header("Skeleton Tests")
 
+# Static skeleton for snapshot test
+st.subheader("Static Skeleton (for snapshot)")
+st.skeleton(height=100)
+
+# Skeleton with different width configurations
+st.subheader("Width Configurations")
+st.skeleton(height=50, width=200)
+st.skeleton(height=50, width="stretch")
+
 # Context manager - instant (skeleton clears immediately)
 if st.button("Run skeleton context manager (instant)"):
     with st.skeleton(height=100):
@@ -63,3 +72,12 @@ if st.button("Test skeleton in fragment"):
         st.button("Rerun fragment")
 
     skeleton_fragment()
+
+# Skeleton in form
+st.subheader("Skeleton in Form")
+with st.form("skeleton_form"):
+    st.write("Form with skeleton placeholder")
+    placeholder = st.skeleton(height=80)
+    submitted = st.form_submit_button("Submit")
+    if submitted:
+        placeholder.success("Form submitted!")

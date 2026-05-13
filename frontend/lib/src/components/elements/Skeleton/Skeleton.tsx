@@ -28,8 +28,12 @@ interface SkeletonProps {
  * User-facing skeleton element for st.skeleton().
  * Fills its container (100% width/height) because the parent
  * ElementContainer is sized via layout config.
+ *
+ * Note: The element prop contains style and height fields, but height is
+ * handled by the parent container's layout config, and style is reserved
+ * for future use (e.g., APP skeleton style).
  */
-const RawSkeleton: FC<SkeletonProps> = () => (
+const RawSkeleton: FC<SkeletonProps> = (_props: SkeletonProps) => (
   <SquareSkeleton
     className="stSkeleton"
     data-testid="stSkeleton"

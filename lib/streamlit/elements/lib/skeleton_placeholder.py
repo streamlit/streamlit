@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Any, Final, Literal
+from typing import TYPE_CHECKING, Final, Literal
 
 from typing_extensions import Self
 
@@ -26,10 +26,12 @@ from streamlit.proto.Element_pb2 import Element as ElementProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
     from types import TracebackType
 
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.layout_utils import LayoutConfig
+    from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 
 _DELAY_SECS: Final = 0.5
@@ -54,7 +56,11 @@ class SkeletonPlaceholder:
         skeleton_proto: SkeletonProto,
         layout_config: LayoutConfig | None,
     ) -> None:
-        """Initialize the skeleton placeholder and show it immediately."""
+        """Initialize the skeleton placeholder.
+
+        In standalone mode, the skeleton is shown immediately when accessed.
+        In context manager mode, we defer showing until after a 0.5s delay.
+        """
         self._parent = parent
         self._skeleton_proto = skeleton_proto
         self._layout_config = layout_config
@@ -66,16 +72,21 @@ class SkeletonPlaceholder:
         self._should_display = True
 
         # Transient element functions (set in __enter__ for context manager mode)
-        self._create_transient: Any = None
-        self._clear_transient: Any = None
+        self._create_transient: Callable[[], ForwardMsg] | None = None
+        self._clear_transient: Callable[[], ForwardMsg] | None = None
 
-        # Show skeleton immediately (standalone mode)
-        # This will be cleared and replaced with transient mode if used as context manager
-        self._dg: DeltaGenerator = self._parent._enqueue(
-            "skeleton",
-            self._skeleton_proto,
-            layout_config=self._layout_config,
-        )
+        # Lazily created DeltaGenerator for standalone mode
+        self._dg: DeltaGenerator | None = None
+
+    def _ensure_enqueued(self) -> DeltaGenerator:
+        """Ensure the skeleton is enqueued for standalone mode, return DeltaGenerator."""
+        if self._dg is None:
+            self._dg = self._parent._enqueue(
+                "skeleton",
+                self._skeleton_proto,
+                layout_config=self._layout_config,
+            )
+        return self._dg
 
     @staticmethod
     def _create(
@@ -86,14 +97,15 @@ class SkeletonPlaceholder:
         """Create a skeleton placeholder (factory method for singleton compatibility)."""
         return SkeletonPlaceholder(parent, skeleton_proto, layout_config)
 
-    def __getattr__(self, name: str) -> Any:
+    def __getattr__(self, name: str) -> object:
         # Skip internal attributes
         if name.startswith("_"):
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
-        # Delegate to the underlying DeltaGenerator
-        return getattr(self._dg, name)
+        # Standalone mode: ensure skeleton is enqueued, then delegate to DeltaGenerator
+        # This lazy enqueue avoids flashing the skeleton when used as context manager
+        return getattr(self._ensure_enqueued(), name)
 
     def __dir__(self) -> list[str]:
         """Return DeltaGenerator methods for IDE autocompletion."""
@@ -104,23 +116,31 @@ class SkeletonPlaceholder:
     def __enter__(self) -> Self:
         """Enter context manager mode with 0.5s delay before showing skeleton.
 
-        The skeleton was shown immediately on creation (standalone mode).
-        In context manager mode, we clear it and switch to transient mode
-        with a 0.5s delay before showing.
+        In context manager mode, we don't show the skeleton immediately.
+        Instead, we use transient elements with a delay (like st.spinner).
         """
+        from streamlit.proto.Empty_pb2 import Empty as EmptyProto
+
         with self._display_lock:
             self._in_context_manager = True
 
-        # Clear the immediately-shown skeleton and switch to transient mode
-        self._dg.empty()
+        # Reserve a slot by enqueuing an empty element (no flash).
+        # The skeleton will be shown via transient after the delay.
+        empty_proto = EmptyProto()
+        self._dg = self._parent._enqueue(
+            "empty", empty_proto, layout_config=self._layout_config
+        )
 
         # Build the element proto for transient use
         element_proto = ElementProto()
         element_proto.skeleton.CopyFrom(self._skeleton_proto)
 
         # Set up transient element with delay (like st.spinner)
+        # Use self._dg (not self._parent) to anchor the transient at the skeleton's slot.
+        # _enqueue already advanced the parent's cursor past the skeleton's position,
+        # so calling _transient on self._dg ensures the delayed skeleton renders correctly.
         try:
-            self._create_transient, self._clear_transient = self._parent._transient(
+            self._create_transient, self._clear_transient = self._dg._transient(
                 element_proto,
                 layout_config=self._layout_config,
             )
@@ -147,24 +167,21 @@ class SkeletonPlaceholder:
         tb: TracebackType | None,
     ) -> Literal[False]:
         """Exit context manager, clearing the skeleton."""
-        if self._in_context_manager:
-            # Cancel timer if still pending
-            if self._timer is not None:
-                self._timer.cancel()
+        # __exit__ is only called when used as a context manager,
+        # and __enter__ always sets _in_context_manager = True.
+        # This check guards against programming errors.
+        if not self._in_context_manager:  # pragma: no cover - defensive
+            raise RuntimeError("__exit__ called without __enter__")
 
-            with self._display_lock:
-                self._should_display = False
+        # Cancel timer if still pending
+        if self._timer is not None:
+            self._timer.cancel()
 
-            # Clear the transient element
-            if self._clear_transient is not None:
-                enqueue_message(self._clear_transient())
+        with self._display_lock:
+            self._should_display = False
 
-            return False
+        # Clear the transient element
+        if self._clear_transient is not None:
+            enqueue_message(self._clear_transient())
 
-        # Standalone mode - clear with empty() and exit DG context
-        if self._dg is not None:
-            try:
-                self._dg.empty()
-            finally:
-                self._dg.__exit__(typ, exc, tb)
         return False
