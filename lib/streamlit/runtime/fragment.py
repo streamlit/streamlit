@@ -193,11 +193,10 @@ class MemoryFragmentStorage(FragmentStorage):
                     self._remove(fragment_id)
 
     def lookup(self, key: str) -> Fragment:
-        with self._lock:
-            try:
-                return self._fragments[key]
-            except KeyError as e:
-                raise FragmentStorageKeyError(str(e))
+        try:
+            return self._fragments[key]
+        except KeyError as e:
+            raise FragmentStorageKeyError(str(e))
 
     def register(
         self,
