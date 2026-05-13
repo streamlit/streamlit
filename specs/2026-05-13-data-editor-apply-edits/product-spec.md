@@ -16,8 +16,8 @@ enables clean patterns for database-backed editing, validation, and programmatic
 
 ### User Requests
 
-- [#7749](https://github.com/streamlit/streamlit/issues/7749) — Users report "disappearing inputs"
-  when using `st.data_editor` with session state.
+- [#7749](https://github.com/streamlit/streamlit/issues/7749#issuecomment-1824545998) — Users
+  report "disappearing inputs" when using `st.data_editor` with session state.
   Phase 1 ([schema-based identity](https://github.com/streamlit/streamlit/pull/10269))
   solves this for `num_rows="fixed"`, but dynamic row operations still need explicit handling.
 
@@ -101,6 +101,13 @@ Unlike `on_change` (fire-and-forget side effects), `apply_edits` requires specif
 (source, edited, edits) to make decisions. Adding `args`/`kwargs` would complicate the
 signature without clear benefit. Users needing additional context can close over variables.
 
+**Note on Principle 11 ("Patterns Are Sacred")**: The existing `args`/`kwargs` parameters on
+`st.data_editor` apply to `on_change`, not to `apply_edits`. Since `apply_edits` has a different
+calling convention (it receives structured arguments and returns a value), sharing `args`/`kwargs`
+would be confusing — users would need to understand which callback receives which extra args.
+If demand arises, we could add `apply_edits_args`/`apply_edits_kwargs` in the future, but this
+is deferred to keep the initial API minimal per Principle 4 ("Start Minimal, Ship Fast").
+
 ## Proposal
 
 ### API
@@ -140,13 +147,30 @@ over the source dataframe, which the API should not require.
 **DataTypes scope**: The callback always receives and returns `pd.DataFrame`, regardless of the
 input `data` type. Non-DataFrame inputs (list, dict, ndarray, etc.) are converted to DataFrame
 before the callback is invoked. If the callback returns a DataFrame but the original `data` was
-a different type, the return value is used as-is (no back-conversion). This is consistent with
-`st.data_editor`'s existing behavior of always returning a DataFrame.
+a different type, the return value is used as-is (no back-conversion).
+
+**Type-preserving overload note**: `st.data_editor` currently preserves input type for
+`EditableData` inputs (returning the same type as the input). When `apply_edits` is set, the
+return type is always `pd.DataFrame` because the callback returns `pd.DataFrame`. This means
+users who need type preservation should either (a) not use `apply_edits`, or (b) handle
+reconversion manually if needed. The `@overload` signatures should reflect this: when
+`apply_edits` is provided, return type is `pd.DataFrame`. This is an explicit API contract
+for this feature, not a breaking change — existing code without `apply_edits` is unaffected.
 
 **DataEditorEdits type:**
 
 This is a new public type, distinct from the internal `EditingState` TypedDict used for
 widget serialization. The name `DataEditorEdits` is chosen to be explicit and avoid confusion.
+
+**Import path**: `DataEditorEdits` is exposed as `st.DataEditorEdits` (flat namespace per
+Principle 21). Users can import it for type annotations:
+
+```python
+from streamlit import DataEditorEdits
+
+def my_callback(source_df: pd.DataFrame, edited_df: pd.DataFrame, edits: DataEditorEdits) -> pd.DataFrame:
+    ...
+```
 
 ```python
 class DataEditorEdits(TypedDict):
@@ -166,7 +190,7 @@ class DataEditorEdits(TypedDict):
 | **No edits** | Callback not invoked; widget renders source data as-is |
 | **With forms** | Callback invoked on form submit, not on each cell edit |
 | **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
-| **`st.session_state[key]`** | Cleared on success; preserved on exception |
+| **`st.session_state[key]`** | Cleared on success; preserved on exception. "Cleared" means the edit state (`edited_rows`, `added_rows`, `deleted_rows`) is reset to empty dicts/lists — the key itself remains in session state with an empty `DataEditorEdits` value, i.e., `st.session_state[key] == {"edited_rows": {}, "added_rows": [], "deleted_rows": []}`. Code checking `if st.session_state[key]["edited_rows"]:` will see `False` after a successful commit. |
 | **When `apply_edits=None`** | No behavior change from current `st.data_editor`; `st.session_state[key]` continues to expose the `EditingState` dict as documented today |
 
 **What counts as "edits present"**: The callback is invoked only when `edited_rows`, `added_rows`,
@@ -231,10 +255,16 @@ st.data_editor(
 
 **Example 3: Revert/reset functionality (#6540)**
 
-This pattern works when the user has made edits and then clicks "Revert" — the next edit
-commit will reset to source data. If no edits are pending, the button click causes a rerun
-but the callback is not invoked (since `edits` would be empty). For a "reset anytime" button
-that works even with no pending edits, use `st.rerun()` with fresh source data instead.
+This pattern demonstrates revert behavior when edits are in-flight. The callback is invoked
+when the user commits an edit (e.g., leaves a cell), and if `revert_requested` is set at that
+moment, the callback returns the original source data instead of the edited data.
+
+**Important limitation**: This pattern only works when edits are being committed in the same
+interaction. Clicking "Revert" after edits have already been committed (in a previous rerun)
+does NOT trigger `apply_edits` — there's no new edit-commit transition. For "revert anytime"
+behavior, users should use a different pattern (e.g., using `st.session_state` to track the
+source data and using `st.rerun()` to reset, or using forms to batch all edits until explicit
+submit).
 
 ```python
 def handle_edits(source_df, edited_df, edits):
@@ -248,6 +278,13 @@ st.data_editor(df, key="editor", num_rows="dynamic", apply_edits=handle_edits)
 ```
 
 **Example 4: Conditional persistence**
+
+Similar to Example 3, this demonstrates conditional save behavior at edit-commit time.
+The callback checks `save_requested` when edits are being committed.
+
+**Important limitation**: Same as Example 3 — clicking "Save" after edits are already committed
+does NOT trigger `apply_edits`. For explicit save-on-button workflows, consider using forms
+(where edits batch until form submit) or a different state management pattern.
 
 ```python
 def maybe_save(source_df, edited_df, edits):
@@ -265,8 +302,8 @@ st.data_editor(df, key="editor", apply_edits=maybe_save)
 
 | Feature | Interaction |
 |---------|-------------|
-| `on_change` | Both execute in the same rerun: `on_change` fires first (before script body), then `apply_edits` when the script reaches the `st.data_editor(...)` call |
-| `key` | Required for `apply_edits` to work correctly; if omitted with `apply_edits` set, raises `StreamlitAPIException` |
+| `on_change` | Both execute in the same rerun: `on_change` fires first (before script body), then `apply_edits` when the script reaches the `st.data_editor(...)` call. **Important**: If `on_change` mutates `st.session_state[key]`, those mutations are **not** reflected in the `edits` / `edited_df` seen by `apply_edits` — the callback receives the edit state as committed by the frontend, not any Python-side mutations. Mutating session state in `on_change` while using `apply_edits` is an anti-pattern; use one or the other. |
+| `key` | **Required** when `apply_edits` is set. If `key` is omitted (or `None`) with `apply_edits` provided, `st.data_editor` raises `StreamlitAPIException("`apply_edits` requires a `key` argument")` at widget construction time. This ensures the commit-clear contract works correctly across reruns. |
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
 | `column_config` | No interaction; column config affects editing UI, not callback |
@@ -280,6 +317,18 @@ When the callback raises an exception:
 2. Edit state is **preserved** (user's work is not lost)
 3. `st.error(str(exception))` is displayed
 4. `st.data_editor()` returns `edited_df` (the invalid data, so downstream code sees user's input)
+
+**Distinguishing success vs. exception returns**: Callers who need to know whether the returned
+dataframe came from a successful commit or an exception can check `st.session_state[key]`:
+- On success: `st.session_state[key]` is cleared (empty edit state)
+- On exception: `st.session_state[key]` is preserved (non-empty edit state)
+
+```python
+result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
+if st.session_state.editor.get("edited_rows") or st.session_state.editor.get("added_rows") or st.session_state.editor.get("deleted_rows"):
+    st.warning("Validation failed — edits not committed")
+```
+
 5. Widget renders with preserved edits overlaid on original source data
 6. User can fix the issue and retry (next interaction re-invokes callback)
 
@@ -313,7 +362,11 @@ def sync_to_database(source_df, edited_df, edits):
 
 ### Out of Scope (Future Work)
 
-- **Async callbacks**: `async def apply_edits(...)` not supported in initial release
+- **Async callbacks**: `async def apply_edits(...)` not supported in initial release. If an
+  `async` callable is passed, `st.data_editor` raises `StreamlitAPIException("apply_edits does
+  not support async callbacks")` at widget construction time. This follows Principle 23 ("Fail
+  Fast, Fail Helpfully") — users see a clear error rather than cryptic "coroutine was never
+  awaited" warnings.
 - **Partial success**: All-or-nothing semantics; no per-row error handling
 - **Conflict resolution UI**: If the callback returns data that differs from the editor's source
   while the user is mid-edit in a new cell, the callback's return value replaces the source
@@ -334,8 +387,10 @@ def sync_to_database(source_df, edited_df, edits):
 | Any security/legal impact? | ✅ None — callback runs user code like `on_change` |
 | Any docs changes needed? | ✅ — document `apply_edits` parameter and patterns |
 
-**Proto changes**: Add a `clear_edit_state` boolean or `edit_state_version` counter to
-`Arrow.proto`. When `apply_edits` succeeds, the backend sets this field to signal the frontend
-to clear its local edit buffer. The frontend keys its `EditingState` cache on this field,
-ensuring stale edits don't persist after a successful commit. Tech spec will detail the
+**Proto changes**: Add an `edit_state_version` counter (preferred over boolean) to `Arrow.proto`.
+When `apply_edits` succeeds, the backend increments this counter to signal the frontend to clear
+its local edit buffer. The counter is more robust than a boolean — it lets the frontend
+distinguish multiple successful commits between message deliveries (e.g., if network latency
+causes messages to arrive out of order). The frontend keys its `EditingState` cache on this
+field, ensuring stale edits don't persist after a successful commit. Tech spec will detail the
 wire-level mechanism.
