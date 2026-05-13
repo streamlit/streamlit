@@ -39,7 +39,7 @@ case:
 A first-party command gives users one simple setup step:
 
 ```bash
-streamlit skills --yes
+streamlit skills
 ```
 
 Alternatively, users can install the meta skill via
