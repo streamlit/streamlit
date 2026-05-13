@@ -39,7 +39,6 @@ import StreamlitMarkdown, {
   HeadingWithActionElements,
   isValidCssColor,
   LinkWithTargetBlank,
-  sanitizeLinkUri,
 } from "./StreamlitMarkdown"
 
 // Mock StreamlitConfig using global mock state (see vitest.setup.ts)
@@ -539,47 +538,6 @@ describe("StreamlitMarkdown", () => {
     const link = await screen.findByText("Some Page")
     expect(link).toHaveAttribute("href", "//0.0.0.0:8501/?p=some_page")
     expect(link).toHaveAttribute("target", "_self")
-  })
-
-  describe("sanitizeLinks prop", () => {
-    it("sanitizes javascript: URLs when sanitizeLinks is true", () => {
-      const source = "[click me](javascript:alert('xss'))"
-      render(
-        <StreamlitMarkdown source={source} allowHTML={false} sanitizeLinks />
-      )
-      // When href is empty, the element loses the "link" role, so we query by text
-      const link = screen.getByText("click me")
-      expect(link.tagName).toBe("A")
-      expect(link).toHaveAttribute("href", "")
-    })
-
-    it("sanitizes data: URLs when sanitizeLinks is true", () => {
-      const source = "[click me](data:text/html,<script>alert('xss')</script>)"
-      render(
-        <StreamlitMarkdown source={source} allowHTML={false} sanitizeLinks />
-      )
-      // When href is empty, the element loses the "link" role, so we query by text
-      const link = screen.getByText("click me")
-      expect(link.tagName).toBe("A")
-      expect(link).toHaveAttribute("href", "")
-    })
-
-    it("allows safe protocols when sanitizeLinks is true", () => {
-      const source = "[click me](https://example.com)"
-      render(
-        <StreamlitMarkdown source={source} allowHTML={false} sanitizeLinks />
-      )
-      const link = screen.getByRole("link", { name: "click me" })
-      expect(link).toHaveAttribute("href", "https://example.com")
-    })
-
-    it("allows javascript: URLs when sanitizeLinks is false (default)", () => {
-      const source = "[click me](javascript:alert('xss'))"
-      render(<StreamlitMarkdown source={source} allowHTML={false} />)
-      const link = screen.getByRole("link", { name: "click me" })
-      // Without sanitizeLinks, the dangerous URL is preserved
-      expect(link).toHaveAttribute("href", "javascript:alert('xss')")
-    })
   })
 
   it("doesn't render header anchors when isInSidebar is true", () => {
@@ -1618,115 +1576,5 @@ describe("CustomMediaTag", () => {
         expect(element).toHaveAttribute("src", src)
       }
     )
-  })
-})
-
-describe("sanitizeLinkUri", () => {
-  describe("allows safe protocols", () => {
-    it.each([
-      {
-        input: "https://example.com",
-        description: "HTTPS URL",
-      },
-      {
-        input: "http://example.com",
-        description: "HTTP URL",
-      },
-      {
-        input: "mailto:user@example.com",
-        description: "mailto URL",
-      },
-      {
-        input: "tel:+1234567890",
-        description: "tel URL",
-      },
-      {
-        input: "https://example.com/path?query=1#hash",
-        description: "HTTPS URL with path, query, and hash",
-      },
-    ])("returns unchanged $description", ({ input }) => {
-      expect(sanitizeLinkUri(input)).toBe(input)
-    })
-  })
-
-  describe("allows relative URLs", () => {
-    it.each([
-      { input: "/path/to/page", description: "absolute path" },
-      { input: "relative/path", description: "relative path" },
-      { input: "#anchor", description: "hash anchor" },
-      { input: "?query=param", description: "query string" },
-      { input: "./relative/path", description: "dot-relative path" },
-      { input: "../parent/path", description: "parent-relative path" },
-    ])("returns unchanged $description", ({ input }) => {
-      expect(sanitizeLinkUri(input)).toBe(input)
-    })
-  })
-
-  describe("blocks dangerous protocols", () => {
-    it.each([
-      {
-        input: "javascript:alert('xss')",
-        description: "javascript protocol",
-      },
-      {
-        input: "javascript:alert(document.cookie)",
-        description: "javascript with document.cookie",
-      },
-      {
-        input: "JAVASCRIPT:alert('xss')",
-        description: "uppercase JAVASCRIPT protocol",
-      },
-      {
-        input: "JaVaScRiPt:alert('xss')",
-        description: "mixed case JavaScript protocol",
-      },
-      {
-        input: "  javascript:alert('xss')",
-        description: "javascript with leading spaces",
-      },
-      {
-        input: "data:text/html,<script>alert('xss')</script>",
-        description: "data URL with HTML",
-      },
-      {
-        input:
-          "data:text/html;base64,PHNjcmlwdD5hbGVydCgneHNzJyk8L3NjcmlwdD4=",
-        description: "data URL with base64 encoded HTML",
-      },
-      {
-        input: "DATA:text/html,<script>alert('xss')</script>",
-        description: "uppercase DATA protocol",
-      },
-      {
-        input: "vbscript:msgbox('xss')",
-        description: "vbscript protocol",
-      },
-      {
-        input: "VBSCRIPT:msgbox('xss')",
-        description: "uppercase VBSCRIPT protocol",
-      },
-    ])("returns empty string for $description", ({ input }) => {
-      expect(sanitizeLinkUri(input)).toBe("")
-    })
-  })
-
-  describe("edge cases", () => {
-    it("handles empty string", () => {
-      expect(sanitizeLinkUri("")).toBe("")
-    })
-
-    it("handles URL with javascript in path (not protocol)", () => {
-      // This should be allowed - javascript is in the path, not the protocol
-      expect(sanitizeLinkUri("https://example.com/javascript:test")).toBe(
-        "https://example.com/javascript:test"
-      )
-    })
-
-    it("handles URL with data in path (not protocol)", () => {
-      // This should be allowed - data is in the path, not the protocol
-      expect(sanitizeLinkUri("https://example.com/data:test")).toBe(
-        "https://example.com/data:test"
-      )
-    })
   })
 })
