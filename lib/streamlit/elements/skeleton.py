@@ -64,9 +64,10 @@ class SkeletonMixin:
         content later, similar to ``st.empty()``.
 
         **Context manager mode**: The skeleton automatically clears when the
-        block exits, whether normally or due to an exception. Unlike
+        block exits, whether normally or due to an exception. Like
         ``st.spinner``, any ``st.*`` calls made inside the ``with`` block
-        are also cleared when the block exits, similar to ``st.empty()``.
+        are written to the parent container and remain visible after the
+        skeleton clears.
 
         Parameters
         ----------

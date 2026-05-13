@@ -95,13 +95,21 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
 
     def test_context_manager_uses_transient_elements(self) -> None:
         """Test that context manager mode uses transient elements (0.5s delay pattern)."""
-        with st.skeleton():
-            pass
+        import time
 
-        # Context manager mode uses transient elements, not regular elements
-        # The clear_transient message should be in the queue
-        delta = self.get_delta_from_queue()
-        assert delta.HasField("new_transient")
+        with st.skeleton():
+            # Sleep longer than the 0.5s delay to ensure skeleton is actually shown
+            time.sleep(0.7)
+            # Check the skeleton element was enqueued as a transient
+            create_delta = self.get_delta_from_queue()
+            assert create_delta.HasField("new_transient")
+            assert create_delta.new_transient.elements[0].HasField("skeleton")
+
+        # After exiting, the clear message should be in the queue
+        clear_delta = self.get_delta_from_queue()
+        assert clear_delta.HasField("new_transient")
+        # Clear message has empty elements list
+        assert len(clear_delta.new_transient.elements) == 0
 
     def test_context_manager_clears_on_exception(self) -> None:
         """Test that skeleton clears even when exception is raised."""

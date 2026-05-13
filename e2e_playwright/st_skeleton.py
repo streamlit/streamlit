@@ -34,7 +34,7 @@ if st.button("Run skeleton context manager (with delay)"):
 if st.button("Run skeleton context manager (with exception)"):
     try:
         with st.skeleton(height=100):
-            time.sleep(0.5)
+            time.sleep(0.7)  # Sleep longer than 0.5s delay to ensure skeleton shows
             raise ValueError("Test exception")
     except ValueError:
         st.error("Exception caught - skeleton was cleared")

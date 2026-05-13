@@ -164,8 +164,8 @@ class DeltaGeneratorSingleton:
 
     @property
     def skeleton_placeholder_cls(self) -> type[SkeletonPlaceholder]:
-        """Stub for SkeletonPlaceholder. Since SkeletonPlaceholder inherits from
-        DeltaGenerator, this is used to avoid circular imports.
+        """Stub for SkeletonPlaceholder. Registered via the singleton to avoid
+        circular imports between skeleton_placeholder.py and delta_generator.py.
         """
         return self._skeleton_placeholder_cls
 

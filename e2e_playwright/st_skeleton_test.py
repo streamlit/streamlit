@@ -68,6 +68,9 @@ def test_skeleton_standalone_replacement(app: Page):
     # Click the button to run standalone mode
     get_button(app, "Run skeleton standalone mode").click()
 
+    # Skeleton should appear while loading (before dataframe replaces it)
+    expect(app.get_by_test_id("stSkeleton")).to_be_visible(timeout=2000)
+
     # Wait for dataframe to appear (skeleton replaced)
     expect(app.get_by_test_id("stDataFrame")).to_be_visible(timeout=5000)
     # Original skeleton should be gone (replaced by dataframe)
