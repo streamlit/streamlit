@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 import streamlit as st
-from streamlit.elements.empty import SkeletonPlaceholder
+from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 from streamlit.errors import StreamlitInvalidHeightError, StreamlitInvalidWidthError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 
@@ -32,47 +32,44 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
 
     def test_skeleton_default_dimensions(self) -> None:
         """Test default dimensions: 100px height and stretch width."""
-        st.skeleton()
+        placeholder = st.skeleton()
 
-        delta = self.get_delta_from_queue()
-        el = delta.new_element
-        assert el.skeleton.height == 100
-        assert el.height_config.pixel_height == 100
-        assert el.width_config.use_stretch is True
+        # Verify the proto configuration (skeleton uses lazy loading)
+        assert placeholder._skeleton_proto.height == 100
+        assert placeholder._layout_config is not None
+        assert placeholder._layout_config.height == 100
+        assert placeholder._layout_config.width == "stretch"
 
     def test_skeleton_custom_pixel_height(self) -> None:
         """Test that st.skeleton accepts custom pixel height."""
-        st.skeleton(height=200)
+        placeholder = st.skeleton(height=200)
 
-        delta = self.get_delta_from_queue()
-        el = delta.new_element
-        assert el.skeleton.height == 200
-        assert el.height_config.pixel_height == 200
+        assert placeholder._skeleton_proto.height == 200
+        assert placeholder._layout_config is not None
+        assert placeholder._layout_config.height == 200
 
     def test_skeleton_stretch_height(self) -> None:
         """Test that st.skeleton accepts 'stretch' height."""
-        st.skeleton(height="stretch")
+        placeholder = st.skeleton(height="stretch")
 
-        delta = self.get_delta_from_queue()
-        el = delta.new_element
-        assert not el.skeleton.HasField("height")
-        assert el.height_config.use_stretch is True
+        # Proto doesn't have height set for stretch
+        assert not placeholder._skeleton_proto.HasField("height")
+        assert placeholder._layout_config is not None
+        assert placeholder._layout_config.height == "stretch"
 
     def test_skeleton_custom_pixel_width(self) -> None:
         """Test that st.skeleton accepts custom pixel width."""
-        st.skeleton(width=300)
+        placeholder = st.skeleton(width=300)
 
-        delta = self.get_delta_from_queue()
-        el = delta.new_element
-        assert el.width_config.pixel_width == 300
+        assert placeholder._layout_config is not None
+        assert placeholder._layout_config.width == 300
 
     def test_skeleton_stretch_width(self) -> None:
         """Test that st.skeleton accepts 'stretch' width explicitly."""
-        st.skeleton(width="stretch")
+        placeholder = st.skeleton(width="stretch")
 
-        delta = self.get_delta_from_queue()
-        el = delta.new_element
-        assert el.width_config.use_stretch is True
+        assert placeholder._layout_config is not None
+        assert placeholder._layout_config.width == "stretch"
 
     def test_skeleton_invalid_height(self) -> None:
         """Test that negative height raises an error."""
@@ -98,13 +95,15 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
 class SkeletonContextManagerTest(DeltaGeneratorTestCase):
     """Test st.skeleton context manager functionality."""
 
-    def test_context_manager_clears_on_exit(self) -> None:
-        """Test that skeleton clears when exiting context manager."""
+    def test_context_manager_uses_transient_elements(self) -> None:
+        """Test that context manager mode uses transient elements (0.5s delay pattern)."""
         with st.skeleton():
             pass
 
+        # Context manager mode uses transient elements, not regular elements
+        # The clear_transient message should be in the queue
         delta = self.get_delta_from_queue()
-        assert delta.new_element.HasField("empty")
+        assert delta.HasField("new_transient")
 
     def test_context_manager_clears_on_exception(self) -> None:
         """Test that skeleton clears even when exception is raised."""
@@ -114,8 +113,9 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         except ValueError:
             pass
 
+        # Should still have the transient clear message
         delta = self.get_delta_from_queue()
-        assert delta.new_element.HasField("empty")
+        assert delta.HasField("new_transient")
 
     def test_context_manager_propagates_exception(self) -> None:
         """Test that exceptions are propagated from context manager."""

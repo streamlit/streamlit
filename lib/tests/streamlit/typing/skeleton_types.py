@@ -24,7 +24,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
-    from streamlit.elements.empty import EmptyMixin, SkeletonPlaceholder
+    from streamlit.elements.empty import EmptyMixin
+    from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 
     dg = EmptyMixin()
 

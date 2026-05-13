@@ -87,6 +87,9 @@ from streamlit.elements.lib.mutable_tab_container import TabContainer as _TabCon
 from streamlit.elements.lib.mutable_popover_container import (
     PopoverContainer as _PopoverContainer,
 )
+from streamlit.elements.lib.skeleton_placeholder import (
+    SkeletonPlaceholder as _SkeletonPlaceholder,
+)
 
 # instantiate the DeltaGeneratorSingleton
 _dg_singleton = _DeltaGeneratorSingleton(
@@ -96,6 +99,7 @@ _dg_singleton = _DeltaGeneratorSingleton(
     expander_container_cls=_ExpanderContainer,
     tab_container_cls=_TabContainer,
     popover_container_cls=_PopoverContainer,
+    skeleton_placeholder_cls=_SkeletonPlaceholder,
 )
 _main: _DeltaGenerator = _dg_singleton._main_dg
 sidebar: _DeltaGenerator = _dg_singleton._sidebar_dg

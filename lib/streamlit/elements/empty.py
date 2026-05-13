@@ -14,10 +14,9 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, cast
 
-from typing_extensions import Self
-
+from streamlit.delta_generator_singletons import get_dg_singleton_instance
 from streamlit.elements.lib.layout_utils import (
     HeightWithoutContent,
     WidthWithoutContent,
@@ -28,43 +27,8 @@ from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
-    from types import TracebackType
-
     from streamlit.delta_generator import DeltaGenerator
-
-
-class SkeletonPlaceholder:
-    """A placeholder that displays a skeleton loading animation.
-
-    This class wraps a ``DeltaGenerator`` and can be used as a context manager.
-    When used as a context manager, the skeleton is automatically cleared when
-    the block exits.
-
-    This class has all the same methods as ``DeltaGenerator`` through delegation.
-    """
-
-    def __init__(self, dg: DeltaGenerator) -> None:
-        self._dg = dg
-
-    def __getattr__(self, name: str) -> Any:
-        # Delegate all attribute access to the underlying DeltaGenerator
-        return getattr(self._dg, name)
-
-    def __enter__(self) -> Self:
-        self._dg.__enter__()
-        return self
-
-    def __exit__(
-        self,
-        typ: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: TracebackType | None,
-    ) -> Literal[False]:
-        try:
-            self._dg.empty()
-        finally:
-            self._dg.__exit__(typ, exc, tb)
-        return False
+    from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 
 
 class EmptyMixin:
@@ -250,13 +214,11 @@ class EmptyMixin:
         if isinstance(height, int) and not isinstance(height, bool):
             skeleton_proto.height = height
 
-        dg = self.dg._enqueue(
-            "skeleton",
-            skeleton_proto,
+        return get_dg_singleton_instance().skeleton_placeholder_cls._create(
+            parent=self.dg,
+            skeleton_proto=skeleton_proto,
             layout_config=layout_config,
         )
-
-        return SkeletonPlaceholder(dg)
 
     @property
     def dg(self) -> DeltaGenerator:

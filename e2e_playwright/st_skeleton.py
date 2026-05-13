@@ -58,7 +58,7 @@ if st.button("Test skeleton in fragment"):
     @st.fragment
     def skeleton_fragment():
         with st.skeleton(height=100):
-            time.sleep(0.5)
+            time.sleep(1)  # Sleep longer than 0.5s delay so skeleton shows
         st.write("Fragment completed!")
         st.button("Rerun fragment")
 
