@@ -121,66 +121,6 @@ const StyledMarkdownViewer = styled.div(({ theme }) => ({
       transition: TOOLBAR_SHOW_TRANSITION,
     },
   },
-
-  // Apply styles to markdown content
-  "h1, h2, h3, h4, h5, h6": {
-    marginTop: 0,
-    marginBottom: "0.5em",
-  },
-
-  p: {
-    marginTop: 0,
-    marginBottom: "0.5em",
-  },
-
-  "ul, ol": {
-    marginTop: 0,
-    marginBottom: "0.5em",
-    paddingLeft: "1.5em",
-  },
-
-  // Inline code
-  code: {
-    padding: "0.2em 0.4em",
-    borderRadius: theme.radii.sm,
-    backgroundColor: "var(--gdg-bg-bubble)",
-    fontSize: "0.9em",
-    fontFamily:
-      '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace',
-  },
-
-  // Code blocks - reset the pre and nested code styles
-  pre: {
-    padding: "0.75em 1em",
-    margin: "0.5em 0",
-    borderRadius: theme.radii.sm,
-    backgroundColor: "var(--gdg-bg-bubble)",
-    overflowX: "auto",
-    fontFamily:
-      '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace',
-    fontSize: "0.875em",
-    lineHeight: 1.5,
-
-    // Reset code styles inside pre
-    code: {
-      padding: 0,
-      backgroundColor: "transparent",
-      fontSize: "inherit",
-      borderRadius: 0,
-    },
-  },
-
-  a: {
-    color: "var(--gdg-accent-color)",
-    textDecoration: "underline",
-  },
-
-  blockquote: {
-    margin: "0.5em 0",
-    paddingLeft: "1em",
-    borderLeft: `${theme.radii.sm} solid var(--gdg-border-color)`,
-    color: "var(--gdg-text-medium)",
-  },
 }))
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
