@@ -81,291 +81,105 @@ project-local bundled skills.
 
 ### Alternatives Considered
 
-**Symlink vs copy installation**
-
-| Option                    | Pros                                          | Cons                                         |
-|---------------------------|-----------------------------------------------|----------------------------------------------|
-| **Symlinks** (preferred)  | Auto-updates when Streamlit upgrades; no duplication | Not supported on all platforms (some Windows configs) |
-| **Copy**                  | Works everywhere                              | Drifts from installed Streamlit; needs re-run after upgrades |
-| **Hybrid** (chosen)       | Best of both: symlink by default, copy fallback | Slightly more complex implementation         |
-
-Decision: Use symlinks by default with copy fallback. This keeps skills in sync for
-most users while supporting platforms where symlinks fail.
-
-**Project root detection**
-
-| Option                                     | Pros                                    | Cons                                              |
-|--------------------------------------------|-----------------------------------------|---------------------------------------------------|
-| **Always current directory**               | Predictable                             | Wrong for monorepos or nested project structures  |
-| **Git root only**                          | Clean, well-defined                     | Fails for non-git projects                        |
-| **Heuristic** (chosen): existing dir > git root > cwd | Respects existing setup; finds repo root | Slightly magic; may surprise in edge cases        |
-
-Decision: Use heuristic approach. Check for existing `.agents/` or `.claude/`
-directories first, then fall back to git root, then current directory. This matches
-user intent in the common case.
-
-**Target directories**
-
-| Option                                               | Pros                                     | Cons                                           |
-|------------------------------------------------------|------------------------------------------|------------------------------------------------|
-| **Generic `.agents/skills/` only**                   | Simple, agent-agnostic                   | Claude Code users must configure discovery     |
-| **Claude Code only (`.claude/skills/`)**             | Works out of the box for Claude          | Excludes other agents                          |
-| **Both** (chosen): `.agents/skills/` + `.claude/skills/` when Claude detected | Works for Claude and other agents | Two directories to manage                      |
-
-Decision: Always install to `.agents/skills/` (generic) and also to `.claude/skills/`
-when `~/.claude` exists. This gives Claude users immediate access while keeping the
-generic location for other agents.
-
-**Command naming**
-
-| Option               | Pros                                    | Cons                                        |
-|----------------------|-----------------------------------------|---------------------------------------------|
-| `streamlit skills`   | Clear, matches library-skills naming    | New subcommand namespace                    |
-| `streamlit install-skills` | Action-oriented                    | Verbose; "install" may imply pip            |
-| `streamlit agents`   | Groups future agent commands            | Less specific to skills                     |
-
-Decision: Use `streamlit skills` for clarity and alignment with library-skills.
-
-**Global install source**
-
-| Option                          | Pros                                          | Cons                                              |
-|---------------------------------|-----------------------------------------------|---------------------------------------------------|
-| **Fetch from GitHub** (chosen)  | Always latest discovery logic; decoupled from Streamlit releases | Requires network; potential version drift         |
-| **Bundle in Streamlit**         | Works offline; version-matched                | Duplicates content; discovery script updates lag behind |
-| **Symlink to cloned repo**      | Single source of truth                        | Requires separate clone; complex setup            |
-
-Decision: Fetch from `streamlit/agent-skills` GitHub repository. The meta skill
-is lightweight (discovery script + instructions), and decoupling it from Streamlit
-releases allows faster iteration on the discovery logic. Network requirement is
-acceptable since global install is a one-time setup operation.
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Symlink vs copy** | Hybrid (symlink default, copy fallback) | Auto-updates on upgrade; fallback for Windows |
+| **Project root detection** | Heuristic: existing dir > git root > cwd | Respects existing setup, finds repo root |
+| **Target directories** | `.agents/skills/` + `.claude/skills/` if detected | Works for Claude and other agents |
+| **Command naming** | `streamlit skills` | Clear, matches library-skills naming |
+| **Global install source** | Fetch from GitHub | Decoupled from releases, allows fast iteration |
 
 ### Interactive Flow
-
-**Step 1: Choose install mode**
 
 ```text
 $ streamlit skills
 
-Streamlit Skills Installer  (magenta, bold)
+Streamlit Skills Installer
 
 Install mode:
   [p] Project (recommended) - skills available in this project only
   [g] Global - discovery skill available in all projects (requires network)
-       ↑cyan    ↑green
 
-Choice [p]:
+Choice [p]: _
 ```
 
-Accepted input is case-insensitive:
+After mode selection, show confirmation with target directories and source (for global).
+On completion, show installed paths with status indicators:
+- `✓ Installed:` (green) for new installs
+- `● Up to date:` (blue) for existing matching installs
+- `⚠ Skipped:` (yellow) for conflicts
 
-- `Enter`, `p`, `project` -> project install
-- `g`, `global` -> global install
-- Invalid input -> re-prompt with "Invalid choice, please enter 'p', 'g', or press Enter"
-- `Ctrl+C` or EOF -> cancel gracefully with "Aborted." message (exit 1)
-
-**Step 2: Confirm installation**
-
-For project install:
-
-```text
-Installing to project: /home/user/myproject  (bright blue path)
-
-Skills to install:
-  • developing-with-streamlit  (magenta bullet, cyan name)
-
-Target directories:
-  • .agents/skills/   (magenta bullet, cyan path)
-  • .claude/skills/   (if Claude Code detected)
-
-Proceed with installation? [Y/n]:
-```
-
-For global install:
-
-```text
-Installing globally  (bright blue)
-
-Skills to install:
-  • developing-with-streamlit  (magenta bullet, cyan name)
-
-Source: github.com/streamlit/agent-skills  (muted gray)
-
-Target directories:
-  • ~/.agents/skills/   (magenta bullet, cyan path)
-  • ~/.claude/skills/   (if Claude Code detected)
-
-Proceed with installation? [Y/n]:
-```
-
-Accepted input:
-
-- `Enter`, `y`, `yes` -> proceed
-- `n`, `no` -> cancel without changes
-
-**Step 3: Result**
-
-For project install:
-
-```text
-✓ Installed:  (green, bold)
-  → .agents/skills/developing-with-streamlit   (green arrow, cyan path)
-  → .claude/skills/developing-with-streamlit   (if Claude Code detected)
-
-✨ Successfully installed to /home/user/myproject  (green bold + bright blue path)
-
-Note: Installed skills are symlinks to your local Streamlit environment.
-      They generally should not be committed to git.
-      (muted gray styling)
-```
-
-For global install:
-
-```text
-✓ Installed:  (green, bold)
-  → ~/.agents/skills/developing-with-streamlit   (green arrow, cyan path)
-  → ~/.claude/skills/developing-with-streamlit   (if Claude Code detected)
-
-✨ Successfully installed globally  (green bold)
-
-The discovery skill will automatically find project-specific Streamlit skills
-when you work in any Streamlit project.
-(muted gray styling)
-```
-
-Additional result states use colored indicators:
-- `● Up to date:` (blue, bold) for already-installed skills
-- `⚠ Skipped due to conflicts:` (yellow, bold) for conflicts
-
-If generated links point into a local environment, the result should mention that
-these are local developer files and generally should not be committed.
-
-### Install Modes
-
-| Mode | What's installed | Where | Source |
-|------|------------------|-------|--------|
-| **Project** (default) | Direct Streamlit skills (`developing-with-streamlit`) | `<project>/.agents/skills/` (+ `.claude/skills/` if Claude detected) | Bundled in active Streamlit binary |
-| **Global** | Meta skill with discovery script | `~/.agents/skills/` (+ `~/.claude/skills/` if Claude detected) | Fetched from GitHub `streamlit/agent-skills` |
-
----
+Input handling:
+- `Enter`/`p`/`project` → project install; `g`/`global` → global install
+- `y`/`yes`/`Enter` → confirm; `n`/`no` → cancel
+- `Ctrl+C` → abort with "Aborted." (exit 1)
+- Invalid input → re-prompt
 
 ### Project Install (Default)
 
-Project install creates symlinks from the project's agent skills directories to
-the bundled skills in the active Streamlit installation. This ensures agents
-working in the project get version-matched Streamlit guidance.
+Creates symlinks from project agent skills directories to bundled skills in the
+active Streamlit installation, ensuring version-matched guidance.
 
-**What gets installed:**
-
-```
-<project>/.agents/skills/developing-with-streamlit -> <streamlit-package>/.agents/skills/developing-with-streamlit
-<project>/.claude/skills/developing-with-streamlit -> <streamlit-package>/.agents/skills/developing-with-streamlit  (if Claude detected)
-```
-
-**Key characteristics:**
-
-- **Version-matched:** Skills come from the invoked `streamlit` binary
-- **Symlinks preferred:** Auto-updates when Streamlit is upgraded in place
-- **Copy fallback:** If symlinks fail (e.g., some Windows configs), falls back to
-  copying with a note to re-run after Streamlit upgrades
-
-**Project root detection:** Install at the current directory if it already has
-`.agents/` or `.claude/`; otherwise install at the nearest git root; otherwise
-install at the current directory.
-
-**Target directories:**
+**Targets:**
 - `<project>/.agents/skills/developing-with-streamlit/` (always)
 - `<project>/.claude/skills/developing-with-streamlit/` (when `~/.claude` exists)
 
-**Copy fallback version tracking:** When copying (instead of symlinking), the
-implementation should store a version marker (e.g., `.streamlit-skills-version`
-file containing the Streamlit version string) in each target directory. On
-subsequent runs, compare this marker against the current Streamlit version to
-detect "up to date" vs "needs refresh" states.
+**Project root detection:** Existing `.agents/` or `.claude/` dir → git root → cwd.
 
-**Streamlit-owned symlink detection:** A symlink is considered Streamlit-owned
-if its target path resolves inside the active `streamlit` package directory
-(i.e., where `import streamlit; streamlit.__file__` points). Symlinks pointing
-elsewhere are treated as user-managed and skipped with a conflict warning.
+**Symlink behavior:**
+- Symlinks preferred (auto-updates on Streamlit upgrade)
+- Copy fallback for platforms without symlink support (stores version marker for
+  staleness detection)
+- A symlink is Streamlit-owned if it resolves inside the `streamlit` package
+  directory; others are user-managed and skipped with conflict warning
 
 ---
 
 ### Global Install
 
-Global install fetches the `developing-with-streamlit` meta skill from the
-[`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) GitHub
-repository and copies it to the user's home agent skills directories. The meta
-skill includes a discovery script that dynamically locates project-specific
-bundled skills at runtime.
+Fetches the `developing-with-streamlit` meta skill from
+[`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) and copies
+it to user home directories. The meta skill's `discover.py` script dynamically
+locates each project's bundled skills at runtime.
 
-**Requirements:**
+**Requires:** Network access to GitHub
 
-- Network access to GitHub
-
-**What gets installed:**
-
-```
-~/.agents/skills/developing-with-streamlit/
-├── SKILL.md           # Meta skill instructions
-└── scripts/
-    └── discover.py    # Discovery script
-
-~/.claude/skills/developing-with-streamlit/  (if ~/.claude exists)
-├── SKILL.md
-└── scripts/
-    └── discover.py
-```
-
-**Target directories:**
+**Targets:**
 - `~/.agents/skills/developing-with-streamlit/` (always)
 - `~/.claude/skills/developing-with-streamlit/` (when `~/.claude` exists)
 
-**How the discovery script works:**
+**What gets installed:**
+```
+developing-with-streamlit/
+├── SKILL.md           # Meta skill instructions
+└── scripts/
+    └── discover.py    # Locates project's bundled skills
+```
 
-The `discover.py` script dynamically locates the project's Streamlit installation
-at runtime and returns the path to the bundled skills. This means:
+**Benefits:**
+- Version-matched skills for each project automatically
+- No re-run needed when Streamlit is upgraded
+- Works across projects with different Streamlit versions
 
-- Agents get version-matched skills for each project automatically
-- No need to re-run `streamlit skills --global` when Streamlit is upgraded
-- Works across multiple projects with different Streamlit versions
-
-**GitHub fetch details:**
-
-- Repository: `https://github.com/streamlit/agent-skills`
-- Branch: `main`
-- Files to download:
-  - `developing-with-streamlit/SKILL.md`
-  - `developing-with-streamlit/scripts/discover.py`
-- The command should use raw GitHub URLs or the GitHub API to fetch files
-- On network failure, exit with a clear error message and non-zero status
+**GitHub fetch:** Downloads from `main` branch via raw URLs or GitHub API.
+On network failure, exits with clear error message.
 
 ---
 
-### Behavior Details (Both Modes)
+### Common Behavior
 
-- **Agent detection:** Install always targets `.agents/skills/`. It also targets
-  `.claude/skills/` when `~/.claude` exists (for project: at project root; for
-  global: at home directory). Other agent-specific directories are out of scope
-  for v1.
-- **Idempotent:** Safe to run multiple times. Existing matching installs report
-  "up to date"; broken Streamlit-owned links are repaired; regular files,
-  regular directories, or links that appear user-managed are skipped with a clear
-  conflict message.
-- **Non-interactive usage:** Automation should pass `--yes`. If prompts cannot
-  be shown, the command should fail with an actionable message rather than
-  hanging.
-- **Git hygiene:** The command should not edit `.gitignore` automatically, but
-  the CLI output and docs should make clear whether generated files are local
-  environment links or copied skill files.
+- **Idempotent:** Safe to run multiple times; reports "up to date" for existing
+  installs, repairs broken links, skips user-managed files with conflict warning
+- **Non-interactive:** Pass `--yes` for automation; fails with actionable message
+  if prompts unavailable
+- **Git hygiene:** Does not edit `.gitignore`; CLI output clarifies whether files
+  are symlinks (don't commit) or copies
 
 ## Follow-Up Work
 
-- Should project installs support `.codex/skills`, `.cursor/skills`, `.gemini/skills`,
-  and other harness-specific directories? Recommendation: not in v1. The generic
-  `.agents/skills/` target plus Claude compatibility keeps the first version
-  small, and runtime metrics can still detect additional harnesses later.
-- Should the command add a `--project-dir` option? Recommendation: defer until
-  users report monorepo friction. The root-detection heuristic covers the common
-  local project case without adding another option.
+- Support for other agent directories (`.codex/skills`, `.cursor/skills`, etc.) —
+  defer to v2 based on metrics/demand
+- `--project-dir` option for monorepos — defer until users report friction
 
 ## Out of Scope
 
