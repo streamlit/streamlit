@@ -56,7 +56,7 @@ def skeleton(
     height: int | Literal["stretch"] = 100,
     *,
     width: int | Literal["stretch"] = "stretch",
-) -> DeltaGenerator:
+) -> SkeletonPlaceholder:
     """Display a skeleton loading placeholder.
 
     Inserts an animated placeholder that can be used to reserve space while
@@ -66,7 +66,7 @@ def skeleton(
     This command supports two usage patterns:
 
     1. **Standalone placeholder** (like ``st.empty()``): Returns a
-       ``DeltaGenerator`` that can be replaced with actual content.
+       ``SkeletonPlaceholder`` that can be replaced with actual content.
 
     2. **Context manager** (like ``st.spinner()``): Shows the skeleton while
        the code block executes, then automatically clears it. In this mode,
@@ -77,18 +77,20 @@ def skeleton(
     ----------
     height : int or "stretch"
         Height of the skeleton in pixels, or ``"stretch"`` to fill the
-        available vertical space (in scrollable containers). Defaults to ``100``.
+        available vertical space. Defaults to ``100``.
 
     width : int or "stretch"
         Width of the skeleton in pixels, or ``"stretch"`` to fill the
         available horizontal space. Defaults to ``"stretch"``.
+        Note: ``"content"`` is not supported since skeleton has no inherent
+        content width.
 
     Returns
     -------
-    DeltaGenerator
-        A container that can hold a single element. Use ``with`` notation
-        or call methods directly on the returned object to replace the
-        skeleton with content.
+    SkeletonPlaceholder
+        A placeholder object that wraps a ``DeltaGenerator``. Use ``with``
+        notation or call ``st.*`` methods directly on the returned object
+        to replace the skeleton with content.
 
     Examples
     --------
@@ -138,12 +140,13 @@ placeholder = st.skeleton(height=200)
 placeholder.dataframe(data)  # Replaces skeleton with content
 ```
 
-- Shows **immediately** (no delay)
-- Returns a `DeltaGenerator` that displays the skeleton
+- Shows **immediately** when `st.skeleton()` is called (no delay)
+- Returns a `SkeletonPlaceholder` that wraps a `DeltaGenerator`
 - The skeleton remains visible until replaced with content
-- Calling any method on the returned object (e.g., `.write()`, `.dataframe()`) replaces
+- Calling any `st.*` method on the placeholder (e.g., `.write()`, `.dataframe()`) replaces
   the skeleton with that content
-- Calling `.empty()` on the returned object clears the skeleton without replacement
+- Multiple replacements are supported (each call replaces the previous content)
+- Calling `.empty()` clears the skeleton without replacement
 
 **Context manager mode (like `st.spinner()`):**
 
@@ -158,9 +161,15 @@ st.dataframe(data)  # Content appears in normal flow
 - If the block completes within 0.5s, no skeleton is shown (avoids flicker)
 - Uses Streamlit's **transient element mechanism** (same as spinner)
 - Auto-clears when the block exits (success or exception)
-- Elements written inside the `with` block are queued normally during execution;
-  the skeleton is transient and clears on exit, revealing subsequent content
+- Content written inside the `with` block appears in the **parent container**, not inside
+  the skeleton (same as `st.spinner()`)
 - Unlike `st.spinner()`, there is no text label—just the animated placeholder
+
+**Dual-mode transition:**
+
+When entering context manager mode, `__enter__` clears the immediately-shown skeleton and
+switches to transient mode with the 0.5s delay. This allows a single API to support both
+use cases transparently.
 
 **Dimension behavior:**
 
@@ -179,6 +188,12 @@ The skeleton displays a pulsing opacity animation (existing behavior from intern
 - Background: `theme.colors.darkenedBgMix15`
 - Border radius: `theme.radii.default`
 - Animation: 750ms pulse, infinite loop
+
+**Frontend rendering:**
+
+The skeleton element always fills its container (100% width and height). The actual
+dimensions are controlled by the layout config applied to the element container wrapper
+via the `useLayoutStyles` hook.
 
 ### Usage Examples
 
@@ -239,7 +254,22 @@ for col in [col1, col2, col3]:
 # Load and display content progressively
 for i, placeholder in enumerate(placeholders):
     time.sleep(0.5)  # Simulate staggered loading
-    placeholder.container().write(f"Card {i + 1} content")
+    placeholder.write(f"Card {i + 1} content")
+```
+
+**Skeleton in fragment:**
+
+```python
+import streamlit as st
+import time
+
+@st.fragment
+def data_section():
+    placeholder = st.skeleton(height=100)
+    time.sleep(1)
+    placeholder.write("Fragment content loaded!")
+
+data_section()
 ```
 
 **Context manager for blocking operations (transient mode):**
@@ -309,6 +339,23 @@ skeleton bars:
 st.skeleton(lines=3)  # Three text-like skeleton lines
 ```
 
+**Pulse animation customization:**
+
+Allow users to customize or disable the animation:
+
+```python
+st.skeleton(height=100, animation="none")  # Static skeleton
+st.skeleton(height=100, animation="shimmer")  # Shimmer instead of pulse
+```
+
+**Theming:**
+
+Allow skeleton color customization via theme configuration.
+
+**Label/text overlay:**
+
+Optional text overlay on skeleton (e.g., "Loading chart...").
+
 **Callback/auto-replace pattern:**
 
 The original feature request proposed callbacks that auto-execute:
@@ -328,6 +375,18 @@ Automatic skeleton display during cache misses could be a future enhancement:
 def load_data():
     ...
 ```
+
+## Compatibility Notes
+
+- The internal `_skeleton()` method remains available for internal use but is not part
+  of the public API
+- `SkeletonProto.style` field exists for internal `APP` style skeletons (app loading),
+  but user-facing skeletons always use `ELEMENT` style (the default)
+- The `height` field on `SkeletonProto` is preserved for backward compatibility, but
+  layout config is the preferred mechanism for new code
+- Internal skeleton components (`AppSkeleton`, `SquareSkeleton` styled-component) remain
+  separate from user-facing `st.skeleton()` and serve different purposes (Suspense
+  fallbacks, custom component loading states)
 
 ## Checklist
 
