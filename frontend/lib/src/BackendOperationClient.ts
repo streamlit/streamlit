@@ -28,14 +28,8 @@ const LOG = getLogger("BackendOperationClient")
 /** Default timeout for backend operation requests (30 seconds). */
 const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 
-/**
- * Timeout for deferred file requests (60 seconds).
- *
- * Note: The previous implementation waited indefinitely. This timeout was
- * introduced to prevent orphan requests from accumulating. For very large
- * file generation, callers can pass a custom timeout to `requestDeferredFile`.
- */
-const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 60_000
+/** Timeout for deferred file requests (3 minutes). */
+const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
 
 /** Information about a pending request. */
 interface PendingRequest<T> {
@@ -213,9 +207,6 @@ export class BackendOperationClient {
     // Return the first non-null payload field
     if (response.deferredFile) return response.deferredFile
     // Future: Add other payload types here
-    // if (response.dataframeChunk) return response.dataframeChunk
-    // if (response.validation) return response.validation
-    // if (response.autocomplete) return response.autocomplete
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")
