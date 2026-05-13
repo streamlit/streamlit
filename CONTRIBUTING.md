@@ -159,6 +159,15 @@ $ sudo apt-get install -y ripgrep
 
 Streamlit's development setup is pretty Mac- and Linux-centric. If you're doing Streamlit development on Windows, we suggest using our [devcontainer](./.devcontainer) via Github Codespaces or locally via VS Code. Alternatively, you can also spin up a Linux VM (e.g. via [VirtualBox](https://www.virtualbox.org/), which is free); or your own Linux Docker image; or using Microsoft's WSL ("Windows Subsystem for Linux").
 
+##### Notes on WSL2
+
+If you choose WSL2, follow the [Ubuntu](#ubuntu) instructions above from inside your WSL distro, with a few extra notes:
+
+- **Keep the checkout inside the WSL filesystem.** Clone into your Linux home directory (e.g. `~/src/streamlit`), not under `/mnt/c/`. Building and running `yarn` across the `/mnt/c` boundary is significantly slower and CRLF line endings on the Windows side can break shell scripts invoked by `make`.
+- **Use `nvm` to install the Node version pinned in [`.nvmrc`](./.nvmrc).** The Node packaged with most Ubuntu releases is too old.
+- **Enable Corepack before running `make`.** `corepack enable` is enough; Corepack will pick up the `yarn` version pinned by [`frontend/package.json`](./frontend/package.json)'s `packageManager` field on first use.
+- **Run `make all-dev` once before any `make frontend-*` target.** `make all-dev` is what runs `yarn install` and populates `frontend/.yarn/`; without it, frontend targets will fail with errors like _"Couldn't find the node_modules state file"_.
+
 ### 2. Grab the code
 
 _(You probably already know how to do this, but just in case...)_
