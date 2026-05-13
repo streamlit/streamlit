@@ -247,14 +247,14 @@ This gives users the best of both worlds:
 ### Backend Implementation (Revised)
 
 The `skeleton()` method needs to support both modes. Since Python can't detect "will this
-be used as a context manager?" at call time, we use a hybrid approach:
+be used as a context manager?" at call time, we use a hybrid approach where the skeleton
+shows immediately but `__enter__` clears it and switches to transient mode.
 
 **File: `lib/streamlit/elements/skeleton.py`** (new file)
 
 ```python
 from __future__ import annotations
 
-import contextlib
 import threading
 from typing import TYPE_CHECKING, Final, Literal, cast
 
@@ -271,7 +271,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner import add_script_run_ctx, enqueue_message
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
+    from types import TracebackType
     from streamlit.cursor import Cursor
 
 DELAY_SECS: Final = 0.5
@@ -284,17 +284,22 @@ class SkeletonPlaceholder(DeltaGenerator):
     - Context manager mode (like st.spinner): 0.5s delay, auto-clears on exit
     """
 
-    _is_context_manager: bool = False
-    _create_transient: object = None
-    _clear_transient: object = None
+    # Instance variables for dual-mode support
+    _sk_parent: DeltaGenerator | None = None
+    _sk_height: HeightWithoutContent = 100
+    _sk_width: WidthWithoutContent = "stretch"
+    _sk_entered_as_context_manager: bool = False
+    _sk_timer: threading.Timer | None = None
+    _sk_skeleton_shown: bool = False
+    _sk_display_lock: threading.Lock | None = None
 
     @staticmethod
-    def _create_standalone(
+    def _create(
         parent: DeltaGenerator,
         height: HeightWithoutContent,
         width: WidthWithoutContent,
     ) -> SkeletonPlaceholder:
-        """Create a standalone skeleton (like st.empty)."""
+        """Create a skeleton placeholder (shows immediately in standalone mode)."""
         layout_config = create_layout_config(
             width=width,
             height=height,
@@ -311,70 +316,70 @@ class SkeletonPlaceholder(DeltaGenerator):
                 dg_type=SkeletonPlaceholder,
             ),
         )
-        placeholder._is_context_manager = False
+        # Store parameters for potential context manager use
+        placeholder._sk_parent = parent
+        placeholder._sk_height = height
+        placeholder._sk_width = width
         return placeholder
 
-    def __init__(
-        self,
-        root_container: int | None,
-        cursor: Cursor | None,
-        parent: DeltaGenerator | None,
-        block_type: str | None,
-    ) -> None:
-        super().__init__(
-            root_container=root_container,
-            cursor=cursor,
-            parent=parent,
-            block_type=block_type,
-        )
+    def __enter__(self) -> SkeletonPlaceholder:
+        """Enter context manager mode: clear standalone skeleton, switch to transient."""
+        self._sk_entered_as_context_manager = True
+        self._sk_display_lock = threading.Lock()
 
-    @contextlib.contextmanager
-    def _as_context_manager(
-        self,
-        parent: DeltaGenerator,
-        height: HeightWithoutContent,
-        width: WidthWithoutContent,
-    ) -> Iterator[None]:
-        """Context manager mode (like st.spinner) - 0.5s delay, auto-clear."""
+        # Clear the immediately-shown standalone skeleton
+        self.empty()
+
+        # Set up transient skeleton with delay (like st.spinner)
         layout_config = create_layout_config(
-            width=width,
-            height=height,
+            width=self._sk_width,
+            height=self._sk_height,
             allow_stretch_height=True,
         )
-
         skeleton_proto = SkeletonProto()
         element_proto = ElementProto()
         element_proto.skeleton.CopyFrom(skeleton_proto)
 
         try:
-            create_transient, clear_transient = parent._transient(
+            parent = self._sk_parent or self
+            create_transient, self._sk_clear_transient = parent._transient(
                 element_proto,
                 layout_config=layout_config,
             )
         except NoSessionContext:
-            yield
-            return
+            # No session context - skip transient handling
+            return self
 
-        display_skeleton = True
-        display_lock = threading.Lock()
-        timer: threading.Timer | None = None
+        def show_skeleton() -> None:
+            with self._sk_display_lock:
+                if not self._sk_entered_as_context_manager:
+                    return  # Already exited, don't show
+                self._sk_skeleton_shown = True
+                enqueue_message(create_transient())
 
-        try:
-            def show_skeleton() -> None:
-                with display_lock:
-                    if display_skeleton:
-                        enqueue_message(create_transient())
+        self._sk_timer = threading.Timer(DELAY_SECS, show_skeleton)
+        add_script_run_ctx(self._sk_timer)
+        self._sk_timer.start()
+        return self
 
-            timer = threading.Timer(DELAY_SECS, show_skeleton)
-            add_script_run_ctx(timer)
-            timer.start()
-            yield
-        finally:
-            if timer:
-                timer.cancel()
-            with display_lock:
-                display_skeleton = False
-                enqueue_message(clear_transient())
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: TracebackType | None,
+    ) -> Literal[False]:
+        """Exit context manager: cancel timer and clear transient if shown."""
+        if self._sk_timer:
+            self._sk_timer.cancel()
+
+        if self._sk_display_lock:
+            with self._sk_display_lock:
+                self._sk_entered_as_context_manager = False
+                # Only clear if skeleton was actually shown
+                if self._sk_skeleton_shown and hasattr(self, "_sk_clear_transient"):
+                    enqueue_message(self._sk_clear_transient())
+
+        return False
 
 
 class SkeletonMixin:
@@ -398,7 +403,7 @@ class SkeletonMixin:
            ...     data = expensive_operation()
            >>> st.dataframe(data)
         """
-        return SkeletonPlaceholder._create_standalone(
+        return SkeletonPlaceholder._create(
             parent=self.dg,
             height=height,
             width=width,
@@ -409,38 +414,18 @@ class SkeletonMixin:
         return cast(DeltaGenerator, self)
 ```
 
-**Key insight**: The `skeleton()` method always returns a `SkeletonPlaceholder` (standalone
-mode). When used as a context manager, `SkeletonPlaceholder.__enter__` detects this and
-switches to transient behavior.
+**Key implementation details:**
 
-Actually, a cleaner approach is to have `skeleton()` return a special object that behaves
-differently based on how it's used:
+1. **Standalone mode**: `skeleton()` immediately enqueues a skeleton element via `_create()`.
+   The returned `SkeletonPlaceholder` can be replaced using any `st.*` method.
 
-```python
-class SkeletonPlaceholder(DeltaGenerator):
-    """Dual-mode skeleton: standalone or context manager."""
+2. **Context manager mode**: When `__enter__` is called, it:
+   - Clears the immediately-shown skeleton
+   - Sets up a transient skeleton with 0.5s delay (matching `st.spinner`)
+   - Tracks whether the skeleton was actually shown (`_sk_skeleton_shown`)
 
-    _parent: DeltaGenerator
-    _height: HeightWithoutContent
-    _width: WidthWithoutContent
-    _entered_as_context_manager: bool = False
-
-    def __enter__(self) -> SkeletonPlaceholder:
-        # Switch to transient/spinner mode
-        self._entered_as_context_manager = True
-        # ... set up timer and transient element ...
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> Literal[False]:
-        if self._entered_as_context_manager:
-            # Cancel timer, clear transient
-            ...
-        return False
-```
-
-This way:
-- `placeholder = st.skeleton()` → standalone, immediate, replaceable
-- `with st.skeleton():` → context manager, delayed, transient
+3. **Guarded cleanup**: `__exit__` only calls `clear_transient()` if `_sk_skeleton_shown`
+   is True, preventing invalid frontend updates when the block completes before the delay.
 
 ### Testing Strategy
 
@@ -487,13 +472,19 @@ with st.skeleton_loading(height=100):  # Context manager only
 **Pros:**
 - Clear separation of concerns
 - No mode-detection complexity
+- Better aligns with API principle #20 (One Use Case, One Command)
 
 **Cons:**
 - Two commands for related functionality
 - Users would need to learn two APIs
+- Less discoverable - user must know both commands exist
+- More API surface to document and maintain
 
 **Decision:** Single command with dual mode. The behavior difference is intuitive based
-on usage pattern.
+on usage pattern (assignment vs `with` statement), and users naturally expect both
+patterns to work with the same command based on experience with `st.empty()`. The dual
+mode follows existing Python conventions where many objects support both direct use
+and context manager use (e.g., `open()` returns a file object usable both ways).
 
 ### 3. Using @contextlib.contextmanager
 

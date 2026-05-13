@@ -101,7 +101,7 @@ def skeleton(
     >>>
     >>> placeholder = st.skeleton(height=200)
     >>> time.sleep(2)  # Simulate loading
-    >>> placeholder.image("https://placekitten.com/400/200")
+    >>> placeholder.image("https://placehold.co/400x200")
 
     Use as a context manager that automatically clears:
 
@@ -176,7 +176,7 @@ use cases transparently.
 | Parameter | Value | Behavior |
 |-----------|-------|----------|
 | `height` | `int` | Fixed height in pixels |
-| `height` | `"stretch"` | Fills available vertical space (in scrollable containers) |
+| `height` | `"stretch"` | Fills available vertical space (requires bounded container) |
 | `width` | `int` | Fixed width in pixels |
 | `width` | `"stretch"` (default) | Fills available horizontal space |
 
@@ -194,6 +194,20 @@ The skeleton displays a pulsing opacity animation (existing behavior from intern
 The skeleton element always fills its container (100% width and height). The actual
 dimensions are controlled by the layout config applied to the element container wrapper
 via the `useLayoutStyles` hook.
+
+**Accessibility:**
+
+- The skeleton uses `role="status"` with `aria-busy="true"` to indicate loading state
+- The pulse animation respects `prefers-reduced-motion` (animation disabled when reduced
+  motion is preferred)
+- Screen readers announce the loading state without being overly verbose
+
+**Rerun behavior:**
+
+If the skeleton is never replaced (e.g., a data fetch fails or the script reruns before
+replacement), the skeleton persists and displays again on the next rerun. This matches
+`st.empty()` behavior - the placeholder maintains its position in the layout until
+explicitly replaced or the element is no longer rendered in the script.
 
 ### Usage Examples
 
@@ -313,7 +327,7 @@ No text, icons, or other decorations—just a clean placeholder shape.
 | `st.empty()` | No | No | Yes | — | No |
 | `st.spinner()` | Yes | No | No | 0.5s | Yes |
 | `st.skeleton()` standalone | Yes | Yes | Yes | None | No |
-| `st.skeleton()` context mgr | Yes | Yes | Yes | 0.5s | No |
+| `st.skeleton()` context mgr | Yes | Yes | No | 0.5s | No |
 
 ## Out of Scope (Future Work)
 
@@ -383,6 +397,6 @@ def load_data():
 | Works on SiS, Cloud, etc?  | ✅ Yes - pure frontend animation, no server dependencies            |
 | No breaking API changes    | ✅ Yes - new command, additive change                               |
 | No new dependencies        | ✅ Yes - uses existing Skeleton component and proto                 |
-| Metrics collected          | ✅ Yes - upgrade internal `_skeleton` metric to public `skeleton`   |
+| Metrics collected          | ✅ Yes - new `skeleton` metric; `_skeleton` kept separate for internal callers |
 | Any security/legal impact? | ✅ No                                                               |
 | Any docs changes needed?   | ✅ Yes - add to API reference and loading patterns guide            |
