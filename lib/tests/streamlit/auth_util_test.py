@@ -18,6 +18,7 @@ import base64
 import json
 import sys
 import unittest
+import warnings
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
@@ -748,6 +749,115 @@ def test_is_authlib_installed_old_version(monkeypatch: pytest.MonkeyPatch) -> No
     fake_authlib.__version__ = "1.3.1"
     monkeypatch.setitem(sys.modules, "authlib", fake_authlib)
     assert is_authlib_installed() is False
+
+
+def test_provider_token_round_trip_suppresses_auth_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Round-trip provider tokens without surfacing Authlib or key-size warnings."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        token = auth_util.encode_provider_token("google")
+        payload = auth_util.decode_provider_token(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+    assert caught == []
+
+
+def test_decode_provider_token_expired_raises_streamlit_auth_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject provider tokens whose ``exp`` claim is already in the past."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(
+        auth_util, "_get_provider_token_expiration_timestamp", lambda: 1
+    )
+
+    token = auth_util.encode_provider_token("google")
+
+    with pytest.raises(StreamlitAuthError, match="expired"):
+        auth_util.decode_provider_token(token)
+
+
+@pytest.mark.parametrize(
+    ("claims", "expected_message"),
+    [
+        pytest.param({"exp": 9999999999}, "provider claim", id="missing_provider"),
+        pytest.param(
+            {"provider": "google"},
+            "exp claim",
+            id="missing_exp",
+        ),
+        pytest.param(
+            {"provider": "google", "exp": "bad"},
+            "exp claim",
+            id="invalid_exp_type",
+        ),
+    ],
+)
+def test_decode_provider_token_invalid_claims_raise_streamlit_auth_error(
+    claims: dict[str, Any],
+    expected_message: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject provider tokens when required claims are missing or malformed."""
+    from joserfc import jwt
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    token = jwt.encode({"alg": "HS256"}, claims, auth_util._get_joserfc_signing_key())
+
+    with pytest.raises(StreamlitAuthError, match=expected_message):
+        auth_util.decode_provider_token(token)
+
+
+def test_encode_provider_token_falls_back_to_authlib(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the Authlib encoder when ``joserfc`` is unavailable."""
+    recorded_providers: list[str] = []
+
+    def mock_encode_with_authlib(provider: str) -> str:
+        recorded_providers.append(provider)
+        return "fallback-token"
+
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_authlib",
+        mock_encode_with_authlib,
+    )
+
+    assert auth_util.encode_provider_token("google") == "fallback-token"
+    assert recorded_providers == ["google"]
+
+
+def test_decode_provider_token_falls_back_to_authlib(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the Authlib decoder when ``joserfc`` is unavailable."""
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_authlib",
+        MagicMock(return_value={"provider": "google", "exp": 1}),
+    )
+
+    assert auth_util.decode_provider_token("token") == {
+        "provider": "google",
+        "exp": 1,
+    }
 
 
 def test_set_split_cookie_single_chunk_path() -> None:
