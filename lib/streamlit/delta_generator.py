@@ -171,6 +171,10 @@ def _maybe_print_use_warning() -> None:
 def _maybe_print_fragment_callback_warning() -> None:
     """Print a warning if elements are being modified during a fragment callback."""
     ctx = get_script_run_ctx()
+    # Invariant: ThreadState is initialized whenever a ScriptRunContext exists
+    # on this thread, since ScriptRunContext.reset() and add_script_run_ctx()
+    # are the only public entry points for binding ctx, and both seed
+    # ThreadState. ThreadState.get() is therefore safe here without a guard.
     if ctx and ThreadState.get().in_fragment_callback:
         warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 

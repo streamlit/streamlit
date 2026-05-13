@@ -279,6 +279,48 @@ class FragmentTest(unittest.TestCase):
         assert ThreadState.get().fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_nested_fragment_restores_outer_delta_path(
+        self, patched_get_script_run_ctx
+    ):
+        """Regression test: after an inner fragment returns from inside an outer
+        fragment, ``ThreadState.get().delta_path`` should equal the outer's prior
+        value.
+
+        Pre-refactor, the outer-fragment's ``finally`` block wiped
+        ``ctx.current_fragment_delta_path`` to ``[]`` on exit from the inner
+        fragment, so ``check_fragment_path_policy`` stopped enforcing the outer
+        fragment's bounds for the rest of the outer body. Post-refactor,
+        ``ThreadState.scoped(fragment_id=...)`` restores all fields via
+        token-reset, including ``delta_path``.
+        """
+        ctx = MagicMock()
+        ctx.cursors = {}
+        ctx.fragment_ids_this_run = []
+        ctx.new_fragment_ids = ThreadSafeSet()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        captured: dict[str, object] = {}
+
+        @fragment
+        def inner_fragment():
+            pass
+
+        @fragment
+        def outer_fragment():
+            # Override the auto-derived delta_path with a sentinel value so the
+            # assertion below is unambiguous.
+            ThreadState.update(delta_path=(0, 1, 2))
+            captured["outer_before_inner"] = ThreadState.get().delta_path
+            inner_fragment()
+            captured["outer_after_inner"] = ThreadState.get().delta_path
+
+        outer_fragment()
+
+        assert captured["outer_before_inner"] == (0, 1, 2)
+        assert captured["outer_after_inner"] == (0, 1, 2)
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_wrapped_fragment_not_saved_in_FragmentStorage(
         self, patched_get_script_run_ctx
     ):
