@@ -97,23 +97,11 @@ SECRETS_MOCK = {
 
 
 def _create_test_provider_token(claims: dict[str, Any]) -> str:
-    """Create a provider token with whichever JOSE backend is available."""
+    """Create a provider token with the joserfc backend used by guarded tests."""
     header = {"alg": "HS256"}
+    from joserfc import jwt
 
-    try:
-        from joserfc import jwt
-
-        return jwt.encode(header, claims, auth_util._get_joserfc_signing_key())
-    except ImportError:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", DeprecationWarning)
-            from authlib.jose import jwt
-
-            token = jwt.encode(header, claims, auth_util.get_signing_secret())
-
-        if isinstance(token, bytes):
-            return token.decode("latin-1")
-        return token
+    return jwt.encode(header, claims, auth_util._get_joserfc_signing_key())
 
 
 class AuthUtilTest(unittest.TestCase):
@@ -821,6 +809,11 @@ def test_decode_provider_token_expired_raises_streamlit_auth_error(
     [
         pytest.param({"exp": 9999999999}, "provider claim", id="missing_provider"),
         pytest.param(
+            {"provider": "", "exp": 9999999999},
+            "provider claim",
+            id="empty_provider",
+        ),
+        pytest.param(
             {"provider": "google"},
             "exp claim",
             id="missing_exp",
@@ -843,6 +836,24 @@ def test_decode_provider_token_invalid_claims_raise_streamlit_auth_error(
 
     with pytest.raises(StreamlitAuthError, match=expected_message):
         auth_util.decode_provider_token(token)
+
+
+def test_authlib_provider_token_round_trip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise the real Authlib provider-token helpers end to end."""
+    pytest.importorskip("authlib")
+    from authlib.deprecate import AuthlibDeprecationWarning
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", AuthlibDeprecationWarning)
+        token = auth_util._encode_provider_token_with_authlib("google")
+        payload = auth_util._decode_provider_token_with_authlib(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
 
 
 def test_encode_provider_token_falls_back_to_authlib(

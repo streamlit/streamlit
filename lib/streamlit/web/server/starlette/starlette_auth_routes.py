@@ -22,6 +22,7 @@ import json
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
+    AUTH_INSTALLATION_MESSAGE,
     build_logout_url,
     clear_cookie_and_chunks,
     decode_provider_token,
@@ -255,10 +256,7 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     try:
         from authlib.integrations import starlette_client
     except ModuleNotFoundError:  # pragma: no cover - optional dependency
-        raise StreamlitAuthError(
-            "Authentication requires Authlib>=1.3.2. "
-            "Install it via `pip install streamlit[auth]`."
-        )
+        raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE)
 
     auth_section = get_secrets_auth_section()
     if auth_section:

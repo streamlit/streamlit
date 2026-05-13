@@ -27,6 +27,7 @@ from typing import (
 
 from streamlit import config, logger, runtime
 from streamlit.auth_util import (
+    AUTH_INSTALLATION_MESSAGE,
     encode_provider_token,
     get_secrets_auth_section,
     is_authlib_installed,
@@ -298,10 +299,7 @@ def login(provider: str | None = None) -> None:
     context = _get_script_run_ctx()
     if context is not None:
         if not is_authlib_installed():
-            raise StreamlitAuthError(
-                "Authentication requires Authlib>=1.3.2. "
-                "Install it via `pip install streamlit[auth]`."
-            )
+            raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE)
         validate_auth_credentials(provider)
         fwd_msg = ForwardMsg()
         fwd_msg.auth_redirect.url = generate_login_redirect_url(provider)

@@ -44,7 +44,7 @@ SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
 SINGLE_BYTE_BASE64_SIZE: Final = 4
 _PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
 _JOSERFC_SHORT_KEY_WARNING: Final = "Key size should be >= 112 bits"
-_AUTH_INSTALLATION_MESSAGE: Final = (
+AUTH_INSTALLATION_MESSAGE: Final = (
     "Authentication requires Authlib>=1.3.2. "
     "Install it via `pip install streamlit[auth]`."
 )
@@ -261,7 +261,7 @@ def _get_joserfc_signing_key() -> Any:
     with warnings.catch_warnings():
         warnings.filterwarnings(
             "ignore",
-            message=_JOSERFC_SHORT_KEY_WARNING,
+            message=re.escape(_JOSERFC_SHORT_KEY_WARNING),
             category=SecurityWarning,
         )
         return OctKey.import_key(get_signing_secret())
@@ -305,6 +305,8 @@ def _validate_provider_token_claims(
         raise ValueError("provider claim is missing")
     if not isinstance(provider, str):
         raise TypeError("provider claim is invalid")
+    if provider == "":
+        raise ValueError("provider claim is missing")
 
     exp = claims.get("exp")
     if exp is None:
@@ -347,7 +349,7 @@ def _decode_provider_token_with_authlib(
             provider_token, get_signing_secret(), claims_options=claim_options
         )
         payload.validate()
-    except JoseError as e:
+    except (JoseError, TypeError, ValueError) as e:
         raise StreamlitAuthError(f"Error decoding provider token: {e}") from None
 
     return cast("ProviderTokenPayload", payload)
@@ -361,7 +363,7 @@ def encode_provider_token(provider: str) -> str:
         try:
             return _encode_provider_token_with_authlib(provider)
         except ImportError:  # pragma: no cover - optional dep
-            raise StreamlitAuthError(_AUTH_INSTALLATION_MESSAGE) from None
+            raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE) from None
 
 
 def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
@@ -372,7 +374,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
         try:
             return _decode_provider_token_with_authlib(provider_token)
         except ImportError:  # pragma: no cover - optional dep
-            raise StreamlitAuthError(_AUTH_INSTALLATION_MESSAGE) from None
+            raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE) from None
 
 
 def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
