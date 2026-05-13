@@ -76,6 +76,12 @@ class FragmentThreadState:
     in_fragment_callback: bool = False
     active_script_hash: str = ""
     is_parallel_worker: bool = False
+    # Fragment id whose container was just pre-allocated on this thread by
+    # ``_dispatch_parallel_fragment``. The matching ``wrapped_fragment`` reads
+    # and clears this on entry, so nested fragments do not inherit it and
+    # correctly create their own container. Call-local in spirit; cleared as
+    # soon as it is consumed.
+    pre_allocated_container_fragment_id: str | None = None
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(

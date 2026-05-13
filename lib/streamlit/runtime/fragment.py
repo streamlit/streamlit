@@ -334,10 +334,18 @@ def _run_parallel_fragment(
     """
 
     def run_fragment() -> None:
+        # ``pre_allocated_container_fragment_id`` tells the matching
+        # ``wrapped_fragment`` invocation to skip creating its own container
+        # because ``_dispatch_parallel_fragment`` already pre-created one on
+        # the main thread (and pushed it onto the inherited DG stack via the
+        # copied context). It is consumed (cleared) on entry to
+        # ``wrapped_fragment`` so nested fragments running inline on this
+        # same worker thread do not inherit it.
         _thread_state.set(
             FragmentThreadState(
                 fragment_id=fragment_id,
                 is_parallel_worker=True,
+                pre_allocated_container_fragment_id=fragment_id,
             )
         )
         try:
@@ -431,6 +439,20 @@ def _fragment(
             prev_fragment_id = ts.fragment_id
             ts.fragment_id = fragment_id
 
+            # Capture and consume the pre-allocated-container signal: only the
+            # ``wrapped_fragment`` invocation for the fragment that
+            # ``_dispatch_parallel_fragment`` just pre-created a container for
+            # should skip ``st.container()``. Clearing the field here ensures
+            # that nested fragments running inline on the same worker thread
+            # (e.g. a sequential ``@st.fragment`` called inside a
+            # ``@st.fragment(parallel=True)`` body) do not inherit it and
+            # correctly create their own container — keeping the initial-run
+            # and fragment-rerun delta paths symmetric.
+            uses_pre_allocated_container = (
+                ts.pre_allocated_container_fragment_id == fragment_id
+            )
+            ts.pre_allocated_container_fragment_id = None
+
             try:
                 # Make sure we set the active script hash to the same value
                 # for the fragment run as when defined upon initialization
@@ -443,12 +465,14 @@ def _fragment(
                 )
                 result = None
                 with active_hash_context:
-                    # For parallel workers, the container was pre-created by
-                    # _dispatch_parallel_fragment and is already on the DG
-                    # stack. For sequential runs, create a new container.
+                    # For the parallel fragment whose container was pre-created
+                    # by _dispatch_parallel_fragment, skip creating another one
+                    # — we already have the right container on the DG stack.
+                    # All other fragments (sequential, or nested inside a
+                    # parallel fragment) create their own container.
                     container_ctx: contextlib.AbstractContextManager[Any] = (
                         contextlib.nullcontext()
-                        if _thread_state.get().is_parallel_worker
+                        if uses_pre_allocated_container
                         else st.container()
                     )
                     with container_ctx:
