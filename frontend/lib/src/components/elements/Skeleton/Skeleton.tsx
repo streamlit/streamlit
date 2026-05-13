@@ -32,11 +32,14 @@ interface SkeletonProps {
  * Note: The element prop contains style and height fields, but height is
  * handled by the parent container's layout config, and style is reserved
  * for future use (e.g., APP skeleton style).
+ *
+ * Uses "stSkeletonElement" test ID to distinguish from internal loading
+ * skeletons (Suspense fallbacks) that use "stSkeleton".
  */
 const RawSkeleton: FC<SkeletonProps> = (_props: SkeletonProps) => (
   <SquareSkeleton
     className="stSkeleton"
-    data-testid="stSkeleton"
+    data-testid="stSkeletonElement"
     height="100%"
     width="100%"
   />

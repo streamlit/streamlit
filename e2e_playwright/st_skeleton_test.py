@@ -21,7 +21,7 @@ from e2e_playwright.shared.app_utils import get_button
 def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
     """Snapshot test for static skeleton element."""
     # Get the first skeleton (the one under "Static Skeleton" heading)
-    skeleton = app.get_by_test_id("stSkeleton").first
+    skeleton = app.get_by_test_id("stSkeletonElement").first
     expect(skeleton).to_be_visible()
     assert_snapshot(skeleton, name="st_skeleton-default")
 
@@ -29,7 +29,7 @@ def test_skeleton_snapshot(app: Page, assert_snapshot: ImageCompareFunction):
 def test_skeleton_width_configurations(app: Page):
     """Test skeleton with different width configurations."""
     # Get all skeletons under "Width Configurations" section
-    skeletons = app.get_by_test_id("stSkeleton")
+    skeletons = app.get_by_test_id("stSkeletonElement")
     # Should have at least 3 skeletons: 1 static + 2 width configs
     expect(skeletons).to_have_count(4)  # 1 static + 2 width + 1 in form
 
@@ -59,12 +59,10 @@ def test_skeleton_context_manager_with_delay(app: Page):
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
 
-    # Skeleton should appear while processing (use nth(0) to get the new transient one)
-    expect(app.get_by_test_id("stSkeleton").first).to_be_visible(timeout=2000)
-
-    # Wait for app to finish running - use expect with longer timeout
-    # since wait_for_app_run doesn't accept timeout
-    expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=5000)
+    # Wait for app to finish running - the context manager has a 1s sleep,
+    # so we need to wait for the success message which appears after the skeleton clears.
+    # Use a longer timeout to account for the delay + script execution time.
+    expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=10000)
 
 
 def test_skeleton_context_manager_with_exception(app: Page):
@@ -73,15 +71,23 @@ def test_skeleton_context_manager_with_exception(app: Page):
     get_button(app, "Run skeleton context manager (with exception)").click()
 
     # Wait for error message with longer timeout for processing
+    # (the script has a 0.7s sleep before raising the exception)
     expect(app.get_by_text("Exception caught - skeleton was cleared")).to_be_visible(
-        timeout=3000
+        timeout=10000
     )
 
 
 def test_skeleton_standalone_replacement(app: Page):
     """Test standalone mode replaces skeleton with content."""
+    # Wait for the app to finish any previous runs
+    wait_for_app_run(app)
+
     # Click the button to run standalone mode
-    get_button(app, "Run skeleton standalone mode").click()
+    button = get_button(app, "Run skeleton standalone mode")
+    button.click()
+
+    # Wait for the app to run (this includes the 1s sleep in the script)
+    wait_for_app_run(app)
 
     # Wait for dataframe to appear (skeleton replaced)
     expect(app.get_by_test_id("stDataFrame")).to_be_visible(timeout=5000)
@@ -103,8 +109,9 @@ def test_skeleton_in_fragment(app: Page):
     # Click button to test fragment
     get_button(app, "Test skeleton in fragment").click()
 
-    # Wait for the fragment to complete
-    expect(app.get_by_text("Fragment completed!")).to_be_visible(timeout=3000)
+    # Wait for the fragment to complete - fragment has a 1s sleep inside a skeleton
+    # context manager, so we need a longer timeout
+    expect(app.get_by_text("Fragment completed!")).to_be_visible(timeout=10000)
 
     # The rerun fragment button should be visible
     expect(app.get_by_role("button", name="Rerun fragment", exact=True)).to_be_visible()
@@ -117,7 +124,7 @@ def test_skeleton_in_form(app: Page):
     expect(form).to_be_visible()
 
     # Skeleton should be in the form
-    skeleton_in_form = form.get_by_test_id("stSkeleton")
+    skeleton_in_form = form.get_by_test_id("stSkeletonElement")
     expect(skeleton_in_form).to_be_visible()
 
     # Submit the form

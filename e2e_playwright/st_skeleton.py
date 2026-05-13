@@ -52,13 +52,13 @@ if st.button("Run skeleton context manager (with exception)"):
 if st.button("Run skeleton standalone mode"):
     placeholder = st.skeleton(height=200)
     time.sleep(1)
-    placeholder.dataframe({"col1": [1, 2, 3], "col2": [4, 5, 6]})
+    placeholder.dataframe({"col1": [1, 2, 3], "col2": [4, 5, 6]})  # type: ignore[operator]
 
 # Standalone mode - clears skeleton with empty()
 if st.button("Run skeleton standalone clear"):
     placeholder = st.skeleton(height=100)
     time.sleep(0.5)
-    placeholder.empty()
+    placeholder.empty()  # type: ignore[operator]
     st.info("Skeleton was cleared with empty()")
 
 # Fragment with skeleton
@@ -80,4 +80,4 @@ with st.form("skeleton_form"):
     placeholder = st.skeleton(height=80)
     submitted = st.form_submit_button("Submit")
     if submitted:
-        placeholder.success("Form submitted!")
+        placeholder.success("Form submitted!")  # type: ignore[operator]

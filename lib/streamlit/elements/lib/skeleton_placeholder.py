@@ -58,8 +58,9 @@ class SkeletonPlaceholder:
     ) -> None:
         """Initialize the skeleton placeholder.
 
-        In standalone mode, the skeleton is shown immediately when accessed.
-        In context manager mode, we defer showing until after a 0.5s delay.
+        In standalone mode, the skeleton is shown immediately.
+        In context manager mode, the immediate skeleton is cleared and replaced
+        with a delayed transient skeleton (like st.spinner).
         """
         self._parent = parent
         self._skeleton_proto = skeleton_proto
@@ -67,6 +68,7 @@ class SkeletonPlaceholder:
 
         # State tracking
         self._in_context_manager = False
+        self._used_standalone = False  # True once methods are called (e.g., .write())
         self._timer: threading.Timer | None = None
         self._display_lock = threading.Lock()
         self._should_display = True
@@ -75,18 +77,13 @@ class SkeletonPlaceholder:
         self._create_transient: Callable[[], ForwardMsg] | None = None
         self._clear_transient: Callable[[], ForwardMsg] | None = None
 
-        # Lazily created DeltaGenerator for standalone mode
-        self._dg: DeltaGenerator | None = None
-
-    def _ensure_enqueued(self) -> DeltaGenerator:
-        """Ensure the skeleton is enqueued for standalone mode, return DeltaGenerator."""
-        if self._dg is None:
-            self._dg = self._parent._enqueue(
-                "skeleton",
-                self._skeleton_proto,
-                layout_config=self._layout_config,
-            )
-        return self._dg
+        # Immediately enqueue the skeleton in standalone mode.
+        # If used as context manager, __enter__ will clear this and switch to transient.
+        self._dg = self._parent._enqueue(
+            "skeleton",
+            self._skeleton_proto,
+            layout_config=self._layout_config,
+        )
 
     @staticmethod
     def _create(
@@ -103,9 +100,10 @@ class SkeletonPlaceholder:
             raise AttributeError(
                 f"'{type(self).__name__}' object has no attribute '{name}'"
             )
-        # Standalone mode: ensure skeleton is enqueued, then delegate to DeltaGenerator
-        # This lazy enqueue avoids flashing the skeleton when used as context manager
-        return getattr(self._ensure_enqueued(), name)
+        # Mark as used in standalone mode (prevents later context manager use)
+        self._used_standalone = True
+        # Delegate to the internal DeltaGenerator
+        return getattr(self._dg, name)
 
     def __dir__(self) -> list[str]:
         """Return DeltaGenerator methods for IDE autocompletion."""
@@ -116,8 +114,8 @@ class SkeletonPlaceholder:
     def __enter__(self) -> Self:
         """Enter context manager mode with 0.5s delay before showing skeleton.
 
-        In context manager mode, we don't show the skeleton immediately.
-        Instead, we use transient elements with a delay (like st.spinner).
+        In context manager mode, we clear the immediately-shown skeleton and switch
+        to transient elements with a delay (like st.spinner).
 
         Raises
         ------
@@ -125,11 +123,9 @@ class SkeletonPlaceholder:
             If the placeholder was already used in standalone mode (via method calls
             like `placeholder.write()`) before entering context manager mode.
         """
-        from streamlit.proto.Empty_pb2 import Empty as EmptyProto
-
         # Disallow mixing standalone and context-manager modes.
-        # If _dg is set, the placeholder was already used in standalone mode.
-        if self._dg is not None:
+        # If methods were already called, the user is in standalone mode.
+        if self._used_standalone:
             raise RuntimeError(
                 "Cannot use st.skeleton() as a context manager after calling methods "
                 "on it (like .write(), .dataframe(), etc.). Use either standalone mode "
@@ -139,12 +135,9 @@ class SkeletonPlaceholder:
         with self._display_lock:
             self._in_context_manager = True
 
-        # Reserve a slot by enqueuing an empty element (no flash).
-        # The skeleton will be shown via transient after the delay.
-        empty_proto = EmptyProto()
-        self._dg = self._parent._enqueue(
-            "empty", empty_proto, layout_config=self._layout_config
-        )
+        # Clear the immediately-shown skeleton and switch to transient mode.
+        # Use empty() to clear without flashing any content.
+        self._dg.empty()
 
         # Build the element proto for transient use
         element_proto = ElementProto()

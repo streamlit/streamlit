@@ -26,7 +26,7 @@ describe("Skeleton element", () => {
   it("renders with correct styling and fills container", () => {
     render(<Skeleton element={SkeletonProto.create()} />)
 
-    const skeletonElement = screen.getByTestId("stSkeleton")
+    const skeletonElement = screen.getByTestId("stSkeletonElement")
     expect(skeletonElement).toBeVisible()
     expect(skeletonElement).toHaveClass("stSkeleton")
     // Use toHaveStyle for Emotion CSS-in-JS styles, not toHaveAttribute
