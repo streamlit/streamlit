@@ -370,10 +370,9 @@ def add_script_run_ctx(
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
             dataclasses.asdict(parent_ts),
         )
-        # Only wrap thread.run for threads that haven't started yet. If the
-        # caller passed in the currently-running thread, run() is already
-        # executing and the wrapper would be dead code while still polluting
-        # the thread's instance attrs across tests.
+        # Skip the wrap if the target is already running: run() has
+        # already been called, and setting the sentinel here would
+        # pollute the main thread across tests.
         if thread is not threading.current_thread() and not getattr(
             thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, False
         ):
@@ -388,31 +387,17 @@ def add_script_run_ctx(
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
             setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)
     elif ctx is not None and thread is threading.current_thread():
-        # The caller is attaching ctx to the current (already-running) thread
-        # from inside the thread itself. The thread.run wrap above is moot
-        # because run() is already executing. Seed ThreadState directly so
-        # subsequent ThreadState.get() / enqueue_message() calls don't crash.
+        # Caller is attaching ctx from inside the currently-running
+        # thread, so the thread.run wrap above is moot. Seed ThreadState
+        # directly from ctx so subsequent ThreadState.get() /
+        # enqueue_message() calls don't crash. See the add_script_run_ctx
+        # docstring for the self-attach behaviour contract.
         #
-        # This handles two callers:
-        #   1. ScriptRunner._run_script_thread, which attaches before ctx.reset()
-        #      seeds ThreadState. reset() will overwrite this seed shortly.
-        #   2. User code that does `add_script_run_ctx(ctx=saved_ctx)` from
-        #      inside a worker thread (documented against, but a real pattern).
-        #
-        # Behaviour for (2):
-        #   - fragment_id / delta_path live in the parent's ContextVar and
-        #     cannot be recovered from a different thread, so deltas from
-        #     such a worker will not be stamped with fragment_id. Pre-PR,
-        #     this stamping was racy on a shared mutable field.
-        #   - active_script_hash is seeded from main_script_hash, NOT from
-        #     the parent's current ThreadState.active_script_hash. For MPA v1
-        #     page bodies executing under `ctx.run_with_active_hash(page_hash)`,
-        #     the parent's active hash is the page hash; the worker still
-        #     observes main_script_hash here. Locked in by
-        #     `test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash`.
-        #     MPA v1 users hitting this should migrate to MPA v2 /
-        #     st.navigation, where every page runs under main_script_hash.
-        # See PR #15072 for the behaviour-change rationale.
+        # Two callers exercise this branch:
+        #   1. ScriptRunner._run_script_thread, before ctx.reset() reseeds.
+        #   2. User code calling add_script_run_ctx(ctx=saved_ctx) from
+        #      inside a worker thread (documented against, but a real
+        #      pattern).
         ThreadState.initialize(
             active_script_hash=ctx.pages_manager.main_script_hash,
         )
