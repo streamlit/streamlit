@@ -18,7 +18,7 @@ enables clean patterns for database-backed editing, validation, and programmatic
 
 - [#7749](https://github.com/streamlit/streamlit/issues/7749) — Users report "disappearing inputs"
   when using `st.data_editor` with session state.
-  [Phase 1 (schema-based identity)](https://github.com/streamlit/streamlit/issues/7749#issuecomment-2345678901)
+  Phase 1 ([schema-based identity](https://github.com/streamlit/streamlit/pull/10269))
   solves this for `num_rows="fixed"`, but dynamic row operations still need explicit handling.
 
 - [#6540](https://github.com/streamlit/streamlit/issues/6540) — Users want to programmatically
@@ -52,7 +52,8 @@ Problems with this pattern:
 
 ### Why Phase 1 Alone Is Insufficient
 
-Phase 1 (schema-based identity for fixed-row editors) solves the computed-column case but doesn't
+Phase 1 ([schema-based identity for fixed-row editors](https://github.com/streamlit/streamlit/pull/10269))
+solves the computed-column case but doesn't
 address row operations (`num_rows="add"`, `"delete"`, `"dynamic"`). For these modes, automatic
 detection of "committed" edits is complex and error-prone. An explicit callback gives users
 control and unlocks additional use cases.
@@ -166,7 +167,11 @@ class DataEditorEdits(TypedDict):
 | **With forms** | Callback invoked on form submit, not on each cell edit |
 | **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
 | **`st.session_state[key]`** | Cleared on success; preserved on exception |
-| **When `apply_edits=None`** | No behavior change from current `st.data_editor` |
+| **When `apply_edits=None`** | No behavior change from current `st.data_editor`; `st.session_state[key]` continues to expose the `EditingState` dict as documented today |
+
+**What counts as "edits present"**: The callback is invoked only when `edited_rows`, `added_rows`,
+or `deleted_rows` is non-empty. Column resizes, sort state, and UI-only interactions do not count
+as edits and do not trigger the callback.
 
 **Commit trigger clarification**: The callback fires when edits transition from "pending in UI"
 to "committed to widget state" — i.e., when `on_change` would fire. This means:
@@ -226,6 +231,11 @@ st.data_editor(
 
 **Example 3: Revert/reset functionality (#6540)**
 
+This pattern works when the user has made edits and then clicks "Revert" — the next edit
+commit will reset to source data. If no edits are pending, the button click causes a rerun
+but the callback is not invoked (since `edits` would be empty). For a "reset anytime" button
+that works even with no pending edits, use `st.rerun()` with fresh source data instead.
+
 ```python
 def handle_edits(source_df, edited_df, edits):
     if st.session_state.get("revert_requested"):
@@ -233,10 +243,7 @@ def handle_edits(source_df, edited_df, edits):
         return source_df  # Reject edits, return original
     return edited_df  # Accept edits
 
-col1, col2 = st.columns(2)
-with col1:
-    st.button("Revert Changes", on_click=lambda: st.session_state.update(revert_requested=True))
-
+st.button("Revert Changes", on_click=lambda: st.session_state.update(revert_requested=True))
 st.data_editor(df, key="editor", num_rows="dynamic", apply_edits=handle_edits)
 ```
 
@@ -258,8 +265,8 @@ st.data_editor(df, key="editor", apply_edits=maybe_save)
 
 | Feature | Interaction |
 |---------|-------------|
-| `on_change` | Fires first (for side effects), then `apply_edits` during rerun |
-| `key` | Required for `apply_edits` to work correctly (widget identity) |
+| `on_change` | Both execute in the same rerun: `on_change` fires first (before script body), then `apply_edits` when the script reaches the `st.data_editor(...)` call |
+| `key` | Required for `apply_edits` to work correctly; if omitted with `apply_edits` set, raises `StreamlitAPIException` |
 | `num_rows` | Works with all modes; most useful for `"add"`, `"delete"`, `"dynamic"` |
 | `disabled` | If all editing disabled, no edits occur, callback not invoked |
 | `column_config` | No interaction; column config affects editing UI, not callback |
@@ -308,23 +315,24 @@ def sync_to_database(source_df, edited_df, edits):
 
 - **Async callbacks**: `async def apply_edits(...)` not supported in initial release
 - **Partial success**: All-or-nothing semantics; no per-row error handling
-- **Conflict resolution UI**: If callback returns data that conflicts with pending edits, no
-  merge UI is provided — callback's return value wins
+- **Conflict resolution UI**: If the callback returns data that differs from the editor's source
+  while the user is mid-edit in a new cell, the callback's return value replaces the source
+  and the in-progress edit continues — no merge UI is provided
 - **Automatic retry**: On exception, user must manually trigger next edit to retry
 - **Automatic commit detection**: For simple `st.session_state.df = st.data_editor(...)` patterns,
   automatic detection of committed edits may be added as a convenience path in the future
 
 ## Checklist
 
-| Item | Status |
-|------|--------|
-| Works on SiS, Cloud, etc? | Yes — standard callback execution |
-| No breaking API changes | Yes — new optional parameter only |
-| No new dependencies | Yes |
-| New proto fields | Yes — see below |
-| Metrics collected | Track `apply_edits` usage vs. without |
-| Any security/legal impact? | None — callback runs user code like `on_change` |
-| Any docs changes needed? | Yes — document `apply_edits` parameter and patterns |
+| Item | ✅ or comment |
+|------|---------------|
+| Works on SiS, Cloud, etc? | ✅ — standard callback execution |
+| No breaking API changes | ✅ — new optional parameter only |
+| No new dependencies | ✅ |
+| New proto fields | ✅ — see below |
+| Metrics collected | ✅ — track `apply_edits` usage vs. without |
+| Any security/legal impact? | ✅ None — callback runs user code like `on_change` |
+| Any docs changes needed? | ✅ — document `apply_edits` parameter and patterns |
 
 **Proto changes**: Add a `clear_edit_state` boolean or `edit_state_version` counter to
 `Arrow.proto`. When `apply_edits` succeeds, the backend sets this field to signal the frontend
