@@ -57,21 +57,23 @@ requiring Node.js, and ensures version-matched skills for project installs.
 
 - [streamlit/agent-skills GitHub](https://github.com/streamlit/agent-skills) - Source for global meta skill
 - [npx skills (vercel/skills)](https://github.com/vercel/skills) - Cross-agent skill installer
-- [library-skills GitHub](https://github.com/tiangolo/library-skills)
-- [library-skills SPEC](https://github.com/tiangolo/library-skills/blob/main/SPEC.md)
+- [library-skills](https://github.com/tiangolo/library-skills) - Cross-package skill discovery tool
 
 ## Proposal
 
 ### CLI Interface
 
 ```bash
-# Interactive project install by default
+# Interactive project install (default)
 streamlit skills
+
+# Interactive global install (fetches from GitHub)
+streamlit skills --global
 
 # Non-interactive project install
 streamlit skills --yes
 
-# Global install (fetches from GitHub)
+# Non-interactive global install
 streamlit skills --global --yes
 ```
 
@@ -174,7 +176,13 @@ On network failure, exits with clear error message.
 - **Non-interactive:** Pass `--yes` for automation; fails with actionable message
   if prompts unavailable
 - **Git hygiene:** Does not edit `.gitignore`; CLI output clarifies whether files
-  are symlinks (don't commit) or copies
+  are symlinks (don't commit) or copies and includes a recommended `.gitignore`
+  snippet:
+  ```
+  # Streamlit agent skills (environment-specific symlinks)
+  .agents/skills/developing-with-streamlit/
+  .claude/skills/developing-with-streamlit/
+  ```
 
 ## Follow-Up Work
 
