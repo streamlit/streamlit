@@ -51,7 +51,7 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
     ...props,
     kind: "markdown",
     sortMode: "default",
-    typeIcon: ":material/code:",
+    typeIcon: ":material/markdown:",
     validateInput,
     getCell(data?: unknown, validate?: boolean): GridCell {
       if (validate && !validateInput(data)) {
