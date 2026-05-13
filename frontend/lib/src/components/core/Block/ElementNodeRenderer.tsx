@@ -566,23 +566,27 @@ const RawElementNodeRenderer = (
         </ElementContainer>
       )
 
-    case "skeleton":
-      // Skeleton uses LARGE_ELEMENT config which respects the layout config's
-      // widthConfig and heightConfig from st.skeleton(). This allows explicit
-      // pixel widths/heights to take effect. The element's own 100% sizing fills
-      // whatever container dimensions the layout config computes.
+    case "skeleton": {
+      const skeletonProto = node.element.skeleton as SkeletonProto
+      // AppSkeleton (internal full-page loading) uses FULL_WIDTH to fill the app container.
+      // Regular st.skeleton() uses LARGE_ELEMENT which respects the layout config's
+      // widthConfig and heightConfig from the public API.
+      const isAppSkeleton =
+        skeletonProto.style === SkeletonProto.SkeletonStyle.APP
       return (
         <ElementContainer
           node={node}
-          config={ElementContainerConfig.LARGE_ELEMENT}
+          config={
+            isAppSkeleton
+              ? ElementContainerConfig.FULL_WIDTH
+              : ElementContainerConfig.LARGE_ELEMENT
+          }
           isStale={isStale}
         >
-          <Skeleton
-            element={node.element.skeleton as SkeletonProto}
-            fillContainer
-          />
+          <Skeleton element={skeletonProto} fillContainer={!isAppSkeleton} />
         </ElementContainer>
       )
+    }
 
     case "snow":
       // Specifically use node.scriptRunId vs. scriptRunId from context
