@@ -228,24 +228,16 @@ def _fragment(
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
             ctx.new_fragment_ids.check_and_add(fragment_id)
-            # Make sure we set the active script hash to the same value
-            # for the fragment run as when defined upon initialization
-            # This ensures that elements (especially widgets) are tied
-            # to a consistent active script hash. Computed here, above
-            # ThreadState.scoped(fragment_id=...), so the comparison does
-            # not depend on scoped() leaving active_script_hash untouched
-            # (the cm itself only fires on `with active_hash_context:`).
+            # Pin the active script hash to the value captured at fragment
+            # definition (consistent widget IDs across reruns). Computed
+            # above ThreadState.scoped() so the comparison isn't coupled
+            # to scoped()'s field semantics.
             active_hash_context = (
                 ctx.run_with_active_hash(initialized_active_script_hash)
                 if initialized_active_script_hash
                 != ThreadState.get().active_script_hash
                 else contextlib.nullcontext()
             )
-            # Set the fragment_id on thread state so that elements corresponding
-            # to this fragment get tagged with the appropriate ID.
-            # ThreadState.scoped() restores fragment_id (and all other fields)
-            # after the fragment finishes — returning to the outer fragment
-            # or to top-level script execution.
             with ThreadState.scoped(fragment_id=fragment_id):
                 result = None
                 with active_hash_context:
