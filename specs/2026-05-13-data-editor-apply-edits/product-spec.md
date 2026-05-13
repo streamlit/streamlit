@@ -136,6 +136,12 @@ def apply_edits(
 but the callback needs to map these back to primary keys. Without `source_df`, users must close
 over the source dataframe, which the API should not require.
 
+**DataTypes scope**: The callback always receives and returns `pd.DataFrame`, regardless of the
+input `data` type. Non-DataFrame inputs (list, dict, ndarray, etc.) are converted to DataFrame
+before the callback is invoked. If the callback returns a DataFrame but the original `data` was
+a different type, the return value is used as-is (no back-conversion). This is consistent with
+`st.data_editor`'s existing behavior of always returning a DataFrame.
+
 **DataEditorEdits type:**
 
 This is a new public type, distinct from the internal `EditingState` TypedDict used for
@@ -283,6 +289,21 @@ def validate_and_save(source_df, edited_df, edits):
 result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 ```
 
+**Side-effect leakage warning**: If the callback performs partial writes before raising
+(e.g., deletes some rows then fails on validation), those side effects are not rolled back.
+Users performing database operations should use transactions:
+
+```python
+def sync_to_database(source_df, edited_df, edits):
+    with db.transaction():  # Rollback on exception
+        for row_idx in edits["deleted_rows"]:
+            delete_from_db(source_df.iloc[row_idx]["id"])
+        # Validate after mutations are staged but before commit
+        if edited_df["amount"].sum() > 10000:
+            raise ValueError("Total exceeds limit")  # Transaction rolls back
+    return load_from_database()
+```
+
 ### Out of Scope (Future Work)
 
 - **Async callbacks**: `async def apply_edits(...)` not supported in initial release
@@ -300,7 +321,13 @@ result = st.data_editor(df, key="editor", apply_edits=validate_and_save)
 | Works on SiS, Cloud, etc? | Yes — standard callback execution |
 | No breaking API changes | Yes — new optional parameter only |
 | No new dependencies | Yes |
-| New proto fields | Yes — `editing_state` field to signal frontend state clear |
+| New proto fields | Yes — see below |
 | Metrics collected | Track `apply_edits` usage vs. without |
 | Any security/legal impact? | None — callback runs user code like `on_change` |
 | Any docs changes needed? | Yes — document `apply_edits` parameter and patterns |
+
+**Proto changes**: Add a `clear_edit_state` boolean or `edit_state_version` counter to
+`Arrow.proto`. When `apply_edits` succeeds, the backend sets this field to signal the frontend
+to clear its local edit buffer. The frontend keys its `EditingState` cache on this field,
+ensuring stale edits don't persist after a successful commit. Tech spec will detail the
+wire-level mechanism.
