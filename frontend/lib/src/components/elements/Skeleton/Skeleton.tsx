@@ -28,14 +28,18 @@ const RawSkeleton: FC<React.PropsWithChildren<{ element: SkeletonProto }>> = ({
     return <AppSkeleton /> // internal-only, does not use any of the element properties
   }
 
-  // The height and width are managed by the ElementContainer via the layout config.
-  // The skeleton itself just fills its container (100% width and height).
+  // When the skeleton has a height specified (via layout config from st.skeleton()),
+  // it fills its container (100% width and height). When no height is specified
+  // (Suspense fallback), we don't pass height/width so that SquareSkeleton uses
+  // its default fallback values. This avoids height: 100% collapsing to 0 inside
+  // a height: auto container.
+  const useContainerSize = element.height !== 0
   return (
     <SquareSkeleton
       className="stSkeleton"
       data-testid="stSkeleton"
-      height="100%"
-      width="100%"
+      height={useContainerSize ? "100%" : undefined}
+      width={useContainerSize ? "100%" : undefined}
     />
   )
 }

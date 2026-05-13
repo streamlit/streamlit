@@ -14,7 +14,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 from typing_extensions import Self
 
@@ -46,7 +46,7 @@ class SkeletonPlaceholder:
     def __init__(self, dg: DeltaGenerator) -> None:
         self._dg = dg
 
-    def __getattr__(self, name: str) -> object:
+    def __getattr__(self, name: str) -> Any:
         # Delegate all attribute access to the underlying DeltaGenerator
         return getattr(self._dg, name)
 
@@ -60,8 +60,10 @@ class SkeletonPlaceholder:
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> Literal[False]:
-        self._dg.empty()
-        self._dg.__exit__(typ, exc, tb)
+        try:
+            self._dg.empty()
+        finally:
+            self._dg.__exit__(typ, exc, tb)
         return False
 
 
