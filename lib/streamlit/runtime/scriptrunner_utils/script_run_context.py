@@ -360,14 +360,11 @@ def add_script_run_ctx(
         parent_ts = None
 
     if parent_ts is not None:
-        # Last-attach wins: store the latest parent snapshot on the thread and
-        # let the (single) run() wrapper read it at thread-start time. This
-        # mirrors how the ctx attachment above overwrites any prior value on
-        # repeat calls to add_script_run_ctx, instead of stacking wrappers.
-        # NOTE: dataclasses.asdict recurses into tuples, so `delta_path`
-        # survives the round-trip as a tuple (matching the dataclass field
-        # type). Changing `delta_path` to a list elsewhere would silently
-        # break the snapshot/restore here.
+        # Store the parent snapshot on the thread; the run() wrapper below
+        # reads it at start time. Repeat add_script_run_ctx() calls refresh
+        # the snapshot — last attach wins, matching the ctx attachment above.
+        # NOTE: dataclasses.asdict preserves tuples, so delta_path survives
+        # the round-trip. Switching delta_path to a list would break this.
         setattr(
             thread,
             _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
