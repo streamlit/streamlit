@@ -573,11 +573,14 @@ def _compute_data_editor_signature(
         for col_name in column_order:
             h.update(f"order:{col_name}".encode())
 
-    # Hash index type and name
+    # Hash index type and name(s)
     index = data_df.index
     h.update(f"index_type:{type(index).__name__}".encode())
-    if index.name is not None:
-        h.update(f"index_name:{index.name}".encode())
+    # Use index.names for MultiIndex (FrozenList of level names), fall back to
+    # index.name for single-level Index
+    for name in index.names:
+        if name is not None:
+            h.update(f"index_name:{name}".encode())
 
     # Hash Arrow field types with nullability
     for field in arrow_schema:
@@ -591,16 +594,23 @@ def _compute_data_editor_signature(
     h.update(f"rows:{len(data_df)}".encode())
 
     # Hash column config mapping (deterministic JSON sort)
-    config_json = json.dumps(
-        {str(k): v for k, v in column_config_mapping.items()},
-        sort_keys=True,
-        default=str,
-    )
+    # Use _pos: prefix for int keys to match _convert_column_config_to_json behavior
+    # and avoid collisions with columns named like "1"
+    config_dict = {
+        (f"_pos:{k}" if isinstance(k, int) else str(k)): v
+        for k, v in column_config_mapping.items()
+        if v is not None
+    }
+    config_json = json.dumps(config_dict, sort_keys=True, default=str)
     h.update(f"config:{config_json}".encode())
 
-    # Hash disabled state when it disables all editing
+    # Hash disabled state (all-disabled or specific columns)
     if disabled is True:
         h.update(b"disabled:all")
+    elif disabled is not False:
+        # disabled is an iterable of column names; sort for stability
+        for col in sorted(str(c) for c in disabled):
+            h.update(f"disabled_col:{col}".encode())
 
     return h.hexdigest()
 
@@ -1216,6 +1226,24 @@ class DataEditorMixin:
         # format that will hash consistently, so we do it late here to have it
         # as close as possible to how it used to be.
         ctx = get_script_run_ctx()
+
+        # Build the kwargs for compute_and_register_element_id. Only include
+        # data_signature when schema identity is enabled to avoid changing the
+        # element ID for existing non-schema-identity data editors.
+        element_id_kwargs: dict[str, Any] = {
+            "data": arrow_bytes,
+            "width": width,
+            "height": height,
+            "use_container_width": use_container_width,
+            "column_order": column_order,
+            "column_config_mapping": str(column_config_mapping),
+            "num_rows": num_rows,
+            "row_height": row_height,
+            "placeholder": placeholder,
+        }
+        if use_schema_identity:
+            element_id_kwargs["data_signature"] = data_signature
+
         element_id = compute_and_register_element_id(
             "data_editor",
             user_key=key,
@@ -1223,16 +1251,7 @@ class DataEditorMixin:
             if use_schema_identity
             else False,
             dg=self.dg,
-            data=arrow_bytes,
-            data_signature=data_signature,
-            width=width,
-            height=height,
-            use_container_width=use_container_width,
-            column_order=column_order,
-            column_config_mapping=str(column_config_mapping),
-            num_rows=num_rows,
-            row_height=row_height,
-            placeholder=placeholder,
+            **element_id_kwargs,
         )
 
         proto = DataframeProto()
