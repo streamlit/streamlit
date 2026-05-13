@@ -118,6 +118,12 @@ class SkeletonPlaceholder:
         dg = self._ensure_enqueued()
         return getattr(dg, name)
 
+    def __dir__(self) -> list[str]:
+        """Return DeltaGenerator methods for IDE autocompletion."""
+        from streamlit.delta_generator import DeltaGenerator
+
+        return dir(DeltaGenerator)
+
     def __enter__(self) -> Self:
         """Enter context manager mode with 0.5s delay before showing skeleton."""
         with self._display_lock:
