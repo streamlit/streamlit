@@ -242,6 +242,7 @@ scatter_chart = _main.scatter_chart
 selectbox = _main.selectbox
 select_slider = _main.select_slider
 segmented_control = _main.segmented_control
+skeleton = _main.skeleton
 slider = _main.slider
 snow = _main.snow
 space = _main.space

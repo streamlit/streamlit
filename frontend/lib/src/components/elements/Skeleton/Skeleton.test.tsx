@@ -41,8 +41,9 @@ describe("Skeleton element", () => {
     render(<Skeleton element={props} />)
 
     const testSkeleton = screen.getByTestId("stSkeleton")
-    expect(testSkeleton).toHaveAttribute("height", "5px")
-    expect(testSkeleton).not.toHaveAttribute("width")
+    // Dimensions are controlled by ElementContainer; skeleton fills its container.
+    expect(testSkeleton).toHaveAttribute("height", "100%")
+    expect(testSkeleton).toHaveAttribute("width", "100%")
   })
 
   it("renders app skeleton", async () => {

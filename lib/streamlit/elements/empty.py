@@ -14,14 +14,55 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Literal, cast
 
+from typing_extensions import Self
+
+from streamlit.elements.lib.layout_utils import (
+    HeightWithoutContent,
+    WidthWithoutContent,
+    create_layout_config,
+)
 from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 from streamlit.runtime.metrics_util import gather_metrics
 
 if TYPE_CHECKING:
+    from types import TracebackType
+
     from streamlit.delta_generator import DeltaGenerator
+
+
+class SkeletonPlaceholder:
+    """A placeholder that displays a skeleton loading animation.
+
+    This class wraps a ``DeltaGenerator`` and can be used as a context manager.
+    When used as a context manager, the skeleton is automatically cleared when
+    the block exits.
+
+    This class has all the same methods as ``DeltaGenerator`` through delegation.
+    """
+
+    def __init__(self, dg: DeltaGenerator) -> None:
+        self._dg = dg
+
+    def __getattr__(self, name: str) -> object:
+        # Delegate all attribute access to the underlying DeltaGenerator
+        return getattr(self._dg, name)
+
+    def __enter__(self) -> Self:
+        self._dg.__enter__()
+        return self
+
+    def __exit__(
+        self,
+        typ: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> Literal[False]:
+        self._dg.empty()
+        self._dg.__exit__(typ, exc, tb)
+        return False
 
 
 class EmptyMixin:
@@ -123,6 +164,96 @@ class EmptyMixin:
         if height:
             skeleton_proto.height = height
         return self.dg._enqueue("skeleton", skeleton_proto)
+
+    @gather_metrics("skeleton")
+    def skeleton(
+        self,
+        height: HeightWithoutContent = 100,
+        *,
+        width: WidthWithoutContent = "stretch",
+    ) -> SkeletonPlaceholder:
+        r"""Display a skeleton loading placeholder.
+
+        A skeleton is a visual placeholder that indicates content is loading.
+        It can be used in two ways:
+
+        **Standalone mode**: Returns a placeholder that can be replaced with
+        content later, similar to ``st.empty()``.
+
+        **Context manager mode**: The skeleton automatically clears when the
+        block exits, whether normally or due to an exception.
+
+        Parameters
+        ----------
+        height : int or "stretch"
+            The height of the skeleton. This can be one of the following:
+
+            - An integer specifying the height in pixels (default: 100).
+            - ``"stretch"``: The height of the skeleton matches the height of
+              the parent container.
+
+        width : int or "stretch"
+            The width of the skeleton. This can be one of the following:
+
+            - ``"stretch"`` (default): The width of the skeleton matches the
+              width of the parent container.
+            - An integer specifying the width in pixels.
+
+        Returns
+        -------
+        SkeletonPlaceholder
+            A placeholder object that can be used to replace the skeleton with
+            other content, or as a context manager.
+
+        Examples
+        --------
+        **Standalone mode** - replace skeleton with content:
+
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> placeholder = st.skeleton(height=200)
+        >>> time.sleep(2)
+        >>> placeholder.dataframe({"col1": [1, 2, 3], "col2": [4, 5, 6]})
+
+        .. output::
+           https://doc-skeleton-standalone.streamlit.app/
+           height: 300px
+
+        **Context manager mode** - skeleton auto-clears when block exits:
+
+        >>> import streamlit as st
+        >>> import time
+        >>>
+        >>> with st.skeleton(height=100):
+        ...     # Expensive computation runs here
+        ...     time.sleep(2)
+        >>> # Skeleton clears, show results below
+        >>> st.success("Data loaded!")
+
+        .. output::
+           https://doc-skeleton-context.streamlit.app/
+           height: 200px
+
+        """
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_stretch_height=True,
+        )
+
+        skeleton_proto = SkeletonProto()
+        # Set pixel height on the proto if an integer is provided
+        if isinstance(height, int):
+            skeleton_proto.height = height
+
+        dg = self.dg._enqueue(
+            "skeleton",
+            skeleton_proto,
+            layout_config=layout_config,
+        )
+
+        return SkeletonPlaceholder(dg)
 
     @property
     def dg(self) -> DeltaGenerator:
