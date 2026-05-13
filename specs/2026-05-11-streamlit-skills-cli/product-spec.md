@@ -42,9 +42,21 @@ A first-party command gives users one simple setup step:
 streamlit skills --yes
 ```
 
+Alternatively, users can install the meta skill via
+[`npx skills`](https://github.com/vercel/skills), a cross-agent installer that
+supports Claude Code, Cursor, Copilot, Gemini CLI, Codex, and others:
+
+```bash
+npx skills add streamlit/agent-skills -s developing-with-streamlit -g
+```
+
+The `streamlit skills` command provides a Streamlit-native experience without
+requiring Node.js, and ensures version-matched skills for project installs.
+
 **Related:**
 
 - [streamlit/agent-skills GitHub](https://github.com/streamlit/agent-skills) - Source for global meta skill
+- [npx skills (vercel/skills)](https://github.com/vercel/skills) - Cross-agent skill installer
 - [library-skills GitHub](https://github.com/tiangolo/library-skills)
 - [library-skills SPEC](https://github.com/tiangolo/library-skills/blob/main/SPEC.md)
 
