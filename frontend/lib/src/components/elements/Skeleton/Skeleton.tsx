@@ -26,18 +26,16 @@ interface SkeletonProps {
 
 /**
  * User-facing skeleton element for st.skeleton().
- * The skeleton fills its container (100% width/height) because the parent
+ * Fills its container (100% width/height) because the parent
  * ElementContainer is sized via layout config.
  */
-const RawSkeleton: FC<SkeletonProps> = () => {
-  return (
-    <SquareSkeleton
-      className="stSkeleton"
-      data-testid="stSkeleton"
-      height="100%"
-      width="100%"
-    />
-  )
-}
+const RawSkeleton: FC<SkeletonProps> = () => (
+  <SquareSkeleton
+    className="stSkeleton"
+    data-testid="stSkeleton"
+    height="100%"
+    width="100%"
+  />
+)
 
 export const Skeleton = memo(RawSkeleton)

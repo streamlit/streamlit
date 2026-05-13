@@ -24,10 +24,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from typing_extensions import assert_type
 
-    from streamlit.elements.empty import EmptyMixin
     from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
+    from streamlit.elements.skeleton import SkeletonMixin
 
-    dg = EmptyMixin()
+    dg = SkeletonMixin()
 
     # Test return type
     assert_type(dg.skeleton(), SkeletonPlaceholder)

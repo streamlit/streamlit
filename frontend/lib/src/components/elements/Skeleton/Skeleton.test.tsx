@@ -23,21 +23,13 @@ import { render } from "~lib/test_util"
 import { Skeleton } from "./Skeleton"
 
 describe("Skeleton element", () => {
-  it("renders without delay", () => {
-    const props = SkeletonProto.create()
-    render(<Skeleton element={props} />)
+  it("renders with correct styling and fills container", () => {
+    render(<Skeleton element={SkeletonProto.create()} />)
 
     const skeletonElement = screen.getByTestId("stSkeleton")
     expect(skeletonElement).toBeVisible()
     expect(skeletonElement).toHaveClass("stSkeleton")
-  })
-
-  it("fills container with 100% width and height", () => {
-    const props = SkeletonProto.create()
-    render(<Skeleton element={props} />)
-
-    const testSkeleton = screen.getByTestId("stSkeleton")
-    expect(testSkeleton).toHaveAttribute("height", "100%")
-    expect(testSkeleton).toHaveAttribute("width", "100%")
+    expect(skeletonElement).toHaveAttribute("height", "100%")
+    expect(skeletonElement).toHaveAttribute("width", "100%")
   })
 })

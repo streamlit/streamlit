@@ -34,13 +34,12 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         """Test default dimensions: 100px height and stretch width."""
         placeholder = st.skeleton()
 
-        # Verify the proto configuration (skeleton uses lazy loading)
         assert placeholder._skeleton_proto.height == 100
         assert placeholder._layout_config is not None
         assert placeholder._layout_config.height == 100
         assert placeholder._layout_config.width == "stretch"
 
-    def test_skeleton_custom_pixel_height(self) -> None:
+    def test_skeleton_pixel_height(self) -> None:
         """Test that st.skeleton accepts custom pixel height."""
         placeholder = st.skeleton(height=200)
 
@@ -52,12 +51,11 @@ class StSkeletonAPITest(DeltaGeneratorTestCase):
         """Test that st.skeleton accepts 'stretch' height."""
         placeholder = st.skeleton(height="stretch")
 
-        # Proto doesn't have height set for stretch
         assert not placeholder._skeleton_proto.HasField("height")
         assert placeholder._layout_config is not None
         assert placeholder._layout_config.height == "stretch"
 
-    def test_skeleton_custom_pixel_width(self) -> None:
+    def test_skeleton_pixel_width(self) -> None:
         """Test that st.skeleton accepts custom pixel width."""
         placeholder = st.skeleton(width=300)
 

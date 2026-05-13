@@ -33,15 +33,7 @@ if TYPE_CHECKING:
 class SkeletonMixin:
     @gather_metrics("_skeleton")
     def _skeleton(self, *, height: int | None = None) -> DeltaGenerator:
-        """Insert a single-element container which displays a "skeleton" placeholder.
-
-        Inserts a container into your app that can be used to hold a single element.
-        This allows you to, for example, remove elements at any point, or replace
-        several elements at once (using a child multi-element container).
-
-        To insert/replace/clear an element on the returned container, you can
-        use ``with`` notation or just call methods directly on the returned object.
-        See some of the examples below.
+        """Insert a single-element container displaying a skeleton placeholder.
 
         This is an internal method and should not be used directly.
 
@@ -137,7 +129,7 @@ class SkeletonMixin:
 
         skeleton_proto = SkeletonProto()
         # Set pixel height on the proto if an integer is provided.
-        # Explicitly exclude bool since isinstance(True, int) is True in Python.
+        # Exclude bool since isinstance(True, int) is True in Python.
         if isinstance(height, int) and not isinstance(height, bool):
             skeleton_proto.height = height
 

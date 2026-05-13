@@ -32,8 +32,8 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Skeleton_pb2 import Skeleton as SkeletonProto
 
-# Delay before showing skeleton in context manager mode (same as spinner)
 _DELAY_SECS: Final = 0.5
+"""Delay before showing skeleton in context manager mode (same as spinner)."""
 
 
 class SkeletonPlaceholder:
