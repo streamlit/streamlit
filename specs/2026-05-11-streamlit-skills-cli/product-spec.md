@@ -243,8 +243,8 @@ these are local developer files and generally should not be committed.
 
 | Mode | What's installed | Where | Source |
 |------|------------------|-------|--------|
-| **Project** (default) | Direct Streamlit skills (`developing-with-streamlit`) | `<project>/.agents/skills/` and `.claude/skills/` | Bundled in active Streamlit binary |
-| **Global** | Meta skill with discovery script | `~/.agents/skills/` and `~/.claude/skills/` | Fetched from GitHub `streamlit/agent-skills` |
+| **Project** (default) | Direct Streamlit skills (`developing-with-streamlit`) | `<project>/.agents/skills/` (+ `.claude/skills/` if Claude detected) | Bundled in active Streamlit binary |
+| **Global** | Meta skill with discovery script | `~/.agents/skills/` (+ `~/.claude/skills/` if Claude detected) | Fetched from GitHub `streamlit/agent-skills` |
 
 **Project install:** Installs the direct skills from the invoked `streamlit`
 binary. It should prefer symlinks so skills stay in sync when Streamlit is
