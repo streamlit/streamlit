@@ -26,7 +26,7 @@ users have no first-party way to expose those skills to local coding agents afte
 installing Streamlit.
 
 The existing solution is [library-skills](https://library-skills.io/)
-(`uvx library-skills --claude`), which scans installed packages for skills. That
+(`uvx library-skills`), which scans installed packages for skills. That
 is useful for broad discovery, but it is heavier than the common Streamlit-only
 case:
 
