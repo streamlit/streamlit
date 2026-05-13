@@ -112,7 +112,7 @@ class DeferredFileHandler(BackendOperationHandler):
     async def handle(
         self,
         request: BackendOperationRequest,
-        _session_id: str,
+        session_id: str,  # noqa: ARG002
     ) -> BackendOperationResponse:
         """Execute the deferred callable and return the generated file URL."""
         payload = request.deferred_file
