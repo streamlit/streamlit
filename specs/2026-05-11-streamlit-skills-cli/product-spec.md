@@ -7,14 +7,16 @@ created: 2026-05-11
 
 ## Summary
 
-Add a `streamlit skills` CLI command that installs Streamlit's bundled AI-agent
-skills from the active Streamlit environment. The initial version focuses on
-project-local installation so agents working in the current project get
-version-matched Streamlit guidance.
+Add a `streamlit skills` CLI command that installs Streamlit's AI-agent skills.
+Two installation modes are supported:
 
-Global installation should be a follow-up once Streamlit also bundles the
-`finding-streamlit-skills` meta skill. That later mode can install Claude Code
-discovery instructions for users who work across many Streamlit projects.
+- **Project (default):** Installs bundled skills from the active Streamlit
+  environment via symlinks, giving version-matched guidance for the current project.
+- **Global:** Fetches the `developing-with-streamlit` meta skill from the
+  [`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) GitHub
+  repository and installs it to the user's global Claude Code skills directory.
+  This meta skill includes a discovery script that dynamically locates
+  project-specific bundled skills at runtime.
 
 ## Problem
 
@@ -41,6 +43,7 @@ streamlit skills --yes
 
 **Related:**
 
+- [streamlit/agent-skills GitHub](https://github.com/streamlit/agent-skills) - Source for global meta skill
 - [library-skills GitHub](https://github.com/tiangolo/library-skills)
 - [library-skills SPEC](https://github.com/tiangolo/library-skills/blob/main/SPEC.md)
 
@@ -55,13 +58,12 @@ streamlit skills
 # Non-interactive project install
 streamlit skills --yes
 
-# Future follow-up after finding-streamlit-skills is bundled
+# Global install (fetches from GitHub)
 streamlit skills --global --yes
 ```
 
-`--yes` skips prompts and confirms project installation. `--global` is reserved
-for future use; in v1 the flag should be hidden from help output and, if passed,
-should exit with a clear "not yet available" error message and non-zero status.
+`--yes` skips prompts and confirms installation. `--global` installs the meta
+skill from GitHub to `~/.claude/skills/` instead of project-local bundled skills.
 
 ### Alternatives Considered
 
@@ -110,14 +112,22 @@ generic location for other agents.
 
 Decision: Use `streamlit skills` for clarity and alignment with library-skills.
 
+**Global install source**
+
+| Option                          | Pros                                          | Cons                                              |
+|---------------------------------|-----------------------------------------------|---------------------------------------------------|
+| **Fetch from GitHub** (chosen)  | Always latest discovery logic; decoupled from Streamlit releases | Requires network; potential version drift         |
+| **Bundle in Streamlit**         | Works offline; version-matched                | Duplicates content; discovery script updates lag behind |
+| **Symlink to cloned repo**      | Single source of truth                        | Requires separate clone; complex setup            |
+
+Decision: Fetch from `streamlit/agent-skills` GitHub repository. The meta skill
+is lightweight (discovery script + instructions), and decoupling it from Streamlit
+releases allows faster iteration on the discovery logic. Network requirement is
+acceptable since global install is a one-time setup operation.
+
 ### Interactive Flow
 
-In v1 with only the project mode available, the installer skips the mode
-selection prompt and goes directly to Step 2 (installation confirmation). When
-`--global` is enabled in a future version, Step 1 will be reintroduced to let
-users choose between project and global installation.
-
-**Step 1: Choose install mode** (future, when multiple modes exist)
+**Step 1: Choose install mode**
 
 ```text
 $ streamlit skills
@@ -126,6 +136,7 @@ Streamlit Skills Installer  (magenta, bold)
 
 Install mode:
   [p] Project (recommended) - skills available in this project only
+  [g] Global - discovery skill available in all projects (requires network)
        ↑cyan    ↑green
 
 Choice [p]:
@@ -134,10 +145,13 @@ Choice [p]:
 Accepted input is case-insensitive:
 
 - `Enter`, `p`, `project` -> project install
-- Invalid input -> re-prompt with "Invalid choice, please enter 'p' or press Enter"
+- `g`, `global` -> global install
+- Invalid input -> re-prompt with "Invalid choice, please enter 'p', 'g', or press Enter"
 - `Ctrl+C` or EOF -> cancel gracefully with "Aborted." message (exit 1)
 
 **Step 2: Confirm installation**
+
+For project install:
 
 ```text
 Installing to project: /home/user/myproject  (bright blue path)
@@ -152,12 +166,27 @@ Target directories:
 Proceed with installation? [Y/n]:
 ```
 
+For global install:
+
+```text
+Installing globally to: ~/.claude/skills/  (bright blue path)
+
+Skills to install:
+  • developing-with-streamlit  (magenta bullet, cyan name)
+
+Source: github.com/streamlit/agent-skills  (muted gray)
+
+Proceed with installation? [Y/n]:
+```
+
 Accepted input:
 
 - `Enter`, `y`, `yes` -> proceed
 - `n`, `no` -> cancel without changes
 
 **Step 3: Result**
+
+For project install:
 
 ```text
 ✓ Installed:  (green, bold)
@@ -171,6 +200,19 @@ Note: Installed skills are symlinks to your local Streamlit environment.
       (muted gray styling)
 ```
 
+For global install:
+
+```text
+✓ Installed:  (green, bold)
+  → ~/.claude/skills/developing-with-streamlit   (green arrow, cyan path)
+
+✨ Successfully installed globally  (green bold)
+
+The discovery skill will automatically find project-specific Streamlit skills
+when you work in any Streamlit project.
+(muted gray styling)
+```
+
 Additional result states use colored indicators:
 - `● Up to date:` (blue, bold) for already-installed skills
 - `⚠ Skipped due to conflicts:` (yellow, bold) for conflicts
@@ -180,10 +222,10 @@ these are local developer files and generally should not be committed.
 
 ### Install Modes
 
-| Mode | What's installed | Where | Use case |
-|------|------------------|-------|----------|
-| **Project** (default) | Direct Streamlit skills, excluding discovery/meta skills | `<project>/.agents/skills/` and, when Claude Code is detected, `<project>/.claude/skills/` | Most users; version-matched skills for the current project |
-| **Global** (future) | `finding-streamlit-skills` meta skill | `~/.claude/skills/` | Claude Code users who want discovery instructions available in every project |
+| Mode | What's installed | Where | Source |
+|------|------------------|-------|--------|
+| **Project** (default) | Direct Streamlit skills (`developing-with-streamlit`) | `<project>/.agents/skills/` and `.claude/skills/` | Bundled in active Streamlit binary |
+| **Global** | Meta skill with discovery script | `~/.claude/skills/developing-with-streamlit/` | Fetched from GitHub `streamlit/agent-skills` |
 
 **Project install:** Installs the direct skills from the invoked `streamlit`
 binary. It should prefer symlinks so skills stay in sync when Streamlit is
@@ -198,10 +240,38 @@ subsequent runs, compare this marker against the current Streamlit version to
 detect "up to date" vs "needs refresh" states. If the marker is missing or
 mismatched, overwrite Streamlit-owned copies.
 
-**Global install (future):** Installs only the `finding-streamlit-skills` meta
-skill. That skill should teach the agent how to locate the bundled Streamlit
-skills in the active Python environment instead of copying a full skill into the
-user's home directory. This mode requires Claude Code (`~/.claude` must exist).
+**Global install:** Fetches the `developing-with-streamlit` meta skill from the
+[`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) repository
+and copies it to `~/.claude/skills/`. This mode requires:
+
+- Claude Code installed (`~/.claude` must exist)
+- Network access to GitHub
+
+**What gets installed (global):**
+
+```
+~/.claude/skills/developing-with-streamlit/
+├── SKILL.md           # Meta skill instructions
+└── scripts/
+    └── discover.py    # Discovery script
+```
+
+The discovery script (`discover.py`) dynamically locates the project's Streamlit
+installation at runtime and returns the path to the bundled skills. This means:
+
+- Agents get version-matched skills for each project automatically
+- No need to re-run `streamlit skills --global` when Streamlit is upgraded
+- Works across multiple projects with different Streamlit versions
+
+**GitHub fetch details:**
+
+- Repository: `https://github.com/streamlit/agent-skills`
+- Branch: `main`
+- Files to download:
+  - `developing-with-streamlit/SKILL.md`
+  - `developing-with-streamlit/scripts/discover.py`
+- The command should use raw GitHub URLs or the GitHub API to fetch files
+- On network failure, exit with a clear error message and non-zero status
 
 ### Behavior Details
 
@@ -230,8 +300,6 @@ user's home directory. This mode requires Claude Code (`~/.claude` must exist).
 
 ## Follow-Up Work
 
-- Add `finding-streamlit-skills` under `lib/streamlit/.agents/skills/`, then
-  enable `streamlit skills --global --yes`.
 - Should project installs support `.codex/skills`, `.cursor/skills`, `.gemini/skills`,
   and other harness-specific directories? Recommendation: not in v1. The generic
   `.agents/skills/` target plus Claude compatibility keeps the first version
