@@ -3120,7 +3120,7 @@ def MarkdownColumn(
     editing will be enabled through a text editor overlay.
 
     .. note::
-        Markdown syntax is not rendered directly in the table cells for performance
+        Markdown syntax is not rendered directly in the table cells for technical
         reasons. Click on a cell to view or edit the rendered markdown content
         in an overlay.
 
