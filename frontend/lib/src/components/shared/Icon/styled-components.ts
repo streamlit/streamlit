@@ -47,6 +47,7 @@ export const StyledSpinnerIcon = styled("i", {
 
   return {
     display: "block",
+    fontStyle: "normal",
     animationName: spinKeyframe,
     animationDuration: "1000ms",
     animationIterationCount: "infinite",
@@ -56,8 +57,6 @@ export const StyledSpinnerIcon = styled("i", {
     cursor: "wait",
     width: adjustedSpinnerSize,
     height: adjustedSpinnerSize,
-    fontSize: adjustedSpinnerSize,
-    justifyContent: "center",
     margin: computeSpacingStyle(margin, theme),
     padding: computeSpacingStyle(padding, theme),
     borderColor: theme.colors.fadedText10,
