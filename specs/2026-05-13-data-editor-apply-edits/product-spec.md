@@ -10,7 +10,8 @@ created: 2026-05-13
 Add an `apply_edits` callback parameter to `st.data_editor` that gives users explicit control
 over when and how edits are committed. The callback receives the edited dataframe and raw edit
 state, handles persistence (e.g., database writes), and returns the new source dataframe. This
-enables clean patterns for database-backed editing, validation, and programmatic reset/revert.
+enables clean patterns for database-backed editing, validation, and conditional edit handling
+(e.g., revert during an active commit interaction).
 
 ## Problem
 
@@ -179,6 +180,12 @@ class DataEditorEdits(TypedDict):
     deleted_rows: list[int]                 # list of deleted row indices
 ```
 
+**Note on `Any` for cell values**: The public `DataEditorEdits` widens cell values to `Any` for
+forward compatibility with richer cell types (e.g., datetime, complex objects) that may be
+supported in the future. The internal `EditingState` at `lib/streamlit/elements/widgets/data_editor.py`
+constrains values to `str | int | float | bool | None` for the current implementation, but the
+public type intentionally leaves room for expansion without breaking user type annotations.
+
 ### Behavior
 
 | Aspect | Behavior |
@@ -229,7 +236,12 @@ def sync_to_database(source_df, edited_df, edits):
     if edited_df["amount"].sum() > 10000:
         raise ValueError("Total amount cannot exceed $10,000")
 
-    # Map deleted row positions to primary keys using source_df
+    # Map deleted row positions to primary keys using source_df.
+    # NOTE: `edits["deleted_rows"]` contains positional indices into source_df
+    # as passed to st.data_editor (independent of any UI sort/filter state).
+    # Always use `.iloc[]` (positional) rather than `.loc[]` (label-based),
+    # as this works correctly regardless of the DataFrame's index type
+    # (default RangeIndex, non-monotonic, MultiIndex, etc.).
     for row_idx in edits["deleted_rows"]:
         pk = source_df.iloc[row_idx]["id"]
         delete_from_db(pk)
@@ -317,6 +329,8 @@ When the callback raises an exception:
 2. Edit state is **preserved** (user's work is not lost)
 3. `st.error(str(exception))` is displayed
 4. `st.data_editor()` returns `edited_df` (the invalid data, so downstream code sees user's input)
+5. Widget renders with preserved edits overlaid on original source data
+6. User can fix the issue and retry (next interaction re-invokes callback)
 
 **Distinguishing success vs. exception returns**: Callers who need to know whether the returned
 dataframe came from a successful commit or an exception can check `st.session_state[key]`:
@@ -329,8 +343,7 @@ if st.session_state.editor.get("edited_rows") or st.session_state.editor.get("ad
     st.warning("Validation failed — edits not committed")
 ```
 
-5. Widget renders with preserved edits overlaid on original source data
-6. User can fix the issue and retry (next interaction re-invokes callback)
+**Example with retry flow**:
 
 ```python
 def validate_and_save(source_df, edited_df, edits):
@@ -392,5 +405,8 @@ When `apply_edits` succeeds, the backend increments this counter to signal the f
 its local edit buffer. The counter is more robust than a boolean — it lets the frontend
 distinguish multiple successful commits between message deliveries (e.g., if network latency
 causes messages to arrive out of order). The frontend keys its `EditingState` cache on this
-field, ensuring stale edits don't persist after a successful commit. Tech spec will detail the
-wire-level mechanism.
+field, ensuring stale edits don't persist after a successful commit.
+
+**Wire compatibility note**: `edit_state_version` should be an optional proto field defaulting to
+0, ensuring mixed-version frontend/backend deployments (rolling upgrades, cached frontends) remain
+wire-compatible. Tech spec will detail the wire-level mechanism.
