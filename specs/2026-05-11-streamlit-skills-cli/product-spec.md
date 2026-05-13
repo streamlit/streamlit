@@ -76,7 +76,8 @@ streamlit skills --global --yes
 ```
 
 `--yes` skips prompts and confirms installation. `--global` installs the meta
-skill from GitHub to `~/.claude/skills/` instead of project-local bundled skills.
+skill from GitHub to the user's global agent skills directories instead of
+project-local bundled skills.
 
 ### Alternatives Considered
 
