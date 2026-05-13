@@ -515,6 +515,78 @@ class RuntimeTest(RuntimeTestCase):
         await asyncio.wait_for(self.runtime.stopped, timeout=1.0)
         assert self.runtime.state == RuntimeState.STOPPED
 
+    async def test_cache_storage_manager_property_exposes_config_value(self):
+        """Runtime.cache_storage_manager returns the manager from RuntimeConfig.
+
+        We construct a RuntimeConfig with a sentinel ``MemoryCacheStorageManager``
+        and verify the property returns the same instance.
+        """
+        from streamlit.runtime.caching.storage.dummy_cache_storage import (
+            MemoryCacheStorageManager,
+        )
+
+        Runtime._instance = None
+        sentinel_manager = MemoryCacheStorageManager()
+        config = RuntimeConfig(
+            "/my/script.py",
+            MemoryMediaFileStorage("/mock/media"),
+            MemoryUploadedFileManager("/mock/upload"),
+            cache_storage_manager=sentinel_manager,
+        )
+        runtime = Runtime(config)
+
+        assert runtime.cache_storage_manager is sentinel_manager
+
+    async def test_stats_mgr_property_exposes_stats_manager(self):
+        """Runtime.stats_mgr exposes a StatsManager populated with the default
+        providers (data cache, resource cache, session state).
+        """
+        from streamlit.runtime.stats import StatsManager
+
+        stats_mgr = self.runtime.stats_mgr
+
+        assert isinstance(stats_mgr, StatsManager)
+        # The default registration includes data, resource, and session-state
+        # providers — querying must return non-empty stats.
+        assert any(
+            stats_mgr._providers_by_family.get(family)
+            for family in stats_mgr._providers_by_family
+        )
+
+    async def test_get_client_returns_session_client_for_known_session(self):
+        """get_client returns the SessionClient associated with the session_id."""
+        await self.runtime.start()
+        client = MockSessionClient()
+        session_id = self.runtime.connect_session(client=client, user_info=MagicMock())
+
+        assert self.runtime.get_client(session_id) is client
+
+    async def test_get_client_returns_none_for_unknown_session(self):
+        """get_client returns None when no session matches session_id."""
+        await self.runtime.start()
+        assert self.runtime.get_client("not_a_session_id") is None
+
+    async def test_clear_user_info_for_session_calls_session(self):
+        """clear_user_info_for_session calls clear_user_info on the AppSession."""
+        await self.runtime.start()
+        session_id = self.runtime.connect_session(
+            client=MockSessionClient(), user_info={"email": "u@example.com"}
+        )
+        session_info = self.runtime._session_mgr.get_session_info(session_id)
+        assert session_info is not None
+
+        with patch.object(
+            session_info.session, "clear_user_info", new=MagicMock()
+        ) as patched_clear_user_info:
+            self.runtime.clear_user_info_for_session(session_id)
+            patched_clear_user_info.assert_called_once_with()
+
+    async def test_clear_user_info_for_session_unknown_session_is_noop(self):
+        """clear_user_info_for_session is a no-op when the session is unknown."""
+        await self.runtime.start()
+        # Should not raise.
+        self.runtime.clear_user_info_for_session("not_a_session_id")
+
 
 class ScriptCheckTest(RuntimeTestCase):
     """Tests for Runtime.does_script_run_without_error"""

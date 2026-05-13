@@ -26,7 +26,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
-from streamlit.elements.help import _get_variable_name_from_code_str
+from streamlit.elements.help import (
+    _get_first_line,
+    _get_signature,
+    _get_variable_name_from_code_str,
+    _is_computed_property,
+)
 from streamlit.errors import StreamlitInvalidWidthError
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.elements.layout_test_utils import WidthConfigFields
@@ -568,6 +573,61 @@ class StHelpAPITest(DeltaGeneratorTestCase):
             st.help(st, width=width)
 
 
+def test_get_signature_returns_none_for_uninspectable_object() -> None:
+    """``_get_signature`` returns ``None`` when ``inspect.signature`` raises ``TypeError``."""
+    # A bare int instance is not callable and ``inspect.signature`` raises ``TypeError``.
+    assert _get_signature(123) is None
+
+
+def test_get_signature_strips_element_prefix_for_delta_generator_callables() -> None:
+    """``_get_signature`` rewrites the leading ``(element, ...)`` prefix when the
+    callable lives in ``streamlit.delta_generator``.
+    """
+    from streamlit.elements.help import _get_signature
+
+    def fn(element, x, y):  # type: ignore[no-untyped-def]
+        pass
+
+    # Spoof ``__module__`` so the ``is_delta_gen`` branch in ``_get_signature``
+    # is exercised. The raw signature is ``(element, x, y)``; the helper must
+    # strip the ``element, `` prefix and return ``(x, y)``.
+    fn.__module__ = "streamlit.delta_generator"
+
+    assert _get_signature(fn) == "(x, y)"
+
+
+def test_get_signature_for_bound_delta_generator_method_does_not_leak_self() -> None:
+    """For bound DeltaGenerator methods, the ``self`` parameter is hidden by
+    ``inspect.signature`` and the resulting signature does not leak it.
+    """
+    sig = _get_signature(st.audio)
+
+    assert sig is not None
+    assert not sig.startswith("(self,")
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        pytest.param("", "", id="empty"),
+        pytest.param("hello\nworld", "hello", id="multi_line"),
+        pytest.param("only one line", "only one line", id="single_line"),
+    ],
+)
+def test_get_first_line(text: str, expected: str) -> None:
+    """``_get_first_line`` returns the substring before the first newline."""
+    assert _get_first_line(text) == expected
+
+
+@pytest.mark.parametrize(
+    "obj",
+    [pytest.param(None, id="none"), pytest.param(object(), id="bare_object")],
+)
+def test_is_computed_property_returns_false_for_unknown_attr(obj: object) -> None:
+    """``_is_computed_property`` returns ``False`` when ``attr_name`` is not on the class hierarchy."""
+    assert _is_computed_property(obj, "definitely_missing") is False
+
+
 @pytest.mark.skipif(
     sys.version_info < (3, 14),
     reason="PEP 649 deferred annotation evaluation is only in Python 3.14+",
@@ -581,7 +641,6 @@ def test_get_signature_handles_pep649_annotations() -> None:
 
     See: https://github.com/streamlit/streamlit/issues/14324
     """
-    from streamlit.elements.help import _get_signature
     from tests.testutil import create_pep649_function
 
     def base_func(items: object) -> None:

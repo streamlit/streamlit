@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import unittest
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,7 +23,7 @@ from streamlit.commands.execution_control import (
     rerun,
     switch_page,
 )
-from streamlit.errors import StreamlitAPIException
+from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.scriptrunner import RerunData
 
@@ -286,5 +287,110 @@ def test_st_switch_page_raises_for_external_page(patched_get_script_run_ctx):
         match=r"Cannot use st\.switch_page with external URL pages",
     ):
         switch_page(mock_page)
+
+    ctx.script_requests.request_rerun.assert_not_called()
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_raises_no_session_context_when_no_ctx(
+    patched_get_script_run_ctx,
+):
+    """``switch_page`` raises ``NoSessionContext`` when called without a session."""
+    patched_get_script_run_ctx.return_value = None
+
+    with pytest.raises(NoSessionContext):
+        switch_page("any_page.py")
+
+
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_raises_no_session_context_when_ctx_has_no_requests(
+    patched_get_script_run_ctx,
+):
+    """``switch_page`` raises ``NoSessionContext`` if ``ctx`` lacks script requests."""
+    ctx = MagicMock()
+    ctx.script_requests = None
+    patched_get_script_run_ctx.return_value = ctx
+
+    with pytest.raises(NoSessionContext):
+        switch_page("any_page.py")
+
+
+def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
+    """Return a mocked ``ScriptRunContext`` with a single registered page."""
+    ctx = MagicMock()
+    ctx.script_requests = MagicMock()
+    ctx.session_state = MagicMock()
+    ctx.query_string = ""
+    ctx.cached_message_hashes = MagicMock()
+    ctx.context_info = {}
+    ctx.main_script_path = "/some/path/your_app.py"
+    ctx.pages_manager.get_pages.return_value = {
+        "hash_1": {
+            "script_path": resolved_script_path,
+            "page_script_hash": "page_1_hash",
+        },
+    }
+
+    query_params_cm = MagicMock()
+    query_params_cm.__enter__.return_value = MagicMock()
+    query_params_cm.__exit__.return_value = False
+    ctx.session_state.query_params.return_value = query_params_cm
+
+    return ctx
+
+
+@pytest.mark.parametrize(
+    "page_arg",
+    [
+        pytest.param("pages/page_1.py", id="string_path"),
+        pytest.param(Path("pages/page_1.py"), id="path_object"),
+    ],
+)
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_with_path_argument(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+    page_arg,
+):
+    """``switch_page`` resolves both ``str`` and ``pathlib.Path`` arguments via the pages manager."""
+    patched_normalize_path_join.return_value = "/some/path/pages/page_1.py"
+    ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    switch_page(page_arg)
+
+    ctx.script_requests.request_rerun.assert_called_once()
+    rerun_arg = ctx.script_requests.request_rerun.call_args[0][0]
+    assert rerun_arg.page_script_hash == "page_1_hash"
+
+
+@patch("streamlit.commands.execution_control.normalize_path_join")
+@patch(
+    "streamlit.commands.execution_control.get_main_script_directory",
+    return_value="/some/path",
+)
+@patch("os.path.realpath", side_effect=lambda p: p)
+@patch("streamlit.commands.execution_control.get_script_run_ctx")
+def test_st_switch_page_string_path_unknown_page_raises(
+    patched_get_script_run_ctx,
+    _patched_realpath,
+    _patched_get_main_script_directory,
+    patched_normalize_path_join,
+):
+    """``switch_page`` raises ``StreamlitAPIException`` if the resolved path is unknown."""
+    patched_normalize_path_join.return_value = "/some/path/missing.py"
+    ctx = _make_pages_lookup_ctx("/some/path/pages/page_1.py")
+    patched_get_script_run_ctx.return_value = ctx
+
+    with pytest.raises(StreamlitAPIException, match=r"Could not find page"):
+        switch_page("missing.py")
 
     ctx.script_requests.request_rerun.assert_not_called()
