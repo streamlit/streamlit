@@ -249,7 +249,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
 
   return (
     <StyledContainer data-testid="stMarkdownColumnViewer">
-      <StyledMarkdownViewer tabIndex={cell.readonly ? undefined : 0}>
+      <StyledMarkdownViewer tabIndex={0} aria-label="Markdown content">
         {!cell.readonly && (
           <StyledToolbarWrapper className="stMarkdownCellToolbar">
             <StyledCellToolbar>
