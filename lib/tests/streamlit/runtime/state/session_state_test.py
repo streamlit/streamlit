@@ -35,7 +35,18 @@ from streamlit.errors import (
     StreamlitAPIException,
     UnserializableSessionStateError,
 )
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
+from streamlit.proto.Common_pb2 import (
+    ChatInputValue as ChatInputValueProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+)
+from streamlit.proto.Common_pb2 import (
+    StringTriggerValue as StringTriggerValueProto,
+)
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
@@ -44,12 +55,13 @@ from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMe
 from streamlit.runtime.state.session_state import (
     KeyIdMapper,
     Serialized,
+    SessionStateStatProvider,
     Value,
     WStates,
     _is_stale_widget,
     _sanitize_url_array,
 )
-from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -273,6 +285,78 @@ class WStateTests(unittest.TestCase):
         self.wstates.call_callback("widget_id_1")
 
         metadata.callback.assert_called_once_with(1, y=2)
+
+    def test_call_callback_with_no_callback_returns_none(self):
+        """``call_callback`` returns None for widgets without a registered callback."""
+        # widget_id_1 has metadata but no callback
+        assert self.wstates.call_callback("widget_id_1") is None
+
+    def test_call_callback_unknown_widget_raises(self):
+        """``call_callback`` raises ``RuntimeError`` for an unknown widget ID."""
+        with pytest.raises(RuntimeError, match=r"Widget unknown not found\."):
+            self.wstates.call_callback("unknown")
+
+    def test_get_serialized_file_uploader_state_value(self):
+        """``get_serialized`` returns a widget proto for ``file_uploader_state_value``."""
+        uploaded_state = FileUploaderStateProto()
+        self.wstates.set_from_value("file_widget_id", uploaded_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="file_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="file_uploader_state_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("file_widget_id")
+        assert serialized is not None
+        assert serialized.id == "file_widget_id"
+        assert serialized.WhichOneof("value") == "file_uploader_state_value"
+
+    def test_get_serialized_string_trigger_value(self):
+        """``get_serialized`` returns a widget proto for ``string_trigger_value``."""
+        trigger_state = StringTriggerValueProto()
+        trigger_state.data = "submit"
+        self.wstates.set_from_value("trigger_widget_id", trigger_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="trigger_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="string_trigger_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("trigger_widget_id")
+        assert serialized is not None
+        assert serialized.string_trigger_value.data == "submit"
+
+    def test_get_serialized_chat_input_value(self):
+        """``get_serialized`` returns a widget proto for ``chat_input_value``."""
+        chat_value = ChatInputValueProto()
+        chat_value.data = "hello"
+        self.wstates.set_from_value("chat_widget_id", chat_value)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="chat_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="chat_input_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("chat_widget_id")
+        assert serialized is not None
+        assert serialized.chat_input_value.data == "hello"
+
+    def test_wstates_repr_includes_class_and_field_names(self):
+        """``repr(WStates)`` includes the class name and field names so it is
+        useful for debugging.
+        """
+        result = repr(self.wstates)
+        assert "WStates" in result
+        assert "states" in result
 
     def test_fragment_callback_warning(self):
         """Test that a warning is logged when modifying elements during a fragment callback."""
@@ -1111,6 +1195,47 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         state._compact_state()
         new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_4 <= new_size_3
+
+
+def test_session_state_repr_includes_class_and_field_names() -> None:
+    """``repr(SessionState())`` includes the class name and at least one
+    field name so it is useful for debugging.
+    """
+    result = repr(SessionState())
+    # Class name and a known dataclass field should appear.
+    assert "SessionState" in result
+    assert "_new_widget_state" in result
+
+
+def test_session_state_stat_provider_returns_empty_for_no_sessions() -> None:
+    """``SessionStateStatProvider.get_stats`` returns an empty mapping with no sessions."""
+    session_mgr = MagicMock()
+    session_mgr.list_active_sessions.return_value = []
+
+    provider = SessionStateStatProvider(_session_mgr=session_mgr)
+
+    assert provider.get_stats() == {}
+    assert provider.stats_families == (CACHE_MEMORY_FAMILY,)
+
+
+def test_session_state_stat_provider_aggregates_session_stats() -> None:
+    """``SessionStateStatProvider.get_stats`` aggregates stats across sessions."""
+    session_info_1 = MagicMock()
+    session_info_1.session.session_state.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st_session_state", "k1", 100)],
+    }
+    session_info_2 = MagicMock()
+    session_info_2.session.session_state.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st_session_state", "k2", 200)],
+    }
+    session_mgr = MagicMock()
+    session_mgr.list_active_sessions.return_value = [session_info_1, session_info_2]
+
+    provider = SessionStateStatProvider(_session_mgr=session_mgr)
+
+    result = provider.get_stats()
+    assert CACHE_MEMORY_FAMILY in result
+    assert sum(stat.byte_length for stat in result[CACHE_MEMORY_FAMILY]) == 300
 
 
 class KeyIdMapperTest(unittest.TestCase):

@@ -19,6 +19,7 @@ import { userEvent } from "@testing-library/user-event"
 
 import { Pagination as PaginationProto } from "@streamlit/protobuf"
 
+import * as useResizeObserverModule from "~lib/hooks/useResizeObserver"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -274,6 +275,212 @@ describe("Pagination widget", () => {
       const pageButtons = getPageButtons()
       expect(pageButtons).toHaveLength(1)
       expect(pageButtons[0]).toHaveTextContent("5")
+    })
+
+    it("handles max_visible_pages=2 with current page at start", () => {
+      const props = getProps({ numPages: 10, default: 1, maxVisiblePages: 2 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons().map(b => b.textContent)).toEqual(["1", "10"])
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+    })
+
+    it("handles max_visible_pages=2 with current page at end", () => {
+      const props = getProps({ numPages: 10, default: 10, maxVisiblePages: 2 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons().map(b => b.textContent)).toEqual(["1", "10"])
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      expect(getActivePageButton()).toHaveTextContent("10")
+    })
+
+    it("handles max_visible_pages=2 with current page in middle", () => {
+      const props = getProps({ numPages: 10, default: 5, maxVisiblePages: 2 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons().map(b => b.textContent)).toEqual(["5", "10"])
+      expect(getActivePageButton()).toHaveTextContent("5")
+    })
+
+    it("handles max_visible_pages=3 with current page near start", () => {
+      const props = getProps({ numPages: 10, default: 2, maxVisiblePages: 3 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons().map(b => b.textContent)).toEqual([
+        "1",
+        "2",
+        "3",
+        "10",
+      ])
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+    })
+
+    it("handles max_visible_pages=3 with current page near end", () => {
+      const props = getProps({ numPages: 10, default: 9, maxVisiblePages: 3 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons().map(b => b.textContent)).toEqual([
+        "1",
+        "8",
+        "9",
+        "10",
+      ])
+    })
+
+    it("handles max_visible_pages=3 with current page in middle", () => {
+      const props = getProps({ numPages: 10, default: 5, maxVisiblePages: 3 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons().map(b => b.textContent)).toEqual([
+        "1",
+        "5",
+        "10",
+      ])
+      // Both start and end ellipses should be present.
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
+    })
+
+    it("renders correctly with current page near end and maxVisible >= 4", () => {
+      const props = getProps({ numPages: 20, default: 19, maxVisiblePages: 5 })
+      render(<Pagination {...props} />)
+
+      const pageButtons = getPageButtons()
+      expect(pageButtons[0]).toHaveTextContent("1")
+      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      expect(getActivePageButton()).toHaveTextContent("19")
+    })
+
+    it("renders correctly with current page near start and maxVisible >= 4", () => {
+      const props = getProps({ numPages: 20, default: 2, maxVisiblePages: 5 })
+      render(<Pagination {...props} />)
+
+      const pageButtons = getPageButtons()
+      expect(pageButtons[0]).toHaveTextContent("1")
+      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      expect(getActivePageButton()).toHaveTextContent("2")
+    })
+
+    it("renders correctly with current page in middle and maxVisible >= 4", () => {
+      const props = getProps({ numPages: 20, default: 10, maxVisiblePages: 5 })
+      render(<Pagination {...props} />)
+
+      const pageButtons = getPageButtons()
+      expect(pageButtons[0]).toHaveTextContent("1")
+      expect(pageButtons[pageButtons.length - 1]).toHaveTextContent("20")
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
+      expect(getActivePageButton()).toHaveTextContent("10")
+    })
+  })
+
+  describe("Set value behavior", () => {
+    it("uses element.value when set_value is true", () => {
+      const props = getProps({
+        numPages: 10,
+        default: 1,
+        value: 7,
+        setValue: true,
+      })
+      render(<Pagination {...props} />)
+
+      expect(getActivePageButton()).toHaveTextContent("7")
+    })
+
+    it("clamps element.value to numPages upper bound", () => {
+      const props = getProps({
+        numPages: 5,
+        default: 1,
+        value: 99,
+        setValue: true,
+      })
+      render(<Pagination {...props} />)
+
+      expect(getActivePageButton()).toHaveTextContent("5")
+    })
+
+    it("clamps element.value to 1 lower bound", () => {
+      const props = getProps({
+        numPages: 5,
+        default: 3,
+        value: -2,
+        setValue: true,
+      })
+      render(<Pagination {...props} />)
+
+      expect(getActivePageButton()).toHaveTextContent("1")
+    })
+  })
+
+  describe("Responsive sizing", () => {
+    // Mocks the container width reported by useResizeObserver.
+    // These tests verify the responsive layout logic, not exact pixel calculations.
+    // The width values are intentionally chosen to exercise distinct layout branches:
+    // - 10000px: large enough to show all buttons (tests full maxVisible)
+    // - 180px: triggers maxVisible=2 collapse (fittable count ~3-4)
+    // - 120px: triggers maxVisible=1 (current page only)
+    // - 40px: triggers maxVisible=0 (no page buttons)
+    // If theme tokens change significantly, tests may need recalibration, but they'll
+    // fail with clear output (wrong button count) rather than silently passing.
+    let resizeObserverSpy: ReturnType<typeof vi.spyOn>
+
+    const mockContainerWidth = (width: number): void => {
+      resizeObserverSpy = vi
+        .spyOn(useResizeObserverModule, "useResizeObserver")
+        .mockReturnValue({
+          values: [width],
+          elementRef: { current: null },
+        })
+    }
+
+    afterEach(() => {
+      resizeObserverSpy?.mockRestore()
+    })
+
+    it("uses full max visible when container width is large", () => {
+      mockContainerWidth(10000)
+      const props = getProps({ numPages: 20, default: 10, maxVisiblePages: 7 })
+      render(<Pagination {...props} />)
+
+      // maxVisible=7 in the middle renders: [1] ... [9] [10] [11] ... [20]
+      expect(getPageButtons().map(b => b.textContent)).toEqual([
+        "1",
+        "9",
+        "10",
+        "11",
+        "20",
+      ])
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(2)
+    })
+
+    it("collapses to maxVisible=2 layout when fittable count is 3 or 4", () => {
+      mockContainerWidth(180)
+      const props = getProps({ numPages: 20, default: 1, maxVisiblePages: 10 })
+      render(<Pagination {...props} />)
+
+      // maxVisible=2 with current=1 renders: [1] ... [20]
+      expect(screen.queryAllByTestId("stPaginationEllipsis")).toHaveLength(1)
+      expect(getPageButtons().map(b => b.textContent)).toEqual(["1", "20"])
+    })
+
+    it("shows only the current page when fittable count is 1 or 2", () => {
+      mockContainerWidth(120)
+      const props = getProps({ numPages: 20, default: 5, maxVisiblePages: 10 })
+      render(<Pagination {...props} />)
+
+      const pageButtons = getPageButtons()
+      expect(pageButtons).toHaveLength(1)
+      expect(pageButtons[0]).toHaveTextContent("5")
+    })
+
+    it("shows no page buttons when fittable count is zero", () => {
+      mockContainerWidth(40)
+      const props = getProps({ numPages: 20, default: 5, maxVisiblePages: 10 })
+      render(<Pagination {...props} />)
+
+      expect(getPageButtons()).toHaveLength(0)
+      expect(getPrevButton()).toBeVisible()
+      expect(getNextButton()).toBeVisible()
     })
   })
 
