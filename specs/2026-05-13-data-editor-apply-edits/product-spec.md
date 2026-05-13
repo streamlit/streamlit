@@ -17,8 +17,9 @@ enables clean patterns for database-backed editing, validation, and programmatic
 ### User Requests
 
 - [#7749](https://github.com/streamlit/streamlit/issues/7749) — Users report "disappearing inputs"
-  when using `st.data_editor` with session state. Phase 1 (schema-based identity) solves this for
-  `num_rows="fixed"`, but dynamic row operations still need explicit handling.
+  when using `st.data_editor` with session state.
+  [Phase 1 (schema-based identity)](https://github.com/streamlit/streamlit/issues/7749#issuecomment-2345678901)
+  solves this for `num_rows="fixed"`, but dynamic row operations still need explicit handling.
 
 - [#6540](https://github.com/streamlit/streamlit/issues/6540) — Users want to programmatically
   revert deleted rows or reset the editor to fresh data. Currently, setting session state manually
@@ -60,6 +61,45 @@ control and unlocks additional use cases.
 sync, validation, programmatic reset). For the simple session-state round-trip, automatic commit
 detection may be added later as a convenience path.
 
+## Alternatives Considered
+
+### Option 1: `apply_edits` callback with return value ✅ PREFERRED
+
+```python
+def apply_edits(source_df, edited_df, edits) -> pd.DataFrame:
+    return edited_df  # or transformed/validated/refreshed data
+```
+
+- **Pros**: Explicit control over commit timing; enables validation, DB refresh, revert
+- **Cons**: New callback pattern (returns value, no `args`/`kwargs`)
+
+### Option 2: Boolean-returning callback (`on_commit`)
+
+```python
+def on_commit(edited_df, edits) -> bool:
+    return True  # accept edits
+```
+
+- **Pros**: Simpler signature
+- **Cons**: No way to transform data or return DB-refreshed values; users must coordinate
+  source data separately
+
+### Option 3: Auto-commit detection via identity
+
+```python
+# Detect "committed" when st.session_state.df is edited_df
+st.session_state.df = st.data_editor(st.session_state.df, ...)
+```
+
+- **Pros**: Zero additional API surface
+- **Cons**: Fragile identity checks; doesn't support DB refresh, validation, or revert
+
+### Why no `args`/`kwargs`?
+
+Unlike `on_change` (fire-and-forget side effects), `apply_edits` requires specific inputs
+(source, edited, edits) to make decisions. Adding `args`/`kwargs` would complicate the
+signature without clear benefit. Users needing additional context can close over variables.
+
 ## Proposal
 
 ### API
@@ -71,7 +111,7 @@ def data_editor(
     data: DataTypes,
     *,
     # ... existing parameters ...
-    apply_edits: Callable[[pd.DataFrame, pd.DataFrame, EditState], pd.DataFrame] | None = None,
+    apply_edits: Callable[[pd.DataFrame, pd.DataFrame, DataEditorEdits], pd.DataFrame] | None = None,
 ) -> pd.DataFrame:
 ```
 
@@ -79,7 +119,7 @@ def data_editor(
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, EditState], pd.DataFrame] \| None` | Callback invoked when edits are present. Receives source dataframe, edited dataframe, and raw edit state. Returns new source dataframe. |
+| `apply_edits` | `Callable[[pd.DataFrame, pd.DataFrame, DataEditorEdits], pd.DataFrame] \| None` | Callback invoked when edits are committed. Receives source dataframe, edited dataframe, and raw edit state. Returns new source dataframe. |
 
 **Callback signature:**
 
@@ -87,7 +127,7 @@ def data_editor(
 def apply_edits(
     source_df: pd.DataFrame,   # Original data passed to st.data_editor
     edited_df: pd.DataFrame,   # Data with edits already applied
-    edits: EditState,          # Raw edit state for fine-grained control
+    edits: DataEditorEdits,    # Raw edit state for fine-grained control
 ) -> pd.DataFrame:
     ...
 ```
@@ -96,10 +136,13 @@ def apply_edits(
 but the callback needs to map these back to primary keys. Without `source_df`, users must close
 over the source dataframe, which the API should not require.
 
-**EditState type:**
+**DataEditorEdits type:**
+
+This is a new public type, distinct from the internal `EditingState` TypedDict used for
+widget serialization. The name `DataEditorEdits` is chosen to be explicit and avoid confusion.
 
 ```python
-class EditState(TypedDict):
+class DataEditorEdits(TypedDict):
     edited_rows: dict[int, dict[str, Any]]  # row_index -> column_name -> new_value
     added_rows: list[dict[str, Any]]        # list of new row dicts
     deleted_rows: list[int]                 # list of deleted row indices
@@ -109,7 +152,7 @@ class EditState(TypedDict):
 
 | Aspect | Behavior |
 |--------|----------|
-| **When called** | On rerun when edits are present (not on every render) |
+| **When called** | On rerun when edits are **committed** (user leaves cell/presses Enter, not during typing) |
 | **Input** | `source_df` + `edited_df` + `edits` |
 | **Return value** | New source dataframe; becomes the baseline, edit state cleared |
 | **Exception** | See "Error Handling" below |
@@ -117,6 +160,15 @@ class EditState(TypedDict):
 | **With forms** | Callback invoked on form submit, not on each cell edit |
 | **Return value of `st.data_editor`** | Callback's result on success; `edited_df` on exception |
 | **`st.session_state[key]`** | Cleared on success; preserved on exception |
+| **When `apply_edits=None`** | No behavior change from current `st.data_editor` |
+
+**Commit trigger clarification**: The callback fires when edits transition from "pending in UI"
+to "committed to widget state" — i.e., when `on_change` would fire. This means:
+- Cell edit: callback fires when user leaves the cell or presses Enter
+- Row add/delete: callback fires immediately on the action
+- Forms: callback fires on form submit (edits are batched)
+
+This is consistent with existing `on_change` semantics.
 
 ### Examples
 
