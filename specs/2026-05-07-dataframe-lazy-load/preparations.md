@@ -6,45 +6,33 @@ focused on protocol, backend source management, and chunk caching.
 
 ## Recommended Order
 
-1. Component-owned Arrow data derivations
-2. Dataframe capability/mode layer
+1. ~~Component-owned Arrow data derivations~~ ✅ DONE
+2. ~~Dataframe capability/mode layer~~ ✅ DONE
 3. Sorting strategy split
 4. Cell-provider layering
 5. Row-count abstraction
-6. Toolbar/export/search capability gates
-7. Generic non-rerun request/response scaffolding
+6. ~~Toolbar/export/search capability gates~~ ✅ DONE
+7. ~~Generic non-rerun request/response scaffolding~~ ✅ DONE
 
 The first six are mostly frontend/dataframe cleanup. The seventh touches protocol/runtime and is
 useful, but should be a separate small spec before implementation.
 
-## 1. Component-Owned Arrow Data Derivations
+## 1. Component-Owned Arrow Data Derivations ✅ DONE
 
-Move `Quiver`/Vega-Lite wrapper construction out of `ElementNode` and into `Table`,
-`DataFrame`, and `ArrowVegaLiteChart`.
+**Implemented.** `Quiver`/Vega-Lite wrapper construction has been moved out of `ElementNode` and
+into the respective components (`Table`, `DataFrame`, `ArrowVegaLiteChart`).
 
-Why this helps:
+Why this helped:
 
 - Keeps the render tree focused on proto payloads, lifecycle metadata, and app layout.
 - Makes dataframe-owned lazy chunk state natural later.
 - Avoids adding lazy dataframe branches to `ElementNode`.
 - Keeps `Quiver` immutable.
 
-This refactor should be independent of lazy loading and can land first.
+## 2. Dataframe Capability/Mode Layer ✅ DONE
 
-## 2. Dataframe Capability/Mode Layer
-
-Today, `DataFrame.tsx` computes behavior through scattered booleans:
-
-- large table threshold
-- empty table handling
-- editing mode
-- add/delete row support
-- sorting support
-- selection support
-- search and CSV toolbar visibility
-
-Add a small capability layer, for example `useDataFrameCapabilities(...)`, that returns explicit
-feature gates:
+**Implemented.** A capability layer (`useDataFrameCapabilities`) now returns explicit feature
+gates based on editing mode, disabled state, table size, and selection mode.
 
 ```typescript
 interface DataFrameCapabilities {
@@ -60,18 +48,10 @@ interface DataFrameCapabilities {
 }
 ```
 
-Initial inputs can be the existing eager-mode facts:
+Lazy loading can add `dataMode: "eager" | "lazy"` as an input without sprinkling `if (isLazy)`
+checks throughout the component.
 
-- `editingMode`
-- `disabled`
-- `isEmptyTable`
-- `isLargeTable`
-- selection mode
-
-Lazy loading can later add one more input, such as `dataMode: "eager" | "lazy"`, without
-sprinkling `if (isLazy)` checks throughout the component.
-
-Why this helps:
+Why this helped:
 
 - Makes current behavior easier to test.
 - Avoids repeated `isLargeTable`, `isEmptyTable`, and editing-mode conditionals.
@@ -157,80 +137,75 @@ Why this helps:
 - Keeps table sizing, selection setup, and toolbar gates consistent.
 - Makes `height="content"` fallback behavior easier to reason about.
 
-## 6. Toolbar, Search, and CSV Export Gates
+## 6. Toolbar, Search, and CSV Export Gates ✅ DONE
 
-Search and CSV export currently assume local data:
-
-- Search is a Glide UI over browser-available rows.
-- CSV export iterates every row via `getCellContent`.
-
-Move toolbar visibility to the capability layer:
+**Implemented.** Toolbar visibility is now controlled through the capability layer in
+`useDataFrameCapabilities`. The `DataFrame.tsx` component uses `canSearch` and `canExportCsv`
+flags to conditionally render toolbar actions.
 
 ```typescript
-if (capabilities.canExportCsv) {
-  // show CSV action
-}
-
-if (capabilities.canSearch) {
-  // show search action
-}
+// In DataFrame.tsx
+{canExportCsv && (
+  <ToolbarAction label="Download as CSV" ... />
+)}
+{canSearch && (
+  <ToolbarAction label="Search" ... />
+)}
 ```
 
-Do not implement server export or server search as preparation work. Just make the UI gates
-explicit.
-
-Why this helps:
+Why this helped:
 
 - Prevents accidental "search/export only loaded chunks" behavior later.
 - Keeps the lazy-loading MVP behavior clear.
 - Makes future server-side search/export possible without rewriting toolbar logic again.
 
-## 7. Generic Non-Rerun Request/Response Scaffolding
+## 7. Generic Non-Rerun Request/Response Scaffolding ✅ DONE
 
-Deferred downloads already show the pattern lazy dataframes need:
+**Implemented in PR [#15147](https://github.com/streamlit/streamlit/pull/15147).**
 
-1. Frontend sends a non-rerun `BackMsg`.
-2. Backend executes work without a script rerun.
-3. Backend responds with a typed `ForwardMsg`.
-4. Frontend resolves a promise or notifies a listener.
+This scaffolding provides the reusable request/response plumbing that lazy dataframes will use.
+The implementation follows the pattern described below and is now ready for dataframe chunk
+requests to extend.
 
-The reusable part is not the media-file manager. The reusable part is the request/response
-plumbing and session-scoped lifecycle.
+### What Was Implemented
 
-Potential frontend refactor:
+**Frontend (`frontend/lib/src/BackendOperationClient.ts`):**
 
-- Replace one-off `deferredFileListeners` in `App.tsx` with a small typed request registry.
-- Support request id generation.
-- Register promise resolvers or response subscribers.
-- Reject/cleanup on disconnect, session reset, or timeout.
-- Let feature-specific APIs wrap it:
-  - `requestDeferredFile(fileId)`
-  - future `requestDataframeChunk(request)`
-  - future `requestServerValidation(request)`
+- `BackendOperationClient` class with typed request registry
+- UUID-based request id generation
+- Promise resolvers with configurable timeout handling
+- Cleanup on disconnect, session reset, or timeout
+- `requestDeferredFile(fileId)` as the first wrapped API
+- Future `requestDataframeChunk(request)` will follow the same pattern
 
-Potential backend refactor:
+**Backend (`lib/streamlit/runtime/backend_operation_handler.py`):**
 
-- Add a small session action/request helper near `AppSession`.
-- Execute slow work off the event loop with `asyncio.to_thread()`.
-- Provide typed success/error response helpers.
-- Support per-session cleanup and stale id rejection.
-- Let feature-specific managers own payload semantics:
-  - deferred downloads return media URLs
-  - lazy dataframe chunks return Arrow bytes
-  - future validation returns validation results
+- `BackendOperationHandler` protocol for typed handlers
+- `BackendOperationDispatcher` for routing requests by payload type
+- `DeferredFileHandler` as the first implementation
+- Async execution via `asyncio.to_thread()` to avoid blocking the event loop
+- Structured error handling with typed responses
 
-Why this helps:
+**Protocol (`proto/streamlit/proto/BackMsg.proto`, `ForwardMsg.proto`):**
 
-- Reuses the deferred-download plumbing without forcing dataframe chunks through URL/media-file
-  semantics.
-- Gives future server-side widget validation a compatible transport.
-- Centralizes timeout/disconnect/error handling.
+- `BackendOperationRequest` with `oneof payload` for extensible request types
+- `BackendOperationResponse` with `oneof payload` for typed responses
+- `DeferredFileRequestPayload` and `DeferredFileResponsePayload` as first payload types
 
-Why this should be separate:
+**Context (`frontend/lib/src/components/core/BackendOperationContext.tsx`):**
 
-- It touches protobuf, `App.tsx`, `AppSession`, and tests.
-- It could benefit multiple features, so it deserves a focused mini spec.
-- It is not required to start the dataframe frontend cleanup.
+- Replaces the old `DownloadContext` with a generic operation context
+- Provides `requestDeferredFile` through React context
+
+### How Lazy Dataframes Will Use This
+
+Lazy dataframe chunk requests will:
+
+1. Add `DataframeChunkRequestPayload` to `BackendOperationRequest.payload` oneof
+2. Add `DataframeChunkResponsePayload` to `BackendOperationResponse.payload` oneof
+3. Register a `DataframeChunkHandler` with the backend dispatcher
+4. Add `requestDataframeChunk(request)` method to `BackendOperationClient`
+5. Use `BackendOperationContext` to send chunk requests from the DataFrame component
 
 ## Future Server-Side Validation
 
@@ -260,10 +235,10 @@ make it easier later, but the widget semantics need their own design.
 
 ## Suggested PR Breakdown
 
-1. Component-owned Arrow data derivations.
-2. Dataframe capability/mode layer.
+1. ~~Component-owned Arrow data derivations.~~ ✅ Done
+2. ~~Dataframe capability/mode layer.~~ ✅ Done
 3. Sorting strategy split.
 4. Cell-provider layering plus row-count abstraction.
-5. Toolbar/search/export gates from capabilities.
-6. Optional non-rerun request/response mini spec and implementation.
+5. ~~Toolbar/search/export gates from capabilities.~~ ✅ Done
+6. ~~Non-rerun request/response implementation.~~ ✅ Done in PR #15147
 7. Lazy dataframe protocol/source manager/chunk cache implementation.

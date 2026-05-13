@@ -26,9 +26,9 @@ available.
   row-major structure.
 - `frontend/lib/src/components/widgets/DataFrame/hooks/useDataLoader.ts` returns a synchronous
   `getCellContent` callback for Glide Data Grid.
-- `BackMsg` already has a non-rerun request/response pattern for deferred downloads. Lazy
-  dataframe chunks need a similar AppSession-handled path, but not the media-file manager
-  because chunks are not downloadable files or stable URLs.
+- `BackMsg` has a generic `BackendOperationRequest`/`BackendOperationResponse` pattern for
+  non-rerun server operations (see PR #15147). Lazy dataframe chunks will use this pattern by
+  adding a new payload type, rather than routing through the media-file manager.
 
 ## Prior Art: Prototype PR #11032
 
@@ -55,10 +55,10 @@ This spec should not copy these prototype details:
 See `preparations.md` in this directory for recommended frontend/dataframe cleanup that can land
 before the lazy-loading implementation starts. Key refactors:
 
-1. **Component-owned Arrow data derivations**: Move `Quiver` construction out of `ElementNode` and
-   into `DataFrame`, `Table`, and `ArrowVegaLiteChart`. See `preparations.md` section 1 for details.
+1. **Component-owned Arrow data derivations** ✅ DONE: `Quiver` construction has been moved out of
+   `ElementNode` and into `DataFrame`, `Table`, and `ArrowVegaLiteChart`.
 
-2. **Dataframe capability/mode layer**: Add `useDataFrameCapabilities(...)` returning explicit
+2. **Dataframe capability/mode layer** ✅ DONE: `useDataFrameCapabilities(...)` now returns explicit
    feature gates (`canSort`, `canSearch`, `canExportCsv`, `canEdit`, etc.). Lazy loading adds one
    input (`dataMode: "eager" | "lazy"`) instead of sprinkling `if (isLazy)` conditionals.
 
@@ -156,14 +156,16 @@ Add a session-scoped manager for lazy dataframe sources. This follows the same p
 `MediaFileManager.add_deferred()` for deferred download buttons (see
 `lib/streamlit/runtime/media_file_manager.py`), but with dataframe-specific semantics.
 
-**Pattern reference:** The deferred download mechanism in `st.download_button` demonstrates
-the non-rerun request/response flow:
+**Pattern reference:** The deferred download mechanism uses the generic backend operation
+handling (see PR #15147, `lib/streamlit/runtime/backend_operation_handler.py`):
 1. `add_deferred()` registers a callable with a unique `file_id`
-2. Frontend sends `DeferredFileRequest` BackMsg
-3. `AppSession._handle_deferred_file_request()` executes callable via `asyncio.to_thread()`
-4. `DeferredFileResponse` ForwardMsg sent back with URL or error
+2. Frontend sends `BackendOperationRequest` with `deferred_file` payload
+3. `BackendOperationDispatcher` routes to `DeferredFileHandler.handle()` which executes
+   the callable via `asyncio.to_thread()`
+4. `BackendOperationResponse` with `deferred_file` payload sent back with URL or error
 
-Lazy dataframe chunks use the same pattern but return Arrow data directly instead of URLs.
+Lazy dataframe chunks will follow this same dispatcher pattern but with a
+`DataframeChunkHandler` that returns Arrow data directly instead of URLs.
 
 Responsibilities:
 
@@ -234,9 +236,11 @@ schema. If no initial rows are available, `serialized_schema` should contain the
 bytes so the frontend can construct columns without waiting for the first chunk. The top-level
 `arrow_data` field in `Dataframe` remains reserved for the eager (non-lazy) rendering path.
 
-Add chunk request/response messages to `BackMsg` and `ForwardMsg`.
+Add chunk request/response as payload types within the generic `BackendOperationRequest` and
+`BackendOperationResponse` messages (see `BackMsg.proto` and `ForwardMsg.proto`).
 
 ```proto
+// SortState can be defined in a shared proto (e.g., Common.proto or Dataframe.proto)
 message SortState {
   string column = 1;
   SortDirection direction = 2;
@@ -247,26 +251,47 @@ message SortState {
     DESCENDING = 2;
   }
 }
+```
 
-message DataframeChunkRequest {
-  string source_id = 1;
-  string request_id = 2;
-  uint64 offset = 3;
-  uint32 limit = 4;
-  string generation = 5;
-  optional SortState sort = 6;  // Current sort state, if any
+```proto
+// In BackMsg.proto - add to BackendOperationRequest.payload oneof
+message BackendOperationRequest {
+  string request_id = 1;
+  string session_id = 2;
+
+  oneof payload {
+    DeferredFileRequestPayload deferred_file = 3;
+    DataframeChunkRequestPayload dataframe_chunk = 4;  // NEW
+  }
 }
 
-message DataframeChunkResponse {
+message DataframeChunkRequestPayload {
   string source_id = 1;
-  string request_id = 2;
-  uint64 offset = 3;
+  uint64 offset = 2;
+  uint32 limit = 3;
   string generation = 4;
-  bool end_of_stream = 7;  // True when this is the final chunk for sequential sources
-  oneof result {
-    ArrowData arrow_data = 5;
-    string error_msg = 6;
+  optional SortState sort = 5;
+}
+```
+
+```proto
+// In ForwardMsg.proto - add to BackendOperationResponse.payload oneof
+message BackendOperationResponse {
+  string request_id = 1;
+  string error_msg = 2;
+
+  oneof payload {
+    DeferredFileResponsePayload deferred_file = 3;
+    DataframeChunkResponsePayload dataframe_chunk = 4;  // NEW
   }
+}
+
+message DataframeChunkResponsePayload {
+  string source_id = 1;
+  uint64 offset = 2;
+  string generation = 3;
+  bool end_of_stream = 4;
+  ArrowData arrow_data = 5;
 }
 ```
 
@@ -296,12 +321,14 @@ the server should return a chunk error response and log the source id, offset, l
 serialized size. Adaptive byte-based chunk splitting can be added later if this shows up in real
 usage.
 
-`request_id` should be a UUID generated by the frontend per request to deduplicate responses.
-`generation` should be a UUID generated by the backend when a source is registered, changing
-on rerun or source invalidation to allow stale-response detection.
+`request_id` is generated by `BackendOperationClient` at the outer `BackendOperationRequest`
+level (not in the inner payload); this is handled automatically by the client's `request()`
+method. `generation` should be a UUID generated by the backend when a source is registered,
+changing on rerun or source invalidation to allow stale-response detection.
 
-The response should be ignored by the frontend if `source_id`, `request_id`, or `generation`
-does not match an active table request.
+The response should be ignored by the frontend if `source_id` or `generation`
+does not match an active lazy dataframe. The `BackendOperationClient` handles `request_id`
+matching automatically.
 
 ### Backend Render Flow
 
@@ -321,34 +348,37 @@ not as a separate element. The existing parameter handling for `column_config`, 
 
 ### Chunk Request Flow
 
-Following the same pattern as `_handle_deferred_file_request()` in `app_session.py`:
+Following the same pattern as `DeferredFileHandler` (see `lib/streamlit/runtime/backend_operation_handler.py`):
 
-1. Frontend sends `DataframeChunkRequest` BackMsg over the existing websocket.
-2. `AppSession.handle_backmsg()` routes to `_handle_dataframe_chunk_request()` without
+1. Frontend sends `BackendOperationRequest` with `dataframe_chunk` payload via the websocket.
+2. `AppSession.handle_backmsg()` routes to `BackendOperationDispatcher.dispatch()` without
    triggering a script rerun.
-3. The handler validates session/source/generation.
-4. The source's `load_rows` implementation is executed via `asyncio.to_thread()` to avoid
+3. The dispatcher routes to `DataframeChunkHandler` based on the payload type.
+4. The handler validates session/source/generation.
+5. The source's `load_rows` implementation is executed via `asyncio.to_thread()` to avoid
    blocking the event loop. The worker thread does NOT have `ScriptRunContext`; source loaders
    cannot call Streamlit APIs.
-5. The chunk is serialized as Arrow and sent back as `DataframeChunkResponse` ForwardMsg.
-6. The frontend inserts the chunk into its cache and triggers a render.
+6. The chunk is serialized as Arrow and sent back as `BackendOperationResponse` with
+   `dataframe_chunk` payload.
+7. The frontend inserts the chunk into its cache and triggers a render.
 
 ### Frontend Transport and Render-tree Integration
 
-The frontend should add a dataframe-specific request/response path alongside the existing
-deferred-file plumbing:
+The frontend should extend the generic `BackendOperationClient` (see PR #15147) with dataframe
+chunk support:
 
-- `App.tsx` handles `ForwardMsg.dataframe_chunk_response` in the top-level ForwardMsg dispatch.
-- `App.tsx` exposes a `requestDataframeChunk(request)` callback and a response subscription
-  registry through a small context, similar in spirit to `DownloadContext` but keyed by
-  `(source_id, generation, request_id)`.
-- `DataFrame` registers a listener while a lazy dataframe is mounted and unregisters it on
-  unmount, source id changes, or generation changes.
-- `DataFrame` sends `BackMsg.dataframe_chunk_request` through that context instead of reaching
-  into connection state directly.
+- Add a `requestDataframeChunk(request)` method to `BackendOperationClient` that wraps the
+  generic `request()` with the dataframe chunk payload type and appropriate timeout.
+- `App.tsx` already routes `ForwardMsg.backend_operation_response` to `BackendOperationClient`;
+  the client dispatches to registered resolvers by `request_id`.
+- `DataFrame` accesses `BackendOperationClient` through `BackendOperationContext` to send
+  `BackMsg.backend_operation_request` with a `dataframe_chunk` payload.
+- `DataFrame` manages request lifecycle: sends chunk requests, handles responses via the
+  returned promise, and cancels/ignores responses on unmount, source id change, or generation
+  change.
 
 This spec assumes the component-owned Arrow data refactor described in `preparations.md` section 1
-has landed. Lazy dataframe handling
+has landed (✅ done). Lazy dataframe handling
 should stay inside the dataframe component/hooks rather than adding a lazy branch to
 `frontend/lib/src/render-tree/ElementNode.ts`:
 
@@ -397,13 +427,13 @@ sources, sorting must use `sortingMode: "server"`:
 
 This section assumes the following preparatory refactors from `preparations.md` have landed:
 
-- **Component-owned Arrow data derivations**: `DataFrame` owns its `Quiver` construction.
-- **Dataframe capability/mode layer**: `useDataFrameCapabilities(...)` returns explicit feature
-  gates that respect `dataMode: "eager" | "lazy"`.
+- **Component-owned Arrow data derivations** ✅ DONE: `DataFrame` owns its `Quiver` construction.
+- **Dataframe capability/mode layer** ✅ DONE: `useDataFrameCapabilities(...)` returns explicit
+  feature gates that respect `dataMode: "eager" | "lazy"`.
 - **Cell-provider layering**: `useDataLoader` is split into base cell provider, editing overlay,
   cell formatter, and error boundary.
 - **Row-count abstraction**: `DataFrameDataShape.numRows` is decoupled from loaded data.
-- **Toolbar/export/search gates**: Search and CSV export visibility use `capabilities.canSearch`
+- **Toolbar/export/search gates** ✅ DONE: Search and CSV export visibility use `capabilities.canSearch`
   and `capabilities.canExportCsv`.
 
 Integrate lazy loading into the existing `DataFrame` component rather than creating a separate
@@ -827,6 +857,7 @@ annotations. Explicit capabilities are easier to validate and document.
 
 ## References
 
+- Generic backend operation handling PR #15147: https://github.com/streamlit/streamlit/pull/15147
 - Component-owned Arrow data refactor: see `preparations.md` section 1
 - Prior prototype PR #11032: https://github.com/streamlit/streamlit/pull/11032
 - Snowflake `LIMIT / FETCH`: https://docs.snowflake.com/en/sql-reference/constructs/limit
