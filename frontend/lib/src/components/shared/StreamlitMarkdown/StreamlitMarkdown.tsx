@@ -472,7 +472,7 @@ export const CustomCodeTag: FC<CustomCodeTagProps> = ({
   const language = match?.[1] || ""
   return !inline ? (
     <ErrorBoundary>
-      <Suspense fallback={<SquareSkeleton />}>
+      <Suspense fallback={<SquareSkeleton data-testid="stSkeleton" />}>
         <StreamlitSyntaxHighlighter
           language={language}
           showLineNumbers={false}
@@ -1205,7 +1205,7 @@ export const RenderedMarkdown = memo(function RenderedMarkdown({
   if (isLoadingPlugins) {
     return (
       <ErrorBoundary>
-        <SquareSkeleton />
+        <SquareSkeleton data-testid="stSkeleton" />
       </ErrorBoundary>
     )
   }

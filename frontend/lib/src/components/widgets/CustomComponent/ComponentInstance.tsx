@@ -410,7 +410,10 @@ function ComponentInstance(props: Props): ReactElement {
     // if height is explicitly set to 0, we don’t want to show the skeleton at all
     frameHeight !== 0 && (
       // Skeletons will have a default height if no frameHeight was specified
-      <SquareSkeleton height={frameHeight ? `${frameHeight}px` : undefined} />
+      <SquareSkeleton
+        data-testid="stSkeleton"
+        height={frameHeight ? `${frameHeight}px` : undefined}
+      />
     )
 
   // If we've timed out waiting for the READY message from the component,
