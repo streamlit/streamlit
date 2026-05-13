@@ -113,7 +113,7 @@ def test_dispatch_returns_error_when_handler_fails() -> None:
     response = asyncio.run(dispatcher.dispatch(request, "session-id"))
 
     assert response.request_id == "request-id"
-    assert response.error_msg == "handler failed"
+    assert response.error_msg == "Failed to process backend operation"
     assert not response.HasField("deferred_file")
 
 
