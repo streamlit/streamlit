@@ -216,8 +216,9 @@ class PolarsDataframeSource:
             The source Polars DataFrame.
         """
         self._df = df
-        # Convert Polars schema to Arrow schema
-        self._schema = df.to_arrow().schema
+        # Convert Polars schema to Arrow schema using head(0) to avoid
+        # materializing the entire DataFrame
+        self._schema = df.head(0).to_arrow().schema
 
     @property
     def row_count(self) -> int:
