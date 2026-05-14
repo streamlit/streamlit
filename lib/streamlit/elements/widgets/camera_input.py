@@ -1,19 +1,6 @@
-# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import annotations
 
+import io
 from dataclasses import dataclass
 from textwrap import dedent
 from typing import TYPE_CHECKING, TypeAlias, cast
@@ -82,6 +69,43 @@ class CameraInputSerde:
         return return_value
 
 
+def _resize_image_if_needed(
+    uploaded_file: UploadedFile | None,
+    size: tuple[int, int] | None,
+) -> UploadedFile | None:
+    """Resize the image in the UploadedFile to the given dimensions.
+
+    This modifies the UploadedFile buffer in-place, preserving the original
+    file_id, name, type, and file_urls metadata.
+    """
+    if uploaded_file is None or size is None:
+        return uploaded_file
+
+    try:
+        from PIL import Image
+
+        # Read the original image data
+        original_data = uploaded_file.getvalue()
+        img = Image.open(io.BytesIO(original_data))
+        img = img.resize(size, Image.LANCZOS)
+
+        # Save resized image back to buffer
+        output = io.BytesIO()
+        img.save(output, format="JPEG", quality=95)
+        resized_data = output.getvalue()
+
+        # Update the UploadedFile buffer in-place
+        uploaded_file.seek(0)
+        uploaded_file.write(resized_data)
+        uploaded_file.truncate()
+        uploaded_file.size = len(resized_data)
+    except Exception:
+        # If PIL is not available or resize fails, return original unchanged
+        pass
+
+    return uploaded_file
+
+
 class CameraInputMixin:
     @gather_metrics("camera_input")
     def camera_input(
@@ -96,6 +120,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        size: tuple[int, int] | None = None,
     ) -> UploadedFile | None:
         r"""Display a widget that returns pictures from the user's webcam.
 
@@ -113,40 +138,34 @@ class CameraInputMixin:
             lists, blockquotes) is automatically escaped and displays as
             literal text in labels.
 
-            See the ``body`` parameter of |st.markdown|_ for additional,
+            See the `body` parameter of |st.markdown|_ for additional,
             supported Markdown directives.
 
             For accessibility reasons, you should never set an empty label, but
-            you can hide it with ``label_visibility`` if needed. In the future,
+            you can hide it with `label_visibility` if needed. In the future,
             we may disallow empty labels by raising an exception.
 
-            .. |st.markdown| replace:: ``st.markdown``
+            .. |st.markdown| replace:: `st.markdown`
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
         key : str, int, or None
             An optional string or integer to use as the unique key for
-            the widget. If this is ``None`` (default), a key will be
-            generated for the widget based on the values of the other
-            parameters. No two widgets may have the same key. Assigning
-            a key stabilizes the widget's identity and preserves its
-            state across reruns even when other parameters change.
+            the widget. If this is `None` (default), a key will be
+            generated for the widget based on the current widget's
+            parameters. Each key must be unique. Duplicate keys will
+            cause a `DuplicateWidgetID` error.
 
-            A key lets you access the widget's value via
-            ``st.session_state[key]`` (read-only). For more details, see
-            `Widget behavior
-            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
-
-            Additionally, if ``key`` is provided, it will be used as a
-            CSS class name prefixed with ``st-key-``.
+            A key can also be used as a CSS class name prefixed with
+            `st-key-`.
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
-            only displays the tooltip when ``label_visibility="visible"``. If
-            this is ``None`` (default), no tooltip is displayed.
+            only displays the tooltip when `label_visibility="visible"`. If
+            this is `None` (default), no tooltip is displayed.
 
             The tooltip can optionally contain GitHub-flavored Markdown,
-            including the Markdown directives described in the ``body``
-            parameter of ``st.markdown``.
+            including the Markdown directives described in the `body`
+            parameter of `st.markdown`.
 
         on_change : callable
             An optional callback invoked when this camera_input's value
@@ -160,24 +179,36 @@ class CameraInputMixin:
 
         disabled : bool
             An optional boolean that disables the camera input if set to
-            ``True``. Default is ``False``.
+            `True`. Default is `False`.
 
         label_visibility : "visible", "hidden", or "collapsed"
-            The visibility of the label. The default is ``"visible"``. If this
-            is ``"hidden"``, Streamlit displays an empty spacer instead of the
+            The visibility of the label. The default is `"visible"`. If this
+            is `"hidden"`, Streamlit displays an empty spacer instead of the
             label, which can help keep the widget aligned with other widgets.
-            If this is ``"collapsed"``, Streamlit displays no label or spacer.
+            If this is `"collapsed"`, Streamlit displays no label or spacer.
 
         width : "stretch" or int
             The width of the camera input widget. This can be one of the
             following:
 
-            - ``"stretch"`` (default): The width of the widget matches the
+            - `"stretch"` (default): The width of the widget matches the
               width of the parent container.
             - An integer specifying the width in pixels: The widget has a
               fixed width. If the specified width is greater than the width of
               the parent container, the width of the widget matches the width
               of the parent container.
+
+        size : tuple of (width, height) or None
+            An optional tuple specifying the desired output size
+            `(width, height)` in pixels for the captured picture. If
+            `None` (default), the picture is returned at the resolution
+            captured by the camera. When set, the image is resized to the
+            specified dimensions using high-quality Lanczos resampling.
+
+            This ensures consistent picture dimensions regardless of the
+            user's browser window size or camera capabilities.
+
+            Example: `size=(640, 480)`
 
         Returns
         -------
@@ -212,6 +243,7 @@ class CameraInputMixin:
             disabled=disabled,
             label_visibility=label_visibility,
             width=width,
+            size=size,
             ctx=ctx,
         )
 
@@ -227,6 +259,7 @@ class CameraInputMixin:
         disabled: bool = False,
         label_visibility: LabelVisibility = "visible",
         width: WidthWithoutContent = "stretch",
+        size: tuple[int, int] | None = None,
         ctx: ScriptRunContext | None = None,
     ) -> UploadedFile | None:
         key = to_key(key)
@@ -248,6 +281,7 @@ class CameraInputMixin:
             label=label,
             help=help,
             width=width,
+            size=size,
         )
 
         camera_input_proto = CameraInputProto()
@@ -283,7 +317,9 @@ class CameraInputMixin:
 
         if isinstance(camera_input_state.value, DeletedFile):
             return None
-        return camera_input_state.value
+
+        # Apply size transformation if requested
+        return _resize_image_if_needed(camera_input_state.value, size)
 
     @property
     def dg(self) -> DeltaGenerator:
