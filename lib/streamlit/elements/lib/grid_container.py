@@ -14,17 +14,12 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-
 from typing_extensions import Self
 
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Block_pb2 import Block as BlockProto
 from streamlit.runtime.metrics_util import gather_metrics
-
-if TYPE_CHECKING:
-    from streamlit.cursor import Cursor
 
 
 class GridContainer(DeltaGenerator):
@@ -33,15 +28,6 @@ class GridContainer(DeltaGenerator):
     This class extends DeltaGenerator to provide the span() method,
     which allows creating grid cells that span multiple columns and/or rows.
     """
-
-    def __init__(
-        self,
-        root_container: int | None,
-        cursor: Cursor | None,
-        parent: DeltaGenerator | None,
-        block_type: str | None,
-    ) -> None:
-        super().__init__(root_container, cursor, parent, block_type)
 
     def __enter__(self) -> Self:  # type: ignore[override]
         super().__enter__()

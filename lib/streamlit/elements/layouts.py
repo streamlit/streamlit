@@ -633,7 +633,7 @@ class LayoutsMixin:
         columns: Literal["auto"] | int = "auto",
         *,
         min_column_width: int | None = 200,
-        gap: Gap | tuple[Gap | None, Gap | None] = "small",
+        gap: Gap | tuple[Gap | None, Gap | None] | None = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         cell_height: Literal["content", "equal"] | int = "content",
@@ -673,8 +673,8 @@ class LayoutsMixin:
             - ``None``: No minimum width constraint. Only valid when
               ``columns`` is an integer.
 
-            When ``columns="auto"``, this parameter is required and must
-            be a positive integer.
+            When ``columns="auto"``, ``min_column_width`` must be a positive
+            integer (it cannot be ``None``).
 
         gap : str or tuple of str
             The gap size between grid cells. This can be one of the
