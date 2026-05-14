@@ -118,7 +118,7 @@ class MediaFileManagerTest(TestCase):
         """Test that file_id generation from data works as expected."""
 
         fake_bytes = "\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00\x00\xff\x00".encode()
-        test_hash = "2ba850426b188d25adc5a37ad313080c346f5e88e069e0807d0cdb2b"
+        test_hash = "401df29c0b6e3fa089b88cc65c9f6daf"
         assert test_hash == _calculate_file_id(fake_bytes, "media/any")
 
         # Make sure we get different file ids for files with same bytes but diff't mimetypes.

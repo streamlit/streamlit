@@ -58,6 +58,13 @@ def is_expected_error(
     if re.search(r"deck:.*is null undefined", msg.text) and browser_name == "firefox":
         return True
 
+    # deck.gl's luma.gl 9.3+ logs an error when WebGL2 is unavailable (headless Firefox CI):
+    if (
+        re.search(r"deck:.*Failed to create WebGL context", msg.text)
+        and browser_name == "firefox"
+    ):
+        return True
+
     # TODO(lukasmasuch): Investigate why firefox is running into this eval issue:
     if (
         (

@@ -17,8 +17,9 @@
 import { memo, PropsWithChildren, RefObject, useMemo } from "react"
 
 import {
-  DownloadContext,
-  DownloadContextProps,
+  BackendOperationClient,
+  BackendOperationContext,
+  BackendOperationContextProps,
   FormsContext,
   FormsContextProps,
   FormsData,
@@ -37,13 +38,7 @@ import {
   ViewStateContext,
   ViewStateContextProps,
 } from "@streamlit/lib"
-import {
-  Config,
-  DeferredFileResponse,
-  IAppPage,
-  Logo,
-  PageConfig,
-} from "@streamlit/protobuf"
+import { Config, IAppPage, Logo, PageConfig } from "@streamlit/protobuf"
 
 type ViewStateContextValues = {
   isFullScreen: boolean
@@ -94,8 +89,8 @@ type FormsContextValues = {
   formsData: FormsData
 }
 
-type DownloadContextValues = {
-  requestDeferredFile?: (fileId: string) => Promise<DeferredFileResponse>
+type BackendOperationContextValues = {
+  backendOperationClient?: BackendOperationClient
 }
 
 type StreamlitContextProviderProps = PropsWithChildren<
@@ -106,7 +101,7 @@ type StreamlitContextProviderProps = PropsWithChildren<
     ThemeContextValues &
     ScriptRunContextValues &
     FormsContextValues &
-    DownloadContextValues
+    BackendOperationContextValues
 >
 
 /**
@@ -148,8 +143,8 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
   fragmentIdsThisRun,
   // FormsContext
   formsData,
-  // DownloadContext
-  requestDeferredFile,
+  // BackendOperationContext
+  backendOperationClient,
   // Children passed through
   children,
 }: StreamlitContextProviderProps) => {
@@ -249,12 +244,12 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
     [formsData]
   )
 
-  const downloadContextProps: DownloadContextProps =
-    useMemo<DownloadContextProps>(
+  const backendOperationContextProps: BackendOperationContextProps =
+    useMemo<BackendOperationContextProps>(
       () => ({
-        requestDeferredFile,
+        backendOperationClient,
       }),
-      [requestDeferredFile]
+      [backendOperationClient]
     )
 
   /**
@@ -271,7 +266,9 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
       <SidebarConfigContext.Provider value={sidebarConfigContextProps}>
         <ThemeContext.Provider value={themeContextProps}>
           <NavigationContext.Provider value={navigationContextProps}>
-            <DownloadContext.Provider value={downloadContextProps}>
+            <BackendOperationContext.Provider
+              value={backendOperationContextProps}
+            >
               <ViewStateContext.Provider value={viewStateContextProps}>
                 <ScriptRunContext.Provider value={scriptRunContextProps}>
                   <FormsContext.Provider value={formsContextProps}>
@@ -279,7 +276,7 @@ const StreamlitContextProvider: React.FC<StreamlitContextProviderProps> = ({
                   </FormsContext.Provider>
                 </ScriptRunContext.Provider>
               </ViewStateContext.Provider>
-            </DownloadContext.Provider>
+            </BackendOperationContext.Provider>
           </NavigationContext.Provider>
         </ThemeContext.Provider>
       </SidebarConfigContext.Provider>

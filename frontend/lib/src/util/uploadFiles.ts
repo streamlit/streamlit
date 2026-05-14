@@ -54,7 +54,7 @@ export const uploadFiles = async ({
   successfulUploads: SuccessfulUpload[]
   failedUploads: FailedUpload[]
 }> => {
-  let fileUrls: IFileURLs[] = []
+  let fileUrls: IFileURLs[]
 
   try {
     fileUrls = await uploadClient.fetchFileURLs(files)

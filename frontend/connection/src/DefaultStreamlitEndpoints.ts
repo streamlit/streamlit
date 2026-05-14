@@ -366,8 +366,9 @@ export class DefaultStreamlitEndpoints implements StreamlitEndpoints {
       return serverUri
     }
 
-    if (notNullOrUndefined(this.cachedServerUri)) {
-      return this.cachedServerUri
+    const cachedServerUri = this.cachedServerUri
+    if (notNullOrUndefined(cachedServerUri)) {
+      return cachedServerUri
     }
 
     throw new Error("not connected to a server!")

@@ -19,7 +19,6 @@
 from __future__ import annotations
 
 import json
-import time
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
@@ -58,70 +57,6 @@ _LOGGER: Final = get_logger(__name__)
 _ROUTE_AUTH_LOGIN: Final = "auth/login"
 _ROUTE_AUTH_LOGOUT: Final = "auth/logout"
 _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
-
-
-class _AsyncAuthCache:
-    """Async cache for Authlib's Starlette integration.
-
-    Authlib's Starlette OAuth client expects an async cache interface.
-    This implementation tracks per-item expiration times to automatically
-    expire OAuth state entries, preventing unbounded memory growth from
-    abandoned auth flows.
-
-    Cache size is expected to be very small: one entry is created per login
-    attempt (not per user/session) and exists only during the OAuth flow—from
-    clicking "Login" until the OAuth callback completes (typically seconds).
-    Each entry is a few hundred bytes. Entries expire after 1 hour (Authlib's
-    default) or are consumed upon successful callback.
-    """
-
-    # Fallback TTL if authlib doesn't provide an expiration time.
-    # This is the same TTL used internally in Authlib (1 hour).
-    _DEFAULT_TTL_SECONDS: Final = 3600
-
-    def __init__(self) -> None:
-        # Cache structure: {key: (value, expiration_timestamp)}
-        # where key is Authlib's state key (e.g., "_state_google_abc123"),
-        # value is the OAuth state data, and expiration_timestamp is a Unix timestamp.
-        self._cache: dict[str, tuple[Any, float]] = {}
-
-    def _evict_expired(self) -> None:
-        """Evict expired items from the cache."""
-        now = time.time()
-        expired_keys = [k for k, (_, exp) in self._cache.items() if exp <= now]
-        for key in expired_keys:
-            del self._cache[key]
-
-    async def get(self, key: str) -> Any:
-        """Get an item from the cache."""
-        self._evict_expired()
-        entry = self._cache.get(key)
-        return entry[0] if entry else None
-
-    async def set(self, key: str, value: Any, expires_in: int | None = None) -> None:
-        """Set an item in the cache."""
-        self._evict_expired()
-        ttl = expires_in if expires_in is not None else self._DEFAULT_TTL_SECONDS
-        self._cache[key] = (value, time.time() + ttl)
-
-    async def delete(self, key: str) -> None:
-        """Delete an item from the cache."""
-        self._cache.pop(key, None)
-
-    def get_dict(self) -> dict[str, Any]:
-        """Get a dictionary of all items in the cache."""
-        self._evict_expired()
-        return {k: v for k, (v, _) in self._cache.items()}
-
-
-# TODO(lukasmasuch): Reevaluate whether we can remove _AsyncAuthCache and rely on Authlib's
-# built-in session storage via SessionMiddleware instead. This would simplify
-# the code but would expose OAuth state data in signed cookies rather than
-# keeping it server-side. See: https://docs.authlib.org/en/latest/client/starlette.html
-#
-# Note: For true multi-tenant support (multiple Streamlit apps in one process),
-# this cache would need to be made per-runtime rather than module-level.
-_STARLETTE_AUTH_CACHE: Final = _AsyncAuthCache()
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -330,9 +265,7 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    oauth = starlette_client.OAuth(
-        config=_AuthlibConfig(config), cache=_STARLETTE_AUTH_CACHE
-    )
+    oauth = starlette_client.OAuth(config=_AuthlibConfig(config))
     oauth.register(provider)
     return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
 
@@ -350,15 +283,22 @@ def _parse_provider_token(provider_token: str | None) -> str | None:
     return payload["provider"]
 
 
-def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
-    """Extract the provider from the state code from the URL."""
+def _get_provider_by_state(
+    request: Request, state_code_from_url: str | None
+) -> str | None:
+    """Extract the provider from the session based on the state code.
 
+    Authlib stores OAuth state in the Starlette session using keys in the format
+    "_state_{provider}_{state_code}". This function iterates over session keys
+    to find the provider that matches the given state code.
+    """
     if state_code_from_url is None:
         return None
-    current_cache_keys = list(_STARLETTE_AUTH_CACHE.get_dict().keys())
-    state_provider_mapping = {}
-    for key in current_cache_keys:
-        # Authlib's Starlette integration stores OAuth state in the cache using keys
+
+    session = request.session
+    state_provider_mapping: dict[str, str] = {}
+    for key in list(session.keys()):
+        # Authlib's Starlette integration stores OAuth state in the session using keys
         # in the format: "_state_{provider}_{state_code}".
         # Example: "_state_google_abc123" breaks down as:
         #   - "_state" = fixed prefix used by Authlib
@@ -370,15 +310,20 @@ def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
         # We have some unit tests that will fail in case the formats gets changed in
         # an authlib update.
         #
-        # Note: This split assumes no underscores in provider names or state codes.
-        # This is safe because: (1) provider names with underscores are explicitly
-        # blocked in validate_auth_credentials() in auth_util.py, and (2) Authlib's
-        # generate_token() uses only alphanumeric characters (a-zA-Z0-9) for state
-        # codes. See auth_util.py for the underscore validation.
+        # Filter by the "_state_" prefix first to avoid false positives from other
+        # session data that might happen to have 4 underscore-separated parts.
+        if not key.startswith("_state_"):
+            continue
+        #
+        # Note: Using maxsplit=3 makes the parse greedy on the last segment, which is
+        # safer if the state code ever contains underscores. While Authlib's
+        # generate_token() currently uses only alphanumeric characters (a-zA-Z0-9),
+        # this is defensive against upstream changes. Provider names with underscores
+        # are explicitly blocked in validate_auth_credentials() in auth_util.py.
         try:
-            _, _, recorded_provider, code = key.split("_")
+            _, _, recorded_provider, code = key.split("_", 3)
         except ValueError:
-            # Skip cache keys that don't match the expected 4-part format.
+            # Skip session keys that don't match the expected 4-part format.
             continue
         state_provider_mapping[code] = recorded_provider
 
@@ -506,7 +451,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     """Handle the OAuth callback from the authentication provider."""
 
     state = request.query_params.get("state")
-    provider = _get_provider_by_state(state)
+    provider = _get_provider_by_state(request, state)
     origin = _get_origin_from_secrets()
     if origin is None:
         _LOGGER.error(

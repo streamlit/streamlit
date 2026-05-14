@@ -38,6 +38,17 @@ if TYPE_CHECKING:
 _lifespan_events: list[str] = []
 
 
+def handle_script_error(exc: Exception) -> bool | None:
+    """Custom handler that logs errors and returns based on session state."""
+
+    # Read from session_state to decide whether to suppress the UI display
+    suppress = st.session_state.get("suppress_error_display", False)
+    if suppress:
+        st.error(f"Custom error UI: {exc}")
+        return True  # Suppress default exception display
+    return None  # Show default exception display
+
+
 class CustomAPIError(Exception):
     """Custom exception for testing exception handlers."""
 
@@ -118,6 +129,7 @@ app = st.App(
     middleware=[Middleware(CustomHeaderMiddleware)],
     lifespan=lifespan,
     exception_handlers={CustomAPIError: custom_api_error_handler},  # type: ignore[dict-item]
+    on_script_error=handle_script_error,
     secrets={
         "api_key": "test-api-key-12345",
         "database": {

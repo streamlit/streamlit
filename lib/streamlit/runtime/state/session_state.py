@@ -16,7 +16,13 @@ from __future__ import annotations
 
 import json
 import pickle  # noqa: S403
-from collections.abc import Iterator, KeysView, Mapping, MutableMapping, Sequence
+from collections.abc import (
+    Iterator,
+    KeysView,
+    Mapping,
+    MutableMapping,
+    Sequence,
+)
 from copy import deepcopy
 from dataclasses import dataclass, field, replace
 from typing import (
@@ -238,7 +244,7 @@ class WStates(MutableMapping[str, Any]):
 
     def remove_stale_widgets(
         self,
-        active_widget_ids: set[str],
+        active_widget_ids: frozenset[str],
         fragment_ids_this_run: list[str] | None,
     ) -> None:
         """Remove widget state for stale widgets."""
@@ -857,13 +863,13 @@ class SessionState:
         changed: bool = new_value != old_value
         return changed
 
-    def on_script_finished(self, widget_ids_this_run: set[str]) -> None:
+    def on_script_finished(self, widget_ids_this_run: frozenset[str]) -> None:
         """Called by ScriptRunner after its script finishes running.
          Updates widgets to prepare for the next script run.
 
         Parameters
         ----------
-        widget_ids_this_run: set[str]
+        widget_ids_this_run: frozenset[str]
             The IDs of the widgets that were accessed during the script
             run. Any widget state whose ID does *not* appear in this set
             is considered "stale" and will be removed.
@@ -897,7 +903,7 @@ class SessionState:
                 }:
                     self._old_state[state_id] = None
 
-    def _remove_stale_widgets(self, active_widget_ids: set[str]) -> None:
+    def _remove_stale_widgets(self, active_widget_ids: frozenset[str]) -> None:
         """Remove widget state for widgets whose ids aren't in `active_widget_ids`."""
         ctx = get_script_run_ctx()
         if ctx is None:
@@ -1044,25 +1050,50 @@ class SessionState:
         # Compacted programmatic sets (st.session_state["k"] = v) are stored
         # under widget IDs only, so the guard correctly excludes them.
         #
+        # Programmatic set (user_key in _new_session_state): sync URL when the
+        # resolved value differs from the backend query snapshot, so reloads
+        # stay consistent (see issue #14670).
+        #
         # Default collapsing: remove stale params the frontend already cleared.
         # The backend's _query_params is not refreshed on same-page reruns, so
         # it can hold entries the frontend already deleted.  Cleaning them here
         # prevents _send_query_param_msg from re-broadcasting stale params.
+        # Programmatic reset to default uses remove_param so the browser URL
+        # is updated when the frontend still shows the old query string.
         restored_bound_value = False
         if metadata.bind == "query-params" and user_key is not None:
             default_value = metadata.deserializer(None)
-            if (
-                widget_value != default_value
-                and user_key in self._old_state
-                and not self.query_params.has_param(user_key)
-                and user_key not in self._new_session_state
+            if widget_value != default_value:
+                if (
+                    user_key in self._old_state
+                    and not self.query_params.has_param(user_key)
+                    and user_key not in self._new_session_state
+                ):
+                    serialized = metadata.serializer(widget_value)
+                    self.query_params.set_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    )
+                    restored_bound_value = True
+                elif (
+                    user_key in self._new_session_state
+                    and not url_value_seeded
+                    and (widget_id in self._old_state or user_key in self._old_state)
+                ):
+                    serialized = metadata.serializer(widget_value)
+                    if not self.query_params.stored_param_matches_corrected_value(
+                        user_key, serialized, metadata.value_type
+                    ):
+                        self.query_params.set_corrected_value(
+                            user_key, serialized, metadata.value_type
+                        )
+            elif (
+                user_key in self._new_session_state
+                and not url_value_seeded
+                and self.query_params.has_param(user_key)
+                and (widget_id in self._old_state or user_key in self._old_state)
             ):
-                serialized = metadata.serializer(widget_value)
-                self.query_params.set_corrected_value(
-                    user_key, serialized, metadata.value_type
-                )
-                restored_bound_value = True
-            elif widget_value == default_value:
+                self.query_params.remove_param(user_key)
+            else:
                 self.query_params.discard_param_no_forward_msg(user_key)
 
         # widget_value_changed indicates to the caller that the widget's
@@ -1294,7 +1325,7 @@ def _is_internal_key(key: str) -> bool:
 
 def _is_stale_widget(
     metadata: WidgetMetadata[Any] | None,
-    active_widget_ids: set[str],
+    active_widget_ids: frozenset[str],
     fragment_ids_this_run: list[str] | None,
 ) -> bool:
     if not metadata:

@@ -35,9 +35,9 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_r
 _LOGGER: Final = get_logger(__name__)
 
 # Limit the number of commands to keep the page profile message small
-_MAX_TRACKED_COMMANDS: Final = 200
+_MAX_TRACKED_COMMANDS: Final = 400
 # Only track a maximum of 25 uses per unique command since some apps use
-# commands excessively (e.g. calling add_rows thousands of times in one rerun)
+# commands excessively (e.g. calling write thousands of times in one rerun)
 # making the page profile useless.
 _MAX_TRACKED_PER_COMMAND: Final = 25
 
@@ -246,7 +246,7 @@ _DBUS_MACHINE_ID_PATH = "/var/lib/dbus/machine-id"
 
 _STREAMLIT_SKILL_NAMES: Final = (
     "developing-with-streamlit",
-    "finding-streamlit-skills",
+    "developing-with-streamlit-in-snowflake",
 )
 _SKILL_MARKER_FILENAME: Final = "SKILL.md"
 # (harness, project_skills_dir, home_skills_dir, agent_home_dir) - skill dirs

@@ -40,7 +40,6 @@ from streamlit.deprecation_util import (
     show_deprecation_warning,
 )
 from streamlit.elements.lib.built_in_chart_utils import (
-    AddRowsMetadata,
     ChartStackType,
     ChartType,
     generate_chart,
@@ -846,7 +845,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.LINE,
             data=data,
             x_from_user=x,
@@ -857,7 +856,6 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
-            use_container_width=(width == "stretch"),
         )
 
         return cast(
@@ -866,7 +864,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1138,7 +1135,7 @@ class VegaChartsMixin:
         if stack is False or stack is None:
             stack = "layered"
 
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.AREA,
             data=data,
             x_from_user=x,
@@ -1150,7 +1147,6 @@ class VegaChartsMixin:
             width=width,
             height=height,
             stack=stack,
-            use_container_width=(width == "stretch"),
         )
         return cast(
             "DeltaGenerator",
@@ -1158,7 +1154,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1470,7 +1465,7 @@ class VegaChartsMixin:
             ChartType.HORIZONTAL_BAR if horizontal else ChartType.VERTICAL_BAR
         )
 
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=bar_chart_type,
             data=data,
             x_from_user=x,
@@ -1481,9 +1476,7 @@ class VegaChartsMixin:
             size_from_user=None,
             width=width,
             height=height,
-            use_container_width=use_container_width,
             stack=stack,
-            horizontal=horizontal,
             sort_from_user=sort,
         )
         return cast(
@@ -1492,7 +1485,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1725,7 +1717,7 @@ class VegaChartsMixin:
            height: 440px
 
         """
-        chart, add_rows_metadata = generate_chart(
+        chart = generate_chart(
             chart_type=ChartType.SCATTER,
             data=data,
             x_from_user=x,
@@ -1736,7 +1728,6 @@ class VegaChartsMixin:
             size_from_user=size,
             width=width,
             height=height,
-            use_container_width=(width == "stretch"),
         )
         return cast(
             "DeltaGenerator",
@@ -1744,7 +1735,6 @@ class VegaChartsMixin:
                 chart,
                 use_container_width=use_container_width,
                 theme="streamlit",
-                add_rows_metadata=add_rows_metadata,
                 width=width,
                 height=height,
             ),
@@ -1937,9 +1927,8 @@ class VegaChartsMixin:
         -------
         element or dict
             If ``on_select`` is ``"ignore"`` (default), this command returns an
-            internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this command returns a
-            dictionary-like object that supports both key and attribute
+            internal placeholder for the chart element. Otherwise, this command
+            returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
@@ -2170,9 +2159,8 @@ class VegaChartsMixin:
         -------
         element or dict
             If ``on_select`` is ``"ignore"`` (default), this command returns an
-            internal placeholder for the chart element that can be used with
-            the ``.add_rows()`` method. Otherwise, this command returns a
-            dictionary-like object that supports both key and attribute
+            internal placeholder for the chart element. Otherwise, this command
+            returns a dictionary-like object that supports both key and attribute
             notation. The attributes are described by the ``VegaLiteState``
             dictionary schema.
 
@@ -2226,7 +2214,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
         width: Width | None = None,
         height: Height = "content",
     ) -> DeltaGenerator | VegaLiteState:
@@ -2252,7 +2239,6 @@ class VegaChartsMixin:
             key=key,
             on_select=on_select,
             selection_mode=selection_mode,
-            add_rows_metadata=add_rows_metadata,
             width=width,
             height=height,
         )
@@ -2266,7 +2252,6 @@ class VegaChartsMixin:
         key: Key | None = None,
         on_select: Literal["rerun", "ignore"] | WidgetCallback = "ignore",
         selection_mode: str | Iterable[str] | None = None,
-        add_rows_metadata: AddRowsMetadata | None = None,
         width: Width | None = None,
         height: Height = "content",
     ) -> DeltaGenerator | VegaLiteState:
@@ -2426,7 +2411,6 @@ class VegaChartsMixin:
             self.dg._enqueue(
                 "vega_lite_chart",
                 vega_lite_proto,
-                add_rows_metadata=add_rows_metadata,
                 layout_config=layout_config,
             )
             return widget_state.value
@@ -2437,7 +2421,6 @@ class VegaChartsMixin:
         return self.dg._enqueue(
             "vega_lite_chart",
             vega_lite_proto,
-            add_rows_metadata=add_rows_metadata,
             layout_config=layout_config,
         )
 

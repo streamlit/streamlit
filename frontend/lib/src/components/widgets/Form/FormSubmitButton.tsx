@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useCallback, useEffect } from "react"
+import { memo, ReactElement, useCallback, useEffect } from "react"
 
 import { Button as ButtonProto } from "@streamlit/protobuf"
 
@@ -38,7 +38,9 @@ export interface Props {
   fragmentId?: string
 }
 
-export function FormSubmitButton(props: Props): ReactElement {
+export const FormSubmitButton = memo(function FormSubmitButton(
+  props: Props
+): ReactElement {
   const { disabled, element, widgetMgr, fragmentId } = props
   const { formId } = element
   const shortcut = element.shortcut ? element.shortcut : undefined
@@ -94,4 +96,4 @@ export function FormSubmitButton(props: Props): ReactElement {
       </BaseButtonTooltip>
     </Box>
   )
-}
+})

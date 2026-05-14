@@ -94,3 +94,25 @@ try:
     st.write(f"Auth Client ID: {st.secrets.auth.client_id}")
 except (AttributeError, StreamlitSecretNotFoundError):
     st.write("Auth Client ID: NOT SET")
+
+st.divider()
+
+# === Script Error Handler Section ===
+st.subheader("Script Error Handler Test")
+suppress = st.checkbox("Suppress error display", key="suppress_error_display")
+st.write(f"Suppress display: {suppress}")
+
+if st.button("Raise exception", key="raise_error"):
+    raise ValueError("Test error from user script")
+
+if st.button("Raise RuntimeError", key="raise_runtime"):
+    raise RuntimeError("Runtime error from user script")
+
+
+# === Widget Callback Error Test ===
+def _on_click_error() -> None:
+    """Callback that raises an exception to test on_script_error with widget callbacks."""
+    raise ValueError("Error from on_click callback")
+
+
+st.button("Raise in callback", key="raise_in_callback", on_click=_on_click_error)

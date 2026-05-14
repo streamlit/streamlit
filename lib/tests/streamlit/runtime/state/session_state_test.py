@@ -35,20 +35,33 @@ from streamlit.errors import (
     StreamlitAPIException,
     UnserializableSessionStateError,
 )
-from streamlit.proto.Common_pb2 import FileURLs as FileURLsProto
+from streamlit.proto.Common_pb2 import (
+    ChatInputValue as ChatInputValueProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileUploaderState as FileUploaderStateProto,
+)
+from streamlit.proto.Common_pb2 import (
+    FileURLs as FileURLsProto,
+)
+from streamlit.proto.Common_pb2 import (
+    StringTriggerValue as StringTriggerValueProto,
+)
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from streamlit.runtime.state import SessionState, get_session_state
 from streamlit.runtime.state.common import GENERATED_ELEMENT_ID_PREFIX, WidgetMetadata
 from streamlit.runtime.state.session_state import (
     KeyIdMapper,
     Serialized,
+    SessionStateStatProvider,
     Value,
     WStates,
     _is_stale_widget,
     _sanitize_url_array,
 )
-from streamlit.runtime.stats import CACHE_MEMORY_FAMILY
+from streamlit.runtime.stats import CACHE_MEMORY_FAMILY, CacheStat
 from streamlit.runtime.uploaded_file_manager import UploadedFile, UploadedFileRec
 from streamlit.testing.v1.app_test import AppTest
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -272,6 +285,78 @@ class WStateTests(unittest.TestCase):
         self.wstates.call_callback("widget_id_1")
 
         metadata.callback.assert_called_once_with(1, y=2)
+
+    def test_call_callback_with_no_callback_returns_none(self):
+        """``call_callback`` returns None for widgets without a registered callback."""
+        # widget_id_1 has metadata but no callback
+        assert self.wstates.call_callback("widget_id_1") is None
+
+    def test_call_callback_unknown_widget_raises(self):
+        """``call_callback`` raises ``RuntimeError`` for an unknown widget ID."""
+        with pytest.raises(RuntimeError, match=r"Widget unknown not found\."):
+            self.wstates.call_callback("unknown")
+
+    def test_get_serialized_file_uploader_state_value(self):
+        """``get_serialized`` returns a widget proto for ``file_uploader_state_value``."""
+        uploaded_state = FileUploaderStateProto()
+        self.wstates.set_from_value("file_widget_id", uploaded_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="file_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="file_uploader_state_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("file_widget_id")
+        assert serialized is not None
+        assert serialized.id == "file_widget_id"
+        assert serialized.WhichOneof("value") == "file_uploader_state_value"
+
+    def test_get_serialized_string_trigger_value(self):
+        """``get_serialized`` returns a widget proto for ``string_trigger_value``."""
+        trigger_state = StringTriggerValueProto()
+        trigger_state.data = "submit"
+        self.wstates.set_from_value("trigger_widget_id", trigger_state)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="trigger_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="string_trigger_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("trigger_widget_id")
+        assert serialized is not None
+        assert serialized.string_trigger_value.data == "submit"
+
+    def test_get_serialized_chat_input_value(self):
+        """``get_serialized`` returns a widget proto for ``chat_input_value``."""
+        chat_value = ChatInputValueProto()
+        chat_value.data = "hello"
+        self.wstates.set_from_value("chat_widget_id", chat_value)
+        self.wstates.set_widget_metadata(
+            WidgetMetadata(
+                id="chat_widget_id",
+                deserializer=lambda x: x,
+                serializer=identity,
+                value_type="chat_input_value",
+            )
+        )
+
+        serialized = self.wstates.get_serialized("chat_widget_id")
+        assert serialized is not None
+        assert serialized.chat_input_value.data == "hello"
+
+    def test_wstates_repr_includes_class_and_field_names(self):
+        """``repr(WStates)`` includes the class name and field names so it is
+        useful for debugging.
+        """
+        result = repr(self.wstates)
+        assert "WStates" in result
+        assert "states" in result
 
     def test_fragment_callback_warning(self):
         """Test that a warning is logged when modifying elements during a fragment callback."""
@@ -813,7 +898,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = {"widget_id"}
+        mock_ctx.widget_ids_this_run = ThreadSafeSet()
+        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -828,7 +914,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_setitem_disallows_setting_created_form(self):
         mock_ctx = MagicMock()
-        mock_ctx.form_ids_this_run = {"form_id"}
+        mock_ctx.form_ids_this_run = ThreadSafeSet()
+        mock_ctx.form_ids_this_run.check_and_add("form_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -853,7 +940,8 @@ class SessionStateMethodTests(unittest.TestCase):
 
     def test_reset_state_value_allows_setting_created_widget(self):
         mock_ctx = MagicMock()
-        mock_ctx.widget_ids_this_run = {"widget_id"}
+        mock_ctx.widget_ids_this_run = ThreadSafeSet()
+        mock_ctx.widget_ids_this_run.check_and_add("widget_id")
 
         with patch(
             "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -1107,6 +1195,47 @@ class SessionStateStatProviderTests(DeltaGeneratorTestCase):
         state._compact_state()
         new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
         assert new_size_4 <= new_size_3
+
+
+def test_session_state_repr_includes_class_and_field_names() -> None:
+    """``repr(SessionState())`` includes the class name and at least one
+    field name so it is useful for debugging.
+    """
+    result = repr(SessionState())
+    # Class name and a known dataclass field should appear.
+    assert "SessionState" in result
+    assert "_new_widget_state" in result
+
+
+def test_session_state_stat_provider_returns_empty_for_no_sessions() -> None:
+    """``SessionStateStatProvider.get_stats`` returns an empty mapping with no sessions."""
+    session_mgr = MagicMock()
+    session_mgr.list_active_sessions.return_value = []
+
+    provider = SessionStateStatProvider(_session_mgr=session_mgr)
+
+    assert provider.get_stats() == {}
+    assert provider.stats_families == (CACHE_MEMORY_FAMILY,)
+
+
+def test_session_state_stat_provider_aggregates_session_stats() -> None:
+    """``SessionStateStatProvider.get_stats`` aggregates stats across sessions."""
+    session_info_1 = MagicMock()
+    session_info_1.session.session_state.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st_session_state", "k1", 100)],
+    }
+    session_info_2 = MagicMock()
+    session_info_2.session.session_state.get_stats.return_value = {
+        CACHE_MEMORY_FAMILY: [CacheStat("st_session_state", "k2", 200)],
+    }
+    session_mgr = MagicMock()
+    session_mgr.list_active_sessions.return_value = [session_info_1, session_info_2]
+
+    provider = SessionStateStatProvider(_session_mgr=session_mgr)
+
+    result = provider.get_stats()
+    assert CACHE_MEMORY_FAMILY in result
+    assert sum(stat.byte_length for stat in result[CACHE_MEMORY_FAMILY]) == 300
 
 
 class KeyIdMapperTest(unittest.TestCase):
@@ -1577,6 +1706,228 @@ class HandleQueryParamBindingTest(DeltaGeneratorTestCase):
         assert self.session_state._new_session_state["my_widget"] == "url_value"
 
 
+class RegisterWidgetQueryParamProgrammaticSyncTest(DeltaGeneratorTestCase):
+    """Programmatic session_state updates sync bound widgets to the URL."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.session_state = SessionState()
+        self.query_params = self.session_state.query_params
+
+    def _page_info_msg_count(self) -> int:
+        return sum(
+            1 for m in self.forward_msg_queue._queue if m.HasField("page_info_changed")
+        )
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_syncs_query_params_and_forward_msg(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.session_state._new_session_state["my_widget"] = "arbitrary value"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self.query_params.get("my_widget") == "arbitrary value"
+        assert self._page_info_msg_count() == 1
+        msg = self.get_message_from_queue(-1)
+        assert "my_widget=arbitrary+value" in msg.page_info_changed.query_string
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_reset_to_default_sends_forward_msg(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("my_widget", "stale")
+        self.session_state._new_session_state["my_widget"] = "default"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+        assert self._page_info_msg_count() == 1
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_set_skips_forward_msg_when_url_already_matches(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("my_widget", "same")
+        self.session_state._new_session_state["my_widget"] = "same"
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_ui_driven_value_does_not_trigger_programmatic_url_sync(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+        self.session_state._compact_state()
+        self.session_state._new_widget_state.set_from_value(widget_id, "from_ui")
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_float_scalar_matches_url_string_form(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-num"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="double_value",
+            deserializer=lambda x: float(x) if x is not None else 0.0,
+            serializer=lambda x: float(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="num")
+        self.session_state._compact_state()
+        # Scalar double_value uses str() in set_corrected_value, not whole-number collapse.
+        self.query_params.set_with_no_forward_msg("num", "5.0")
+        self.session_state._new_session_state["num"] = 5.0
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="num")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_bool_coercion_matches_url(self, mock_ctx: MagicMock) -> None:
+        widget_id = "$$ID-hash-bool"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="bool_value",
+            deserializer=lambda x: x if x is not None else False,
+            serializer=lambda x: bool(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="flag")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("flag", "true")
+        self.session_state._new_session_state["flag"] = True
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="flag")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_programmatic_string_array_coercion_matches_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        widget_id = "$$ID-hash-arr"
+        metadata = _create_test_widget_metadata(
+            widget_id,
+            value_type="string_array_value",
+            deserializer=lambda x: x if x is not None else [],
+            serializer=lambda x: list(x),
+        )
+        self.query_params.set_initial_query_params("")
+
+        self.session_state.register_widget(metadata, user_key="arr")
+        self.session_state._compact_state()
+        self.query_params.set_with_no_forward_msg("arr", ["a", "b"])
+        self.session_state._new_session_state["arr"] = ["a", "b"]
+        self.clear_queue()
+
+        self.session_state.register_widget(metadata, user_key="arr")
+
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_initial_load_preseeding_does_not_sync_url(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """Session state pre-seeded before first register must not push to URL.
+
+        The widget_id is absent from _old_state (never compacted), so
+        the programmatic-sync branch must not fire on first render.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("")
+
+        self.session_state._new_session_state["my_widget"] = "preseed_value"
+        self.session_state.register_widget(metadata, user_key="my_widget")
+
+        assert "my_widget" not in self.query_params._query_params
+        assert self._page_info_msg_count() == 0
+
+    @patch(
+        "streamlit.runtime.state.session_state.get_script_run_ctx",
+        return_value=MockScriptRunCtx(),
+    )
+    def test_url_seeded_initial_load_does_not_trigger_programmatic_sync(
+        self, mock_ctx: MagicMock
+    ) -> None:
+        """URL-seeded initial load must not emit a redundant page_info_changed.
+
+        _seed_widget_from_url writes the URL value into _new_session_state,
+        so the not url_value_seeded guard in Branch 1b is the only protection.
+        """
+        widget_id = "$$ID-hash-my_widget"
+        metadata = _create_test_widget_metadata(widget_id)
+        self.query_params.set_initial_query_params("my_widget=url_value")
+        self.clear_queue()
+
+        with patch.object(self.query_params, "set_corrected_value") as mock_set:
+            self.session_state.register_widget(metadata, user_key="my_widget")
+            mock_set.assert_not_called()
+
+        assert self._page_info_msg_count() == 0
+
+
 class RegisterWidgetUnbindTest(DeltaGeneratorTestCase):
     """Tests for register_widget cleaning up stale bindings when bind is removed."""
 
@@ -1830,8 +2181,8 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
         "streamlit.runtime.state.session_state.get_script_run_ctx",
         return_value=MockScriptRunCtx(),
     )
-    def test_skips_url_sync_when_session_state_set(self, mock_ctx: MagicMock) -> None:
-        """Programmatic st.session_state set this run should not sync to URL."""
+    def test_syncs_url_when_session_state_set(self, mock_ctx: MagicMock) -> None:
+        """Programmatic st.session_state set this run syncs to URL."""
         metadata = self._setup_remount_state("old_value")
         self.session_state._new_session_state["my_widget"] = "programmatic_value"
 
@@ -1839,7 +2190,9 @@ class RegisterWidgetUrlSyncTest(DeltaGeneratorTestCase):
             self.query_params, "set_corrected_value"
         ) as mock_set_corrected:
             self.session_state.register_widget(metadata, user_key="my_widget")
-            mock_set_corrected.assert_not_called()
+            mock_set_corrected.assert_called_once_with(
+                "my_widget", "programmatic_value", "string_value"
+            )
 
     @patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",

@@ -471,15 +471,20 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_command_tracking_limits(self):
         """Command tracking limits should be respected.
 
-        Current limits are 25 per unique command and 200 in total.
+        Current limits are _MAX_TRACKED_PER_COMMAND (25) per unique command
+        and _MAX_TRACKED_COMMANDS (400) in total.
         """
         ctx = get_script_run_ctx()
         assert ctx is not None
         ctx.reset()
         ctx.gather_usage_stats = True
 
+        # Create enough unique command names to exceed _MAX_TRACKED_COMMANDS
+        # when each is called _MAX_TRACKED_PER_COMMAND + 1 times.
+        # With 20 commands * 25 per command = 500, which exceeds the 400 limit.
+        num_unique_commands = 20
         funcs = []
-        for i in range(10):
+        for i in range(num_unique_commands):
 
             def test_function() -> str:
                 return "foo"
@@ -808,7 +813,7 @@ def _clear_skills_cache() -> Iterator[None]:
 )
 @pytest.mark.parametrize(
     "skill",
-    ["developing-with-streamlit", "finding-streamlit-skills"],
+    ["developing-with-streamlit", "developing-with-streamlit-in-snowflake"],
 )
 def test_detect_installed_skills_emits_expected_token(
     tmp_path: Path,
@@ -889,12 +894,12 @@ def test_detect_installed_skills_walks_up_to_repo_root(
     home.mkdir()
     app.mkdir(parents=True)
     (repo / ".git").mkdir()
-    _make_skill_dir(repo, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".agents/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
-    assert tokens == ["repo:agents:finding-streamlit-skills"]
+    assert tokens == ["repo:agents:developing-with-streamlit-in-snowflake"]
 
 
 def test_detect_installed_skills_returns_sorted_deduped_tokens(
@@ -908,14 +913,14 @@ def test_detect_installed_skills_returns_sorted_deduped_tokens(
     app.mkdir(parents=True)
     (repo / ".git").mkdir()
     _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
-    _make_skill_dir(app, ".agents/skills", "finding-streamlit-skills")
+    _make_skill_dir(app, ".agents/skills", "developing-with-streamlit-in-snowflake")
     _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
-        "app:agents:finding-streamlit-skills",
+        "app:agents:developing-with-streamlit-in-snowflake",
         "home:cursor:developing-with-streamlit",
         "repo:claude:developing-with-streamlit",
     ]
@@ -938,15 +943,45 @@ def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
     # Note: no ``~/.claude`` directory is created — the user has never run
     # Claude Code. But the project ships skills under its own .claude dir.
     _make_skill_dir(app, ".claude/skills", "developing-with-streamlit")
-    _make_skill_dir(repo, ".claude/skills", "finding-streamlit-skills")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit-in-snowflake")
 
     monkeypatch.setenv("HOME", str(home))
     tokens = metrics_util._detect_installed_skills(str(app))
 
     assert tokens == [
         "app:claude:developing-with-streamlit",
-        "repo:claude:finding-streamlit-skills",
+        "repo:claude:developing-with-streamlit-in-snowflake",
     ]
+
+
+def test_detect_installed_skills_detects_symlinked_skill_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked skill directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    # Create a real skill directory elsewhere
+    real_skill = tmp_path / "external" / "developing-with-streamlit"
+    real_skill.mkdir(parents=True)
+    (real_skill / "SKILL.md").write_text("---\nname: developing-with-streamlit\n---\n")
+
+    # Symlink it into the .claude/skills directory
+    skills_dir = app / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+    try:
+        (skills_dir / "developing-with-streamlit").symlink_to(
+            real_skill, target_is_directory=True
+        )
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
 
 
 @pytest.mark.parametrize(
@@ -1024,6 +1059,27 @@ def test_detect_installed_agents_returns_sorted_deduped_tokens(
 
     monkeypatch.setenv("HOME", str(home))
     assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+
+
+def test_detect_installed_agents_detects_symlinked_harness_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked harness directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    # Create a real .claude directory elsewhere
+    real_claude = tmp_path / "external" / ".claude"
+    real_claude.mkdir(parents=True)
+
+    # Symlink it into the home directory
+    try:
+        (home / ".claude").symlink_to(real_claude, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude"]
 
 
 @pytest.mark.parametrize(
