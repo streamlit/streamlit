@@ -702,8 +702,9 @@ class LayoutsMixin:
 
             - ``"content"`` (default): Each cell's height matches its
               content. Cells in different rows can have different heights.
-            - ``"equal"``: All cells in the same row have equal height,
-              matching the tallest cell in that row.
+            - ``"equal"``: All rows in the grid have equal height, sized
+              to the tallest row. This works best when the grid container
+              has a fixed height.
             - A positive integer: All cells have a fixed height in pixels.
 
         width : "stretch" or int
@@ -718,8 +719,11 @@ class LayoutsMixin:
 
         Returns
         -------
-        DeltaGenerator
-            A container object that supports ``with`` notation or method calls.
+        GridDeltaGenerator
+            A container object that supports ``with`` notation or method
+            calls. In addition to the standard DeltaGenerator methods, this
+            object also has a ``span()`` method that allows creating cells
+            that span multiple columns or rows.
 
         Examples
         --------

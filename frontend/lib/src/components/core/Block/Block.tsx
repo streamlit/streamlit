@@ -273,7 +273,15 @@ interface GridContainerProps extends BaseBlockProps {
  * Renders a CSS Grid container with its children wrapped in grid cells.
  */
 const GridContainer = (props: GridContainerProps): ReactElement => {
-  const { node } = props
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  } = props
   const parentContext = useContext(FlexContext)
   const gridConfig = node.deltaBlock.gridContainer
 
@@ -294,45 +302,71 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     BlockProto.GridContainer.CellHeightMode.CONTENT
   const cellHeightPx = gridConfig?.cellHeightConfig?.pixelHeight ?? undefined
 
-  // Collect child elements and their grid cell configurations
+  // Collect child elements and their grid cell configurations.
+  // Use individual props as dependencies instead of the props object
+  // to ensure stable memoization (widgetMgr etc. are stable singletons).
   const childrenWithCells = useMemo(() => {
-    const visitor = new RenderNodeVisitor(props)
+    const visitor = new RenderNodeVisitor({
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    })
 
-    return (node.children ?? []).map((childNode, index) => {
+    return (node.children ?? []).map(childNode => {
       // Get grid cell config from BlockNode children
       let columnSpan: number | undefined
       let rowSpan: number | undefined
+      let nodeId: string | undefined
 
-      if (childNode instanceof BlockNode && childNode.deltaBlock.gridCell) {
-        const gridCell = childNode.deltaBlock.gridCell
-        if (gridCell.columnSpan && gridCell.columnSpan > 1) {
-          columnSpan = gridCell.columnSpan
-        }
-        if (gridCell.rowSpan && gridCell.rowSpan > 1) {
-          rowSpan = gridCell.rowSpan
+      if (childNode instanceof BlockNode) {
+        nodeId = childNode.deltaBlock.id || undefined
+        if (childNode.deltaBlock.gridCell) {
+          const gridCell = childNode.deltaBlock.gridCell
+          if (gridCell.columnSpan && gridCell.columnSpan > 1) {
+            columnSpan = gridCell.columnSpan
+          }
+          if (gridCell.rowSpan && gridCell.rowSpan > 1) {
+            rowSpan = gridCell.rowSpan
+          }
         }
       }
 
-      // Render the child element
-      childNode.accept(visitor)
-      const childElement = visitor.reactElements[index]
+      // Render the child element using the return value from accept()
+      // instead of indexing into reactElements, since the visitor may
+      // push 0, 1, or multiple elements per node (e.g., transient nodes).
+      const childElement = childNode.accept(visitor)
 
       return {
         element: childElement,
+        nodeId,
         columnSpan,
         rowSpan,
       }
     })
-  }, [node.children, props])
+  }, [
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  ])
 
   // Determine if grid has fixed cell height for overflow handling
   const hasFixedHeight =
     cellHeightMode === BlockProto.GridContainer.CellHeightMode.FIXED
 
-  // Wrap each child in a StyledGridCell with span information
+  // Wrap each child in a StyledGridCell with span information.
+  // Use nodeId for stable React keys to avoid incorrect reuse when elements
+  // are inserted/removed. Fall back to index if nodeId unavailable.
   const wrappedChildren = childrenWithCells.map((child, index) => (
     <StyledGridCell
-      key={child.element?.key ?? index}
+      key={child.nodeId ?? index}
       verticalAlignment={verticalAlignment}
       showBorder={showCellBorder}
       hasFixedHeight={hasFixedHeight}
