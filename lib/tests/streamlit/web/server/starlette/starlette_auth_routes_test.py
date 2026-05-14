@@ -299,7 +299,25 @@ class TestAuthCookieFlags:
             assert cookie["path"] == "/"
 
             # Check max-age is present and equals 30 days.
-            assert cookie["max-age"] == str(30 * 24 * 60 * 60)
+            assert cookie["max-age"] == str(
+                starlette_auth_routes._AUTH_COOKIE_MAX_AGE_SECONDS
+            )
+
+            # Same persistence check on the tokens cookie.
+            tokens_cookie_header = next(
+                (
+                    h
+                    for h in set_cookie_headers
+                    if h.startswith(f"{TOKENS_COOKIE_NAME}=")
+                ),
+                None,
+            )
+            assert tokens_cookie_header is not None, "Tokens cookie not found"
+            tokens_cookies = SimpleCookie()
+            tokens_cookies.load(tokens_cookie_header)
+            assert tokens_cookies[TOKENS_COOKIE_NAME]["max-age"] == str(
+                starlette_auth_routes._AUTH_COOKIE_MAX_AGE_SECONDS
+            )
 
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}
