@@ -282,6 +282,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     uploadClient,
     componentRegistry,
   } = props
+
+  // Handle cycling of colors for dividers (same as ChildRenderer):
+  assignDividerColor(node, useEmotionTheme())
+
   const parentContext = useContext(FlexContext)
   const gridConfig = node.deltaBlock.gridContainer
 
