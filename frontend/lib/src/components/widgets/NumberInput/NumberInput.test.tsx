@@ -1625,6 +1625,71 @@ describe("NumberInput widget", () => {
       expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
       expect(input).toHaveAttribute("aria-invalid", "true")
     })
+
+    it("error clears when valid value is committed via step-down button", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 10, min: 0, max: 50 })
+      vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+      const stepDownButton = screen.getByTestId("stNumberInputStepDown")
+
+      // Trigger an error by entering a value above max
+      await user.clear(input)
+      await user.type(input, "51") // Above max
+      await user.keyboard("{enter}")
+
+      // Error should be visible
+      expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
+      expect(input).toHaveAttribute("aria-invalid", "true")
+
+      // Click step-down to get to a valid value (50)
+      await user.click(stepDownButton)
+
+      // Error should be cleared after committing a valid value via step button
+      expect(
+        screen.queryByTestId("stNumberInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(input).toHaveAttribute("aria-invalid", "false")
+      // Value should be committed
+      expect(input).toHaveValue(50)
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        50,
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("error clears when valid value is committed via arrow keys", async () => {
+      const user = userEvent.setup()
+      const props = getIntProps({ default: 10, min: 0, max: 50 })
+
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+
+      // Trigger an error by entering a value below min
+      await user.clear(input)
+      await user.type(input, "-1") // Below min
+      await user.keyboard("{enter}")
+
+      // Error should be visible
+      expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
+      expect(input).toHaveAttribute("aria-invalid", "true")
+
+      // Use ArrowUp to get to a valid value (0)
+      await user.type(input, "{arrowup}")
+
+      // Error should be cleared after committing a valid value via arrow key
+      expect(
+        screen.queryByTestId("stNumberInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(input).toHaveAttribute("aria-invalid", "false")
+      expect(input).toHaveValue(0)
+    })
   })
 })
 

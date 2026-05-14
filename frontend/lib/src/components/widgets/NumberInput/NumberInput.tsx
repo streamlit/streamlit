@@ -222,6 +222,9 @@ const NumberInput: React.FC<Props> = ({
         return
       }
 
+      // Clear any error when a valid value is committed (e.g., via step buttons)
+      resetError()
+
       const newValue = valueArg ?? elementDefault ?? null
 
       setValueWithSource({ value: newValue, fromUi })
@@ -236,6 +239,7 @@ const NumberInput: React.FC<Props> = ({
       formatCurrentValue,
       setValueWithSource,
       createErrorMessage,
+      resetError,
     ]
   )
 

@@ -46,9 +46,8 @@ export const StyledInputContainer = styled.div<StyledInputContainerProps>(
       : "transparent",
 
     "&.focused": {
-      borderColor: hasError
-        ? theme.colors.redBackgroundColor
-        : theme.colors.primary,
+      // Keep primary border color even in error state for clear keyboard focus indication
+      borderColor: theme.colors.primary,
     },
 
     input: {
