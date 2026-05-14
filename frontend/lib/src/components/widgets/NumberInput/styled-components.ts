@@ -123,6 +123,6 @@ export const StyledInstructionsContainer =
       // Also account for the error icon if there is an error.
       right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
         clearable ? "1em" : "0em"
-      } + ${hasError ? theme.iconSizes.lg : "0em"})`,
+      } + ${hasError ? `${theme.iconSizes.lg} + ${theme.spacing.twoXS}` : "0em"})`,
     })
   )
