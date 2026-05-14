@@ -16,35 +16,50 @@
 
 import styled from "@emotion/styled"
 
-export const StyledInputContainer = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  flexWrap: "nowrap",
-  alignItems: "center",
-  height: theme.sizes.minElementHeight,
-  // Mimic the baseweb's borders here, so we can apply the focus style
-  // to the entire container and not only the input itself
-  borderWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
-  borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
-  transitionDuration: "200ms",
-  transitionProperty: "border",
-  transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
-  borderRadius: theme.radii.default,
-  overflow: "hidden", // Fix rounded corner being overlaid with corner of internal input.
+interface StyledInputContainerProps {
+  hasError?: boolean
+}
 
-  "&.focused": {
-    borderColor: theme.colors.primary,
-  },
+export const StyledInputContainer = styled.div<StyledInputContainerProps>(
+  ({ theme, hasError }) => ({
+    display: "flex",
+    flexDirection: "row",
+    flexWrap: "nowrap",
+    alignItems: "center",
+    height: theme.sizes.minElementHeight,
+    // Mimic the baseweb's borders here, so we can apply the focus style
+    // to the entire container and not only the input itself
+    borderWidth: theme.sizes.borderWidth,
+    borderStyle: "solid",
+    // In error state, use the red background color for the border so it blends
+    borderColor: hasError
+      ? theme.colors.redBackgroundColor
+      : (theme.colors.widgetBorderColor ?? theme.colors.secondaryBg),
+    transitionDuration: "200ms",
+    transitionProperty: "border",
+    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+    borderRadius: theme.radii.default,
+    overflow: "hidden", // Fix rounded corner being overlaid with corner of internal input.
+    // In error state, apply the red background color
+    backgroundColor: hasError
+      ? theme.colors.redBackgroundColor
+      : "transparent",
 
-  input: {
-    MozAppearance: "textfield",
-    "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
-      WebkitAppearance: "none",
-      margin: theme.spacing.none,
+    "&.focused": {
+      borderColor: hasError
+        ? theme.colors.redBackgroundColor
+        : theme.colors.primary,
     },
-  },
-}))
+
+    input: {
+      MozAppearance: "textfield",
+      "&::-webkit-inner-spin-button, &::-webkit-outer-spin-button": {
+        WebkitAppearance: "none",
+        margin: theme.spacing.none,
+      },
+    },
+  })
+)
 
 export const StyledInputControls = styled.div({
   display: "flex",
@@ -52,47 +67,62 @@ export const StyledInputControls = styled.div({
   alignSelf: "stretch",
 })
 
-export const StyledInputControl = styled.button(({ theme }) => ({
-  margin: theme.spacing.none,
-  border: "none",
-  height: theme.sizes.full,
-  display: "flex",
-  alignItems: "center",
-  width: theme.sizes.numberInputControlsWidth,
-  justifyContent: "center",
-  color: theme.colors.bodyText,
-  transition: "color 300ms, backgroundColor 300ms",
-  backgroundColor: theme.colors.secondaryBg,
-  "&:hover:enabled, &:focus:enabled": {
-    color: theme.colors.white,
-    backgroundColor: theme.colors.primary,
-    transition: "none",
-    outline: "none",
-  },
-  "&:active": {
-    outline: "none",
+interface StyledInputControlProps {
+  hasError?: boolean
+}
+
+export const StyledInputControl = styled.button<StyledInputControlProps>(
+  ({ theme, hasError }) => ({
+    margin: theme.spacing.none,
     border: "none",
-  },
-  "&:disabled": {
-    cursor: "not-allowed",
-    color: theme.colors.fadedText40,
-  },
-}))
+    height: theme.sizes.full,
+    display: "flex",
+    alignItems: "center",
+    width: theme.sizes.numberInputControlsWidth,
+    justifyContent: "center",
+    color: theme.colors.bodyText,
+    transition: "color 300ms, backgroundColor 300ms",
+    // In error state, use the red background color; otherwise use the secondary background
+    backgroundColor: hasError
+      ? theme.colors.redBackgroundColor
+      : theme.colors.secondaryBg,
+    "&:hover:enabled, &:focus:enabled": {
+      color: theme.colors.white,
+      backgroundColor: theme.colors.primary,
+      transition: "none",
+      outline: "none",
+    },
+    "&:active": {
+      outline: "none",
+      border: "none",
+    },
+    "&:disabled": {
+      cursor: "not-allowed",
+      color: theme.colors.fadedText40,
+    },
+  })
+)
 
 interface StyledInstructionsContainerProps {
   // If widget is clearable, the instruction needs to be moved a couple
   // pixels to the left to avoid overlapping with the clear button.
   clearable: boolean
+  // If widget has an error, the instruction needs to be moved to account
+  // for the error icon.
+  hasError?: boolean
 }
 
 export const StyledInstructionsContainer =
-  styled.div<StyledInstructionsContainerProps>(({ theme, clearable }) => ({
-    position: "absolute",
-    marginRight: theme.spacing.twoXS,
-    left: 0,
-    // The instructions should be placed after the two controls
-    // and the clear button if it's present.
-    right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
-      clearable ? "1em" : "0em"
-    })`,
-  }))
+  styled.div<StyledInstructionsContainerProps>(
+    ({ theme, clearable, hasError }) => ({
+      position: "absolute",
+      marginRight: theme.spacing.twoXS,
+      left: 0,
+      // The instructions should be placed after the two controls
+      // and the clear button if it's present.
+      // Also account for the error icon if there is an error.
+      right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
+        clearable ? "1em" : "0em"
+      } + ${hasError ? theme.iconSizes.lg : "0em"})`,
+    })
+  )

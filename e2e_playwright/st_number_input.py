@@ -203,3 +203,16 @@ v22 = st.number_input(
     bind="query-params",
 )
 st.write("bound minmax value:", v22)
+
+# --- Error UI test ---
+st.markdown("---")
+st.subheader("Error state tests")
+
+v23 = st.number_input(
+    "number input 23 (error test)",
+    value=50,
+    min_value=0,
+    max_value=100,
+    key="number_input_error_test",
+)
+st.write("number input 23 (error test) - value:", v23)

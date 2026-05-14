@@ -25,6 +25,7 @@ import {
   useState,
 } from "react"
 
+import { ErrorOutline } from "@emotion-icons/material-outlined"
 import { Minus, Plus } from "@emotion-icons/open-iconic"
 import { Input as UIInput } from "baseui/input"
 
@@ -36,6 +37,8 @@ import {
 } from "~lib/components/shared/Icon/DynamicIcon"
 import Icon from "~lib/components/shared/Icon/Icon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
+import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
+import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import { useBasicWidgetState } from "~lib/hooks/useBasicWidgetState"
@@ -136,6 +139,24 @@ const NumberInput: React.FC<Props> = ({
       }
     : undefined
 
+  // Error state for validation messages
+  const [error, setError] = useState<string | null>(null)
+
+  const resetError = useCallback((): void => {
+    setError(null)
+  }, [])
+
+  // Helper to create error messages for min/max validation
+  const createErrorMessage = useCallback(
+    (value: number): string => {
+      if (value < min) {
+        return `**Error**: Value must be at least ${min}.`
+      }
+      return `**Error**: Value must be at most ${max}.`
+    },
+    [min, max]
+  )
+
   // Use useBasicWidgetState for core value management
   const [value, setValueWithSource] = useBasicWidgetState<
     number | null,
@@ -150,11 +171,12 @@ const NumberInput: React.FC<Props> = ({
     fragmentId,
     formClearBehavior: "resetValueAndRunCallback",
     onFormCleared: useCallback(() => {
-      // Reset dirty state and formatted value when form is cleared
+      // Reset dirty state, formatted value, and error when form is cleared
       const newValue = elementDefault ?? null
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
-    }, [elementDefault, formatCurrentValue]),
+      resetError()
+    }, [elementDefault, formatCurrentValue, resetError]),
     queryParamBinding,
   })
 
@@ -194,9 +216,9 @@ const NumberInput: React.FC<Props> = ({
       value: number | null
       fromUi: boolean
     }) => {
-      // Validate range and show browser validation message if out of range
+      // Validate range and show Streamlit-themed error UI if out of range
       if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
-        inputRef.current?.reportValidity()
+        setError(createErrorMessage(valueArg))
         return
       }
 
@@ -207,7 +229,14 @@ const NumberInput: React.FC<Props> = ({
       setDirty(false)
       setFormattedValue(formatCurrentValue(newValue))
     },
-    [min, max, elementDefault, formatCurrentValue, setValueWithSource]
+    [
+      min,
+      max,
+      elementDefault,
+      formatCurrentValue,
+      setValueWithSource,
+      createErrorMessage,
+    ]
   )
 
   const handleFocus = useCallback((): void => {
@@ -239,6 +268,9 @@ const NumberInput: React.FC<Props> = ({
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>): void => {
       const { value: targetValue } = e.target
 
+      // Clear any error when the user starts typing
+      resetError()
+
       if (targetValue === "") {
         setDirty(true)
         setFormattedValue(null)
@@ -251,7 +283,7 @@ const NumberInput: React.FC<Props> = ({
         // on blur or enter.
       }
     },
-    []
+    [resetError]
   )
 
   // Parse the current formatted value to get the numeric value for increment/decrement
@@ -379,6 +411,7 @@ const NumberInput: React.FC<Props> = ({
       <StyledInputContainer
         className={isFocused ? "focused" : ""}
         data-testid="stNumberInputContainer"
+        hasError={Boolean(error)}
       >
         <UIInput
           type="number"
@@ -401,6 +434,23 @@ const NumberInput: React.FC<Props> = ({
                 iconValue={element.icon}
                 size="lg"
               />
+            )
+          }
+          endEnhancer={
+            error && (
+              <Tooltip
+                content={
+                  <StreamlitMarkdown source={error} allowHTML={false} />
+                }
+                placement={Placement.TOP_RIGHT}
+                error
+              >
+                <Icon
+                  content={ErrorOutline}
+                  size="lg"
+                  testid="stNumberInputErrorIcon"
+                />
+              </Tooltip>
             )
           }
           id={id}
@@ -431,9 +481,8 @@ const NumberInput: React.FC<Props> = ({
             Input: {
               props: {
                 "data-testid": "stNumberInputField",
+                "aria-invalid": Boolean(error),
                 step: step,
-                min: min,
-                max: max,
                 // We specify the type as "number" to have numeric keyboard on mobile devices.
                 // We also set inputMode to "" since by default BaseWeb sets "text",
                 // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.
@@ -451,12 +500,18 @@ const NumberInput: React.FC<Props> = ({
                 "::placeholder": {
                   color: theme.colors.fadedText60,
                 },
+                // Change input value text color in error state
+                ...(error && {
+                  color: theme.colors.redTextColor,
+                }),
               },
             },
             InputContainer: {
               style: () => ({
                 borderTopRightRadius: 0,
                 borderBottomRightRadius: 0,
+                // Explicitly specified so error background renders correctly
+                backgroundColor: "transparent",
               }),
             },
             Root: {
@@ -472,6 +527,11 @@ const NumberInput: React.FC<Props> = ({
                 borderBottomWidth: 0,
                 paddingRight: 0,
                 paddingLeft: icon ? theme.spacing.sm : 0,
+                // In error state, set transparent background so the container's
+                // red background shows through
+                ...(error && {
+                  backgroundColor: "transparent",
+                }),
               },
             },
             StartEnhancer: {
@@ -486,6 +546,15 @@ const NumberInput: React.FC<Props> = ({
                   : "inherit",
               },
             },
+            EndEnhancer: {
+              style: {
+                // Match text color with st.error in light and dark mode
+                color: theme.colors.redTextColor,
+                backgroundColor: "transparent",
+                paddingLeft: theme.spacing.none,
+                paddingRight: theme.spacing.twoXS,
+              },
+            },
           }}
         />
         {/* We only want to show the increment/decrement controls when there is sufficient room to display the value and these controls. */}
@@ -496,6 +565,7 @@ const NumberInput: React.FC<Props> = ({
               onClick={decrement}
               disabled={!canDec || disabled}
               tabIndex={-1}
+              hasError={Boolean(error)}
             >
               <Icon
                 content={Minus}
@@ -508,6 +578,7 @@ const NumberInput: React.FC<Props> = ({
               onClick={increment}
               disabled={!canInc || disabled}
               tabIndex={-1}
+              hasError={Boolean(error)}
             >
               <Icon
                 content={Plus}
@@ -519,7 +590,10 @@ const NumberInput: React.FC<Props> = ({
         )}
       </StyledInputContainer>
       {shouldShowInstructions && (
-        <StyledInstructionsContainer clearable={clearable}>
+        <StyledInstructionsContainer
+          clearable={clearable}
+          hasError={Boolean(error)}
+        >
           <InputInstructions
             dirty={dirty}
             value={formattedValue ?? ""}

@@ -35,7 +35,7 @@ from e2e_playwright.shared.app_utils import (
     reset_hovering,
 )
 
-NUMBER_INPUT_COUNT = 23
+NUMBER_INPUT_COUNT = 24
 
 
 def test_number_input_widget_display(
@@ -623,3 +623,70 @@ def test_number_input_query_param_non_clearable_empty_value(
     # Non-clearable number input should reject empty value, show default 3.14
     expect_prefixed_markdown(page, "bound float value:", "3.14")
     expect(page).not_to_have_url(re.compile(r"[?&]bound_float="))
+
+
+def test_number_input_error_state(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
+    """Test that the number input error state displays correctly for out-of-range values.
+
+    This tests the Streamlit-themed error UI that replaces browser-native validation.
+    Covers:
+    - Error tooltip icon appears when value is out of range
+    - Red background styling in error state
+    - Error tooltip content matches expected message
+    - Error clears when valid value is entered
+    """
+    number_input = get_element_by_key(themed_app, "number_input_error_test")
+    input_field = number_input.get_by_test_id("stNumberInputField")
+
+    # Test 1: Enter value below minimum (min=0)
+    input_field.fill("-10")
+    input_field.press("Enter")
+
+    # Error icon (via tooltip hover target) should be visible
+    error_icon = number_input.get_by_test_id("stTooltipErrorHoverTarget")
+    expect(error_icon).to_be_visible()
+
+    # Input should have aria-invalid attribute for accessibility
+    expect(input_field).to_have_attribute("aria-invalid", "true")
+
+    # Hover over error icon and verify tooltip content
+    error_icon.hover()
+    tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_contain_text("Error")
+    expect(tooltip).to_contain_text("Value must be at least 0")
+
+    # Snapshot the error state (below min)
+    reset_hovering(themed_app)
+    assert_snapshot(number_input, name="st_number_input-error_below_min")
+
+    # Test 2: Enter value above maximum (max=100)
+    input_field.fill("150")
+    input_field.press("Enter")
+
+    # Error icon should still be visible
+    expect(error_icon).to_be_visible()
+    expect(input_field).to_have_attribute("aria-invalid", "true")
+
+    # Verify tooltip shows max error message
+    error_icon.hover()
+    tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_contain_text("Error")
+    expect(tooltip).to_contain_text("Value must be at most 100")
+
+    # Test 3: Error clears when valid value is entered
+    input_field.fill("50")
+    input_field.press("Enter")
+    wait_for_app_run(themed_app)
+
+    # Error icon should no longer be visible
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()
+    expect(input_field).to_have_attribute("aria-invalid", "false")
+
+    # Value should be committed
+    expect_prefixed_markdown(themed_app, "number input 23 (error test) - value:", "50")
+
+    # Test 4: No error for initially valid value (negative test)
+    # The widget should already be in valid state from above
+    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()
