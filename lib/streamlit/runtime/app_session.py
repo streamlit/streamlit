@@ -43,6 +43,8 @@ from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
 )
+from streamlit.runtime.dataframe_chunk_handler import DataframeChunkHandler
+from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
@@ -194,6 +196,9 @@ class AppSession:
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
+        # Lazy dataframe source manager for server-side chunk loading
+        self._dataframe_source_manager = DataframeSourceManager()
+
         self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
 
         # Store references to background tasks to prevent garbage collection.
@@ -216,6 +221,23 @@ class AppSession:
         dispatcher.register(
             "deferred_file",
             DeferredFileHandler(lambda: runtime.get_instance().media_file_mgr),
+        )
+
+        # Register lazy dataframe chunk handler.
+        # The handler looks up the session through the runtime to avoid holding
+        # a reference to self, which would prevent garbage collection.
+        def get_source_manager(
+            session_id: str,
+        ) -> DataframeSourceManager | None:
+            rt = runtime.get_instance()
+            session_info = rt._session_mgr.get_session_info(session_id)
+            if session_info is None or session_info.session is None:
+                return None
+            return session_info.session.dataframe_source_manager
+
+        dispatcher.register(
+            "dataframe_chunk",
+            DataframeChunkHandler(get_source_manager),
         )
 
         return dispatcher
@@ -314,6 +336,9 @@ class AppSession:
 
             # Clear any session caches. This ensures shutdown hooks are called.
             self.clear_session_caches()
+
+            # Clear all lazy dataframe sources for this session.
+            self._dataframe_source_manager.clear_all()
 
     def _enqueue_forward_msg(self, msg: ForwardMsg) -> None:
         """Enqueue a new ForwardMsg to our browser queue.
@@ -520,6 +545,11 @@ class AppSession:
     @property
     def session_state(self) -> SessionState:
         return self._session_state
+
+    @property
+    def dataframe_source_manager(self) -> DataframeSourceManager:
+        """Return the session's lazy dataframe source manager."""
+        return self._dataframe_source_manager
 
     def _should_rerun_on_file_change(self, filepath: str) -> bool:
         pages = self._pages_manager.get_pages()

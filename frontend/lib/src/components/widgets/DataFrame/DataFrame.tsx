@@ -49,6 +49,7 @@ import { createPortal } from "react-dom"
 
 import { Dataframe as DataframeProto, streamlit } from "@streamlit/protobuf"
 
+import { BackendOperationContext } from "~lib/components/core/BackendOperationContext"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import { LibConfigContext } from "~lib/components/core/LibConfigContext"
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
@@ -80,6 +81,8 @@ import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
 import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
+import useLazyColumnSort from "./hooks/useLazyColumnSort"
+import useLazyDataLoader from "./hooks/useLazyDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
@@ -142,9 +145,14 @@ function DataFrame({
   // Use provided Quiver data or construct from proto's arrowData. The
   // elementHash serves as the primary memoization key to avoid unnecessary
   // re-parsing when the payload hasn't changed.
+  // For lazy dataframes, we construct from lazyData.initialChunk instead.
   const data = useMemo(() => {
     if (dataProp !== undefined) {
       return dataProp
+    }
+    // For lazy dataframes, use the initial chunk
+    if (element.lazyData?.initialChunk?.data) {
+      return new Quiver(element.lazyData.initialChunk)
     }
     if (!element.arrowData) {
       throw new Error("DataFrame element is missing arrowData")
@@ -152,7 +160,12 @@ function DataFrame({
     return new Quiver(element.arrowData)
     // elementHash is intentionally included as a stability anchor for memoization
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dataProp, elementHash, element.arrowData])
+  }, [
+    dataProp,
+    elementHash,
+    element.arrowData,
+    element.lazyData?.initialChunk,
+  ])
 
   const {
     expanded: isFullScreen,
@@ -188,6 +201,20 @@ function DataFrame({
   // Default to false, if no libConfig, e.g. for tests
   const { enforceDownloadInNewTab = false } = useContext(LibConfigContext)
 
+  // Backend operation client for lazy dataframe chunk requests
+  const { backendOperationClient } = useContext(BackendOperationContext)
+
+  // Detect lazy mode from element.lazyData
+  const isLazy =
+    !isNullOrUndefined(element.lazyData?.sourceId) &&
+    element.lazyData?.sourceId !== ""
+  const lazyData = element.lazyData
+
+  // For lazy dataframes, we require the backend operation client
+  if (isLazy && !backendOperationClient) {
+    throw new Error("Lazy dataframe requires BackendOperationClient")
+  }
+
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
   const [hasVerticalScroll, setHasVerticalScroll] = useState<boolean>(false)
@@ -220,8 +247,11 @@ function DataFrame({
     element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
 
   // Number of rows of the table minus 1 for the header row:
+  // For lazy dataframes, use the rowCount from lazyData metadata.
   const dataDimensions = data.dimensions
-  const originalNumRows = Math.max(0, dataDimensions.numDataRows)
+  const originalNumRows = isLazy
+    ? Math.max(0, Number(lazyData?.rowCount ?? 0))
+    : Math.max(0, dataDimensions.numDataRows)
 
   // Centralized capability layer that determines which features are enabled
   const {
@@ -242,6 +272,8 @@ function DataFrame({
     disabled,
     numDataRows: originalNumRows,
     numDataColumns: dataDimensions.numDataColumns,
+    isLazy,
+    lazySortable: lazyData?.sortable ?? false,
   })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
@@ -285,8 +317,47 @@ function DataFrame({
     editingState
   )
 
-  const { columns, sortColumn, getOriginalIndex, getCellContent } =
-    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  // Lazy data loading - always call to maintain hook order, but only use when isLazy
+  // We've verified backendOperationClient exists for lazy mode above
+  const lazyDataLoaderResult = useLazyDataLoader({
+    lazyData: lazyData ?? {
+      sourceId: "",
+      generation: "",
+      rowCount: 0,
+      pageSize: 500,
+    },
+    columns: originalColumns,
+    numRows: originalNumRows,
+    // We use a type assertion here since we've validated the client exists for lazy mode
+    client: backendOperationClient as NonNullable<
+      typeof backendOperationClient
+    >,
+    dataEditorRef,
+  })
+
+  // Eager sorting - use when not lazy
+  const eagerSortResult = useColumnSort(
+    originalNumRows,
+    originalColumns,
+    getOriginalCellContent
+  )
+
+  // Lazy sorting - always call to maintain hook order, but only use when isLazy
+  const lazySortResult = useLazyColumnSort(
+    originalColumns,
+    lazyDataLoaderResult.getCellContent,
+    lazyDataLoaderResult.setSort
+  )
+
+  // Choose sorting and cell content based on mode
+  const { columns, sortColumn, getOriginalIndex, getCellContent } = isLazy
+    ? {
+        columns: lazySortResult.columns,
+        sortColumn: lazySortResult.sortColumn,
+        getOriginalIndex: lazySortResult.getOriginalIndex,
+        getCellContent: lazySortResult.getCellContent,
+      }
+    : eagerSortResult
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)

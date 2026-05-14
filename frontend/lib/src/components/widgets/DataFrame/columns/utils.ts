@@ -214,6 +214,17 @@ export function getEmptyCell(missingCell = false): LoadingCell {
 }
 
 /**
+ * Returns a loading cell for lazy-loaded data that is being fetched.
+ */
+export function getLoadingCell(): LoadingCell {
+  return {
+    kind: GridCellKind.Loading,
+    allowOverlay: false,
+    copyData: "",
+  }
+}
+
+/**
  * Returns an empty text cell.
  *
  * @param readonly: If true, returns a read-only version of the cell.

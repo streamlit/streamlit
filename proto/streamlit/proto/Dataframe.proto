@@ -18,9 +18,51 @@ syntax = "proto3";
 
 import "streamlit/proto/ArrowData.proto";
 
+// Sort state for server-side sorting in lazy dataframes.
+message SortState {
+  // Column name/id to sort by
+  string column = 1;
+  // Sort direction
+  SortDirection direction = 2;
+
+  enum SortDirection {
+    SORT_DIRECTION_UNSPECIFIED = 0;
+    ASCENDING = 1;
+    DESCENDING = 2;
+  }
+}
+
+// Metadata for lazy-loaded dataframes that load data on-demand.
+message LazyDataframe {
+  // Unique identifier for this lazy source (session-scoped)
+  string source_id = 1;
+  // Total row count (always set in Phase 1; optional for future sequential sources)
+  optional uint64 row_count = 2;
+  // Initial row offset for the first chunk
+  uint64 initial_offset = 3;
+  // Number of rows per chunk
+  uint32 page_size = 4;
+  // Generation identifier for invalidation (changes on rerun or source change)
+  string generation = 5;
+  // Access mode for the lazy source
+  AccessMode access_mode = 6;
+  // Initial chunk of data (may be empty if no initial data is cheap to fetch)
+  ArrowData initial_chunk = 7;
+  // Arrow IPC schema bytes when initial_chunk is empty
+  bytes serialized_schema = 8;
+  // Whether server-side sorting is enabled for this source
+  bool sortable = 9;
+
+  enum AccessMode {
+    ACCESS_MODE_UNSPECIFIED = 0;
+    RANDOM_ACCESS = 1;
+    SEQUENTIAL = 2;
+  }
+}
+
 // Proto message for st.dataframe and st.data_editor elements.
 message Dataframe {
-  // The Arrow data to display
+  // The Arrow data to display (used for eager/non-lazy mode)
   ArrowData arrow_data = 1;
 
   // The id of the widget, this is required if the dataframe is editable
@@ -48,6 +90,9 @@ message Dataframe {
   // Default selection state (JSON serialized), set when selection_default is provided.
   // Applied by the frontend only when there is no stored selection state.
   optional string selection_default = 12;
+
+  // Lazy dataframe metadata (present when lazy loading is enabled)
+  optional LazyDataframe lazy_data = 13;
 
   // Available editing modes:
   enum EditingMode {

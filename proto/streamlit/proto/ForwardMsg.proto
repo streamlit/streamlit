@@ -16,6 +16,7 @@
 
 syntax = "proto3";
 
+import "streamlit/proto/ArrowData.proto";
 import "streamlit/proto/AuthRedirect.proto";
 import "streamlit/proto/AutoRerun.proto";
 import "streamlit/proto/Common.proto";
@@ -121,12 +122,28 @@ message BackendOperationResponse {
   oneof payload {
     // Response for deferred file requests
     DeferredFileResponsePayload deferred_file = 3;
+    // Response for lazy dataframe chunk requests
+    DataframeChunkResponsePayload dataframe_chunk = 4;
   }
 }
 
 // Response payload for deferred file downloads
 message DeferredFileResponsePayload {
   string url = 1;
+}
+
+// Response payload for lazy dataframe chunk requests
+message DataframeChunkResponsePayload {
+  // The source ID of the lazy dataframe
+  string source_id = 1;
+  // Row offset of this chunk
+  uint64 offset = 2;
+  // Generation identifier for invalidation detection
+  string generation = 3;
+  // True if this is the last chunk (for sequential sources)
+  bool end_of_stream = 4;
+  // Arrow data for this chunk
+  ArrowData arrow_data = 5;
 }
 
 // ForwardMsgMetadata contains all data that does _not_ get hashed (or cached)

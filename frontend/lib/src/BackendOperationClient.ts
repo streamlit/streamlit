@@ -21,6 +21,8 @@ import {
   BackendOperationRequest,
   IBackendOperationRequest,
   IBackendOperationResponse,
+  IDataframeChunkRequestPayload,
+  IDataframeChunkResponsePayload,
 } from "@streamlit/protobuf"
 
 const LOG = getLogger("BackendOperationClient")
@@ -75,7 +77,10 @@ export class BackendOperationClient {
    * Send a backend operation request to the server.
    */
   public request<TResponse>(
-    payloadField: keyof Pick<IBackendOperationRequest, "deferredFile">,
+    payloadField: keyof Pick<
+      IBackendOperationRequest,
+      "deferredFile" | "dataframeChunk"
+    >,
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
   ): Promise<TResponse> {
@@ -136,6 +141,24 @@ export class BackendOperationClient {
       "deferredFile",
       { fileId },
       timeoutMs ?? DEFERRED_FILE_REQUEST_TIMEOUT_MS
+    )
+  }
+
+  /**
+   * Request a dataframe chunk for lazy loading.
+   *
+   * @param payload - The chunk request payload containing source_id, offset, limit, generation, and optional sort
+   * @param timeoutMs - Optional timeout override
+   * @returns A promise that resolves with the chunk response payload
+   */
+  public requestDataframeChunk(
+    payload: IDataframeChunkRequestPayload,
+    timeoutMs?: number
+  ): Promise<IDataframeChunkResponsePayload> {
+    return this.request<IDataframeChunkResponsePayload>(
+      "dataframeChunk",
+      payload,
+      timeoutMs
     )
   }
 
@@ -206,7 +229,7 @@ export class BackendOperationClient {
   ): unknown {
     // Return the first non-null payload field
     if (response.deferredFile) return response.deferredFile
-    // Future: Add other payload types here
+    if (response.dataframeChunk) return response.dataframeChunk
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")
