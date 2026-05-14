@@ -524,7 +524,7 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def inner_fragment():
-            pass
+            captured["inner_delta_path"] = ThreadState.get().delta_path
 
         @fragment
         def outer_fragment():
@@ -537,6 +537,9 @@ class FragmentTest(unittest.TestCase):
         outer_fragment()
 
         assert captured["outer_before_inner"] == (0, 1, 2)
+        # Sanity check: inner must actually mutate delta_path, otherwise the
+        # restoration assertion below would pass trivially.
+        assert captured["inner_delta_path"] != (0, 1, 2)
         assert captured["outer_after_inner"] == (0, 1, 2)
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")

@@ -615,7 +615,9 @@ class ScriptRunnerTest(unittest.TestCase):
             raise KeyError("kaboom")
 
         def fragment():
-            ThreadState.initialize(fragment_id="my_fragment_id")
+            # Preserve the active_script_hash that ctx.reset() seeded; we only
+            # need to override fragment_id for this test.
+            ThreadState.update(fragment_id="my_fragment_id")
             _fragment(non_optional_func)()
 
         scriptrunner = TestScriptRunner("good_script.py")
