@@ -151,11 +151,15 @@ the signature. This detects row reorders even when row count is unchanged:
 ```python
 # In _compute_data_editor_signature:
 if not isinstance(data_df.index, pd.RangeIndex):
-    # Include index value hash to detect row reorders
-    index_hash = hashlib.md5(
-        str(data_df.index.tolist()).encode("utf-8"),
-        usedforsecurity=False
-    ).hexdigest()[:8]
+    # Use vectorized hashing for performance on large dataframes
+    try:
+        index_bytes = pd.util.hash_pandas_object(
+            data_df.index, index=False
+        ).values.tobytes()
+    except TypeError:
+        # Fallback for unhashable object dtypes
+        index_bytes = str(data_df.index.tolist()).encode("utf-8")
+    index_hash = hashlib.md5(index_bytes, usedforsecurity=False).hexdigest()[:8]
     h.update(f"index_values:{index_hash}".encode("utf-8"))
 ```
 
@@ -165,6 +169,13 @@ is considered identity-stable since it typically means "row positions are the id
 meaningful index (e.g., primary keys, timestamps, categorical labels) signals that row position
 may change while logical identity is stable — exactly the scenario where stale positional edits
 are dangerous.
+
+**RangeIndex limitation**: For dataframes with a default `RangeIndex`, a same-length refetch could
+theoretically replay stale positional edits onto different logical rows. Phase 1 accepts this
+limitation because: (1) users with meaningful row identity typically have a meaningful index, and
+(2) the alternative (treating all RangeIndex editors as unsafe) would regress the common case of
+stable positional data. Apps that refetch RangeIndex data and want safety should use `apply_edits`
+(Phase 2) or set a meaningful index on their dataframe.
 
 **Partial `disabled` changes** (documented limitation):
 
@@ -192,7 +203,17 @@ warning about the row-positioning semantics. Suggested wording:
 
 > **Note**: When `key` is provided with `num_rows="fixed"`, edits are tracked by row *position*.
 > If the source data is reordered (rows shuffled), the edit state is cleared to prevent edits
-> from being applied to incorrect rows. For full control over edit application, use `apply_edits`.
+> from being applied to incorrect rows. To retain the previous reset-on-change behavior, omit the
+> `key` parameter. For full control over edit application, see the `apply_edits` parameter
+> (available in Phase 2).
+
+**Note**: The reference to `apply_edits` in the docstring should be gated behind Phase 2 shipping.
+If Phase 1 ships standalone, use this simpler wording instead:
+
+> **Note**: When `key` is provided with `num_rows="fixed"`, edits are tracked by row *position*.
+> If the source data is reordered (rows shuffled), the edit state is cleared to prevent edits
+> from being applied to incorrect rows. To retain the previous reset-on-change behavior, omit the
+> `key` parameter.
 
 This ensures users discover the behavior at the point of use (IDE autocomplete, help tooltip)
 rather than only in documentation.
@@ -248,8 +269,17 @@ def _compute_data_editor_signature(
     # A default RangeIndex (0, 1, 2, ...) is position-stable, so we skip it.
     # A meaningful index suggests row identity may differ from position.
     if not isinstance(data_df.index, pd.RangeIndex):
+        # Use vectorized hashing for performance on large dataframes
+        # pd.util.hash_pandas_object is fast and handles various dtypes
+        try:
+            index_bytes = pd.util.hash_pandas_object(
+                data_df.index, index=False
+            ).values.tobytes()
+        except TypeError:
+            # Fallback for unhashable object dtypes
+            index_bytes = str(data_df.index.tolist()).encode("utf-8")
         index_hash = hashlib.md5(
-            str(data_df.index.tolist()).encode("utf-8"),
+            index_bytes,
             usedforsecurity=False
         ).hexdigest()[:8]
         h.update(f"index_values:{index_hash}".encode("utf-8"))
@@ -345,60 +375,52 @@ if (valuesEqual(sourceValue, editValue, column)) {
 ```
 
 **2. On data change**: When Arrow data updates, iterate stored edits and clear any that now
-match the new source values.
+match the new source values. Use `useExecuteWhenChanged` (per codebase convention) instead of
+`useEffect` to avoid an extra render cycle — see `useWidgetState.ts:247-250` for the precedent.
 
 ```typescript
-// In useEffect triggered by data change
-useEffect(() => {
-  let cleared = false
-  editingState.forEachEditedCell((col, row, editCell) => {
-    const column = columns[col]
-    const sourceCell = getCellContent([col, row])
-    const sourceValue = column.getCellValue(sourceCell)
-    const editValue = column.getCellValue(editCell)
+// Use useExecuteWhenChanged to run reconciliation on signature change
+// This avoids the extra render cycle of useEffect
+useExecuteWhenChanged(
+  currentSignature,  // Backend-provided data signature from proto
+  () => {
+    let cleared = false
+    editingState.forEachEditedCell((col, row, editCell) => {
+      const column = columns[col]
+      const sourceCell = getCellContent([col, row])
+      const sourceValue = column.getCellValue(sourceCell)
+      const editValue = column.getCellValue(editCell)
 
-    if (valuesEqual(sourceValue, editValue, column)) {
-      editingState.clearCell(col, row)
-      cleared = true
+      if (valuesEqual(sourceValue, editValue, column)) {
+        editingState.clearCell(col, row)
+        cleared = true
+      }
+    })
+    if (cleared) {
+      // Trigger re-render to show updated source values
+      updateNumRows()
     }
-  })
-  if (cleared) {
-    // Trigger re-render to show updated source values
-    updateNumRows()
   }
-}, [data])  // Or use a stable data hash/version
+)
 ```
 
 **Performance note**: The reconciliation iterates every stored edit and calls `getCellContent` for
 each (which reads from the Arrow-backed table). For editors with many edited cells (e.g., bulk
-paste), this runs on every data update.
+paste), this runs on every data signature change.
 
-**Early bail-out mechanism**: The `useEffect([data])` dependency fires on React identity changes,
-which may occur even when the underlying Arrow bytes are equivalent (e.g., on reruns with the same
-source data). To avoid unnecessary reconciliation:
-
-1. Use the backend-provided `data_signature` (exposed via proto) as the stable change signal
-2. Compare `elementHash` or the new proto field before starting reconciliation
-3. Only run reconciliation when the signature actually changed
+**Early bail-out mechanism**: The `useExecuteWhenChanged` pattern above uses the backend-provided
+`data_signature` (exposed via proto or derived from `elementHash`) as the stable change signal.
+This ensures reconciliation only runs when the source data schema/structure actually changed, not
+on every React identity change. If `data_signature` is not available, the frontend can fall back
+to comparing `elementHash`:
 
 ```typescript
-// Use backend-provided signature for stable change detection
-const prevSignatureRef = useRef<string | undefined>()
-const currentSignature = element.dataSignature  // From proto
-
-useEffect(() => {
-  if (prevSignatureRef.current === currentSignature) {
-    // Data identity changed but content is equivalent — skip reconciliation
-    return
-  }
-  prevSignatureRef.current = currentSignature
-
-  // Proceed with reconciliation...
-}, [data, currentSignature])
+// Alternative: Use elementHash if data_signature proto field is not added
+const currentSignature = element.dataSignature ?? elementHash
 ```
 
-This ensures reconciliation only runs when the source data actually changed, not on every
-React identity change.
+This approach is preferred over raw `useEffect([data])` because React identity changes occur even
+when the underlying Arrow bytes are equivalent (e.g., on reruns with the same source data).
 
 **Value comparison** (`valuesEqual`):
 
@@ -750,7 +772,7 @@ On exception, edit state is preserved.
 
 ```python
 # In data_editor.py
-from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptControlException
+from streamlit.runtime.scriptrunner_utils.exceptions import ScriptControlException
 
 def _data_editor(..., apply_edits: Callable | None = None):
     # ... existing setup ...
@@ -758,16 +780,17 @@ def _data_editor(..., apply_edits: Callable | None = None):
     # Deserialize edit state
     edit_state = _deserialize_edit_state(widget_state.value)
     callback_failed = False
-    edited_df = None  # Initialize outside conditional for proper scoping
 
     if apply_edits is not None and _has_pending_edits(edit_state):
-        # Apply edits to get edited_df
-        edited_df = _apply_dataframe_edits(data_df.copy(), edit_state, ...)
+        # Apply edits to get edited_df (capture the copy first, then mutate in-place)
+        edited_df = data_df.copy()
+        _apply_dataframe_edits(edited_df, edit_state, ...)
 
         try:
             # User callback handles persistence, returns new source
             # Pass source_df.copy() to prevent callback mutations from affecting original
-            new_source_df = apply_edits(data_df.copy(), edited_df, edit_state)
+            # Pass edited_df.copy() to prevent callback mutations from affecting return value
+            new_source_df = apply_edits(data_df.copy(), edited_df.copy(), edit_state)
 
             # Success: use returned dataframe as new source
             data_df = new_source_df
@@ -792,8 +815,11 @@ def _data_editor(..., apply_edits: Callable | None = None):
 
     # When apply_edits is None and there are edits, apply them as existing behavior
     elif apply_edits is None and _has_pending_edits(edit_state):
-        edited_df = _apply_dataframe_edits(data_df.copy(), edit_state, ...)
+        edited_df = data_df.copy()
+        _apply_dataframe_edits(edited_df, edit_state, ...)
         data_df = edited_df  # Existing pre-Phase-2 behavior
+    else:
+        edited_df = None  # No edits to apply
 
     # Serialize proto with (possibly updated) arrow_bytes
     # ...
@@ -1094,7 +1120,7 @@ would require significant frontend/proto changes.
 | Works on SiS, Cloud, etc? | Yes — uses standard `compute_and_register_element_id` |
 | Breaking API changes | None — new behavior only when `key` is provided |
 | No new dependencies | Yes |
-| New proto fields | Phase 1: None. Phase 2: Yes — `editing_state` for frontend clear signal |
+| New proto fields | Phase 1: Optional — `data_signature` can be added for frontend bail-out optimization, but is not strictly required (frontend can compare `elementHash` instead). Phase 2: Yes — `editing_state` for frontend clear signal |
 | Metrics collected | Consider tracking keyed vs unkeyed data_editor usage |
 | Any security/legal impact? | No |
 | Any docs changes needed? | Yes — document `key` for edit persistence, `apply_edits` for row operations |

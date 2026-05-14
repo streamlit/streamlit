@@ -117,11 +117,11 @@ class EditState(TypedDict):
 
 **Type export for callback annotation:**
 
-`EditState` is exported from `streamlit.elements.lib.column_types` (same module as `ColumnConfig`)
-so users can type-annotate their callbacks:
+`EditState` is exported from `streamlit.column_config` (alongside `ColumnConfig`) so users can
+type-annotate their callbacks using a stable public API path:
 
 ```python
-from streamlit.elements.lib.column_types import EditState
+from streamlit.column_config import EditState
 
 def my_callback(
     source_df: pd.DataFrame,
@@ -130,6 +130,11 @@ def my_callback(
 ) -> pd.DataFrame:
     ...
 ```
+
+**Note on naming**: The internal codebase uses `EditingState` for the frontend's positional edit
+buffer. `EditState` is the user-facing alias — same shape, but with int keys (post-conversion) and
+documented as part of the public API. The callback always receives the converted `EditState`, not
+the raw JSON widget state.
 
 The type is documented in `EditState` shape (post-conversion with int keys) — static type checkers
 will see `dict[int, dict[str, Any]]` for `edited_rows`, matching the runtime behavior.
@@ -189,8 +194,14 @@ Alternatively, use `@st.cache_data(ttl=...)` for database-backed data that refre
 **Example 1: Simple session state round-trip**
 
 ```python
+# Initialize baseline data
+if "df" not in st.session_state:
+    st.session_state.df = pd.DataFrame({"A": [1, 2, 3], "B": [4, 5, 6]})
+
 def accept_edits(source_df, edited_df, edits):
-    return edited_df  # Accept all edits as-is
+    # Store result for baseline persistence (see "How to Persist the Baseline" above)
+    st.session_state.df = edited_df
+    return edited_df
 
 st.data_editor(
     st.session_state.df,
@@ -317,13 +328,28 @@ raise StreamlitAPIException(
 
 ### Error Handling
 
-When the callback raises an exception:
+When the callback raises an exception, behavior depends on the exception type:
+
+**Validation exceptions** (`ValueError`, `TypeError`):
 1. Exception is caught by the widget
 2. Edit state is **preserved** (user's work is not lost)
-3. `st.error(str(exception))` is displayed
+3. `st.error(str(exception))` is displayed at the widget location
 4. `st.data_editor()` returns `edited_df` (the invalid data, so downstream code sees user's input)
 5. Widget renders with preserved edits overlaid on original source data
 6. User can fix the issue and retry (next interaction re-invokes callback)
+
+**Control flow exceptions** (`st.rerun()`, `st.stop()`):
+- Re-raised to allow normal control flow inside callbacks
+
+**Other exceptions** (database errors, network failures, etc.):
+- Propagated to Streamlit's normal exception handling
+- This prevents accidentally leaking backend details (connection strings, SQL errors, stack traces)
+  via `st.error(str(exception))`
+
+**Security note**: Only validation exceptions (`ValueError`, `TypeError`) display their message
+via `st.error()`. For other exceptions, the message may contain sensitive backend details — they
+propagate to the standard exception UI instead. If you need to display custom error messages for
+infrastructure failures, catch them explicitly and raise a `ValueError` with a safe message.
 
 ```python
 def validate_and_save(source_df, edited_df, edits):
