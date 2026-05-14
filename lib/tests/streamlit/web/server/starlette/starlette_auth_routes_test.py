@@ -298,6 +298,9 @@ class TestAuthCookieFlags:
             # Check path flag (should be "/" when no baseUrlPath)
             assert cookie["path"] == "/"
 
+            # Check max-age is present and equals 30 days.
+            assert cookie["max-age"] == str(30 * 24 * 60 * 60)
+
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}
     )
