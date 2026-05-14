@@ -1412,7 +1412,8 @@ class TestArrowTruncation(DeltaGeneratorTestCase):
             }
         )
         original_table = pa.Table.from_pandas(original_df)
-        st.dataframe(original_df)
+        # Explicitly disable lazy mode to test truncation behavior
+        st.dataframe(original_df, lazy=False)
         el = self.get_delta_from_queue().new_element
         # Test that table bytes should be smaller than the full table
         assert len(el.dataframe.arrow_data.data) < original_table.nbytes
