@@ -210,10 +210,9 @@ function DataFrame({
     element.lazyData?.sourceId !== ""
   const lazyData = element.lazyData
 
-  // For lazy dataframes, we require the backend operation client
-  if (isLazy && !backendOperationClient) {
-    throw new Error("Lazy dataframe requires BackendOperationClient")
-  }
+  // Check for missing backend client in lazy mode - will render error below
+  // instead of throwing to avoid violating React's Rules of Hooks
+  const missingBackendClient = isLazy && !backendOperationClient
 
   const [isFocused, setIsFocused] = useState<boolean>(true)
   const [showSearch, setShowSearch] = useState(false)
@@ -771,6 +770,22 @@ function DataFrame({
     isInHorizontalLayout || (widthConfig?.useContent && !isInRoot)
       ? true
       : false
+
+  // Early return for missing backend client in lazy mode (after all hooks)
+  if (missingBackendClient) {
+    return (
+      <StyledResizableContainer
+        className="stDataFrame"
+        data-testid="stDataFrame"
+        ref={resizableContainerRef}
+        isInHorizontalLayout={isInHorizontalLayout}
+        minHeight={minHeight}
+        disableResize={disableResize}
+      >
+        <div>Error: Lazy dataframe requires BackendOperationClient</div>
+      </StyledResizableContainer>
+    )
+  }
 
   return (
     <StyledResizableContainer

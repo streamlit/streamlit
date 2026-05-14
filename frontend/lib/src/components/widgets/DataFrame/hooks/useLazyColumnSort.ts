@@ -95,18 +95,21 @@ function useLazyColumnSort(
   const [sortConfig, setSortConfig] = useState<SortConfig>()
 
   // Convert local sort config to proto sort state
+  // Use the column name (not id) since the backend needs the actual column name
   const currentSort: ISortState | null = useMemo(() => {
     if (!sortConfig) {
       return null
     }
+    // Find the column to get its name (id is the internal UI identifier)
+    const column = columns.find(c => c.id === sortConfig.column.id)
     return {
-      column: sortConfig.column.id ?? "",
+      column: column?.name ?? "",
       direction:
         sortConfig.direction === "desc"
           ? SortState.SortDirection.DESCENDING
           : SortState.SortDirection.ASCENDING,
     }
-  }, [sortConfig])
+  }, [sortConfig, columns])
 
   const updatedColumns = useMemo(
     () => updateSortingHeader(columns, sortConfig),
@@ -151,10 +154,10 @@ function useLazyColumnSort(
 
       setSortConfig(newConfig)
 
-      // Notify the cache of the sort change
+      // Notify the cache of the sort change - use column name for backend
       if (newConfig) {
         onSortChange({
-          column: clickedColumn.id ?? "",
+          column: clickedColumn.name,
           direction:
             newConfig.direction === "desc"
               ? SortState.SortDirection.DESCENDING

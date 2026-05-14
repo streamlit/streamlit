@@ -105,9 +105,9 @@ function useLazyDataLoader({
       pageSize,
       client,
       onUpdate: () => {
+        // Increment cache version to trigger Glide Data Grid re-render.
+        // The version change causes getCellContent to be called with fresh data.
         setCacheVersion(v => v + 1)
-        // Trigger Glide Data Grid to re-render updated cells
-        dataEditorRef.current?.updateCells([])
       },
     })
 
