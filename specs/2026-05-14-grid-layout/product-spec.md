@@ -701,7 +701,7 @@ dashboard cards, and nested flex controls.
 
 ## Checklist
 
-| Item | Status or comment |
+| Item | ✅ or comment |
 | --- | --- |
 | Works on SiS, Cloud, etc? | Yes. Frontend CSS Grid and existing block protocol patterns should work in all runtimes. |
 | No breaking API changes | Yes. New command only. |
