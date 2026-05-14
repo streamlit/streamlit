@@ -25,55 +25,55 @@ from typing_extensions import assert_type
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.layouts import LayoutsMixin
-    from streamlit.elements.lib.grid_delta_generator import GridDeltaGenerator
+    from streamlit.elements.lib.grid_container import GridContainer
 
     grid = LayoutsMixin().grid
 
-    # st.grid returns GridDeltaGenerator
-    assert_type(grid(), GridDeltaGenerator)
+    # st.grid returns GridContainer
+    assert_type(grid(), GridContainer)
 
-    # GridDeltaGenerator is a DeltaGenerator (Liskov substitution)
+    # GridContainer is a DeltaGenerator (Liskov substitution)
     g: DeltaGenerator = grid()
     assert_type(g, DeltaGenerator)
 
     # Context manager returns Self
     with grid() as ctx:
-        assert_type(ctx, GridDeltaGenerator)
+        assert_type(ctx, GridContainer)
 
     # columns parameter accepts "auto" or int
-    assert_type(grid("auto"), GridDeltaGenerator)
-    assert_type(grid(4), GridDeltaGenerator)
+    assert_type(grid("auto"), GridContainer)
+    assert_type(grid(4), GridContainer)
 
     # min_column_width accepts int or None
-    assert_type(grid(4, min_column_width=200), GridDeltaGenerator)
-    assert_type(grid(4, min_column_width=None), GridDeltaGenerator)
+    assert_type(grid(4, min_column_width=200), GridContainer)
+    assert_type(grid(4, min_column_width=None), GridContainer)
 
     # gap accepts single value or tuple
-    assert_type(grid(gap="small"), GridDeltaGenerator)
-    assert_type(grid(gap=("medium", "small")), GridDeltaGenerator)
-    assert_type(grid(gap=(None, "small")), GridDeltaGenerator)
+    assert_type(grid(gap="small"), GridContainer)
+    assert_type(grid(gap=("medium", "small")), GridContainer)
+    assert_type(grid(gap=(None, "small")), GridContainer)
 
     # vertical_alignment accepts literals
-    assert_type(grid(vertical_alignment="top"), GridDeltaGenerator)
-    assert_type(grid(vertical_alignment="center"), GridDeltaGenerator)
-    assert_type(grid(vertical_alignment="bottom"), GridDeltaGenerator)
+    assert_type(grid(vertical_alignment="top"), GridContainer)
+    assert_type(grid(vertical_alignment="center"), GridContainer)
+    assert_type(grid(vertical_alignment="bottom"), GridContainer)
 
     # border accepts bool
-    assert_type(grid(border=True), GridDeltaGenerator)
-    assert_type(grid(border=False), GridDeltaGenerator)
+    assert_type(grid(border=True), GridContainer)
+    assert_type(grid(border=False), GridContainer)
 
     # cell_height accepts literals or int
-    assert_type(grid(cell_height="content"), GridDeltaGenerator)
-    assert_type(grid(cell_height="equal"), GridDeltaGenerator)
-    assert_type(grid(cell_height=200), GridDeltaGenerator)
+    assert_type(grid(cell_height="content"), GridContainer)
+    assert_type(grid(cell_height="equal"), GridContainer)
+    assert_type(grid(cell_height=200), GridContainer)
 
     # width accepts "stretch" or int
-    assert_type(grid(width="stretch"), GridDeltaGenerator)
-    assert_type(grid(width=400), GridDeltaGenerator)
+    assert_type(grid(width="stretch"), GridContainer)
+    assert_type(grid(width=400), GridContainer)
 
     # dense accepts bool
-    assert_type(grid(dense=True), GridDeltaGenerator)
-    assert_type(grid(dense=False), GridDeltaGenerator)
+    assert_type(grid(dense=True), GridContainer)
+    assert_type(grid(dense=False), GridContainer)
 
     # span method returns DeltaGenerator
     span = grid().span

@@ -1975,8 +1975,8 @@ class GridTest(DeltaGeneratorTestCase):
 
         # Default is auto mode (max_columns=0)
         assert grid_block.add_block.grid_container.max_columns == 0
-        # Default min_column_width is 220
-        assert grid_block.add_block.grid_container.min_column_width_px == 220
+        # Default min_column_width is 200
+        assert grid_block.add_block.grid_container.min_column_width_px == 200
         # Default gaps are small
         assert (
             grid_block.add_block.grid_container.row_gap_config.gap_size == GapSize.SMALL

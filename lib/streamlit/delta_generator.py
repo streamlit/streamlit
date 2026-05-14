@@ -581,7 +581,7 @@ class DeltaGenerator(
 
         if dg._root_container is None or dg._cursor is None:
             # Return a properly-typed DeltaGenerator even in bare mode
-            # so that DeltaGenerator subclasses (e.g., GridDeltaGenerator)
+            # so that DeltaGenerator subclasses (e.g., GridContainer)
             # can still have their methods called.
             if dg_type is not None and not isinstance(dg, dg_type):
                 return cast(

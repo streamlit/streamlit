@@ -54,7 +54,7 @@ from streamlit.string_util import validate_icon_or_emoji
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
-    from streamlit.elements.lib.grid_delta_generator import GridDeltaGenerator
+    from streamlit.elements.lib.grid_container import GridContainer
     from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -639,7 +639,7 @@ class LayoutsMixin:
         cell_height: Literal["content", "equal"] | int = "content",
         width: WidthWithoutContent = "stretch",
         dense: bool = True,
-    ) -> GridDeltaGenerator:
+    ) -> GridContainer:
         r"""Insert a responsive CSS Grid layout container.
 
         Inserts an invisible grid container into your app that can hold
@@ -727,7 +727,7 @@ class LayoutsMixin:
 
         Returns
         -------
-        GridDeltaGenerator
+        GridContainer
             A container object that supports ``with`` notation or method
             calls. In addition to the standard DeltaGenerator methods, this
             object also has a ``span()`` method that allows creating cells
@@ -881,11 +881,14 @@ class LayoutsMixin:
         # Set width configuration
         block_proto.width_config.CopyFrom(get_width_config(width))
 
-        from streamlit.elements.lib.grid_delta_generator import GridDeltaGenerator
+        # Import at runtime to avoid circular import
+        from streamlit.elements.lib.grid_container import (
+            GridContainer as GridContainerClass,
+        )
 
         return cast(
-            "GridDeltaGenerator",
-            self.dg._block(block_proto, dg_type=GridDeltaGenerator),
+            "GridContainer",
+            self.dg._block(block_proto, dg_type=GridContainerClass),
         )
 
     @gather_metrics("tabs")

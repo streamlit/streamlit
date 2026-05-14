@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     from streamlit.cursor import Cursor
 
 
-class GridDeltaGenerator(DeltaGenerator):
+class GridContainer(DeltaGenerator):
     """A DeltaGenerator for grid containers that supports cell spanning.
 
     This class extends DeltaGenerator to provide the span() method,
