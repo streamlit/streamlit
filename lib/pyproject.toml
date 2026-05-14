@@ -23,7 +23,7 @@ description = "A faster way to build and share data apps"
 # Note: README.md is in the repo root. The build process copies it to lib/
 # before building. See .github/workflows/release.yml.
 readme = "README.md"
-license = "Apache-2.0"
+license = {text = "Apache-2.0"}
 requires-python = ">=3.10"
 authors = [{ name = "Snowflake Inc", email = "hello@streamlit.io" }]
 classifiers = [
