@@ -343,8 +343,8 @@ function computeGridTemplateColumns(
 
   if (minColumnWidthPx > 0) {
     // Fixed column count with min width: allow responsive wrapping
-    // Use auto-fit to allow columns to wrap when container is narrow
-    return `repeat(auto-fit, minmax(max(${minColumnWidthPx}px, calc((100% - ${maxColumns - 1} * ${columnGapPx}) / ${maxColumns})), 1fr))`
+    // Use min(100%, minWidth) to ensure columns can collapse to single column
+    return `repeat(auto-fit, minmax(min(100%, max(${minColumnWidthPx}px, calc((100% - ${maxColumns - 1} * ${columnGapPx}) / ${maxColumns}))), 1fr))`
   }
 
   // Fixed column count without min width: strict equal columns
@@ -392,6 +392,8 @@ export const StyledGridContainerBlock =
           columnGapPx
         ),
         gridAutoRows,
+        // Prevent spans from creating implicit columns by making them 0-width
+        gridAutoColumns: 0,
       }
     }
   )
@@ -437,8 +439,9 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
       minWidth: 0,
       minHeight: 0,
       maxWidth: "100%",
-      // Enable scrolling when cell has fixed height and content overflows
-      ...(hasFixedHeight && { overflow: "auto" }),
+      // For fixed height cells, use overflow-y auto to allow scrolling
+      // but keep overflow-x visible so toolbars/menus aren't clipped
+      ...(hasFixedHeight && { overflowY: "auto", overflowX: "clip" }),
       ...(showBorder && {
         border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
         borderRadius: theme.radii.default,
