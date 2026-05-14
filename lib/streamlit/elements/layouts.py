@@ -632,12 +632,13 @@ class LayoutsMixin:
         self,
         columns: Literal["auto"] | int = "auto",
         *,
-        min_column_width: int | None = 220,
+        min_column_width: int | None = 200,
         gap: Gap | tuple[Gap | None, Gap | None] = "small",
         vertical_alignment: Literal["top", "center", "bottom"] = "top",
         border: bool = False,
         cell_height: Literal["content", "equal"] | int = "content",
         width: WidthWithoutContent = "stretch",
+        dense: bool = True,
     ) -> GridDeltaGenerator:
         r"""Insert a responsive CSS Grid layout container.
 
@@ -666,7 +667,7 @@ class LayoutsMixin:
             The minimum width of each column in pixels. This can be one of
             the following:
 
-            - A positive integer (default 220): Each column has at least
+            - A positive integer (default 200): Each column has at least
               this width. This enables responsive wrapping when the
               container is narrower than ``columns * min_column_width``.
             - ``None``: No minimum width constraint. Only valid when
@@ -716,6 +717,13 @@ class LayoutsMixin:
               a fixed width. If the specified width is greater than the
               width of the parent container, the width of the container
               matches the width of the parent container.
+
+        dense : bool
+            Whether to use dense packing mode. If this is ``True``
+            (default), the grid fills gaps by reordering smaller cells
+            to fill empty spaces left by spanning cells. If this is
+            ``False``, cells are placed in order, leaving gaps when
+            spanning cells don't fit.
 
         Returns
         -------
@@ -866,6 +874,9 @@ class LayoutsMixin:
                 BlockProto.GridContainer.CellHeightMode.FIXED
             )
             grid_container.cell_height_config.pixel_height = cell_height
+
+        # Set dense packing mode
+        grid_container.dense = dense
 
         # Set width configuration
         block_proto.width_config.CopyFrom(get_width_config(width))

@@ -320,6 +320,7 @@ export interface StyledGridContainerBlockProps {
   columnGap: streamlit.GapSize | undefined
   cellHeightMode: BlockProto.GridContainer.CellHeightMode
   cellHeightPx?: number
+  dense?: boolean
 }
 
 /**
@@ -361,6 +362,7 @@ export const StyledGridContainerBlock =
       columnGap,
       cellHeightMode,
       cellHeightPx,
+      dense,
     }) => {
       const rowGapPx = translateGapWidth(rowGap, theme)
       const columnGapPx = translateGapWidth(columnGap, theme)
@@ -392,8 +394,8 @@ export const StyledGridContainerBlock =
           columnGapPx
         ),
         gridAutoRows,
-        // Prevent spans from creating implicit columns by making them 0-width
-        gridAutoColumns: 0,
+        // Dense packing mode fills gaps by reordering items
+        ...(dense && { gridAutoFlow: "dense" }),
       }
     }
   )

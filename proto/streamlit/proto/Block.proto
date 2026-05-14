@@ -213,6 +213,10 @@ message Block {
 
     // Optional fixed cell height configuration (used when cell_height_mode is FIXED).
     optional streamlit.HeightConfig cell_height_config = 8;
+
+    // Whether to use dense packing mode (grid-auto-flow: dense).
+    // When true, the grid fills gaps by reordering items.
+    bool dense = 9;
   }
 
   message GridCell {

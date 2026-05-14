@@ -71,6 +71,10 @@ if TYPE_CHECKING:
     assert_type(grid(width="stretch"), GridDeltaGenerator)
     assert_type(grid(width=400), GridDeltaGenerator)
 
+    # dense accepts bool
+    assert_type(grid(dense=True), GridDeltaGenerator)
+    assert_type(grid(dense=False), GridDeltaGenerator)
+
     # span method returns DeltaGenerator
     span = grid().span
     assert_type(span(), DeltaGenerator)

@@ -293,7 +293,10 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
 
   // Extract grid configuration with defaults
   const maxColumns = gridConfig?.maxColumns ?? 0
-  const minColumnWidthPx = gridConfig?.minColumnWidthPx ?? 220
+  // In auto mode (maxColumns=0), we need a positive min width; in fixed mode, 0 is valid
+  const rawMinColumnWidthPx = gridConfig?.minColumnWidthPx ?? 0
+  const minColumnWidthPx =
+    maxColumns === 0 && rawMinColumnWidthPx === 0 ? 200 : rawMinColumnWidthPx
   const rowGap = gridConfig?.rowGapConfig?.gapSize ?? streamlit.GapSize.SMALL
   const columnGap =
     gridConfig?.columnGapConfig?.gapSize ?? streamlit.GapSize.SMALL
@@ -305,6 +308,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
     gridConfig?.cellHeightMode ??
     BlockProto.GridContainer.CellHeightMode.CONTENT
   const cellHeightPx = gridConfig?.cellHeightConfig?.pixelHeight ?? undefined
+  const dense = gridConfig?.dense ?? true
 
   // Collect child elements and their grid cell configurations.
   // Use individual props as dependencies instead of the props object
@@ -394,6 +398,7 @@ const GridContainer = (props: GridContainerProps): ReactElement => {
       columnGap={columnGap}
       cellHeightMode={cellHeightMode}
       cellHeightPx={cellHeightPx}
+      dense={dense}
       className={classNames("stGrid", convertKeyToClassName(userKey))}
       data-testid="stGrid"
     >
