@@ -35,10 +35,14 @@ export const StyledProgressTrack = styled.div<StyledProgressTrackProps>(
   })
 )
 
-// transform is intentionally NOT in this class — it is applied via inline
-// style in ProgressBar.tsx. Emotion generates a new class for each unique prop
-// combination, so if transform lived here, the browser would see a class swap
-// rather than a property mutation, and the CSS transition would never fire.
+/**
+ * The fill element of the progress bar.
+ *
+ * `transform` is intentionally NOT in this class — it is applied via inline
+ * style in ProgressBar.tsx. Emotion generates a new class for each unique prop
+ * combination, so if transform lived here, the browser would see a class swap
+ * rather than a property mutation, and the CSS transition would never fire.
+ */
 export const StyledProgressFill = styled.div(({ theme }) => ({
   width: "100%",
   height: "100%",

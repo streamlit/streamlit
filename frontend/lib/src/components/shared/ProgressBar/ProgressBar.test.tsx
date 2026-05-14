@@ -84,8 +84,8 @@ describe("ProgressBar component", () => {
   it("squares top corners when squareTopCorners is true", () => {
     render(<ProgressBar value={50} squareTopCorners />)
     const track = screen.getByTestId("stProgressBarTrack")
-    expect(track).toHaveStyle({ borderTopLeftRadius: 0 })
-    expect(track).toHaveStyle({ borderTopRightRadius: 0 })
+    expect(track).toHaveStyle({ borderTopLeftRadius: "0px" })
+    expect(track).toHaveStyle({ borderTopRightRadius: "0px" })
   })
 
   it.each([Size.EXTRASMALL, Size.SMALL])(

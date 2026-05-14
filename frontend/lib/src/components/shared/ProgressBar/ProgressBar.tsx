@@ -53,7 +53,7 @@ function ProgressBar({
           data-testid="stProgressBarTrack"
         >
           <StyledProgressFill
-            style={{ transform: `translateX(${(pct ?? clamped) - 100}%)` }}
+            style={{ transform: `translateX(${pct - 100}%)` }}
           />
         </StyledProgressTrack>
       )}
