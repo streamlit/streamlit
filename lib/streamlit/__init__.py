@@ -213,6 +213,7 @@ file_uploader = _main.file_uploader
 form = _main.form
 form_submit_button = _main.form_submit_button
 graphviz_chart = _main.graphviz_chart
+grid = _main.grid
 header = _main.header
 help = _main.help
 html = _main.html

@@ -312,3 +312,141 @@ export const StyledLayoutWrapper = styled.div<StyledLayoutWrapperProps>(
     flex,
   })
 )
+
+export interface StyledGridContainerBlockProps {
+  maxColumns: number
+  minColumnWidthPx: number
+  rowGap: streamlit.GapSize | undefined
+  columnGap: streamlit.GapSize | undefined
+  cellHeightMode: BlockProto.GridContainer.CellHeightMode
+  cellHeightPx?: number
+}
+
+/**
+ * Computes the CSS grid-template-columns value based on configuration.
+ *
+ * When maxColumns is 0 (auto mode), we use auto-fit with minmax to let the
+ * browser determine the number of columns based on available width.
+ *
+ * When maxColumns is set, we optionally incorporate minColumnWidth to allow
+ * responsive wrapping, or use fixed equal columns if no minimum is specified.
+ */
+function computeGridTemplateColumns(
+  maxColumns: number,
+  minColumnWidthPx: number,
+  columnGapPx: string
+): string {
+  if (maxColumns === 0) {
+    // Auto mode: columns determined by min width
+    return `repeat(auto-fit, minmax(min(100%, ${minColumnWidthPx}px), 1fr))`
+  }
+
+  if (minColumnWidthPx > 0) {
+    // Fixed column count with min width: allow responsive wrapping
+    // Use auto-fit to allow columns to wrap when container is narrow
+    return `repeat(auto-fit, minmax(max(${minColumnWidthPx}px, calc((100% - ${maxColumns - 1} * ${columnGapPx}) / ${maxColumns})), 1fr))`
+  }
+
+  // Fixed column count without min width: strict equal columns
+  return `repeat(${maxColumns}, minmax(0, 1fr))`
+}
+
+export const StyledGridContainerBlock =
+  styled.div<StyledGridContainerBlockProps>(
+    ({
+      theme,
+      maxColumns,
+      minColumnWidthPx,
+      rowGap,
+      columnGap,
+      cellHeightMode,
+      cellHeightPx,
+    }) => {
+      const rowGapPx = translateGapWidth(rowGap, theme)
+      const columnGapPx = translateGapWidth(columnGap, theme)
+
+      // Determine grid-auto-rows based on cell height mode
+      let gridAutoRows: string
+      const { CellHeightMode } = BlockProto.GridContainer
+      switch (cellHeightMode) {
+        case CellHeightMode.EQUAL:
+          gridAutoRows = "1fr"
+          break
+        case CellHeightMode.FIXED:
+          gridAutoRows = cellHeightPx ? `${cellHeightPx}px` : "auto"
+          break
+        case CellHeightMode.CONTENT:
+        default:
+          gridAutoRows = "auto"
+      }
+
+      return {
+        display: "grid",
+        width: "100%",
+        maxWidth: "100%",
+        minWidth: "1rem",
+        gap: `${rowGapPx} ${columnGapPx}`,
+        gridTemplateColumns: computeGridTemplateColumns(
+          maxColumns,
+          minColumnWidthPx,
+          columnGapPx
+        ),
+        gridAutoRows,
+      }
+    }
+  )
+
+export interface StyledGridCellProps {
+  verticalAlignment: BlockProto.GridContainer.VerticalAlignment
+  showBorder: boolean
+  hasFixedHeight: boolean
+  columnSpan?: number
+  rowSpan?: number
+}
+
+export const StyledGridCell = styled.div<StyledGridCellProps>(
+  ({
+    theme,
+    verticalAlignment,
+    showBorder,
+    hasFixedHeight,
+    columnSpan,
+    rowSpan,
+  }) => {
+    const { VerticalAlignment } = BlockProto.GridContainer
+
+    // Map vertical alignment to CSS justify-content (since we use column direction)
+    let justifyContent: string
+    switch (verticalAlignment) {
+      case VerticalAlignment.CENTER:
+        justifyContent = "center"
+        break
+      case VerticalAlignment.BOTTOM:
+        justifyContent = "flex-end"
+        break
+      case VerticalAlignment.TOP:
+      default:
+        justifyContent = "flex-start"
+    }
+
+    return {
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "stretch",
+      justifyContent,
+      minWidth: 0,
+      minHeight: 0,
+      maxWidth: "100%",
+      // Enable scrolling when cell has fixed height and content overflows
+      ...(hasFixedHeight && { overflow: "auto" }),
+      ...(showBorder && {
+        border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+        borderRadius: theme.radii.default,
+        padding: `calc(${theme.spacing.lg} - ${theme.sizes.borderWidth})`,
+      }),
+      ...(columnSpan &&
+        columnSpan > 1 && { gridColumn: `span ${columnSpan}` }),
+      ...(rowSpan && rowSpan > 1 && { gridRow: `span ${rowSpan}` }),
+    }
+  }
+)

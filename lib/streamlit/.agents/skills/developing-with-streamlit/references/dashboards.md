@@ -51,6 +51,21 @@ with st.container(horizontal=True):
 
 Horizontal containers wrap on smaller screens. Prefer them over `st.columns` for metric rows.
 
+For more control over card layout, use `st.grid`:
+
+```python
+# Grid with equal-height cells and borders
+with st.grid(columns=4, border=True, cell_height="equal", gap="medium"):
+    st.metric("Revenue", "$1.2M", "-7%")
+    st.metric("Users", "762k", "+12%")
+    st.metric("Orders", "1.4k", "+5%")
+    st.metric("Conversion", "3.2%", "+0.1%")
+```
+
+**Grid vs horizontal container:**
+- `st.container(horizontal=True)` — Simple metric rows, auto-wrapping
+- `st.grid` — More layout control (fixed columns, cell spanning, equal heights)
+
 ## Metrics with sparklines
 
 Add trend context with `chart_data`:
@@ -128,9 +143,10 @@ Each template uses synthetic data that can be replaced with real queries. See `a
 
 ## References
 
-- `layouts.md` — Columns, containers, tabs, dialogs
+- `layouts.md` — Columns, containers, grids, tabs, dialogs
 - `data-display.md` — Charts, dataframes, column configuration
 - `performance.md` — Caching and fragments for heavy dashboards
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.metric](https://docs.streamlit.io/develop/api-reference/data/st.metric)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)

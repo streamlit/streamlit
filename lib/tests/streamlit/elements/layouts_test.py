@@ -1963,3 +1963,330 @@ class DialogTest(DeltaGeneratorTestCase):
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.id
+
+
+class GridTest(DeltaGeneratorTestCase):
+    """Test st.grid."""
+
+    def test_default_grid(self):
+        """Test that a grid can be created with default parameters."""
+        st.grid()
+        grid_block = self.get_delta_from_queue()
+
+        # Default is auto mode (max_columns=0)
+        assert grid_block.add_block.grid_container.max_columns == 0
+        # Default min_column_width is 220
+        assert grid_block.add_block.grid_container.min_column_width_px == 220
+        # Default gaps are small
+        assert (
+            grid_block.add_block.grid_container.row_gap_config.gap_size == GapSize.SMALL
+        )
+        assert (
+            grid_block.add_block.grid_container.column_gap_config.gap_size
+            == GapSize.SMALL
+        )
+        # Default vertical alignment is TOP
+        assert (
+            grid_block.add_block.grid_container.vertical_alignment
+            == BlockProto.GridContainer.VerticalAlignment.TOP
+        )
+        # Default border is False
+        assert not grid_block.add_block.grid_container.show_cell_border
+        # Default cell height mode is CONTENT
+        assert (
+            grid_block.add_block.grid_container.cell_height_mode
+            == BlockProto.GridContainer.CellHeightMode.CONTENT
+        )
+        # Default allows empty
+        assert grid_block.add_block.allow_empty
+
+    def test_grid_with_fixed_columns(self):
+        """Test grid with a fixed number of columns."""
+        st.grid(columns=3)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.grid_container.max_columns == 3
+
+    def test_grid_with_auto_columns(self):
+        """Test grid with auto columns mode."""
+        st.grid(columns="auto", min_column_width=300)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.grid_container.max_columns == 0
+        assert grid_block.add_block.grid_container.min_column_width_px == 300
+
+    @parameterized.expand(
+        [
+            (-1,),
+            (0,),
+            ("invalid",),
+        ]
+    )
+    def test_invalid_columns(self, invalid_columns):
+        """Test that invalid columns values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(columns=invalid_columns)
+
+    def test_auto_columns_requires_min_column_width(self):
+        """Test that auto columns require min_column_width to be set."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(columns="auto", min_column_width=None)
+
+    @parameterized.expand(
+        [
+            (-1,),
+            (0,),
+            ("invalid",),
+        ]
+    )
+    def test_invalid_min_column_width(self, invalid_min_width):
+        """Test that invalid min_column_width values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(columns=3, min_column_width=invalid_min_width)
+
+    def test_min_column_width_none_with_fixed_columns(self):
+        """Test that min_column_width=None is valid with fixed columns."""
+        st.grid(columns=3, min_column_width=None)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.grid_container.max_columns == 3
+        assert grid_block.add_block.grid_container.min_column_width_px == 0
+
+    def test_grid_with_single_gap(self):
+        """Test grid with a single gap value."""
+        st.grid(gap="medium")
+        grid_block = self.get_delta_from_queue()
+
+        assert (
+            grid_block.add_block.grid_container.row_gap_config.gap_size
+            == GapSize.MEDIUM
+        )
+        assert (
+            grid_block.add_block.grid_container.column_gap_config.gap_size
+            == GapSize.MEDIUM
+        )
+
+    def test_grid_with_tuple_gap(self):
+        """Test grid with different row and column gaps."""
+        st.grid(gap=("large", "small"))
+        grid_block = self.get_delta_from_queue()
+
+        assert (
+            grid_block.add_block.grid_container.row_gap_config.gap_size == GapSize.LARGE
+        )
+        assert (
+            grid_block.add_block.grid_container.column_gap_config.gap_size
+            == GapSize.SMALL
+        )
+
+    def test_grid_with_none_gap_in_tuple(self):
+        """Test grid with None gap values in tuple."""
+        st.grid(gap=(None, "medium"))
+        grid_block = self.get_delta_from_queue()
+
+        assert (
+            grid_block.add_block.grid_container.row_gap_config.gap_size == GapSize.NONE
+        )
+        assert (
+            grid_block.add_block.grid_container.column_gap_config.gap_size
+            == GapSize.MEDIUM
+        )
+
+    def test_grid_with_invalid_gap_tuple_length(self):
+        """Test that gap tuple with wrong length raises an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(gap=("small", "medium", "large"))
+
+    @parameterized.expand(
+        [
+            ("top", BlockProto.GridContainer.VerticalAlignment.TOP),
+            ("center", BlockProto.GridContainer.VerticalAlignment.CENTER),
+            ("bottom", BlockProto.GridContainer.VerticalAlignment.BOTTOM),
+        ]
+    )
+    def test_grid_vertical_alignment(
+        self, alignment: str, expected: BlockProto.GridContainer.VerticalAlignment
+    ):
+        """Test grid with different vertical alignment values."""
+        st.grid(vertical_alignment=alignment)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.grid_container.vertical_alignment == expected
+
+    def test_invalid_vertical_alignment(self):
+        """Test that invalid vertical alignment raises an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(vertical_alignment="invalid")
+
+    def test_grid_with_border(self):
+        """Test grid with border enabled."""
+        st.grid(border=True)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.grid_container.show_cell_border
+
+    @parameterized.expand(
+        [
+            ("content", BlockProto.GridContainer.CellHeightMode.CONTENT),
+            ("equal", BlockProto.GridContainer.CellHeightMode.EQUAL),
+        ]
+    )
+    def test_grid_cell_height_mode(
+        self, cell_height: str, expected: BlockProto.GridContainer.CellHeightMode
+    ):
+        """Test grid with different cell height modes."""
+        st.grid(cell_height=cell_height)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.grid_container.cell_height_mode == expected
+
+    def test_grid_fixed_cell_height(self):
+        """Test grid with fixed cell height in pixels."""
+        st.grid(cell_height=150)
+        grid_block = self.get_delta_from_queue()
+
+        assert (
+            grid_block.add_block.grid_container.cell_height_mode
+            == BlockProto.GridContainer.CellHeightMode.FIXED
+        )
+        assert (
+            grid_block.add_block.grid_container.cell_height_config.pixel_height == 150
+        )
+
+    @parameterized.expand(
+        [
+            (-1,),
+            (0,),
+            ("invalid",),
+        ]
+    )
+    def test_invalid_cell_height(self, invalid_height):
+        """Test that invalid cell_height values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(cell_height=invalid_height)
+
+    def test_grid_width_stretch(self):
+        """Test grid with stretch width."""
+        st.grid(width="stretch")
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.width_config.use_stretch
+
+    def test_grid_width_pixel(self):
+        """Test grid with fixed pixel width."""
+        st.grid(width=500)
+        grid_block = self.get_delta_from_queue()
+
+        assert grid_block.add_block.width_config.pixel_width == 500
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+            ("content",),  # content not allowed for grid
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.grid(width=invalid_width)
+
+    def test_grid_context_manager(self):
+        """Test that grid works as a context manager."""
+        with st.grid():
+            st.write("Hello")
+
+        all_deltas = self.get_all_deltas_from_queue()
+
+        # Should have 2 deltas: grid container and markdown element
+        assert len(all_deltas) == 2
+        assert all_deltas[0].add_block.HasField("grid_container")
+
+
+class SpanTest(DeltaGeneratorTestCase):
+    """Test st.grid().span() method."""
+
+    def test_default_span(self):
+        """Test that span creates a container with default span values."""
+        grid = st.grid()
+        grid.span()
+
+        all_deltas = self.get_all_deltas_from_queue()
+        assert len(all_deltas) == 2
+        # First delta is the grid container
+        assert all_deltas[0].add_block.HasField("grid_container")
+        # Second delta is the span container (vertical block)
+        assert all_deltas[1].add_block.HasField("vertical")
+        # Default span values should not set grid_cell (span = 1 is default)
+        assert not all_deltas[1].add_block.HasField("grid_cell")
+
+    def test_span_with_column_span(self):
+        """Test span with column span greater than 1."""
+        grid = st.grid()
+        grid.span(columns=2)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        span_block = all_deltas[1].add_block
+        assert span_block.grid_cell.column_span == 2
+        assert span_block.grid_cell.row_span == 0  # Not set
+
+    def test_span_with_row_span(self):
+        """Test span with row span greater than 1."""
+        grid = st.grid()
+        grid.span(rows=3)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        span_block = all_deltas[1].add_block
+        assert span_block.grid_cell.row_span == 3
+        assert span_block.grid_cell.column_span == 0  # Not set
+
+    def test_span_with_both_spans(self):
+        """Test span with both column and row spans."""
+        grid = st.grid()
+        grid.span(columns=2, rows=3)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        span_block = all_deltas[1].add_block
+        assert span_block.grid_cell.column_span == 2
+        assert span_block.grid_cell.row_span == 3
+
+    def test_span_context_manager(self):
+        """Test that span works as a context manager."""
+        grid = st.grid()
+        with grid.span(columns=2):
+            st.write("Hello")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        # Should have 3 deltas: grid container, span container, and markdown element
+        assert len(all_deltas) == 3
+        assert all_deltas[0].add_block.HasField("grid_container")
+        assert all_deltas[1].add_block.HasField("vertical")
+        assert all_deltas[1].add_block.grid_cell.column_span == 2
+
+    @parameterized.expand(
+        [
+            (0,),
+            (-1,),
+            ("invalid",),
+        ]
+    )
+    def test_invalid_column_span(self, invalid_columns):
+        """Test that invalid column span values raise an error."""
+        grid = st.grid()
+        with pytest.raises(StreamlitAPIException):
+            grid.span(columns=invalid_columns)
+
+    @parameterized.expand(
+        [
+            (0,),
+            (-1,),
+            ("invalid",),
+        ]
+    )
+    def test_invalid_row_span(self, invalid_rows):
+        """Test that invalid row span values raise an error."""
+        grid = st.grid()
+        with pytest.raises(StreamlitAPIException):
+            grid.span(rows=invalid_rows)

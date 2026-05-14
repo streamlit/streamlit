@@ -45,6 +45,55 @@ cols = st.columns(4, vertical_alignment="center")
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 ```
 
+## Grid: responsive CSS Grid layouts
+
+Use `st.grid` for layouts that need to automatically wrap and resize based on available space.
+
+```python
+# Auto-sizing grid with minimum column width
+with st.grid():
+    st.metric("Revenue", "$1.2M")
+    st.metric("Users", "762k")
+    st.metric("Orders", "1.4k")
+    st.metric("Conversion", "3.2%")
+```
+
+**Grid vs columns:**
+- `st.columns` — Fixed number of columns, no wrapping
+- `st.grid` — Responsive wrapping, cells auto-size to fit
+
+**Common grid patterns:**
+
+```python
+# Fixed columns with responsive wrapping
+with st.grid(columns=3, border=True, cell_height="equal"):
+    for item in items:
+        st.markdown(f"**{item.name}**")
+        st.caption(item.description)
+
+# Auto-sizing cards with custom gap
+with st.grid(min_column_width=250, gap="medium", border=True):
+    for metric in metrics:
+        st.metric(metric.label, metric.value, metric.delta)
+
+# Spanning cells for featured content
+grid = st.grid(columns=4, min_column_width=150, border=True)
+with grid.span(columns=2):
+    st.markdown("**Featured** - spans 2 columns")
+with grid.container():
+    st.markdown("Cell 2")
+with grid.container():
+    st.markdown("Cell 3")
+```
+
+**Key parameters:**
+- `columns` — `"auto"` (default) or fixed number
+- `min_column_width` — Minimum cell width in pixels (enables responsive wrapping)
+- `gap` — Size between cells: `"small"` (default), `"medium"`, `"large"`, etc.
+- `border` — Show borders around cells
+- `cell_height` — `"content"` (default), `"equal"` (match tallest in row), or fixed pixels
+- `vertical_alignment` — `"top"` (default), `"center"`, `"bottom"`
+
 ## Horizontal containers for button groups
 
 Use `st.container(horizontal=True)` instead of columns for button groups:
@@ -157,5 +206,6 @@ st.container(height=300)
 
 - [st.container](https://docs.streamlit.io/develop/api-reference/layout/st.container)
 - [st.columns](https://docs.streamlit.io/develop/api-reference/layout/st.columns)
+- [st.grid](https://docs.streamlit.io/develop/api-reference/layout/st.grid)
 - [st.sidebar](https://docs.streamlit.io/develop/api-reference/layout/st.sidebar)
 - [st.dialog](https://docs.streamlit.io/develop/api-reference/execution-flow/st.dialog)

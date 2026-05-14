@@ -340,3 +340,166 @@ describe("BlockNodeRenderer CSS key class placement", () => {
     expect(innerBlock.className).not.toContain("st-key-")
   })
 })
+
+describe("GridContainer Component", () => {
+  function makeGridBlock(
+    gridContainerProps: Partial<BlockProto.IGridContainer> = {},
+    children: BlockNode[] = []
+  ): BlockNode {
+    return new BlockNode(
+      FAKE_SCRIPT_HASH,
+      children,
+      new BlockProto({
+        allowEmpty: true,
+        gridContainer: {
+          maxColumns: 0,
+          minColumnWidthPx: 220,
+          rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+          verticalAlignment: BlockProto.GridContainer.VerticalAlignment.TOP,
+          showCellBorder: false,
+          cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT,
+          ...gridContainerProps,
+        },
+      })
+    )
+  }
+
+  const widgetMgr = new WidgetStateManager({
+    sendRerunBackMsg: vi.fn(),
+    formsDataChanged: vi.fn(),
+  })
+
+  function makeGridNodeRendererComponent(node: BlockNode): ReactElement {
+    return (
+      <BlockNodeRenderer
+        node={node}
+        scriptRunId=""
+        scriptRunState={ScriptRunState.NOT_RUNNING}
+        widgetsDisabled={false}
+        widgetMgr={widgetMgr}
+        // @ts-expect-error
+        uploadClient={undefined}
+      />
+    )
+  }
+
+  it("should render a grid container", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toBeVisible()
+    expect(gridContainer).toHaveClass("stGrid")
+  })
+
+  it("should apply display: grid style", () => {
+    const block = makeGridBlock()
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle("display: grid")
+  })
+
+  it("should apply auto-fit grid template columns in auto mode", () => {
+    const block = makeGridBlock({
+      maxColumns: 0,
+      minColumnWidthPx: 200,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    // Check that it uses auto-fit with minmax
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr))"
+    )
+  })
+
+  it("should apply fixed column template in fixed mode without min width", () => {
+    const block = makeGridBlock({
+      maxColumns: 3,
+      minColumnWidthPx: 0,
+    })
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveStyle(
+      "grid-template-columns: repeat(3, minmax(0, 1fr))"
+    )
+  })
+
+  it.each([
+    [
+      "row gap: small, column gap: small",
+      {
+        rowGapConfig: { gapSize: streamlit.GapSize.SMALL },
+        columnGapConfig: { gapSize: streamlit.GapSize.SMALL },
+      },
+      "gap: 1rem 1rem;",
+    ],
+    [
+      "row gap: medium, column gap: large",
+      {
+        rowGapConfig: { gapSize: streamlit.GapSize.MEDIUM },
+        columnGapConfig: { gapSize: streamlit.GapSize.LARGE },
+      },
+      "gap: 2rem 4rem;",
+    ],
+    [
+      "row gap: none, column gap: none",
+      {
+        rowGapConfig: { gapSize: streamlit.GapSize.NONE },
+        columnGapConfig: { gapSize: streamlit.GapSize.NONE },
+      },
+      "gap: 0 0;",
+    ],
+  ])("should apply %s", (_desc, gapConfig, expectedStyle) => {
+    const block = makeGridBlock(gapConfig)
+    renderWithContexts(makeGridNodeRendererComponent(block))
+    expect(screen.getByTestId("stGrid")).toHaveStyle(expectedStyle)
+  })
+
+  it.each([
+    [
+      "auto rows: auto for content mode",
+      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.CONTENT },
+      "grid-auto-rows: auto;",
+    ],
+    [
+      "auto rows: 1fr for equal mode",
+      { cellHeightMode: BlockProto.GridContainer.CellHeightMode.EQUAL },
+      "grid-auto-rows: 1fr;",
+    ],
+    [
+      "auto rows: fixed px for fixed mode",
+      {
+        cellHeightMode: BlockProto.GridContainer.CellHeightMode.FIXED,
+        cellHeightConfig: { pixelHeight: 100 },
+      },
+      "grid-auto-rows: 100px;",
+    ],
+  ])("should apply %s", (_desc, cellConfig, expectedStyle) => {
+    const block = makeGridBlock(cellConfig)
+    renderWithContexts(makeGridNodeRendererComponent(block))
+    expect(screen.getByTestId("stGrid")).toHaveStyle(expectedStyle)
+  })
+
+  it("should apply user key as CSS class", () => {
+    const block = new BlockNode(
+      FAKE_SCRIPT_HASH,
+      [],
+      new BlockProto({
+        allowEmpty: true,
+        gridContainer: {
+          maxColumns: 0,
+          minColumnWidthPx: 220,
+        },
+        id: "$$ID-abc123-my_grid",
+      })
+    )
+    renderWithContexts(makeGridNodeRendererComponent(block))
+
+    const gridContainer = screen.getByTestId("stGrid")
+    expect(gridContainer).toHaveClass("st-key-my_grid")
+  })
+})
