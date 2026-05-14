@@ -18,8 +18,8 @@ from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import ImageCompareFunction, wait_for_app_run
 from e2e_playwright.shared.dataframe_utils import (
-    click_on_cell,
     expect_canvas_to_be_stable,
+    sort_column,
 )
 
 
@@ -40,7 +40,9 @@ def test_lazy_dataframe_renders_initial_data(
     assert_snapshot(dataframe, name="lazy_dataframe_initial")
 
 
-def test_lazy_dataframe_sorting(themed_app: Page):
+def test_lazy_dataframe_sorting(
+    themed_app: Page, assert_snapshot: ImageCompareFunction
+):
     """Test that lazy dataframe supports server-side sorting."""
     wait_for_app_run(themed_app)
 
@@ -51,17 +53,16 @@ def test_lazy_dataframe_sorting(themed_app: Page):
     # Wait for the dataframe canvas to be stable
     expect_canvas_to_be_stable(dataframe)
 
-    # Click on a column header (row 0) to sort
-    # The first column (col 1) is the "id" column after the index column (col 0)
-    click_on_cell(
-        dataframe, row_pos=0, col_pos=1, column_width="small", wait_after_ms=500
-    )
+    # Sort by clicking on the "id" column header (col_pos=1, since col_pos=0 is index)
+    # This triggers server-side sorting for lazy dataframes
+    sort_column(dataframe, col_pos=1, column_width="small")
 
-    # Wait for the sort to complete
+    # Wait for the sort to complete and data to reload
     expect_canvas_to_be_stable(dataframe)
 
-    # Verify the dataframe is still visible after sorting
-    expect(dataframe).to_be_visible()
+    # Take a snapshot to verify the sorted state
+    # The snapshot comparison ensures the data order actually changed
+    assert_snapshot(dataframe, name="lazy_dataframe_sorted")
 
 
 def test_lazy_dataframe_search_disabled(themed_app: Page):

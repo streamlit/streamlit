@@ -184,14 +184,14 @@ class PandasDataframeSource:
                 ignore_index=True,
             )
         elif sort is not None:
-            # Check if sorting by index
-            index_names = [
-                name for name in df.index.names if name is not None
-            ] or df.index.names
-            if sort.column in index_names or (
-                len(index_names) == 1 and index_names[0] is None
-            ):
+            # Check if sorting by a named index
+            # We only sort by index if the column explicitly matches an index name.
+            # Do NOT fall back to index sort for unknown column names.
+            index_names = [name for name in df.index.names if name is not None]
+            if sort.column in index_names:
                 df = df.sort_index(ascending=sort.ascending)
+            # If column not found in columns or named indices, ignore the sort
+            # (this can happen with stale frontend requests after schema changes)
 
         # Slice the requested range
         end_offset = min(offset + limit, len(df))

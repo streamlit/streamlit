@@ -65,6 +65,7 @@ from streamlit.source_util import page_sort_key
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
+    from streamlit.runtime.dataframe_source_manager import DataframeSourceManager
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -355,6 +356,30 @@ class ScriptRunner:
             )
         return ctx
 
+    def _get_dataframe_source_manager(self) -> DataframeSourceManager | None:
+        """Get the DataframeSourceManager for the current session, if any."""
+        try:
+            rt = runtime.get_instance()
+            session_info = rt._session_mgr.get_session_info(self._session_id)
+            if session_info is None or session_info.session is None:
+                return None
+            return session_info.session.dataframe_source_manager
+        except (AttributeError, RuntimeError):
+            # Handle cases where runtime is not fully initialized or mocked
+            return None
+
+    def _clear_dataframe_source_refs(self) -> None:
+        """Clear active refs for lazy dataframe sources at script start."""
+        manager = self._get_dataframe_source_manager()
+        if manager is not None:
+            manager.clear_active_refs()
+
+    def _prune_dataframe_sources(self) -> None:
+        """Prune unreferenced lazy dataframe sources after script completes."""
+        manager = self._get_dataframe_source_manager()
+        if manager is not None:
+            manager.prune_unreferenced_sources()
+
     def _run_script_thread(self) -> None:
         """The entry point for the script thread.
 
@@ -516,6 +541,8 @@ class ScriptRunner:
                 # download buttons/links to them present in the app, which will result
                 # in a 404 should the user click on them.
                 runtime.get_instance().media_file_mgr.clear_session_refs()
+                # Also clear active refs for lazy dataframe sources
+                self._clear_dataframe_source_refs()
 
             self._pages_manager.set_script_intent(
                 rerun_data.page_script_hash, rerun_data.page_name
@@ -811,6 +838,8 @@ class ScriptRunner:
         # Remove orphaned files now that the script has run and files in use
         # are marked as active.
         runtime.get_instance().media_file_mgr.remove_orphaned_files()
+        # Also prune unreferenced lazy dataframe sources
+        self._prune_dataframe_sources()
 
         # Force garbage collection to run, to help avoid memory use building up
         # This is usually not an issue, but sometimes GC takes time to kick in and
