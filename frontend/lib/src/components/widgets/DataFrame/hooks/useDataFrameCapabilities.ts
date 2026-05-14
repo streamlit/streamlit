@@ -47,6 +47,8 @@ interface DataFrameCapabilities {
   supportsFillHandle: boolean
   /** Whether rectangle (multi-cell) selection is supported. Touch devices use cell-only selection. */
   supportsRectangleSelection: boolean
+  /** Whether the dataframe uses lazy loading. */
+  isLazy: boolean
 }
 
 interface UseDataFrameCapabilitiesParams {
@@ -58,6 +60,10 @@ interface UseDataFrameCapabilitiesParams {
   numDataRows: number
   /** Number of data columns in the table. */
   numDataColumns: number
+  /** Whether the dataframe is in lazy loading mode. */
+  isLazy?: boolean
+  /** Whether the lazy source supports server-side sorting. */
+  lazySortable?: boolean
 }
 
 /**
@@ -91,6 +97,8 @@ function useDataFrameCapabilities({
   disabled,
   numDataRows,
   numDataColumns,
+  isLazy = false,
+  lazySortable = false,
 }: UseDataFrameCapabilitiesParams): DataFrameCapabilities {
   return useMemo(() => {
     const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
@@ -107,27 +115,38 @@ function useDataFrameCapabilities({
     )
     const isLargeTable = numDataRows > LARGE_TABLE_ROWS_THRESHOLD
 
-    const canSort =
-      !isLargeTable &&
-      !isEmptyTable &&
-      editingMode !== DYNAMIC &&
-      editingMode !== ADD_ONLY
+    // For lazy dataframes, sorting is enabled if the source supports it
+    // For eager dataframes, sorting is disabled for large tables and dynamic modes
+    const canSort = isLazy
+      ? lazySortable && !isEmptyTable
+      : !isLargeTable &&
+        !isEmptyTable &&
+        editingMode !== DYNAMIC &&
+        editingMode !== ADD_ONLY
 
-    const canSearch = !isEmptyTable
+    // Search is disabled for lazy dataframes (server-side search not implemented)
+    const canSearch = !isEmptyTable && !isLazy
 
-    const canExportCsv = !isLargeTable && !isEmptyTable
+    // CSV export is disabled for lazy dataframes (all data not available)
+    const canExportCsv = !isLargeTable && !isEmptyTable && !isLazy
 
-    const canEdit = !isEmptyTable && editingMode !== READ_ONLY && !disabled
+    // Editing is disabled for lazy dataframes
+    const canEdit =
+      !isEmptyTable && editingMode !== READ_ONLY && !disabled && !isLazy
 
+    // Adding rows is disabled for lazy dataframes
     const canAddRows =
       !isEmptyTable &&
       (editingMode === DYNAMIC || editingMode === ADD_ONLY) &&
-      !disabled
+      !disabled &&
+      !isLazy
 
+    // Deleting rows is disabled for lazy dataframes
     const canDeleteRows =
       !isEmptyTable &&
       (editingMode === DYNAMIC || editingMode === DELETE_ONLY) &&
-      !disabled
+      !disabled &&
+      !isLazy
 
     const canResizeColumns = !isTouchDevice
 
@@ -148,8 +167,16 @@ function useDataFrameCapabilities({
       canResizeColumns,
       supportsFillHandle,
       supportsRectangleSelection,
+      isLazy,
     }
-  }, [editingMode, disabled, numDataRows, numDataColumns])
+  }, [
+    editingMode,
+    disabled,
+    numDataRows,
+    numDataColumns,
+    isLazy,
+    lazySortable,
+  ])
 }
 
 export default useDataFrameCapabilities

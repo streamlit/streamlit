@@ -18,6 +18,7 @@ syntax = "proto3";
 
 import "streamlit/proto/ClientState.proto";
 import "streamlit/proto/Common.proto";
+import "streamlit/proto/Dataframe.proto";
 
 // A message from the browser to the server.
 message BackMsg {
@@ -78,10 +79,26 @@ message BackendOperationRequest {
   oneof payload {
     // Deferred file download request
     DeferredFileRequestPayload deferred_file = 3;
+    // Lazy dataframe chunk request
+    DataframeChunkRequestPayload dataframe_chunk = 4;
   }
 }
 
 // Payload for deferred file requests
 message DeferredFileRequestPayload {
   string file_id = 1;
+}
+
+// Payload for lazy dataframe chunk requests
+message DataframeChunkRequestPayload {
+  // The source ID of the lazy dataframe
+  string source_id = 1;
+  // Row offset to start loading from
+  uint64 offset = 2;
+  // Number of rows to load
+  uint32 limit = 3;
+  // Generation identifier for invalidation detection
+  string generation = 4;
+  // Optional sort state for server-side sorting
+  optional SortState sort = 5;
 }

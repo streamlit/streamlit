@@ -63,6 +63,8 @@ from streamlit.util import ReadOnlyAttributeDictionary
 if TYPE_CHECKING:
     from collections.abc import Iterable
 
+    from pandas.io.formats.style import Styler
+
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
@@ -91,6 +93,12 @@ _ROW_SELECTION_MODES: Final[set[SelectionMode]] = {
     "single-row-required",
     "multi-row",
 }
+
+# Lazy loading thresholds
+# Auto-lazy threshold: use lazy mode for in-memory dataframes above this row count
+_AUTO_LAZY_THRESHOLD: Final[int] = 150000
+# Minimum row count for lazy=True to take effect (below this, eager is OK)
+_FORCED_LAZY_MIN_ROWS: Final[int] = 1000
 
 
 class DataframeSelectionState(TypedDict, total=False):
@@ -489,6 +497,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
     ) -> DeltaGenerator: ...
 
     @overload
@@ -508,6 +517,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
     ) -> DataframeState: ...
 
     @gather_metrics("dataframe")
@@ -527,6 +537,7 @@ class ArrowMixin:
         selection_default: DataframeState | None = None,
         row_height: int | None = None,
         placeholder: str | None = None,
+        lazy: bool | None = None,
     ) -> DeltaGenerator | DataframeState:
         """Display a dataframe as an interactive table.
 
@@ -742,6 +753,25 @@ class ArrowMixin:
             leave a cell empty, use an empty string (``""``). Other common
             values are ``"null"``, ``"NaN"`` and ``"-"``.
 
+        lazy : bool or None
+            Controls whether to use lazy row loading for the dataframe. This
+            can be one of the following:
+
+            - ``None`` (default): Streamlit chooses automatically. Uses lazy
+              loading for compatible in-memory pandas or Polars DataFrames
+              with more than 150,000 rows.
+            - ``True``: Force lazy loading. The dataframe will load rows
+              on-demand as the user scrolls. This reduces the initial payload
+              size and browser memory usage. Requires at least 1,000 rows to
+              take effect. Incompatible with ``pandas.Styler``,
+              ``on_select != "ignore"``, and editing modes.
+            - ``False``: Never use lazy loading. Uses the existing eager
+              rendering path.
+
+            When lazy loading is enabled, search, CSV export, and selection
+            are disabled. Server-side sorting is supported for compatible
+            data sources.
+
         Returns
         -------
         element or dict
@@ -938,6 +968,24 @@ class ArrowMixin:
         num_rows: int = 0
         column_names: list[str] = []
 
+        # Determine if lazy mode should be used
+        is_styler = dataframe_util.is_pandas_styler(data)
+        use_lazy_mode = False
+
+        # Check lazy mode compatibility and resolve mode
+        if lazy is True:
+            # User explicitly requested lazy mode
+            if is_styler:
+                raise StreamlitAPIException(
+                    "lazy=True is not compatible with pandas.Styler. "
+                    "Use lazy=False or lazy=None to use the existing eager rendering."
+                )
+            if is_selection_activated:
+                raise StreamlitAPIException(
+                    "lazy=True is not compatible with on_select != 'ignore'. "
+                    "Selection is not supported for lazy dataframes in this version."
+                )
+
         has_range_index: bool = False
         if isinstance(data, pa.Table):
             # For pyarrow tables, we can just serialize the table directly
@@ -946,6 +994,7 @@ class ArrowMixin:
             )
             num_rows = data.num_rows
             column_names = data.column_names
+            # PyArrow tables don't support lazy mode in Phase 1
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
@@ -953,13 +1002,15 @@ class ArrowMixin:
             # Determine the input data format
             data_format = dataframe_util.determine_data_format(data)
 
-            if dataframe_util.is_pandas_styler(data):
+            if is_styler:
                 # If pandas.Styler uuid is not provided, a hash of the position
                 # of the element will be used. This will cause a rerender of the table
                 # when the position of the element is changed.
                 delta_path = self.dg._get_delta_path_str()
                 default_uuid = str(hash(delta_path))
-                marshall_styler(proto.arrow_data, data, default_uuid)
+                # Cast data to Styler since is_styler confirms the type
+
+                marshall_styler(proto.arrow_data, cast("Styler", data), default_uuid)
 
             # Convert the input data into a pandas.DataFrame
             data_df = dataframe_util.convert_anything_to_pandas_df(
@@ -967,12 +1018,93 @@ class ArrowMixin:
             )
             has_range_index = dataframe_util.has_range_index(data_df)
             apply_data_specific_configs(column_config_mapping, data_format)
-            # Serialize the data to bytes:
-            proto.arrow_data.data = dataframe_util.convert_pandas_df_to_arrow_bytes(
-                data_df
-            )
+
             num_rows = len(data_df)
             column_names = list(data_df.columns)
+
+            # Determine if lazy mode should be used
+            # Check if the data is a supported in-memory type for lazy loading
+            import pandas as pd
+
+            is_in_memory_pandas = isinstance(data, pd.DataFrame)
+            is_in_memory_polars = dataframe_util.is_polars_dataframe(data)
+            is_lazy_compatible = (
+                (is_in_memory_pandas or is_in_memory_polars)
+                and not is_styler
+                and not is_selection_activated
+            )
+
+            if lazy is True and is_lazy_compatible:
+                # User explicitly requested lazy mode
+                if num_rows >= _FORCED_LAZY_MIN_ROWS:
+                    use_lazy_mode = True
+                # else: below threshold, use eager as small-data optimization
+            elif (
+                lazy is None and is_lazy_compatible and num_rows > _AUTO_LAZY_THRESHOLD
+            ):
+                # Auto-lazy: use lazy mode for large dataframes
+                use_lazy_mode = True
+
+            if use_lazy_mode:
+                # Create lazy dataframe source and register it
+                from streamlit.dataframe.source import (
+                    DEFAULT_PAGE_SIZE,
+                    create_dataframe_source,
+                )
+                from streamlit.proto.Dataframe_pb2 import LazyDataframe
+
+                # Get the script run context to access the session
+                ctx = get_script_run_ctx()
+                if ctx is None or ctx.session_id is None:
+                    # Fall back to eager mode if context is not available
+                    use_lazy_mode = False
+                else:
+                    # Get the session's dataframe source manager
+                    from streamlit import runtime
+
+                    rt = runtime.get_instance()
+                    session = rt._session_mgr.get_session_info(ctx.session_id)
+                    if session is None or session.session is None:
+                        use_lazy_mode = False
+                    else:
+                        source_mgr = session.session.dataframe_source_manager
+                        delta_path = self.dg._get_delta_path_str()
+
+                        # Create the source adapter from the original data (not data_df)
+                        # to preserve the original data type
+                        source_data = data if is_in_memory_polars else data_df
+                        source = create_dataframe_source(source_data)
+
+                        # Register the source
+                        source_id, generation = source_mgr.register_source(
+                            source,
+                            delta_path,
+                            fragment_id=ctx.current_fragment_id,
+                        )
+
+                        # Fetch the initial chunk
+                        initial_chunk_bytes = source.load_rows(
+                            offset=0,
+                            limit=DEFAULT_PAGE_SIZE,
+                        )
+
+                        # Populate the lazy_data proto
+                        proto.lazy_data.source_id = source_id
+                        proto.lazy_data.row_count = source.row_count
+                        proto.lazy_data.initial_offset = 0
+                        proto.lazy_data.page_size = DEFAULT_PAGE_SIZE
+                        proto.lazy_data.generation = generation
+                        proto.lazy_data.access_mode = (
+                            LazyDataframe.AccessMode.RANDOM_ACCESS
+                        )
+                        proto.lazy_data.initial_chunk.data = initial_chunk_bytes
+                        proto.lazy_data.sortable = source.sortable
+
+            if not use_lazy_mode:
+                # Serialize the full data for eager mode
+                proto.arrow_data.data = dataframe_util.convert_pandas_df_to_arrow_bytes(
+                    data_df
+                )
 
         if hide_index is not None:
             update_column_config(
