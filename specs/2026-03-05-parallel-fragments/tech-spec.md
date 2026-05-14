@@ -483,6 +483,29 @@ thread's cursor, which advances it past the fragment's slot and creates a child
 immediately. The child cursor starts with
 `_owner_thread = None` — it hasn't been used yet.
 
+The pre-creation step **must** go through `st.container()` rather than a raw
+`Block_pb2()`. The frontend's `AppRoot.addBlock` reconciliation inherits the
+existing `BlockNode`'s children only when the incoming Block's `oneof type`
+matches the existing block's `oneof type`. The initial run produces this
+container from the main thread (R1) and the first fragment rerun produces it
+again from `wrapped_fragment` (R2); if their `oneof type` values differ — e.g.
+R1 emits an empty `Block` and R2 emits a `flex_container` — the frontend resets
+the children list to empty, every widget unmounts and remounts, and any user
+input landing in that window can be reverted by stale React state.
+
+The matching `wrapped_fragment` invocation on the worker thread must skip its
+own `st.container()` call so that R1 and R2 produce the same container delta at
+the same `delta_path`. This skip signal is **call-local to a single
+`wrapped_fragment` invocation**, not thread-local: dispatch stores the
+pre-allocated fragment's `fragment_id` in a field on `FragmentThreadState`
+(`pre_allocated_container_fragment_id`), and `wrapped_fragment` reads and
+clears it on entry, skipping its own `st.container()` only when the stored id
+matches the fragment currently being run. Any nested sequential `@st.fragment`
+invoked from inside the parallel fragment's body — running inline on the same
+worker thread — therefore observes `None` and creates its own container,
+preserving delta-path symmetry between its initial run and its subsequent
+rerun on the main thread.
+
 **3. Lazy thread ownership.** When the worker thread runs and calls `lock_element()`
 on the container's cursor for the first time, `_check_owner()` claims it — setting
 `_owner_ident` to the worker thread's ID via `threading.get_ident()`. The
@@ -878,6 +901,12 @@ class FragmentThreadState:
     in_fragment_callback: bool = False
     active_script_hash: str = ""
     is_parallel_worker: bool = False
+    # Fragment id whose container was just pre-allocated on this thread by
+    # ``_dispatch_parallel_fragment``. The matching ``wrapped_fragment`` reads
+    # and clears this on entry, so nested fragments do not inherit it and
+    # correctly create their own container. Call-local in spirit; cleared as
+    # soon as it is consumed.
+    pre_allocated_container_fragment_id: str | None = None
 ```
 
 This uses the same `ContextVar` + `copy_context()` mechanism already used for
