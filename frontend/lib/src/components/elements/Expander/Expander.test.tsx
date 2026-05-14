@@ -283,6 +283,92 @@ describe("widget mode (widgetMgr + element.id)", () => {
 
     expect(setBoolValueSpy).not.toHaveBeenCalled()
   })
+
+  it("syncs widget manager state on programmatic expand change", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "expander-123"
+    const fragmentId = "frag-1"
+
+    // Start collapsed
+    const props = getProps(
+      { expanded: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(screen.getByText("test")).not.toBeVisible()
+
+    // Backend programmatically expands (e.g. st.session_state.key = True)
+    const expandedProps = getProps(
+      { expanded: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Expander {...expandedProps}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // The widget manager should be updated with fromUi: false so that
+    // subsequent reruns send the correct value back to the backend
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: false },
+      fragmentId
+    )
+  })
+
+  it("syncs widget manager state on programmatic collapse to prevent stale reopens", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "expander-123"
+    const fragmentId = "frag-1"
+
+    // Start expanded
+    const props = getProps(
+      { expanded: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
+      <Expander {...props}>
+        <div>test</div>
+      </Expander>
+    )
+
+    expect(screen.getByText("test")).toBeVisible()
+
+    // Backend programmatically collapses (e.g. st.session_state.key = False)
+    const collapsedProps = getProps(
+      { expanded: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Expander {...collapsedProps}>
+        <div>test</div>
+      </Expander>
+    )
+
+    // The widget manager must be updated with false so that the next rerun
+    // (triggered by e.g. another widget) does not send stale "true" back
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      false,
+      { fromUi: false },
+      fragmentId
+    )
+  })
 })
 
 describe("passive state persistence", () => {
