@@ -418,13 +418,15 @@ export const StyledGridCell = styled.div<StyledGridCellProps>(
     const { VerticalAlignment } = BlockProto.GridContainer
 
     // Map vertical alignment to CSS justify-content (since we use column direction)
+    // Use "safe" keyword for center/end to prevent content from overflowing
+    // when it's larger than the container
     let justifyContent: string
     switch (verticalAlignment) {
       case VerticalAlignment.CENTER:
-        justifyContent = "center"
+        justifyContent = "safe center"
         break
       case VerticalAlignment.BOTTOM:
-        justifyContent = "flex-end"
+        justifyContent = "safe flex-end"
         break
       case VerticalAlignment.TOP:
       default:
