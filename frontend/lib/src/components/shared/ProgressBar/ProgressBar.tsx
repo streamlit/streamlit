@@ -52,7 +52,9 @@ function ProgressBar({
           $squareTopCorners={squareTopCorners}
           data-testid="stProgressBarTrack"
         >
-          <StyledProgressFill $percentage={pct ?? clamped} />
+          <StyledProgressFill
+            style={{ transform: `translateX(${(pct ?? clamped) - 100}%)` }}
+          />
         </StyledProgressTrack>
       )}
     </AriaProgressBar>

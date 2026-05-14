@@ -23,10 +23,6 @@ interface StyledProgressTrackProps {
   $squareTopCorners?: boolean
 }
 
-interface StyledProgressFillProps {
-  $percentage: number
-}
-
 export const StyledProgressTrack = styled.div<StyledProgressTrackProps>(
   ({ theme, $size, $squareTopCorners }) => ({
     height: $size === Size.EXTRASMALL ? theme.spacing.twoXS : theme.spacing.sm,
@@ -39,10 +35,14 @@ export const StyledProgressTrack = styled.div<StyledProgressTrackProps>(
   })
 )
 
-export const StyledProgressFill = styled.div<StyledProgressFillProps>(
-  ({ theme, $percentage }) => ({
-    width: `${$percentage}%`,
-    height: "100%",
-    backgroundColor: theme.colors.secondary,
-  })
-)
+// transform is intentionally NOT in this class — it is applied via inline
+// style in ProgressBar.tsx. Emotion generates a new class for each unique prop
+// combination, so if transform lived here, the browser would see a class swap
+// rather than a property mutation, and the CSS transition would never fire.
+export const StyledProgressFill = styled.div(({ theme }) => ({
+  width: "100%",
+  height: "100%",
+  backgroundColor: theme.colors.secondary,
+  borderRadius: theme.radii.sm,
+  transition: "transform 0.5s ease",
+}))
