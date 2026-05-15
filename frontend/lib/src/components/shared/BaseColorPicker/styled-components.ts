@@ -49,7 +49,7 @@ export const StyledChromePicker = styled.div(({ theme }) => ({
     color: `${theme.colors.bodyText} !important`,
   },
   input: {
-    fontSize: `${theme.fontSizes.md} !important`,
+    fontSize: `${theme.fontSizes.sm} !important`,
     height: `${theme.sizes.minElementHeight} !important`,
     backgroundColor: `${theme.colors.secondaryBg} !important`,
     color: `${theme.colors.bodyText} !important`,

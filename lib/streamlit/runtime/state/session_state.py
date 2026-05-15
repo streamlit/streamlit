@@ -39,7 +39,10 @@ from streamlit.errors import StreamlitAPIException, UnserializableSessionStateEr
 from streamlit.logger import get_logger
 from streamlit.proto.WidgetStates_pb2 import WidgetState as WidgetStateProto
 from streamlit.proto.WidgetStates_pb2 import WidgetStates as WidgetStatesProto
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.common import (
     RegisterWidgetResult,
     T,
@@ -334,9 +337,8 @@ class WStates(MutableMapping[str, Any]):
 
         ctx = get_script_run_ctx()
         if ctx and metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
-            callback(*args, **kwargs)
-            ctx.in_fragment_callback = False
+            with ThreadState.scoped(in_fragment_callback=True):
+                callback(*args, **kwargs)
         else:
             callback(*args, **kwargs)
 
@@ -717,15 +719,13 @@ class SessionState:
 
         ctx = get_script_run_ctx()
         if ctx and cb_metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
-            try:
-                callback_fn(*cb_args, **cb_kwargs)
-            except RerunException:
-                get_dg_singleton_instance().main_dg.warning(
-                    "Calling st.rerun() within a callback is a no-op."
-                )
-            finally:
-                ctx.in_fragment_callback = False
+            with ThreadState.scoped(in_fragment_callback=True):
+                try:
+                    callback_fn(*cb_args, **cb_kwargs)
+                except RerunException:
+                    get_dg_singleton_instance().main_dg.warning(
+                        "Calling st.rerun() within a callback is a no-op."
+                    )
         else:
             try:
                 callback_fn(*cb_args, **cb_kwargs)
@@ -1124,7 +1124,7 @@ class SessionState:
         """
         # Register the widget binding
         ctx = get_script_run_ctx()
-        script_hash = ctx.active_script_hash if ctx is not None else ""
+        script_hash = ThreadState.get().active_script_hash if ctx is not None else ""
         self.query_params.bind_widget(
             param_key=user_key,
             widget_id=widget_id,
