@@ -3641,7 +3641,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.5.1"
     postinstall-postinstall: "npm:^2.1.0"
-    protobufjs: "npm:^8.0.3"
+    protobufjs: "npm:^8.2.0"
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
@@ -14980,13 +14980,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^8.0.3":
-  version: 8.0.3
-  resolution: "protobufjs@npm:8.0.3"
+"protobufjs@npm:^8.2.0":
+  version: 8.3.0
+  resolution: "protobufjs@npm:8.3.0"
   dependencies:
-    "@types/node": "npm:>=13.7.0"
     long: "npm:^5.0.0"
-  checksum: 10c0/af4d29a3a872e9770f22b3a43158e187ce0138abb018b808ea147b6d23034df31438e69d8b85b85826ef353e38cea7142c252307e9ef403022b2ac94be010540
+  checksum: 10c0/dfdb7224b44cff678e971671b6edff6653f29970b4c593b43f220a433ca30a1468465064761b8360488f2531c34651289421af3d60275485582194b21131d639
   languageName: node
   linkType: hard
 
