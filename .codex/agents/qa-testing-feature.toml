@@ -12,12 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from streamlit.external.langchain.streamlit_callback_handler import (
-    LLMThoughtLabeler,
-    StreamlitCallbackHandler,
-)
-
-__all__ = [
-    "LLMThoughtLabeler",
-    "StreamlitCallbackHandler",
-]
+name = "qa-testing-feature"
+description = "QA test the feature in the current branch using Playwright."
+developer_instructions = "Read and follow the instructions in `.claude/agents/qa-testing-feature.md`."

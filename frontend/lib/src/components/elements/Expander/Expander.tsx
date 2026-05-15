@@ -60,7 +60,7 @@ const ExpanderIcon = (props: ExpanderIconProps): ReactElement => {
 
   return icon ? (
     <DynamicIcon
-      size="lg"
+      size="base"
       iconValue={icon}
       testid={statusIconTestIds[icon] || "stExpanderIcon"}
     />
@@ -195,7 +195,7 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
                     ? ":material/keyboard_arrow_down:"
                     : ":material/keyboard_arrow_right:"
                 }
-                size="lg"
+                size="base"
               />
             )}
             {showUserIcon && <ExpanderIcon icon={icon} />}

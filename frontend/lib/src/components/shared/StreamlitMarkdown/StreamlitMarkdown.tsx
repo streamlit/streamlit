@@ -255,10 +255,44 @@ export function createAnchorFromText(text: string | null): string {
   return xxhash.h32(text, 0xabcd).toString(16)
 }
 
-// Note: React markdown limits hrefs to specific protocols ('http', 'https',
-// 'mailto', 'tel') We are essentially allowing any URL (a data URL). It can
-// be considered a security flaw, but developers can choose to expose it.
+// Dangerous URL schemes that can execute arbitrary code when clicked
+const DANGEROUS_URL_SCHEMES = ["javascript:", "vbscript:"]
+
+// C0 control characters (U+0000-U+001F) that browsers silently strip from URLs
+// per the WHATWG URL spec. These must be removed before checking schemes to
+// prevent bypass attacks like "\x01javascript:alert(1)".
+// eslint-disable-next-line no-control-regex
+const C0_CONTROL_CHARS_REGEX = /[\x00-\x1F]/g
+
+/**
+ * Transforms link URIs for markdown rendering.
+ *
+ * Uses a blocklist approach instead of React Markdown's default allowlist
+ * (defaultUrlTransform) to preserve compatibility with data: URLs and other
+ * custom schemes that Streamlit users rely on (e.g., inline images, PDFs).
+ * Only explicitly dangerous schemes (javascript:, vbscript:) are blocked.
+ *
+ * Note: data:text/html URLs can execute JavaScript but run in a sandboxed
+ * null-origin context, making them less dangerous than javascript: URLs.
+ *
+ * Blocked URLs return "#" instead of "" to prevent navigation. An empty href
+ * combined with target="_blank" would open the current page in a new tab.
+ */
 function transformLinkUri(href: string): string {
+  // Strip C0 control characters and whitespace, then lowercase for comparison.
+  // Browsers strip C0 chars per WHATWG URL spec, so we must normalize first
+  // to prevent bypass attacks like "\x01javascript:alert(1)".
+  const normalizedHref = href
+    .replace(C0_CONTROL_CHARS_REGEX, "")
+    .toLowerCase()
+    .trim()
+  if (
+    DANGEROUS_URL_SCHEMES.some(scheme => normalizedHref.startsWith(scheme))
+  ) {
+    // Return "#" instead of "" to prevent navigation. Empty href with
+    // target="_blank" would open the current page in a new tab.
+    return "#"
+  }
   return href
 }
 

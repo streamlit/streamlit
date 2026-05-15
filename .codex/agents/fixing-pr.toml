@@ -11,3 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+name = "fixing-pr"
+description = "Fix CI failures and address PR review comments for the current branch."
+developer_instructions = "Read and follow the instructions in `.claude/agents/fixing-pr.md`."

@@ -66,14 +66,18 @@ jobs:
             exit 1
           fi
 
-      - name: Get issue details
+      # Only needed for manual runs (workflow_dispatch), where there is no
+      # `github.event.issue` payload. For the `issues` trigger we read the
+      # title/URL from the event context directly (see env block below).
+      - name: Get issue details (workflow_dispatch only)
         id: issue-info
+        if: github.event_name == 'workflow_dispatch'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ISSUE_DATA=$(gh api repos/${{ github.repository }}/issues/${{ env.ISSUE_NUMBER }})
-          echo "html_url=$(echo "$ISSUE_DATA" | jq -r '.html_url')" >> $GITHUB_OUTPUT
-          echo "title=$(echo "$ISSUE_DATA" | jq -r '.title')" >> $GITHUB_OUTPUT
+          ISSUE_DATA=$(gh issue view "$ISSUE_NUMBER" --repo "${{ github.repository }}" --json title,url)
+          echo "html_url=$(echo "$ISSUE_DATA" | jq -r '.url')" >> "$GITHUB_OUTPUT"
+          echo "title=$(echo "$ISSUE_DATA" | jq -r '.title')" >> "$GITHUB_OUTPUT"
 
       # Runs only very basic triage (first-level support) based on the
       # issue information and historical issues. This will detect
@@ -84,8 +88,11 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_URL: ${{ steps.issue-info.outputs.html_url }}
-          ISSUE_TITLE: ${{ steps.issue-info.outputs.title }}
+          # Prefer the values from the event payload so we use the issue state
+          # as it was when the workflow was triggered, falling back to the
+          # API-derived outputs for manual (workflow_dispatch) runs.
+          ISSUE_URL: ${{ github.event.issue.html_url || steps.issue-info.outputs.html_url }}
+          ISSUE_TITLE: ${{ github.event.issue.title || steps.issue-info.outputs.title }}
         run: |
           cursor-agent -p "You are operating in a GitHub Actions runner to triage a GitHub issue.
 
