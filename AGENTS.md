@@ -98,3 +98,24 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
+
+## Cursor Cloud specific instructions
+
+### Services
+
+| Service | How to start | Default port |
+|---------|-------------|-------------|
+| Streamlit backend | `uv run streamlit run <script.py> --server.headless=true` | 8501 |
+| Frontend dev server | `make frontend-dev` | 3000 |
+| Both (recommended) | `make debug <script.py>` | 3001 (frontend), 8501 (backend) |
+
+### Gotchas
+
+- **ESLint cache staleness**: After installing frontend dependencies or building workspace packages, delete ESLint caches before running `make frontend-lint`: `find frontend -name ".eslintcache" -delete`. Stale caches can cause false `import-x/no-unresolved` errors for workspace packages like `@streamlit/utils`.
+- **Workspace packages must be built before frontend lint**: The `connection` and other workspaces import `@streamlit/utils` which needs its `dist/` output. Run `cd frontend && yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build` (or `make frontend-fast`) before `make frontend-lint`.
+- **Python `tzdata` package**: The VM may not have timezone data available to Python. The update script installs `tzdata` via `uv pip install tzdata` to prevent `ZoneInfoNotFoundError` in tests.
+- **`python` command**: The VM only has `python3` by default. The update script creates a symlink `python -> python3`.
+- **All make commands** must be run from the repo root (`/agent/repos/streamlit`).
+- **Pre-commit hooks** require `uv run git commit` / `uv run git push` so linters/formatters in the uv venv are available.
+- **E2E tests** require Playwright browsers: `uv run python -m playwright install --with-deps` (installed via `make python-init` by default).
+- For standard build/test/lint commands, see the `make` commands section above and the Makefile.
