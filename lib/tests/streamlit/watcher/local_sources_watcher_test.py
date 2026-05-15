@@ -18,7 +18,9 @@ from __future__ import annotations
 
 import contextlib
 import os
+import pickle
 import sys
+import threading
 import types
 import unittest
 from unittest.mock import MagicMock, call, patch
@@ -201,7 +203,10 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             # Simulate a change to the child module
             lsw.on_path_changed(NESTED_MODULE_CHILD_FILE)
 
-            # Assert that both the parent and child are unloaded, ready for reload
+            # Eviction is deferred until the next script run boundary.
+            assert "NESTED_MODULE_CHILD" in sys.modules
+            assert "NESTED_MODULE_PARENT" in sys.modules
+            lsw.flush_pending_evictions()
             assert "NESTED_MODULE_CHILD" not in sys.modules
             assert "NESTED_MODULE_PARENT" not in sys.modules
 
@@ -287,7 +292,8 @@ class LocalSourcesWatcherTest(unittest.TestCase):
             # Simulate a change to the child module
             lsw.on_path_changed(pkg_path)
 
-            # Assert that both the parent and child are unloaded, ready for reload
+            assert "pkg" in sys.modules
+            lsw.flush_pending_evictions()
             assert "pkg" not in sys.modules
 
         del sys.modules["tests.streamlit.watcher.test_data.namespace_package"]
@@ -327,6 +333,11 @@ class LocalSourcesWatcherTest(unittest.TestCase):
         ):
             lsw.on_path_changed(trigger_path)
 
+            assert "myns" in sys.modules
+            assert "myns.core" in sys.modules
+            assert "myns.spec" in sys.modules
+            assert "myns_extra" in sys.modules
+            lsw.flush_pending_evictions()
             assert "myns" not in sys.modules
             assert "myns.core" not in sys.modules
             assert "myns.spec" not in sys.modules
@@ -578,6 +589,130 @@ class LocalSourcesWatcherTest(unittest.TestCase):
 
         # Clean up
         config.set_option("server.folderWatchList", [])
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_module_eviction_deferred_until_flush(self, fob):
+        """Modules stay in sys.modules after on_path_changed until flush."""
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        key = os.path.realpath(DUMMY_MODULE_1_FILE)
+        lsw._watched_modules = {
+            key: local_sources_watcher.WatchedModule(MagicMock(), "DUMMY_MODULE_1"),
+        }
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+            assert "DUMMY_MODULE_1" in sys.modules
+            lsw.flush_pending_evictions()
+            assert "DUMMY_MODULE_1" not in sys.modules
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_second_flush_pending_evictions_is_noop(self, fob):
+        """A second flush after clearing pending evictions is a safe no-op."""
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        key = os.path.realpath(DUMMY_MODULE_1_FILE)
+        lsw._watched_modules = {
+            key: local_sources_watcher.WatchedModule(MagicMock(), "DUMMY_MODULE_1"),
+        }
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+            lsw.flush_pending_evictions()
+            lsw.flush_pending_evictions()
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_pep420_child_names_evicted_on_flush(self, fob):
+        """Child submodules (PEP 420) are evicted along with the parent on flush."""
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        mypackage = types.ModuleType("mypackage")
+        sub = types.ModuleType("mypackage.sub")
+        trigger_path = os.path.realpath(DUMMY_MODULE_1_FILE)
+        lsw._watched_modules = {
+            trigger_path: local_sources_watcher.WatchedModule(MagicMock(), "mypackage"),
+        }
+        with patch.dict(sys.modules, {"mypackage": mypackage, "mypackage.sub": sub}):
+            lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+            assert "mypackage" in sys.modules
+            assert "mypackage.sub" in sys.modules
+            lsw.flush_pending_evictions()
+            assert "mypackage" not in sys.modules
+            assert "mypackage.sub" not in sys.modules
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_callbacks_see_sys_modules_before_flush(self, fob):
+        """Callbacks fire during on_path_changed and observe pre-eviction sys.modules."""
+        seen: list[bool] = []
+
+        def callback(_filepath: str) -> None:
+            seen.append("DUMMY_MODULE_1" in sys.modules)
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        lsw.register_file_change_callback(callback)
+        key = os.path.realpath(DUMMY_MODULE_1_FILE)
+        lsw._watched_modules = {
+            key: local_sources_watcher.WatchedModule(MagicMock(), "DUMMY_MODULE_1"),
+        }
+        with patch.dict(sys.modules, {"DUMMY_MODULE_1": DUMMY_MODULE_1}):
+            lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+        assert seen == [True]
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_concurrent_on_path_changed_accumulates_evictions(self, fob):
+        """Concurrent watcher threads accumulate evictions without losing entries."""
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        trigger1 = os.path.realpath(DUMMY_MODULE_1_FILE)
+        trigger2 = os.path.realpath(DUMMY_MODULE_2_FILE)
+        lsw._watched_modules = {
+            trigger1: local_sources_watcher.WatchedModule(
+                MagicMock(), "DUMMY_MODULE_1"
+            ),
+            trigger2: local_sources_watcher.WatchedModule(
+                MagicMock(), "DUMMY_MODULE_2"
+            ),
+        }
+        with patch.dict(
+            sys.modules,
+            {"DUMMY_MODULE_1": DUMMY_MODULE_1, "DUMMY_MODULE_2": DUMMY_MODULE_2},
+        ):
+            errors: list[BaseException] = []
+
+            def worker(i: int) -> None:
+                try:
+                    path = trigger1 if i % 2 == 0 else trigger2
+                    lsw.on_path_changed(path)
+                except BaseException as e:
+                    errors.append(e)
+
+            threads = [threading.Thread(target=worker, args=(i,)) for i in range(64)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+            assert not errors
+            lsw.flush_pending_evictions()
+            assert "DUMMY_MODULE_1" not in sys.modules
+            assert "DUMMY_MODULE_2" not in sys.modules
+
+    @patch("streamlit.watcher.local_sources_watcher.PathWatcher")
+    def test_pickling_succeeds_between_path_change_and_flush(self, fob):
+        """Regression for gh-14593: pickle must not see torn-down sys.modules."""
+        mod_name = "_streamlit_lsw_pickle_test_mod"
+        mod = types.ModuleType(mod_name)
+
+        class Model:
+            pass
+
+        Model.__module__ = mod_name
+        Model.__qualname__ = "Model"
+        mod.Model = Model
+
+        lsw = local_sources_watcher.LocalSourcesWatcher(PagesManager(SCRIPT_PATH))
+        key = os.path.realpath(DUMMY_MODULE_1_FILE)
+        lsw._watched_modules = {
+            key: local_sources_watcher.WatchedModule(MagicMock(), mod_name),
+        }
+        with patch.dict(sys.modules, {mod_name: mod}):
+            obj = Model()
+            lsw.on_path_changed(DUMMY_MODULE_1_FILE)
+            pickle.dumps(obj)
+            lsw.flush_pending_evictions()
 
 
 def test_get_module_paths_outputs_abs_paths():

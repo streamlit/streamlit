@@ -39,7 +39,6 @@ interface StyledStreamlitMarkdownProps {
   isInHorizontalLayout?: boolean
   inheritFont?: boolean
   boldLabel?: boolean
-  largerLabel?: boolean
   isToast?: boolean
   truncate?: boolean
 }
@@ -203,14 +202,16 @@ export const StyledStreamlitMarkdown =
       isInHorizontalLayout = false,
       inheritFont,
       boldLabel,
-      largerLabel,
       isToast,
       truncate,
     }) => {
-      // Widget Labels have smaller font size with exception of Button/Checkbox/Radio Button labels
-      // Toasts also have smaller font size as well as pills and segmented controls.
-      const useSmallerFontSize =
-        (isLabel && !largerLabel) || isToast || isCaption
+      // All widget labels (isLabel=true) use the smaller font size (fontSizes.sm = 14px).
+      // Normal markdown text (isLabel=false) stays at fontSizes.md (16px).
+      // Toasts and captions also use the smaller font size.
+      // Some label contexts (e.g. alert titles, dialog titles, slider labels, metric values)
+      // opt out of this sizing via inheritFont=true, which makes the font-size, font-family,
+      // and font-weight inherit from their parent container instead.
+      const useSmallerFontSize = isLabel || isToast || isCaption
 
       return {
         fontFamily: inheritFont ? "inherit" : theme.genericFonts.bodyFont,
@@ -222,7 +223,7 @@ export const StyledStreamlitMarkdown =
         fontWeight: inheritFont ? "inherit" : undefined,
         marginBottom:
           isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
-        opacity: isCaption ? 0.6 : undefined,
+        opacity: isCaption ? theme.opacities.secondary : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
@@ -306,7 +307,7 @@ export const StyledStreamlitMarkdown =
           margin: "1em 0 1em 0",
           padding: `0 0 0 0.75em`,
           borderLeft: `0.15em solid ${theme.colors.borderColor}`,
-          opacity: 0.6,
+          opacity: theme.opacities.secondary,
         },
 
         "b, strong": {

@@ -22,9 +22,32 @@ from streamlit.proto.Exception_pb2 import Exception as ExceptionProto
 from streamlit.runtime.caching.cache_errors import (
     UnhashableParamError,
     UnserializableReturnValueError,
+    get_cached_func_name_md,
+    get_return_value_type,
 )
 from tests import testutil
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+
+
+def test_get_cached_func_name_md_with_name_attr() -> None:
+    """Test get_cached_func_name_md returns function name when __name__ exists."""
+
+    def my_func() -> None:
+        pass
+
+    assert get_cached_func_name_md(my_func) == "`my_func()`"
+
+
+def test_get_cached_func_name_md_without_name_attr() -> None:
+    """Test get_cached_func_name_md falls back to type name for non-functions."""
+    result = get_cached_func_name_md(42)
+    assert result == "`int`"
+
+
+def test_get_return_value_type_with_module() -> None:
+    """Test get_return_value_type returns module.type for objects with __module__."""
+    result = get_return_value_type(threading.Lock())
+    assert "lock" in result.lower() or "Lock" in result
 
 
 class CacheErrorsTest(DeltaGeneratorTestCase):

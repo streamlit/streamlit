@@ -145,6 +145,40 @@ class StJsonAPITest(DeltaGeneratorTestCase):
             assert body["tokens"]["id"] == "***"
             assert body["tokens"]["access"] == "***"
 
+    def test_st_json_with_namedtuple(self):
+        """Test st.json converts namedtuple to dict via _asdict."""
+        from typing import NamedTuple
+
+        class Point(NamedTuple):
+            x: int
+            y: int
+
+        p = Point(1, 2)
+        st.json(p)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == {"x": 1, "y": 2}
+
+    def test_st_json_with_mapping_proxy(self):
+        """Test st.json converts MappingProxyType to dict."""
+        import types
+
+        d = types.MappingProxyType({"a": 1, "b": 2})
+        st.json(d)
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == {"a": 1, "b": 2}
+
+    def test_st_json_with_list_like(self):
+        """Test st.json converts list-like (tuple, set) to list."""
+        st.json((1, 2, 3))
+
+        el = self.get_delta_from_queue().new_element
+        body = json.loads(el.json.body)
+        assert body == [1, 2, 3]
+
     def test_st_json_user_info_without_tokens(self):
         """Test that st.json handles UserInfoProxy without tokens correctly."""
         with patch(

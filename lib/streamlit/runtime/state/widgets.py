@@ -17,6 +17,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from streamlit.errors import StreamlitAPIException, StreamlitInvalidBindValueError
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+)
 from streamlit.runtime.state.common import (
     BindOption,
     RegisterWidgetResult,
@@ -163,7 +166,7 @@ def register_widget(
         callbacks=callbacks,
         callback_args=args,
         callback_kwargs=kwargs,
-        fragment_id=ctx.current_fragment_id if ctx else None,
+        fragment_id=ThreadState.get().fragment_id if ctx else None,
         presenter=presenter,
         bind=bind,
         formatted_options=formatted_options,

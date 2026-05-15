@@ -652,7 +652,7 @@ class DateInputSerde:
             return []
 
         to_serialize = list(v) if isinstance(v, Sequence) else [v]
-        return [date.strftime(v, "%Y-%m-%d") for v in to_serialize]
+        return [date.strftime(d, "%Y-%m-%d") for d in to_serialize]  # ty: ignore[invalid-argument-type]
 
 
 class TimeWidgetsMixin:
@@ -982,7 +982,12 @@ class TimeWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        self.dg._enqueue("time_input", time_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "time_input",
+            time_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
         return widget_state.value
 
     @overload
@@ -1410,7 +1415,10 @@ class TimeWidgetsMixin:
         layout_config = create_layout_config(width=width)
 
         self.dg._enqueue(
-            "date_time_input", date_time_input_proto, layout_config=layout_config
+            "date_time_input",
+            date_time_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
         )
         return current_value
 
@@ -1897,7 +1905,12 @@ class TimeWidgetsMixin:
 
         layout_config = create_layout_config(width=width)
 
-        self.dg._enqueue("date_input", date_input_proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "date_input",
+            date_input_proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
         return current_value
 
     @property

@@ -27,6 +27,12 @@ if TYPE_CHECKING:
 
 _LOGGER: Final = getLogger(__name__)
 
+# The interval (in seconds) between message flush cycles in the runtime event loop.
+# Also reused by callers that need to wait for outstanding messages to be delivered
+# before requesting a rerun (e.g. `st.switch_page`). Note: message batching is
+# enforced at the queue level (flush_browser_queue), not via this sleep interval.
+MESSAGE_FLUSH_INTERVAL_SECS: Final[float] = 0.001
+
 
 class MessageSizeError(MarkdownFormattedException):
     """Exception raised when a websocket message is larger than the configured limit."""

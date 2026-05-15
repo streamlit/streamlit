@@ -370,7 +370,7 @@ describe("BidiComponent/utils/theme", () => {
       protoFieldsToIgnore.forEach(ignoredKey => {
         expect(
           extractedThemeKeys,
-          `Expected ignored protobuf theme field "${ignoredKey}" to be omitted from extracted theme keys.`
+          `Expected ignored protobuf theme field "${String(ignoredKey)}" to be omitted from extracted theme keys.`
         ).not.toContain(ignoredKey)
       })
     })

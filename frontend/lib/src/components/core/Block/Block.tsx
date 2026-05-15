@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { ReactElement, useContext } from "react"
+import { ReactElement, useContext, useMemo } from "react"
 
 import classNames from "classnames"
 
@@ -70,7 +70,43 @@ const ChildRenderer = (props: BlockPropsWithoutWidth): ReactElement => {
   // Handle cycling of colors for dividers:
   assignDividerColor(props.node, useEmotionTheme())
 
-  return <>{RenderNodeVisitor.collectReactElements(props)}</>
+  const {
+    node,
+    widgetsDisabled,
+    disableFullscreenMode,
+    endpoints,
+    widgetMgr,
+    uploadClient,
+    componentRegistry,
+  } = props
+
+  // Memoize traversal to avoid recomputing during resize events.
+  // All props are included in deps to satisfy exhaustive-deps lint rule.
+  // The singleton props (endpoints, widgetMgr, etc.) never change references,
+  // so including them doesn't cause unnecessary recomputation.
+  const elements = useMemo(
+    () =>
+      RenderNodeVisitor.collectReactElements({
+        node,
+        widgetsDisabled,
+        disableFullscreenMode,
+        endpoints,
+        widgetMgr,
+        uploadClient,
+        componentRegistry,
+      }),
+    [
+      node,
+      widgetsDisabled,
+      disableFullscreenMode,
+      endpoints,
+      widgetMgr,
+      uploadClient,
+      componentRegistry,
+    ]
+  )
+
+  return <>{elements}</>
 }
 
 /**

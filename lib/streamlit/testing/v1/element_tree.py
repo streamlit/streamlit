@@ -2567,8 +2567,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
+        elif delta.WhichOneof("type") == "new_transient":
+            # new_transient (e.g. spinner) - skip these in the element tree
+            continue
         else:
-            # add_rows
+            # Unknown delta type - skip to avoid silently swallowing future types
             continue
 
         current_node: Block = root

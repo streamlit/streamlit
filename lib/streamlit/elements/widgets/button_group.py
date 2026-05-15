@@ -1212,7 +1212,12 @@ class ButtonGroupMixin:
             # Save format function for AppTest to serialize values as strings
             save_for_app_testing(ctx, element_id, options_format_func or str)
 
-        self.dg._enqueue("button_group", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "button_group",
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=value_needs_reset or widget_state.value_changed,
+        )
 
         # Return widget_state with possibly updated value
         if value_needs_reset:

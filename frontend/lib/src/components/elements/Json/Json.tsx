@@ -56,6 +56,7 @@ function Json({ element }: Readonly<JsonProps>): ReactElement {
     bodyObject = JSON.parse(element.body)
   } catch (e) {
     const error = ensureError(e)
+
     try {
       bodyObject = JSON5.parse(element.body)
     } catch {

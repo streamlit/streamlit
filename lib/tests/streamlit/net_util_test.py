@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import unittest
+from unittest.mock import MagicMock
 
 import requests
 import requests_mock
@@ -68,3 +69,62 @@ class UtilTest(unittest.TestCase):
             assert None is net_util.get_external_ip()
 
         net_util._external_ip = None
+
+
+def test_get_external_ip_uses_short_timeout(monkeypatch) -> None:
+    """Verify get_external_ip uses 1s timeout for both HTTP and HTTPS calls."""
+    # Reset cache to force new request
+    monkeypatch.setattr(net_util, "_external_ip", None)
+
+    mock_get = MagicMock()
+    mock_response = MagicMock()
+    mock_response.text = "1.2.3.4"
+    mock_get.return_value = mock_response
+
+    monkeypatch.setattr("requests.get", mock_get)
+
+    net_util.get_external_ip()
+
+    # Verify timeout=1 was passed on the HTTP call
+    mock_get.assert_called_once()
+    _, kwargs = mock_get.call_args
+    assert kwargs.get("timeout") == 1, (
+        f"Expected timeout=1, got {kwargs.get('timeout')}"
+    )
+
+
+def test_get_external_ip_https_fallback_uses_short_timeout(monkeypatch) -> None:
+    """Verify HTTPS fallback in get_external_ip also uses 1s timeout."""
+    # Reset cache to force new request
+    monkeypatch.setattr(net_util, "_external_ip", None)
+
+    mock_get = MagicMock()
+
+    def side_effect(url: str, timeout: float = 5) -> MagicMock:
+        """Simulate HTTP failure, HTTPS success."""
+        if url == net_util._AWS_CHECK_IP:
+            raise requests.exceptions.ConnectTimeout()
+        mock_response = MagicMock()
+        mock_response.text = "1.2.3.4"
+        return mock_response
+
+    mock_get.side_effect = side_effect
+    monkeypatch.setattr("requests.get", mock_get)
+
+    result = net_util.get_external_ip()
+
+    # Verify both calls were made with timeout=1
+    assert result == "1.2.3.4"
+    assert mock_get.call_count == 2
+
+    # Check first call (HTTP)
+    first_call_kwargs = mock_get.call_args_list[0].kwargs
+    assert first_call_kwargs.get("timeout") == 1, (
+        f"HTTP call: Expected timeout=1, got {first_call_kwargs.get('timeout')}"
+    )
+
+    # Check second call (HTTPS fallback)
+    second_call_kwargs = mock_get.call_args_list[1].kwargs
+    assert second_call_kwargs.get("timeout") == 1, (
+        f"HTTPS fallback: Expected timeout=1, got {second_call_kwargs.get('timeout')}"
+    )

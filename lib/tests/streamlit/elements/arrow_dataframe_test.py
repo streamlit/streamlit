@@ -30,7 +30,11 @@ from streamlit.dataframe_util import (
     convert_arrow_bytes_to_pandas_df,
     is_pandas_version_less_than,
 )
-from streamlit.elements.arrow import _validate_selection_state
+from streamlit.elements.arrow import (
+    DataframeSelectionSerde,
+    _validate_selection_state,
+    parse_selection_mode,
+)
 from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
@@ -1168,6 +1172,114 @@ class TestValidateSelectionState:
             selection_mode_set={"single-row-required"},
         )
         assert result["selection"]["rows"] == [0]
+
+
+_EMPTY_SELECTION = {"rows": [], "columns": [], "cells": []}
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "ui_value", "expected_rows"),
+    [
+        # ``selection_default`` is used when no UI value is provided.
+        (
+            {"selection_default": {"selection": {**_EMPTY_SELECTION, "rows": [3]}}},
+            None,
+            [3],
+        ),
+        # No UI value and no default => empty selection.
+        ({}, None, []),
+        # ``is_required_row_mode`` auto-selects row 0 when nothing is selected.
+        ({"is_required_row_mode": True, "num_rows": 5}, None, [0]),
+        # ``is_required_row_mode`` does not override an explicit selection.
+        (
+            {"is_required_row_mode": True, "num_rows": 5},
+            '{"selection": {"rows": [2], "columns": [], "cells": []}}',
+            [2],
+        ),
+        # ``is_required_row_mode`` with empty dataframe must NOT auto-select row 0.
+        ({"is_required_row_mode": True, "num_rows": 0}, None, []),
+    ],
+    ids=[
+        "default_used_when_ui_none",
+        "empty_when_no_default",
+        "required_row_mode_auto_selects_first",
+        "required_row_mode_preserves_selection",
+        "required_row_mode_skips_when_empty_df",
+    ],
+)
+def test_dataframe_selection_serde_deserialize_rows(
+    kwargs: dict[str, Any],
+    ui_value: str | None,
+    expected_rows: list[int],
+) -> None:
+    """``DataframeSelectionSerde.deserialize`` resolves ``selection.rows`` across configurations."""
+    serde = DataframeSelectionSerde(**kwargs)
+    assert serde.deserialize(ui_value)["selection"]["rows"] == expected_rows
+
+
+def test_dataframe_selection_serde_deserialize_returns_attribute_dictionary() -> None:
+    """``deserialize`` wraps the result in a read-only ``ReadOnlyAttributeDictionary``."""
+    result = DataframeSelectionSerde().deserialize(None)
+
+    # Attribute access must work for users (regression: #14454).
+    assert result.selection.rows == []  # type: ignore[attr-defined]
+    # The dict is read-only; mutating the top-level mapping must raise.
+    with pytest.raises(TypeError):
+        result["selection"] = {"rows": [99], "columns": [], "cells": []}  # type: ignore[index]
+
+
+def test_dataframe_selection_serde_returns_empty_when_no_default() -> None:
+    """``DataframeSelectionSerde.deserialize`` returns the empty selection when neither UI value nor default exists."""
+    assert DataframeSelectionSerde().deserialize(None)["selection"] == _EMPTY_SELECTION
+
+
+def test_dataframe_selection_serde_fills_missing_keys() -> None:
+    """``DataframeSelectionSerde.deserialize`` adds missing ``rows``/``columns``/``cells`` keys."""
+    result = DataframeSelectionSerde().deserialize('{"selection": {}}')
+
+    assert result["selection"] == _EMPTY_SELECTION
+
+
+def test_dataframe_selection_serde_replaces_state_without_selection_key() -> None:
+    """``DataframeSelectionSerde.deserialize`` resets to empty state when ``selection`` key is missing."""
+    result = DataframeSelectionSerde().deserialize('{"foo": "bar"}')
+
+    assert result == {"selection": _EMPTY_SELECTION}
+
+
+def test_dataframe_selection_serde_converts_cells_to_tuples() -> None:
+    """JSON cells (lists) are converted to tuples after deserialization."""
+    result = DataframeSelectionSerde().deserialize(
+        '{"selection": {"rows": [], "columns": [], "cells": [[1, "col1"]]}}'
+    )
+
+    assert result["selection"]["cells"] == [(1, "col1")]
+
+
+def test_dataframe_selection_serde_serialize_roundtrip() -> None:
+    """``serialize`` produces JSON parseable by ``deserialize`` to the equivalent state."""
+    serde = DataframeSelectionSerde()
+    state = {"selection": {"rows": [1], "columns": ["c1"], "cells": []}}
+
+    result = serde.deserialize(serde.serialize(state))  # type: ignore[arg-type]
+
+    assert result["selection"] == {"rows": [1], "columns": ["c1"], "cells": []}
+
+
+def test_parse_selection_mode_with_invalid_mode_raises() -> None:
+    """``parse_selection_mode`` raises ``StreamlitAPIException`` for unknown modes."""
+    with pytest.raises(StreamlitAPIException, match="Invalid selection mode"):
+        parse_selection_mode("not-a-real-mode")  # type: ignore[arg-type]
+
+
+def test_parse_selection_mode_accepts_iterable_of_modes() -> None:
+    """``parse_selection_mode`` maps user-facing mode names to the corresponding proto values."""
+    result = parse_selection_mode(["multi-row", "multi-column"])
+
+    assert result == {
+        DataframeProto.SelectionMode.MULTI_ROW,
+        DataframeProto.SelectionMode.MULTI_COLUMN,
+    }
 
 
 def test_programmatic_selection_returns_attribute_dictionary() -> None:

@@ -112,6 +112,7 @@ describe("AppNavigation", () => {
       deployedAppMetadataChanged: () => {},
       restartWebsocketConnection: () => {},
       terminateWebsocketConnection: () => {},
+      printApp: () => {},
       streamlitExecutionStartedAt: 0,
       fileUploadClientConfigChanged: () => {},
     })
