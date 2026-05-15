@@ -32,7 +32,10 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitValueAssignmentNotAllowedError,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    in_cached_function,
+)
 
 _KEY: Final = "the key"
 
@@ -195,8 +198,10 @@ class CheckCacheReplayTest(ElementPoliciesTest):
 class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
     def setUp(self):
         ctx = MagicMock()
-        ctx.current_fragment_id = "my_fragment_id"
-        ctx.current_fragment_delta_path = [0, 1, 2]
+        ThreadState.initialize(
+            fragment_id="my_fragment_id",
+            delta_path=(0, 1, 2),
+        )
         self.ctx = ctx
 
     @patch("streamlit.elements.lib.policies.get_script_run_ctx")
@@ -226,6 +231,22 @@ class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
         self, patched_get_script_run_ctx: MagicMock
     ):
         patched_get_script_run_ctx.return_value = self.ctx
+        dg = MagicMock()
+        dg._active_dg._cursor = MagicMock()
+        dg._active_dg._cursor.delta_path = [0, 1, 2, 0]
+        check_fragment_path_policy(dg)
+
+    @patch("streamlit.elements.lib.policies.get_script_run_ctx")
+    def test_when_fragment_id_set_but_delta_path_is_none_then_dont_raise(
+        self, patched_get_script_run_ctx: MagicMock
+    ):
+        """``check_fragment_path_policy`` must not raise when ``delta_path``
+        is ``None`` — the brief window between entering
+        ``ThreadState.scoped(fragment_id=...)`` and the subsequent
+        ``ThreadState.update(delta_path=...)`` inside the fragment wrapper.
+        """
+        patched_get_script_run_ctx.return_value = self.ctx
+        ThreadState.update(delta_path=None)
         dg = MagicMock()
         dg._active_dg._cursor = MagicMock()
         dg._active_dg._cursor.delta_path = [0, 1, 2, 0]

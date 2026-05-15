@@ -348,7 +348,7 @@ const NumberInput: React.FC<Props> = ({
   // is same when input controls hidden
   const iconAdjustment =
     // Account for icon size + its left/right padding
-    convertRemToPx(theme.iconSizes.lg) +
+    convertRemToPx(theme.iconSizes.base) +
     2 * convertRemToPx(theme.spacing.twoXS)
 
   const hideControlsBreakpoint = convertRemToPx(
@@ -399,7 +399,7 @@ const NumberInput: React.FC<Props> = ({
               <DynamicIcon
                 data-testid="stNumberInputIcon"
                 iconValue={element.icon}
-                size="lg"
+                size="base"
               />
             )
           }
@@ -479,7 +479,7 @@ const NumberInput: React.FC<Props> = ({
                 paddingLeft: 0,
                 paddingRight: 0,
                 // Keeps emoji icons from being cut off on the right
-                minWidth: theme.iconSizes.lg,
+                minWidth: theme.iconSizes.base,
                 // Material icons color changed as inactionable
                 color: isMaterialIcon(icon)
                   ? theme.colors.fadedText60
