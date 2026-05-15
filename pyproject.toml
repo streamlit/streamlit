@@ -131,6 +131,8 @@ test = [
   # Used for memory tracking in E2E test statistics:
   "psutil>=5.9.0",
   "types-psutil>=5.9.0",
+  # Timezone data for Python (needed on minimal OS images without system tzdata):
+  "tzdata>=2024.1",
 ]
 
 # Integration test dependencies
