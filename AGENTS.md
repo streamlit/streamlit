@@ -113,8 +113,8 @@ Selection of `make` commands for development (run in the repo root):
 
 - **ESLint cache staleness**: After installing frontend dependencies or building workspace packages, delete ESLint caches before running `make frontend-lint`: `find frontend -name ".eslintcache" -delete`. Stale caches can cause false `import-x/no-unresolved` errors for workspace packages like `@streamlit/utils`.
 - **Workspace packages must be built before frontend lint**: The `connection` and other workspaces import `@streamlit/utils` which needs its `dist/` output. Run `cd frontend && yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build` (or `make frontend-fast`) before `make frontend-lint`.
-- **Python `tzdata` package**: The VM may not have timezone data available to Python. The update script installs `tzdata` via `uv pip install tzdata` to prevent `ZoneInfoNotFoundError` in tests.
-- **`python` command**: The VM only has `python3` by default. The update script creates a symlink `python -> python3`.
+- **Python `tzdata` package**: If you encounter `ZoneInfoNotFoundError`, install `tzdata` with `uv pip install tzdata`.
+- **`python` command**: Some environments only provide `python3`. Prefer `python3` in commands, or create a local `python -> python3` shim if a tool requires `python`.
 - **All make commands** must be run from the repo root.
 - **Pre-commit hooks** require `uv run git commit` / `uv run git push` so linters/formatters in the uv venv are available.
 - **E2E tests** require Playwright browsers: `uv run python -m playwright install --with-deps` (installed via `make python-init` by default).
