@@ -55,6 +55,7 @@ from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
     get_script_run_ctx,
 )
 from streamlit.runtime.state import WidgetCallback, register_widget
@@ -1113,7 +1114,7 @@ class ArrowMixin:
                         source_id, generation = source_mgr.register_source(
                             source,
                             delta_path,
-                            fragment_id=ctx.current_fragment_id,
+                            fragment_id=ThreadState.get().fragment_id,
                         )
 
                         # Fetch the initial chunk
