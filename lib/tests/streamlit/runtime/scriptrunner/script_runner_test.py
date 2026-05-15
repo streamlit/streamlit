@@ -33,7 +33,11 @@ from streamlit.elements.exception import _GENERIC_UNCAUGHT_EXCEPTION_TEXT
 from streamlit.proto.WidgetStates_pb2 import WidgetState, WidgetStates
 from streamlit.runtime import Runtime
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
-from streamlit.runtime.fragment import MemoryFragmentStorage, _fragment
+from streamlit.runtime.fragment import (
+    MemoryFragmentStorage,
+    ParallelFragmentCoordinator,
+    _fragment,
+)
 from streamlit.runtime.media_file_manager import MediaFileManager
 from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
@@ -609,6 +613,14 @@ class ScriptRunnerTest(unittest.TestCase):
         """
 
         ctx = MagicMock()
+        # The script-thread yield-point branch of
+        # _maybe_handle_execution_control_request reads
+        # ctx.parallel_coordinator.worker_exception and re-raises it if
+        # set. Without an explicit None, MagicMock returns a MagicMock,
+        # which raises TypeError ("exceptions must derive from
+        # BaseException") when the production code tries to raise it —
+        # masking the KeyError this test is actually checking for.
+        ctx.parallel_coordinator.worker_exception = None
         patched_get_script_run_ctx.return_value = ctx
 
         def non_optional_func():
@@ -1236,6 +1248,181 @@ class ScriptRunnerTest(unittest.TestCase):
                     ScriptRunnerEvent.SHUTDOWN,
                 ],
             )
+
+    def test_parallel_coordinator_is_fresh_per_run(self):
+        """Each script run constructs a brand new
+        ParallelFragmentCoordinator. A leaked instance would carry the
+        previous run's stop event / worker exception into the next run.
+
+        ``coordinator_id_capture.py`` calls ``st.rerun()`` once so the
+        runner does two full runs in a single start/join cycle —
+        back-to-back ``request_rerun`` calls coalesce.
+        """
+        scriptrunner = TestScriptRunner("coordinator_id_capture.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        ids = scriptrunner._session_state["coordinator_ids"]
+        assert len(ids) == 2
+        assert ids[0] != ids[1]
+
+    def test_parallel_coordinator_join_called_after_exec(self):
+        """The script runner must call ``coordinator.join()`` exactly once
+        after a successful full-app run, before clearing fragment storage."""
+        join_calls: list[int] = []
+        original_join = ParallelFragmentCoordinator.join
+
+        def recording_join(self):
+            join_calls.append(1)
+            return original_join(self)
+
+        with patch.object(ParallelFragmentCoordinator, "join", recording_join):
+            scriptrunner = TestScriptRunner("good_script.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        assert len(join_calls) == 1
+
+    def test_parallel_coordinator_drain_on_rerun_exception(self):
+        """When ``exec()`` raises RerunException (e.g. user code calls
+        ``st.rerun()``), the script runner's try/except must call
+        ``coordinator.drain()`` and re-raise so the rerun loop sees the
+        exception and runs the script again."""
+        drain_calls: list[int] = []
+        original_drain = ParallelFragmentCoordinator.drain
+
+        def recording_drain(self):
+            drain_calls.append(1)
+            return original_drain(self)
+
+        with patch.object(ParallelFragmentCoordinator, "drain", recording_drain):
+            scriptrunner = TestScriptRunner("rerun_once_then_finish.py")
+            scriptrunner.request_rerun(RerunData())
+            scriptrunner.start()
+            scriptrunner.join()
+
+        self._assert_no_exceptions(scriptrunner)
+        # The first run's st.rerun() raises RerunException -> drain() runs once.
+        # The second run completes normally -> no drain call.
+        assert len(drain_calls) == 1
+        # Two SCRIPT_STARTED events confirm the rerun was honored.
+        started_events = [
+            e for e in scriptrunner.events if e == ScriptRunnerEvent.SCRIPT_STARTED
+        ]
+        assert len(started_events) == 2
+
+    def test_worker_thread_yield_check_noop_when_idle(self):
+        """A worker thread (attached via add_script_run_ctx) hits the
+        worker-thread branch of ``_maybe_handle_execution_control_request``.
+        With no stop requested it must not raise so that existing
+        worker-thread paths (e.g. spinner) keep working."""
+        import threading as _threading
+
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            SCRIPT_RUN_CONTEXT_ATTR_NAME,
+            add_script_run_ctx,
+        )
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+        self._assert_no_exceptions(scriptrunner)
+
+        script_thread = scriptrunner._script_thread
+        ctx = getattr(script_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+        assert ctx is not None
+        assert ctx.parallel_coordinator is not None
+        assert ctx.parallel_coordinator.should_stop() is False
+
+        worker_errors: list[BaseException] = []
+
+        def worker() -> None:
+            add_script_run_ctx(_threading.current_thread(), ctx)
+            try:
+                # The script runner is no longer in script-thread, so this
+                # call hits the worker-thread branch. With should_stop() False
+                # it must return without raising.
+                scriptrunner._maybe_handle_execution_control_request()
+            except BaseException as e:
+                worker_errors.append(e)
+
+        t = _threading.Thread(target=worker)
+        t.start()
+        t.join()
+        assert worker_errors == []
+
+    @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
+    def test_script_thread_yield_check_worker_exception_wins_over_request(
+        self, patched_get_script_run_ctx
+    ):
+        """On the script-thread branch, a stored worker exception is
+        re-raised before any external RERUN/STOP request from
+        ``ScriptRequests`` is dequeued. The worker's RerunData is preserved
+        so the rerun loop honors the worker's intent, not the external
+        request that arrived concurrently.
+        """
+        worker_rerun_data = RerunData(query_string="from_worker")
+        worker_exc = RerunException(worker_rerun_data)
+
+        ctx = MagicMock()
+        ctx.parallel_coordinator.worker_exception = worker_exc
+        patched_get_script_run_ctx.return_value = ctx
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        # Queue an external rerun request that should NOT win over the
+        # worker's stored exception.
+        external_rerun_data = RerunData(query_string="external")
+        scriptrunner._requests.request_rerun(external_rerun_data)
+
+        with patch.object(scriptrunner, "_is_in_script_thread", return_value=True):
+            scriptrunner._execing = True
+            with pytest.raises(RerunException) as excinfo:
+                scriptrunner._maybe_handle_execution_control_request()
+
+        assert excinfo.value.rerun_data is worker_rerun_data
+
+    def test_worker_thread_yield_check_raises_when_stop_requested(self):
+        """When the coordinator's stop event is set (e.g. a sibling worker
+        called ``request_stop``), the worker-thread branch raises
+        StopException so the worker exits at its next yield point."""
+        import threading as _threading
+
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            SCRIPT_RUN_CONTEXT_ATTR_NAME,
+            add_script_run_ctx,
+        )
+
+        scriptrunner = TestScriptRunner("good_script.py")
+        scriptrunner.request_rerun(RerunData())
+        scriptrunner.start()
+        scriptrunner.join()
+        self._assert_no_exceptions(scriptrunner)
+
+        script_thread = scriptrunner._script_thread
+        ctx = getattr(script_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+        assert ctx is not None
+        assert ctx.parallel_coordinator is not None
+        ctx.parallel_coordinator.request_stop()
+
+        worker_errors: list[BaseException] = []
+
+        def worker() -> None:
+            add_script_run_ctx(_threading.current_thread(), ctx)
+            try:
+                scriptrunner._maybe_handle_execution_control_request()
+            except BaseException as e:
+                worker_errors.append(e)
+
+        t = _threading.Thread(target=worker)
+        t.start()
+        t.join()
+        assert len(worker_errors) == 1
+        assert isinstance(worker_errors[0], StopException)
 
     def test_page_script_hash_to_script_path(self):
         scriptrunner = TestScriptRunner("good_navigation_script.py")

@@ -65,7 +65,7 @@ from streamlit.source_util import page_sort_key
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-    from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.fragment import FragmentStorage, ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         OnScriptErrorHandler,
@@ -445,9 +445,19 @@ class ScriptRunner:
         """
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
-            # script execution thread. However, it's possible for deltas to
-            # be enqueued (and, therefore, for this function to be called)
-            # in separate threads, so we check for that here.
+            # script execution thread. However, this function also runs from
+            # parallel fragment worker threads, since deltas enqueued there
+            # flow through _enqueue_forward_msg. On a worker thread we can't
+            # service script-level rerun/stop requests, but we do check the
+            # coordinator so a cooperatively-cancelled worker raises at its
+            # next yield point.
+            ctx = get_script_run_ctx(suppress_warning=True)
+            if (
+                ctx is not None
+                and ctx.parallel_coordinator is not None
+                and ctx.parallel_coordinator.should_stop()
+            ):
+                raise StopException()
             return
 
         if not self._execing:
@@ -456,6 +466,23 @@ class ScriptRunner:
             # we change our state to STOPPED, and a statechange-listener
             # enqueues a new ForwardEvent
             return
+
+        # Before consulting _requests, surface any cancellation a parallel
+        # fragment worker initiated (st.stop() / st.rerun(scope="app") in a
+        # worker thread). Workers can't raise their own exceptions across
+        # threads, so they store them on the coordinator and the script
+        # thread re-raises here at its next yield point. We re-raise with
+        # the original type — and original RerunData, if any — so the
+        # script runner's outer rerun loop sees the right request type.
+        # Worker-initiated cancellation takes precedence over a concurrent
+        # external request from _requests: the worker already captured the
+        # user intent in-band, while _requests only reflects whatever the
+        # frontend has sent so far.
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is not None and ctx.parallel_coordinator is not None:
+            worker_exc = ctx.parallel_coordinator.worker_exception
+            if worker_exc is not None:
+                raise worker_exc
 
         request = self._requests.on_scriptrunner_yield()
         if request is None:
@@ -583,6 +610,7 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
+                yield_check=self._maybe_handle_execution_control_request,
             )
 
             self.on_event.send(
@@ -731,10 +759,27 @@ class ScriptRunner:
                                 )
 
                     else:
-                        if PagesManager.uses_pages_directory:
-                            _mpa_v1(self._main_script_path)
-                        else:
-                            exec(code, module.__dict__)  # noqa: S102
+                        # parallel_coordinator is None until the first
+                        # ctx.reset(), which always runs before this point;
+                        # cast pins that for the type checker.
+                        coordinator = cast(
+                            "ParallelFragmentCoordinator",
+                            ctx.parallel_coordinator,
+                        )
+                        try:
+                            if PagesManager.uses_pages_directory:
+                                _mpa_v1(self._main_script_path)
+                            else:
+                                exec(code, module.__dict__)  # noqa: S102
+                            coordinator.join()
+                        except BaseException:
+                            # Always drain so in-flight worker fragments
+                            # don't outlive the script run, regardless of
+                            # whether the escape was a script-control
+                            # exception, an uncaught user error, or an
+                            # interrupt.
+                            coordinator.drain()
+                            raise
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.new_fragment_ids.snapshot()
                         )
