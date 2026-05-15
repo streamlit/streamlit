@@ -251,3 +251,75 @@ export const StyledChatAudioWave = styled.div(({ theme }) => ({
     inset: 0,
   },
 }))
+
+export const StyledVideoPreviewContainer = styled.div(({ theme }) => ({
+  position: "absolute",
+  bottom: `calc(100% + ${theme.spacing.sm})`,
+  left: "50%",
+  transform: "translateX(-50%)",
+  width: theme.sizes.minPopupWidth,
+  backgroundColor: theme.colors.secondaryBg,
+  padding: theme.spacing.sm,
+  borderRadius: theme.radii.default,
+  boxShadow: theme.shadows.popover,
+  zIndex: theme.zIndices.popup,
+  display: "flex",
+  flexDirection: "column",
+  gap: theme.spacing.xs,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`,
+}))
+
+export const StyledRecordingIndicator = styled.div(({ theme }) => ({
+  position: "absolute",
+  top: theme.spacing.md,
+  right: theme.spacing.md,
+  width: theme.iconSizes.base,
+  height: theme.iconSizes.base,
+  backgroundColor: theme.colors.redColor,
+  borderRadius: "50%",
+  animation: "pulse 1.5s infinite",
+  "@keyframes pulse": {
+    "0%": { opacity: 1 },
+    "50%": { opacity: 0.3 },
+    "100%": { opacity: 1 },
+  },
+}))
+
+export const StyledVideoPausedOverlay = styled.div(({ theme }) => ({
+  position: "absolute",
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  color: theme.colors.white,
+  pointerEvents: "none",
+}))
+
+export const StyledPendingMediaChip = styled.div(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: theme.spacing.xs,
+  padding: `${theme.spacing.twoXS} ${theme.spacing.sm}`,
+  backgroundColor: theme.colors.secondaryBg,
+  borderRadius: theme.radii.default,
+  fontSize: theme.fontSizes.sm,
+  border: `${theme.sizes.borderWidth} solid ${theme.colors.widgetBorderColor}`,
+}))
+
+export const StyledPendingMediaChipRemove = styled.button(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  background: "transparent",
+  border: "none",
+  cursor: "pointer",
+  padding: theme.spacing.twoXS,
+  borderRadius: theme.radii.default,
+  color: theme.colors.fadedText60,
+  "&:hover": {
+    color: theme.colors.bodyText,
+  },
+}))

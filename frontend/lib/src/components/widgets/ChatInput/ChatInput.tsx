@@ -26,12 +26,14 @@ import {
   useState,
 } from "react"
 
-import { MicNone } from "@emotion-icons/material-outlined"
+import { MicNone, Videocam } from "@emotion-icons/material-outlined"
 import {
   ArrowUpward,
   Check,
   Close,
   ErrorOutline,
+  Pause,
+  PlayArrow,
 } from "@emotion-icons/material-rounded"
 import type { AxiosProgressEvent } from "axios"
 import { Textarea as UITextArea } from "baseui/textarea"
@@ -86,10 +88,15 @@ import {
   StyledInputInstructions,
   StyledInputRow,
   StyledLeftCluster,
+  StyledPendingMediaChip,
+  StyledPendingMediaChipRemove,
+  StyledRecordingIndicator,
   StyledRightCluster,
   StyledSendIconButton,
   StyledTextareaWrapper,
   StyledToolbarRow,
+  StyledVideoPausedOverlay,
+  StyledVideoPreviewContainer,
   StyledWaveformContainer,
 } from "./styled-components"
 
@@ -190,7 +197,12 @@ function ChatInput({
   const chatInputRef = useRef<HTMLTextAreaElement>(null)
   const processedSetValueRef = useRef(false)
   const waveformContainerRef = useRef<HTMLDivElement>(null)
+  const videoPreviewRef = useRef<HTMLVideoElement>(null)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const streamRef = useRef<MediaStream | null>(null)
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null)
   const uploadAbortControllerRef = useRef<AbortController | null>(null)
+  const videoApprovedRef = useRef<boolean>(false)
 
   const { width, elementRef } = useCalculatedDimensions()
   const { innerWidth, innerHeight } = useWindowDimensionsContext()
@@ -200,6 +212,13 @@ function ChatInput({
   const [files, setFiles] = useState<UploadFileInfo[]>([])
   const [fileDragged, setFileDragged] = useState(false)
   const [audioUploading, setAudioUploading] = useState(false)
+  const [videoUploading, setVideoUploading] = useState(false)
+  const [isVideoRecording, setIsVideoRecording] = useState(false)
+  const [isVideoPaused, setIsVideoPaused] = useState(false)
+  const [pendingAudio, setPendingAudio] =
+    useState<UploadedFileInfoProto | null>(null)
+  const [pendingVideo, setPendingVideo] =
+    useState<UploadedFileInfoProto | null>(null)
   const [recordingError, setRecordingError] = useState<string | null>(null)
   const [isStacked, setIsStacked] = useState(false)
 
@@ -207,6 +226,28 @@ function ChatInput({
   const [dropzoneResetCounter, setDropzoneResetCounter] = useState(0)
 
   const acceptAudio = element.acceptAudio ?? false
+  const acceptVideo = element.acceptVideo ?? false
+
+  useEffect(() => {
+    const video = videoPreviewRef.current
+    if (!videoStream || !video) {
+      return
+    }
+    video.srcObject = videoStream
+    // Safari ignores autoPlay when srcObject is used; force .play().
+    video.play().catch(error => {
+      LOG.error("Video preview play failed:", error)
+    })
+  }, [videoStream])
+
+  const stopAllTracks = useCallback((stream: MediaStream | null) => {
+    if (!stream) return
+    for (const track of stream.getTracks()) {
+      if (track.readyState !== "ended") {
+        track.stop()
+      }
+    }
+  }, [])
 
   // Cleanup: abort any in-progress uploads on unmount
   useEffect(() => {
@@ -214,8 +255,9 @@ function ChatInput({
       if (uploadAbortControllerRef.current) {
         uploadAbortControllerRef.current.abort()
       }
+      stopAllTracks(streamRef.current)
     }
-  }, [])
+  }, [stopAllTracks])
 
   // Track if we've done the initial height calculation with a valid width.
   // This prevents unnecessary recalculations on every window resize.
@@ -333,8 +375,13 @@ function ChatInput({
       return false
     }
 
-    return value !== "" || files.length > 0
-  }, [files, value])
+    return (
+      value !== "" ||
+      files.length > 0 ||
+      pendingAudio !== null ||
+      pendingVideo !== null
+    )
+  }, [files, value, pendingAudio, pendingVideo])
 
   const acceptFile = chatInputAcceptFileProtoValueToEnum(element.acceptFile)
   const maxFileSize = sizeConverter(
@@ -530,19 +577,14 @@ function ChatInput({
 
   const submitChatInput = useCallback(
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef is a ref; setFiles/setValue/setIsStacked/setDropzoneResetCounter are stable setters
-    (audioInfo?: UploadedFileInfoProto): void => {
+    (): void => {
       // We want the chat input to always be in focus
       // even if the user clicks the submit button
       if (chatInputRef.current) {
         chatInputRef.current.focus()
       }
 
-      // Allow submission if:
-      // - dirty=true (user typed text or uploaded files), OR
-      // - audioInfo is provided (audio was just recorded and uploaded)
-      // Audio bypasses the dirty check because it's uploaded and submitted
-      // immediately without being added to the files state.
-      if ((!dirty && !audioInfo) || disabled) {
+      if (!dirty || disabled) {
         return
       }
 
@@ -551,7 +593,8 @@ function ChatInput({
       const composedValue: IChatInputValue = {
         data: value,
         fileUploaderState: filesValue,
-        audioFileInfo: audioInfo,
+        audioFileInfo: pendingAudio ?? undefined,
+        videoFileInfo: pendingVideo ?? undefined,
       }
 
       widgetMgr.setChatInputValue(
@@ -568,6 +611,8 @@ function ChatInput({
 
       setFiles([])
       setValue("")
+      setPendingAudio(null)
+      setPendingVideo(null)
       setIsStacked(false)
       autoExpand.clearScrollHeight()
     },
@@ -576,6 +621,8 @@ function ChatInput({
       disabled,
       value,
       files.length,
+      pendingAudio,
+      pendingVideo,
       createChatInputWidgetFilesValue,
       widgetMgr,
       element,
@@ -584,7 +631,58 @@ function ChatInput({
     ]
   )
 
-  // Handle audio approval and upload
+  const uploadMediaToPending = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- refs to abort/input; pending+error setters are stable
+    async (
+      file: File,
+      kind: "audio" | "video",
+      setUploading: (uploading: boolean) => void
+    ): Promise<void> => {
+      try {
+        setUploading(true)
+
+        const fileURLsArray = await uploadClient.fetchFileURLs([file])
+        if (fileURLsArray.length === 0) {
+          throw new Error(`Failed to get upload URL for ${kind} file`)
+        }
+        const fileUrls = fileURLsArray[0]
+
+        uploadAbortControllerRef.current = new AbortController()
+        await uploadClient.uploadFile(
+          { formId: "", ...element },
+          fileUrls.uploadUrl as string,
+          file,
+          () => {},
+          uploadAbortControllerRef.current.signal
+        )
+
+        const info = new UploadedFileInfoProto({
+          fileId: fileUrls.fileId as string,
+          fileUrls,
+          name: file.name,
+          size: file.size,
+        })
+
+        if (kind === "audio") {
+          setPendingAudio(info)
+        } else {
+          setPendingVideo(info)
+        }
+      } catch (error) {
+        LOG.error(`${kind} upload failed:`, error)
+        setRecordingError(
+          kind === "audio" ? "Recording failed" : "Video recording failed"
+        )
+        if (chatInputRef.current) {
+          chatInputRef.current.focus()
+        }
+      } finally {
+        setUploading(false)
+      }
+    },
+    [uploadClient, element]
+  )
+
   const handleAudioApprove = useCallback(
     // eslint-disable-next-line react-hooks/preserve-manual-memoization -- chatInputRef and uploadAbortControllerRef are refs; setAudioUploading and setRecordingError are stable setters
     async (wav: Blob): Promise<void> => {
@@ -593,57 +691,144 @@ function ChatInput({
       const audioFile = new File([wav], `audio-${timestamp}.wav`, {
         type: "audio/wav",
       })
+      await uploadMediaToPending(audioFile, "audio", setAudioUploading)
+    },
+    [uploadMediaToPending]
+  )
+
+  const handleVideoApprove = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- setVideoUploading is a stable setter
+    async (videoBlob: Blob): Promise<void> => {
+      // Strip ";codecs=..." — browsers emit different suffixes per container.
+      const mimeType =
+        (videoBlob.type || "video/webm").split(";")[0].trim() || "video/webm"
+      const extension = mimeType.includes("mp4") ? "mp4" : "webm"
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-")
+
+      const videoFile = new File(
+        [videoBlob],
+        `video-${timestamp}.${extension}`,
+        { type: mimeType }
+      )
+      await uploadMediaToPending(videoFile, "video", setVideoUploading)
+    },
+    [uploadMediaToPending]
+  )
+
+  const startVideoRecording = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- media refs; video/recording setters are stable
+    async () => {
+      if (typeof MediaRecorder === "undefined") {
+        setRecordingError("Video recording is not supported in this browser")
+        return
+      }
 
       try {
-        setAudioUploading(true)
+        setRecordingError(null)
 
-        // 1. Fetch upload URL
-        const fileURLsArray = await uploadClient.fetchFileURLs([audioFile])
-
-        if (fileURLsArray.length === 0) {
-          throw new Error("Failed to get upload URL for audio file")
-        }
-
-        const fileUrls = fileURLsArray[0]
-
-        // 2. Upload audio file with progress tracking
-        uploadAbortControllerRef.current = new AbortController()
-        await uploadClient.uploadFile(
-          {
-            formId: "",
-            ...element,
-          },
-          fileUrls.uploadUrl as string,
-          audioFile,
-          () => {
-            // Progress callback - track upload progress (could display percentage if needed)
-          },
-          uploadAbortControllerRef.current.signal
-        )
-
-        // 3. Create audio file info
-        const audioInfo = new UploadedFileInfoProto({
-          fileId: fileUrls.fileId as string,
-          fileUrls,
-          name: audioFile.name,
-          size: audioFile.size,
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
         })
+        streamRef.current = stream
+        setVideoStream(stream)
 
-        // 4. Submit immediately with audio info
-        submitChatInput(audioInfo)
-      } catch (error) {
-        const errorMessage = "Recording failed"
-        LOG.error("Audio upload failed:", error)
-        setRecordingError(errorMessage)
-        // Refocus on input after error
-        if (chatInputRef.current) {
-          chatInputRef.current.focus()
+        const mimeType = [
+          "video/webm;codecs=vp9,opus",
+          "video/webm;codecs=vp8,opus",
+          "video/webm",
+          "video/mp4",
+        ].find(type => MediaRecorder.isTypeSupported(type))
+
+        if (!mimeType) {
+          stopAllTracks(stream)
+          streamRef.current = null
+          setVideoStream(null)
+          setRecordingError("No supported video format in this browser")
+          return
         }
-      } finally {
-        setAudioUploading(false)
+
+        const recorder = new MediaRecorder(stream, { mimeType })
+        const chunks: Blob[] = []
+
+        recorder.ondataavailable = e => {
+          if (e.data.size > 0) {
+            chunks.push(e.data)
+          }
+        }
+
+        recorder.onstop = async () => {
+          const approved = videoApprovedRef.current
+          videoApprovedRef.current = false
+          if (approved) {
+            const blob = new Blob(chunks, { type: recorder.mimeType })
+            await handleVideoApprove(blob)
+          }
+          stopAllTracks(stream)
+          streamRef.current = null
+          setVideoStream(null)
+        }
+
+        videoApprovedRef.current = false
+        mediaRecorderRef.current = recorder
+        recorder.start()
+        setIsVideoRecording(true)
+      } catch (error) {
+        LOG.error("Video recording start failed:", error)
+        setRecordingError("Could not access camera")
       }
     },
-    [uploadClient, element, submitChatInput]
+    [handleVideoApprove, stopAllTracks]
+  )
+
+  const stopVideoRecording = useCallback(
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization -- media refs; video setters are stable
+    (approved: boolean) => {
+      if (mediaRecorderRef.current && isVideoRecording) {
+        videoApprovedRef.current = approved
+        mediaRecorderRef.current.stop()
+        setIsVideoRecording(false)
+        setIsVideoPaused(false)
+      }
+    },
+    [isVideoRecording]
+  )
+
+  const handleVideoCancel = useCallback(() => {
+    stopVideoRecording(false)
+  }, [stopVideoRecording])
+
+  const handleVideoApproveAction = useCallback(() => {
+    stopVideoRecording(true)
+  }, [stopVideoRecording])
+
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- ref + stable setter
+  const handleVideoPause = useCallback(() => {
+    const recorder = mediaRecorderRef.current
+    if (recorder?.state !== "recording") return
+    recorder.pause()
+    setIsVideoPaused(true)
+  }, [])
+
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization -- ref + stable setter
+  const handleVideoResume = useCallback(() => {
+    const recorder = mediaRecorderRef.current
+    if (recorder?.state !== "paused") return
+    recorder.resume()
+    setIsVideoPaused(false)
+  }, [])
+
+  const handleVideoClick = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+
+      if (!acceptVideo || disabled || isVideoRecording) {
+        return
+      }
+      void startVideoRecording()
+    },
+    [acceptVideo, disabled, isVideoRecording, startVideoRecording]
   )
 
   // Memoize events to ensure fresh closures when dependencies change
@@ -876,6 +1061,60 @@ function ChatInput({
           </StyledFilesArea>
         )}
 
+        {(pendingAudio || pendingVideo) && (
+          <StyledFilesArea>
+            {pendingAudio && (
+              <StyledPendingMediaChip data-testid="stChatInputPendingAudio">
+                <Icon content={MicNone} size="md" color="inherit" />
+                <span>{pendingAudio.name}</span>
+                <StyledPendingMediaChipRemove
+                  onClick={() => setPendingAudio(null)}
+                  aria-label="Remove audio recording"
+                >
+                  <Icon content={Close} size="md" color="inherit" />
+                </StyledPendingMediaChipRemove>
+              </StyledPendingMediaChip>
+            )}
+            {pendingVideo && (
+              <StyledPendingMediaChip data-testid="stChatInputPendingVideo">
+                <Icon content={Videocam} size="md" color="inherit" />
+                <span>{pendingVideo.name}</span>
+                <StyledPendingMediaChipRemove
+                  onClick={() => setPendingVideo(null)}
+                  aria-label="Remove video recording"
+                >
+                  <Icon content={Close} size="md" color="inherit" />
+                </StyledPendingMediaChipRemove>
+              </StyledPendingMediaChip>
+            )}
+          </StyledFilesArea>
+        )}
+
+        {isVideoRecording && (
+          <StyledVideoPreviewContainer>
+            {/* eslint-disable-next-line jsx-a11y/control-has-associated-label -- local-only camera preview without playback controls */}
+            <video
+              ref={videoPreviewRef}
+              autoPlay
+              muted
+              playsInline
+              style={{
+                width: "100%",
+                borderRadius: theme.radii.default,
+                transform: "scaleX(-1)",
+                filter: isVideoPaused ? "blur(8px)" : "none",
+                transition: "filter 200ms ease",
+              }}
+            />
+            {!isVideoPaused && <StyledRecordingIndicator />}
+            {isVideoPaused && (
+              <StyledVideoPausedOverlay>
+                <Icon content={Pause} size="threeXL" color="inherit" />
+              </StyledVideoPausedOverlay>
+            )}
+          </StyledVideoPreviewContainer>
+        )}
+
         {/* Main row - contains textarea and button clusters
             When expanded (hasExpandedHeight): column layout with textarea above toolbar row
             When not expanded: row layout (inline or stacked via flex-wrap)
@@ -953,6 +1192,63 @@ function ChatInput({
                     />
                   </StyledInputInstructions>
                 )}
+                {acceptVideo &&
+                  (isVideoRecording ? (
+                    <>
+                      <StyledSendIconButton
+                        onClick={handleVideoCancel}
+                        disabled={disabled}
+                        data-testid="stChatInputVideoCancelButton"
+                        aria-label="Cancel video recording"
+                      >
+                        <Icon content={Close} size="lg" color="inherit" />
+                      </StyledSendIconButton>
+                      <StyledSendIconButton
+                        onClick={
+                          isVideoPaused ? handleVideoResume : handleVideoPause
+                        }
+                        disabled={disabled}
+                        data-testid="stChatInputVideoPauseButton"
+                        aria-label={
+                          isVideoPaused
+                            ? "Resume video recording"
+                            : "Pause video recording"
+                        }
+                      >
+                        <Icon
+                          content={isVideoPaused ? PlayArrow : Pause}
+                          size="lg"
+                          color="inherit"
+                        />
+                      </StyledSendIconButton>
+                      <StyledSendIconButton
+                        onClick={handleVideoApproveAction}
+                        disabled={disabled || videoUploading}
+                        data-testid="stChatInputVideoApproveButton"
+                        aria-label="Approve video recording"
+                      >
+                        {videoUploading ? (
+                          <DynamicIcon size="lg" iconValue="spinner" />
+                        ) : (
+                          <Icon content={Check} size="lg" color="inherit" />
+                        )}
+                      </StyledSendIconButton>
+                    </>
+                  ) : (
+                    <StyledSendIconButton
+                      onClick={handleVideoClick}
+                      disabled={
+                        disabled ||
+                        videoUploading ||
+                        audioUploading ||
+                        pendingVideo !== null
+                      }
+                      data-testid="stChatInputVideoButton"
+                      aria-label="Start video recording"
+                    >
+                      <Icon content={Videocam} size="xl" color="inherit" />
+                    </StyledSendIconButton>
+                  ))}
                 {acceptAudio && (
                   <>
                     {recordingError ? (
@@ -963,7 +1259,9 @@ function ChatInput({
                       >
                         <StyledSendIconButton
                           onClick={handleMicClickVoid}
-                          disabled={disabled || audioUploading}
+                          disabled={
+                            disabled || audioUploading || pendingAudio !== null
+                          }
                           hasError
                           data-testid="stChatInputMicButton"
                           aria-label="Start recording"
@@ -978,7 +1276,9 @@ function ChatInput({
                     ) : (
                       <StyledSendIconButton
                         onClick={handleMicClickVoid}
-                        disabled={disabled || audioUploading}
+                        disabled={
+                          disabled || audioUploading || pendingAudio !== null
+                        }
                         data-testid="stChatInputMicButton"
                         aria-label="Start recording"
                       >
@@ -989,7 +1289,13 @@ function ChatInput({
                 )}
                 <StyledSendIconButton
                   onClick={handleSubmit}
-                  disabled={!dirty || disabled || audioUploading}
+                  disabled={
+                    !dirty ||
+                    disabled ||
+                    audioUploading ||
+                    videoUploading ||
+                    isVideoRecording
+                  }
                   data-testid="stChatInputSubmitButton"
                   aria-label="Send message"
                   primary
@@ -1064,6 +1370,69 @@ function ChatInput({
                         />
                       </StyledInputInstructions>
                     )}
+                    {acceptVideo &&
+                      (isVideoRecording ? (
+                        <>
+                          <StyledSendIconButton
+                            onClick={handleVideoCancel}
+                            disabled={disabled}
+                            data-testid="stChatInputVideoCancelButton"
+                            aria-label="Cancel video recording"
+                          >
+                            <Icon content={Close} size="lg" color="inherit" />
+                          </StyledSendIconButton>
+                          <StyledSendIconButton
+                            onClick={
+                              isVideoPaused
+                                ? handleVideoResume
+                                : handleVideoPause
+                            }
+                            disabled={disabled}
+                            data-testid="stChatInputVideoPauseButton"
+                            aria-label={
+                              isVideoPaused
+                                ? "Resume video recording"
+                                : "Pause video recording"
+                            }
+                          >
+                            <Icon
+                              content={isVideoPaused ? PlayArrow : Pause}
+                              size="lg"
+                              color="inherit"
+                            />
+                          </StyledSendIconButton>
+                          <StyledSendIconButton
+                            onClick={handleVideoApproveAction}
+                            disabled={disabled || videoUploading}
+                            data-testid="stChatInputVideoApproveButton"
+                            aria-label="Approve video recording"
+                          >
+                            {videoUploading ? (
+                              <DynamicIcon size="lg" iconValue="spinner" />
+                            ) : (
+                              <Icon
+                                content={Check}
+                                size="lg"
+                                color="inherit"
+                              />
+                            )}
+                          </StyledSendIconButton>
+                        </>
+                      ) : (
+                        <StyledSendIconButton
+                          onClick={handleVideoClick}
+                          disabled={
+                            disabled ||
+                            videoUploading ||
+                            audioUploading ||
+                            pendingVideo !== null
+                          }
+                          data-testid="stChatInputVideoButton"
+                          aria-label="Start video recording"
+                        >
+                          <Icon content={Videocam} size="xl" color="inherit" />
+                        </StyledSendIconButton>
+                      ))}
                     {acceptAudio && (
                       <>
                         {recordingError ? (
@@ -1074,7 +1443,11 @@ function ChatInput({
                           >
                             <StyledSendIconButton
                               onClick={handleMicClickVoid}
-                              disabled={disabled || audioUploading}
+                              disabled={
+                                disabled ||
+                                audioUploading ||
+                                pendingAudio !== null
+                              }
                               hasError
                               data-testid="stChatInputMicButton"
                               aria-label="Start recording"
@@ -1089,7 +1462,11 @@ function ChatInput({
                         ) : (
                           <StyledSendIconButton
                             onClick={handleMicClickVoid}
-                            disabled={disabled || audioUploading}
+                            disabled={
+                              disabled ||
+                              audioUploading ||
+                              pendingAudio !== null
+                            }
                             data-testid="stChatInputMicButton"
                             aria-label="Start recording"
                           >
@@ -1104,7 +1481,13 @@ function ChatInput({
                     )}
                     <StyledSendIconButton
                       onClick={handleSubmit}
-                      disabled={!dirty || disabled || audioUploading}
+                      disabled={
+                        !dirty ||
+                        disabled ||
+                        audioUploading ||
+                        videoUploading ||
+                        isVideoRecording
+                      }
                       data-testid="stChatInputSubmitButton"
                       aria-label="Send message"
                       primary

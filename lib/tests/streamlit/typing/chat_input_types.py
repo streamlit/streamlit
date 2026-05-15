@@ -19,9 +19,10 @@ from typing import TYPE_CHECKING
 from typing_extensions import assert_type
 
 # Perform type checking tests for st.chat_input
-# The return type depends on accept_file and accept_audio parameters:
-# - accept_file=False and accept_audio=False (default) -> returns str | None
-# - accept_file=True/multiple/directory OR accept_audio=True -> returns ChatInputValue | None
+# The return type depends on accept_file, accept_audio, and accept_video parameters:
+# - all three False (default) -> returns str | None
+# - any of accept_file=True/multiple/directory, accept_audio=True, or
+#   accept_video=True -> returns ChatInputValue | None
 if TYPE_CHECKING:
     from streamlit.elements.widgets.chat import ChatInputValue, ChatMixin
 
@@ -54,6 +55,8 @@ if TYPE_CHECKING:
     # accept_audio=True returns ChatInputValue | None
     assert_type(chat_input("Message", accept_audio=True), ChatInputValue | None)
 
+    assert_type(chat_input("Message", accept_video=True), ChatInputValue | None)
+
     # Both accept_file and accept_audio enabled returns ChatInputValue | None
     assert_type(
         chat_input("Message", accept_file=True, accept_audio=True),
@@ -61,6 +64,15 @@ if TYPE_CHECKING:
     )
     assert_type(
         chat_input("Message", accept_file="multiple", accept_audio=True),
+        ChatInputValue | None,
+    )
+
+    assert_type(
+        chat_input("Message", accept_audio=True, accept_video=True),
+        ChatInputValue | None,
+    )
+    assert_type(
+        chat_input("Message", accept_file="multiple", accept_video=True),
         ChatInputValue | None,
     )
 

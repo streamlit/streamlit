@@ -73,6 +73,9 @@ class LocalSourcesWatcher:
 
         self._watched_modules: dict[str, WatchedModule] = {}
         self._watched_pages: set[str] = set()
+
+        # Defer sys.modules eviction to the script thread to avoid mutating
+        # sys.modules from the file-watcher thread while user code runs.
         self._pending_evictions: set[str] = set()
         self._pending_evictions_lock = threading.Lock()
 
@@ -164,6 +167,13 @@ class LocalSourcesWatcher:
             for wm in self._watched_modules.values()
             if wm.module_name is not None and wm.module_name in sys.modules
         }
+        # Skip Streamlit's own modules: re-importing them mid-session reinitialises
+        # singletons (e.g. DeltaGeneratorSingleton) and crashes the runtime.
+        modules_to_evict = {
+            name
+            for name in modules_to_evict
+            if not (name == "streamlit" or name.startswith("streamlit."))
+        }
         if modules_to_evict:
             with self._pending_evictions_lock:
                 self._pending_evictions.update(modules_to_evict)
@@ -174,19 +184,19 @@ class LocalSourcesWatcher:
     def on_script_run(self) -> None:
         """Hook called by ``ScriptRunner`` at the start of each script run.
 
-        Runs on the script thread before any user code executes.  Currently
-        flushes deferred ``sys.modules`` evictions so that the watcher thread
-        never mutates ``sys.modules`` while user code is running.
+        Runs on the script thread before any user code executes. Flushes
+        deferred ``sys.modules`` evictions so the file-watcher thread never
+        mutates ``sys.modules`` while user code (or cache serialization) runs.
         """
+
         self.flush_pending_evictions()
 
     def flush_pending_evictions(self) -> None:
         """Remove pending watched modules from ``sys.modules``.
 
-        Called at the start of each script run on the script thread so that
-        ``sys.modules`` is not mutated from the file watcher thread while user
-        code (or cache serialization) is executing.
+        Called at the start of each script run on the script thread.
         """
+
         with self._pending_evictions_lock:
             pending = self._pending_evictions
             self._pending_evictions = set()

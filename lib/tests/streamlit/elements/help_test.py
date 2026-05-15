@@ -122,7 +122,7 @@ class StHelpTest(DeltaGeneratorTestCase):
         assert ds.type == "method"
 
         signature = (
-            "(data: 'MediaData', format: 'str' = 'audio/wav', start_time: 'MediaTime' = 0, *, "
+            "(data: 'MediaData', format: 'str | None' = None, start_time: 'MediaTime' = 0, *, "
             "sample_rate: 'int | None' = None, end_time: 'MediaTime | None' = None, loop: 'bool' = False, "
             "autoplay: 'bool' = False, width: 'WidthWithoutContent' = 'stretch') -> 'DeltaGenerator'"
         )

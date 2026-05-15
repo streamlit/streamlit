@@ -46,5 +46,8 @@ message ChatInput {
   // If not set, uses browser default
   optional int32 audio_sample_rate = 13;
 
+  // Whether to show video recording button
+  bool accept_video = 14;
+
   reserved 8;
 }

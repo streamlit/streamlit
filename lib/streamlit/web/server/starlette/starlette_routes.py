@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import mimetypes
 import os
 from typing import TYPE_CHECKING, Final
 from urllib.parse import quote
@@ -699,12 +700,21 @@ def create_upload_routes(
         if len(data) > max_size_bytes:
             raise HTTPException(status_code=413, detail="File too large")
 
+        content_type = upload.content_type or "application/octet-stream"
+        # Some clients don't set a useful per-file Content-Type for multipart
+        # uploads. In those cases, infer a better type from the filename so media
+        # playback works reliably.
+        if content_type == "application/octet-stream" and upload.filename:
+            guessed, _ = mimetypes.guess_type(upload.filename, strict=False)
+            if guessed:
+                content_type = guessed
+
         upload_mgr.add_file(
             session_id=session_id,
             file=UploadedFileRec(
                 file_id=file_id,
                 name=upload.filename or "",
-                type=upload.content_type or "application/octet-stream",
+                type=content_type,
                 data=data,
             ),
         )

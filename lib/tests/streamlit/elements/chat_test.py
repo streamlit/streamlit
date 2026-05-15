@@ -26,6 +26,7 @@ from streamlit.elements.widgets.chat import (
     ChatInputValue,
     _pop_audio_file,
     _pop_upload_files,
+    _pop_video_file,
 )
 from streamlit.errors import (
     StreamlitAPIException,
@@ -833,12 +834,125 @@ class ChatTest(DeltaGeneratorTestCase):
             st.chat_input(accept_audio=True, audio_sample_rate=12345)
         assert "Invalid audio_sample_rate" in str(exc.value)
 
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_video_file(self, deserialize_patch):
+        """Test that a video file is properly handled by ChatInputValue."""
+        rec = UploadedFileRec("video0", "recording.webm", "video/webm", b"video data")
+
+        video_file = UploadedFile(
+            rec, FileURLsProto(file_id="video0", delete_url="d0", upload_url="u0")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="",
+            files=[],
+            video=video_file,
+            _include_files=True,
+            _include_video=True,
+        )
+
+        return_val = st.chat_input(accept_file="multiple", accept_video=True)
+
+        assert return_val.video == video_file
+        assert return_val.video.name == "recording.webm"
+        assert return_val.video.type == "video/webm"
+        assert return_val.video.getvalue() == b"video data"
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_video_file_none(self, deserialize_patch):
+        """Test that ChatInputValue handles a None video file correctly."""
+        deserialize_patch.return_value = ChatInputValue(
+            text="hello", files=[], video=None, _include_files=True, _include_video=True
+        )
+
+        return_val = st.chat_input(accept_file="multiple", accept_video=True)
+
+        assert return_val.video is None
+        assert return_val.text == "hello"
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_with_video(self, deserialize_patch):
+        """Test ChatInputValue dict-like interface with the video field."""
+        rec = UploadedFileRec("video0", "recording.mp4", "video/mp4", b"video data")
+        video_file = UploadedFile(
+            rec, FileURLsProto(file_id="video0", delete_url="d0", upload_url="u0")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="test",
+            files=[],
+            video=video_file,
+            _include_files=True,
+            _include_video=True,
+        )
+
+        return_val = st.chat_input(accept_file="multiple", accept_video=True)
+
+        assert return_val["video"] == video_file
+        assert return_val["text"] == "test"
+        assert "video" in return_val
+        assert len(return_val) == 3  # text, files, video
+
+        as_dict = return_val.to_dict()
+        assert as_dict["video"] == video_file
+        assert as_dict["text"] == "test"
+        assert as_dict["files"] == []
+
+    @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
+    def test_chat_input_value_with_audio_and_video(self, deserialize_patch):
+        """Test ChatInputValue exposes audio and video simultaneously."""
+        audio_rec = UploadedFileRec(
+            "audio0", "recording.wav", "audio/wav", b"audio data"
+        )
+        audio_file = UploadedFile(
+            audio_rec, FileURLsProto(file_id="audio0", delete_url="da", upload_url="ua")
+        )
+        video_rec = UploadedFileRec(
+            "video0", "recording.mp4", "video/mp4", b"video data"
+        )
+        video_file = UploadedFile(
+            video_rec, FileURLsProto(file_id="video0", delete_url="dv", upload_url="uv")
+        )
+
+        deserialize_patch.return_value = ChatInputValue(
+            text="hi",
+            files=[],
+            audio=audio_file,
+            video=video_file,
+            _include_audio=True,
+            _include_video=True,
+        )
+
+        return_val = st.chat_input(accept_audio=True, accept_video=True)
+
+        assert return_val.audio == audio_file
+        assert return_val.video == video_file
+        assert set(return_val.keys()) == {"text", "audio", "video"}
+
+    @parameterized.expand([(None, False), (False, False), (True, True)])
+    def test_chat_input_accept_video(self, value, expected) -> None:
+        """The accept_video kwarg maps onto the proto field."""
+        kwargs = {} if value is None else {"accept_video": value}
+        st.chat_input(**kwargs)
+        c = self.get_delta_from_queue().new_element.chat_input
+        assert c.accept_video is expected
+
     @parameterized.expand(
         [
-            (False, False, False, False, {"text"}),
-            ("multiple", False, True, False, {"text", "files"}),
-            (False, True, False, True, {"text", "audio"}),
-            ("multiple", True, True, True, {"text", "files", "audio"}),
+            (False, False, False, False, False, False, {"text"}),
+            ("multiple", False, False, True, False, False, {"text", "files"}),
+            (False, True, False, False, True, False, {"text", "audio"}),
+            (False, False, True, False, False, True, {"text", "video"}),
+            (False, True, True, False, True, True, {"text", "audio", "video"}),
+            (
+                "multiple",
+                True,
+                True,
+                True,
+                True,
+                True,
+                {"text", "files", "audio", "video"},
+            ),
         ]
     )
     @patch("streamlit.elements.widgets.chat.ChatInputSerde.deserialize")
@@ -846,21 +960,29 @@ class ChatTest(DeltaGeneratorTestCase):
         self,
         accept_file,
         accept_audio,
+        accept_video,
         include_files,
         include_audio,
+        include_video,
         expected_keys,
         deserialize_patch,
     ):
-        """Test that ChatInputValue only includes keys based on accept_file/accept_audio."""
+        """Test that ChatInputValue only exposes keys based on the accept_* flags."""
         deserialize_patch.return_value = ChatInputValue(
             text="test",
             files=[],
             audio=None,
+            video=None,
             _include_files=include_files,
             _include_audio=include_audio,
+            _include_video=include_video,
         )
 
-        return_val = st.chat_input(accept_file=accept_file, accept_audio=accept_audio)
+        return_val = st.chat_input(
+            accept_file=accept_file,
+            accept_audio=accept_audio,
+            accept_video=accept_video,
+        )
 
         # Verify expected keys are present
         assert set(return_val.keys()) == expected_keys
@@ -893,6 +1015,17 @@ class ChatTest(DeltaGeneratorTestCase):
                 _ = return_val["audio"]
             with pytest.raises(AttributeError):
                 _ = return_val.audio
+
+        if "video" in expected_keys:
+            assert "video" in return_val
+            assert return_val["video"] is None
+            assert return_val.video is None
+        else:
+            assert "video" not in return_val
+            with pytest.raises(KeyError):
+                _ = return_val["video"]
+            with pytest.raises(AttributeError):
+                _ = return_val.video
 
         # Verify to_dict matches expected keys
         as_dict = return_val.to_dict()
@@ -983,6 +1116,59 @@ class ChatInputSerdeTest(DeltaGeneratorTestCase):
 
         assert result == "test message"
 
+    def test_deserialize_returns_string_when_only_video_accepted_and_no_video(self):
+        """Test deserialize returns a string when only video is accepted but text is sent."""
+        serde = ChatInputSerde(
+            accept_files=False, accept_audio=False, accept_video=True
+        )
+        proto = ChatInputValueProto()
+        proto.data = "no video, just text"
+
+        result = serde.deserialize(proto)
+
+        assert isinstance(result, ChatInputValue)
+        assert result.text == "no video, just text"
+        assert result.video is None
+
+    def test_deserialize_returns_none_when_video_accepted_but_nothing_submitted(self):
+        """Test deserialize returns None when accept_video=True but no content was sent."""
+        serde = ChatInputSerde(
+            accept_files=False, accept_audio=False, accept_video=True
+        )
+        proto = ChatInputValueProto()  # data unset, no video_file_info
+
+        result = serde.deserialize(proto)
+
+        assert result is None
+
+    def test_deserialize_includes_video_when_present(self):
+        """Test deserialize attaches the video file to ChatInputValue."""
+        ctx = self.script_run_ctx
+        file_id = "video-serde"
+        ctx.uploaded_file_mgr.add_file(
+            session_id=ctx.session_id,
+            file=UploadedFileRec(
+                file_id=file_id,
+                name="recording.mp4",
+                type="video/mp4",
+                data=b"video bytes",
+            ),
+        )
+
+        serde = ChatInputSerde(
+            accept_files=False, accept_audio=False, accept_video=True
+        )
+        proto = ChatInputValueProto()
+        proto.data = ""
+        proto.video_file_info.file_id = file_id
+
+        result = serde.deserialize(proto)
+
+        assert isinstance(result, ChatInputValue)
+        assert result.video is not None
+        assert result.video.name == "recording.mp4"
+        assert result.video.getvalue() == b"video bytes"
+
 
 class PopUploadFilesTest(DeltaGeneratorTestCase):
     """Test _pop_upload_files and _pop_audio_file functions."""
@@ -1018,3 +1204,75 @@ class PopUploadFilesTest(DeltaGeneratorTestCase):
         ):
             result = _pop_audio_file(proto)
             assert result is None
+
+    def test_pop_video_file_returns_none_for_none(self):
+        """Return None for None, empty file_id, or a missing record."""
+        assert _pop_video_file(None) is None
+        assert _pop_video_file(UploadedFileInfoProto()) is None
+
+        proto = UploadedFileInfoProto(file_id="missing-video")
+        assert _pop_video_file(proto) is None
+
+    def test_pop_video_file_returns_none_no_ctx(self):
+        """Return None when there is no active ScriptRunContext."""
+        proto = UploadedFileInfoProto(file_id="video123")
+        with patch(
+            "streamlit.elements.widgets.chat.get_script_run_ctx", return_value=None
+        ):
+            assert _pop_video_file(proto) is None
+
+    @parameterized.expand(
+        [
+            ("recording.mp4", "video/mp4"),
+            ("recording.webm", "video/webm"),
+            ("recording.MOV", "video/quicktime"),
+            ("recording.webm", "video/webm;codecs=vp8,opus"),
+        ]
+    )
+    def test_pop_video_file_accepts_supported_videos(
+        self, name: str, mime_type: str
+    ) -> None:
+        """Accept the supported extensions and MIME types, including codec parameters."""
+        ctx = self.script_run_ctx
+        file_id = "video-ok"
+        ctx.uploaded_file_mgr.add_file(
+            session_id=ctx.session_id,
+            file=UploadedFileRec(
+                file_id=file_id, name=name, type=mime_type, data=b"video bytes"
+            ),
+        )
+
+        proto = UploadedFileInfoProto()
+        proto.file_id = file_id
+
+        result = _pop_video_file(proto)
+
+        assert result is not None
+        assert result.name == name
+        assert result.type == mime_type
+        assert result.getvalue() == b"video bytes"
+
+        remaining = ctx.uploaded_file_mgr.get_files(
+            session_id=ctx.session_id, file_ids=[file_id]
+        )
+        assert remaining == []
+
+    @parameterized.expand(
+        [
+            ("recording.gif", "video/mp4", "Invalid file extension for video input"),
+            ("recording.mp4", "text/plain", "Invalid MIME type for video input"),
+        ]
+    )
+    def test_pop_video_file_rejects_invalid(
+        self, name: str, mime: str, message: str
+    ) -> None:
+        """Raise when extension or MIME type is unsupported."""
+        ctx = self.script_run_ctx
+        file_id = "video-bad"
+        ctx.uploaded_file_mgr.add_file(
+            session_id=ctx.session_id,
+            file=UploadedFileRec(file_id=file_id, name=name, type=mime, data=b"bytes"),
+        )
+
+        with pytest.raises(StreamlitAPIException, match=message):
+            _pop_video_file(UploadedFileInfoProto(file_id=file_id))

@@ -60,9 +60,6 @@ from streamlit.proto.Common_pb2 import FileUploaderState as FileUploaderStatePro
 from streamlit.proto.Common_pb2 import UploadedFileInfo as UploadedFileInfoProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
-from streamlit.runtime.memory_uploaded_file_manager import (
-    MemoryUploadedFileManager,
-)
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
 from streamlit.runtime.state import (
@@ -89,14 +86,25 @@ _ACCEPTED_AUDIO_MIME_TYPES: frozenset[str] = frozenset(
     }
 )
 
+_ACCEPTED_VIDEO_EXTENSIONS: tuple[str, ...] = (".mp4", ".webm", ".mov")
+_ACCEPTED_VIDEO_MIME_TYPES: frozenset[str] = frozenset(
+    {
+        "video/mp4",
+        "video/webm",
+        "video/quicktime",
+        "video/x-matroska",
+        "application/octet-stream",
+    }
+)
+
 
 @dataclass
 class ChatInputValue(MutableMapping[str, Any]):
     """Represents the value returned by `st.chat_input` after user interaction.
 
     This dataclass contains the user's input text, any files uploaded, and optionally
-    an audio recording. It provides a dict-like interface for accessing and modifying
-    its attributes.
+    an audio recording or video recording. It provides a dict-like interface for
+    accessing and modifying its attributes.
 
     Attributes
     ----------
@@ -106,6 +114,8 @@ class ChatInputValue(MutableMapping[str, Any]):
         A list of files uploaded by the user. Only present when accept_file=True.
     audio : UploadedFile or None, optional
         An audio recording uploaded by the user, if any. Only present when accept_audio=True.
+    video : UploadedFile or None, optional
+        A video recording uploaded by the user, if any. Only present when accept_video=True.
 
     Notes
     -----
@@ -113,13 +123,16 @@ class ChatInputValue(MutableMapping[str, Any]):
     - Use `to_dict()` to convert the value to a standard dictionary.
     - The 'files' key is only present when accept_file=True.
     - The 'audio' key is only present when accept_audio=True.
+    - The 'video' key is only present when accept_video=True.
     """
 
     text: str
     files: list[UploadedFile] = field(default_factory=list)
     audio: UploadedFile | None = None
+    video: UploadedFile | None = None
     _include_files: bool = field(default=False, repr=False, compare=False)
     _include_audio: bool = field(default=False, repr=False, compare=False)
+    _include_video: bool = field(default=False, repr=False, compare=False)
     _included_keys: tuple[str, ...] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
@@ -129,6 +142,8 @@ class ChatInputValue(MutableMapping[str, Any]):
             keys.append("files")
         if self._include_audio:
             keys.append("audio")
+        if self._include_video:
+            keys.append("video")
         object.__setattr__(self, "_included_keys", tuple(keys))
 
     def _get_included_keys(self) -> tuple[str, ...]:
@@ -155,7 +170,7 @@ class ChatInputValue(MutableMapping[str, Any]):
             raise KeyError(f"Invalid key: {item}") from None
 
     def __getattribute__(self, name: str) -> Any:
-        # Intercept access to files/audio when they're excluded
+        # Intercept access to files/audio/video when they're excluded
         # Use object.__getattribute__ to avoid infinite recursion
         if name == "files" and not object.__getattribute__(self, "_include_files"):
             raise AttributeError(
@@ -164,6 +179,10 @@ class ChatInputValue(MutableMapping[str, Any]):
         if name == "audio" and not object.__getattribute__(self, "_include_audio"):
             raise AttributeError(
                 "'ChatInputValue' object has no attribute 'audio' (accept_audio=False)"
+            )
+        if name == "video" and not object.__getattribute__(self, "_include_video"):
+            raise AttributeError(
+                "'ChatInputValue' object has no attribute 'video' (accept_video=False)"
             )
         # For all other attributes, use normal lookup
         return object.__getattribute__(self, name)
@@ -189,6 +208,8 @@ class ChatInputValue(MutableMapping[str, Any]):
             result["files"] = self.files
         if self._include_audio:
             result["audio"] = self.audio
+        if self._include_video:
+            result["video"] = self.video
         return result
 
 
@@ -280,16 +301,6 @@ def _pop_upload_files(
             uploaded_file = UploadedFile(maybe_file_rec, f.file_urls)
             collected_files.append(uploaded_file)
 
-            # Remove file from manager after creating UploadedFile object.
-            # Only MemoryUploadedFileManager implements remove_file.
-            # This explicit type check ensures we only use this cleanup logic
-            # with manager types we've explicitly approved.
-            if isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
-                ctx.uploaded_file_mgr.remove_file(
-                    session_id=ctx.session_id,
-                    file_id=f.file_id,
-                )
-
     return collected_files
 
 
@@ -317,7 +328,7 @@ def _pop_audio_file(
         If the uploaded audio file does not have a `.wav` extension or its MIME type is not
         one of the accepted WAV types (`audio/wav`, `audio/wave`, `audio/x-wav`).
     """
-    if audio_file_info is None:
+    if audio_file_info is None or not audio_file_info.file_id:
         return None
 
     ctx = get_script_run_ctx()
@@ -342,21 +353,71 @@ def _pop_audio_file(
             f"Only WAV files ({_ACCEPTED_AUDIO_EXTENSION}) are accepted."
         )
 
-    # Validate MIME type (browsers may send different variations of WAV MIME types)
-    if uploaded_file.type not in _ACCEPTED_AUDIO_MIME_TYPES:
+    base_mime_type = uploaded_file.type.split(";")[0].strip()
+    if base_mime_type not in _ACCEPTED_AUDIO_MIME_TYPES:
         raise StreamlitAPIException(
             f"Invalid MIME type for audio input: `{uploaded_file.type}`. "
-            f"Expected one of {_ACCEPTED_AUDIO_MIME_TYPES}."
+            f"Accepted MIME types: {sorted(_ACCEPTED_AUDIO_MIME_TYPES)}."
         )
 
-    # Remove the file from the manager after creating the UploadedFile object.
-    # Only MemoryUploadedFileManager implements remove_file (not part of the
-    # UploadedFileManager Protocol). This explicit type check ensures we only
-    # use this cleanup logic with manager types we've explicitly approved.
-    if audio_file_info and isinstance(ctx.uploaded_file_mgr, MemoryUploadedFileManager):
-        ctx.uploaded_file_mgr.remove_file(
-            session_id=ctx.session_id,
-            file_id=audio_file_info.file_id,
+    return uploaded_file
+
+
+def _pop_video_file(
+    video_file_info: UploadedFileInfoProto | None,
+) -> UploadedFile | None:
+    """Extract and return a single video file from the protobuf message.
+
+    Similar to _pop_upload_files but handles a single video file instead of a list.
+    Validates that the uploaded file is a supported video file.
+
+    Parameters
+    ----------
+    video_file_info : UploadedFileInfoProto or None
+        The protobuf message containing information about the uploaded video file.
+
+    Returns
+    -------
+    UploadedFile or None
+        The extracted video file if available, None otherwise.
+
+    Raises
+    ------
+    StreamlitAPIException
+        If the uploaded video file does not have a supported extension or its
+        MIME type is not one of the accepted video types.
+    """
+    if video_file_info is None or not video_file_info.file_id:
+        return None
+
+    ctx = get_script_run_ctx()
+    if ctx is None:  # pragma: no cover - defensive
+        return None
+
+    file_recs_list = ctx.uploaded_file_mgr.get_files(
+        session_id=ctx.session_id,
+        file_ids=[video_file_info.file_id],
+    )
+
+    if len(file_recs_list) == 0:
+        return None
+
+    file_rec = file_recs_list[0]
+    uploaded_file = UploadedFile(file_rec, video_file_info.file_urls)
+
+    if not any(
+        uploaded_file.name.lower().endswith(ext) for ext in _ACCEPTED_VIDEO_EXTENSIONS
+    ):
+        raise StreamlitAPIException(
+            f"Invalid file extension for video input: `{uploaded_file.name}`. "
+            f"Allowed extensions: {_ACCEPTED_VIDEO_EXTENSIONS}."
+        )
+
+    base_mime_type = uploaded_file.type.split(";")[0].strip()
+    if base_mime_type not in _ACCEPTED_VIDEO_MIME_TYPES:
+        raise StreamlitAPIException(
+            f"Invalid MIME type for video input: `{uploaded_file.type}`. "
+            f"Accepted MIME types: {sorted(_ACCEPTED_VIDEO_MIME_TYPES)}."
         )
 
     return uploaded_file
@@ -366,31 +427,49 @@ def _pop_audio_file(
 class ChatInputSerde:
     accept_files: bool = False
     accept_audio: bool = False
+    accept_video: bool = False
     allowed_types: Sequence[str] | None = None
 
     def deserialize(
         self, ui_value: ChatInputValueProto | None
     ) -> str | ChatInputValue | None:
-        if ui_value is None or not ui_value.HasField("data"):
+        if ui_value is None:
             return None
-        if not self.accept_files and not self.accept_audio:
-            return ui_value.data
-        uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
-        for file in uploaded_files:
-            if self.allowed_types and not isinstance(file, DeletedFile):
-                enforce_filename_restriction(file.name, self.allowed_types)
 
-        # Extract audio file separately from the audio_file_info field
-        audio_file = _pop_audio_file(
-            ui_value.audio_file_info if ui_value.HasField("audio_file_info") else None
-        )
+        if not self.accept_files and not self.accept_audio and not self.accept_video:
+            return ui_value.data
+
+        uploaded_files = []
+        if self.accept_files:
+            uploaded_files = _pop_upload_files(ui_value.file_uploader_state)
+            for file in uploaded_files:
+                if self.allowed_types and not isinstance(file, DeletedFile):
+                    enforce_filename_restriction(file.name, self.allowed_types)
+
+        audio_file = None
+        if self.accept_audio:
+            audio_file = _pop_audio_file(ui_value.audio_file_info)
+
+        video_file = None
+        if self.accept_video:
+            video_file = _pop_video_file(ui_value.video_file_info)
+
+        if (
+            not ui_value.data
+            and not uploaded_files
+            and audio_file is None
+            and video_file is None
+        ):
+            return None
 
         return ChatInputValue(
             text=ui_value.data,
             files=uploaded_files,
             audio=audio_file,
+            video=video_file,
             _include_files=self.accept_files,
             _include_audio=self.accept_audio,
+            _include_video=self.accept_video,
         )
 
     def serialize(self, v: str | None) -> ChatInputValueProto:
@@ -555,6 +634,7 @@ class ChatMixin:
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[False] = False,
+        accept_video: Literal[False] = False,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -574,7 +654,28 @@ class ChatMixin:
         accept_file: Literal[False] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: Literal[True],
+        accept_video: bool = False,
         audio_sample_rate: int | None = 16000,
+        disabled: bool = False,
+        on_submit: WidgetCallback | None = None,
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+        width: WidthWithoutContent = "stretch",
+        height: Height = "content",
+    ) -> ChatInputValue | None: ...
+
+    @overload
+    def chat_input(
+        self,
+        placeholder: str = "Your message",
+        *,
+        key: Key | None = None,
+        max_chars: int | None = None,
+        max_upload_size: int | None = None,
+        accept_file: Literal[False] = False,
+        file_type: str | Sequence[str] | None = None,
+        accept_audio: bool = False,
+        accept_video: Literal[True],
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
         args: WidgetArgs | None = None,
@@ -594,6 +695,7 @@ class ChatMixin:
         accept_file: Literal[True, "multiple", "directory"],
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
+        accept_video: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
@@ -614,6 +716,7 @@ class ChatMixin:
         accept_file: bool | Literal["multiple", "directory"] = False,
         file_type: str | Sequence[str] | None = None,
         accept_audio: bool = False,
+        accept_video: bool = False,
         audio_sample_rate: int | None = 16000,
         disabled: bool = False,
         on_submit: WidgetCallback | None = None,
@@ -728,6 +831,12 @@ class ChatMixin:
             ``None``. If this is ``None``, the widget uses the browser's
             default sample rate (typically 44100 or 48000 Hz).
 
+        accept_video : bool
+            Whether to show a video recording button in the chat input. This
+            defaults to ``False``. If this is ``True``, users can record and
+            submit video messages. Recorded video is available as an
+            ``UploadedFile`` object.
+
         disabled : bool
             Whether the chat input should be disabled. This defaults to
             ``False``.
@@ -773,33 +882,38 @@ class ChatMixin:
 
             - ``None``: If the user didn't submit a message, file, or audio
               recording in the last rerun, the widget returns ``None``.
-            - A string: When the widget isn't configured to accept files or
-              audio recordings, and the user submitted a message in the last
-              rerun, the widget returns the user's message as a string.
-            - A dict-like object: When the widget is configured to accept files
-              or audio recordings, and the user submitted any content in the
-              last rerun, the widget returns a dict-like object.
+            - A string: When the widget isn't configured to accept files,
+              audio recordings, or video recordings, and the user submitted a
+              message in the last rerun, the widget returns the user's message
+              as a string.
+            - A dict-like object: When the widget is configured to accept files,
+              audio recordings, or video recordings, and the user submitted any
+              content in the last rerun, the widget returns a dict-like object.
               The object always includes the ``text`` attribute, and
-              optionally includes ``files`` and/or ``audio`` attributes depending
-              on the ``accept_file`` and ``accept_audio`` parameters.
+              optionally includes ``files``, ``audio`` and/or ``video`` attributes
+              depending on the ``accept_file``, ``accept_audio``, and
+              ``accept_video`` parameters.
 
-            When the widget is configured to accept files or audio recordings,
-            and the user submitted content in the last rerun, you can access
-            the user's submission with key or attribute notation from the
-            dict-like object. This is shown in Example 3 below.
+            When the widget is configured to accept files, audio recordings, or
+            video recordings, and the user submitted content in the last rerun,
+            you can access the user's submission with key or attribute notation
+            from the dict-like object. This is shown in Example 3 below.
 
             - The ``text`` attribute holds a string that is the user's message.
               This is an empty string if the user only submitted one or more
-              files or audio recordings.
+              files, audio recordings, or video recordings.
             - The ``files`` attribute is only present when ``accept_file``
               isn't ``False``. When present, it holds a list of
               ``UploadedFile`` objects. The list is empty if the user only
-              submitted a message or audio recording. Unlike
+              submitted a message, audio recording, or video recording. Unlike
               ``st.file_uploader``, this attribute always returns a list, even
               when the widget is configured to accept only one file at a time.
             - The ``audio`` attribute is only present when ``accept_audio`` is
               ``True``. When present, it holds an ``UploadedFile`` object if
               audio was recorded or ``None`` if no audio was recorded.
+            - The ``video`` attribute is only present when ``accept_video`` is
+              ``True``. When present, it holds an ``UploadedFile`` object if
+              video was recorded or ``None`` if no video was recorded.
 
             The ``UploadedFile`` class is a subclass of ``BytesIO`` and
             therefore is "file-like". This means you can pass an instance of it
@@ -957,6 +1071,7 @@ class ChatMixin:
             file_type=file_type,
             accept_audio=accept_audio,
             audio_sample_rate=audio_sample_rate,
+            accept_video=accept_video,
             width=width,
             height=height,
         )
@@ -1022,9 +1137,12 @@ class ChatMixin:
         if audio_sample_rate is not None:
             chat_input_proto.audio_sample_rate = audio_sample_rate
 
+        chat_input_proto.accept_video = accept_video
+
         serde = ChatInputSerde(
             accept_files=accept_file in {True, "multiple", "directory"},
             accept_audio=accept_audio,
+            accept_video=accept_video,
             allowed_types=file_type,
         )
         widget_state = register_widget(  # type: ignore[misc]
@@ -1061,22 +1179,15 @@ class ChatMixin:
 
         if ctx:
             save_for_app_testing(ctx, element_id, widget_state.value)
-        has_one_shot = widget_state.value_changed and widget_state.value is not None
         if position == "bottom":
             # We need to enqueue the chat input into the bottom container
             # instead of the currently active dg.
             get_dg_singleton_instance().bottom_dg._enqueue(
-                "chat_input",
-                chat_input_proto,
-                layout_config=layout_config,
-                has_one_shot_effect=has_one_shot,
+                "chat_input", chat_input_proto, layout_config=layout_config
             )
         else:
             self.dg._enqueue(
-                "chat_input",
-                chat_input_proto,
-                layout_config=layout_config,
-                has_one_shot_effect=has_one_shot,
+                "chat_input", chat_input_proto, layout_config=layout_config
             )
 
         return widget_state.value if not widget_state.value_changed else None

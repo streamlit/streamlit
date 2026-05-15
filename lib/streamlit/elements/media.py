@@ -15,6 +15,7 @@
 from __future__ import annotations
 
 import io
+import mimetypes
 import os
 import re
 from datetime import timedelta
@@ -31,6 +32,7 @@ from streamlit.proto.Video_pb2 import Video as VideoProto
 from streamlit.proto.WidthConfig_pb2 import WidthConfig
 from streamlit.runtime import caching
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.uploaded_file_manager import UploadedFile
 from streamlit.time_util import time_to_seconds
 
 if TYPE_CHECKING:
@@ -72,7 +74,7 @@ class MediaMixin:
     def audio(
         self,
         data: MediaData,
-        format: str = "audio/wav",
+        format: str | None = None,
         start_time: MediaTime = 0,
         *,
         sample_rate: int | None = None,
@@ -228,7 +230,7 @@ class MediaMixin:
     def video(
         self,
         data: MediaData,
-        format: str = "video/mp4",
+        format: str | None = None,
         start_time: MediaTime = 0,
         *,  # keyword-only arguments:
         subtitles: SubtitleData = None,
@@ -450,7 +452,7 @@ def _marshall_av_media(
     coordinates: str,
     proto: AudioProto | VideoProto,
     data: MediaData,
-    mimetype: str,
+    mimetype: str | None,
 ) -> None:
     """Fill audio or video proto based on contents of data.
 
@@ -475,6 +477,17 @@ def _marshall_av_media(
         data_or_filename = data
     elif isinstance(data, Path):
         data_or_filename = str(data)
+    elif isinstance(data, UploadedFile):
+        if mimetype is None:
+            mimetype = data.type
+        if mimetype is not None:
+            mimetype = mimetype.split(";", 1)[0].strip()
+        if not mimetype or mimetype == "application/octet-stream":
+            guessed, _ = mimetypes.guess_type(data.name, strict=False)
+            if guessed:
+                mimetype = guessed
+        data.seek(0)
+        data_or_filename = data.getvalue()
     elif isinstance(data, io.BytesIO):
         data.seek(0)
         data_or_filename = data.getvalue()
@@ -489,13 +502,15 @@ def _marshall_av_media(
     else:
         raise RuntimeError(f"Invalid binary data format: {type(data)}")
 
+    if mimetype is None:
+        mimetype = "audio/wav" if isinstance(proto, AudioProto) else "video/mp4"
+
     if runtime.exists():
         file_url = runtime.get_instance().media_file_mgr.add(
             data_or_filename, mimetype, coordinates
         )
         caching.save_media_data(data_or_filename, mimetype, coordinates)
     else:
-        # When running in "raw mode", we can't access the MediaFileManager.
         file_url = ""
 
     proto.url = file_url
@@ -506,7 +521,7 @@ def marshall_video(
     coordinates: str,
     proto: VideoProto,
     data: MediaData,
-    mimetype: str = "video/mp4",
+    mimetype: str | None = "video/mp4",
     start_time: int = 0,
     subtitles: SubtitleData = None,
     end_time: int | None = None,
@@ -773,7 +788,7 @@ def marshall_audio(
     coordinates: str,
     proto: AudioProto,
     data: MediaData,
-    mimetype: str = "audio/wav",
+    mimetype: str | None = None,
     start_time: int = 0,
     sample_rate: int | None = None,
     end_time: int | None = None,
