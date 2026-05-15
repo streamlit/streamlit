@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 
 import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
@@ -77,9 +77,6 @@ function useLazyDataLoader({
   // Track if we're still in initial loading state
   const [isLoading, setIsLoading] = useState(true)
 
-  // Create cache instance with stable identity based on source/generation
-  const cacheRef = useRef<LazyDataframeCache | null>(null)
-
   // Initialize cache with new source/generation
   const cache = useMemo(() => {
     const sourceId = lazyData.sourceId ?? ""
@@ -104,7 +101,6 @@ function useLazyDataLoader({
       },
     })
 
-    cacheRef.current = newCache
     return newCache
     // Re-create cache when source identity changes
   }, [

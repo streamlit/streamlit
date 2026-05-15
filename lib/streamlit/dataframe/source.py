@@ -178,12 +178,12 @@ class PandasDataframeSource:
 
         # Apply sorting if requested
         if sort is not None and sort.column in df.columns:
-            # Use stable mergesort to preserve relative order of equal elements
+            # Use stable sort to preserve relative order of equal elements
+            # Note: We don't use ignore_index=True to preserve original index labels
             df = df.sort_values(
                 by=sort.column,
                 ascending=sort.ascending,
-                kind="mergesort",
-                ignore_index=True,
+                kind="stable",
             )
         elif sort is not None:
             # Check if sorting by a named index

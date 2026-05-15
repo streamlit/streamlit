@@ -82,7 +82,7 @@ class TestPandasDataframeSource:
         assert isinstance(chunk_bytes, bytes)
 
     def test_load_rows_with_sort_ascending(self):
-        """Test row loading with ascending sort."""
+        """Test row loading with ascending sort returns correctly ordered data."""
         import pandas as pd
 
         df = pd.DataFrame({"a": [3, 1, 2], "b": [30, 10, 20]})
@@ -94,8 +94,14 @@ class TestPandasDataframeSource:
         )
         assert isinstance(chunk_bytes, bytes)
 
+        # Verify the data is actually sorted
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        assert values == [1, 2, 3]
+
     def test_load_rows_with_sort_descending(self):
-        """Test row loading with descending sort."""
+        """Test row loading with descending sort returns correctly ordered data."""
         import pandas as pd
 
         df = pd.DataFrame({"a": [3, 1, 2], "b": [30, 10, 20]})
@@ -106,6 +112,89 @@ class TestPandasDataframeSource:
             offset=0, limit=3, sort=SortConfig(column="a", ascending=False)
         )
         assert isinstance(chunk_bytes, bytes)
+
+        # Verify the data is actually sorted in descending order
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        assert values == [3, 2, 1]
+
+    def test_load_rows_sort_with_offset(self):
+        """Test row loading with sort and offset works correctly."""
+        import pandas as pd
+
+        df = pd.DataFrame({"a": [5, 3, 1, 4, 2]})
+        source = PandasDataframeSource(df)
+
+        # Load rows 1-3 (indices 1, 2) sorted ascending
+        chunk_bytes = source.load_rows(
+            offset=1, limit=2, sort=SortConfig(column="a", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        # After sort: [1, 2, 3, 4, 5], take offset 1 with limit 2 -> [2, 3]
+        assert values == [2, 3]
+
+    def test_load_rows_sort_by_named_index(self):
+        """Test sorting by a named index works correctly."""
+        import pandas as pd
+
+        df = pd.DataFrame({"a": [10, 20, 30]}, index=pd.Index([3, 1, 2], name="my_idx"))
+        source = PandasDataframeSource(df)
+
+        # Sort by the named index
+        chunk_bytes = source.load_rows(
+            offset=0, limit=3, sort=SortConfig(column="my_idx", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        # After sorting by index: index order becomes [1, 2, 3], values become [20, 30, 10]
+        values = table.column("a").to_pylist()
+        assert values == [20, 30, 10]
+
+    def test_load_rows_sort_unknown_column_ignored(self):
+        """Test that sorting by an unknown column is silently ignored."""
+        import pandas as pd
+
+        df = pd.DataFrame({"a": [3, 1, 2]})
+        source = PandasDataframeSource(df)
+
+        # Sort by a non-existent column - should return original order
+        chunk_bytes = source.load_rows(
+            offset=0, limit=3, sort=SortConfig(column="nonexistent", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        # Original order preserved since column doesn't exist
+        assert values == [3, 1, 2]
+
+    def test_load_rows_preserves_index_labels(self):
+        """Test that sorting preserves original index labels."""
+        import pandas as pd
+
+        df = pd.DataFrame(
+            {"a": [3, 1, 2]}, index=pd.Index(["x", "y", "z"], name="my_idx")
+        )
+        source = PandasDataframeSource(df)
+
+        # Sort by 'a' ascending
+        chunk_bytes = source.load_rows(
+            offset=0, limit=3, sort=SortConfig(column="a", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        # Values should be sorted
+        values = table.column("a").to_pylist()
+        assert values == [1, 2, 3]
+        # Index should also be reordered to match: y (1), z (2), x (3)
+        idx_values = table.column("my_idx").to_pylist()
+        assert idx_values == ["y", "z", "x"]
 
     def test_load_rows_offset_beyond_end(self):
         """Test that offset beyond the end returns empty data."""
@@ -157,6 +246,61 @@ class TestPolarsDataframeSource:
         chunk_bytes = source.load_rows(offset=0, limit=2)
         assert isinstance(chunk_bytes, bytes)
         assert len(chunk_bytes) > 0
+
+    @pytest.mark.require_integration
+    def test_load_rows_with_sort_ascending(self):
+        """Test row loading with ascending sort returns correctly ordered data."""
+        import polars as pl
+
+        df = pl.DataFrame({"a": [3, 1, 2], "b": [30, 10, 20]})
+        source = PolarsDataframeSource(df)
+
+        # Load all rows sorted by 'a' ascending
+        chunk_bytes = source.load_rows(
+            offset=0, limit=3, sort=SortConfig(column="a", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        assert values == [1, 2, 3]
+
+    @pytest.mark.require_integration
+    def test_load_rows_with_sort_descending(self):
+        """Test row loading with descending sort returns correctly ordered data."""
+        import polars as pl
+
+        df = pl.DataFrame({"a": [3, 1, 2], "b": [30, 10, 20]})
+        source = PolarsDataframeSource(df)
+
+        # Load all rows sorted by 'a' descending
+        chunk_bytes = source.load_rows(
+            offset=0, limit=3, sort=SortConfig(column="a", ascending=False)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        assert values == [3, 2, 1]
+
+    @pytest.mark.require_integration
+    def test_load_rows_sort_with_offset(self):
+        """Test row loading with sort and offset works correctly."""
+        import polars as pl
+
+        df = pl.DataFrame({"a": [5, 3, 1, 4, 2]})
+        source = PolarsDataframeSource(df)
+
+        # Load rows 1-3 (indices 1, 2) sorted ascending
+        chunk_bytes = source.load_rows(
+            offset=1, limit=2, sort=SortConfig(column="a", ascending=True)
+        )
+
+        reader = pa.ipc.open_stream(chunk_bytes)
+        table = reader.read_all()
+        values = table.column("a").to_pylist()
+        # After sort: [1, 2, 3, 4, 5], take offset 1 with limit 2 -> [2, 3]
+        assert values == [2, 3]
 
 
 class TestCreateDataframeSource:

@@ -102,8 +102,13 @@ function useLazyColumnSort(
     }
     // Find the column to get its name (id is the internal UI identifier)
     const column = columns.find(c => c.id === sortConfig.column.id)
+    // If the column is not found (e.g., schema changed), return null (no sort)
+    // to avoid sending an invalid column name to the backend
+    if (!column) {
+      return null
+    }
     return {
-      column: column?.name ?? "",
+      column: column.name,
       direction:
         sortConfig.direction === "desc"
           ? SortState.SortDirection.DESCENDING

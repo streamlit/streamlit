@@ -61,6 +61,7 @@ export interface LazyDataframeCacheConfig {
 /**
  * Key for identifying cached chunks based on sort state.
  * Different sort states require separate cache entries.
+ * Uses JSON.stringify to avoid key collisions from column names containing colons.
  */
 function makeSortKey(sort: ISortState | null | undefined): string {
   if (!sort?.column) {
@@ -68,7 +69,7 @@ function makeSortKey(sort: ISortState | null | undefined): string {
   }
   const dir =
     sort.direction === SortState.SortDirection.DESCENDING ? "desc" : "asc"
-  return `${sort.column}:${dir}`
+  return JSON.stringify({ column: sort.column, direction: dir })
 }
 
 /**
@@ -239,10 +240,12 @@ export class LazyDataframeCache {
   }
 
   private ensureSortCache(sortKey: string): Map<number, CachedChunk> {
-    if (!this.cache.has(sortKey)) {
-      this.cache.set(sortKey, new Map())
+    let sortCache = this.cache.get(sortKey)
+    if (!sortCache) {
+      sortCache = new Map()
+      this.cache.set(sortKey, sortCache)
     }
-    return this.cache.get(sortKey) ?? new Map()
+    return sortCache
   }
 
   private getChunkForRow(
