@@ -123,7 +123,7 @@ Selection of `make` commands for development (run in the repo root):
 - **Workspace packages must be built before frontend lint**: The `connection` and other workspaces import `@streamlit/utils` which needs its `dist/` output. Run `cd frontend && yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build` (or `make frontend-fast`) before `make frontend-lint`.
 - **Python `tzdata` package**: The VM may not have timezone data available to Python. The update script installs `tzdata` via `uv pip install tzdata` to prevent `ZoneInfoNotFoundError` in tests.
 - **`python` command**: The VM only has `python3` by default. The update script creates a symlink `python -> python3`.
-- **All make commands** must be run from the repo root (`/agent/repos/streamlit`).
+- **All make commands** must be run from the repo root.
 - **Pre-commit hooks** require `uv run git commit` / `uv run git push` so linters/formatters in the uv venv are available.
 - **E2E tests** require Playwright browsers: `uv run python -m playwright install --with-deps` (installed via `make python-init` by default).
 - For standard build/test/lint commands, see the `make` commands section above and the Makefile.
