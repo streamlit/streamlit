@@ -55,24 +55,27 @@ This spec should not copy these prototype details:
 See `preparations.md` in this directory for recommended frontend/dataframe cleanup that can land
 before the lazy-loading implementation starts. Key refactors:
 
-1. **Component-owned Arrow data derivations** ✅ DONE: `Quiver` construction has been moved out of
-   `ElementNode` and into `DataFrame`, `Table`, and `ArrowVegaLiteChart`.
+1. **Component-owned Arrow data derivations**: Move `Quiver` construction out of `ElementNode`
+   and into `DataFrame`, `Table`, and `ArrowVegaLiteChart`.
 
-2. **Dataframe capability/mode layer** ✅ DONE: `useDataFrameCapabilities(...)` now returns explicit
-   feature gates (`canSort`, `canSearch`, `canExportCsv`, `canEdit`, etc.). Lazy loading adds one
-   input (`dataMode: "eager" | "lazy"`) instead of sprinkling `if (isLazy)` conditionals.
+2. **Dataframe capability/mode layer**: Add `useDataFrameCapabilities(...)` that returns explicit
+   feature gates (`canSort`, `canSearch`, `canExportCsv`, `canEdit`, etc.). Lazy loading adds an
+   `isLazy` flag that disables incompatible features.
 
-3. **Sorting strategy split**: Refactor `useColumnSort` into explicit `sortingMode: "client" | "server" | "disabled"`.
-   Client sorting assumes all data is local; server sorting only manages sort state and header UI.
+3. **Sorting strategy split**: Implement separate hooks for eager/client-side sorting and
+   lazy/server-side sorting. The lazy hook only manages sort state and header UI without building
+   row mappings.
 
 4. **Cell-provider layering**: Split `useDataLoader` into base cell provider, editing overlay, cell
    formatter, and error boundary. Lazy loading replaces only the base cell provider.
 
-5. **Row-count abstraction**: Decouple displayed row count from `Quiver.dimensions.numDataRows`.
-   Lazy dataframes get `numRows` from source metadata while columns/schema come from the initial chunk.
+5. **Row-count abstraction**: Derive `originalNumRows` from `lazy_data.row_count` when lazy
+   metadata is present, decoupled from `Quiver.dimensions.numDataRows` on the initial chunk.
 
-6. **Toolbar/search/export gates**: Move toolbar visibility to capability layer gates
-   (`capabilities.canSearch`, `capabilities.canExportCsv`) so lazy mode disables these cleanly.
+6. **Toolbar/search/export gates**: Search and CSV export visibility should use capability flags
+   from `useDataFrameCapabilities` that respect the `isLazy` flag. Both toolbar UI and
+   keyboard shortcuts (Ctrl/Cmd+F for search, Ctrl/Cmd+A for select-all) must be gated on
+   capabilities to prevent triggering data loads or incorrect behavior for lazy dataframes.
 
 These refactors make the lazy-loading implementation simpler because eager/lazy differences are
 handled through explicit modes and capabilities rather than scattered conditionals.
@@ -198,6 +201,13 @@ Responsibilities:
 This should live near runtime/session code, not in the media file manager. The media file
 manager is optimized for deferred file generation and URL serving, while dataframe chunks are
 short-lived protocol responses.
+
+**Prototype Learning:** The source lifecycle callbacks should be integrated into
+`lib/streamlit/runtime/script_runner.py`:
+- `_clear_dataframe_source_refs(fragment_id)` called at script start (in `_run_script()`)
+- `_prune_dataframe_sources(fragment_id)` called after script finishes (after `on_script_finished`)
+This mirrors the media file manager pattern and ensures sources are cleaned up properly on
+rerun and fragment rerun.
 
 ### Proto Shape
 
@@ -394,6 +404,40 @@ should stay inside the dataframe component/hooks rather than adding a lazy branc
 - Column loading, column configuration, and formatting continue to use the schema/initial
   `Quiver`. Cell lookup for rows not present in the initial chunk goes through the lazy cache.
 
+**Prototype Learning - React Hooks Architecture:**
+
+To comply with React's Rules of Hooks, all hooks must be called unconditionally on every render.
+The implementation should always call both eager and lazy hooks, then select results based on
+`isLazy`:
+
+```typescript
+// Always call both hooks to maintain consistent hook order
+const eagerSortResult = useColumnSort(...)
+const lazySortResult = useLazyColumnSort(...)
+
+// Select based on mode
+const { columns, sortColumn, getCellContent } = isLazy
+  ? lazySortResult
+  : eagerSortResult
+```
+
+Error checks that might prevent rendering (e.g., missing `BackendOperationClient` for lazy mode)
+must be moved after all hooks and should render error UI instead of throwing, to avoid breaking
+the hook call order.
+
+**Capability Wiring:** The `lazySortable` capability from `lazy_data.sortable` must be explicitly
+passed to `useDataFrameCapabilities`:
+
+```typescript
+const capabilities = useDataFrameCapabilities({
+  // ...other params
+  isLazy,
+  lazySortable: lazyData?.sortable ?? false,
+})
+```
+
+This enables sorting UI only when the source declares `sortable=true`.
+
 ### Server-side Sorting Integration
 
 This section assumes the sorting strategy split from `preparations.md` has landed: `useColumnSort`
@@ -422,6 +466,18 @@ sources, sorting must use `sortingMode: "server"`:
 - Native adapters and future custom sources receive the sort state and are responsible for
   returning rows in that order. If a backend cannot safely sort every exposed column, the source
   should set `sortable=False`.
+
+**Prototype Learning:** The prototype uses separate hooks:
+- `useColumnSort` for eager/client-side sorting (existing)
+- `useLazyColumnSort` for lazy/server-side sorting (new)
+
+Both hooks should always be called to maintain React's Rules of Hooks, then results selected based
+on `isLazy` flag. The lazy hook should use `clickedColumn.name` (the backend schema column name) for
+sort state, not `sortConfig.column.id` (the internal frontend UI id).
+
+**Sort Column Name Resolution:** When communicating sort state to the backend, the frontend must
+use the column's name from the Arrow schema. Unknown column names should be silently ignored by the
+backend source (returning unsorted data) rather than falling back to index sorting.
 
 ### Frontend Cache and Rendering
 
@@ -528,6 +584,11 @@ The ForwardMsg handler should directly trigger this update when a chunk response
 avoiding the polling approach used in the prototype PR #11032. This provides immediate
 feedback when chunks load and avoids unnecessary timer overhead.
 
+**Prototype Learning:** The actual re-render can be triggered by React state updates
+(e.g., `setCacheVersion`) in the lazy data loader hook, not necessarily by explicit `updateCells()`
+calls. When a chunk loads, incrementing a cache version state causes React to re-render, and the
+`getCellContent` callback returns the newly loaded data instead of loading cells.
+
 #### Lazy Chunk Storage
 
 Each loaded Arrow chunk should still be parsed into a normal `Quiver` so the existing Arrow
@@ -583,6 +644,22 @@ Phase 1 adapters:
   threshold (`150000` rows) when lazy mode is compatible.
 - Native unevaluated adapters that are implementation-ready and can provide known row count,
   schema, stable range access, and safe sorting semantics.
+
+**Prototype Learning - Polars Schema Access:**
+For Polars dataframes, avoid materializing the entire dataframe to get the schema. Use
+`df.schema` directly to get a `polars.Schema` object, then convert to PyArrow schema:
+
+```python
+# Polars DataFrame - get schema without materializing
+polars_schema = df.schema
+pa_schema = pa.schema([
+    (name, df.head(0).to_arrow().schema.field(name).type)
+    for name in polars_schema.names()
+])
+```
+
+This avoids the memory and performance cost of converting the full dataframe to Arrow just to
+extract schema information.
 
 Phase 2 adapters:
 
@@ -785,8 +862,12 @@ The follow-up should add:
 - `pandas.Styler`: keep existing eager `st.dataframe(styler)` behavior for `lazy=None` and
   `lazy=False`; raise `StreamlitAPIException` for `lazy=True`.
 - `st.data_editor`: out of scope
-- Client-side search: disabled for lazy dataframes. Searching only loaded chunks would be
-  incorrect. Server-side search is deferred to a follow-up phase.
+- Client-side search: disabled for lazy dataframes. Both the search toolbar button and keyboard
+  shortcut (Ctrl/Cmd+F) are gated on `canSearch` capability. Searching only loaded chunks would
+  be incorrect. Server-side search is deferred to a follow-up phase.
+- Select-all keyboard shortcut: disabled for lazy dataframes via `isLazy` flag to prevent
+  triggering load requests for all data. This matches existing behavior for large tables (>150k
+  rows) where select-all is already disabled for performance reasons.
 - CSV download/export: hidden for lazy dataframes in MVP. Server-side export can be added later.
 - Filtering: out of scope until `st.dataframe` has a filtering UI/API.
 
@@ -855,6 +936,28 @@ annotations. Explicit capabilities are easier to validate and document.
 - Performance smoke test with a source larger than browser memory to verify initial payload size
   stays bounded.
 
+**Prototype Learning - E2E Test Utilities:**
+
+Lazy dataframe E2E tests must use the existing `dataframe_utils` helpers because Glide Data Grid
+uses canvas rendering, not standard DOM elements:
+
+```python
+from e2e_playwright.shared.dataframe_utils import (
+    expect_canvas_to_be_stable,
+    sort_column,
+)
+
+# Wait for canvas to stabilize before assertions
+expect_canvas_to_be_stable(dataframe)
+
+# Click on column header to sort (uses position calculation, not DOM selectors)
+sort_column(dataframe, col_pos=1, column_width="small")
+```
+
+Raw selectors like `locator('[data-testid="glide-cell"]')` will not work reliably because the
+grid content is rendered on a canvas element. Use the provided utilities that calculate pixel
+positions for interactions.
+
 ## References
 
 - Generic backend operation handling PR #15147: https://github.com/streamlit/streamlit/pull/15147
@@ -868,3 +971,38 @@ annotations. Explicit capabilities are easier to validate and document.
 - Snowpark `DataFrame.cache_result`: https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/api/snowflake.snowpark.DataFrame.cache_result
 - Snowflake `RESULT_SCAN`: https://docs.snowflake.com/en/sql-reference/functions/result_scan
 - Snowpark `DataFrame.to_pandas_batches`: https://docs.snowflake.com/en/developer-guide/snowpark/reference/python/latest/snowpark/api/snowflake.snowpark.DataFrame.to_pandas_batches
+
+## Prototype Implementation Reference
+
+The following files were created or modified in the prototype implementation
+(branch `lukasmasuch/lazy-dataframe-loading`, PR #15189). This serves as a reference for the
+actual implementation:
+
+**Backend (Python):**
+- `lib/streamlit/dataframe/__init__.py` - New package for dataframe sources
+- `lib/streamlit/dataframe/source.py` - `DataframeSourceProtocol`, `PandasDataframeSource`, `PolarsDataframeSource`
+- `lib/streamlit/runtime/dataframe_source_manager.py` - Session-scoped source manager
+- `lib/streamlit/runtime/dataframe_chunk_handler.py` - Handler for chunk requests
+- `lib/streamlit/elements/arrow.py` - Added `lazy` parameter and lazy mode resolution
+- `lib/streamlit/runtime/app_session.py` - Registered chunk handler, added source manager property
+- `lib/streamlit/runtime/script_runner.py` - Source lifecycle integration
+
+**Frontend (TypeScript):**
+- `frontend/lib/src/components/widgets/DataFrame/LazyDataframeCache.ts` - Chunk-based cache
+- `frontend/lib/src/components/widgets/DataFrame/hooks/useLazyDataLoader.ts` - Lazy cell loading hook
+- `frontend/lib/src/components/widgets/DataFrame/hooks/useLazyColumnSort.ts` - Server-side sorting hook
+- `frontend/lib/src/components/widgets/DataFrame/DataFrame.tsx` - Integrated lazy loading
+- `frontend/lib/src/components/widgets/DataFrame/hooks/useDataFrameCapabilities.ts` - Added `isLazy` and `lazySortable` flags
+- `frontend/lib/src/BackendOperationClient.ts` - Added `requestDataframeChunk` method
+
+**Protocol (Protobuf):**
+- `proto/streamlit/proto/Dataframe.proto` - `LazyDataframe`, `SortState` messages
+- `proto/streamlit/proto/BackMsg.proto` - `DataframeChunkRequestPayload`
+- `proto/streamlit/proto/ForwardMsg.proto` - `DataframeChunkResponsePayload`
+
+**Tests:**
+- `lib/tests/streamlit/dataframe/source_test.py` - Unit tests for source adapters
+- `lib/tests/streamlit/runtime/dataframe_source_manager_test.py` - Unit tests for manager
+- `lib/tests/streamlit/runtime/dataframe_chunk_handler_test.py` - Unit tests for handler
+- `e2e_playwright/st_dataframe_lazy.py` - E2E test app
+- `e2e_playwright/st_dataframe_lazy_test.py` - E2E tests

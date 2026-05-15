@@ -280,8 +280,13 @@ per-column public allowlist; adapters whose backend can only sort some columns s
 `sortable=False` and keep sorting disabled until a narrower capability API exists.
 
 **Search:** Table-wide search is disabled for lazy sources in the first version. Searching only
-loaded chunks would be incorrect because unloaded rows would be excluded. Server-side search
-can be added in a follow-up phase.
+loaded chunks would be incorrect because unloaded rows would be excluded. Both the search toolbar
+button and the search keyboard shortcut (Ctrl/Cmd+F) are disabled for lazy dataframes.
+Server-side search can be added in a follow-up phase.
+
+**Select-all:** The select-all keyboard shortcut (Ctrl/Cmd+A) is disabled for lazy dataframes to
+prevent triggering load requests for all data. This matches the existing behavior for large tables
+(>150k rows) where select-all is already disabled for performance reasons.
 
 `st.dataframe` does not currently support filtering. Lazy loading should not introduce
 filtering UI in the MVP, but the source API should leave a clear extension path for a future
