@@ -15,7 +15,12 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Iterable, Iterator, Mapping, MutableMapping
+from collections.abc import (
+    Iterable,
+    Iterator,
+    Mapping,
+    MutableMapping,
+)
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Any, Final, cast

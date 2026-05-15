@@ -32,7 +32,11 @@ from streamlit.errors import (
     StreamlitAPIException,
     StreamlitValueAssignmentNotAllowedError,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import in_cached_function
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    FragmentThreadState,
+    _thread_state,
+    in_cached_function,
+)
 
 _KEY: Final = "the key"
 
@@ -194,10 +198,10 @@ class CheckCacheReplayTest(ElementPoliciesTest):
 
 class FragmentCannotWriteToOutsidePathTest(unittest.TestCase):
     def setUp(self):
-        ctx = MagicMock()
-        ctx.current_fragment_id = "my_fragment_id"
-        ctx.current_fragment_delta_path = [0, 1, 2]
-        self.ctx = ctx
+        _thread_state.set(
+            FragmentThreadState(fragment_id="my_fragment_id", delta_path=[0, 1, 2])
+        )
+        self.ctx = MagicMock()
 
     @patch("streamlit.elements.lib.policies.get_script_run_ctx")
     def test_when_element_delta_path_length_is_smaller_than_parent_then_raise(

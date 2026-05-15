@@ -40,6 +40,7 @@ from streamlit.runtime.fragment import (
 )
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import _thread_state
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -474,19 +475,27 @@ class FragmentTest(unittest.TestCase):
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_resets_current_fragment_id_on_success(self, patched_get_script_run_ctx):
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            FragmentThreadState,
+        )
+
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
         def my_fragment():
-            assert ctx.current_fragment_id != "my_fragment_id"
+            assert _thread_state.get().fragment_id != "my_fragment_id"
 
-        ctx.current_fragment_id = "my_fragment_id"
+        _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
         my_fragment()
-        assert ctx.current_fragment_id == "my_fragment_id"
+        assert _thread_state.get().fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            FragmentThreadState,
+        )
+
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -494,14 +503,14 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_exploding_fragment():
-            assert ctx.current_fragment_id != "my_fragment_id"
+            assert _thread_state.get().fragment_id != "my_fragment_id"
             raise Exception(exception_message)
 
-        ctx.current_fragment_id = "my_fragment_id"
+        _thread_state.set(FragmentThreadState(fragment_id="my_fragment_id"))
         with pytest.raises(Exception, match=exception_message):
             my_exploding_fragment()
 
-        assert ctx.current_fragment_id == "my_fragment_id"
+        assert _thread_state.get().fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_wrapped_fragment_not_saved_in_FragmentStorage(
@@ -549,7 +558,7 @@ class FragmentTest(unittest.TestCase):
         def my_fragment():
             nonlocal call_count
 
-            assert ctx.current_fragment_id is not None
+            assert _thread_state.get().fragment_id is not None
 
             curr_dg_stack = context_dg_stack.get()
             # Verify that mutations made in previous runs of my_fragment aren't
@@ -583,13 +592,18 @@ class FragmentTest(unittest.TestCase):
     def test_sets_current_fragment_id_in_full_script_runs(
         self, patched_get_script_run_ctx
     ):
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            FragmentThreadState,
+        )
+
         ctx = MagicMock()
         ctx.cursors = {}
         ctx.fragment_ids_this_run = []
         ctx.new_fragment_ids = ThreadSafeSet()
-        ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
+
+        _thread_state.set(FragmentThreadState(fragment_id=None))
 
         dg = MagicMock()
         dg.my_random_field = 0
@@ -597,7 +611,7 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_fragment():
-            assert ctx.current_fragment_id is not None
+            assert _thread_state.get().fragment_id is not None
 
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
@@ -617,7 +631,7 @@ class FragmentTest(unittest.TestCase):
         # This time, dg should have been mutated since we don't restore it from a
         # snapshot in a regular script run.
         assert dg.my_random_field == 3
-        assert ctx.current_fragment_id is None
+        assert _thread_state.get().fragment_id is None
 
     @parameterized.expand(
         [
@@ -757,7 +771,7 @@ class FragmentTest(unittest.TestCase):
         patched_get_script_run_ctx.return_value = ctx
 
         def my_function():
-            return ctx.current_fragment_id
+            return _thread_state.get().fragment_id
 
         fragment_id1 = _fragment(my_function)()
         fragment_id2 = _fragment(my_function, additional_hash_info="some_hash_info")()
@@ -1048,6 +1062,68 @@ class FragmentCannotWriteToOutsidePathTest(DeltaGeneratorTestCase):
         element_producer: ELEMENT_PRODUCER,
     ):
         _app(element_producer)
+
+
+class ParallelFragmentDispatchTest(DeltaGeneratorTestCase):
+    """Tests for ``_dispatch_parallel_fragment``."""
+
+    # Suppress unawaited coroutine warning from MagicMock(spec=Runtime).
+    pytestmark = pytest.mark.filterwarnings(
+        "ignore:coroutine.*was never awaited:RuntimeWarning"
+    )
+
+    def test_pre_created_container_uses_flex_container_proto_type(self) -> None:
+        """The container pre-created on the main thread for a parallel fragment
+        must use the same ``flex_container`` Block proto type that a fragment
+        rerun produces via ``st.container()``.
+
+        Regression test for the parallel-fragment widget-state-loss bug: if R1's
+        pre-created container is an empty ``Block`` and R2's container is a
+        ``flex_container``, the frontend's ``addBlock`` reconciliation drops
+        ``children = []`` (no inheritance), forcing widgets to unmount/remount
+        and creating a window where user click state can be lost.
+        """
+        from streamlit.runtime.fragment import ParallelFragmentCoordinator
+
+        # Stand up a coordinator that captures submitted workers without
+        # running them, so the test runs deterministically on a single thread.
+        captured_workers: list[Callable[[], None]] = []
+
+        coordinator = MagicMock(spec=ParallelFragmentCoordinator)
+        coordinator.submit = MagicMock(
+            side_effect=lambda fn, *args: captured_workers.append(lambda: fn(*args))
+        )
+        self.script_run_ctx.parallel_coordinator = coordinator
+        # Treat this as a full app run (not a fragment-id-scoped rerun) so
+        # ``_fragment`` takes the parallel-dispatch path.
+        self.script_run_ctx.fragment_ids_this_run = []
+
+        @fragment(parallel=True)
+        def my_parallel_fragment() -> None:  # pragma: no cover - body unused
+            pass
+
+        my_parallel_fragment()
+
+        # Exactly one addBlock should have been enqueued from the main-thread
+        # pre-creation step (the worker hasn't run yet).
+        deltas = self.get_all_deltas_from_queue()
+        assert len(deltas) == 1, (
+            f"expected 1 addBlock delta, got {len(deltas)}: {deltas}"
+        )
+        delta = deltas[0]
+        assert delta.WhichOneof("type") == "add_block", delta
+        block = delta.add_block
+
+        # The pre-created container must be a flex_container so it matches the
+        # proto type produced by ``st.container()`` on a fragment rerun.
+        assert block.WhichOneof("type") == "flex_container", (
+            f"parallel fragment pre-created container has wrong proto type: "
+            f"{block.WhichOneof('type')!r} (expected 'flex_container')"
+        )
+
+        # The delta should be tagged with the fragment_id so the frontend
+        # routes child elements to the correct fragment.
+        assert delta.fragment_id, "delta should be tagged with fragment_id"
 
 
 @pytest.mark.skipif(

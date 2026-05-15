@@ -314,11 +314,17 @@ class CachedFunc(Generic[P, R]):
         # on behalf of the user.
         is_nested_cache_function = in_cached_function.get()
 
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            _thread_state,
+        )
+
         spinner_or_no_context = (
             get_dg_singleton_instance().main_dg.spinner(
                 spinner_message, _cache=True, show_time=self._info.show_time
             )
-            if spinner_message is not None and not is_nested_cache_function
+            if spinner_message is not None
+            and not is_nested_cache_function
+            and not _thread_state.get().is_parallel_worker
             else contextlib.nullcontext()
         )
         with spinner_or_no_context:

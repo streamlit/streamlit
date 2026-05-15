@@ -20,6 +20,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react"
 
@@ -345,12 +346,19 @@ export function useBasicWidgetState<
     queryParamBindingOptions
   )
 
-  // Respond to value changes via session_state. This is also set via an
-  // "event", this time using the .setValue property of the proto.
+  // Track which element proto we already processed a setValue event for.
+  // Each script/fragment rerun creates a new proto object, so reference
+  // equality distinguishes "new event" from "already processed on a previous
+  // render of the same element".  This replaces the old approach of mutating
+  // element.setValue to false, which was unreliable under React batching —
+  // a later render could see the mutation from an earlier render's effect and
+  // skip a legitimate setValue=true event.
+  const lastProcessedSetValueRef = useRef<unknown>(null)
+
   useEffect(() => {
     if (!element.setValue) return
-    // eslint-disable-next-line react-hooks/immutability -- consuming setValue event from proto
-    element.setValue = false // Clear "event".
+    if (lastProcessedSetValueRef.current === element) return
+    lastProcessedSetValueRef.current = element
 
     setNextValueWithSource({
       value: getCurrStateFromProto(element),

@@ -526,10 +526,14 @@ def test_callbacks_with_rerun():
 def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     """Ensure fragment callback context flag is cleared on RerunException.
 
-    This guards against leaving `ctx.in_fragment_callback` stuck to True if
+    This guards against leaving `_thread_state.in_fragment_callback` stuck to True if
     a callback raises, which could contaminate subsequent runs.
     """
     from streamlit.runtime.scriptrunner import RerunException
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        FragmentThreadState,
+        _thread_state,
+    )
 
     ss = SessionState()
     wid = "w-frag"
@@ -551,8 +555,8 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
     ss._old_state[wid] = 1
     ss._new_widget_state.set_from_value(wid, 2)  # ensure _widget_changed is True
 
+    _thread_state.set(FragmentThreadState(in_fragment_callback=False))
     mock_ctx = MagicMock()
-    mock_ctx.in_fragment_callback = False
 
     with patch(
         "streamlit.runtime.state.session_state.get_script_run_ctx",
@@ -561,7 +565,7 @@ def test_fragment_callback_flag_resets_on_rerun_exception() -> None:
         # Callbacks internally catch RerunException and log a warning.
         ss._call_callbacks()
 
-    assert mock_ctx.in_fragment_callback is False
+    assert _thread_state.get().in_fragment_callback is False
 
 
 def test_updates():

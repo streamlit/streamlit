@@ -332,11 +332,16 @@ class WStates(MutableMapping[str, Any]):
         args = metadata.callback_args or ()
         kwargs = metadata.callback_kwargs or {}
 
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            _thread_state,
+        )
+
         ctx = get_script_run_ctx()
         if ctx and metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
+            ts = _thread_state.get()
+            ts.in_fragment_callback = True
             callback(*args, **kwargs)
-            ctx.in_fragment_callback = False
+            ts.in_fragment_callback = False
         else:
             callback(*args, **kwargs)
 
@@ -714,10 +719,14 @@ class SessionState:
             Keyword arguments passed to the callback.
         """
         from streamlit.runtime.scriptrunner import RerunException
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            _thread_state,
+        )
 
         ctx = get_script_run_ctx()
         if ctx and cb_metadata.fragment_id is not None:
-            ctx.in_fragment_callback = True
+            ts = _thread_state.get()
+            ts.in_fragment_callback = True
             try:
                 callback_fn(*cb_args, **cb_kwargs)
             except RerunException:
@@ -725,7 +734,7 @@ class SessionState:
                     "Calling st.rerun() within a callback is a no-op."
                 )
             finally:
-                ctx.in_fragment_callback = False
+                ts.in_fragment_callback = False
         else:
             try:
                 callback_fn(*cb_args, **cb_kwargs)

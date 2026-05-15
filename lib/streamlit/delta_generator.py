@@ -167,8 +167,10 @@ def _maybe_print_use_warning() -> None:
 
 def _maybe_print_fragment_callback_warning() -> None:
     """Print a warning if elements are being modified during a fragment callback."""
+    from streamlit.runtime.scriptrunner_utils.script_run_context import _thread_state
+
     ctx = get_script_run_ctx()
-    if ctx and getattr(ctx, "in_fragment_callback", False):
+    if ctx and _thread_state.get().in_fragment_callback:
         warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         logger.get_logger("root").warning(
@@ -488,8 +490,12 @@ class DeltaGenerator(
         # Operate on the active DeltaGenerator, in case we're in a `with` block.
         dg = self._active_dg
 
+        from streamlit.runtime.scriptrunner_utils.script_run_context import (
+            _thread_state,
+        )
+
         ctx = get_script_run_ctx()
-        if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
+        if ctx and _thread_state.get().fragment_id and _writes_directly_to_sidebar(dg):
             raise StreamlitAPIException(
                 "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
                 "supported. To write elements to the sidebar with a fragment, call your "
@@ -536,7 +542,9 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                dg._cursor.get_locked_cursor() if dg._cursor is not None else None
+                dg._cursor.lock_element(delta_type=delta_type)
+                if dg._cursor is not None
+                else None
             )
 
             output_dg = DeltaGenerator(
@@ -586,13 +594,9 @@ class DeltaGenerator(
         msg.metadata.delta_path[:] = dg._cursor.delta_path
         msg.delta.add_block.CopyFrom(block_proto)
 
-        # Normally we'd return a new DeltaGenerator that uses the locked cursor
-        # below. But in this case we want to return a DeltaGenerator that uses
-        # a brand new cursor for this new block we're creating.
-        block_cursor = cursor.RunningCursor(
-            root_container=dg._root_container,
-            parent_path=(*dg._cursor.parent_path, dg._cursor.index),
-        )
+        # Create a child cursor for the new block. open_block() also advances
+        # the parent cursor past this slot.
+        block_cursor = dg._cursor.open_block()
 
         # `dg_type` param added for st.status container. It allows us to
         # instantiate DeltaGenerator subclasses from the function.
@@ -612,8 +616,6 @@ class DeltaGenerator(
         # NOTE: Container form ids aren't set in proto.
         block_dg._form_data = FormData(current_form_id(dg))
 
-        # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor()
         _enqueue_message(msg)
 
         caching.save_block_message(

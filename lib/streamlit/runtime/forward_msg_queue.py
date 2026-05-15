@@ -29,8 +29,9 @@ class ForwardMsgQueue:
     flushes all session queues and delivers their messages to the appropriate
     clients.
 
-    ForwardMsgQueue is not thread-safe - a queue should only be used from
-    a single thread.
+    ForwardMsgQueue is not thread-safe — a queue should only be used from a
+    single thread. Parallel fragment workers enqueue via call_soon_threadsafe
+    which serializes onto the event loop thread.
     """
 
     _before_enqueue_msg: Callable[[ForwardMsg], None] | None = None
@@ -147,8 +148,8 @@ class ForwardMsgQueue:
                         # (not associated with a fragment) or...
                         msg.delta is None
                         or (
-                            # it is a delta but not associated with any of the passed
-                            # fragments
+                            # it is a delta but not associated with any of the
+                            # passed fragments
                             msg.delta is not None
                             and (
                                 msg.delta.fragment_id is None
@@ -166,7 +167,8 @@ class ForwardMsgQueue:
         before being cleared.
         """
         queue = self._queue
-        self.clear()
+        self._queue = []
+        self._delta_index_map = {}
         return queue
 
     def __len__(self) -> int:

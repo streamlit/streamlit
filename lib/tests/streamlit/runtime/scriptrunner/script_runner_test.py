@@ -51,7 +51,10 @@ from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequests,
     ScriptRequestType,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    _thread_state,
+    get_script_run_ctx,
+)
 from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
@@ -517,13 +520,15 @@ class ScriptRunnerTest(unittest.TestCase):
             ctx = get_script_run_ctx()
             assert ctx is not None
 
-            previous_fragment_id = ctx.current_fragment_id
-            ctx.current_fragment_id = "inner"
+            # PR 5b moved the active-fragment id off ctx onto thread-local state.
+            ts = _thread_state.get()
+            previous_fragment_id = ts.fragment_id
+            ts.fragment_id = "inner"
             try:
                 if inner.call_count == 1:
                     st.rerun(scope="fragment")
             finally:
-                ctx.current_fragment_id = previous_fragment_id
+                ts.fragment_id = previous_fragment_id
 
         inner = MagicMock(side_effect=rerun_inner)
 
@@ -562,13 +567,15 @@ class ScriptRunnerTest(unittest.TestCase):
                 "inner", inner, parent_fragment_id="outer"
             )
 
-            previous_fragment_id = ctx.current_fragment_id
-            ctx.current_fragment_id = "outer"
+            # PR 5b moved the active-fragment id off ctx onto thread-local state.
+            ts = _thread_state.get()
+            previous_fragment_id = ts.fragment_id
+            ts.fragment_id = "outer"
             try:
                 if outer.call_count == 1:
                     st.rerun(scope="fragment")
             finally:
-                ctx.current_fragment_id = previous_fragment_id
+                ts.fragment_id = previous_fragment_id
 
         outer = MagicMock(side_effect=rerun_outer)
         scriptrunner._fragment_storage.register("outer", outer, parent_fragment_id=None)
@@ -616,6 +623,7 @@ class ScriptRunnerTest(unittest.TestCase):
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
         ctx.current_fragment_id = "my_fragment_id"
+        ctx.parallel_coordinator = None
 
         def non_optional_func():
             raise KeyError("kaboom")

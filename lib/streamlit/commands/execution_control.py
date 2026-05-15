@@ -96,7 +96,10 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    from streamlit.runtime.scriptrunner_utils.script_run_context import _thread_state
+
+    fragment_id = _thread_state.get().fragment_id
+    new_queue = list(dropwhile(lambda x: x != fragment_id, curr_queue))
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
@@ -281,6 +284,9 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    from streamlit.runtime.fragment import _check_not_parallel_worker
+
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 
