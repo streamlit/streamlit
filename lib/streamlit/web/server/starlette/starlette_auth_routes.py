@@ -42,6 +42,7 @@ from streamlit.web.server.starlette.starlette_app_utils import (
     decode_signed_value,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
 )
@@ -57,9 +58,6 @@ _LOGGER: Final = get_logger(__name__)
 _ROUTE_AUTH_LOGIN: Final = "auth/login"
 _ROUTE_AUTH_LOGOUT: Final = "auth/logout"
 _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
-
-# Lifetime of the persistent auth cookies set by st.login(), 30 Days.
-_AUTH_COOKIE_MAX_AGE_SECONDS: Final = 30 * 24 * 60 * 60
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -187,7 +185,7 @@ def _set_single_cookie(
         httponly=True,
         samesite="lax",
         path=_get_cookie_path(),
-        max_age=_AUTH_COOKIE_MAX_AGE_SECONDS,
+        max_age=AUTH_COOKIE_MAX_AGE_SECONDS,
     )
 
 

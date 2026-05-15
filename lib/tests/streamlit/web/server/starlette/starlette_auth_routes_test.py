@@ -33,6 +33,7 @@ from streamlit.web.server.starlette.starlette_auth_routes import (
     create_auth_routes,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
 )
@@ -299,9 +300,7 @@ class TestAuthCookieFlags:
             assert cookie["path"] == "/"
 
             # Check max-age is present and equals 30 days.
-            assert cookie["max-age"] == str(
-                starlette_auth_routes._AUTH_COOKIE_MAX_AGE_SECONDS
-            )
+            assert cookie["max-age"] == str(AUTH_COOKIE_MAX_AGE_SECONDS)
 
             # Same persistence check on the tokens cookie.
             tokens_cookie_header = next(
@@ -316,7 +315,7 @@ class TestAuthCookieFlags:
             tokens_cookies = SimpleCookie()
             tokens_cookies.load(tokens_cookie_header)
             assert tokens_cookies[TOKENS_COOKIE_NAME]["max-age"] == str(
-                starlette_auth_routes._AUTH_COOKIE_MAX_AGE_SECONDS
+                AUTH_COOKIE_MAX_AGE_SECONDS
             )
 
     @patch_config_options(
