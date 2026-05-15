@@ -16,11 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-import {
-  DataEditorProps,
-  DataEditorRef,
-  GridCell,
-} from "@glideapps/glide-data-grid"
+import { DataEditorProps, GridCell } from "@glideapps/glide-data-grid"
 import { getLogger } from "loglevel"
 
 import { ILazyDataframe, ISortState } from "@streamlit/protobuf"
@@ -57,8 +53,6 @@ interface UseLazyDataLoaderParams {
   numRows: number
   /** Backend operation client for making chunk requests. */
   client: BackendOperationClient
-  /** Reference to the DataEditor for triggering cell updates. */
-  dataEditorRef: React.RefObject<DataEditorRef | null>
 }
 
 /**
@@ -76,7 +70,6 @@ function useLazyDataLoader({
   columns,
   numRows,
   client,
-  dataEditorRef,
 }: UseLazyDataLoaderParams): LazyDataLoaderReturn {
   // Track version to trigger re-renders when cache updates
   const [cacheVersion, setCacheVersion] = useState(0)
@@ -120,7 +113,6 @@ function useLazyDataLoader({
     lazyData.pageSize,
     lazyData.rowCount,
     client,
-    dataEditorRef,
   ])
 
   // Load initial chunk from proto if available
