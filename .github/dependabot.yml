@@ -81,6 +81,9 @@ updates:
       eslint:
         patterns:
           - "*eslint*"
+      emotion-icons:
+        patterns:
+          - "@emotion-icons/*"
       emotion:
         patterns:
           - "*emotion*"
@@ -98,9 +101,6 @@ updates:
       testing-library:
         patterns:
           - "@testing-library/*"
-      emotion-icons:
-        patterns:
-          - "@emotion-icons/*"
       moment:
         patterns:
           - "moment"
