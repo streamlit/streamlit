@@ -31,7 +31,10 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+    get_script_run_ctx,
+)
 from streamlit.time_util import time_to_seconds
 from streamlit.type_util import get_object_name
 from streamlit.util import calc_hash
@@ -329,7 +332,7 @@ def _fragment(
         if ctx is None:
             return None
 
-        parent_fragment_id_at_def = ctx.current_fragment_id
+        parent_fragment_id_at_def = ThreadState.get().fragment_id
 
         cursors_snapshot = deepcopy(ctx.cursors)
         dg_stack_snapshot = deepcopy(context_dg_stack.get())
@@ -339,7 +342,7 @@ def _fragment(
 
         # We intentionally want to capture the active script hash here to ensure
         # that the fragment is associated with the correct script running.
-        initialized_active_script_hash = ctx.active_script_hash
+        initialized_active_script_hash = ThreadState.get().active_script_hash
 
         def wrapped_fragment() -> Any:
             import streamlit as st
@@ -364,24 +367,17 @@ def _fragment(
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
             ctx.new_fragment_ids.check_and_add(fragment_id)
-            # Set ctx.current_fragment_id so that elements corresponding to this
-            # fragment get tagged with the appropriate ID. ctx.current_fragment_id gets
-            # reset after the fragment function finishes running to either return to the
-            # script (outside of any fragments) or to the outer fragment this one is
-            # nested in.
-            prev_fragment_id = ctx.current_fragment_id
-            ctx.current_fragment_id = fragment_id
-
-            try:
-                # Make sure we set the active script hash to the same value
-                # for the fragment run as when defined upon initialization
-                # This ensures that elements (especially widgets) are tied
-                # to a consistent active script hash
-                active_hash_context = (
-                    ctx.run_with_active_hash(initialized_active_script_hash)
-                    if initialized_active_script_hash != ctx.active_script_hash
-                    else contextlib.nullcontext()
-                )
+            # Pin the active script hash to the value captured at fragment
+            # definition (consistent widget IDs across reruns). Computed
+            # above ThreadState.scoped() so the comparison isn't coupled
+            # to scoped()'s field semantics.
+            active_hash_context = (
+                ctx.run_with_active_hash(initialized_active_script_hash)
+                if initialized_active_script_hash
+                != ThreadState.get().active_script_hash
+                else contextlib.nullcontext()
+            )
+            with ThreadState.scoped(fragment_id=fragment_id):
                 result = None
                 with active_hash_context:
                     with st.container():
@@ -394,11 +390,15 @@ def _fragment(
                             # e.g. [0, 3, 0] -> [0, 3].
                             # All fragment elements start with [0, 3].
                             active_dg = context_dg_stack.get()[-1]
-                            ctx.current_fragment_delta_path = (
-                                active_dg._cursor.delta_path
-                                if active_dg._cursor
-                                else []
-                            )[:-1]
+                            ThreadState.update(
+                                delta_path=tuple(
+                                    (
+                                        active_dg._cursor.delta_path
+                                        if active_dg._cursor
+                                        else []
+                                    )[:-1]
+                                )
+                            )
                             result = non_optional_func(*args, **kwargs)
                         except (
                             RerunException,
@@ -414,9 +414,6 @@ def _fragment(
                             # was already handled and flags should be set accordingly
                             raise FragmentHandledException(e)
                     return result
-            finally:
-                ctx.current_fragment_id = prev_fragment_id
-                ctx.current_fragment_delta_path = []
 
         ctx.fragment_storage.register(
             fragment_id,

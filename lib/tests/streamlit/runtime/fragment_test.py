@@ -40,6 +40,7 @@ from streamlit.runtime.fragment import (
 )
 from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
@@ -450,6 +451,7 @@ class FragmentTest(unittest.TestCase):
                 ),
             )
         )
+        ThreadState.initialize()
 
     def tearDown(self):
         context_dg_stack.set(self.original_dg_stack)
@@ -473,20 +475,20 @@ class FragmentTest(unittest.TestCase):
         assert called
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_resets_current_fragment_id_on_success(self, patched_get_script_run_ctx):
+    def test_resets_fragment_id_on_success(self, patched_get_script_run_ctx):
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
         @fragment
         def my_fragment():
-            assert ctx.current_fragment_id != "my_fragment_id"
+            assert ThreadState.get().fragment_id != "my_fragment_id"
 
-        ctx.current_fragment_id = "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
         my_fragment()
-        assert ctx.current_fragment_id == "my_fragment_id"
+        assert ThreadState.get().fragment_id == "my_fragment_id"
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
-    def test_resets_current_fragment_id_on_exception(self, patched_get_script_run_ctx):
+    def test_resets_fragment_id_on_exception(self, patched_get_script_run_ctx):
         ctx = MagicMock()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -494,14 +496,51 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_exploding_fragment():
-            assert ctx.current_fragment_id != "my_fragment_id"
+            assert ThreadState.get().fragment_id != "my_fragment_id"
             raise Exception(exception_message)
 
-        ctx.current_fragment_id = "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
         with pytest.raises(Exception, match=exception_message):
             my_exploding_fragment()
 
-        assert ctx.current_fragment_id == "my_fragment_id"
+        assert ThreadState.get().fragment_id == "my_fragment_id"
+
+    @patch("streamlit.runtime.fragment.get_script_run_ctx")
+    def test_nested_fragment_restores_outer_delta_path(
+        self, patched_get_script_run_ctx
+    ):
+        """After an inner fragment returns from inside an outer fragment,
+        ``ThreadState.get().delta_path`` is restored to the outer's prior
+        value.
+        """
+        ctx = MagicMock()
+        ctx.cursors = {}
+        ctx.fragment_ids_this_run = []
+        ctx.new_fragment_ids = ThreadSafeSet()
+        ctx.fragment_storage = MemoryFragmentStorage()
+        patched_get_script_run_ctx.return_value = ctx
+
+        captured: dict[str, object] = {}
+
+        @fragment
+        def inner_fragment():
+            captured["inner_delta_path"] = ThreadState.get().delta_path
+
+        @fragment
+        def outer_fragment():
+            # Sentinel so the assertion below is unambiguous.
+            ThreadState.update(delta_path=(0, 1, 2))
+            captured["outer_before_inner"] = ThreadState.get().delta_path
+            inner_fragment()
+            captured["outer_after_inner"] = ThreadState.get().delta_path
+
+        outer_fragment()
+
+        assert captured["outer_before_inner"] == (0, 1, 2)
+        # Sanity check: inner must actually mutate delta_path, otherwise the
+        # restoration assertion below would pass trivially.
+        assert captured["inner_delta_path"] != (0, 1, 2)
+        assert captured["outer_after_inner"] == (0, 1, 2)
 
     @patch("streamlit.runtime.fragment.get_script_run_ctx")
     def test_wrapped_fragment_not_saved_in_FragmentStorage(
@@ -549,7 +588,7 @@ class FragmentTest(unittest.TestCase):
         def my_fragment():
             nonlocal call_count
 
-            assert ctx.current_fragment_id is not None
+            assert ThreadState.get().fragment_id is not None
 
             curr_dg_stack = context_dg_stack.get()
             # Verify that mutations made in previous runs of my_fragment aren't
@@ -587,7 +626,6 @@ class FragmentTest(unittest.TestCase):
         ctx.cursors = {}
         ctx.fragment_ids_this_run = []
         ctx.new_fragment_ids = ThreadSafeSet()
-        ctx.current_fragment_id = None
         ctx.fragment_storage = MemoryFragmentStorage()
         patched_get_script_run_ctx.return_value = ctx
 
@@ -597,7 +635,7 @@ class FragmentTest(unittest.TestCase):
 
         @fragment
         def my_fragment():
-            assert ctx.current_fragment_id is not None
+            assert ThreadState.get().fragment_id is not None
 
             curr_dg_stack = context_dg_stack.get()
             curr_dg_stack[0].my_random_field += 1
@@ -617,7 +655,7 @@ class FragmentTest(unittest.TestCase):
         # This time, dg should have been mutated since we don't restore it from a
         # snapshot in a regular script run.
         assert dg.my_random_field == 3
-        assert ctx.current_fragment_id is None
+        assert ThreadState.get().fragment_id is None
 
     @parameterized.expand(
         [
@@ -667,7 +705,7 @@ class FragmentTest(unittest.TestCase):
         ctx.fragment_storage = MemoryFragmentStorage()
         ctx.pages_manager = PagesManager("")
         ctx.pages_manager.set_pages({})  # Migrate to MPAv2
-        ctx.active_script_hash = "some_hash"
+        ThreadState.update(active_script_hash="some_hash")
         # Use a plain dict (not the auto-generated MagicMock) so that deepcopy(ctx.cursors)
         # does not traverse back to the real fragment_storage above, whose threading.Lock
         # cannot be deepcopied.
@@ -685,7 +723,7 @@ class FragmentTest(unittest.TestCase):
         saved_fragment = next(iter(ctx.fragment_storage._fragments.values()))
 
         # set the hash to something different for subsequent calls
-        ctx.active_script_hash = "a_different_hash"
+        ThreadState.update(active_script_hash="a_different_hash")
 
         # Verify subsequent calls will run with the original active script hash
         saved_fragment()
@@ -757,7 +795,7 @@ class FragmentTest(unittest.TestCase):
         patched_get_script_run_ctx.return_value = ctx
 
         def my_function():
-            return ctx.current_fragment_id
+            return ThreadState.get().fragment_id
 
         fragment_id1 = _fragment(my_function)()
         fragment_id2 = _fragment(my_function, additional_hash_info="some_hash_info")()

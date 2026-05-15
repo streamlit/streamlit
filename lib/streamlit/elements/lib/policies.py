@@ -25,6 +25,7 @@ from streamlit.errors import (
     StreamlitValueAssignmentNotAllowedError,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
     get_script_run_ctx,
     in_cached_function,
 )
@@ -138,11 +139,17 @@ def check_fragment_path_policy(dg: DeltaGenerator) -> None:
     """
 
     ctx = get_script_run_ctx()
-    # Check is only relevant for fragments
-    if ctx is None or ctx.current_fragment_id is None:
+    if ctx is None:
         return
 
-    current_fragment_delta_path = ctx.current_fragment_delta_path
+    ts = ThreadState.get()
+    if ts.fragment_id is None:
+        return
+
+    current_fragment_delta_path = ts.delta_path
+    if current_fragment_delta_path is None:
+        return
+
     current_cursor = dg._active_dg._cursor
     if current_cursor is None:
         return

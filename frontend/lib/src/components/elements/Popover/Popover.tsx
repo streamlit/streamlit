@@ -243,7 +243,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
                           ? ":material/expand_less:"
                           : ":material/expand_more:"
                       }
-                      size="lg"
+                      size="base"
                     />
                   </StyledPopoverExpansionIcon>
                 )}
