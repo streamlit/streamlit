@@ -95,6 +95,35 @@ updates:
           # Due to the coupling between vite plugins and underlying swc
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      emotion-icons:
+        patterns:
+          - "@emotion-icons/*"
+      moment:
+        patterns:
+          - "moment"
+          - "moment-*"
+      styletron:
+        patterns:
+          - "styletron-*"
+          - "@types/styletron-*"
+      d3:
+        patterns:
+          - "d3"
+          - "d3-*"
+          - "@types/d3*"
+      plotly:
+        patterns:
+          - "plotly.js"
+          - "react-plotly.js"
+          - "@types/plotly*"
+          - "@types/react-plotly*"
+      oxc:
+        patterns:
+          - "oxlint"
+          - "oxfmt"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
