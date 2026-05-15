@@ -264,6 +264,16 @@ if TYPE_CHECKING:
     assert_type(dataframe(df, placeholder="-", on_select="rerun"), DataframeState)
 
     # =====================================================================
+    # Test lazy parameter (bool or None)
+    # =====================================================================
+
+    assert_type(dataframe(df, lazy=True), DeltaGenerator)
+    assert_type(dataframe(df, lazy=False), DeltaGenerator)
+    assert_type(dataframe(df, lazy=None), DeltaGenerator)
+    assert_type(dataframe(df, lazy=True, on_select="ignore"), DeltaGenerator)
+    # Note: lazy=True with on_select="rerun" raises at runtime but is type-valid
+
+    # =====================================================================
     # Test with all parameters combined (on_select="ignore")
     # =====================================================================
 
@@ -282,6 +292,7 @@ if TYPE_CHECKING:
             selection_default=None,
             row_height=35,
             placeholder="-",
+            lazy=False,
         ),
         DeltaGenerator,
     )
@@ -305,6 +316,7 @@ if TYPE_CHECKING:
             selection_default={"selection": {"rows": [0], "columns": ["A"]}},
             row_height=40,
             placeholder="N/A",
+            lazy=None,
         ),
         DataframeState,
     )
@@ -328,6 +340,7 @@ if TYPE_CHECKING:
             selection_default=None,
             row_height=None,
             placeholder=None,
+            lazy=None,
         ),
         DataframeState,
     )

@@ -763,8 +763,8 @@ class ArrowMixin:
             - ``True``: Force lazy loading. The dataframe will load rows
               on-demand as the user scrolls. This reduces the initial payload
               size and browser memory usage. Requires at least 1,000 rows to
-              take effect. Incompatible with ``pandas.Styler``,
-              ``on_select != "ignore"``, and editing modes.
+              take effect. Incompatible with ``pandas.Styler`` and
+              ``on_select != "ignore"``.
             - ``False``: Never use lazy loading. Uses the existing eager
               rendering path.
 
@@ -1012,16 +1012,6 @@ class ArrowMixin:
 
                 marshall_styler(proto.arrow_data, cast("Styler", data), default_uuid)
 
-            # Convert the input data into a pandas.DataFrame
-            data_df = dataframe_util.convert_anything_to_pandas_df(
-                data, ensure_copy=False
-            )
-            has_range_index = dataframe_util.has_range_index(data_df)
-            apply_data_specific_configs(column_config_mapping, data_format)
-
-            num_rows = len(data_df)
-            column_names = list(data_df.columns)
-
             # Determine if lazy mode should be used
             # Check if the data is a supported in-memory type for lazy loading
             import pandas as pd
@@ -1034,16 +1024,54 @@ class ArrowMixin:
                 and not is_selection_activated
             )
 
-            if lazy is True and is_lazy_compatible:
-                # User explicitly requested lazy mode
-                if num_rows >= _FORCED_LAZY_MIN_ROWS:
+            # For Polars dataframes that will use lazy mode, get row count without
+            # converting to pandas to avoid materializing the entire DataFrame
+            polars_row_count: int = 0
+            polars_column_names: list[str] = []
+            if is_in_memory_polars:
+                # Cast to Any to access Polars-specific attributes
+                # (is_polars_dataframe already verified the type)
+                polars_df = cast("Any", data)
+                polars_row_count = int(polars_df.height)
+                polars_column_names = list(polars_df.columns)
+                # Check if lazy mode should be used based on Polars metadata
+                if lazy is True and is_lazy_compatible:
+                    if polars_row_count >= _FORCED_LAZY_MIN_ROWS:
+                        use_lazy_mode = True
+                elif (
+                    lazy is None
+                    and is_lazy_compatible
+                    and polars_row_count > _AUTO_LAZY_THRESHOLD
+                ):
                     use_lazy_mode = True
-                # else: below threshold, use eager as small-data optimization
-            elif (
-                lazy is None and is_lazy_compatible and num_rows > _AUTO_LAZY_THRESHOLD
-            ):
-                # Auto-lazy: use lazy mode for large dataframes
-                use_lazy_mode = True
+
+            # Convert to pandas only if needed (not for Polars lazy mode)
+            data_df: pd.DataFrame | None = None
+            if not (is_in_memory_polars and use_lazy_mode):
+                data_df = dataframe_util.convert_anything_to_pandas_df(
+                    data, ensure_copy=False
+                )
+                has_range_index = dataframe_util.has_range_index(data_df)
+                num_rows = len(data_df)
+                column_names = list(data_df.columns)
+
+                # For pandas dataframes, check lazy mode based on converted data
+                if is_in_memory_pandas:
+                    if lazy is True and is_lazy_compatible:
+                        if num_rows >= _FORCED_LAZY_MIN_ROWS:
+                            use_lazy_mode = True
+                    elif (
+                        lazy is None
+                        and is_lazy_compatible
+                        and num_rows > _AUTO_LAZY_THRESHOLD
+                    ):
+                        use_lazy_mode = True
+            else:
+                # For Polars lazy mode, use the Polars metadata
+                num_rows = polars_row_count
+                column_names = polars_column_names
+
+            apply_data_specific_configs(column_config_mapping, data_format)
 
             if use_lazy_mode:
                 # Create lazy dataframe source and register it
@@ -1070,10 +1098,16 @@ class ArrowMixin:
                         source_mgr = session.session.dataframe_source_manager
                         delta_path = self.dg._get_delta_path_str()
 
-                        # Create the source adapter from the original data (not data_df)
-                        # to preserve the original data type
-                        source_data = data if is_in_memory_polars else data_df
-                        source = create_dataframe_source(source_data)
+                        # Create the source adapter from the original data
+                        # For Polars, use the original data; for pandas, use data_df
+                        # which has been validated/converted
+                        if is_in_memory_polars:
+                            source = create_dataframe_source(data)
+                        else:
+                            # data_df is guaranteed to be set for pandas lazy mode
+                            source = create_dataframe_source(
+                                cast("pd.DataFrame", data_df)
+                            )
 
                         # Register the source
                         source_id, generation = source_mgr.register_source(
@@ -1102,6 +1136,12 @@ class ArrowMixin:
 
             if not use_lazy_mode:
                 # Serialize the full data for eager mode
+                # If data_df is None (Polars lazy mode fell back), convert now
+                if data_df is None:
+                    data_df = dataframe_util.convert_anything_to_pandas_df(
+                        data, ensure_copy=False
+                    )
+                    has_range_index = dataframe_util.has_range_index(data_df)
                 proto.arrow_data.data = dataframe_util.convert_pandas_df_to_arrow_bytes(
                     data_df
                 )

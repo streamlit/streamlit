@@ -93,6 +93,19 @@ class DataframeSourceManager:
             A tuple of (source_id, generation) for this source.
         """
         with self._lock:
+            # Remove existing sources with the same delta_path to prevent memory leaks
+            # when a script reruns and re-registers sources for the same delta paths.
+            to_remove = [
+                sid
+                for sid, registered in self._sources.items()
+                if registered.delta_path == delta_path
+            ]
+            for sid in to_remove:
+                del self._sources[sid]
+                _LOGGER.debug(
+                    "Replaced existing source %s at delta_path %s", sid, delta_path
+                )
+
             source_id = str(uuid.uuid4())
             generation = str(uuid.uuid4())
 

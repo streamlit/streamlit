@@ -24,11 +24,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Final, Protocol
 
-import pyarrow as pa
-
 from streamlit import dataframe_util
 
 if TYPE_CHECKING:
+    import pyarrow as pa
+
     from streamlit.proto.Dataframe_pb2 import SortState
 
 
@@ -131,6 +131,8 @@ class PandasDataframeSource:
         df : pd.DataFrame
             The source pandas DataFrame.
         """
+        import pyarrow as pa
+
         self._df = df
         self._schema = pa.Schema.from_pandas(df)
 

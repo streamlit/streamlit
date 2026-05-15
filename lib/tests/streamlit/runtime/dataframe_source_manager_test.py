@@ -123,8 +123,9 @@ def test_prune_removes_unreferenced_sources() -> None:
 
     manager.prune_unreferenced_sources()
 
-    # First source should be gone, second should remain
-    assert manager.source_count == 2  # New registration + old path still counted
+    # First source should be gone (not re-registered), second should remain
+    # (and was replaced during re-registration)
+    assert manager.source_count == 1
 
 
 def test_clear_all_removes_all_sources() -> None:

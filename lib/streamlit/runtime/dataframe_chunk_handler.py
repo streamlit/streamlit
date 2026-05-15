@@ -23,7 +23,6 @@ from __future__ import annotations
 import asyncio
 from typing import TYPE_CHECKING, Final
 
-from streamlit.dataframe.source import MAX_CHUNK_LIMIT, sort_state_to_config
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
@@ -79,6 +78,9 @@ class DataframeChunkHandler:
         BackendOperationResponse
             The response containing Arrow data or an error message.
         """
+        # Import here to avoid importing pyarrow/numpy at module load time
+        from streamlit.dataframe.source import MAX_CHUNK_LIMIT, sort_state_to_config
+
         payload = request.dataframe_chunk
 
         # Validate session and get source manager
