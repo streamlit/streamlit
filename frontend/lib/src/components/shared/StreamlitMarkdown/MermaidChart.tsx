@@ -14,7 +14,15 @@
  * limitations under the License.
  */
 
-import { memo, useCallback, useEffect, useId, useMemo, useState } from "react"
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 
 import {
   Check,
@@ -354,9 +362,17 @@ const MermaidChart = memo(function MermaidChart({
 
   const themeConfig = useMemo(() => getMermaidThemeConfig(theme), [theme])
 
+  // Counter to ensure each render gets a unique diagram ID, preventing conflicts
+  // when rapid source/theme changes cause overlapping mermaid.render() calls.
+  const renderCounterRef = useRef(0)
+
   useEffect(() => {
     let isCancelled = false
     let committedToState = false
+
+    // Increment counter for each effect run to generate a unique ID
+    renderCounterRef.current += 1
+    const renderNum = renderCounterRef.current
 
     const renderMermaid = async (): Promise<void> => {
       setIsLoading(true)
@@ -386,8 +402,10 @@ const MermaidChart = memo(function MermaidChart({
           mermaidWithKey[THEME_CONFIG_KEY] = themeConfigKey
         }
 
-        // Generate a unique ID for this render (remove colons since mermaid uses it as a CSS selector)
-        const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}`
+        // Generate a unique ID for this render. Includes render counter to prevent
+        // conflicts when multiple renders overlap (e.g., rapid source changes).
+        // Remove colons since mermaid uses it as a CSS selector.
+        const diagramId = `mermaid-${uniqueId.replace(/:/g, "")}-${renderNum}`
         const { svg } = await mermaid.render(diagramId, source)
 
         if (isCancelled) return
@@ -415,6 +433,8 @@ const MermaidChart = memo(function MermaidChart({
           const errorMessage =
             err instanceof Error ? err.message : "Failed to render diagram"
           setError(errorMessage)
+          // Clear svgBlobUrl so the cleanup effect revokes any previously successful URL
+          setSvgBlobUrl(null)
           setIsLoading(false)
         }
       }
