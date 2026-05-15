@@ -233,7 +233,7 @@ class WriteMixin:
                         "Failed to parse the LangChain AIMessageChunk. "
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent LangChain update. You might be able to fix this "
-                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "by downgrading the LangChain library or upgrading Streamlit. Also, "
                         "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 

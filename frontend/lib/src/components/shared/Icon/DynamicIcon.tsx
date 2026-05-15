@@ -135,6 +135,7 @@ const DynamicIconDispatcher = ({
     return (
       <StyledDynamicIcon {...props}>
         <StyledSpinnerIcon
+          aria-hidden="true"
           data-testid={props.testid || "stSpinnerIcon"}
           {...props}
         />

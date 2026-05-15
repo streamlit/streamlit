@@ -14,20 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  Dataframe as DataframeProto,
-  Element,
-  ForwardMsgMetadata,
-  IArrowData,
-  IArrowNamedDataSet,
-  VegaLiteChart as VegaLiteChartProto,
-} from "@streamlit/protobuf"
-
-import type {
-  VegaLiteChartElement,
-  WrappedNamedDataset,
-} from "~lib/components/elements/ArrowVegaLiteChart/arrowUtils"
-import { Quiver } from "~lib/dataframes/Quiver"
+import { Element, ForwardMsgMetadata } from "@streamlit/protobuf"
 
 import { AppNode } from "./AppNode.interface"
 import { TransientNode } from "./TransientNode"
@@ -46,10 +33,6 @@ export class ElementNode implements AppNode {
   public readonly scriptRunId: string
 
   public readonly fragmentId?: string
-
-  private lazyQuiverElement?: Quiver
-
-  private lazyVegaLiteChartElement?: VegaLiteChartElement
 
   // The hash of the script that created this element.
   public readonly activeScriptHash: string
@@ -72,84 +55,6 @@ export class ElementNode implements AppNode {
     this.activeScriptHash = activeScriptHash
     this.fragmentId = fragmentId
     this.elementHash = elementHash
-  }
-
-  /**
-   * Create a new ElementNode with updated lifecycle metadata but preserved
-   * lazy caches (quiverElement, vegaLiteChartElement). This is used when
-   * reusing an element payload based on matching elementHash.
-   */
-  public withPreservedDerivations(
-    metadata: ForwardMsgMetadata,
-    scriptRunId: string,
-    activeScriptHash: string,
-    fragmentId?: string,
-    elementHash?: string
-  ): ElementNode {
-    const newNode = new ElementNode(
-      this.element,
-      metadata,
-      scriptRunId,
-      activeScriptHash,
-      fragmentId,
-      elementHash
-    )
-    // Preserve the lazy caches from this node
-    newNode.lazyQuiverElement = this.lazyQuiverElement
-    newNode.lazyVegaLiteChartElement = this.lazyVegaLiteChartElement
-    return newNode
-  }
-
-  public get quiverElement(): Quiver {
-    if (this.lazyQuiverElement !== undefined) {
-      return this.lazyQuiverElement
-    }
-
-    if (this.element.type !== "table" && this.element.type !== "dataframe") {
-      throw new Error(
-        `elementType '${this.element.type}' is not a valid Quiver element!`
-      )
-    }
-
-    const arrowData =
-      this.element.type === "table"
-        ? (this.element.table?.arrowData as IArrowData)
-        : ((this.element.dataframe as DataframeProto)?.arrowData as IArrowData)
-    const toReturn = new Quiver(arrowData)
-    // TODO (lukasmasuch): Delete element from proto object?
-    this.lazyQuiverElement = toReturn
-    return toReturn
-  }
-
-  public get vegaLiteChartElement(): VegaLiteChartElement {
-    if (this.lazyVegaLiteChartElement !== undefined) {
-      return this.lazyVegaLiteChartElement
-    }
-
-    if (this.element.type !== "vegaLiteChart") {
-      throw new Error(
-        `elementType '${this.element.type}' is not a valid VegaLiteChartElement!`
-      )
-    }
-
-    const proto = this.element.vegaLiteChart as VegaLiteChartProto
-    const modifiedData = proto.data ? new Quiver(proto.data) : null
-    const modifiedDatasets =
-      proto.datasets.length > 0 ? wrapDatasets(proto.datasets) : []
-
-    const toReturn = {
-      data: modifiedData,
-      spec: proto.spec,
-      datasets: modifiedDatasets,
-      useContainerWidth: proto.useContainerWidth,
-      vegaLiteTheme: proto.theme,
-      id: proto.id,
-      selectionMode: proto.selectionMode,
-      formId: proto.formId,
-    }
-
-    this.lazyVegaLiteChartElement = toReturn
-    return toReturn
   }
 
   /**
@@ -210,15 +115,4 @@ export class ElementNode implements AppNode {
       node.deltaMsgReceivedAt
     )
   }
-}
-
-/** Iterates over datasets and converts data to Quiver. */
-function wrapDatasets(datasets: IArrowNamedDataSet[]): WrappedNamedDataset[] {
-  return datasets.map((dataset: IArrowNamedDataSet) => {
-    return {
-      hasName: dataset.hasName as boolean,
-      name: dataset.name as string,
-      data: new Quiver(dataset.data as IArrowData),
-    }
-  })
 }

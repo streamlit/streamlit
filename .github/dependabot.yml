@@ -117,14 +117,6 @@ updates:
       - "autofix"
       - "never-stale"
 
-    ignore:
-      - dependency-name: "langchain"
-        # Newer langchain version conflict with our test setup
-        # see: https://github.com/streamlit/streamlit/pull/10227
-        versions: [">=0.3.21"]
-      - dependency-name: "langchain-community"
-        versions: [">=0.3.14"]
-
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
   - package-ecosystem: "uv"

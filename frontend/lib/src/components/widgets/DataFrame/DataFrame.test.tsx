@@ -20,7 +20,6 @@ import { screen } from "@testing-library/react"
 
 import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
-import { Quiver } from "~lib/dataframes/Quiver"
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { TEN_BY_TEN } from "~lib/mocks/arrow/tenByTen"
 import { render } from "~lib/test_util"
@@ -48,25 +47,23 @@ vi.mock("native-file-system-adapter", () => ({}))
 import DataFrame, { DataFrameProps } from "./DataFrame"
 
 const getProps = (
-  data: Quiver,
+  data: Uint8Array,
   editingMode: DataframeProto.EditingMode = DataframeProto.EditingMode
     .READ_ONLY
 ): DataFrameProps => ({
   element: DataframeProto.create({
-    arrowData: { data: new Uint8Array() },
+    arrowData: { data },
     editingMode,
   }),
-  data,
+  elementHash: "test-hash",
   disabled: false,
   widgetMgr: {
     getStringValue: vi.fn(),
   } as unknown as WidgetStateManager,
 })
 
-const { ResizeObserver } = window
-
 describe("DataFrame widget", () => {
-  const props = getProps(new Quiver({ data: TEN_BY_TEN }))
+  const props = getProps(TEN_BY_TEN)
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -78,7 +75,6 @@ describe("DataFrame widget", () => {
   })
 
   afterEach(() => {
-    window.ResizeObserver = ResizeObserver
     vi.restoreAllMocks()
   })
 
@@ -89,7 +85,7 @@ describe("DataFrame widget", () => {
 
   it("renders when widgetMgr is undefined", () => {
     const propsWithoutWidgetMgr = {
-      ...getProps(new Quiver({ data: TEN_BY_TEN })),
+      ...getProps(TEN_BY_TEN),
       widgetMgr: undefined,
     }
 
@@ -134,12 +130,7 @@ describe("DataFrame widget", () => {
     }))
 
     render(
-      <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.FIXED
-        )}
-      />
+      <DataFrame {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.FIXED)} />
     )
     // Check the mock was called with the expected props
     expect(dataEditorMockFn).toHaveBeenCalledWith(
@@ -155,10 +146,7 @@ describe("DataFrame widget", () => {
   it("enables trailing row for ADD_ONLY editing mode", () => {
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.ADD_ONLY
-        )}
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.ADD_ONLY)}
       />
     )
 
@@ -186,10 +174,7 @@ describe("DataFrame widget", () => {
   it("enables row selection for DELETE_ONLY editing mode", () => {
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.DELETE_ONLY
-        )}
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DELETE_ONLY)}
       />
     )
 
@@ -214,10 +199,7 @@ describe("DataFrame widget", () => {
   it("enables both trailing row and row selection for DYNAMIC editing mode", () => {
     render(
       <DataFrame
-        {...getProps(
-          new Quiver({ data: TEN_BY_TEN }),
-          DataframeProto.EditingMode.DYNAMIC
-        )}
+        {...getProps(TEN_BY_TEN, DataframeProto.EditingMode.DYNAMIC)}
       />
     )
 
