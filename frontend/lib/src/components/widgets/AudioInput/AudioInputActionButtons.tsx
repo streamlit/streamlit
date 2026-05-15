@@ -59,7 +59,7 @@ const ActionButton: React.FC<BaseActionButtonProps> = ({
     containerWidth
     data-testid="stAudioInputActionButton"
   >
-    <Icon content={iconContent} size="lg" color="inherit" />
+    <Icon content={iconContent} size="base" color="inherit" />
   </BaseButton>
 )
 

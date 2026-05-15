@@ -39,7 +39,6 @@ lazy_loaded_modules = [
     # a local credentials.toml file. So, we cannot test this here.
     # Internal modules:
     "streamlit.emojis",
-    "streamlit.external",
     "streamlit.material_icon_names",
     "streamlit.proto.openmetrics_data_model_pb2",
     "streamlit.vendor.pympler",

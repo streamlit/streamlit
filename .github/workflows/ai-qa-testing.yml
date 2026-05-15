@@ -1,0 +1,310 @@
+# AI QA Testing workflow runs QA tests on a PR branch using Cursor CLI
+name: AI QA Testing
+
+on:
+  pull_request:
+    types: [labeled]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to run QA tests on"
+        required: true
+        type: number
+      model:
+        description: "Model to use for QA testing"
+        required: false
+        type: string
+        default: "claude-opus-4-7-thinking-xhigh"
+
+env:
+  PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+  MODEL: ${{ github.event.inputs.model || 'claude-opus-4-7-thinking-xhigh' }}
+
+jobs:
+  check-secrets:
+    if: github.event_name == 'workflow_dispatch' || github.event.label.name == 'ai-qa-test'
+    runs-on: ubuntu-latest
+    outputs:
+      has_key: ${{ steps.check-key.outputs.has_key }}
+    steps:
+      - name: Check for API key
+        id: check-key
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+        run: |
+          if [ -z "$CURSOR_API_KEY" ]; then
+            echo "has_key=false" >> $GITHUB_OUTPUT
+            echo "::warning::CURSOR_API_KEY is not available. This typically happens for PRs from forks."
+          else
+            echo "has_key=true" >> $GITHUB_OUTPUT
+          fi
+
+  ai-qa-testing:
+    needs: check-secrets
+    if: needs.check-secrets.outputs.has_key == 'true'
+    runs-on: ubuntu-latest-8-cores
+    timeout-minutes: 90
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      actions: read
+    outputs:
+      qa_dir: ${{ steps.qa-setup.outputs.qa_dir }}
+
+    concurrency:
+      group: ${{ github.workflow }}-pr-${{ github.event.inputs.pr_number || github.event.pull_request.number }}
+      cancel-in-progress: true
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Get PR details
+        id: pr-info
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+        run: |
+          PR_DATA=$(gh api "repos/$REPOSITORY/pulls/$PR_NUMBER_ENV")
+          echo "head_sha=$(echo "$PR_DATA" | jq -r '.head.sha')" >> "$GITHUB_OUTPUT"
+          echo "head_ref=$(echo "$PR_DATA" | jq -r '.head.ref')" >> "$GITHUB_OUTPUT"
+          echo "base_ref=$(echo "$PR_DATA" | jq -r '.base.ref')" >> "$GITHUB_OUTPUT"
+          echo "html_url=$(echo "$PR_DATA" | jq -r '.html_url')" >> "$GITHUB_OUTPUT"
+          echo "title=$(echo "$PR_DATA" | jq -r '.title')" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout Streamlit code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.pr-info.outputs.head_sha }}
+          persist-credentials: false
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Set Python version vars
+        uses: ./.github/actions/build_info
+
+      - name: Setup virtual env
+        uses: ./.github/actions/make_init
+        with:
+          python_version: ${{ env.PYTHON_MAX_VERSION }}
+
+      - name: Install playwright
+        uses: ./.github/actions/playwright_install
+
+      - name: Build frontend
+        run: make frontend-fast
+
+      - name: Clone agent-wiki
+        run: |
+          git clone https://github.com/streamlit/streamlit.wiki.git agent-wiki
+
+      - name: Install Cursor CLI
+        run: |
+          curl https://cursor.com/install -fsS | bash
+          echo "$HOME/.cursor/bin" >> $GITHUB_PATH
+
+      - name: Set up QA directory
+        id: qa-setup
+        env:
+          HEAD_REF: ${{ steps.pr-info.outputs.head_ref }}
+        run: |
+          # Derive feature name from branch (strip prefix before "/" if present)
+          # Falls back to short commit hash in detached-HEAD environments (e.g., CI)
+          FEATURE_NAME=$(echo "$HEAD_REF" | sed 's|.*/||')
+          FEATURE_NAME=${FEATURE_NAME:-$(git rev-parse --short HEAD)}
+          QA_DIR="work-tmp/qa-${FEATURE_NAME}"
+          mkdir -p "$QA_DIR"
+
+          # Export for later steps and as output
+          echo "QA_DIR=$QA_DIR" >> "$GITHUB_ENV"
+          echo "qa_dir=$QA_DIR" >> "$GITHUB_OUTPUT"
+
+      - name: AI QA Testing
+        env:
+          CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY: ${{ github.repository }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          PR_HTML_URL: ${{ steps.pr-info.outputs.html_url }}
+        run: |
+          PROMPT="You are operating in a GitHub Actions runner to perform QA testing on a pull request.
+
+          ## Context
+
+          - Repository: $REPOSITORY
+          - Main branch: develop
+          - PR Number: $PR_NUMBER_ENV
+          - PR URL: $PR_HTML_URL
+
+          The repository is checked out at the PR's head commit with full git history.
+          The dev environment is set up - you can run make commands.
+          Playwright browsers are installed for testing.
+          The frontend is built and ready.
+
+          The GitHub CLI (gh) is available for READ operations.
+
+          ## Task
+
+          Run the qa-testing-feature subagent to perform comprehensive QA testing on this PR.
+
+          Do not ask for confirmation. Execute tests and document all findings.
+
+          Write the final QA report to '${QA_DIR}/qa-report.md'.
+          Write exactly one of PASS, FAIL, or BLOCKED (no formatting, just the word) to '${QA_DIR}/verdict.txt'.
+          "
+          cursor-agent -p "$PROMPT" --force --model "$MODEL" --output-format=text || true
+
+          # Ensure report and verdict files exist (fallback if cursor-agent fails)
+          if [ ! -f "${QA_DIR}/qa-report.md" ]; then
+            echo "# QA Testing Report" > "${QA_DIR}/qa-report.md"
+            echo "" >> "${QA_DIR}/qa-report.md"
+            echo "QA testing did not produce a report." >> "${QA_DIR}/qa-report.md"
+          fi
+
+          if [ ! -f "${QA_DIR}/verdict.txt" ]; then
+            echo "UNKNOWN" > "${QA_DIR}/verdict.txt"
+          fi
+
+      - name: Upload QA artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: qa-testing-output
+          path: |
+            ${{ env.QA_DIR }}/qa-report.md
+            ${{ env.QA_DIR }}/verdict.txt
+          retention-days: 7
+
+  post-results:
+    needs: [check-secrets, ai-qa-testing]
+    if: always() && needs.check-secrets.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Remove 'ai-qa-test' label
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr edit "$PR_NUMBER_ENV" --remove-label "ai-qa-test" --repo "$REPOSITORY" || true
+
+      - name: Download QA artifacts
+        id: download
+        if: needs.ai-qa-testing.result == 'success'
+        uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: qa-testing-output
+          path: qa-artifacts
+
+      - name: Post missing key notice
+        if: needs.check-secrets.outputs.has_key == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body "ℹ️ **AI QA Testing Not Available via Label**
+
+          The \`ai-qa-test\` label cannot trigger AI QA testing for this PR because the required API key is not available. This typically happens for PRs from forked repositories.
+
+          **To request AI QA testing, a maintainer can:**
+          1. Go to the [AI QA Testing workflow](https://github.com/streamlit/streamlit/actions/workflows/ai-qa-testing.yml)
+          2. Click **Run workflow**
+          3. Enter the PR number: \`$PR_NUMBER_ENV\`
+          4. Click **Run workflow**" --repo "$REPOSITORY"
+
+      - name: Post QA report
+        if: needs.check-secrets.outputs.has_key == 'true' && steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          MODEL_NAME: ${{ env.MODEL }}
+          RUN_ID: ${{ github.run_id }}
+          QA_DIR: ${{ needs.ai-qa-testing.outputs.qa_dir }}
+        run: |
+          if [ -f "qa-artifacts/${QA_DIR}/qa-report.md" ]; then
+            # Add footer to report
+            {
+              echo ""
+              echo "---"
+              echo "*This is an automated QA report by \`$MODEL_NAME\`.*"
+            } >> "qa-artifacts/${QA_DIR}/qa-report.md"
+
+            gh pr comment "$PR_NUMBER_ENV" --body-file "qa-artifacts/${QA_DIR}/qa-report.md" --repo "$REPOSITORY"
+          else
+            gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI QA Testing completed but no report was generated.**
+
+            Please check the [workflow run](https://github.com/${REPOSITORY}/actions/runs/${RUN_ID}) for details." --repo "$REPOSITORY"
+          fi
+
+      - name: Post failure notice
+        if: needs.check-secrets.outputs.has_key == 'true' && (needs.ai-qa-testing.result == 'failure' || steps.download.outcome != 'success')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          gh pr comment "$PR_NUMBER_ENV" --body "⚠️ **AI QA Testing Failed**
+
+          The AI QA testing job failed to complete. Please check the [workflow run](${SERVER_URL}/$REPOSITORY/actions/runs/${RUN_ID}) for details.
+
+          You can retry by adding the 'ai-qa-test' label again or manually triggering the workflow." --repo "$REPOSITORY"
+
+      - name: Apply label based on verdict
+        if: needs.check-secrets.outputs.has_key == 'true' && steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER_ENV: ${{ env.PR_NUMBER }}
+          REPOSITORY: ${{ github.repository }}
+          QA_DIR: ${{ needs.ai-qa-testing.outputs.qa_dir }}
+        run: |
+          if [ ! -f "qa-artifacts/${QA_DIR}/verdict.txt" ]; then
+            echo "Warning: verdict.txt not found, skipping label"
+            exit 0
+          fi
+
+          VERDICT=$(cat "qa-artifacts/${QA_DIR}/verdict.txt" | tr -d '[:space:]')
+          case "$VERDICT" in
+            FAIL)
+              echo "Adding 'do-not-merge' label"
+              gh pr edit "$PR_NUMBER_ENV" --add-label "do-not-merge" --repo "$REPOSITORY"
+              ;;
+            PASS)
+              echo "Removing 'do-not-merge' label if present"
+              gh pr edit "$PR_NUMBER_ENV" --remove-label "do-not-merge" --repo "$REPOSITORY" || true
+              ;;
+            *)
+              echo "Verdict is $VERDICT - no label changes"
+              ;;
+          esac
+
+      - name: Write step summary
+        env:
+          QA_RESULT: ${{ needs.ai-qa-testing.result }}
+          HAS_KEY: ${{ needs.check-secrets.outputs.has_key }}
+          QA_DIR: ${{ needs.ai-qa-testing.outputs.qa_dir }}
+        run: |
+          {
+            echo "## AI QA Testing Summary"
+            echo "- PR: #$PR_NUMBER"
+            echo "- Model: $MODEL"
+            echo "- Result: $QA_RESULT"
+            if [ "$HAS_KEY" = "false" ]; then
+              echo "- Note: API key not available (fork PR)"
+            fi
+            if [ -f "qa-artifacts/${QA_DIR}/verdict.txt" ]; then
+              echo "- Verdict: $(cat "qa-artifacts/${QA_DIR}/verdict.txt")"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"

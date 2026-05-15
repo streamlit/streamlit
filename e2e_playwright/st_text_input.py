@@ -167,6 +167,21 @@ bound_text_max = st.text_input(
 )
 st.write("bound text max value:", bound_text_max)
 
+# Programmatic st.session_state updates must sync the browser URL for bound widgets
+if runtime.exists():
+    st.markdown("Bound widget + session_state sync:")
+    if st.button("Set bound_text_ss via session_state", key="set_bound_text_ss_btn"):
+        st.session_state["bound_text_ss"] = "arbitrary value"
+    if st.button("Reset bound_text_ss to default", key="reset_bound_text_ss_btn"):
+        st.session_state["bound_text_ss"] = "default"
+    st.text_input(
+        "bound text session state input",
+        value="default",
+        key="bound_text_ss",
+        bind="query-params",
+    )
+    st.write("bound text ss value:", st.session_state["bound_text_ss"])
+
 # --- setValue one-shot test (element hash memo regression) ---
 if "setvalue_counter" not in st.session_state:
     st.session_state.setvalue_counter = 0
