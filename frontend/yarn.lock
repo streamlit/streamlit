@@ -3641,7 +3641,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.5.1"
     postinstall-postinstall: "npm:^2.1.0"
-    protobufjs: "npm:^8.0.3"
+    protobufjs: "npm:^8.3.0"
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-color: "npm:^2.18.1"
@@ -3694,7 +3694,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/protobuf@workspace:protobuf"
   dependencies:
-    protobufjs-cli: "npm:^2.0.3"
+    protobufjs: "npm:^8.3.0"
+    protobufjs-cli: "npm:^2.3.0"
     typesync: "npm:^0.14.3"
   languageName: unknown
   linkType: soft
@@ -13348,7 +13349,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"minimist@npm:^1.2.0, minimist@npm:^1.2.5, minimist@npm:^1.2.6, minimist@npm:^1.2.8":
+"minimist@npm:^1.2.5, minimist@npm:^1.2.6, minimist@npm:^1.2.8":
   version: 1.2.8
   resolution: "minimist@npm:1.2.8"
   checksum: 10c0/19d3fcdca050087b84c2029841a093691a91259a47def2f18222f41e7645a0b7c44ef4b40e88a1e58a40c84d2ef0ee6047c55594d298146d0eb3f6b737c20ce6
@@ -14957,9 +14958,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs-cli@npm:^2.0.3":
-  version: 2.0.3
-  resolution: "protobufjs-cli@npm:2.0.3"
+"protobufjs-cli@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "protobufjs-cli@npm:2.3.0"
   dependencies:
     chalk: "npm:^4.0.0"
     escodegen: "npm:^1.13.0"
@@ -14967,26 +14968,26 @@ __metadata:
     estraverse: "npm:^5.1.0"
     glob: "npm:^8.0.0"
     jsdoc: "npm:^4.0.0"
-    minimist: "npm:^1.2.0"
+    minimist: "npm:^1.2.8"
     semver: "npm:^7.1.2"
     tmp: "npm:^0.2.1"
     uglify-js: "npm:^3.7.7"
   peerDependencies:
-    protobufjs: ">=8.0.2 <9"
+    protobufjs: ">=8.2.1 <9"
   bin:
     pbjs: bin/pbjs
     pbts: bin/pbts
-  checksum: 10c0/7a7aed39dbe919755d9912ceb9ddc8c247af76cb4ee2fee131d43a5133bccf716143dceb919edf0cd06633f1d7e69fce5c3a4ac76f209537e142672ae14e7b0c
+    protoc-gen-pbjs: bin/protoc-gen-pbjs
+  checksum: 10c0/ab91ef4b4359ec866c20075518820de4fdd5ee80bd9b704effe1460f0f5324a328292b3b23c2f3837f0bee34bbc4b4895e9de3d998ce66ce83a2d69012e5bb32
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^8.0.3":
-  version: 8.0.3
-  resolution: "protobufjs@npm:8.0.3"
+"protobufjs@npm:^8.3.0":
+  version: 8.3.0
+  resolution: "protobufjs@npm:8.3.0"
   dependencies:
-    "@types/node": "npm:>=13.7.0"
     long: "npm:^5.0.0"
-  checksum: 10c0/af4d29a3a872e9770f22b3a43158e187ce0138abb018b808ea147b6d23034df31438e69d8b85b85826ef353e38cea7142c252307e9ef403022b2ac94be010540
+  checksum: 10c0/dfdb7224b44cff678e971671b6edff6653f29970b4c593b43f220a433ca30a1468465064761b8360488f2531c34651289421af3d60275485582194b21131d639
   languageName: node
   linkType: hard
 

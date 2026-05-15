@@ -95,6 +95,10 @@ updates:
           # Due to the coupling between vite plugins and underlying swc
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
+      protobufjs:
+        patterns:
+          - "protobufjs"
+          - "protobufjs-cli"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
