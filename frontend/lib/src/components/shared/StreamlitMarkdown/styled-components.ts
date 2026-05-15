@@ -223,7 +223,7 @@ export const StyledStreamlitMarkdown =
         fontWeight: inheritFont ? "inherit" : undefined,
         marginBottom:
           isLabel || isInHorizontalLayout ? "" : `-${theme.spacing.lg}`,
-        opacity: isCaption ? 0.6 : undefined,
+        opacity: isCaption ? theme.opacities.secondary : undefined,
         color: "inherit",
         // Always respect the width of the parent container:
         maxWidth: "100%",
@@ -307,7 +307,7 @@ export const StyledStreamlitMarkdown =
           margin: "1em 0 1em 0",
           padding: `0 0 0 0.75em`,
           borderLeft: `0.15em solid ${theme.colors.borderColor}`,
-          opacity: 0.6,
+          opacity: theme.opacities.secondary,
         },
 
         "b, strong": {
