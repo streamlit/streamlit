@@ -19,7 +19,7 @@ from __future__ import annotations
 import pyarrow as pa
 import pytest
 
-from streamlit.dataframe.source import (
+from streamlit.dataframe_sources.source import (
     PandasDataframeSource,
     PolarsDataframeSource,
     SortConfig,

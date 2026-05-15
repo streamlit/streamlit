@@ -1076,7 +1076,7 @@ class ArrowMixin:
 
             if use_lazy_mode:
                 # Create lazy dataframe source and register it
-                from streamlit.dataframe.source import (
+                from streamlit.dataframe_sources.source import (
                     DEFAULT_PAGE_SIZE,
                     create_dataframe_source,
                 )

@@ -19,7 +19,7 @@ from __future__ import annotations
 import asyncio
 from unittest.mock import MagicMock
 
-from streamlit.dataframe.source import MAX_CHUNK_LIMIT
+from streamlit.dataframe_sources.source import MAX_CHUNK_LIMIT
 from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 from streamlit.proto.Dataframe_pb2 import SortState
 from streamlit.runtime.dataframe_chunk_handler import DataframeChunkHandler

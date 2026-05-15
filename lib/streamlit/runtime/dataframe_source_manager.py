@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Final
 from streamlit.logger import get_logger
 
 if TYPE_CHECKING:
-    from streamlit.dataframe.source import DataframeSourceProtocol
+    from streamlit.dataframe_sources.source import DataframeSourceProtocol
 
 _LOGGER: Final = get_logger(__name__)
 

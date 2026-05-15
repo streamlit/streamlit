@@ -79,7 +79,10 @@ class DataframeChunkHandler:
             The response containing Arrow data or an error message.
         """
         # Import here to avoid importing pyarrow/numpy at module load time
-        from streamlit.dataframe.source import MAX_CHUNK_LIMIT, sort_state_to_config
+        from streamlit.dataframe_sources.source import (
+            MAX_CHUNK_LIMIT,
+            sort_state_to_config,
+        )
 
         payload = request.dataframe_chunk
 
