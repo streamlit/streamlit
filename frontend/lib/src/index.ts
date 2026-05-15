@@ -18,7 +18,13 @@
 import "@streamlit/utils"
 // These imports are each exported specifically in order to minimize public apis.
 export type { LibConfig } from "@streamlit/connection"
-export { AppRoot, BlockNode, ElementNode, TransientNode } from "./AppNode"
+export {
+  AppRoot,
+  BlockNode,
+  ElementNode,
+  TransientNode,
+  type AppNode,
+} from "./AppNode"
 export {
   ContainerContentsWrapper,
   VerticalBlock,
@@ -26,8 +32,8 @@ export {
 export type { BlockPropsWithoutWidth } from "./components/core/Block/Block"
 export { default as ElementNodeRenderer } from "./components/core/Block/ElementNodeRenderer"
 export type { ElementNodeRendererProps } from "./components/core/Block/ElementNodeRenderer"
-export { DownloadContext } from "./components/core/DownloadContext"
-export type { DownloadContextProps } from "./components/core/DownloadContext"
+export { BackendOperationContext } from "./components/core/BackendOperationContext"
+export type { BackendOperationContextProps } from "./components/core/BackendOperationContext"
 export { FormsContext } from "./components/core/FormsContext"
 export type { FormsContextProps } from "./components/core/FormsContext"
 export { default as IsDialogContext } from "./components/core/IsDialogContext"
@@ -84,6 +90,8 @@ export { useWindowDimensionsContext } from "./components/shared/WindowDimensions
 export { ComponentRegistry } from "./components/widgets/CustomComponent/ComponentRegistry"
 export { Quiver } from "./dataframes/Quiver"
 export { FileUploadClient } from "./FileUploadClient"
+export { BackendOperationClient } from "./BackendOperationClient"
+export type { BackendOperationClientProps } from "./BackendOperationClient"
 export { useCopyToClipboard } from "./hooks/useCopyToClipboard"
 export { useCrossOriginAttribute } from "./hooks/useCrossOriginAttribute"
 export { useEmotionTheme } from "./hooks/useEmotionTheme"

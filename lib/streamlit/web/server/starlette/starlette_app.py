@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import copy
+from collections.abc import Mapping as MappingABC
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Final
@@ -73,6 +75,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.media_file_manager import MediaFileManager
     from streamlit.runtime.memory_media_file_storage import MemoryMediaFileStorage
     from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+    )
+    from streamlit.runtime.secrets import SecretsValue
 
 # Reserved route prefixes that users cannot override.
 _RESERVED_ROUTE_PREFIXES: Final[tuple[str, ...]] = (
@@ -256,6 +262,12 @@ class App:
         paths are resolved based on context: when started via ``streamlit run``,
         they resolve relative to the main script; when started directly via uvicorn
         or another ASGI server, they resolve relative to the current working directory.
+    secrets : Mapping[str, SecretsValue] | None
+        A dictionary of secrets to make available via ``st.secrets``. Supported
+        value types are: ``str``, ``int``, ``float``, ``bool``, and nested ``dict``.
+        When provided, these secrets are shallow-merged with file-based secrets
+        (programmatic secrets override file-based secrets at the top level).
+        Unsupported types raise ``TypeError`` at construction.
     lifespan : Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         Async context manager for startup/shutdown logic. The context manager
         receives the App instance and can yield a dictionary of state that will
@@ -266,8 +278,30 @@ class App:
     middleware : Sequence[Middleware] | None
         Middleware stack to apply to all requests. User middleware runs before
         Streamlit's internal middleware.
+    on_script_error : Callable[[Exception], bool | None] | None
+        Callback invoked when an uncaught exception occurs during script execution.
+        The callback receives the exception and can optionally return ``True`` to
+        suppress the default exception display in the UI, allowing custom error UI
+        to be shown instead. Returns ``False`` or ``None`` to show the exception
+        normally. Useful for integrating with error monitoring services like Sentry.
+
+        The handler is invoked for:
+
+        - Uncaught exceptions in the full app script
+        - Exceptions in widget callbacks (``on_change``, ``on_click``, etc.)
+
+        The handler is NOT invoked for:
+
+        - ``st.stop()`` / ``st.rerun()`` (control flow, not errors)
+        - Syntax/compile errors in the script
+        - ``KeyboardInterrupt`` / ``SystemExit``
     exception_handlers : Mapping[Any, ExceptionHandler] | None
-        Custom exception handlers for user routes.
+        A mapping of either integer status codes, or exception class types onto
+        callables which handle the exceptions. Exception handler callables should
+        be of the form ``handler(request, exc) -> response`` and may be either
+        standard functions, or async functions. This is only for exception handling
+        on the network layer. Use ``on_script_error`` for customized handling of
+        uncaught exceptions from the app script.
     debug : bool
         Enable debug mode for the underlying Starlette application.
 
@@ -301,28 +335,85 @@ class App:
     ...     return JSONResponse({"status": "ok"})
     >>>
     >>> app = App("main.py", routes=[Route("/health", health)])
+
+    With programmatic secrets:
+
+    >>> import os
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> app = App(
+    ...     "main.py",
+    ...     secrets={
+    ...         "database": {
+    ...             "host": os.environ["DB_HOST"],
+    ...             "password": os.environ["DB_PASSWORD"],
+    ...         }
+    ...     },
+    ... )
+
+    With error monitoring (Sentry):
+
+    >>> import sentry_sdk
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> sentry_sdk.init(dsn="...")
+    >>>
+    >>> def log_to_sentry(exc):
+    ...     sentry_sdk.capture_exception(exc)
+    ...     return None  # Show default exception display
+    >>>
+    >>> app = App("main.py", on_script_error=log_to_sentry)
+
+    With custom error UI:
+
+    >>> import streamlit as st
+    >>> from streamlit.web.server.starlette import App
+    >>>
+    >>> def custom_error_handler(exc):
+    ...     st.error("Something went wrong!")
+    ...     return True  # Suppress default exception display
+    >>>
+    >>> app = App("main.py", on_script_error=custom_error_handler)
     """
 
     def __init__(
         self,
         script_path: str | Path,
         *,
+        secrets: Mapping[str, SecretsValue] | None = None,
         lifespan: (
             Callable[[App], AbstractAsyncContextManager[dict[str, Any] | None]] | None
         ) = None,
         routes: Sequence[BaseRoute] | None = None,
         middleware: Sequence[Middleware] | None = None,
+        on_script_error: OnScriptErrorHandler | None = None,
         exception_handlers: Mapping[Any, ExceptionHandler] | None = None,
         debug: bool = False,
     ) -> None:
+        from streamlit.runtime.secrets import _validate_secrets_value
+
         self._script_path = Path(script_path)
         self._user_lifespan = lifespan
         self._user_routes = list(routes) if routes else []
         self._user_middleware = list(middleware) if middleware else []
+        self._on_script_error = on_script_error
         self._exception_handlers = (
             dict(exception_handlers) if exception_handlers else {}
         )
         self._debug = debug
+
+        # Validate and store programmatic secrets (deep copy to prevent external mutation)
+        if secrets is not None:
+            if not isinstance(secrets, MappingABC):
+                raise TypeError(
+                    f"secrets must be a mapping (dict), got {type(secrets).__name__!r}."
+                )
+            # Validate all keys are strings and values have allowed types
+            _validate_secrets_value(dict(secrets))
+        self._programmatic_secrets = (
+            copy.deepcopy(secrets) if secrets is not None else None
+        )
+        self._secrets_applied: bool = False
 
         self._runtime: Runtime | None = None
         self._starlette_app: Starlette | None = None
@@ -442,6 +533,7 @@ class App:
                 session_storage=MemorySessionStorage(
                     ttl_seconds=config.get_option("server.disconnectedSessionTTL")
                 ),
+                on_script_error=self._on_script_error,
             ),
         )
 
@@ -475,6 +567,14 @@ class App:
         # Prepare the Streamlit environment (secrets, pydeck, static folder check)
         # Use resolved path to ensure correct directory for static folder check
         prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        # Merge programmatic secrets (after file-based secrets are loaded)
+        # Only apply once to prevent re-entry issues with test harnesses or restarts
+        if self._programmatic_secrets and not self._secrets_applied:
+            from streamlit.runtime.secrets import secrets_singleton
+
+            secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+            self._secrets_applied = True
 
         _set_anyio_thread_limiter()
 
@@ -622,6 +722,13 @@ class App:
 
         # Prepare the Streamlit environment
         prepare_streamlit_environment(str(self._resolve_script_path()))
+
+        # Merge programmatic secrets (after file-based secrets are loaded)
+        if self._programmatic_secrets and not self._secrets_applied:
+            from streamlit.runtime.secrets import secrets_singleton
+
+            secrets_singleton.merge_programmatic_secrets(self._programmatic_secrets)
+            self._secrets_applied = True
 
         _set_anyio_thread_limiter()
 

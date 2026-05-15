@@ -78,6 +78,7 @@ import useCustomRenderer from "./hooks/useCustomRenderer"
 import useCustomTheme from "./hooks/useCustomTheme"
 import useDataEditor from "./hooks/useDataEditor"
 import useDataExporter from "./hooks/useDataExporter"
+import useDataFrameCapabilities from "./hooks/useDataFrameCapabilities"
 import useDataLoader from "./hooks/useDataLoader"
 import useRowHover from "./hooks/useRowHover"
 import useSelectionHandler from "./hooks/useSelectionHandler"
@@ -92,9 +93,6 @@ import Tooltip from "./Tooltip"
 import "@glideapps/glide-data-grid/dist/index.css"
 import "@glideapps/glide-data-grid-cells/dist/index.css"
 
-// Number of rows that triggers some optimization features
-// for large tables.
-const LARGE_TABLE_ROWS_THRESHOLD = 150000
 // Fallback size for the scrollbar gutter size in rem.
 // If the scrollbar gutter size is 0, it means that we the system is using
 // overlay scrollbars that don't take any space. In this case, we assume
@@ -104,7 +102,13 @@ const SCROLLBAR_FALLBACK_SIZE_REM = "0.5rem"
 
 export interface DataFrameProps {
   element: DataframeProto
-  data: Quiver
+  elementHash?: string
+  /**
+   * Optional pre-constructed Quiver data. If provided, this is used directly
+   * instead of constructing from element.arrowData. This is primarily used by
+   * ReadOnlyGrid which already has a Quiver instance.
+   */
+  data?: Quiver
   disabled: boolean
   widgetMgr: WidgetStateManager | undefined
   disableFullscreenMode?: boolean
@@ -119,13 +123,14 @@ export interface DataFrameProps {
  * The main component used by dataframe & data_editor to render an editable table.
  *
  * @param element - The element's proto message
- * @param data - The Arrow data to render (extracted from the proto message)
+ * @param data - Optional pre-constructed Quiver data (for ReadOnlyGrid use case)
  * @param disabled - Whether the widget is disabled
  * @param widgetMgr - The widget manager
  */
 function DataFrame({
   element,
-  data,
+  elementHash,
+  data: dataProp,
   disabled,
   widgetMgr,
   disableFullscreenMode,
@@ -134,6 +139,21 @@ function DataFrame({
   widthConfig,
   heightConfig,
 }: Readonly<DataFrameProps>): ReactElement {
+  // Use provided Quiver data or construct from proto's arrowData. The
+  // elementHash serves as the primary memoization key to avoid unnecessary
+  // re-parsing when the payload hasn't changed.
+  const data = useMemo(() => {
+    if (dataProp !== undefined) {
+      return dataProp
+    }
+    if (!element.arrowData) {
+      throw new Error("DataFrame element is missing arrowData")
+    }
+    return new Quiver(element.arrowData)
+    // elementHash is intentionally included as a stability anchor for memoization
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataProp, elementHash, element.arrowData])
+
   const {
     expanded: isFullScreen,
     expand,
@@ -192,59 +212,37 @@ function DataFrame({
     []
   )
 
-  // Determine if the device is primary using touch as input:
-  const isTouchDevice = useMemo<boolean>(
-    () => window.matchMedia?.("(pointer: coarse)").matches ?? false,
-    []
-  )
-
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
   // editingMode field defined.
-  if (isNullOrUndefined(element.editingMode)) {
-    element.editingMode = DataframeProto.EditingMode.READ_ONLY
-  }
-
-  const { READ_ONLY, DYNAMIC, ADD_ONLY, DELETE_ONLY } =
-    DataframeProto.EditingMode
+  const editingMode =
+    element.editingMode ?? DataframeProto.EditingMode.READ_ONLY
 
   // Number of rows of the table minus 1 for the header row:
   const dataDimensions = data.dimensions
   const originalNumRows = Math.max(0, dataDimensions.numDataRows)
 
-  // For empty tables, we show an extra row that
-  // contains "empty" as a way to indicate that the table is empty.
-  const isEmptyTable =
-    originalNumRows === 0 &&
-    // We don't show empty state for modes that allow adding rows
-    // with a table that has data columns defined.
-    !(
-      (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
-      dataDimensions.numDataColumns > 0
-    )
-
-  // For large tables, we apply some optimizations to handle large data
-  const isLargeTable = originalNumRows > LARGE_TABLE_ROWS_THRESHOLD
-  // Sorting is disabled for modes that allow adding rows (DYNAMIC, ADD_ONLY)
-  // because sorting and row addition can conflict
-  const isSortingEnabled =
-    !isLargeTable &&
-    !isEmptyTable &&
-    element.editingMode !== DYNAMIC &&
-    element.editingMode !== ADD_ONLY
-
-  // Check if the editing mode allows adding rows (DYNAMIC or ADD_ONLY)
-  const canAddRows =
-    !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === ADD_ONLY) &&
-    !disabled
-
-  // Check if the editing mode allows deleting rows (DYNAMIC or DELETE_ONLY)
-  const canDeleteRows =
-    !isEmptyTable &&
-    (element.editingMode === DYNAMIC || element.editingMode === DELETE_ONLY) &&
-    !disabled
+  // Centralized capability layer that determines which features are enabled
+  const {
+    canSort,
+    canSearch,
+    canExportCsv,
+    canEdit,
+    canAddRows,
+    canDeleteRows,
+    isEmptyTable,
+    isLargeTable,
+    isTouchDevice,
+    canResizeColumns,
+    supportsFillHandle,
+    supportsRectangleSelection,
+  } = useDataFrameCapabilities({
+    editingMode,
+    disabled,
+    numDataRows: originalNumRows,
+    numDataColumns: dataDimensions.numDataColumns,
+  })
 
   const [columnOrder, setColumnOrder] = useState(element.columnOrder)
 
@@ -293,6 +291,10 @@ function DataFrame({
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
   getOriginalIndexRef.current = getOriginalIndex
+
+  // Ref to track the last processed selectionState to avoid proto mutation.
+  // Used to detect when a new programmatic selection arrives from the backend.
+  const processedSelectionStateRef = useRef<string | null>(null)
 
   // Create the sync selection state callback using the sorted columns and getOriginalIndex.
   // This is done here because it needs the output from useColumnSort.
@@ -400,12 +402,16 @@ function DataFrame({
 
     const currentGetOriginalIndex = getOriginalIndexRef.current
 
-    // Find the new display indices for the original data rows
+    // Build a Set for O(1) lookup instead of O(n²) nested loops
+    const targetOriginalIndices = new Set(originalRowIndices)
     const newDisplayIndices: number[] = []
-    for (const origIdx of originalRowIndices) {
-      for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
-        if (currentGetOriginalIndex(displayIdx) === origIdx) {
-          newDisplayIndices.push(displayIdx)
+
+    for (let displayIdx = 0; displayIdx < originalNumRows; displayIdx++) {
+      const origIdx = currentGetOriginalIndex(displayIdx)
+      if (targetOriginalIndices.has(origIdx)) {
+        newDisplayIndices.push(displayIdx)
+        // Early exit when all targets found
+        if (newDisplayIndices.length === targetOriginalIndices.size) {
           break
         }
       }
@@ -434,15 +440,21 @@ function DataFrame({
   /**
    * Apply programmatic selection changes set via st.session_state.
    * selectionState is a one-shot signal from the backend (only present on
-   * the rerun where the value changed); we clear it after consuming.
+   * the rerun where the value changed). We track processed values via ref
+   * to avoid mutating the proto object.
    */
   useEffect(() => {
-    if (!element.selectionState) {
+    // Skip if no selectionState or we've already processed this exact value
+    if (
+      !element.selectionState ||
+      element.selectionState === processedSelectionStateRef.current
+    ) {
       return
     }
 
     const selectionState = element.selectionState
-    element.selectionState = null
+    // Mark as processed (using ref instead of proto mutation)
+    processedSelectionStateRef.current = selectionState
 
     const programmaticSelection = getProgrammaticSelectionState({
       selectionState,
@@ -457,9 +469,6 @@ function DataFrame({
     if (programmaticSelection) {
       processSelectionChange(programmaticSelection, { shouldSync: false })
     }
-    // We depend on `element.selectionState` instead of `element` for stability;
-    // `element` is only referenced to clear the one-shot signal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     element.selectionState,
     columns,
@@ -576,7 +585,7 @@ function DataFrame({
           textDark: gridTheme.glideTheme.textLight,
         },
         span: [0, Math.max(columns.length - 1, 0)],
-      } as GridCell
+      }
     },
     [columns, gridTheme.glideTheme.textLight]
   )
@@ -740,9 +749,7 @@ function DataFrame({
         if (
           !isFocused &&
           !isTouchDevice &&
-          !event.currentTarget.contains(
-            event.relatedTarget as HTMLElement | null
-          ) &&
+          !event.currentTarget.contains(event.relatedTarget) &&
           !isCellSelectionActivated
         ) {
           // Clear cell selections, but keep row & column selections.
@@ -829,14 +836,14 @@ function DataFrame({
             />
           </ColumnVisibilityMenu>
         )}
-        {!isLargeTable && !isEmptyTable && (
+        {canExportCsv && (
           <ToolbarAction
             label="Download as CSV"
             icon={FileDownload}
             onClick={exportToCsv}
           />
         )}
-        {!isEmptyTable && (
+        {canSearch && (
           <ToolbarAction
             label="Search"
             icon={Search}
@@ -910,7 +917,7 @@ function DataFrame({
           rowHeight={rowHeight}
           headerHeight={gridTheme.defaultHeaderHeight}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
-          onColumnResize={isTouchDevice ? undefined : onColumnResize}
+          onColumnResize={canResizeColumns ? onColumnResize : undefined}
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
           // Freeze all index columns:
@@ -924,7 +931,7 @@ function DataFrame({
           // Deactivate row markers and numbers:
           rowMarkers={"none"}
           // Deactivate selections:
-          rangeSelect={isTouchDevice ? "cell" : "rect"}
+          rangeSelect={supportsRectangleSelection ? "rect" : "cell"}
           columnSelect={"none"}
           rowSelect={"none"}
           // Enable interactive column reordering:
@@ -965,7 +972,7 @@ function DataFrame({
           }}
           // Header click is used for column sorting:
           onHeaderClicked={(columnIdx: number, _event) => {
-            if (!isSortingEnabled || isColumnSelectionActivated) {
+            if (!canSort || isColumnSelectionActivated) {
               // Deactivate sorting for empty state, for large dataframes, or
               // when column selection is activated.
               return
@@ -1127,18 +1134,16 @@ function DataFrame({
             rangeSelectionBlending: "additive",
           })}
           // If element is editable, enable editing features:
-          {...(!isEmptyTable &&
-            element.editingMode !== READ_ONLY &&
-            !disabled && {
-              // Support fill handle for bulk editing:
-              fillHandle: !isTouchDevice,
-              // Support editing:
-              onCellEdited,
-              // Support pasting data for bulk editing:
-              onPaste,
-              // Support deleting cells & rows:
-              onDelete,
-            })}
+          {...(canEdit && {
+            // Support fill handle for bulk editing:
+            fillHandle: supportsFillHandle,
+            // Support editing:
+            onCellEdited,
+            // Support pasting data for bulk editing:
+            onPaste,
+            // Support deleting cells & rows:
+            onDelete,
+          })}
           // If element allows adding rows (DYNAMIC or ADD_ONLY), enable trailing row
           // and deactivate sorting:
           {...(canAddRows && {
@@ -1183,7 +1188,7 @@ function DataFrame({
             column={originalColumns[showMenu.columnIdx]}
             onCloseMenu={() => setShowMenu(undefined)}
             onSortColumn={
-              isSortingEnabled
+              canSort
                 ? (direction: "asc" | "desc" | undefined) => {
                     // Hide search before sorting to clear search results
                     if (showSearch) {
@@ -1261,6 +1266,7 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
         )}
     </StyledResizableContainer>

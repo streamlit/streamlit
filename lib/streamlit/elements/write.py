@@ -233,7 +233,7 @@ class WriteMixin:
                         "Failed to parse the LangChain AIMessageChunk. "
                         "The most likely cause is a change of the chunk object structure "
                         "due to a recent LangChain update. You might be able to fix this "
-                        "by downgrading the OpenAI library or upgrading Streamlit. Also, "
+                        "by downgrading the LangChain library or upgrading Streamlit. Also, "
                         "please report this issue to: https://github.com/streamlit/streamlit/issues."
                     ) from err
 
@@ -355,7 +355,7 @@ class WriteMixin:
 
         ..  output::
             https://doc-write1.streamlit.app/
-            height: 150px
+            height: 200px
 
         As mentioned earlier, ``st.write()`` also accepts other data formats, such as
         numbers, data frames, styled data frames, and assorted objects:

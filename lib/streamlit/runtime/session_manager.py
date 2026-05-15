@@ -25,7 +25,10 @@ if TYPE_CHECKING:
     from streamlit.runtime.app_session import AppSession
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
 
 
@@ -247,6 +250,7 @@ class SessionManager(Protocol):
         uploaded_file_manager: UploadedFileManager,
         script_cache: ScriptCache,
         message_enqueued_callback: Callable[[], None] | None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         """Initialize a SessionManager with the given SessionStorage.
 
@@ -263,6 +267,11 @@ class SessionManager(Protocol):
 
         message_enqueued_callback
             A callback invoked after a message is enqueued to be sent to a web client.
+
+        on_script_error
+            Callback to invoke when an uncaught exception occurs in user script code.
+            Returns True to suppress the default exception display, or False/None
+            to show the exception normally.
         """
         raise NotImplementedError  # pragma: no cover - abstract
 

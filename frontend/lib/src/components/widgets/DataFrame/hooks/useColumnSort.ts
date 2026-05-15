@@ -149,7 +149,7 @@ function useColumnSort(
           column: toGlideColumn(clickedColumn),
           direction: sortDirection,
           mode: clickedColumn.sortMode,
-        } as ColumnSortConfig)
+        })
       }
     },
     [sort, updatedColumns]

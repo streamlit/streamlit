@@ -33,6 +33,7 @@ from streamlit.proto.ChatInput_pb2 import ChatInput
 from streamlit.proto.LabelVisibility_pb2 import LabelVisibility as LabelVisibilityProto
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
+    ThreadState,
     get_script_run_ctx,
 )
 from streamlit.runtime.state.common import (
@@ -137,15 +138,11 @@ def _register_element_id(
     if not element_id:
         return
 
-    if user_key := user_key_from_element_id(element_id):
-        if user_key not in ctx.widget_user_keys_this_run:
-            ctx.widget_user_keys_this_run.add(user_key)
-        else:
-            raise StreamlitDuplicateElementKey(user_key)
+    user_key = user_key_from_element_id(element_id)
+    if user_key and not ctx.widget_user_keys_this_run.check_and_add(user_key):
+        raise StreamlitDuplicateElementKey(user_key)
 
-    if element_id not in ctx.widget_ids_this_run:
-        ctx.widget_ids_this_run.add(element_id)
-    else:
+    if not ctx.widget_ids_this_run.check_and_add(element_id):
         raise StreamlitDuplicateElementId(element_type)
 
 
@@ -249,7 +246,7 @@ def compute_and_register_element_id(
         # Add the active script hash to give elements on different
         # pages unique IDs. This is added even if
         # key_as_main_identity is specified.
-        kwargs_to_use["active_script_hash"] = ctx.active_script_hash
+        kwargs_to_use["active_script_hash"] = ThreadState.get().active_script_hash
 
     if dg and not ignore_command_kwargs:
         kwargs_to_use["form_id"] = current_form_id(dg)

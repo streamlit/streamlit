@@ -92,6 +92,17 @@ with st.expander("Stretch width", width="stretch"):
 
 st.expander("Empty", expanded=True)
 
+# Compact expanders
+st.expander("Compact collapsed", type="compact").write("Compact mode content")
+
+with st.expander("Compact expanded", expanded=True, type="compact"):
+    st.write("Compact content with no border")
+    st.code("print('hello')")
+
+st.expander("Compact with icon", type="compact", icon=":material/psychology:").write(
+    "AI reasoning content"
+)
+
 
 # To test for: https://github.com/streamlit/streamlit/issues/12149
 code_block = """
@@ -266,3 +277,27 @@ if persist_show:
 
 with st.expander("Persist expander", expanded=False, key="persist_expander"):
     st.write("Persist expander content")
+
+# ============================================================================
+# Multiple Stateful Expanders — programmatic close regression test
+# https://github.com/streamlit/streamlit/issues/14943
+# ============================================================================
+
+
+def close_multi_exp_a() -> None:
+    st.session_state.multi_exp_a = False
+
+
+def close_multi_exp_b() -> None:
+    st.session_state.multi_exp_b = False
+
+
+exp_a = st.expander("Multi exp A", key="multi_exp_a", on_change="rerun")
+with exp_a:
+    st.write("Expander A content")
+    st.button("Close A", on_click=close_multi_exp_a, key="close_multi_exp_a_btn")
+
+exp_b = st.expander("Multi exp B", key="multi_exp_b", on_change="rerun")
+with exp_b:
+    st.write("Expander B content")
+    st.button("Close B", on_click=close_multi_exp_b, key="close_multi_exp_b_btn")

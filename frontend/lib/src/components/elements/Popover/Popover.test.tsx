@@ -242,7 +242,11 @@ describe("Dynamic popover (widget mode)", () => {
     const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
 
     const widgetId = "popover-widget-id"
-    const props = getProps({ open: false, id: widgetId }, { widgetMgr })
+    const fragmentId = "frag-1"
+    const props = getProps(
+      { open: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
 
     const { rerender } = render(
       <Popover {...props}>
@@ -253,7 +257,10 @@ describe("Dynamic popover (widget mode)", () => {
     const trigger = screen.getByRole("button").closest("[aria-expanded]")
     expect(trigger).toHaveAttribute("aria-expanded", "false")
 
-    const updatedProps = getProps({ open: true, id: widgetId }, { widgetMgr })
+    const updatedProps = getProps(
+      { open: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
 
     rerender(
       <Popover {...updatedProps}>
@@ -262,7 +269,60 @@ describe("Dynamic popover (widget mode)", () => {
     )
 
     expect(trigger).toHaveAttribute("aria-expanded", "true")
-    expect(setBoolValueSpy).not.toHaveBeenCalled()
+    // The widget manager state should also be updated (with fromUi: false
+    // to avoid triggering a rerun) so that subsequent reruns send the
+    // correct value back to the backend.
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      true,
+      { fromUi: false },
+      fragmentId
+    )
+  })
+
+  it("syncs widget manager state on programmatic close to prevent stale reopens", () => {
+    const widgetMgr = createWidgetMgr()
+    const setBoolValueSpy = vi.spyOn(widgetMgr, "setBoolValue")
+
+    const widgetId = "popover-widget-id"
+    const fragmentId = "frag-1"
+
+    // Start with the popover open (simulating it was opened by the user)
+    const props = getProps(
+      { open: true, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    const { rerender } = render(
+      <Popover {...props}>
+        <div>content</div>
+      </Popover>
+    )
+
+    const trigger = screen.getByRole("button").closest("[aria-expanded]")
+    expect(trigger).toHaveAttribute("aria-expanded", "true")
+
+    // Backend programmatically closes the popover (e.g. st.session_state.key = False)
+    const closedProps = getProps(
+      { open: false, id: widgetId },
+      { widgetMgr, fragmentId }
+    )
+
+    rerender(
+      <Popover {...closedProps}>
+        <div>content</div>
+      </Popover>
+    )
+
+    expect(trigger).toHaveAttribute("aria-expanded", "false")
+    // The widget manager must be updated with false so that the next rerun
+    // (triggered by e.g. another popover) does not send stale "true" back.
+    expect(setBoolValueSpy).toHaveBeenCalledWith(
+      { id: widgetId },
+      false,
+      { fromUi: false },
+      fragmentId
+    )
   })
 })
 

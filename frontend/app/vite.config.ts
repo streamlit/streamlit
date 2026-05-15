@@ -21,7 +21,6 @@ import terminal from "vite-plugin-terminal"
 import { version } from "./package.json"
 
 import react from "@vitejs/plugin-react-swc"
-import viteTsconfigPaths from "vite-tsconfig-paths"
 import path from "path"
 
 const BASE = "./"
@@ -105,7 +104,6 @@ export default defineConfig(({ command }) => ({
       jsxImportSource: "@emotion/react",
       plugins: [["@swc/plugin-emotion", {}]],
     }),
-    viteTsconfigPaths(),
     // Log browser console output to terminal for debugging by coding agents
     // Enable with: DEBUG_TO_CONSOLE=1 make frontend-dev
     ...(command === "serve" && DEBUG_TO_CONSOLE
@@ -134,6 +132,7 @@ export default defineConfig(({ command }) => ({
       : []),
   ],
   resolve: {
+    tsconfigPaths: true,
     alias: [
       {
         find: /^react-uid$/,
@@ -195,6 +194,7 @@ export default defineConfig(({ command }) => ({
     assetsDir: "static",
     sourcemap: DEV_BUILD || ANALYZE_BUNDLE,
     manifest: true,
+    reportCompressedSize: false,
     rolldownOptions: {
       output: {
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js

@@ -29,6 +29,7 @@ from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
     ScriptRunContext,
+    ThreadState,
     add_script_run_ctx,
     enqueue_message,
 )
@@ -42,7 +43,6 @@ if TYPE_CHECKING:
 
 def _create_script_run_context(
     fake_enqueue: Callable[[ForwardMsg], None],
-    current_fragment_id: str | None = None,
     pages_manager: PagesManager | None = None,
     cached_message_hashes: set[str] | None = None,
 ):
@@ -56,7 +56,6 @@ def _create_script_run_context(
         user_info={"email": "test@example.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=pages_manager or PagesManager(""),
-        current_fragment_id=current_fragment_id,
         cached_message_hashes=cached_message_hashes or set(),
     )
 
@@ -68,6 +67,7 @@ class ScriptRunContextTest(unittest.TestCase):
             delattr(threading.current_thread(), SCRIPT_RUN_CONTEXT_ATTR_NAME)
         except AttributeError:
             pass
+        ThreadState.initialize()
 
     def test_allow_set_page_config_once(self):
         """st.set_page_config can be called once"""
@@ -115,7 +115,7 @@ class ScriptRunContextTest(unittest.TestCase):
         msg.delta.new_element.markdown.body = "foo"
 
         ctx.enqueue(msg)
-        assert msg.metadata.active_script_hash == ctx.active_script_hash
+        assert msg.metadata.active_script_hash == ThreadState.get().active_script_hash
 
         ctx.set_mpa_v2_page("new_hash")
 
@@ -197,37 +197,191 @@ class ScriptRunContextTest(unittest.TestCase):
         def fake_enqueue(msg: ForwardMsg):
             fake_enqueue_result["msg"] = msg
 
-            ctx = _create_script_run_context(
-                fake_enqueue, current_fragment_id="my_fragment_id"
-            )
-            add_script_run_ctx(ctx=ctx)
-            msg = ForwardMsg()
-            msg.delta.new_element.markdown.body = "foo"
-            enqueue_message(msg)
-            assert fake_enqueue_result is not None
-            assert (
-                fake_enqueue_result["msg"].delta.new_element.markdown.body
-                == msg.delta.new_element.markdown.body
-            )
-            assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
+        ctx = _create_script_run_context(fake_enqueue)
+        add_script_run_ctx(ctx=ctx)
+        msg = ForwardMsg()
+        msg.delta.new_element.markdown.body = "foo"
+        enqueue_message(msg)
+        assert fake_enqueue_result is not None
+        assert (
+            fake_enqueue_result["msg"].delta.new_element.markdown.body
+            == msg.delta.new_element.markdown.body
+        )
+        assert fake_enqueue_result["msg"].delta.fragment_id == "my_fragment_id"
 
     def test_run_with_active_hash(self):
         """Ensure the active script is set correctly"""
         pages_manager = PagesManager("")
         ctx = _create_script_run_context(
             lambda _msg: None,
-            current_fragment_id="my_fragment_id",
             pages_manager=pages_manager,
         )
 
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
-        assert ctx.active_script_hash == pages_manager.main_script_hash
+        assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
 
         pages_manager.set_pages({})
         ctx.set_mpa_v2_page("new_hash")
-        assert ctx.active_script_hash == pages_manager.main_script_hash
+        assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
 
         with ctx.run_with_active_hash("new_hash"):
-            assert ctx.active_script_hash == "new_hash"
+            assert ThreadState.get().active_script_hash == "new_hash"
 
-        assert ctx.active_script_hash == pages_manager.main_script_hash
+        assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
+
+    def test_add_script_run_ctx_self_attach_seeds_thread_state(self):
+        """Worker thread self-attach: ``add_script_run_ctx(ctx=...)`` from
+        inside a worker thread (with no prior ThreadState bound) should seed
+        ThreadState from ``ctx`` so subsequent ``ThreadState.get()`` calls
+        don't crash. ``fragment_id`` / ``delta_path`` are not recoverable in
+        this mode and must remain at their defaults.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})  # populate main_script_hash
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        result: dict[str, object] = {}
+
+        def worker() -> None:
+            try:
+                add_script_run_ctx(ctx=ctx)
+                ts = ThreadState.get()
+                result["ts"] = ts
+                result["attached_ctx"] = getattr(
+                    threading.current_thread(),
+                    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+                    None,
+                )
+            except Exception as exc:
+                result["exc"] = exc
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+
+        assert result.get("exc") is None, f"worker raised: {result.get('exc')!r}"
+        ts = result["ts"]
+        assert ts.active_script_hash == pages_manager.main_script_hash
+        assert ts.fragment_id is None
+        assert ts.delta_path is None
+        assert ts.in_fragment_callback is False
+        assert result["attached_ctx"] is ctx
+
+    def test_add_script_run_ctx_self_attach_does_not_propagate_fragment_id(self):
+        """Self-attached workers (``add_script_run_ctx(ctx=...)`` from inside
+        the worker) do NOT inherit the parent's ``fragment_id``.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+        ThreadState.update(fragment_id="parent_fragment")
+
+        result: dict[str, object] = {}
+
+        def worker() -> None:
+            add_script_run_ctx(ctx=ctx)
+            result["fragment_id"] = ThreadState.get().fragment_id
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+
+        assert result["fragment_id"] is None
+
+    def test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash(
+        self,
+    ):
+        """Self-attached workers seed ``active_script_hash`` from
+        ``ctx.pages_manager.main_script_hash``, NOT the parent's current
+        ``ThreadState.active_script_hash``.
+
+        Concretely: inside an MPA v1 ``run_with_active_hash(page_hash)`` scope
+        the parent observes the page hash, but a self-attaching worker still
+        sees the main hash.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        captured: dict[str, object] = {}
+
+        with ctx.run_with_active_hash("page_hash"):
+            assert ThreadState.get().active_script_hash == "page_hash"
+
+            def worker() -> None:
+                add_script_run_ctx(ctx=ctx)
+                captured["active_script_hash"] = ThreadState.get().active_script_hash
+
+            t = threading.Thread(target=worker)
+            t.start()
+            t.join()
+
+        assert captured["active_script_hash"] == pages_manager.main_script_hash
+        assert captured["active_script_hash"] != "page_hash"
+
+    def test_add_script_run_ctx_double_attach_is_last_wins(self):
+        """Repeat ``add_script_run_ctx`` calls on a not-yet-started thread
+        are last-wins for the parent ``FragmentThreadState`` snapshot.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        captured: dict[str, object] = {}
+
+        def worker_target() -> None:
+            captured["fragment_id"] = ThreadState.get().fragment_id
+
+        t = threading.Thread(target=worker_target)
+
+        ThreadState.update(fragment_id="frag1")
+        add_script_run_ctx(t, ctx)
+
+        ThreadState.update(fragment_id="frag2")
+        add_script_run_ctx(t, ctx)
+
+        t.start()
+        t.join()
+
+        assert captured["fragment_id"] == "frag2"
+
+    def test_add_script_run_ctx_propagates_thread_state_to_child(self):
+        """Child threads observe the parent's ``FragmentThreadState``
+        snapshot on start; child mutations stay isolated from the parent's
+        ContextVar.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(
+            fragment_id="parent_fragment",
+            delta_path=(1, 2, 3),
+            active_script_hash="parent_hash",
+        )
+
+        captured: dict[str, object] = {}
+
+        def child_target() -> None:
+            ts_before = ThreadState.get()
+            captured["before"] = (
+                ts_before.fragment_id,
+                ts_before.delta_path,
+                ts_before.active_script_hash,
+            )
+            ThreadState.update(fragment_id="child_changed_it")
+            captured["after_child_update"] = ThreadState.get().fragment_id
+
+        t = threading.Thread(target=child_target)
+        add_script_run_ctx(t, ctx)
+        t.start()
+        t.join()
+
+        assert captured["before"] == ("parent_fragment", (1, 2, 3), "parent_hash")
+        assert captured["after_child_update"] == "child_changed_it"
+
+        parent_ts = ThreadState.get()
+        assert parent_ts.fragment_id == "parent_fragment"
+        assert parent_ts.delta_path == (1, 2, 3)
+        assert parent_ts.active_script_hash == "parent_hash"

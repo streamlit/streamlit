@@ -33,6 +33,21 @@ message PageProfile {
   // - "asgi-server": st.App run directly with external ASGI server (uvicorn, gunicorn)
   // - "asgi-mounted": st.App mounted on another ASGI framework (FastAPI, Starlette)
   string server_mode = 12;
+  // Streamlit-shipped agent skills detected on the user's system, encoded as
+  // "<location>:<harness>:<skill>" tokens. Locations are "home" (user home),
+  // "app" (directory of the main script), and "repo" (nearest ancestor
+  // containing a ``.git`` directory, if different from ``app``). Harnesses
+  // are "agents", "claude", "codex", "cortex", "cursor", "gemini", and
+  // "opencode" (each uses its own skills directory convention). Skills are
+  // "developing-with-streamlit" and "finding-streamlit-skills".
+  // Empty when no bundled skills are installed.
+  repeated string installed_skills = 13;
+  // Agent harnesses detected on the user's system, identified by the
+  // presence of the harness's home-level config directory (e.g. ~/.claude,
+  // ~/.codex, ~/.snowflake/cortex). Tokens match the harness names used
+  // in ``installed_skills``. Independent of whether Streamlit skills are
+  // installed in any of them. Empty when no harnesses are detected.
+  repeated string installed_agents = 14;
 }
 
 // The field names are used as part of the event json sent

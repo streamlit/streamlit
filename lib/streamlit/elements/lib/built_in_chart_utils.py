@@ -16,10 +16,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from datetime import date
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, cast
 
 from streamlit import dataframe_util, type_util
 from streamlit.elements.lib.color_util import (
@@ -33,7 +32,7 @@ from streamlit.elements.lib.color_util import (
 from streamlit.errors import Error, StreamlitAPIException
 
 if TYPE_CHECKING:
-    from collections.abc import Collection, Hashable, Sequence
+    from collections.abc import Collection, Sequence
 
     import altair as alt
     import pandas as pd
@@ -51,38 +50,6 @@ ChartStackType: TypeAlias = Literal["normalize", "center", "layered"]
 # For datasets with more points than this threshold, hover events are throttled
 # to 16ms (~60fps) to improve performance.
 _LARGE_DATASET_POINT_THRESHOLD: Final = 1000
-
-
-class PrepDataColumns(TypedDict):
-    """Columns used for the prep_data step in Altair Arrow charts."""
-
-    x_column: str | None
-    y_column_list: list[str]
-    color_column: str | None
-    size_column: str | None
-    sort_column: str | None
-
-
-@dataclass
-class AddRowsMetadata:
-    """Metadata needed by add_rows on native charts.
-
-    This class is used to pass some important info to add_rows.
-    """
-
-    chart_command: str
-    last_index: Hashable | None
-    columns: PrepDataColumns
-    # Chart styling properties
-    color: str | Color | list[Color] | None = None
-    width: Width | None = None
-    height: Height | None = None
-    use_container_width: bool | None = None
-    # Only applicable for bar & area charts
-    stack: bool | ChartStackType | None = None
-    # Only applicable for bar charts
-    horizontal: bool = False
-    sort: bool | str = False
 
 
 class ChartType(Enum):
@@ -156,13 +123,11 @@ def generate_chart(
     size_from_user: str | float | None = None,
     width: Width | None = None,
     height: Height | None = None,
-    use_container_width: bool | None = None,
     # Bar & Area charts only:
     stack: bool | ChartStackType | None = None,
     # Bar charts only:
-    horizontal: bool = False,
     sort_from_user: bool | str = False,
-) -> tuple[alt.Chart | alt.LayerChart, AddRowsMetadata]:
+) -> alt.Chart | alt.LayerChart:
     """Function to use the chart's type, data columns and indices to figure out the
     chart's spec.
     """
@@ -187,30 +152,6 @@ def generate_chart(
     size_column, size_value = _parse_generic_column(df, size_from_user)
     # Get name of column to use for sort.
     sort_column = _parse_sort_column(df, sort_from_user)
-
-    # Store some info so we can use it in add_rows.
-    add_rows_metadata = AddRowsMetadata(
-        # The st command that was used to generate this chart.
-        chart_command=cast("str", chart_type.value["command"]),
-        # The last index of df so we can adjust the input df in add_rows:
-        last_index=_last_index_for_melted_dataframes(df),
-        # This is the input to prep_data (except for the df):
-        columns={
-            "x_column": x_column,
-            "y_column_list": y_column_list,
-            "color_column": color_column,
-            "size_column": size_column,
-            "sort_column": sort_column,
-        },
-        # Chart styling properties
-        color=color_from_user,
-        width=width,
-        height=height,
-        use_container_width=use_container_width,
-        stack=stack,
-        horizontal=horizontal,
-        sort=sort_from_user,
-    )
 
     # At this point, all foo_column variables are either None/empty or contain actual
     # columns that are guaranteed to exist.
@@ -293,9 +234,9 @@ def generate_chart(
     ):
         return _add_improved_hover_tooltips(
             chart, x_column, chart_width, chart_height, len(df)
-        ).interactive(), add_rows_metadata
+        ).interactive()
 
-    return chart.interactive(), add_rows_metadata
+    return chart.interactive()
 
 
 def _add_improved_hover_tooltips(
@@ -361,49 +302,6 @@ def _add_improved_hover_tooltips(
     return cast("alt.LayerChart", layer_chart)
 
 
-def prep_chart_data_for_add_rows(
-    data: Data,
-    add_rows_metadata: AddRowsMetadata,
-) -> tuple[Data, AddRowsMetadata]:
-    """Prepares the data for add_rows on our built-in charts.
-
-    This includes aspects like conversion of the data to Pandas DataFrame,
-    changes to the index, and melting the data if needed.
-    """
-    import pandas as pd
-
-    df = dataframe_util.convert_anything_to_pandas_df(data)
-
-    # Make range indices start at last_index.
-    if isinstance(df.index, pd.RangeIndex):
-        old_step = _get_pandas_index_attr(df, "step")
-
-        # We have to drop the predefined index
-        df = df.reset_index(drop=True)
-
-        old_stop = _get_pandas_index_attr(df, "stop")
-
-        if old_step is None or old_stop is None:
-            raise StreamlitAPIException("'RangeIndex' object has no attribute 'step'")
-
-        start = add_rows_metadata.last_index + old_step
-        stop = add_rows_metadata.last_index + old_step + old_stop
-
-        df.index = pd.RangeIndex(start=start, stop=stop, step=old_step)
-        add_rows_metadata.last_index = stop - 1
-
-    out_data, *_ = _prep_data(
-        df,
-        x_column=add_rows_metadata.columns["x_column"],
-        y_column_list=add_rows_metadata.columns["y_column_list"],
-        color_column=add_rows_metadata.columns["color_column"],
-        size_column=add_rows_metadata.columns["size_column"],
-        sort_column=add_rows_metadata.columns["sort_column"],
-    )
-
-    return out_data, add_rows_metadata
-
-
 def _infer_vegalite_type(
     data: pd.Series[Any],
 ) -> VegaLiteType:
@@ -464,13 +362,6 @@ def _infer_vegalite_type(
     return "nominal"
 
 
-def _get_pandas_index_attr(
-    data: pd.DataFrame | pd.Series[Any],
-    attr: str,
-) -> Any | None:
-    return getattr(data.index, attr, None)
-
-
 def _prep_data(
     df: pd.DataFrame,
     x_column: str | None,
@@ -479,7 +370,7 @@ def _prep_data(
     size_column: str | None,
     sort_column: str | None = None,
 ) -> tuple[pd.DataFrame, str | None, str | None, str | None, str | None, str | None]:
-    """Prepares the data for charting. This is also used in add_rows.
+    """Prepares the data for charting.
 
     Returns the prepared dataframe and the new names of the x column (taking the index
     reset into consideration) and y, color, and size columns.
@@ -515,12 +406,6 @@ def _prep_data(
 
     # Return the data, but also the new names to use for x, y, and color.
     return melted_data, x_column, y_column, color_column, size_column, sort_column
-
-
-def _last_index_for_melted_dataframes(
-    data: pd.DataFrame,
-) -> Hashable | None:
-    return cast("Hashable", data.index[-1]) if data.index.size > 0 else None
 
 
 def _is_date_column(df: pd.DataFrame, name: str | None) -> bool:
