@@ -331,7 +331,6 @@ function DataFrame({
     client: backendOperationClient as NonNullable<
       typeof backendOperationClient
     >,
-    dataEditorRef,
   })
 
   // Eager sorting - use when not lazy
@@ -1033,10 +1032,14 @@ function DataFrame({
           // Activate keybindings:
           keybindings={{
             downFill: true,
-            ...(isCellSelectionActivated || isLargeTable
+            // Disable built-in search keybinding - we handle it manually below
+            // and need to gate it on canSearch for lazy dataframes
+            search: false,
+            ...(isCellSelectionActivated || isLargeTable || isLazy
               ? {
                   // Deactivate select all to prevent potential performance issues
-                  // with too many selected cells being processed for cell selection:
+                  // with too many selected cells being processed for cell selection,
+                  // or triggering load of all data for lazy dataframes:
                   selectAll: false,
                 }
               : {}),
@@ -1044,7 +1047,11 @@ function DataFrame({
           // Search needs to be activated manually, to support search
           // via the toolbar:
           onKeyDown={event => {
-            if ((event.ctrlKey || event.metaKey) && event.key === "f") {
+            if (
+              canSearch &&
+              (event.ctrlKey || event.metaKey) &&
+              event.key === "f"
+            ) {
               setShowSearch(cv => !cv)
               event.stopPropagation()
               event.preventDefault()
