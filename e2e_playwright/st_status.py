@@ -64,3 +64,14 @@ with st.status("Fixed width status", state="complete", width=200):
 
 with st.status("Stretch width status", state="complete", width="stretch"):
     st.write("Hello World")
+
+# Compact status
+# Use the non-context-manager pattern to capture the running state before update
+compact_running_status = st.status("Compact running", type="compact")
+compact_running_status.write("Processing...")
+
+with st.status("Compact complete", state="complete", type="compact"):
+    st.write("Done!")
+
+with st.status("Compact expanded", state="complete", expanded=True, type="compact"):
+    st.write("Compact content visible")

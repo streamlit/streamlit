@@ -17,6 +17,7 @@ from __future__ import annotations
 import collections
 import contextlib
 import contextvars
+import dataclasses
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -24,7 +25,10 @@ from typing import (
     TYPE_CHECKING,
     Final,
     TypeAlias,
+    TypedDict,
 )
+
+from typing_extensions import Unpack
 
 from streamlit.errors import (
     NoSessionContext,
@@ -62,6 +66,101 @@ UserInfoType: TypeAlias = dict[str, str | bool | dict[str, str] | None]
 in_cached_function: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "in_cached_function", default=False
 )
+
+
+@dataclass(frozen=True)
+class FragmentThreadState:
+    """Per-thread state for a fragment execution.
+
+    Frozen so that all mutations must go through ThreadState.update() or
+    ThreadState.scoped(), which rebind the ContextVar and guarantee context
+    isolation when using copy_context().
+    """
+
+    fragment_id: str | None = None
+    delta_path: tuple[int, ...] | None = None
+    in_fragment_callback: bool = False
+    active_script_hash: str = ""
+
+
+class _FragmentThreadStateFields(TypedDict, total=False):
+    """Keyword-arg shape for ``ThreadState.{initialize, update, scoped}``.
+
+    Mirrors ``FragmentThreadState``'s fields. Using ``TypedDict + Unpack``
+    catches typos (e.g., ``fragmentid=`` vs ``fragment_id=``) and wrong
+    value types at type-check time rather than as a runtime ``TypeError``.
+    """
+
+    fragment_id: str | None
+    delta_path: tuple[int, ...] | None
+    in_fragment_callback: bool
+    active_script_hash: str
+
+
+_thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
+    "fragment_thread_state",
+)
+
+
+class ThreadState:
+    """Encapsulates all access to the per-thread FragmentThreadState ContextVar.
+
+    The ContextVar ``_thread_state`` is module-private. External code interacts
+    exclusively through this class. The frozen dataclass ensures callers cannot
+    bypass the API — in-place mutation raises ``FrozenInstanceError``.
+    """
+
+    @staticmethod
+    def initialize(**kwargs: Unpack[_FragmentThreadStateFields]) -> None:
+        """Create a fresh FragmentThreadState and bind it in the current context.
+
+        Called from ``reset()`` at the start of every script run, and from
+        parallel fragment worker setup to seed the worker's copied context
+        with the parent's snapshot.
+        """
+        _thread_state.set(FragmentThreadState(**kwargs))
+
+    @staticmethod
+    def get() -> FragmentThreadState:
+        """Read the current context's FragmentThreadState.
+
+        Returns a frozen object — callers can read fields but cannot mutate
+        them. Raises ``RuntimeError`` if called before ``initialize()``.
+        """
+        try:
+            return _thread_state.get()
+        except LookupError:
+            raise RuntimeError(
+                "FragmentThreadState not initialized — "
+                "ScriptRunContext.reset() or add_script_run_ctx() must be "
+                "called on this thread first."
+            ) from None
+
+    @staticmethod
+    def update(**kwargs: Unpack[_FragmentThreadStateFields]) -> None:
+        """Update one or more fields on the current context's state.
+
+        Creates a new frozen dataclass via ``dataclasses.replace()`` and
+        rebinds the ContextVar, ensuring context isolation.
+        """
+        _thread_state.set(dataclasses.replace(ThreadState.get(), **kwargs))
+
+    @staticmethod
+    @contextlib.contextmanager
+    def scoped(
+        **overrides: Unpack[_FragmentThreadStateFields],
+    ) -> Generator[None, None, None]:
+        """Temporarily override fields, automatically restore on exit.
+
+        Uses ``ContextVar.reset(token)`` to atomically restore the entire
+        previous state. Used for nesting within a single thread (e.g. nested
+        fragments) where ``copy_context()`` is not involved.
+        """
+        token = _thread_state.set(dataclasses.replace(ThreadState.get(), **overrides))
+        try:
+            yield
+        finally:
+            _thread_state.reset(token)
 
 
 @dataclass
@@ -105,11 +204,8 @@ class ScriptRunContext:
     form_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
-    current_fragment_id: str | None = None
     fragment_ids_this_run: list[str] | None = None
     new_fragment_ids: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
-    in_fragment_callback: bool = False
-    _active_script_hash: str = ""
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
 
@@ -118,25 +214,16 @@ class ScriptRunContext:
         return self.pages_manager.current_page_script_hash
 
     @property
-    def active_script_hash(self) -> str:
-        return self._active_script_hash
-
-    @property
     def main_script_parent(self) -> Path:
         return self.pages_manager.main_script_parent
 
     @contextlib.contextmanager
     def run_with_active_hash(self, page_hash: str) -> Generator[None, None, None]:
-        original_page_hash = self._active_script_hash
-        self._active_script_hash = page_hash
-        try:
+        with ThreadState.scoped(active_script_hash=page_hash):
             yield
-        finally:
-            # in the event of any exception, ensure we set the active hash back
-            self._active_script_hash = original_page_hash
 
     def set_mpa_v2_page(self, page_script_hash: str) -> None:
-        self._active_script_hash = self.pages_manager.main_script_hash
+        ThreadState.update(active_script_hash=self.pages_manager.main_script_hash)
         self.pages_manager.set_current_page_script_hash(page_script_hash)
 
     def reset(
@@ -157,13 +244,13 @@ class ScriptRunContext:
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
-        self._active_script_hash = self.pages_manager.main_script_hash
+        ThreadState.initialize(
+            active_script_hash=self.pages_manager.main_script_hash,
+        )
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
         self.tracked_commands = []
         self.tracked_commands_counter = collections.Counter()
-        self.current_fragment_id = None
-        self.current_fragment_delta_path: list[int] = []
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids.clear()
         self.has_dialog_opened = False
@@ -188,7 +275,7 @@ class ScriptRunContext:
 
     def enqueue(self, msg: ForwardMsg) -> None:
         """Enqueue a ForwardMsg for this context's session."""
-        msg.metadata.active_script_hash = self.active_script_hash
+        msg.metadata.active_script_hash = ThreadState.get().active_script_hash
 
         # We populate the hash and cacheable field for all messages.
         # Besides the forward message cache, the hash might also be used
@@ -208,22 +295,45 @@ class ScriptRunContext:
 
 
 SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
+# Thread-attached storage used by add_script_run_ctx:
+# - Fields slot: parent FragmentThreadState snapshot, applied at run() time.
+# - Install slot: sentinel that prevents thread.run from being wrapped
+#   more than once across repeated add_script_run_ctx() calls.
+_FRAGMENT_THREAD_STATE_FIELDS_ATTR: Final = "_streamlit_fragment_thread_state_fields"
+_FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR: Final = (
+    "_streamlit_fragment_thread_state_wrap_installed"
+)
 
 
 def add_script_run_ctx(
     thread: threading.Thread | None = None, ctx: ScriptRunContext | None = None
 ) -> threading.Thread:
-    """Adds the current ScriptRunContext to a newly-created thread.
+    """Attach the current ScriptRunContext to a thread and propagate the
+    parent's FragmentThreadState snapshot.
 
-    This should be called from this thread's parent thread,
-    before the new thread starts.
+    Normal usage: call from the parent thread, before the child starts.
+    Repeat attaches on the same not-yet-started thread are last-wins for
+    both ``ctx`` and the FragmentThreadState snapshot.
+
+    Self-attach fallback: when called from inside the thread it is
+    attaching to (current thread, or ``thread`` omitted with explicit
+    ``ctx``), ``ThreadState`` is seeded directly from ``ctx``. The
+    parent's ContextVar is not visible from another thread, so:
+
+    - ``fragment_id`` and ``delta_path`` are NOT propagated; worker
+      writes won't be stamped with the parent's ``fragment_id``.
+    - ``active_script_hash`` is seeded from
+      ``ctx.pages_manager.main_script_hash``. MPA v1 page bodies will
+      therefore see the main hash, not the page hash; migrate to MPA v2
+      / ``st.navigation`` if that matters. Locked in by
+      ``test_add_script_run_ctx_self_attach_uses_main_script_hash_not_page_hash``.
 
     Parameters
     ----------
-    thread : threading.Thread
-        The thread to attach the current ScriptRunContext to.
+    thread : threading.Thread or None
+        Thread to attach to. Defaults to the current thread.
     ctx : ScriptRunContext or None
-        The ScriptRunContext to add, or None to use the current thread's
+        Context to attach. Defaults to the caller's current
         ScriptRunContext.
 
     Returns
@@ -238,6 +348,55 @@ def add_script_run_ctx(
         ctx = get_script_run_ctx()
     if ctx is not None:
         setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+
+    # ContextVars don't cross thread boundaries, so capture the parent's
+    # FragmentThreadState and initialize it when the child thread starts.
+    try:
+        parent_ts = ThreadState.get()
+    except RuntimeError:
+        parent_ts = None
+
+    if parent_ts is not None:
+        # Store the parent snapshot on the thread; the run() wrapper below
+        # reads it at start time. Repeat add_script_run_ctx() calls refresh
+        # the snapshot — last attach wins, matching the ctx attachment above.
+        setattr(
+            thread,
+            _FRAGMENT_THREAD_STATE_FIELDS_ATTR,
+            dataclasses.asdict(parent_ts),
+        )
+        # Skip the wrap if the target is already running: run() has
+        # already been called, and setting the sentinel here would
+        # pollute the main thread across tests.
+        if thread is not threading.current_thread() and not getattr(
+            thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, False
+        ):
+            original_run = thread.run
+
+            def _run_with_thread_state() -> None:
+                fields = getattr(thread, _FRAGMENT_THREAD_STATE_FIELDS_ATTR, None)
+                if fields is not None:
+                    ThreadState.initialize(**fields)
+                original_run()
+
+            thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
+            setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)
+    elif ctx is not None and thread is threading.current_thread():
+        # Caller is attaching ctx from inside the currently-running
+        # thread, so the thread.run wrap above is moot. Seed ThreadState
+        # directly from ctx so subsequent ThreadState.get() /
+        # enqueue_message() calls don't crash. See the add_script_run_ctx
+        # docstring for the self-attach behaviour contract.
+        #
+        # Two callers exercise this branch:
+        #   1. ScriptRunner._run_script_thread, before ctx.reset() reseeds.
+        #   2. User code calling add_script_run_ctx(ctx=saved_ctx) from
+        #      inside a worker thread (documented against, but a real
+        #      pattern).
+        ThreadState.initialize(
+            active_script_hash=ctx.pages_manager.main_script_hash,
+        )
+
     return thread
 
 
@@ -277,7 +436,8 @@ def enqueue_message(msg: ForwardMsg) -> None:
     if ctx is None:
         raise NoSessionContext()
 
-    if ctx.current_fragment_id and msg.WhichOneof("type") == "delta":
-        msg.delta.fragment_id = ctx.current_fragment_id
+    ts = ThreadState.get()
+    if ts.fragment_id and msg.WhichOneof("type") == "delta":
+        msg.delta.fragment_id = ts.fragment_id
 
     ctx.enqueue(msg)

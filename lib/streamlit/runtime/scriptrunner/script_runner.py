@@ -571,9 +571,11 @@ class ScriptRunner:
                 # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)
 
-            fragment_ids_this_run: list[str] | None = (
-                rerun_data.fragment_id_queue or None
-            )
+            fragment_ids_this_run: list[str] | None = None
+            if rerun_data.fragment_id_queue:
+                fragment_ids_this_run = self._fragment_storage.order_fragment_ids(
+                    rerun_data.fragment_id_queue
+                )
 
             ctx.reset(
                 query_string=rerun_data.query_string,
@@ -652,6 +654,7 @@ class ScriptRunner:
                 module: types.ModuleType = module,
                 ctx: ScriptRunContext = ctx,
                 rerun_data: RerunData = rerun_data,
+                fragment_ids_this_run: list[str] | None = fragment_ids_this_run,
             ) -> None:
                 with (
                     modified_sys_path(self._main_script_path),
@@ -665,15 +668,16 @@ class ScriptRunner:
 
                     ctx.on_script_start()
 
-                    if rerun_data.fragment_id_queue:
-                        for fragment_id in rerun_data.fragment_id_queue:
+                    if fragment_ids_this_run:
+                        for fragment_id in fragment_ids_this_run:
+                            registration_sequence_before = (
+                                self._fragment_storage.registration_sequence()
+                            )
                             try:
                                 wrapped_fragment = self._fragment_storage.lookup(
                                     fragment_id
                                 )
-                                wrapped_fragment()
-
-                            except FragmentStorageKeyError:  # noqa: PERF203
+                            except FragmentStorageKeyError:
                                 # This can happen if the fragment_id is removed from the
                                 # storage before the script runner gets to it. In this
                                 # case, the fragment is simply skipped.
@@ -694,6 +698,10 @@ class ScriptRunner:
                                         " required, so its mainly for debugging.",
                                         fragment_id,
                                     )
+                                continue
+
+                            try:
+                                wrapped_fragment()
                             except (RerunException, StopException):
                                 # The wrapped_fragment function is executed
                                 # inside of a exec_func_with_error_handling call, so
@@ -705,6 +713,22 @@ class ScriptRunner:
                                 # error itself is already rendered within the wrapped
                                 # fragment.
                                 pass
+                            finally:
+                                # Cleanup always uses what was actually re-registered
+                                # during this attempt, regardless of how the fragment
+                                # exited (normal return, RerunException, StopException,
+                                # or a swallowed user exception). Children that the
+                                # fragment did not get a chance to re-register will be
+                                # dropped here and re-created on the next rerun.
+                                registered_ids = (
+                                    self._fragment_storage.ids_registered_after(
+                                        registration_sequence_before
+                                    )
+                                )
+                                self._fragment_storage.clear_stale_descendants(
+                                    fragment_id,
+                                    registered_ids,
+                                )
 
                     else:
                         if PagesManager.uses_pages_directory:

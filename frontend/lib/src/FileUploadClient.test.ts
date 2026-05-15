@@ -18,36 +18,46 @@ import { Mock } from "vitest"
 
 import { FileUploadClient } from "./FileUploadClient"
 import { mockSessionInfo } from "./mocks/mocks"
+import { StreamlitEndpoints } from "./StreamlitEndpoints"
 
 const MOCK_FILE_ID = -111
 const MOCK_FILE = new File(["file1"], "file1.txt")
+
+const makeMockEndpoints = (
+  overrides: Partial<StreamlitEndpoints> = {}
+): StreamlitEndpoints => ({
+  setStaticConfigUrl: vi.fn(),
+  sendClientErrorToHost: vi.fn(),
+  checkSourceUrlResponse: vi.fn(),
+  buildComponentURL: vi.fn(),
+  buildBidiComponentURL: vi.fn(),
+  buildMediaURL: vi.fn(),
+  buildDownloadUrl: vi.fn(),
+  buildFileUploadURL: vi.fn(),
+  buildAppPageURL: vi.fn(),
+  uploadFileUploaderFile: vi.fn(),
+  ...overrides,
+})
 
 describe("FileUploadClient Upload", () => {
   let formsWithPendingRequestsChanged: Mock
   let requestFileURLs: Mock
   let uploadFileUploaderFile: Mock
+  let deleteFileAtURL: Mock
   let uploader: FileUploadClient
 
   beforeEach(() => {
     formsWithPendingRequestsChanged = vi.fn()
     uploadFileUploaderFile = vi.fn()
     requestFileURLs = vi.fn()
+    deleteFileAtURL = vi.fn()
 
     uploader = new FileUploadClient({
       sessionInfo: mockSessionInfo(),
-      endpoints: {
-        setStaticConfigUrl: vi.fn(),
-        sendClientErrorToHost: vi.fn(),
-        checkSourceUrlResponse: vi.fn(),
-        buildComponentURL: vi.fn(),
-        buildBidiComponentURL: vi.fn(),
-        buildMediaURL: vi.fn(),
-        buildDownloadUrl: vi.fn(),
-        buildFileUploadURL: vi.fn(),
-        buildAppPageURL: vi.fn(),
-        uploadFileUploaderFile: uploadFileUploaderFile,
-        deleteFileAtURL: vi.fn(),
-      },
+      endpoints: makeMockEndpoints({
+        uploadFileUploaderFile,
+        deleteFileAtURL,
+      }),
       formsWithPendingRequestsChanged,
       requestFileURLs,
     })
@@ -186,5 +196,38 @@ describe("FileUploadClient Upload", () => {
         fileUrls: [],
       })
     }).not.toThrow()
+  })
+
+  it("deleteFile calls endpoints.deleteFileAtURL", async () => {
+    deleteFileAtURL.mockResolvedValue(undefined)
+
+    await uploader.deleteFile("/some/file/url")
+
+    expect(deleteFileAtURL).toHaveBeenCalledTimes(1)
+    expect(deleteFileAtURL).toHaveBeenCalledWith(
+      "/some/file/url",
+      expect.any(String)
+    )
+  })
+})
+
+describe("FileUploadClient without optional endpoints", () => {
+  const makeUploader = (): FileUploadClient =>
+    new FileUploadClient({
+      sessionInfo: mockSessionInfo(),
+      endpoints: makeMockEndpoints(),
+      formsWithPendingRequestsChanged: vi.fn(),
+    })
+
+  it("deleteFile resolves to undefined when deleteFileAtURL is undefined", async () => {
+    await expect(
+      makeUploader().deleteFile("/some/url")
+    ).resolves.toBeUndefined()
+  })
+
+  it("fetchFileURLs resolves to [] when requestFileURLs is not provided", async () => {
+    await expect(makeUploader().fetchFileURLs([MOCK_FILE])).resolves.toEqual(
+      []
+    )
   })
 })
