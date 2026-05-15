@@ -58,6 +58,7 @@ _LOGGER: Final = get_logger(__name__)
 _ROUTE_AUTH_LOGIN: Final = "auth/login"
 _ROUTE_AUTH_LOGOUT: Final = "auth/logout"
 _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
+_AUTH_COOKIE_SAMESITE: Final = "lax"
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -148,17 +149,29 @@ async def _set_auth_cookie(
     def set_single_cookie(cookie_name: str, value: str) -> None:
         _set_single_cookie(response, cookie_name, value)
 
+    cookie_attr_size = _get_auth_cookie_attribute_size()
     set_cookie_with_chunks(
         set_single_cookie,
         _create_signed_value_wrapper,
         USER_COOKIE_NAME,
         user_info,
+        cookie_attr_size=cookie_attr_size,
     )
     set_cookie_with_chunks(
         set_single_cookie,
         _create_signed_value_wrapper,
         TOKENS_COOKIE_NAME,
         tokens,
+        cookie_attr_size=cookie_attr_size,
+    )
+
+
+def _get_auth_cookie_attribute_size() -> int:
+    """Return the auth cookie attribute bytes used for chunk-size estimation."""
+    return len(
+        f"; Path={_get_cookie_path()}; HttpOnly; "
+        f"SameSite={_AUTH_COOKIE_SAMESITE}; "
+        f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}"
     )
 
 
@@ -183,7 +196,7 @@ def _set_single_cookie(
         cookie_name,
         cookie_payload,
         httponly=True,
-        samesite="lax",
+        samesite=_AUTH_COOKIE_SAMESITE,
         path=_get_cookie_path(),
         max_age=AUTH_COOKIE_MAX_AGE_SECONDS,
     )
