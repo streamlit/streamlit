@@ -33,14 +33,14 @@
 
 - Prefer `make` targets for all dev tasks (tests, lint, format, builds).
 - Always use `uv run` to run any Python command (e.g. `uv run streamlit`, `uv run pytest`, `uv run ruff`, `uv run mypy`, etc.).
-- Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
+- **Important:** Always use `uv run` for git commands that trigger hooks (e.g. `uv run git commit`, `uv run git push`). Pre-commit hooks require the uv environment to run linters and formatters.
 - For Python unit tests: `uv run pytest` commands are allowed and encouraged for running specific tests during development.
 - For E2E tests: `uv run pytest` commands targeting `e2e_playwright/` files are blocked by policy.
   Use `make run-e2e-test <filename>` instead.
 
 ## `make` commands
 
-Selection of `make` commands for development (run in the repo root):
+Selection of `make` commands for development (**Important: run from the repo root**):
 
 - `help`: Show all available make commands. [~1s]
 - `check`: Run all checks (format, lint, types, unit tests) on changed files only. Add `E2E_CHECK=true` to include E2E tests. [varies by changes]
@@ -101,6 +101,8 @@ Selection of `make` commands for development (run in the repo root):
 
 ## Cursor Cloud specific instructions
 
+The environment is configured via `.cursor/environment.json`, which installs system dependencies (Node.js 24, protoc, rsync) via a Dockerfile and runs `make init` to install all project dependencies.
+
 ### Services
 
 | Service | How to start | Default port |
@@ -109,13 +111,4 @@ Selection of `make` commands for development (run in the repo root):
 | Frontend dev server | `make frontend-dev` | 3000 |
 | Both (recommended) | `make debug <script.py>` | 3001 (frontend), 8501 (backend) |
 
-### Gotchas
-
-- **ESLint cache staleness**: After installing frontend dependencies or building workspace packages, delete ESLint caches before running `make frontend-lint`: `find frontend -name ".eslintcache" -delete`. Stale caches can cause false `import-x/no-unresolved` errors for workspace packages like `@streamlit/utils`.
-- **Workspace packages must be built before frontend lint**: The `connection` and other workspaces import `@streamlit/utils` which needs its `dist/` output. Run `cd frontend && yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build` (or `make frontend-fast`) before `make frontend-lint`.
-- **Python `tzdata` package**: If you encounter `ZoneInfoNotFoundError`, install `tzdata` with `uv pip install tzdata`.
-- **`python` command**: Some environments only provide `python3`. Prefer `python3` in commands, or create a local `python -> python3` shim if a tool requires `python`.
-- **All make commands** must be run from the repo root.
-- **Pre-commit hooks** require `uv run git commit` / `uv run git push` so linters/formatters in the uv venv are available.
-- **E2E tests** require Playwright browsers: `uv run python -m playwright install --with-deps` (installed via `make python-init` by default).
-- For standard build/test/lint commands, see the `make` commands section above and the Makefile.
+For standard build/test/lint commands, see the `make` commands section above.
