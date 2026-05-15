@@ -26,6 +26,7 @@ from streamlit.commands.execution_control import (
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
 from streamlit.runtime.scriptrunner import RerunData
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 
 
 class NewFragmentIdQueueTest(unittest.TestCase):
@@ -42,7 +43,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
     def test_asserts_if_curr_id_not_in_queue(self):
         ctx = MagicMock()
         ctx.fragment_ids_this_run = ["some_fragment_id"]
-        ctx.current_fragment_id = "some_other_fragment_id"
+        ThreadState.initialize(fragment_id="some_other_fragment_id")
 
         with pytest.raises(
             RuntimeError,
@@ -60,7 +61,7 @@ class NewFragmentIdQueueTest(unittest.TestCase):
             "id4",
             "id5",
         ]
-        ctx.current_fragment_id = "curr_id"
+        ThreadState.initialize(fragment_id="curr_id")
 
         assert _new_fragment_id_queue(ctx, scope="fragment") == [
             "curr_id",
