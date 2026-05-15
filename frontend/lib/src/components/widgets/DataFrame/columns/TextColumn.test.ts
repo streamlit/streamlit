@@ -162,4 +162,23 @@ describe("TextColumn", () => {
     const cell = mockColumn.getCell("test", true)
     expect(isErrorCell(cell)).toEqual(false)
   })
+
+  it.each([null, undefined])(
+    "treats %p as valid when the column is not required",
+    value => {
+      const mockColumn = TextColumn(MOCK_TEXT_COLUMN_PROPS)
+      expect(mockColumn.validateInput!(value)).toBe(true)
+    }
+  )
+
+  it.each([null, undefined])(
+    "rejects %p when the column is required",
+    value => {
+      const mockColumn = TextColumn({
+        ...MOCK_TEXT_COLUMN_PROPS,
+        isRequired: true,
+      })
+      expect(mockColumn.validateInput!(value)).toBe(false)
+    }
+  )
 })

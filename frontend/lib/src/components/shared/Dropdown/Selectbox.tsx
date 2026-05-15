@@ -299,8 +299,8 @@ const Selectbox: FC<Props> = ({
               overrides: {
                 Svg: {
                   style: () => ({
-                    width: theme.iconSizes.xl,
-                    height: theme.iconSizes.xl,
+                    width: theme.iconSizes.lg,
+                    height: theme.iconSizes.lg,
                   }),
                 },
               },
