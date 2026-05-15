@@ -16,53 +16,16 @@
 
 import { FC, useMemo } from "react"
 
-import { streamlit } from "@streamlit/protobuf"
-
 import type { ElementNode } from "~lib/AppNode"
 import { StyledElementContainer } from "~lib/components/core/Block/styled-components"
 import { FlexContext } from "~lib/components/core/Layout/FlexContext"
 import {
+  extractLayoutSubElement,
   useLayoutStyles,
-  type UseLayoutStylesArgs,
 } from "~lib/components/core/Layout/useLayoutStyles"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 
 import { ElementContainerConfig } from "./ElementContainerConfig"
-
-const getLayoutSubElement = (
-  node: ElementNode
-): UseLayoutStylesArgs["subElement"] => {
-  const typeKey = node.element.type as keyof typeof node.element | undefined
-  const raw = typeKey
-    ? (node.element as unknown as Record<string, unknown>)[typeKey]
-    : undefined
-  if (!raw || typeof raw !== "object") return undefined
-
-  const candidate = raw as Record<string, unknown>
-  const subElement = {
-    useContainerWidth: candidate.useContainerWidth as
-      | boolean
-      | null
-      | undefined,
-    height: candidate.height as number | undefined,
-    width: candidate.width as number | undefined,
-    widthConfig: candidate.widthConfig as
-      | streamlit.IWidthConfig
-      | null
-      | undefined,
-  }
-
-  if (
-    subElement.useContainerWidth === undefined &&
-    subElement.height === undefined &&
-    subElement.width === undefined &&
-    subElement.widthConfig === undefined
-  ) {
-    return undefined
-  }
-
-  return subElement
-}
 
 export const StyledElementContainerLayoutWrapper: FC<
   Omit<
@@ -86,7 +49,7 @@ export const StyledElementContainerLayoutWrapper: FC<
 
   let styles = useLayoutStyles({
     element: node.element,
-    subElement: getLayoutSubElement(node),
+    subElement: extractLayoutSubElement(node.element),
     styleOverrides,
     minStretchBehavior,
   })
