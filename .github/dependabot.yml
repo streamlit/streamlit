@@ -81,9 +81,6 @@ updates:
       eslint:
         patterns:
           - "*eslint*"
-      emotion-icons:
-        patterns:
-          - "@emotion-icons/*"
       emotion:
         patterns:
           - "*emotion*"
