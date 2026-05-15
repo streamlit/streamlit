@@ -93,9 +93,11 @@ const createBaseUiThemeOverrides = (
   const { inSidebar, colors, genericFonts, fontSizes, lineHeights, radii } =
     theme
 
-  const fontStyles = {
+  // Font styles applied to all BaseWeb typography tokens that back widget inputs,
+  // labels, and pickers — 14px to align with Streamlit's widget label size.
+  const widgetFontStyles = {
     fontFamily: genericFonts.bodyFont,
-    fontSize: fontSizes.md,
+    fontSize: fontSizes.sm,
     fontSizeSm: fontSizes.sm,
     fontWeight: "normal",
     lineHeight: lineHeights.base,
@@ -143,23 +145,23 @@ const createBaseUiThemeOverrides = (
       // Here we override some fonts that are used in widgets. We don't care
       // about the ones that are not used.
       font100: {},
-      font150: { ...fontStyles }, // Popup menus
-      font200: {},
+      font150: { ...widgetFontStyles }, // Tooltip text, mini buttons
+      font200: { ...widgetFontStyles }, // Multiselect compact input, menu list items
       font250: {},
-      font300: { ...fontStyles }, // Popup menus
-      font350: { ...fontStyles }, // Checkbox
-      font400: { ...fontStyles }, // Textinput, textarea, selectboxes
-      font450: { ...fontStyles }, // Radio
-      font460: { ...fontStyles }, // Calendar header buttons
-      font470: { ...fontStyles }, // Button
-      font500: { ...fontStyles }, // Selected items in selectbox
+      font300: { ...widgetFontStyles }, // Input (SIZE.default), tabs, textarea, selectboxes
+      font350: { ...widgetFontStyles }, // Checkbox
+      font400: { ...widgetFontStyles }, // Input (SIZE.large), selected items
+      font450: { ...widgetFontStyles }, // Radio
+      font460: { ...widgetFontStyles }, // Calendar header buttons
+      font470: { ...widgetFontStyles }, // Button (mini size)
+      font500: { ...widgetFontStyles }, // Selected items in selectbox
       font600: {},
 
-      LabelXSmall: { ...fontStyles },
-      LabelSmall: { ...fontStyles },
-      LabelMedium: { ...fontStyles },
-      LabelLarge: { ...fontStyles },
-      ParagraphSmall: { ...fontStyles },
+      LabelXSmall: { ...widgetFontStyles },
+      LabelSmall: { ...widgetFontStyles },
+      LabelMedium: { ...widgetFontStyles },
+      LabelLarge: { ...widgetFontStyles },
+      ParagraphSmall: { ...widgetFontStyles }, // Calendar day cells (DENSITY.high datepicker)
     },
 
     colors: {
