@@ -20,13 +20,13 @@ natural-width controls, and grid becomes the tool for repeated equal-track layou
 
 ### User Requests
 
-- [GitHub Issue #11101](https://github.com/streamlit/streamlit/issues/11101) - Grid layout
-- [GitHub Issue #5353](https://github.com/streamlit/streamlit/issues/5353) - Wrap
-  columns/grids on different screen sizes
-- [GitHub Issue #6592](https://github.com/streamlit/streamlit/issues/6592) - Configurable
-  column responsiveness width threshold
-- [GitHub Issue #3052](https://github.com/streamlit/streamlit/issues/3052) - Vertical
-  alignment for columns
+- [#11101](https://github.com/streamlit/streamlit/issues/11101) - Grid layout
+- [#5353](https://github.com/streamlit/streamlit/issues/5353) - Wrap columns/grids on
+  different screen sizes
+- [#6592](https://github.com/streamlit/streamlit/issues/6592) - Configurable column
+  responsiveness width threshold
+- [#3052](https://github.com/streamlit/streamlit/issues/3052) - Vertical alignment for
+  columns
 
 Issue #11101 describes two needs:
 
