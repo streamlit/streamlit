@@ -77,15 +77,15 @@ describe("ProgressBar component", () => {
   it("does not square top corners by default", () => {
     render(<ProgressBar value={50} />)
     expect(screen.getByTestId("stProgressBarTrack")).not.toHaveStyle({
-      borderTopLeftRadius: "0px",
+      borderTopLeftRadius: "0",
     })
   })
 
   it("squares top corners when squareTopCorners is true", () => {
     render(<ProgressBar value={50} squareTopCorners />)
     const track = screen.getByTestId("stProgressBarTrack")
-    expect(track).toHaveStyle({ borderTopLeftRadius: "0px" })
-    expect(track).toHaveStyle({ borderTopRightRadius: "0px" })
+    expect(track).toHaveStyle({ borderTopLeftRadius: "0" })
+    expect(track).toHaveStyle({ borderTopRightRadius: "0" })
   })
 
   it.each([Size.EXTRASMALL, Size.SMALL])(

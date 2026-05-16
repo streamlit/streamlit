@@ -46,17 +46,19 @@ function ProgressBar({
       maxValue={100}
       aria-label={ariaLabel}
     >
-      {({ percentage: pct }) => (
-        <StyledProgressTrack
-          $size={size}
-          $squareTopCorners={squareTopCorners}
-          data-testid="stProgressBarTrack"
-        >
-          <StyledProgressFill
-            style={{ transform: `translateX(${pct - 100}%)` }}
-          />
-        </StyledProgressTrack>
-      )}
+      <StyledProgressTrack
+        $size={size}
+        data-testid="stProgressBarTrack"
+        style={
+          squareTopCorners
+            ? { borderTopLeftRadius: "0", borderTopRightRadius: "0" }
+            : undefined
+        }
+      >
+        <StyledProgressFill
+          style={{ transform: `translateX(${clamped - 100}%)` }}
+        />
+      </StyledProgressTrack>
     </AriaProgressBar>
   )
 }

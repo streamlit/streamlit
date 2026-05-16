@@ -20,33 +20,30 @@ import { Size } from "./types"
 
 interface StyledProgressTrackProps {
   $size: Size
-  $squareTopCorners?: boolean
 }
 
 export const StyledProgressTrack = styled.div<StyledProgressTrackProps>(
-  ({ theme, $size, $squareTopCorners }) => ({
+  ({ theme, $size }) => ({
     height: $size === Size.EXTRASMALL ? theme.spacing.twoXS : theme.spacing.sm,
     backgroundColor: theme.colors.secondaryBg,
     borderRadius: theme.radii.sm,
     overflow: "hidden",
-    ...($squareTopCorners
-      ? { borderTopLeftRadius: 0, borderTopRightRadius: 0 }
-      : {}),
   })
 )
 
 /**
  * The fill element of the progress bar.
  *
- * `transform` is intentionally NOT in this class — it is applied via inline
- * style in ProgressBar.tsx. Emotion generates a new class for each unique prop
- * combination, so if transform lived here, the browser would see a class swap
- * rather than a property mutation, and the CSS transition would never fire.
+ * Dynamic values (`transform` and `squareTopCorners` on the track) are applied
+ * via inline `style` props in ProgressBar.tsx rather than Emotion props.
+ * Emotion generates a new CSS class for each unique prop combination — inline
+ * styles keep the class stable so CSS transitions fire correctly, and make
+ * `toHaveStyle` assertions in tests reliable (jsdom does not compute
+ * class-based styles from injected `<style>` tags).
  */
 export const StyledProgressFill = styled.div(({ theme }) => ({
   width: "100%",
   height: "100%",
   backgroundColor: theme.colors.secondary,
-  borderRadius: theme.radii.sm,
   transition: "transform 0.5s ease",
 }))
