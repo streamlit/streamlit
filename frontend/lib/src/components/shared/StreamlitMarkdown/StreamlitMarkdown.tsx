@@ -1000,9 +1000,23 @@ function mdLinksInDiv(source: string): string {
   const markdownLinkRegex = /\[([^\]]+)\]\((.+?)\)/g
 
   return source.replace(divBlockRegex, divBlock => {
-    return divBlock.replace(markdownLinkRegex, (_match, label, href) => {
-      return `<a href="${href}">${label}</a>`
-    })
+    const firstGtIndex = divBlock.indexOf(">")
+
+    if (firstGtIndex === -1) {
+      return divBlock
+    }
+
+    const openingTag = divBlock.slice(0, firstGtIndex + 1)
+    const innerAndClosing = divBlock.slice(firstGtIndex + 1)
+
+    const processedInnerAndClosing = innerAndClosing.replace(
+      markdownLinkRegex,
+      (_match, label, href) => {
+        return `<a href="${href}">${label}</a>`
+      }
+    )
+
+    return `${openingTag}${processedInnerAndClosing}`
   })
 }
 

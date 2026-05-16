@@ -477,8 +477,17 @@ describe("StreamlitMarkdown", () => {
     expect(link).toHaveAttribute("target", "_self")
   })
 
-  it("renders HTML links correctly", async () => {
+  it("renders markdown links inside div when allowHTML is true", async () => {
     const source = "<div>Something1 [Streamlit](https://streamlit.io/)</div>"
+    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const link = await screen.findByText("Streamlit")
+    expect(link).toHaveAttribute("href", "https://streamlit.io/")
+    expect(link instanceof HTMLAnchorElement).toBe(true)
+  })
+
+  it("doesn't convert markdown links inside div attributes", async () => {
+    const source =
+      '<div title="[x](y)">Something [Streamlit](https://streamlit.io/)</div>'
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
     const link = await screen.findByText("Streamlit")
     expect(link).toHaveAttribute("href", "https://streamlit.io/")
