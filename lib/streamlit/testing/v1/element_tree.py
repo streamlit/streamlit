@@ -502,10 +502,11 @@ class Dataframe(Element):
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
-        self.key = None
         self.proto = proto
         self.root = root
         self.type = "dataframe"
+        # Extract user key from the element id if present
+        self.key = user_key_from_element_id(proto.id) if proto.id else None
 
     @property
     def value(self) -> PandasDataframe:
@@ -932,7 +933,7 @@ class FileUploader(Widget):
         """Allowed file types for upload. (list of str)"""  # noqa: D400
         return list(self.proto.type)
 
-    def set_value(  # type: ignore[override,unused-ignore]
+    def set_value(  # ty: ignore[invalid-method-override]
         self,
         files: (tuple[str, bytes, str] | Sequence[tuple[str, bytes, str]] | None),
     ) -> Self:
@@ -1948,6 +1949,28 @@ class Block:
         return WidgetList(self.get("button_group"))  # type: ignore
 
     @property
+    def pills(self) -> WidgetList[ButtonGroup[Any]]:
+        """st.pills widgets (subset of button_group with PILLS style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.PILLS
+            ]
+        )
+
+    @property
+    def segmented_control(self) -> WidgetList[ButtonGroup[Any]]:
+        """st.segmented_control widgets (subset of button_group with SEGMENTED_CONTROL style)."""
+        return WidgetList(
+            [
+                button_group
+                for button_group in self.button_group
+                if button_group.proto.style == ButtonGroupProto.Style.SEGMENTED_CONTROL
+            ]
+        )
+
+    @property
     def caption(self) -> ElementList[Caption]:
         return ElementList(self.get("caption"))  # type: ignore
 
@@ -2544,8 +2567,11 @@ def parse_tree_from_messages(messages: list[ForwardMsg]) -> ElementTree:
                 new_node = Tab(block.tab, root=root)
             else:
                 new_node = Block(proto=block, root=root)
+        elif delta.WhichOneof("type") == "new_transient":
+            # new_transient (e.g. spinner) - skip these in the element tree
+            continue
         else:
-            # add_rows
+            # Unknown delta type - skip to avoid silently swallowing future types
             continue
 
         current_node: Block = root

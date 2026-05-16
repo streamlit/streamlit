@@ -36,6 +36,7 @@ from streamlit.web.server.starlette.starlette_server import (
     RetriesExceededError,
     UvicornRunner,
     _bind_socket,
+    _get_uvicorn_config_kwargs,
     _get_websocket_settings,
     _is_port_manually_set,
     _server_address_is_unix_socket,
@@ -132,12 +133,117 @@ class TestGetWebsocketSettings:
 
     @patch_config_options({"server.websocketPingInterval": 10})
     def test_low_interval_accepted(self) -> None:
-        """Test that low interval values are accepted (no Tornado constraints)."""
+        """Test that low interval values are accepted."""
 
         interval, timeout = _get_websocket_settings()
 
         assert interval == 10
         assert timeout == 10
+
+
+class TestGetUvicornConfigKwargs:
+    """Tests for _get_uvicorn_config_kwargs function."""
+
+    @pytest.mark.parametrize(
+        ("uvicorn_version", "expected_ws"),
+        [
+            # Versions below threshold should use "auto"
+            ("0.30.0", "auto"),
+            ("0.43.0", "auto"),
+            ("0.43.99", "auto"),
+            ("0.44.0rc1", "auto"),  # Pre-releases are less than final release
+            ("0.44.0.dev0", "auto"),  # Dev releases are less than final release
+            # Versions at or above threshold should use "websockets-sansio"
+            ("0.44.0", "websockets-sansio"),
+            ("0.44.1", "websockets-sansio"),
+            ("0.45.0", "websockets-sansio"),
+            ("1.0.0", "websockets-sansio"),
+        ],
+    )
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_websocket_protocol_by_uvicorn_version(
+        self, uvicorn_version: str, expected_ws: str
+    ) -> None:
+        """Test that ws protocol is selected correctly based on uvicorn version."""
+        with patch("uvicorn.__version__", uvicorn_version):
+            kwargs = _get_uvicorn_config_kwargs()
+
+        assert kwargs["ws"] == expected_ws
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": None,
+            "server.sslKeyFile": None,
+            "server.websocketPingInterval": None,
+            "server.enableWebsocketCompression": True,
+        }
+    )
+    def test_uvicorn_accepts_config_kwargs(self) -> None:
+        """Test that uvicorn.Config accepts the kwargs without raising.
+
+        This is a smoke test that verifies the kwargs dict structure is valid.
+        The actual protocol resolution and validation happens lazily in
+        uvicorn.Config.load(), not in __init__.
+        """
+        import uvicorn
+
+        kwargs = _get_uvicorn_config_kwargs()
+
+        # Verify uvicorn.Config accepts these kwargs without raising
+        uvicorn_config = uvicorn.Config(app="test:app", **kwargs)
+        assert uvicorn_config.ws in {"websockets-sansio", "auto"}
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": "/path/to/cert.pem",
+            "server.sslKeyFile": "/path/to/key.pem",
+            "server.websocketPingInterval": 45,
+            "server.enableWebsocketCompression": False,
+        }
+    )
+    def test_returns_all_expected_keys(self) -> None:
+        """Test that all expected configuration keys are returned."""
+        kwargs = _get_uvicorn_config_kwargs()
+
+        expected_keys = {
+            "ssl_certfile",
+            "ssl_keyfile",
+            "ws",
+            "ws_ping_interval",
+            "ws_ping_timeout",
+            "ws_max_size",
+            "ws_per_message_deflate",
+            "use_colors",
+            "access_log",
+        }
+        assert set(kwargs.keys()) == expected_keys
+
+    @patch_config_options(
+        {
+            "server.sslCertFile": "/path/to/cert.pem",
+            "server.sslKeyFile": "/path/to/key.pem",
+            "server.websocketPingInterval": 45,
+            "server.enableWebsocketCompression": False,
+        }
+    )
+    def test_returns_configured_values(self) -> None:
+        """Test that configured values are properly passed through."""
+        kwargs = _get_uvicorn_config_kwargs()
+
+        assert kwargs["ssl_certfile"] == "/path/to/cert.pem"
+        assert kwargs["ssl_keyfile"] == "/path/to/key.pem"
+        assert kwargs["ws_ping_interval"] == 45
+        assert kwargs["ws_ping_timeout"] == 45
+        assert kwargs["ws_per_message_deflate"] is False
+        assert kwargs["use_colors"] is False
+        assert kwargs["access_log"] is False
 
 
 class TestServerPortIsManuallySet:
@@ -237,7 +343,7 @@ class TestSslConfiguration:
         server = self._create_server()
 
         with pytest.raises(SystemExit):
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
     @patch_config_options(
         {"server.sslCertFile": None, "server.sslKeyFile": "/tmp/key.pem"}
@@ -247,7 +353,7 @@ class TestSslConfiguration:
         server = self._create_server()
 
         with pytest.raises(SystemExit):
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
     @patch_config_options({"server.sslCertFile": None, "server.sslKeyFile": None})
     def test_no_ssl_when_neither_option_set(self) -> None:
@@ -270,7 +376,7 @@ class TestSslConfiguration:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
             # Verify uvicorn.Config was called with ssl_certfile=None, ssl_keyfile=None
             uvicorn_config_cls.assert_called_once()
@@ -301,7 +407,7 @@ class TestSslConfiguration:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
             # Verify uvicorn.Config was called with the correct SSL options
             uvicorn_config_cls.assert_called_once()
@@ -311,7 +417,7 @@ class TestSslConfiguration:
 
 
 class TestStartStarletteServer:
-    """Integration tests for the Server._start_starlette() method."""
+    """Integration tests for the Server.start() method."""
 
     def setUp(self) -> None:
         """Set up test fixtures."""
@@ -370,7 +476,7 @@ class TestStartStarletteServer:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
         assert bind_socket.call_count == 2
         uvicorn_instance.startup.assert_awaited_once()
@@ -392,7 +498,7 @@ class TestStartStarletteServer:
             ),
         ):
             with pytest.raises(SystemExit):
-                self._run_async(server._start_starlette())
+                self._run_async(server.start())
 
     def test_raises_on_max_retries_exceeded(self) -> None:
         """Test that RetriesExceededError is raised after max retries."""
@@ -410,7 +516,7 @@ class TestStartStarletteServer:
             ),
         ):
             with pytest.raises(RetriesExceededError):
-                self._run_async(server._start_starlette())
+                self._run_async(server.start())
 
     def test_raises_on_unix_socket(self) -> None:
         """Test that RuntimeError is raised for Unix socket addresses."""
@@ -419,7 +525,7 @@ class TestStartStarletteServer:
 
         with patch_config_options({"server.address": "unix:///tmp/streamlit.sock"}):
             with pytest.raises(RuntimeError, match="Unix sockets are not supported"):
-                self._run_async(server._start_starlette())
+                self._run_async(server.start())
 
     def test_retries_on_permission_denied(self) -> None:
         """Test that server retries on EACCES (permission denied) errors.
@@ -448,7 +554,7 @@ class TestStartStarletteServer:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
         assert bind_socket.call_count == 2
         uvicorn_instance.startup.assert_awaited_once()
@@ -463,7 +569,7 @@ class TestStartStarletteServer:
             side_effect=OSError(errno.ENOENT, "no such file"),
         ):
             with pytest.raises(OSError, match="no such file") as exc_info:
-                self._run_async(server._start_starlette())
+                self._run_async(server.start())
 
             assert exc_info.value.errno == errno.ENOENT
 
@@ -488,7 +594,7 @@ class TestStartStarletteServer:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
         bind_socket.assert_called_once()
         call_args = bind_socket.call_args[0]
@@ -515,11 +621,96 @@ class TestStartStarletteServer:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
         bind_socket.assert_called_once()
         call_args = bind_socket.call_args[0]
         assert call_args[0] == "192.168.1.100"
+
+
+class TestDynamicPort:
+    """Tests for server.port=0 (ephemeral port) support in UvicornServer."""
+
+    def setUp(self) -> None:
+        """Set up test fixtures."""
+        Runtime._instance = None
+        self.original_port = config.get_option("server.port")
+        config.set_option("server.port", 0)
+        self.loop = asyncio.new_event_loop()
+
+    def tearDown(self) -> None:
+        """Tear down test fixtures."""
+        Runtime._instance = None
+        config.set_option("server.port", self.original_port)
+        self.loop.close()
+
+    @pytest.fixture(autouse=True)
+    def setup_and_teardown(self) -> None:
+        """Pytest fixture for setup and teardown."""
+        self.setUp()
+        yield
+        self.tearDown()
+
+    def _create_server(self) -> Server:
+        """Create a Server instance for testing."""
+        server = Server("mock/script/path", is_hello=False)
+        server._runtime._eventloop = self.loop
+        return server
+
+    def _run_async(self, coro: Coroutine[Any, Any, None]) -> None:
+        """Run an async coroutine in the test event loop."""
+        self.loop.run_until_complete(coro)
+
+    def test_updates_config_port_when_binding_to_zero(self) -> None:
+        """Test that config is updated with the actual port when port=0."""
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+        mock_socket.getsockname.return_value = ("127.0.0.1", 54321)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server.start())
+
+        assert config.get_option("server.port") == 54321
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.port == 54321
+
+    def test_does_not_call_getsockname_for_nonzero_port(self) -> None:
+        """Test that getsockname is not called when a specific port is configured."""
+        config.set_option("server.port", 8501)
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                return_value=mock_socket,
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server.start())
+
+        mock_socket.getsockname.assert_not_called()
+        assert config.get_option("server.port") == 8501
 
 
 class TestServerLifecycle:
@@ -574,7 +765,7 @@ class TestServerLifecycle:
 
         async def verify_start_returns() -> None:
             nonlocal start_returned
-            await server._start_starlette()
+            await server.start()
             # If we get here, start() returned (didn't block forever)
             start_returned = True
 
@@ -616,7 +807,7 @@ class TestServerLifecycle:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
             # Verify server is stored and can be stopped
             assert server._starlette_server is not None
@@ -646,7 +837,7 @@ class TestServerLifecycle:
             uvicorn_instance.should_exit = False
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
             # Verify stopped returns an awaitable
             stopped = server.stopped
@@ -680,7 +871,7 @@ class TestServerLifecycle:
             # Before start, _starlette_server should be None
             assert server1._starlette_server is None
 
-            self._run_async(server1._start_starlette())
+            self._run_async(server1.start())
 
             # After start, _starlette_server should be set
             assert server1._starlette_server is not None
@@ -710,7 +901,7 @@ class TestServerLifecycle:
             uvicorn_server_cls.return_value = uvicorn_instance
 
             with pytest.raises(RuntimeError, match="Server startup failed"):
-                self._run_async(server._start_starlette())
+                self._run_async(server.start())
 
     def test_stopped_event_set_after_main_loop_completes(self) -> None:
         """Test that stopped event is set after the server main loop completes."""
@@ -735,7 +926,7 @@ class TestServerLifecycle:
             uvicorn_instance.main_loop = AsyncMock(return_value=None)
             uvicorn_server_cls.return_value = uvicorn_instance
 
-            self._run_async(server._start_starlette())
+            self._run_async(server.start())
 
             starlette_server: UvicornServer = server._starlette_server  # type: ignore
             assert starlette_server is not None

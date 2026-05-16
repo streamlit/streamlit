@@ -179,7 +179,7 @@ function ProgressColumn(
         )
       }
 
-      let displayData = ""
+      let displayData: string
 
       try {
         displayData = formatNumber(cellData, parameters.format, fixedDecimals)

@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/connection",
-  "version": "1.55.0",
+  "version": "1.57.0",
   "license": "Apache-2.0",
   "private": true,
   "type": "module",
@@ -24,27 +24,26 @@
     "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "lint:fix": "yarn run -T eslint --cache --max-warnings 0 --fix src",
     "typecheck": "yarn run typecheck:all",
-    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T oxfmt --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T oxfmt --check --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },
   "dependencies": {
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
-    "axios": "^1.13.6",
-    "lodash-es": "^4.17.23",
+    "axios": "^1.16.0",
+    "lodash-es": "^4.18.1",
     "loglevel": "^1.9.2"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12",
     "axios-mock-adapter": "^2.1.0",
     "typesync": "^0.14.3",
-    "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-plugin-svgr": "^4.5.0",
-    "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0",
+    "vite": "^8.0.11",
+    "vite-plugin-dts": "^5.0.0",
+    "vite-plugin-svgr": "^5.2.0",
+    "vitest": "^4.1.5",
     "vitest-websocket-mock": "^0.5.0"
   },
   "browserslist": [

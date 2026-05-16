@@ -39,6 +39,10 @@ from streamlit.proto.NewSession_pb2 import (
     UserInfo,
 )
 from streamlit.runtime import caching
+from streamlit.runtime.backend_operation_handler import (
+    BackendOperationDispatcher,
+    DeferredFileHandler,
+)
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
 from streamlit.runtime.metrics_util import Installation
@@ -55,10 +59,16 @@ if TYPE_CHECKING:
 
     from google.protobuf.internal.containers import RepeatedScalarFieldContainer
 
-    from streamlit.proto.BackMsg_pb2 import BackMsg, DeferredFileRequest
+    from streamlit.proto.BackMsg_pb2 import (
+        BackendOperationRequest,
+        BackMsg,
+    )
     from streamlit.runtime.script_data import ScriptData
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
-    from streamlit.runtime.scriptrunner_utils.script_run_context import UserInfoType
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+        UserInfoType,
+    )
     from streamlit.runtime.state import SessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
     from streamlit.source_util import PageHash, PageInfo
@@ -97,6 +107,7 @@ class AppSession:
         message_enqueued_callback: Callable[[], None] | None,
         user_info: UserInfoType,
         session_id_override: str | None = None,
+        on_script_error: OnScriptErrorHandler | None = None,
     ) -> None:
         """Initialize the AppSession.
 
@@ -131,6 +142,11 @@ class AppSession:
             The ID to assign to this session. Setting this can be useful when the
             service that a Streamlit Runtime is running in wants to tie the lifecycle of
             a Streamlit session to some other session-like object that it manages.
+
+        on_script_error
+            Callback to invoke when an uncaught exception occurs in user script code.
+            Returns True to suppress the default exception display, or False/None
+            to show the exception normally.
         """
 
         # Each AppSession has a unique string ID.
@@ -140,6 +156,7 @@ class AppSession:
         self._script_data = script_data
         self._uploaded_file_mgr = uploaded_file_manager
         self._script_cache = script_cache
+        self._on_script_error = on_script_error
         self._pages_manager = PagesManager(
             script_data.main_script_path, self._script_cache
         )
@@ -177,11 +194,31 @@ class AppSession:
 
         self._fragment_storage: FragmentStorage = MemoryFragmentStorage()
 
+        self._backend_operation_dispatcher = self._create_backend_operation_dispatcher()
+
+        # Store references to background tasks to prevent garbage collection.
+        # Tasks are removed via add_done_callback when they complete.
+        self._background_tasks: set[asyncio.Task[None]] = set()
+
         _LOGGER.debug("AppSession initialized (id=%s)", self.id)
 
     def __del__(self) -> None:
         """Ensure that we call shutdown() when an AppSession is garbage collected."""
         self.shutdown()
+
+    def _create_backend_operation_dispatcher(self) -> BackendOperationDispatcher:
+        """Create and configure the backend operation dispatcher.
+
+        Registers handlers for all supported backend operation request types.
+        """
+        dispatcher = BackendOperationDispatcher()
+
+        dispatcher.register(
+            "deferred_file",
+            DeferredFileHandler(lambda: runtime.get_instance().media_file_mgr),
+        )
+
+        return dispatcher
 
     def register_file_watchers(self) -> None:
         """Register handlers to be called when various files are changed.
@@ -319,15 +356,17 @@ class AppSession:
                 self._handle_stop_script_request()
             elif msg_type == "file_urls_request":
                 self._handle_file_urls_request(msg.file_urls_request)
-            elif msg_type == "deferred_file_request":
-                # Execute deferred callable in a separate thread to avoid blocking
-                # the main event loop. Use create_task to run the async handler.
-                # Store task reference to prevent garbage collection.
+            elif msg_type == "backend_operation_request":
                 task = asyncio.create_task(
-                    self._handle_deferred_file_request(msg.deferred_file_request)
+                    self._handle_backend_operation_request(
+                        msg.backend_operation_request
+                    )
                 )
-                # Add task name for better debugging
-                task.set_name(f"deferred_file_{msg.deferred_file_request.file_id}")
+                task.set_name(f"backend_op_{msg.backend_operation_request.request_id}")
+                # Store task reference to prevent garbage collection.
+                # Remove from set when done via callback.
+                self._background_tasks.add(task)
+                task.add_done_callback(self._background_tasks.discard)
             else:
                 _LOGGER.warning('No handler for "%s"', msg_type)
 
@@ -472,6 +511,8 @@ class AppSession:
             user_info=self._user_info,
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
+            on_script_error=self._on_script_error,
+            local_sources_watcher=self._local_sources_watcher,
         )
         self._scriptrunner.on_event.connect(self._on_scriptrunner_event)
         self._scriptrunner.start()
@@ -947,33 +988,34 @@ class AppSession:
 
         self._enqueue_forward_msg(msg)
 
-    async def _handle_deferred_file_request(self, request: DeferredFileRequest) -> None:
-        """Handle a deferred_file_request BackMsg sent by the client.
+    async def _handle_backend_operation_request(
+        self, request: BackendOperationRequest
+    ) -> None:
+        """Handle a backend_operation_request BackMsg sent by the client.
 
-        Execute the deferred callable in a separate thread and send the URL back
-        to the frontend. This prevents blocking the main event loop if the callable
-        is slow.
+        Dispatches the request to the appropriate handler and sends the
+        response back to the frontend.
         """
-        response = ForwardMsg()
-        response.deferred_file_response.file_id = request.file_id
-
-        try:
-            # Execute the deferred callable in a separate thread to avoid blocking
-            # the main event loop. This is critical for shared apps where a slow
-            # callable could freeze all sessions.
-            url = await asyncio.to_thread(
-                runtime.get_instance().media_file_mgr.execute_deferred,
-                request.file_id,
+        if request.session_id != self.id:
+            _LOGGER.warning(
+                "Rejecting backend operation request %s: session ID mismatch "
+                "(request=%s, expected=%s)",
+                request.request_id,
+                request.session_id[:8] if request.session_id else "<none>",
+                self.id[:8] if self.id else "<none>",
             )
-            response.deferred_file_response.url = url
-        except Exception as e:
-            # Send error response if callable execution fails
-            _LOGGER.exception(
-                "Error executing deferred callable for file_id %s", request.file_id
+            msg = ForwardMsg()
+            msg.backend_operation_response.request_id = request.request_id
+            msg.backend_operation_response.error_msg = (
+                "Invalid session ID for backend operation request"
             )
-            response.deferred_file_response.error_msg = str(e)
+            self._enqueue_forward_msg(msg)
+            return
 
-        self._enqueue_forward_msg(response)
+        response = await self._backend_operation_dispatcher.dispatch(request, self.id)
+        msg = ForwardMsg()
+        msg.backend_operation_response.CopyFrom(response)
+        self._enqueue_forward_msg(msg)
 
     def _populate_app_pages(
         self, msg: NewSession, pages: dict[PageHash, PageInfo]

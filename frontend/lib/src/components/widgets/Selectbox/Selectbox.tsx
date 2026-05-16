@@ -87,6 +87,7 @@ const Selectbox: FC<Props> = ({
     labelVisibility,
     placeholder,
     acceptNewOptions,
+    filterMode,
   } = element
 
   const queryParamBinding = element.queryParamKey
@@ -133,6 +134,7 @@ const Selectbox: FC<Props> = ({
       placeholder={placeholder}
       clearable={clearable}
       acceptNewOptions={acceptNewOptions ?? false}
+      filterMode={filterMode}
     />
   )
 }

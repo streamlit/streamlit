@@ -17,7 +17,6 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite"
 import dts from "vite-plugin-dts"
-import viteTsconfigPaths from "vite-tsconfig-paths"
 
 import path from "path"
 
@@ -34,15 +33,14 @@ const EXTERNAL_DEPENDENCIES = [
 
 export default defineConfig({
   base: "./",
-  plugins: [
-    viteTsconfigPaths(),
-    dts({
-      insertTypesEntry: true,
-    }),
-  ],
+  plugins: !DEV_WATCH ? [dts({ insertTypesEntry: true })] : [],
+  resolve: {
+    tsconfigPaths: true,
+  },
   build: {
     outDir: "dist",
     sourcemap: DEV_BUILD || DEV_WATCH,
+    reportCompressedSize: false,
     lib: {
       entry: path.resolve(__dirname, "src/index.ts"),
       name: "streamlit-component-lib",

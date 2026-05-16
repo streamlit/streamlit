@@ -2,8 +2,17 @@
   "name": "streamlit-component-lib",
   "version": "2.0.0",
   "description": "Support code for Streamlit Components",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
   "files": [
     "dist"
   ],
@@ -14,8 +23,8 @@
     "testWatch": "vitest",
     "lint": "yarn run -T eslint --cache --max-warnings 0 src",
     "typecheck": "yarn run typecheck:all",
-    "format": "yarn run -T prettier --write --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
-    "formatCheck": "yarn run -T prettier --check --cache --config ../.prettierrc --ignore-path ../.prettierignore './src/**/*.{js,ts,jsx,tsx}'",
+    "format": "yarn run -T oxfmt --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
+    "formatCheck": "yarn run -T oxfmt --check --config ../.oxfmtrc.json './src/**/*.{js,ts,jsx,tsx}'",
     "typesync": "typesync",
     "typesync:ci": "typesync --dry=fail"
   },
@@ -49,16 +58,15 @@
     "@types/react-dom": "^18.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "typesync": "^0.14.3",
-    "vite": "^8.0.0",
-    "vite-plugin-dts": "^4.5.4",
-    "vite-tsconfig-paths": "^6.1.0",
-    "vitest": "^4.1.0"
+    "vite": "^8.0.11",
+    "vite-plugin-dts": "^5.0.0",
+    "vitest": "^4.1.5"
   },
   "resolutions": {
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0"
   },
-  "packageManager": "yarn@4.5.3"
+  "packageManager": "yarn@4.13.0"
 }

@@ -17,13 +17,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Literal, cast
 
 from streamlit import dataframe_util
-from streamlit.elements.lib.layout_utils import (
-    Height,
-    LayoutConfig,
-    Width,
-    validate_height,
-    validate_width,
-)
+from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.elements.lib.pandas_styler_utils import marshall_styler
 from streamlit.errors import StreamlitAPIException, StreamlitValueError
 from streamlit.proto.Table_pb2 import Table as TableProto
@@ -32,6 +26,7 @@ from streamlit.runtime.metrics_util import gather_metrics
 if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
+    from streamlit.elements.lib.layout_utils import Height, Width
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
 
 
@@ -226,42 +221,46 @@ class TableMixin:
               scrolling is enabled with sticky headers.
 
         hide_index : bool or None
-            Whether to hide the index column. This can be one of the following:
+            Whether to hide the index column. This can be one of the following
+            values:
 
             - ``None`` (default): Hide the index column if it's a default
-              RangeIndex (0, 1, 2, ...). Show custom indices.
+              ``RangeIndex``. Show custom indices.
             - ``True``: Always hide the index column.
             - ``False``: Always show the index column.
 
         hide_header : bool or None
             Whether to hide the column header row. This can be one of the
-            following:
+            following values:
 
             - ``None`` (default): Auto-hide headers for data formats without
-              user-defined column names (e.g., ``dict``, ``list``,
-              ``numpy.ndarray``). Show headers for data with explicit column
-              names (e.g., ``pandas.DataFrame``).
+              user-defined column names, like ``dict``, ``list``, and
+              ``numpy.ndarray``. Show headers for data with explicit column
+              names, like ``pandas.DataFrame``.
             - ``True``: Always hide the column header row, including all levels
-              of MultiIndex headers.
+              of ``MultiIndex`` headers.
             - ``False``: Always show the column header row.
 
         Examples
         --------
         **Example 1: Display a confusion matrix as a static table**
 
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>>
-        >>> confusion_matrix = pd.DataFrame(
-        ...     {
-        ...         "Predicted Cat": [85, 3, 2, 1],
-        ...         "Predicted Dog": [2, 78, 4, 0],
-        ...         "Predicted Bird": [1, 5, 72, 3],
-        ...         "Predicted Fish": [0, 2, 1, 89],
-        ...     },
-        ...     index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
-        ... )
-        >>> st.table(confusion_matrix)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import pandas as pd
+            import streamlit as st
+
+            confusion_matrix = pd.DataFrame(
+                {
+                    "Predicted Cat": [85, 3, 2, 1],
+                    "Predicted Dog": [2, 78, 4, 0],
+                    "Predicted Bird": [1, 5, 72, 3],
+                    "Predicted Fish": [0, 2, 1, 89],
+                },
+                index=["Actual Cat", "Actual Dog", "Actual Bird", "Actual Fish"],
+            )
+            st.table(confusion_matrix)
 
         .. output::
            https://doc-table-confusion.streamlit.app/
@@ -269,20 +268,23 @@ class TableMixin:
 
         **Example 2: Display a product leaderboard with Markdown and horizontal borders**
 
-        >>> import streamlit as st
-        >>>
-        >>> product_data = {
-        ...     "Product": [
-        ...         ":material/devices: Widget Pro",
-        ...         ":material/smart_toy: Smart Device",
-        ...         ":material/inventory: Premium Kit",
-        ...     ],
-        ...     "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
-        ...     "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
-        ...     "Units sold": [1247, 892, 654],
-        ...     "Revenue": [125000, 89000, 98000],
-        ... }
-        >>> st.table(product_data, border="horizontal")
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            product_data = {
+                "Product": [
+                    ":material/devices: Widget Pro",
+                    ":material/smart_toy: Smart Device",
+                    ":material/inventory: Premium Kit",
+                ],
+                "Category": [":blue[Electronics]", ":green[IoT]", ":violet[Bundle]"],
+                "Stock": ["🟢 Full", "🟡 Low", "🔴 Empty"],
+                "Units sold": [1247, 892, 654],
+                "Revenue": [125000, 89000, 98000],
+            }
+            st.table(product_data, border="horizontal")
 
         .. output::
            https://doc-table-horizontal-border.streamlit.app/
@@ -290,48 +292,63 @@ class TableMixin:
 
         **Example 3: Display a scrollable table with fixed height**
 
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>> from numpy.random import default_rng as rng
-        >>>
-        >>> df = pd.DataFrame(
-        ...     rng(0).standard_normal((50, 5)), columns=["A", "B", "C", "D", "E"]
-        ... )
-        >>> st.table(df, height=300)
+        .. code-block:: python
+            :filename: streamlit_app.py
 
-        **Example 4: Display key-value data with auto-hidden headers**
+            import pandas as pd
+            import streamlit as st
+            from numpy.random import default_rng as rng
 
-        >>> import streamlit as st
-        >>>
-        >>> # Headers are auto-hidden for dict data
-        >>> st.table(
-        ...     {
-        ...         "Price": "$145.00",
-        ...         "Customer": "Bobby Jones",
-        ...         "Address": "129 Market St, NYC",
-        ...     }
-        ... )
+            df = pd.DataFrame(
+                rng(0).standard_normal((50, 5)), columns=["A", "B", "C", "D", "E"]
+            )
+            st.table(df, height=300)
+
+        **Example 4: Display key-value data**
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            st.table(
+                {
+                    ":material/folder: Project": "**Streamlit** - The fastest way to build data apps",
+                    ":material/code: Repository": "[github.com/streamlit/streamlit](https://github.com/streamlit/streamlit)",
+                    ":material/new_releases: Version": ":gray-badge[1.45.0]",
+                    ":material/license: License": ":green-badge[Apache 2.0]",
+                    ":material/group: Maintainers": ":blue-badge[Core Team] :violet-badge[Community]",
+                },
+                border="horizontal",
+                width="content",
+            )
 
         .. output::
-           https://doc-table-key-value.streamlit.app/
-           height: 200px
+           https://doc-table-auto-header.streamlit.app/
+           height: 250px
 
         **Example 5: Display a minimal table without index and headers**
 
-        >>> import pandas as pd
-        >>> import streamlit as st
-        >>>
-        >>> df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]})
-        >>> st.table(df, hide_index=True, hide_header=True)
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import pandas as pd
+            import streamlit as st
+
+            df = pd.DataFrame({"Name": ["Alice", "Bob"], "Age": [25, 30]})
+            st.table(df, hide_index=True, hide_header=True)
 
         .. output::
-           https://doc-table-minimal.streamlit.app/
-           height: 150px
+           https://doc-table-hide-header-and-index.streamlit.app/
+           height: 200px
 
         """
-        # Validate width and height parameters
-        validate_width(width, allow_content=True)
-        validate_height(height, allow_content=True)
+        layout_config = create_layout_config(
+            width=width,
+            height=height,
+            allow_content_width=True,
+            allow_content_height=True,
+        )
 
         # Parse border parameter to enum value
         border_mode = parse_border_mode(border)
@@ -362,12 +379,6 @@ class TableMixin:
         # when the position of the element is changed.
         delta_path = self.dg._get_delta_path_str()
         default_uuid = str(hash(delta_path))
-
-        # Create layout configuration for width and height
-        layout_config = LayoutConfig(
-            width=width,
-            height=height,
-        )
 
         proto = TableProto()
         marshall_table(proto.arrow_data, data, default_uuid)

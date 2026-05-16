@@ -54,6 +54,12 @@ st.exception(
     width="stretch",
 )
 
+# Test exception at narrow width to verify footer links wrap correctly (#12870)
+st.exception(
+    RuntimeError("Links should wrap at narrow widths"),
+    width=250,
+)
+
 # Test an exception that is raised without explicitly calling st.exception. This also
 # shows the stack trace (which `st.exception` doesn't show when called explicitly).
 # We're hiding this behind a button so the script doesn't raise an exception when run,

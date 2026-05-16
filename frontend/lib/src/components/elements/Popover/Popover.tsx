@@ -32,7 +32,10 @@ import BaseButton, {
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { BaseButtonTooltip } from "~lib/components/shared/BaseButton/BaseButtonTooltip"
 import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
-import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
+import {
+  DynamicIcon,
+  isMenuStyleIconLabel,
+} from "~lib/components/shared/Icon/DynamicIcon"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
@@ -98,6 +101,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       return
     }
     setOpen(element.open)
+    // Also update the widget manager so the frontend sends the correct value
+    // on subsequent reruns. Without this, a programmatic close (e.g.
+    // st.session_state.key = False) would leave a stale "true" in the widget
+    // state, causing the popover to reopen when another widget triggers a rerun.
+    widgetMgr?.setBoolValue(
+      { id: widgetId },
+      element.open,
+      { fromUi: false },
+      fragmentId
+    )
   }, [widgetId, element.open])
 
   // It would be nice to remove this since it uses a resize observer
@@ -145,6 +158,9 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   } else if (element.type === "tertiary") {
     kind = BaseButtonKind.TERTIARY
   }
+
+  // Hide the chevron if the label is a menu-style icon (e.g., :material/menu:)
+  const hideChevron = isMenuStyleIconLabel(element.icon, element.label)
 
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
@@ -214,21 +230,23 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
               containerWidth={true}
               onClick={handleToggle}
             >
-              <StyledPopoverLabelContainer>
+              <StyledPopoverLabelContainer $hideChevron={hideChevron}>
                 <DynamicButtonLabel
                   icon={element.icon}
                   label={element.label}
                 />
-                <StyledPopoverExpansionIcon>
-                  <DynamicIcon
-                    iconValue={
-                      open
-                        ? ":material/expand_less:"
-                        : ":material/expand_more:"
-                    }
-                    size="lg"
-                  />
-                </StyledPopoverExpansionIcon>
+                {!hideChevron && (
+                  <StyledPopoverExpansionIcon aria-hidden="true">
+                    <DynamicIcon
+                      iconValue={
+                        open
+                          ? ":material/expand_less:"
+                          : ":material/expand_more:"
+                      }
+                      size="base"
+                    />
+                  </StyledPopoverExpansionIcon>
+                )}
               </StyledPopoverLabelContainer>
             </BaseButton>
           </BaseButtonTooltip>

@@ -24,9 +24,8 @@ from typing import (
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
-    LayoutConfig,
     Width,
-    validate_width,
+    create_layout_config,
 )
 from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import (
@@ -277,8 +276,7 @@ class FeedbackMixin:
             )
 
         key = to_key(key)
-        validate_width(width, allow_content=True)
-        layout_config = LayoutConfig(width=width)
+        layout_config = create_layout_config(width=width, allow_content_width=True)
 
         check_widget_policies(self.dg, key, on_change, default_value=default)
 
@@ -326,7 +324,12 @@ class FeedbackMixin:
         if ctx:
             save_for_app_testing(ctx, element_id, None)
 
-        self.dg._enqueue("feedback", proto, layout_config=layout_config)
+        self.dg._enqueue(
+            "feedback",
+            proto,
+            layout_config=layout_config,
+            has_one_shot_effect=widget_state.value_changed,
+        )
 
         return widget_state.value
 

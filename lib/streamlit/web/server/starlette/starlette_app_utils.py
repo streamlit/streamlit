@@ -19,6 +19,18 @@ from __future__ import annotations
 import binascii
 import os
 import time
+from typing import Final
+
+from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
+)
+
+# Allow a small server-side grace period beyond the browser cookie max-age so
+# recently expired auth cookies can still be decoded during edge-case timing.
+_AUTH_COOKIE_GRACE_PERIOD_SECONDS: Final = 24 * 60 * 60
+_DEFAULT_SIGNED_VALUE_MAX_AGE_DAYS: Final = (
+    AUTH_COOKIE_MAX_AGE_SECONDS + _AUTH_COOKIE_GRACE_PERIOD_SECONDS
+) / 86400
 
 
 def parse_range_header(range_header: str, total_size: int) -> tuple[int, int]:
@@ -112,13 +124,6 @@ def create_signed_value(
 ) -> bytes:
     """Create a signed cookie value using itsdangerous.
 
-    Note: This uses itsdangerous for signing, which is NOT compatible with
-    Tornado's secure cookie format. Cookies signed by this function cannot
-    be read by Tornado's get_signed_cookie/get_secure_cookie, and vice versa.
-    Switching between Tornado and Starlette backends will invalidate existing
-    auth cookies (_streamlit_user), requiring users to re-authenticate.
-    This is expected behavior when switching between Tornado and Starlette backends.
-
     Parameters
     ----------
     secret
@@ -145,7 +150,7 @@ def decode_signed_value(
     secret: str,
     name: str,
     value: str | bytes,
-    max_age_days: float = 31,
+    max_age_days: float = _DEFAULT_SIGNED_VALUE_MAX_AGE_DAYS,
 ) -> bytes | None:
     """Decode a signed cookie value using itsdangerous.
 
@@ -158,7 +163,8 @@ def decode_signed_value(
     value
         The signed value to decode.
     max_age_days
-        Maximum age of the cookie in days (default: 31).
+        Maximum age of the cookie in days. Defaults to the auth cookie lifetime
+        plus a 1-day grace period.
 
     Returns
     -------
@@ -189,7 +195,7 @@ def decode_signed_value(
 def generate_xsrf_token_string(
     token_bytes: bytes | None = None, timestamp: int | None = None
 ) -> str:
-    """Generate a version 2 XSRF token string compatible with Tornado.
+    """Generate a version 2 XSRF token string.
 
     Format: 2|mask|masked_token|timestamp
 
@@ -222,7 +228,7 @@ def generate_xsrf_token_string(
 def decode_xsrf_token_string(
     cookie_value: str,
 ) -> tuple[bytes | None, int | None]:
-    """Decode a Tornado XSRF token string.
+    """Decode an XSRF token string.
 
     Supports version 2 (masked) and version 1 (unmasked) tokens.
 
@@ -259,8 +265,8 @@ def decode_xsrf_token_string(
         if not token:
             return None, None
         # V1 tokens don't have an embedded timestamp, so we use current time
-        # as a placeholder (matches Tornado's behavior). This timestamp is
-        # informational only and not used for token validation.
+        # as a placeholder. This timestamp is informational only and not used
+        # for token validation.
         return token, int(time.time())
     except (binascii.Error, ValueError):
         return None, None
@@ -286,8 +292,8 @@ def generate_random_hex_string(num_bytes: int = 32) -> str:
 def validate_xsrf_token(supplied_token: str | None, xsrf_cookie: str | None) -> bool:
     """Validate the XSRF token from the WebSocket subprotocol against the cookie.
 
-    This mirrors Tornado's XSRF validation logic to ensure the frontend can share
-    XSRF logic between WebSocket handshake and HTTP uploads regardless of backend.
+    This ensures the frontend can share XSRF logic between WebSocket handshake
+    and HTTP uploads.
     """
 
     if not supplied_token or not xsrf_cookie:

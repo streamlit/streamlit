@@ -38,7 +38,7 @@ from e2e_playwright.shared.app_utils import (
     tab_until_focused,
 )
 
-NUM_SLIDER_WIDGETS = 37
+NUM_SLIDER_WIDGETS = 38
 
 
 def test_slider_rendering(themed_app: Page, assert_snapshot: ImageCompareFunction):
@@ -268,6 +268,9 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     reset_hovering(app)
     reset_focus(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
+    # Wait for the tick bar (min/max labels) to fully fade out (300ms 200ms delay)
+    # so the snapshot is stable and not captured mid-transition.
+    expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
     assert_snapshot(slider, name="st_slider-float_formatting")
 
 
@@ -354,6 +357,9 @@ def test_dynamic_slider_props(app: Page, assert_snapshot: ImageCompareFunction):
     expect_prefixed_markdown(app, "Updated slider value:", "50")
 
     dynamic_slider.scroll_into_view_if_needed()
+    # Move the mouse away to hide the slider tick bar (shown on hover)
+    # which can cause snapshot flakiness if the slider re-renders under the cursor.
+    reset_hovering(app)
     assert_snapshot(dynamic_slider, name="st_slider-dynamic_updated")
 
     # Check that the help tooltip is correct:
@@ -655,3 +661,20 @@ def test_slider_ui_value_wins_on_rerun_and_syncs_url(page: Page, app_base_url: s
 
     expect_prefixed_markdown(page, "Bound ss value:", "76")
     expect(page).to_have_url(re.compile(r"bound_ss=76"))
+
+
+def test_slider_setvalue_preserved_on_rerun(app: Page):
+    """Test that slider setValue commands are delivered even when the protobuf hash matches.
+
+    This verifies that a slider with a programmatic value is correctly set
+    on every rerun, not cached/skipped due to hash matching.
+    """
+    expect_markdown(app, "Slider counter: 1")
+    slider = get_slider(app, "Programmatic slider")
+    expect(slider).to_contain_text("50")
+
+    for expected_counter in range(2, 5):
+        app.get_by_role("button", name="Trigger slider rerun", exact=True).click()
+        wait_for_app_run(app)
+        expect_markdown(app, f"Slider counter: {expected_counter}")
+        expect(slider).to_contain_text("50")

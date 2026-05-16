@@ -14,6 +14,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -322,6 +323,9 @@ def test_dynamic_download_button(app: Page, assert_snapshot: ImageCompareFunctio
     expect_prefixed_markdown(app, "Clicked updated button:", "True")
 
 
+@pytest.mark.skip_browser(
+    "webkit"
+)  # Webkit keyboard shortcuts flaky in Playwright 1.59
 def test_download_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the download button."""
     shortcut_button = get_element_by_key(app, "shortcut_download_button")

@@ -253,4 +253,32 @@ describe("MenuButton widget", () => {
     // The icon should still render via StreamlitMarkdown's material icon support
     expect(menuItem).toHaveTextContent("Export")
   })
+
+  it.each([
+    ":material/menu:",
+    ":material/more_vert:",
+    ":material/more_horiz:",
+  ])("hides chevron when label is menu-style icon %s", async label => {
+    const user = userEvent.setup()
+    const props = getProps({ label })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+
+    // Chevron should not be present when closed
+    expect(button).not.toHaveTextContent("expand_more")
+
+    // Open menu and check chevron is still not shown
+    await user.click(button)
+    await screen.findByTestId("stMenuButtonBody")
+    expect(button).not.toHaveTextContent("expand_less")
+  })
+
+  it("shows chevron for regular labels", () => {
+    const props = getProps({ label: "Actions" })
+    render(<MenuButton {...props} />)
+
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toHaveTextContent("expand_more")
+  })
 })

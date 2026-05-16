@@ -1,7 +1,7 @@
 {
   "recommendations": [
     "dbaeumer.vscode-eslint",
-    "esbenp.prettier-vscode",
+    "oxc.oxc-vscode",
     "ms-python.mypy-type-checker",
     "ms-python.python",
     "ms-python.debugpy",

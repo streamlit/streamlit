@@ -44,7 +44,7 @@ feature warrants both. The directory can also include other assets relevant to t
 
 Never start with what you want to build. Start with **why**:
 
-- Link GitHub issues with upvote counts
+- Link GitHub issues
 - Show concrete user pain points and current workarounds
 - Include use cases
 

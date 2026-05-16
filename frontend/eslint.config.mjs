@@ -17,15 +17,14 @@
 import path from "path"
 import { fileURLToPath } from "url"
 import { createJiti } from "jiti"
+import { fixupPluginRules } from "@eslint/compat"
 
 // Core ESLint and plugins
 import eslint from "@eslint/js"
 import tseslint from "typescript-eslint"
-import react from "eslint-plugin-react"
 import reactHooks from "eslint-plugin-react-hooks"
 import eslintReact from "@eslint-react/eslint-plugin"
-import importPlugin from "eslint-plugin-import"
-import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
+import importX from "eslint-plugin-import-x"
 import lodash from "eslint-plugin-lodash"
 import vitest from "@vitest/eslint-plugin"
 import testingLibrary from "eslint-plugin-testing-library"
@@ -210,8 +209,7 @@ export default defineConfig([
   tseslint.configs.recommendedTypeChecked,
   reactHooks.configs.flat.recommended,
   eslintReact.configs["recommended-type-checked"],
-  importPlugin.flatConfigs.recommended,
-  eslintPluginPrettierRecommended,
+  importX.flatConfigs.recommended,
   // Global configuration for all files
   {
     languageOptions: {
@@ -243,9 +241,8 @@ export default defineConfig([
     files: ["**/*.ts", "**/*.tsx"],
     plugins: {
       ...jsxA11y.flatConfigs.recommended.plugins,
-      react,
       lodash,
-      "no-relative-import-paths": noRelativeImportPaths,
+      "no-relative-import-paths": fixupPluginRules(noRelativeImportPaths),
       "streamlit-custom": streamlitCustom,
     },
     rules: {
@@ -256,24 +253,22 @@ export default defineConfig([
       "no-console": "error",
       // Prevent unintentional use of `debugger`
       "no-debugger": "error",
-      // We don't use PropTypes
-      "react/prop-types": "off",
-      // We don't escape entities
-      "react/no-unescaped-entities": "off",
       // We do want to discourage the usage of flushSync
-      "@eslint-react/dom/no-flush-sync": "error",
+      "@eslint-react/dom-no-flush-sync": "error",
       // This was giving false positives
       "@eslint-react/no-unused-class-component-members": "off",
       // This was giving false positives
-      "@eslint-react/naming-convention/use-state": "off",
+      "@eslint-react/use-state": "off",
       // Turning off for now until we have clearer guidance on how to fix existing usages
-      "@eslint-react/hooks-extra/no-direct-set-state-in-use-effect": "off",
+      "@eslint-react/set-state-in-effect": "off",
       // We don't want to warn about empty fragments
-      "@eslint-react/no-useless-fragment": "off",
+      "@eslint-react/jsx-no-useless-fragment": "off",
       // Prevent context values from being recreated on every render
-      "react/jsx-no-constructed-context-values": "error",
+      "@eslint-react/no-unstable-context-value": "error",
       // We want to enforce display names for context providers for better debugging
       "@eslint-react/no-missing-context-display-name": "error",
+      // New rules in @eslint-react v4/v5 — disable until existing violations are addressed
+      "@eslint-react/exhaustive-deps": "off",
       // TypeScript rules with type-checking
       // We want to use these, but we have far too many instances of these rules
       // for it to be realistic right now. Over time, we should fix these.
@@ -303,10 +298,7 @@ export default defineConfig([
         },
       ],
       // It's safe to use functions before they're defined
-      "@typescript-eslint/no-use-before-define": [
-        "warn",
-        { functions: false },
-      ],
+      "@typescript-eslint/no-use-before-define": ["warn", { functions: false }],
       // Functions must have return types, but we allow inline function expressions to omit them
       "@typescript-eslint/explicit-function-return-type": [
         "warn",
@@ -355,7 +347,7 @@ export default defineConfig([
       // Imports should be `import "./FooModule"`, not `import "./FooModule.js"`
       // We need to configure this to check our .tsx files, see:
       // https://github.com/benmosher/eslint-plugin-import/issues/1615#issuecomment-577500405
-      "import/extensions": [
+      "import-x/extensions": [
         "error",
         "ignorePackages",
         {
@@ -365,7 +357,7 @@ export default defineConfig([
           tsx: "never",
         },
       ],
-      "import/prefer-default-export": "off",
+      "import-x/prefer-default-export": "off",
       "max-classes-per-file": "off",
       "no-shadow": "off",
       "no-param-reassign": "off",
@@ -391,7 +383,7 @@ export default defineConfig([
           ignoreDeclarationSort: true,
         },
       ],
-      "import/order": [
+      "import-x/order": [
         "error",
         {
           pathGroups: [
@@ -434,11 +426,13 @@ export default defineConfig([
       "streamlit-custom/no-force-reflow-access": "error",
       "streamlit-custom/no-aria-hidden-with-focusable-children": "error",
       "no-restricted-imports": getNoRestrictedImports(),
-      // React configuration
-      "react/jsx-uses-react": "off",
-      "react/react-in-jsx-scope": "off",
       // React hooks rules
       ...reactHooks.configs.flat.recommended.rules,
+      // New React Compiler rules in react-hooks v7.1 — disable until existing
+      // violations are addressed. Only rules-of-hooks and exhaustive-deps were
+      // previously enforced.
+      "react-hooks/refs": "off",
+      "react-hooks/set-state-in-effect": "off",
       // Enforce "You Might Not Need an Effect" pattern - don't derive state in effects
       "react-hooks/no-deriving-state-in-effects": "error",
       // jsx-a11y rules
@@ -455,10 +449,7 @@ export default defineConfig([
       "jsx-a11y/no-noninteractive-tabindex": "error",
     },
     settings: {
-      react: {
-        version: "detect",
-      },
-      "import/resolver": {
+      "import-x/resolver": {
         typescript: {
           // Use project service for import resolution as well
           project: path.resolve(__dirname, "./tsconfig.json"),
@@ -470,7 +461,9 @@ export default defineConfig([
     files: ["**/src/**/*.ts", "**/src/**/*.tsx"],
     ignores: ["**/*.test.ts", "**/*.test.tsx"],
     rules: {
-      "no-restricted-globals": getNoRestrictedGlobals({ includeUseTimeout: true }),
+      "no-restricted-globals": getNoRestrictedGlobals({
+        includeUseTimeout: true,
+      }),
       "no-restricted-properties": getNoRestrictedProperties({
         includeUseTimeout: true,
       }),
@@ -555,6 +548,7 @@ export default defineConfig([
     "app/eslint.config.mjs",
     "vitest.config.ts",
     "vitest.setup.ts",
+    "**/vite.config.ts",
     "lib/src/proto.js",
     "lib/src/proto.d.ts",
     "**/node_modules/*",

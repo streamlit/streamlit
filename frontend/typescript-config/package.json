@@ -1,6 +1,6 @@
 {
   "name": "@streamlit/typescript-config",
-  "version": "1.55.0",
+  "version": "1.57.0",
   "license": "Apache-2.0",
   "private": true,
   "files": [
@@ -12,7 +12,7 @@
     "typecheck:all": "cd $INIT_CWD && tsc"
   },
   "devDependencies": {
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "browserslist": [
     ">0.2%",

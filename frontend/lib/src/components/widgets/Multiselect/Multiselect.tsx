@@ -240,6 +240,7 @@ const Multiselect: FC<Props> = props => {
     options,
     isMulti: true,
     acceptNewOptions: element.acceptNewOptions ?? false,
+    filterMode: element.filterMode,
     placeholderInput: element.placeholder,
   })
 
@@ -399,8 +400,8 @@ const Multiselect: FC<Props> = props => {
                 overrides: {
                   Svg: {
                     style: () => ({
-                      width: theme.iconSizes.xl,
-                      height: theme.iconSizes.xl,
+                      width: theme.iconSizes.lg,
+                      height: theme.iconSizes.lg,
                     }),
                   },
                 },
@@ -494,7 +495,7 @@ const Multiselect: FC<Props> = props => {
                       borderTopRightRadius: theme.radii.md2,
                       borderBottomRightRadius: theme.radii.md2,
                       borderBottomLeftRadius: theme.radii.md2,
-                      fontSize: theme.fontSizes.md,
+                      fontSize: theme.fontSizes.sm,
                       paddingLeft: theme.spacing.sm,
                       // Top and left margins are deferred to ValueContainer padding
                       marginTop: theme.spacing.none,

@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 
 import streamlit as st
-from streamlit.runtime.scriptrunner_utils.script_run_context import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 
 np.random.seed(0)
 data = np.random.randint(low=0, high=20, size=(20, 3))
@@ -141,7 +141,7 @@ with st.sidebar:
 @st.dialog("Submit-button Dialog")
 def submit_button_dialog() -> None:
     st.write("This dialog has a submit button.")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
+    st.write(f"Fragment Id: {ThreadState.get().fragment_id}")
 
     if st.button("Submit", key="dialog6-btn"):
         st.rerun()
@@ -159,7 +159,7 @@ def level2_dialog() -> None:
 @st.dialog("Level1 Dialog")
 def level1_dialog() -> None:
     st.write("First level dialog")
-    st.write(f"Fragment Id: {get_script_run_ctx().current_fragment_id}")  # type: ignore[union-attr]
+    st.write(f"Fragment Id: {ThreadState.get().fragment_id}")
     level2_dialog()
 
 

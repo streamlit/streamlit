@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import re
+
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -370,20 +372,28 @@ def test_submit_button_with_key(app: Page):
 def test_form_submit_button_displays_shortcut(app: Page):
     """Ensure shortcut labels are rendered for form submit buttons."""
     shortcut_button = get_element_by_key(app, "shortcut_submit_button")
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + S")
+    # Use regex to accept both Windows (Ctrl + Alt) and macOS (⌘ + ⌥) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|⌥) \+ S")
+    )
 
 
 # Firefox has some issues with sub-pixel flakiness
 # but functional everything is working fine with firefox.
+# Webkit keyboard shortcuts are unreliable with Playwright 1.59+
 @pytest.mark.skip_browser("firefox")
+@pytest.mark.skip_browser("webkit")
 def test_form_submit_button_shortcut_triggers(app: Page):
     """Ensure pressing the shortcut activates the form submit button."""
     shortcut_button = get_element_by_key(app, "shortcut_submit_button")
     expect(shortcut_button).to_be_visible()
-    expect(shortcut_button.locator("kbd")).to_have_text("Ctrl + Alt + S")
+    # Use regex to accept both Windows (Ctrl + Alt) and macOS (⌘ + ⌥) representations
+    expect(shortcut_button.locator("kbd")).to_have_text(
+        re.compile(r"(Ctrl|⌘) \+ (Alt|⌥) \+ S")
+    )
 
     # Press hotkey to trigger the button:
-    app.keyboard.press("Control+Alt+KeyS")
+    app.keyboard.press("ControlOrMeta+Alt+KeyS")
     wait_for_app_run(app)
     expect(app.get_by_text("Shortcut form submitted!")).to_be_visible()
 
