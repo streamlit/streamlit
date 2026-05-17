@@ -36,12 +36,14 @@ import {
   shouldWidthStretch,
 } from "~lib/components/core/Layout/utils"
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
+import type { AccordionProps } from "~lib/components/elements/Accordion/Accordion"
+import Accordion from "~lib/components/elements/Accordion/Accordion"
 import ChatMessage from "~lib/components/elements/ChatMessage/ChatMessage"
 import Dialog from "~lib/components/elements/Dialog/Dialog"
 import Expander from "~lib/components/elements/Expander/Expander"
 import Popover from "~lib/components/elements/Popover/Popover"
-import Tabs from "~lib/components/elements/Tabs/Tabs"
 import type { TabProps } from "~lib/components/elements/Tabs/Tabs"
+import Tabs from "~lib/components/elements/Tabs/Tabs"
 import Form from "~lib/components/widgets/Form/Form"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useScrollToBottom } from "~lib/hooks/useScrollToBottom"
@@ -426,6 +428,25 @@ export const BlockNodeRenderer = (
       fragmentId: node.fragmentId,
     }
     return <Tabs {...tabsProps} />
+  }
+
+  if (node.deltaBlock.accordionContainer) {
+    const renderAccordionContent = (
+      mappedChildProps: JSX.IntrinsicAttributes & BlockPropsWithoutWidth
+    ): ReactElement => {
+      return <ContainerContentsWrapper {...mappedChildProps} height="auto" />
+    }
+
+    const accordionProps: AccordionProps = {
+      ...childProps,
+      isStale,
+      renderAccordionContent,
+      width: styles.width,
+      flex: styles.flex,
+      fragmentId: node.fragmentId,
+    }
+
+    return <Accordion {...accordionProps} />
   }
 
   if (containerElement) {

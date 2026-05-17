@@ -15,7 +15,6 @@
 import unittest
 
 import pytest
-
 import streamlit as st
 from streamlit.delta_generator import DeltaGenerator
 from streamlit.delta_generator_singletons import (
@@ -26,7 +25,6 @@ from streamlit.delta_generator_singletons import (
     get_dg_singleton_instance,
     get_last_dg_added_to_context_stack,
 )
-from streamlit.elements.lib.skeleton_placeholder import SkeletonPlaceholder
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.RootContainer_pb2 import RootContainer
 
@@ -189,7 +187,8 @@ def test_singleton_init_raises_when_already_initialized() -> None:
             expander_container_cls=DeltaGenerator,
             tab_container_cls=DeltaGenerator,
             popover_container_cls=DeltaGenerator,
-            skeleton_placeholder_cls=SkeletonPlaceholder,
+            accordion_container_cls=DeltaGenerator,
+            skeleton_placeholder_cls=DeltaGenerator,
         )
 
 

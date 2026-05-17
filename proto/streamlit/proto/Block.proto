@@ -34,6 +34,8 @@ message Block {
     Dialog dialog = 11;
     FlexContainer flex_container = 13;
     Transparent transparent = 17;
+    AccordionContainer accordion_container = 18;
+    Accordion accordion = 19;
   }
 
   bool allow_empty = 8;
@@ -188,5 +190,14 @@ message Block {
   // render directly in the parent container's flex context.
   message Transparent {}
 
-  // Next ID: 18
+  message AccordionContainer {
+    int32 default_open_index = 1;
+    optional string id = 2;
+  }
+
+  message Accordion {
+    string label = 1;
+  }
+
+  // Next ID: 20
 }

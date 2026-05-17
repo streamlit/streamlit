@@ -54,6 +54,7 @@ from streamlit.string_util import validate_icon_or_emoji
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.elements.lib.dialog import Dialog
+    from streamlit.elements.lib.mutable_accordion_container import AccordionContainer
     from streamlit.elements.lib.mutable_expander_container import ExpanderContainer
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
@@ -90,6 +91,19 @@ class _PopoverSerde:
 @dataclass
 class _TabsSerde:
     """Serializer/deserializer for tabs widget state (active tab label)."""
+
+    default_label: str
+
+    def serialize(self, v: str) -> str:
+        return str(v)
+
+    def deserialize(self, ui_value: str | None) -> str:
+        return ui_value if ui_value is not None else self.default_label
+
+
+@dataclass
+class _AccordionSerde:
+    """Serializer/deserializer for accordion widget state."""
 
     default_label: str
 
@@ -983,6 +997,322 @@ class LayoutsMixin:
             tab_dgs.append(tab_dg)
 
         return tuple(tab_dgs)
+
+    @gather_metrics("accordion")
+    def accordion(
+        self,
+        sections: Sequence[str],
+        *,
+        width: WidthWithoutContent = "stretch",
+        default: str | None = None,
+        key: Key | None = None,
+        on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
+        args: WidgetArgs | None = None,
+        kwargs: WidgetKwargs | None = None,
+    ) -> Sequence[AccordionContainer]:
+        r"""Insert containers separated into accordion sections.
+
+        Inserts a number of multi-element containers as accordion sections.
+        An accordion is a grouped set of collapsible sections that lets users
+        reveal one section of related content at a time.
+
+        To add elements to the returned containers, you can use the ``with``
+        notation (preferred) or just call methods directly on the returned
+        objects. See examples below.
+
+        By default, all accordion content is computed and sent to the frontend
+        regardless of which section is open. To enable lazy execution where
+        only the open section's content runs, use ``on_change="rerun"`` or
+        pass a callable to ``on_change``. Each section's ``.open`` property
+        indicates whether it is currently open, letting you conditionally
+        render expensive content.
+
+        Parameters
+        ----------
+        sections : list of str
+            Creates an accordion section for each string in the list. The first
+            section is open by default. The string is used as the section label.
+
+        width : "stretch" or int
+            The width of the accordion container. This can be one of the
+            following:
+
+            - ``"stretch"`` (default): The width of the container matches the
+              width of the parent container.
+            - An integer specifying the width in pixels: The container has a
+              fixed width. If the specified width is greater than the width of
+              the parent container, the width of the container matches the width
+              of the parent container.
+
+        default : str or None
+            The default section to open. If this is ``None`` (default), the
+            first section is opened. If this is a string, it must be one of the
+            section labels. If two sections have the same label as ``default``,
+            the first one is opened.
+
+        key : str, int, or None
+            An optional string or integer to use as the unique key for
+            the widget. If this is ``None`` (default), a key will be
+            generated for the widget based on the values of the other
+            parameters. No two widgets may have the same key.
+
+            When ``on_change`` is set to ``"rerun"`` or a callable, setting a
+            key lets you read or update the open section label via
+            ``st.session_state[key]``. For more details, see `Widget behavior
+            <https://docs.streamlit.io/develop/concepts/architecture/widget-behavior>`_.
+
+            Additionally, if ``key`` is provided, it will be used as a
+            CSS class name prefixed with ``st-key-``.
+
+        on_change : "ignore", "rerun", callable, or None
+            How the accordion should respond when the user changes the open
+            section. This controls whether the accordion tracks state and
+            triggers reruns. ``on_change`` can be one of the following values:
+
+            - ``"ignore"`` (default): The accordion doesn't track state. All
+              accordion content runs regardless of which section is open. The
+              ``.open`` attribute of each section container returns ``None``
+              for all sections.
+
+            - ``"rerun"``: The accordion tracks state. Streamlit reruns the
+              app when the user changes the open section. The ``.open``
+              attribute of each section container returns its current state,
+              which is ``True`` if it is open and ``False`` otherwise. This
+              lets you skip expensive work in closed sections.
+
+            - A callable: The accordion tracks state. Streamlit executes the
+              callable as a callback function and reruns the app when the user
+              changes the open section. The ``.open`` attribute of each section
+              container returns its state like when ``on_change="rerun"``. If
+              you need to access the label of the current open section inside
+              your callback, fetch it through Session State.
+
+            When the accordion tracks state, it can't be used inside
+            Streamlit cache-decorated functions.
+
+        args : list or tuple or None
+            An optional list or tuple of args to pass to the ``on_change``
+            callback.
+
+        kwargs : dict or None
+            An optional dict of kwargs to pass to the ``on_change`` callback.
+
+        Returns
+        -------
+        Sequence of AccordionContainers
+            A sequence of ``AccordionContainer`` objects with ``.open``
+            properties to return the current state of the sections if the
+            accordion tracks state.
+
+        Examples
+        --------
+        **Example 1: Use context management**
+
+        You can use the ``with`` statement to insert any element into an
+        accordion section:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            section1, section2 = st.accordion(["First", "Second"])
+
+            with section1:
+                st.write("Content of the first section")
+
+            with section2:
+                st.write("Content of the second section")
+
+        **Example 2: Call methods directly**
+
+        You can call methods directly on the returned objects:
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            details, settings = st.accordion(["Details", "Settings"])
+
+            details.write("This is the details section")
+            settings.checkbox("Enable feature")
+
+        **Example 3: Set the default open section**
+
+        Use the ``default`` parameter to set the default section.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+            summary, logs = st.accordion(
+                ["Summary", "Logs"],
+                default="Logs",
+            )
+
+            with summary:
+                st.write("Summary content")
+
+            with logs:
+                st.write("Logs content")
+
+        **Example 4: Programmatically control the accordion state**
+
+        You can use a key to programmatically control the accordion state or
+        access the state in callbacks. You must set the ``on_change`` parameter
+        for the accordion to track state.
+
+        .. code-block:: python
+            :filename: streamlit_app.py
+
+            import streamlit as st
+
+
+            def open_logs():
+                st.session_state.panel = "Logs"
+
+
+            def on_accordion_change():
+                st.toast(f"You opened the {st.session_state.panel} section.")
+
+
+            summary, logs = st.accordion(
+                ["Summary", "Logs"],
+                on_change=on_accordion_change,
+                key="panel",
+            )
+
+            if summary.open:
+                with summary:
+                    st.write("This is the summary section")
+
+            if logs.open:
+                with logs:
+                    st.write("This is the logs section")
+
+            st.button("Open logs", on_click=open_logs)
+
+        """
+        if not sections:
+            raise StreamlitAPIException(
+                "The input argument to st.accordion must contain at least one section label."
+            )
+
+        if default and default not in sections:
+            raise StreamlitAPIException(
+                f"The default accordion section '{default}' is not in the list of sections."
+            )
+
+        if any(not isinstance(section, str) for section in sections):
+            raise StreamlitAPIException(
+                "The sections input list to st.accordion is only allowed to contain strings."
+            )
+
+        if not callable(on_change) and on_change not in {"ignore", "rerun"}:
+            raise StreamlitValueError(
+                "on_change",
+                ["'rerun'", "'ignore'", "a callback function"],
+            )
+
+        key = to_key(key)
+        default_index = sections.index(default) if default else 0
+        is_stateful = on_change != "ignore"
+
+        element_id: str | None = None
+        block_id: str | None = None
+        current_section_label = sections[default_index]
+
+        if is_stateful:
+            is_callback = callable(on_change)
+            check_widget_policies(
+                self.dg,
+                key,
+                on_change=cast("WidgetCallback", on_change) if is_callback else None,
+                default_value=None,
+                writes_allowed=True,
+                enable_check_callback_rules=is_callback,
+            )
+
+            ctx = get_script_run_ctx()
+
+            element_id = compute_and_register_element_id(
+                "accordion",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+                sections=tuple(sections),
+                width=width,
+                default=default,
+            )
+            block_id = element_id
+
+            serde = _AccordionSerde(default_label=sections[default_index])
+
+            accordion_state = register_widget(
+                element_id,
+                deserializer=serde.deserialize,
+                serializer=serde.serialize,
+                ctx=ctx,
+                value_type="string_value",
+                on_change_handler=on_change if callable(on_change) else None,
+                args=args if callable(on_change) else None,
+                kwargs=kwargs if callable(on_change) else None,
+            )
+
+            current_section_label = accordion_state.value
+            if current_section_label not in sections:
+                current_section_label = sections[default_index]
+        elif key is not None:
+            block_id = compute_and_register_element_id(
+                "accordion",
+                user_key=key,
+                key_as_main_identity=False,
+                dg=self.dg,
+            )
+
+        def accordion_section_proto(label: str) -> BlockProto:
+            section_proto = BlockProto()
+            section_proto.accordion.label = label
+            section_proto.allow_empty = True
+            return section_proto
+
+        block_proto = BlockProto()
+        block_proto.accordion_container.SetInParent()
+        validate_width(width)
+        block_proto.width_config.CopyFrom(get_width_config(width))
+
+        try:
+            current_section_index = sections.index(current_section_label)
+        except ValueError:
+            current_section_index = default_index
+
+        block_proto.accordion_container.default_open_index = current_section_index
+
+        if is_stateful and element_id is not None:
+            block_proto.accordion_container.id = element_id
+
+        if block_id is not None:
+            block_proto.id = block_id
+
+        section_cls = get_dg_singleton_instance().accordion_container_cls
+        accordion_container = self.dg._block(block_proto)
+
+        section_dgs: list[AccordionContainer] = []
+        for section_label in sections:
+            section_dg = cast(
+                "AccordionContainer",
+                accordion_container._block(
+                    accordion_section_proto(section_label),
+                    dg_type=section_cls,
+                ),
+            )
+            if is_stateful:
+                section_dg.open = section_label == current_section_label
+            section_dgs.append(section_dg)
+
+        return tuple(section_dgs)
 
     @gather_metrics("expander")
     def expander(

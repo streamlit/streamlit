@@ -1998,3 +1998,505 @@ class DialogTest(DeltaGeneratorTestCase):
 
         dialog_block = self.get_delta_from_queue()
         assert dialog_block.add_block.dialog.id
+
+
+class AccordionTest(DeltaGeneratorTestCase):
+    def test_section_required(self):
+        """Test that at least one section is required."""
+        with pytest.raises(TypeError):
+            st.accordion()
+
+        with pytest.raises(StreamlitAPIException):
+            st.accordion([])
+
+    def test_only_label_strings_allowed(self):
+        """Test that only strings are allowed as section labels."""
+        with pytest.raises(StreamlitAPIException):
+            st.accordion(["First", True])
+
+        with pytest.raises(StreamlitAPIException):
+            st.accordion(["First", 10])
+
+    def test_returns_all_expected_sections(self):
+        """Test that all labels are added in correct order."""
+        sections = st.accordion([f"Section {i}" for i in range(5)])
+        assert len(sections) == 5
+
+        for section in sections:
+            with section:
+                pass
+
+        all_deltas = self.get_all_deltas_from_queue()
+        section_blocks = all_deltas[1:]
+
+        assert len(all_deltas) == 6
+        assert len(section_blocks) == 5
+
+        for index, section_block in enumerate(section_blocks):
+            assert section_block.add_block.accordion.label == f"Section {index}"
+
+    def test_default_section_index_first_section(self):
+        """Test that the default section index is 0 when default is not specified."""
+        st.accordion(["First", "Second", "Third"])
+
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+
+        assert (
+            accordion_container_block.add_block.accordion_container.default_open_index
+            == 0
+        )
+
+    def test_invalid_default_section(self):
+        """Test that an exception is raised if the default section is not in the list."""
+        with pytest.raises(StreamlitAPIException) as context:
+            st.accordion(["First", "Second", "Third"], default="Fourth")
+
+        assert (
+            "The default accordion section 'Fourth' is not in the list of sections."
+            in str(context.value)
+        )
+
+    def test_valid_default_section(self):
+        """Test that a valid default section sets the correct index."""
+        st.accordion(["First", "Second", "Third"], default="Second")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+
+        assert (
+            accordion_container_block.add_block.accordion_container.default_open_index
+            == 1
+        )
+
+    def test_section_labels_with_whitespace(self):
+        """Test that labels with leading/trailing spaces are accepted and preserved."""
+        labels = ["  First", "Second  ", "  Third  "]
+        st.accordion(labels)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        actual_labels = [delta.add_block.accordion.label for delta in all_deltas[1:]]
+
+        assert actual_labels == labels
+
+    def test_duplicate_section_labels(self):
+        """Test that duplicate section labels are allowed."""
+        labels = ["Same", "Same", "Same"]
+        st.accordion(labels)
+
+        all_deltas = self.get_all_deltas_from_queue()
+        actual_labels = [delta.add_block.accordion.label for delta in all_deltas[1:]]
+
+        assert actual_labels == labels
+
+    def test_default_section_with_duplicate_labels_picks_first_occurrence_zero(self):
+        """If default label appears multiple times, pick the first occurrence (index 0)."""
+        st.accordion(["Same", "Unique", "Same"], default="Same")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+
+        assert (
+            accordion_container_block.add_block.accordion_container.default_open_index
+            == 0
+        )
+
+    def test_default_section_with_duplicate_labels_picks_first_occurrence_non_zero(
+        self,
+    ):
+        """If the first occurrence is not at index 0, pick that non-zero index."""
+        st.accordion(["X", "Same", "Unique", "Same"], default="Same")
+
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+
+        assert (
+            accordion_container_block.add_block.accordion_container.default_open_index
+            == 1
+        )
+
+    def test_width_config_pixel_width(self):
+        """Test that pixel width configuration works correctly."""
+        st.accordion(["First", "Second"], width=200)
+        accordion_container_block = self.get_delta_from_queue(0)
+        assert accordion_container_block.add_block.width_config.pixel_width == 200
+
+    def test_width_config_stretch(self):
+        """Test that stretch width configuration works correctly."""
+        st.accordion(["First", "Second"], width="stretch")
+        accordion_container_block = self.get_delta_from_queue(0)
+        assert accordion_container_block.add_block.width_config.use_stretch
+
+    @parameterized.expand(
+        [
+            (None,),
+            ("invalid",),
+            (-100,),
+            (0,),
+            ("content",),
+        ]
+    )
+    def test_invalid_width(self, invalid_width):
+        """Test that invalid width values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.accordion(["First", "Second"], width=invalid_width)
+
+    def test_open_returns_none_by_default(self):
+        """Test that .open returns None on all sections when on_change is not set."""
+        sections = st.accordion(["First", "Second", "Third"])
+        for section in sections:
+            assert section.open is None
+
+    def test_open_returns_none_with_default_section(self):
+        """Test that .open returns None even with a default section (no state tracking)."""
+        sections = st.accordion(["First", "Second", "Third"], default="Second")
+        for section in sections:
+            assert section.open is None
+
+    def test_invalid_on_change_raises(self):
+        """Test that invalid on_change values raise an error."""
+        with pytest.raises(StreamlitAPIException):
+            st.accordion(["First", "Second"], on_change="invalid")
+
+    def test_on_change_rerun_sets_open_on_sections(self):
+        """Test that on_change='rerun' sets .open correctly on each section."""
+        sections = st.accordion(["First", "Second", "Third"], on_change="rerun")
+        assert sections[0].open is True
+        assert sections[1].open is False
+        assert sections[2].open is False
+
+    def test_on_change_rerun_with_default_sets_open(self):
+        """Test that on_change='rerun' with default sets the right section as open."""
+        sections = st.accordion(
+            ["First", "Second", "Third"], default="Second", on_change="rerun"
+        )
+        assert sections[0].open is False
+        assert sections[1].open is True
+        assert sections[2].open is False
+
+    def test_on_change_rerun_sets_id(self):
+        """Test that on_change='rerun' sets id on the accordion container proto."""
+        st.accordion(["First", "Second"], on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.accordion_container.id != ""
+
+    def test_on_change_none_does_not_set_id(self):
+        """Test that no on_change does not set id."""
+        st.accordion(["First", "Second"])
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert not accordion_container_block.add_block.accordion_container.HasField(
+            "id"
+        )
+
+    def test_on_change_rerun_with_key_accessible_via_session_state(self):
+        """Test that on_change='rerun' with key stores the active section label."""
+        st.accordion(
+            ["First", "Second", "Third"], key="my_accordion", on_change="rerun"
+        )
+        assert "my_accordion" in st.session_state
+        assert st.session_state.my_accordion == "First"
+
+    def test_on_change_rerun_with_default_session_state(self):
+        """Test that default section is reflected in session_state."""
+        st.accordion(
+            ["First", "Second", "Third"],
+            key="my_accordion",
+            default="Third",
+            on_change="rerun",
+        )
+        assert st.session_state.my_accordion == "Third"
+
+    def test_on_change_rerun_with_default_sets_correct_section_index(self):
+        """Test that default + on_change='rerun' sets the correct section index in proto."""
+        st.accordion(["First", "Second", "Third"], default="Third", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert (
+            accordion_container_block.add_block.accordion_container.default_open_index
+            == 2
+        )
+
+    def test_on_change_rerun_falls_back_when_label_not_in_sections(self):
+        """Test that a stale session state label falls back to the default section."""
+        st.session_state["my_accordion"] = "OldSection"
+
+        sections = st.accordion(["X", "Y", "Z"], key="my_accordion", on_change="rerun")
+
+        assert sections[0].open is True
+        assert sections[1].open is False
+        assert sections[2].open is False
+
+    def test_on_change_ignore_with_key_open_remains_none(self):
+        """Test that on_change='ignore' with key leaves .open as None and no widget state."""
+        sections = st.accordion(
+            ["First", "Second", "Third"], key="my_accordion", on_change="ignore"
+        )
+        for section in sections:
+            assert section.open is None
+        assert "my_accordion" not in st.session_state
+
+    def test_passive_key_sets_block_id(self):
+        """Test that key with on_change='ignore' sets block-level id for stable identity."""
+        st.accordion(["First", "Second"], key="my_accordion", on_change="ignore")
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.id != ""
+        assert "my_accordion" in accordion_container_block.add_block.id
+        assert not accordion_container_block.add_block.accordion_container.HasField(
+            "id"
+        )
+
+    def test_passive_key_without_key_does_not_set_block_id(self):
+        """Test that accordion without key does not set block-level id."""
+        st.accordion(["First", "Second"])
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.id == ""
+
+    def test_on_change_rerun_with_key_sets_block_id(self):
+        """Test that on_change='rerun' with key sets the block-level id."""
+        st.accordion(["First", "Second"], key="my_accordion", on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.id != ""
+        assert "my_accordion" in accordion_container_block.add_block.id
+
+    def test_on_change_rerun_without_key_sets_block_id(self):
+        """Test that on_change='rerun' without key still sets block-level id."""
+        st.accordion(["First", "Second"], on_change="rerun")
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.id != ""
+
+    def test_on_change_callback_sets_block_id(self):
+        """Test that a callable on_change with key sets the block-level id."""
+        st.accordion(["First", "Second"], key="cb_accordion2", on_change=lambda: None)
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.id != ""
+        assert "cb_accordion2" in accordion_container_block.add_block.id
+
+    def test_on_change_callback_sets_id(self) -> None:
+        """Test that a callable on_change sets id on the accordion container proto."""
+
+        def on_change() -> None:
+            pass
+
+        st.accordion(["First", "Second"], key="cb_accordion", on_change=on_change)
+        all_deltas = self.get_all_deltas_from_queue()
+        accordion_container_block = all_deltas[0]
+        assert accordion_container_block.add_block.accordion_container.id != ""
+
+    def test_on_change_callback_sets_open_on_sections(self) -> None:
+        """Test that a callable on_change sets .open correctly on each section."""
+
+        def on_change() -> None:
+            pass
+
+        sections = st.accordion(
+            ["First", "Second", "Third"], key="cb_accordion", on_change=on_change
+        )
+        assert sections[0].open is True
+        assert sections[1].open is False
+        assert sections[2].open is False
+
+    def test_on_change_callback_with_default_section(self) -> None:
+        """Test that a callable on_change with default sets correct section open."""
+
+        def on_change() -> None:
+            pass
+
+        sections = st.accordion(
+            ["First", "Second", "Third"],
+            key="cb_accordion",
+            default="Second",
+            on_change=on_change,
+        )
+        assert sections[0].open is False
+        assert sections[1].open is True
+        assert sections[2].open is False
+
+    def _get_accordion_widget_state(self) -> WidgetState:
+        """Get the single accordion WidgetState from session state."""
+        widget_states = self.script_run_ctx.session_state.get_widget_states()
+        assert len(widget_states) == 1, (
+            f"Expected exactly 1 widget state, got {len(widget_states)}"
+        )
+        return widget_states[0]
+
+    def test_on_change_callback_fires_on_state_change(self) -> None:
+        """Test that callback function is invoked when active section switches."""
+        callback_calls: list[str] = []
+
+        def on_accordion_change() -> None:
+            callback_calls.append("called")
+
+        st.accordion(
+            ["First", "Second"], key="cb_accordion", on_change=on_accordion_change
+        )
+
+        current_ws = self._get_accordion_widget_state()
+        new_ws = WidgetState()
+        new_ws.CopyFrom(current_ws)
+        new_ws.string_value = "Second"
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_ws])
+        )
+
+        assert len(callback_calls) == 1
+
+    def test_on_change_callback_no_fire_on_initial_render(self) -> None:
+        """Test that callback does not fire on initial render."""
+        callback_calls: list[str] = []
+
+        def on_accordion_change() -> None:
+            callback_calls.append("called")
+
+        st.accordion(
+            ["First", "Second"], key="cb_accordion", on_change=on_accordion_change
+        )
+
+        assert len(callback_calls) == 0
+
+    def test_on_change_callback_receives_args_kwargs(self) -> None:
+        """Test that callback receives provided args and kwargs."""
+        received_args: list[object] = []
+        received_kwargs: dict[str, object] = {}
+
+        def on_change(*args: object, **kwargs: object) -> None:
+            received_args.extend(args)
+            received_kwargs.update(kwargs)
+
+        st.accordion(
+            ["First", "Second"],
+            key="cb_accordion",
+            on_change=on_change,
+            args=("arg1", "arg2"),
+            kwargs={"key1": "value1"},
+        )
+
+        current_ws = self._get_accordion_widget_state()
+        new_ws = WidgetState()
+        new_ws.CopyFrom(current_ws)
+        new_ws.string_value = "Second"
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[new_ws])
+        )
+
+        assert received_args == ["arg1", "arg2"]
+        assert received_kwargs == {"key1": "value1"}
+
+    def test_on_change_callback_accessible_via_session_state(self) -> None:
+        """Test that active section label is accessible via session_state with callback."""
+
+        def on_change() -> None:
+            pass
+
+        st.accordion(
+            ["First", "Second", "Third"], key="cb_accordion", on_change=on_change
+        )
+        assert "cb_accordion" in st.session_state
+        assert st.session_state.cb_accordion == "First"
+
+    def test_invalid_on_change_with_callback_type_raises(self) -> None:
+        """Test that non-string, non-callable on_change raises."""
+        with pytest.raises(StreamlitAPIException):
+            st.accordion(["First", "Second"], on_change=123)  # type: ignore[arg-type]
+
+    def test_backwards_compat_rerun_still_works(self) -> None:
+        """Test that on_change='rerun' still works after callback support."""
+        sections = st.accordion(["First", "Second"], on_change="rerun")
+        assert sections[0].open is True
+        assert sections[1].open is False
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_callable_on_change_inside_form_raises(self) -> None:
+        """Test that a callable on_change inside st.form raises StreamlitInvalidFormCallbackError."""
+        with pytest.raises(StreamlitInvalidFormCallbackError):
+            with st.form("form"):
+                st.accordion(["First", "Second"], on_change=lambda: None)
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_on_change_rerun_inside_form_does_not_raise(self) -> None:
+        """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
+        with st.form("form"):
+            st.accordion(["First", "Second"], on_change="rerun")
+
+    def test_on_change_callback_fires_on_multiple_section_switches(self) -> None:
+        """Test that the callback fires on multiple accordion section changes."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.accordion(["First", "Second", "Third"], key="cb_acc", on_change=on_change)
+
+        current_ws = self._get_accordion_widget_state()
+
+        ws_second = WidgetState()
+        ws_second.CopyFrom(current_ws)
+        ws_second.string_value = "Second"
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[ws_second])
+        )
+        assert len(callback_calls) == 1
+
+        ws_third = WidgetState()
+        ws_third.CopyFrom(ws_second)
+        ws_third.string_value = "Third"
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[ws_third])
+        )
+        assert len(callback_calls) == 2
+
+    def test_on_change_callback_does_not_fire_on_unchanged_value(self) -> None:
+        """Test that the callback does not fire when the accordion value stays the same."""
+        callback_calls: list[str] = []
+
+        def on_change() -> None:
+            callback_calls.append("called")
+
+        st.accordion(["First", "Second"], key="cb_acc", on_change=on_change)
+
+        current_ws = self._get_accordion_widget_state()
+        same_ws = WidgetState()
+        same_ws.CopyFrom(current_ws)
+        self.script_run_ctx.session_state.on_script_will_rerun(
+            WidgetStates(widgets=[same_ws])
+        )
+
+        assert len(callback_calls) == 0
+
+    def test_callback_registered_in_widget_metadata(self) -> None:
+        """Test that the callback is stored in widget metadata."""
+
+        def on_change() -> None:
+            pass
+
+        st.accordion(["First", "Second"], key="cb_acc", on_change=on_change)
+        ctx = get_script_run_ctx()
+        assert ctx is not None
+        session_state = ctx.session_state._state
+        widget_id = session_state.get_widget_states()[0].id
+        metadata = session_state._new_widget_state.widget_metadata.get(widget_id)
+        assert metadata is not None
+        assert metadata.callback is not None
+
+    def test_on_change_rerun_falls_back_to_explicit_default_when_session_state_is_stale(
+        self,
+    ) -> None:
+        """Test that stale session state falls back to the explicit default section."""
+        st.session_state["my_accordion"] = "OldSection"
+
+        sections = st.accordion(
+            ["First", "Second", "Third"],
+            key="my_accordion",
+            default="Second",
+            on_change="rerun",
+        )
+
+        assert sections[0].open is False
+        assert sections[1].open is True
+        assert sections[2].open is False

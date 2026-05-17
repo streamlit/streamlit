@@ -263,6 +263,7 @@ NON_WIDGET_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
 CONTAINER_ELEMENTS: list[tuple[str, ELEMENT_PRODUCER]] = [
     ("container", lambda: st.container()),
     ("expander", lambda: st.expander("Expand me")),
+    ("accordion", lambda: st.accordion(["First", "Second"])),
     ("tabs", lambda: st.tabs(["Tab 1", "Tab 2"])),
     ("chat_message", lambda: st.chat_message("user")),
     ("popover", lambda: st.popover("Popover")),
