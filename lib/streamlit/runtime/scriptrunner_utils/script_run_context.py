@@ -243,7 +243,8 @@ class ScriptRunContext:
         fragment_ids_this_run: list[str] | None = None,
         cached_message_hashes: set[str] | None = None,
         context_info: ContextInfo | None = None,
-        yield_check: Callable[[], None] = lambda: None,  # checked by workers to cease execution
+        # Checked by fragment workers to cease execution.
+        yield_check: Callable[[], None] = lambda: None,
     ) -> None:
         if threading.get_ident() != self._main_thread_ident:
             raise RuntimeError(
