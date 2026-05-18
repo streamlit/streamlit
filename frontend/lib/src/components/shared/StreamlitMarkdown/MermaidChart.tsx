@@ -366,6 +366,10 @@ const MermaidChart = memo(function MermaidChart({
   // when rapid source/theme changes cause overlapping mermaid.render() calls.
   const renderCounterRef = useRef(0)
 
+  // Ref to track the blob URL being used for PNG download. This prevents the
+  // cleanup effect from revoking the URL while an async image load is in progress.
+  const downloadingBlobUrlRef = useRef<string | null>(null)
+
   useEffect(() => {
     let isCancelled = false
     let committedToState = false
@@ -447,10 +451,11 @@ const MermaidChart = memo(function MermaidChart({
     }
   }, [source, themeConfig, uniqueId])
 
-  // Clean up blob URL when component unmounts or URL changes
+  // Clean up blob URL when component unmounts or URL changes.
+  // Skips revocation if the URL is currently being used for PNG download.
   useEffect(() => {
     return () => {
-      if (svgBlobUrl) {
+      if (svgBlobUrl && svgBlobUrl !== downloadingBlobUrlRef.current) {
         URL.revokeObjectURL(svgBlobUrl)
       }
     }
@@ -465,18 +470,15 @@ const MermaidChart = memo(function MermaidChart({
 
   /**
    * Download the rendered diagram as a PNG image.
-   * Captures svgBlobUrl locally to prevent race conditions if the component
-   * re-renders and the blob URL cleanup effect revokes the URL during image loading.
+   * Uses a ref to protect the blob URL from being revoked during async image loading.
    */
   const handleDownloadPng = useCallback((): void => {
     if (!svgBlobUrl) {
       return
     }
 
-    // Capture the blob URL in a local variable to prevent race conditions.
-    // If a re-render triggers the cleanup effect while the image is loading,
-    // the old URL could be revoked before onload fires.
-    const capturedBlobUrl = svgBlobUrl
+    // Mark this URL as in-use for download to prevent cleanup effect from revoking it.
+    downloadingBlobUrlRef.current = svgBlobUrl
 
     const img = new Image()
     img.onload = () => {
@@ -491,6 +493,7 @@ const MermaidChart = memo(function MermaidChart({
 
       const ctx = canvas.getContext("2d")
       if (!ctx) {
+        downloadingBlobUrlRef.current = null
         return
       }
 
@@ -503,11 +506,24 @@ const MermaidChart = memo(function MermaidChart({
       link.download = "mermaid-diagram.png"
       link.href = canvas.toDataURL("image/png")
       link.click()
+
+      // Clear the ref and revoke the URL if it's no longer the current one
+      const urlToCheck = downloadingBlobUrlRef.current
+      downloadingBlobUrlRef.current = null
+      if (urlToCheck && urlToCheck !== svgBlobUrl) {
+        URL.revokeObjectURL(urlToCheck)
+      }
     }
     img.onerror = () => {
       LOG.error("Failed to load SVG for PNG export")
+      // Clear the ref and revoke the URL if it's no longer the current one
+      const urlToCheck = downloadingBlobUrlRef.current
+      downloadingBlobUrlRef.current = null
+      if (urlToCheck && urlToCheck !== svgBlobUrl) {
+        URL.revokeObjectURL(urlToCheck)
+      }
     }
-    img.src = capturedBlobUrl
+    img.src = svgBlobUrl
   }, [svgBlobUrl, theme.colors.bgColor])
 
   if (isLoading) {
