@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import logging
+from unittest.mock import patch
 
 import pytest
 
@@ -158,15 +158,6 @@ def test_normalize_shortcut_rejects_reserved_keys(shortcut: str) -> None:
         normalize_shortcut(shortcut)
 
 
-@pytest.fixture
-def shortcut_logger_propagates(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Allow caplog to capture warnings from the shortcut_utils logger."""
-    logger = logging.getLogger("streamlit.elements.lib.shortcut_utils")
-    monkeypatch.setattr(logger, "propagate", True)
-
-
 @pytest.mark.parametrize(
     "shortcut",
     [
@@ -195,31 +186,19 @@ def shortcut_logger_propagates(
         "Mod+PageDown",
     ],
 )
-def test_normalize_shortcut_warns_for_browser_reserved(
-    shortcut: str,
-    caplog: pytest.LogCaptureFixture,
-    shortcut_logger_propagates: None,
-) -> None:
+def test_normalize_shortcut_warns_for_browser_reserved(shortcut: str) -> None:
     """Browser-reserved combos produce a logger warning but still normalize."""
-    with caplog.at_level(
-        logging.WARNING, logger="streamlit.elements.lib.shortcut_utils"
-    ):
+    with patch("streamlit.elements.lib.shortcut_utils._LOGGER") as mock_logger:
         result = normalize_shortcut(shortcut)
     assert result
-    assert any("reserved by the browser" in record.message for record in caplog.records)
+    mock_logger.warning.assert_called_once()
+    warning_message = mock_logger.warning.call_args.args[0]
+    assert "reserved by the browser" in warning_message
 
 
 @pytest.mark.parametrize("shortcut", ["Ctrl+K", "Alt+S", "Cmd+Shift+P", "Enter", "F1"])
-def test_normalize_shortcut_does_not_warn_for_safe(
-    shortcut: str,
-    caplog: pytest.LogCaptureFixture,
-    shortcut_logger_propagates: None,
-) -> None:
+def test_normalize_shortcut_does_not_warn_for_safe(shortcut: str) -> None:
     """Non-reserved combos must not emit the browser-reserved warning."""
-    with caplog.at_level(
-        logging.WARNING, logger="streamlit.elements.lib.shortcut_utils"
-    ):
+    with patch("streamlit.elements.lib.shortcut_utils._LOGGER") as mock_logger:
         normalize_shortcut(shortcut)
-    assert not any(
-        "reserved by the browser" in record.message for record in caplog.records
-    )
+    mock_logger.warning.assert_not_called()
