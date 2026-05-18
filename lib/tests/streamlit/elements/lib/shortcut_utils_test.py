@@ -187,6 +187,8 @@ def _reset_browser_reserved_warning_cache() -> None:
         "Cmd+Shift+Tab",
         "Ctrl+PageUp",
         "Ctrl+PageDown",
+        "Cmd+PageUp",
+        "Cmd+PageDown",
         "Ctrl+L",
         "Cmd+L",
         "F11",

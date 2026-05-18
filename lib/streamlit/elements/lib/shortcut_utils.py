@@ -87,6 +87,8 @@ _BROWSER_RESERVED_SHORTCUTS: Final[frozenset[str]] = frozenset(
         "cmd+shift+tab",
         "ctrl+pageup",
         "ctrl+pagedown",
+        "cmd+pageup",
+        "cmd+pagedown",
         "ctrl+l",
         "cmd+l",
         "f11",
