@@ -560,6 +560,13 @@ def fragment(
             Parallel execution is only used during full app reruns. Fragment
             reruns triggered by widget interactions always execute sequentially.
 
+        .. warning::
+
+            ``st.session_state`` is not thread-safe for concurrent writes.
+            Parallel fragments that write to the **same** ``session_state``
+            key have undefined behavior. Use distinct keys per fragment to
+            avoid race conditions.
+
     Examples
     --------
     The following example demonstrates basic usage of
