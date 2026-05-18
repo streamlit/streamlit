@@ -92,6 +92,7 @@
     "protobufjs": "^8.0.3",
     "query-string": "^9.3.1",
     "re-resizable": "^6.11.2",
+    "react-aria-components": "^1.17.0",
     "react-color": "^2.18.1",
     "react-dropzone": "^15.0.0",
     "react-feather": "^2.0.10",

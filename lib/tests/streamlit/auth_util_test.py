@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
 # Simulates realistic cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
+TEST_COOKIE_ATTR_SIZE = len("; Path=/; HttpOnly")
 
 
 def create_realistic_signed_value(name: str, value: str) -> bytes:
@@ -260,6 +261,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "test_cookie",
             small_data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Should only have the main cookie, no chunks
@@ -283,6 +285,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "test_cookie",
             large_data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Main cookie should exist (contains chunk count marker)
@@ -293,6 +296,60 @@ class CookieChunkingTest(unittest.TestCase):
         # Verify all chunks exist (1, 2, ..., chunk_count)
         for i in range(1, chunk_count + 1):
             assert f"test_cookie_{i}" in cookies
+
+    def test_set_cookie_with_chunks_respects_cookie_attr_size(self):
+        """Test that larger cookie attributes trigger chunking sooner."""
+        cookie_name = "test_cookie"
+        larger_cookie_attr_size = TEST_COOKIE_ATTR_SIZE + 32
+        payload_size = 1
+
+        while True:
+            data = {"key": "x" * payload_size}
+            serialized = json.dumps(data)
+            signed_value = create_realistic_signed_value(cookie_name, serialized)
+            default_size = (
+                len(cookie_name) + 1 + len(signed_value) + TEST_COOKIE_ATTR_SIZE
+            )
+            larger_size = (
+                len(cookie_name) + 1 + len(signed_value) + larger_cookie_attr_size
+            )
+
+            if default_size <= auth_util.MAX_COOKIE_BYTES < larger_size:
+                break
+
+            payload_size += 1
+            if payload_size > 5000:  # pragma: no cover - defensive
+                raise AssertionError("Could not find boundary payload size")
+
+        default_cookies: dict[str, str] = {}
+
+        def mock_set_default_cookie(name: str, value: str) -> None:
+            default_cookies[name] = value
+
+        set_cookie_with_chunks(
+            mock_set_default_cookie,
+            create_realistic_signed_value,
+            cookie_name,
+            data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
+        )
+
+        assert not default_cookies[cookie_name].startswith("chunks-")
+
+        larger_cookies: dict[str, str] = {}
+
+        def mock_set_larger_cookie(name: str, value: str) -> None:
+            larger_cookies[name] = value
+
+        set_cookie_with_chunks(
+            mock_set_larger_cookie,
+            create_realistic_signed_value,
+            cookie_name,
+            data,
+            cookie_attr_size=larger_cookie_attr_size,
+        )
+
+        assert larger_cookies[cookie_name].startswith("chunks-")
 
     def test_get_cookie_with_chunks_single_cookie(self):
         """Test retrieving a single (non-chunked) cookie."""
@@ -443,6 +500,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "auth_cookie",
             data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Get the cookie
@@ -469,6 +527,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "auth_cookie",
             data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Verify chunks were created
@@ -711,7 +770,13 @@ def test_set_split_cookie_single_chunk_path() -> None:
         return large_prefix + base64.b64encode(value.encode())
 
     serialized = json.dumps({"data": "y" * 400})
-    _set_split_cookie(mock_set, mock_create_signed, "c", serialized)
+    _set_split_cookie(
+        mock_set,
+        mock_create_signed,
+        "c",
+        serialized,
+        cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
+    )
 
     assert set_calls == [("c", serialized)]
 
