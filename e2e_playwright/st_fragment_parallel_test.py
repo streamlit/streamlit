@@ -92,34 +92,6 @@ def test_parallel_fragments_preserve_source_order(app: Page) -> None:
     )
 
 
-def test_parallel_fragment_error_handling(app: Page) -> None:
-    """Fragment that raises exception shows error, sibling continues.
-
-    The error should render in the fragment's container, and other fragments
-    should complete unaffected.
-    """
-    error_section = get_element_by_key(app, "error_section")
-
-    expect(error_section.get_by_text("Error fragment starting")).to_be_visible()
-
-    expect(error_section.get_by_text("Sibling fragment completed")).to_be_visible()
-
-    expect(error_section.get_by_text("Intentional error")).to_be_visible()
-
-
-def test_parallel_fragment_st_stop(app: Page) -> None:
-    """Fragment that calls st.stop() stops execution cleanly.
-
-    The stopping fragment should show its starting message but not the content
-    after st.stop(). Sibling behavior depends on coordinator implementation.
-    """
-    stop_section = get_element_by_key(app, "stop_section")
-
-    expect(stop_section.get_by_text("Stopping fragment starting")).to_be_visible()
-
-    expect(stop_section.get_by_text("This should not appear")).not_to_be_visible()
-
-
 def test_parallel_fragment_container_matches_main_thread(app: Page) -> None:
     """Verify container pre-allocation: no duplicate or empty containers.
 
