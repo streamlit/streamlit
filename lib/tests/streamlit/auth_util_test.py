@@ -902,6 +902,74 @@ def test_decode_provider_token_falls_back_to_authlib(
     }
 
 
+def test_provider_token_round_trips_through_real_authlib_when_joserfc_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public encode/decode round-trip works end-to-end on the Authlib fallback path.
+
+    The mocked dispatch tests above prove the public helpers pick the Authlib branch
+    when joserfc raises ``ImportError``, and ``test_authlib_provider_token_round_trip``
+    proves the Authlib helpers work in isolation. This test bridges the two by driving
+    the public API with a real Authlib backend, covering the path a user on
+    ``Authlib<1.7`` (no transitive joserfc) actually exercises in production.
+    """
+    pytest.importorskip("authlib")
+    from authlib.deprecate import AuthlibDeprecationWarning
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError("joserfc unavailable")),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError("joserfc unavailable")),
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", AuthlibDeprecationWarning)
+        token = auth_util.encode_provider_token("google")
+        payload = auth_util.decode_provider_token(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+
+
+@pytest.mark.parametrize(
+    ("operation", "args"),
+    [
+        pytest.param("encode_provider_token", ("google",), id="encode"),
+        pytest.param("decode_provider_token", ("ignored-token",), id="decode"),
+    ],
+)
+def test_provider_token_raises_install_hint_when_no_jose_backend_available(
+    operation: str,
+    args: tuple[Any, ...],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Surface the ``streamlit[auth]`` install hint when neither JOSE backend is available.
+
+    Anti-regression for the user-facing error path on installs that have neither
+    ``joserfc`` nor ``Authlib`` (e.g. plain ``pip install streamlit`` without the
+    ``auth`` extra). Both private helpers are forced to raise ``ImportError`` to
+    simulate the missing optional dependencies.
+    """
+    for helper in (
+        "_encode_provider_token_with_joserfc",
+        "_encode_provider_token_with_authlib",
+        "_decode_provider_token_with_joserfc",
+        "_decode_provider_token_with_authlib",
+    ):
+        monkeypatch.setattr(
+            auth_util, helper, MagicMock(side_effect=ImportError("missing"))
+        )
+
+    with pytest.raises(StreamlitAuthError, match=r"pip install streamlit\[auth\]"):
+        getattr(auth_util, operation)(*args)
+
+
 def test_set_split_cookie_single_chunk_path() -> None:
     """Cover ``_set_split_cookie`` when the serialized value fits in one chunk.
 

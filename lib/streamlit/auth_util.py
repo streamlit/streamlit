@@ -362,7 +362,7 @@ def encode_provider_token(provider: str) -> str:
     except ImportError:
         try:
             return _encode_provider_token_with_authlib(provider)
-        except ImportError:  # pragma: no cover - optional dep
+        except ImportError:
             raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE) from None
 
 
@@ -373,7 +373,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
     except ImportError:
         try:
             return _decode_provider_token_with_authlib(provider_token)
-        except ImportError:  # pragma: no cover - optional dep
+        except ImportError:
             raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE) from None
 
 
