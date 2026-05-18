@@ -36,9 +36,6 @@ if TYPE_CHECKING:
 
 
 MAX_COOKIE_BYTES: Final = 4096
-# Cookie attributes added by the server: "; Path=/; HttpOnly"
-COOKIE_ATTRIBUTES: Final = "; Path=/; HttpOnly"
-COOKIE_ATTR_SIZE: Final = len(COOKIE_ATTRIBUTES)
 # Safety buffer for signing overhead to account for edge cases, rounding, and potential
 # variations in signing implementations (e.g., longer timestamps after year 2286)
 SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
@@ -304,6 +301,8 @@ def set_cookie_with_chunks(
     create_signed_value_fn: Callable[[str, str], bytes],
     cookie_name: str,
     value: dict[str, Any],
+    *,
+    cookie_attr_size: int,
 ) -> None:
     """Set a cookie, splitting into multiple cookies if necessary.
 
@@ -312,14 +311,15 @@ def set_cookie_with_chunks(
         create_signed_value_fn: Function to create a signed cookie value (cookie_name, value)
         cookie_name: Name of the cookie
         value: Dictionary value to serialize and store
+        cookie_attr_size: Number of attribute bytes appended to each cookie.
     """
     serialized_cookie_value = json.dumps(value)
 
     # Calculate actual cookie size using the provided signing function
     signed_value = create_signed_value_fn(cookie_name, serialized_cookie_value)
 
-    # Cookie format: "name=value" + COOKIE_ATTRIBUTES
-    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + COOKIE_ATTR_SIZE
+    # Cookie format: "name=value" + cookie attributes
+    actual_cookie_size = len(cookie_name) + 1 + len(signed_value) + cookie_attr_size
 
     # Check if cookie needs to be split
     if actual_cookie_size > MAX_COOKIE_BYTES:
@@ -332,6 +332,7 @@ def set_cookie_with_chunks(
             create_signed_value_fn,
             cookie_name,
             serialized_cookie_value,
+            cookie_attr_size=cookie_attr_size,
         )
     else:
         set_single_cookie_fn(cookie_name, serialized_cookie_value)
@@ -364,6 +365,8 @@ def _set_split_cookie(
     create_signed_value_fn: Callable[[str, str], bytes],
     cookie_name: str,
     value: str,
+    *,
+    cookie_attr_size: int,
 ) -> None:
     """Split a large cookie value into multiple smaller cookies.
 
@@ -375,6 +378,7 @@ def _set_split_cookie(
         create_signed_value_fn: Function to create a signed cookie value
         cookie_name: Name of the cookie
         value: Serialized string value to split and store
+        cookie_attr_size: Number of attribute bytes appended to each cookie.
     """
     # Calculate overhead empirically from the actual signing function, plus safety buffer
     signing_overhead = (
@@ -385,7 +389,7 @@ def _set_split_cookie(
     # Available space for the signed value:
     # MAX_COOKIE_BYTES - cookie_name - "=" (1 byte) - cookie attributes
     available_for_signed_value = (
-        MAX_COOKIE_BYTES - len(cookie_name) - 1 - COOKIE_ATTR_SIZE
+        MAX_COOKIE_BYTES - len(cookie_name) - 1 - cookie_attr_size
     )
 
     # Space available for the base64-encoded value (after subtracting signing overhead)
