@@ -98,6 +98,10 @@ def open_dialog_with_chart(app: Page):
     click_button(app, "Open Chart Dialog")
 
 
+def open_dialog_with_layered_chart(app: Page):
+    click_button(app, "Open Layered Chart Dialog")
+
+
 def open_dialog_with_rerun(app: Page):
     click_button(app, "Open Dialog with rerun")
 
@@ -501,6 +505,31 @@ def test_dialog_with_chart(app: Page):
     chart_box = chart.bounding_box()
     assert chart_box is not None
     target: Position = {"x": chart_box["width"] * 0.5, "y": chart_box["height"] * 0.5}
+    app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
+    chart.hover(position=target)
+    tooltip = app.locator("#vg-tooltip-element")
+    expect(tooltip).to_be_visible()
+
+
+def test_dialog_with_layered_chart_shows_tooltips(app: Page):
+    """Check that layered Vega-Lite charts positioned in dialogs respond to hover events
+    on the lower layers and show the tooltip.
+    """
+    open_dialog_with_layered_chart(app)
+    main_dialog = app.get_by_test_id(modal_test_id)
+    expect(main_dialog).to_have_count(1)
+    expect(main_dialog).to_be_visible()
+
+    chart = main_dialog.get_by_test_id("stVegaLiteChart").locator(
+        "[role='graphics-document']"
+    )
+    expect(chart).to_be_visible()
+    wait_for_app_run(app)
+    chart.scroll_into_view_if_needed()
+    chart_box = chart.bounding_box()
+    assert chart_box is not None
+    # Hover in the lower-right of the chart where the area polygon is
+    target: Position = {"x": chart_box["width"] * 0.75, "y": chart_box["height"] * 0.75}
     app.mouse.move(chart_box["x"] + target["x"], chart_box["y"] + target["y"])
     chart.hover(position=target)
     tooltip = app.locator("#vg-tooltip-element")
