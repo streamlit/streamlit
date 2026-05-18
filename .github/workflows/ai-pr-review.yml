@@ -14,12 +14,12 @@ on:
         description: "Model(s) to use for the review (comma-separated for multi-model). The last model serves as the 'judge' for consolidating reviews."
         required: false
         type: string
-        default: "gpt-5.4-xhigh,gemini-3.1-pro,claude-opus-4-7-thinking-xhigh"
+        default: "gpt-5.3-codex-high,claude-4.6-opus-high-thinking"
 
 # Computed PR number and model for use in jobs
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'gpt-5.4-xhigh,gemini-3.1-pro,claude-opus-4-7-thinking-xhigh' }}
+  MODEL: ${{ github.event.inputs.model || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking' }}
 
 jobs:
   # Job 1: Parse model list and check for API key
@@ -51,7 +51,7 @@ jobs:
           # Guard against empty/whitespace model input
           if [ -z "${MODEL// /}" ]; then
             echo "::error::MODEL is empty or whitespace-only. Using default."
-            MODEL="claude-opus-4-7-thinking-xhigh"
+            MODEL="claude-4.6-opus-high-thinking"
           fi
 
           # Split comma-separated, trim whitespace, convert to JSON array
@@ -62,7 +62,7 @@ jobs:
           MODEL_COUNT=$(echo "$MODELS_JSON" | jq 'length')
           if [ "$MODEL_COUNT" -eq 0 ]; then
             echo "::error::No valid models found after parsing. Using default."
-            MODELS_JSON='["claude-opus-4-7-thinking-xhigh"]'
+            MODELS_JSON='["claude-4.6-opus-high-thinking"]'
             MODEL_COUNT=1
           fi
 

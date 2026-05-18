@@ -22,6 +22,8 @@ from typing import Final
 USER_COOKIE_NAME: Final = "_streamlit_user"
 # Cookie name for storing signed OAuth tokens (access_token, id_token).
 TOKENS_COOKIE_NAME: Final = "_streamlit_user_tokens"
+# Lifetime of the persistent auth cookies set by st.login(), 30 days.
+AUTH_COOKIE_MAX_AGE_SECONDS: Final = 30 * 24 * 60 * 60
 # Cookie name for Cross-Site Request Forgery (XSRF) token validation.
 XSRF_COOKIE_NAME: Final = "_streamlit_xsrf"
 # Cookie name for server-side session management.

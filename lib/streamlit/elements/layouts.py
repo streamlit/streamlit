@@ -1257,6 +1257,7 @@ class LayoutsMixin:
         *,
         key: Key | None = None,
         icon: str | None = None,
+        type: Literal["default", "compact"] = "default",
         width: WidthWithoutContent = "stretch",
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
@@ -1339,6 +1340,13 @@ class LayoutsMixin:
               font library.
 
             - ``"spinner"``: Displays a spinner as an icon.
+
+        type : "default" or "compact"
+            The visual style of the expander. If ``"default"`` (default), the
+            expander is displayed with a border and background. If ``"compact"``,
+            the expander is rendered as a minimal inline toggle, ideal for
+            displaying AI reasoning, thoughts, or collapsible metadata without
+            visual clutter.
 
         width : "stretch" or int
             The width of the expander container. This can be one of the following:
@@ -1478,6 +1486,9 @@ class LayoutsMixin:
                 "on_change", ["'rerun'", "'ignore'", "a callable"]
             )
 
+        if type not in {"default", "compact"}:
+            raise StreamlitValueError("type", ["'default'", "'compact'"])
+
         key = to_key(key)
         is_stateful = on_change != "ignore"
 
@@ -1507,6 +1518,7 @@ class LayoutsMixin:
                 expanded=expanded,
                 icon=icon,
                 width=width,
+                type=type,
             )
             block_id = element_id
 
@@ -1530,10 +1542,16 @@ class LayoutsMixin:
                 user_key=key,
                 key_as_main_identity=False,
                 dg=self.dg,
+                type=type,
             )
         expandable_proto = BlockProto.Expandable()
         expandable_proto.expanded = current_expanded
         expandable_proto.label = label
+        expandable_proto.type = (
+            BlockProto.Expandable.Type.COMPACT
+            if type == "compact"
+            else BlockProto.Expandable.Type.DEFAULT
+        )
         if icon is not None:
             expandable_proto.icon = validate_icon_or_emoji(icon)
 
@@ -1945,6 +1963,7 @@ class LayoutsMixin:
         *,
         expanded: bool = False,
         state: Literal["running", "complete", "error"] = "running",
+        type: Literal["default", "compact"] = "default",
         width: WidthWithoutContent = "stretch",
     ) -> StatusContainer:
         r"""Insert a status container to display output from long-running tasks.
@@ -2000,6 +2019,13 @@ class LayoutsMixin:
             - ``running`` (default): A spinner icon is shown.
             - ``complete``: A checkmark icon is shown.
             - ``error``: An error icon is shown.
+
+        type : "default" or "compact"
+            The visual style of the status container. If ``"default"`` (default),
+            the container is displayed with a border and background. If
+            ``"compact"``, the container is rendered as a minimal inline
+            toggle, ideal for displaying AI reasoning or task progress without
+            visual clutter.
 
         width : "stretch" or int
             The width of the status container. This can be one of the following:
@@ -2063,7 +2089,7 @@ class LayoutsMixin:
 
         """
         return get_dg_singleton_instance().status_container_cls._create(
-            self.dg, label, expanded=expanded, state=state, width=width
+            self.dg, label, expanded=expanded, state=state, type=type, width=width
         )
 
     def _dialog(
