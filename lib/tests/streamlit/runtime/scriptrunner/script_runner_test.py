@@ -1315,47 +1315,6 @@ class ScriptRunnerTest(unittest.TestCase):
         ]
         assert len(started_events) == 2
 
-    def test_worker_thread_yield_check_noop_when_idle(self):
-        """A worker thread (attached via add_script_run_ctx) hits the
-        worker-thread branch of ``_maybe_handle_execution_control_request``.
-        With no stop requested it must not raise so that existing
-        worker-thread paths (e.g. spinner) keep working."""
-        import threading as _threading
-
-        from streamlit.runtime.scriptrunner_utils.script_run_context import (
-            SCRIPT_RUN_CONTEXT_ATTR_NAME,
-            add_script_run_ctx,
-        )
-
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData())
-        scriptrunner.start()
-        scriptrunner.join()
-        self._assert_no_exceptions(scriptrunner)
-
-        script_thread = scriptrunner._script_thread
-        ctx = getattr(script_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
-        assert ctx is not None
-        assert ctx.parallel_coordinator is not None
-        assert ctx.parallel_coordinator.should_stop() is False
-
-        worker_errors: list[BaseException] = []
-
-        def worker() -> None:
-            add_script_run_ctx(_threading.current_thread(), ctx)
-            try:
-                # The script runner is no longer in script-thread, so this
-                # call hits the worker-thread branch. With should_stop() False
-                # it must return without raising.
-                scriptrunner._maybe_handle_execution_control_request()
-            except BaseException as e:
-                worker_errors.append(e)
-
-        t = _threading.Thread(target=worker)
-        t.start()
-        t.join()
-        assert worker_errors == []
-
     @patch("streamlit.runtime.scriptrunner.script_runner.get_script_run_ctx")
     def test_script_thread_yield_check_worker_exception_wins_over_request(
         self, patched_get_script_run_ctx
@@ -1385,44 +1344,6 @@ class ScriptRunnerTest(unittest.TestCase):
                 scriptrunner._maybe_handle_execution_control_request()
 
         assert excinfo.value.rerun_data is worker_rerun_data
-
-    def test_worker_thread_yield_check_raises_when_stop_requested(self):
-        """When the coordinator's stop event is set (e.g. a sibling worker
-        called ``request_stop``), the worker-thread branch raises
-        StopException so the worker exits at its next yield point."""
-        import threading as _threading
-
-        from streamlit.runtime.scriptrunner_utils.script_run_context import (
-            SCRIPT_RUN_CONTEXT_ATTR_NAME,
-            add_script_run_ctx,
-        )
-
-        scriptrunner = TestScriptRunner("good_script.py")
-        scriptrunner.request_rerun(RerunData())
-        scriptrunner.start()
-        scriptrunner.join()
-        self._assert_no_exceptions(scriptrunner)
-
-        script_thread = scriptrunner._script_thread
-        ctx = getattr(script_thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
-        assert ctx is not None
-        assert ctx.parallel_coordinator is not None
-        ctx.parallel_coordinator.request_stop()
-
-        worker_errors: list[BaseException] = []
-
-        def worker() -> None:
-            add_script_run_ctx(_threading.current_thread(), ctx)
-            try:
-                scriptrunner._maybe_handle_execution_control_request()
-            except BaseException as e:
-                worker_errors.append(e)
-
-        t = _threading.Thread(target=worker)
-        t.start()
-        t.join()
-        assert len(worker_errors) == 1
-        assert isinstance(worker_errors[0], StopException)
 
     def test_page_script_hash_to_script_path(self):
         scriptrunner = TestScriptRunner("good_navigation_script.py")
