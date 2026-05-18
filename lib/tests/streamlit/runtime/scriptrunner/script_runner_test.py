@@ -613,13 +613,8 @@ class ScriptRunnerTest(unittest.TestCase):
         """
 
         ctx = MagicMock()
-        # The script-thread yield-point branch of
-        # _maybe_handle_execution_control_request reads
-        # ctx.parallel_coordinator.worker_exception and re-raises it if
-        # set. Without an explicit None, MagicMock returns a MagicMock,
-        # which raises TypeError ("exceptions must derive from
-        # BaseException") when the production code tries to raise it —
-        # masking the KeyError this test is actually checking for.
+        # Set to None to prevent MagicMock being returned, which would
+        # cause the test to fail with TypeError instead of KeyError.
         ctx.parallel_coordinator.worker_exception = None
         patched_get_script_run_ctx.return_value = ctx
 

@@ -468,17 +468,9 @@ class ScriptRunner:
             # enqueues a new ForwardEvent
             return
 
-        # Before consulting _requests, surface any cancellation a parallel
-        # fragment worker initiated (st.stop() / st.rerun(scope="app") in a
-        # worker thread). Workers can't raise their own exceptions across
-        # threads, so they store them on the coordinator and the script
-        # thread re-raises here at its next yield point. We re-raise with
-        # the original type — and original RerunData, if any — so the
-        # script runner's outer rerun loop sees the right request type.
-        # Worker-initiated cancellation takes precedence over a concurrent
-        # external request from _requests: the worker already captured the
-        # user intent in-band, while _requests only reflects whatever the
-        # frontend has sent so far.
+        # Re-raise any worker-stored exception before consulting _requests.
+        # Worker-initiated cancellation takes precedence because it
+        # captured user intent in-band.
         ctx = get_script_run_ctx(suppress_warning=True)
         if ctx is not None and ctx.parallel_coordinator is not None:
             worker_exc = ctx.parallel_coordinator.worker_exception
@@ -760,9 +752,8 @@ class ScriptRunner:
                                 )
 
                     else:
-                        # parallel_coordinator is None until the first
-                        # ctx.reset(), which always runs before this point;
-                        # cast pins that for the type checker.
+                        # Expect parallel_coordinator to be initialized;
+                        # cast makes this clear to the type checker.
                         coordinator = cast(
                             "ParallelFragmentCoordinator",
                             ctx.parallel_coordinator,

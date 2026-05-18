@@ -169,6 +169,12 @@ class ParallelFragmentCoordinator:
         with self._exception_lock:
             return self._worker_exception
 
+    def _raise_if_worker_exception(self) -> None:
+        """Re-raise the stored worker exception if one exists."""
+        stored = self.worker_exception
+        if stored is not None:
+            raise stored
+
     def join(self) -> None:
         """Block until all outstanding work completes.
 
@@ -186,13 +192,9 @@ class ParallelFragmentCoordinator:
                 if self._outstanding == 0:
                     break
             self._yield_check()
-            stored = self.worker_exception
-            if stored is not None:
-                raise stored
+            self._raise_if_worker_exception()
             time.sleep(self._poll_interval)
-        stored = self.worker_exception
-        if stored is not None:
-            raise stored
+        self._raise_if_worker_exception()
         self._executor.shutdown(wait=False)
 
     def drain(self) -> None:
