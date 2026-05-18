@@ -29,7 +29,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from streamlit.runtime.fragment import ParallelFragmentCoordinator
+from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,

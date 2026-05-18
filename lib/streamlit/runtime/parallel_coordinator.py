@@ -1,0 +1,207 @@
+# Copyright (c) Streamlit Inc. (2018-2022) Snowflake Inc. (2022-2026)
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+"""ParallelFragmentCoordinator and supporting helpers.
+
+Separated from ``fragment.py`` to break the import cycle with
+``script_run_context.py``: the coordinator imports from
+``script_run_context`` (for ``get_script_run_ctx`` and
+``SCRIPT_RUN_CONTEXT_ATTR_NAME``), and ``script_run_context`` needs to
+construct a coordinator in ``reset()``.  With the coordinator in its own
+module, ``script_run_context`` can import it at module level.
+"""
+
+from __future__ import annotations
+
+import contextlib
+import contextvars
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+from typing import TYPE_CHECKING, Any
+
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+    ScriptRunContext,
+    get_script_run_ctx,
+)
+
+if TYPE_CHECKING:
+    from collections.abc import Callable, Iterator
+
+
+@contextlib.contextmanager
+def _scoped_ctx_attach(ctx: ScriptRunContext | None) -> Iterator[None]:
+    """Bind *ctx* as the active ScriptRunContext on the current thread for
+    the duration of the block; restore the prior binding on exit.
+
+    Used by ``ParallelFragmentCoordinator.submit()`` so a pool thread that
+    executes successive submissions sees the right ctx for each call and
+    never carries a stale ctx across submissions.
+    """
+    thread = threading.current_thread()
+    prev = getattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, None)
+    setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, ctx)
+    try:
+        yield
+    finally:
+        if prev is None:
+            try:
+                delattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME)
+            except AttributeError:
+                pass
+        else:
+            setattr(thread, SCRIPT_RUN_CONTEXT_ATTR_NAME, prev)
+
+
+class ParallelFragmentCoordinator:
+    """Manages the lifecycle of parallel fragment workers for one script run.
+
+    Owned by ScriptRunContext (created in ctx.reset()) and exposed as
+    ctx.parallel_coordinator. The coordinator is single-use: a fresh
+    instance is created at the start of every script run, joined or drained
+    before the run ends, and discarded.
+
+    Workers submitted via :meth:`submit` run inside a
+    ``contextvars.copy_context()`` snapshot of the caller's context with a
+    scoped ``ScriptRunContext`` attach so ``get_script_run_ctx()`` and
+    ``ThreadState.get()`` return the parent's values. Worker-side
+    ``ThreadState.update()`` writes stay local to the copied context.
+    """
+
+    def __init__(
+        self,
+        yield_check: Callable[[], None],
+        max_workers: int | None = None,
+        poll_interval: float = 0.1,
+    ) -> None:
+        if max_workers is not None and max_workers < 1:
+            raise ValueError(
+                f"runner.parallelMaxWorkers must be None or a positive "
+                f"integer, got {max_workers!r}"
+            )
+        self._executor = ThreadPoolExecutor(max_workers=max_workers)
+        self._outstanding = 0
+        self._outstanding_lock = threading.Lock()
+        self._stop_event = threading.Event()
+        self._worker_exception: RerunException | StopException | None = None
+        self._exception_lock = threading.Lock()
+        self._yield_check = yield_check
+        self._poll_interval = poll_interval
+
+    def submit(self, fn: Callable[..., Any], *args: Any) -> None:
+        """Submit a worker function to the thread pool.
+
+        Captures the caller's ``ScriptRunContext`` (thread attribute) and the
+        caller's full ``contextvars.Context`` (which includes ``FragmentThreadState``)
+        at submit time.  The worker runs inside ``copy_context().run(...)`` with a
+        scoped ctx attach so ``get_script_run_ctx()`` and ``ThreadState.get()``
+        return the parent's values for the duration of the call.  Worker-side
+        ``ThreadState.update()`` writes stay local to the captured copy — they
+        never leak back to the parent thread.
+
+        Increments the outstanding counter before submitting so a nested
+        submit() from inside a running worker is visible to join() before
+        the parent's tracked() decrement runs. May be called from any
+        thread (main thread or worker threads for nested fragments).
+        """
+        ctx = get_script_run_ctx()
+        captured = contextvars.copy_context()
+
+        with self._outstanding_lock:
+            self._outstanding += 1
+
+        def tracked() -> None:
+            try:
+                with _scoped_ctx_attach(ctx):
+                    captured.run(fn, *args)
+            finally:
+                with self._outstanding_lock:
+                    self._outstanding -= 1
+
+        try:
+            self._executor.submit(tracked)
+        except RuntimeError:
+            with self._outstanding_lock:
+                self._outstanding -= 1
+            raise
+
+    def request_stop(self) -> None:
+        """Record an st.stop() from a worker. First writer wins."""
+        with self._exception_lock:
+            if self._worker_exception is None:
+                self._worker_exception = StopException()
+        self._stop_event.set()
+
+    def request_rerun(self, exc: RerunException) -> None:
+        """Record an st.rerun(scope='app') from a worker. First writer wins."""
+        with self._exception_lock:
+            if self._worker_exception is None:
+                self._worker_exception = exc
+        self._stop_event.set()
+
+    def should_stop(self) -> bool:
+        """Whether worker threads should cooperatively exit at their next
+        yield point.
+        """
+        return self._stop_event.is_set()
+
+    @property
+    def worker_exception(self) -> RerunException | StopException | None:
+        """The exception stored by the first worker to call request_stop()
+        or request_rerun().
+        """
+        with self._exception_lock:
+            return self._worker_exception
+
+    def join(self) -> None:
+        """Block until all outstanding work completes.
+
+        Polls _outstanding (lock-protected) and calls _yield_check() each
+        poll interval so the script thread stays responsive to external
+        RERUN/STOP requests. If a worker stored an exception, raise it
+        instead of returning normally.
+
+        If join() raises (worker exception or yield-check exception), the
+        executor is left running and the caller is responsible for calling
+        drain() to shut down in-flight workers.
+        """
+        while True:
+            with self._outstanding_lock:
+                if self._outstanding == 0:
+                    break
+            self._yield_check()
+            stored = self.worker_exception
+            if stored is not None:
+                raise stored
+            time.sleep(self._poll_interval)
+        stored = self.worker_exception
+        if stored is not None:
+            raise stored
+        self._executor.shutdown(wait=False)
+
+    def drain(self) -> None:
+        """Cleanup join after cancellation.
+
+        Sets the stop event so workers at their next yield point exit, then
+        shuts down the executor synchronously, cancelling queued futures.
+        Does NOT call _yield_check — safe to call from except blocks
+        without risking recursive RerunException/StopException.
+        """
+        self._stop_event.set()
+        self._executor.shutdown(wait=True, cancel_futures=True)

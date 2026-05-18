@@ -65,7 +65,8 @@ from streamlit.source_util import page_sort_key
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
-    from streamlit.runtime.fragment import FragmentStorage, ParallelFragmentCoordinator
+    from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         OnScriptErrorHandler,

@@ -48,8 +48,9 @@ if TYPE_CHECKING:
     from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
     from streamlit.proto.PageProfile_pb2 import Command
-    from streamlit.runtime.fragment import FragmentStorage, ParallelFragmentCoordinator
+    from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -263,9 +264,10 @@ class ScriptRunContext:
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
         )
-        # Deferred import to avoid the fragment.py <-> script_run_context.py cycle.
+        # Deferred: parallel_coordinator imports from this module, and
+        # config pulls in the heavy streamlit.__init__ chain.
         from streamlit import config
-        from streamlit.runtime.fragment import ParallelFragmentCoordinator
+        from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
