@@ -21,6 +21,7 @@ from contextlib import asynccontextmanager
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from unittest.mock import patch
 
 import pytest
 from starlette.applications import Starlette
@@ -1748,7 +1749,12 @@ class TestAppConfigDiscovery:
         monkeypatch.chdir(project)
 
         App("myapp/app.py")
-        config.get_config_options(force_reparse=True)
+        # Stub out the config-parsed signal: any prior test that constructed
+        # an `AppSession` and registered file watchers leaves a strong
+        # reference on `_on_config_parsed`. Firing those receivers here would
+        # touch closed asyncio event loops from those defunct sessions.
+        with patch.object(config._on_config_parsed, "send"):
+            config.get_config_options(force_reparse=True)
 
         assert config.get_option("theme.primaryColor") == "#ff0000"
 
@@ -1770,7 +1776,9 @@ class TestAppConfigDiscovery:
         monkeypatch.chdir(tmp_path)
 
         App(str((myapp / "app.py").resolve()))
-        config.get_config_options(force_reparse=True)
+        # See note in the relative-path variant above.
+        with patch.object(config._on_config_parsed, "send"):
+            config.get_config_options(force_reparse=True)
 
         assert config.get_option("theme.primaryColor") == "#00ff00"
 
