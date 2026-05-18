@@ -483,21 +483,15 @@ thread's cursor, which advances it past the fragment's slot and creates a child
 immediately. The child cursor starts with
 `_owner_thread = None` — it hasn't been used yet.
 
-The pre-creation step **must** go through `st.container()` rather than a raw
-`Block_pb2()`. The frontend's `addBlock` reconciliation preserves a
-`BlockNode`'s children only when the incoming Block's `oneof type` matches
-the existing one; a mismatch (e.g. empty `Block` vs `flex_container`) resets
-children, unmounts every widget, and can revert user input via stale React
-state. Using `st.container()` guarantees the main-thread delta (R1) and the
-worker-thread delta (R2) carry the same `oneof type`.
-
-The worker's `wrapped_fragment` must therefore **skip** its own
-`st.container()` call so R1 and R2 produce identical container deltas at
-the same `delta_path`. The skip signal is **call-local**: dispatch stores the
-fragment id in `FragmentThreadState.pre_allocated_container_fragment_id`,
-and `wrapped_fragment` reads-and-clears it on entry. Nested sequential
-`@st.fragment` calls on the same worker thread see `None` and create their
-own containers normally.
+The pre-creation step **must** use `st.container()` rather than a raw
+`Block_pb2()` — the frontend's `addBlock` reconciliation resets a
+`BlockNode`'s children when the incoming Block's `oneof type` changes,
+so the main-thread delta and worker-thread delta must carry the same type.
+To avoid a duplicate container delta, dispatch stores the fragment id in
+`FragmentThreadState.pre_allocated_container_fragment_id` and the worker's
+`wrapped_fragment` reads-and-clears it on entry, skipping its own
+`st.container()` call. Nested `@st.fragment` calls see `None` and create
+their containers normally.
 
 **3. Lazy thread ownership.** When the worker thread runs and calls `lock_element()`
 on the container's cursor for the first time, `_check_owner()` claims it — setting
