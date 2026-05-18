@@ -35,11 +35,16 @@ from streamlit.errors import (
 )
 from streamlit.runtime.fragment import (
     MemoryFragmentStorage,
+    _dispatch_parallel_fragment,
     _fragment,
+    _run_parallel_fragment,
     fragment,
 )
 from streamlit.runtime.pages_manager import PagesManager
-from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
+from streamlit.runtime.scriptrunner_utils.exceptions import (
+    RerunException,
+    StopException,
+)
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -1141,3 +1146,363 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         assert decorated.__name__ == "base_func"
     finally:
         context_dg_stack.set(original_dg_stack)
+
+
+# PARALLEL FRAGMENT TESTS
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_fragment_parallel_parameter_accepted(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """@st.fragment(parallel=True) decorates without error."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MagicMock()
+    ctx.fragment_ids_this_run = None
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    called = False
+
+    @fragment(parallel=True)
+    def my_parallel_fragment() -> None:
+        nonlocal called
+        called = True
+
+    my_parallel_fragment()
+    assert ctx.fragment_storage.register.call_count == 1
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_parallel_fragment_dispatches_to_coordinator(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """Mock coordinator.submit(), call a parallel fragment during a full-app run."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment(parallel=True)
+    def my_parallel_fragment() -> None:
+        pass
+
+    my_parallel_fragment()
+
+    mock_coordinator.submit.assert_called_once()
+    call_args = mock_coordinator.submit.call_args
+    assert call_args[0][0] == _run_parallel_fragment
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_parallel_fragment_returns_none(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """Parallel fragment call returns None."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    ctx.parallel_coordinator = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment(parallel=True)
+    def my_parallel_fragment() -> str:
+        return "result"
+
+    result = my_parallel_fragment()
+    assert result is None
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_parallel_fragment_sequential_during_fragment_rerun(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """When fragment_ids_this_run is set, parallel fragment executes inline."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MagicMock()
+    ctx.fragment_ids_this_run = ["some_fragment_id"]
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    called = False
+
+    @fragment(parallel=True)
+    def my_parallel_fragment() -> None:
+        nonlocal called
+        called = True
+
+    my_parallel_fragment()
+
+    assert called
+    mock_coordinator.submit.assert_not_called()
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_wrapped_fragment_skips_container_when_pre_allocated(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """When skip signal is set, no st.container() is created."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment
+    def my_fragment() -> None:
+        pass
+
+    my_fragment()
+
+    saved_fragment = next(iter(ctx.fragment_storage._fragments.values()))
+    fragment_id = next(iter(ctx.fragment_storage._fragments.keys()))
+
+    with patch("streamlit.container") as mock_container:
+        mock_container.return_value.__enter__ = MagicMock()
+        mock_container.return_value.__exit__ = MagicMock()
+
+        ThreadState.update(pre_allocated_container_fragment_id=fragment_id)
+        saved_fragment()
+        mock_container.assert_not_called()
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_wrapped_fragment_clears_skip_signal_after_use(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """Skip signal is cleared after wrapped_fragment runs."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment
+    def my_fragment() -> None:
+        pass
+
+    my_fragment()
+
+    saved_fragment = next(iter(ctx.fragment_storage._fragments.values()))
+    fragment_id = next(iter(ctx.fragment_storage._fragments.keys()))
+
+    ThreadState.update(pre_allocated_container_fragment_id=fragment_id)
+    with patch("streamlit.container"):
+        saved_fragment()
+
+    assert ThreadState.get().pre_allocated_container_fragment_id is None
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_nested_sequential_fragment_creates_own_container(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """Nested sequential fragment inside parallel worker creates its own container."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    inner_container_created = False
+
+    @fragment
+    def inner_fragment() -> None:
+        pass
+
+    @fragment
+    def outer_fragment() -> None:
+        nonlocal inner_container_created
+        inner_fragment()
+        inner_container_created = True
+
+    outer_fragment()
+
+    assert inner_container_created
+    assert len(ctx.fragment_storage._fragments) == 2
+
+
+def test_run_parallel_fragment_handles_rerun_exception() -> None:
+    """_run_parallel_fragment calls coordinator.request_rerun() on RerunException."""
+    mock_coordinator = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = mock_coordinator
+
+    rerun_exc = RerunException(rerun_data=None)
+
+    def raising_fragment() -> None:
+        raise rerun_exc
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+    ):
+        ThreadState.initialize()
+        _run_parallel_fragment("test_id", raising_fragment, [])
+
+    mock_coordinator.request_rerun.assert_called_once_with(rerun_exc)
+
+
+def test_run_parallel_fragment_handles_stop_exception() -> None:
+    """_run_parallel_fragment calls coordinator.request_stop() on StopException."""
+    mock_coordinator = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = mock_coordinator
+
+    def raising_fragment() -> None:
+        raise StopException()
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+    ):
+        ThreadState.initialize()
+        _run_parallel_fragment("test_id", raising_fragment, [])
+
+    mock_coordinator.request_stop.assert_called_once()
+
+
+def test_run_parallel_fragment_handles_fragment_handled_exception() -> None:
+    """_run_parallel_fragment swallows FragmentHandledException."""
+    mock_coordinator = MagicMock()
+    mock_ctx = MagicMock()
+    mock_ctx.parallel_coordinator = mock_coordinator
+
+    def raising_fragment() -> None:
+        raise FragmentHandledException(ValueError("test"))
+
+    with (
+        patch("streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx),
+        patch("streamlit.delta_generator_singletons.context_dg_stack"),
+    ):
+        ThreadState.initialize()
+        _run_parallel_fragment("test_id", raising_fragment, [])
+
+    mock_coordinator.request_rerun.assert_not_called()
+    mock_coordinator.request_stop.assert_not_called()
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_nested_parallel_fragment_dispatches_from_worker(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """Dispatch from worker thread works with fresh pre-allocation."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment(parallel=True)
+    def inner_parallel() -> None:
+        pass
+
+    inner_parallel()
+
+    assert mock_coordinator.submit.call_count == 1
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_dispatch_restores_calling_thread_dg_stack(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """After dispatch, calling thread's dg_stack doesn't contain the pre-allocated container."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.parallel_coordinator = MagicMock()
+    patched_get_script_run_ctx.return_value = ctx
+
+    original_dg_stack = context_dg_stack.get()
+    original_len = len(original_dg_stack)
+
+    ThreadState.initialize()
+
+    def wrapped_fragment() -> None:
+        pass
+
+    _dispatch_parallel_fragment(ctx, "test_fragment_id", wrapped_fragment)
+
+    assert len(context_dg_stack.get()) == original_len
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_worker_dg_stack_points_at_pre_allocated_container(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """Worker's context_dg_stack includes the pre-allocated container."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.new_fragment_ids = ThreadSafeSet()
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    def wrapped_fragment() -> None:
+        pass
+
+    _dispatch_parallel_fragment(ctx, "test_fragment_id", wrapped_fragment)
+
+    call_args = mock_coordinator.submit.call_args[0]
+    dg_stack_snapshot = call_args[3]
+    assert len(dg_stack_snapshot) > 0
+
+
+@patch("streamlit.runtime.fragment.get_script_run_ctx")
+def test_run_every_parallel_fragment_reruns_sequentially(
+    patched_get_script_run_ctx: MagicMock,
+) -> None:
+    """run_every + parallel=True dispatches on initial run, reruns inline on timer."""
+    ctx = MagicMock()
+    ctx.fragment_storage = MemoryFragmentStorage()
+    ctx.fragment_ids_this_run = None
+    ctx.new_fragment_ids = ThreadSafeSet()
+    ctx.cursors = {}
+    mock_coordinator = MagicMock()
+    ctx.parallel_coordinator = mock_coordinator
+    patched_get_script_run_ctx.return_value = ctx
+
+    ThreadState.initialize()
+
+    @fragment(parallel=True, run_every=5)
+    def my_fragment() -> None:
+        pass
+
+    my_fragment()
+    assert mock_coordinator.submit.call_count == 1
+
+    saved_fragment = next(iter(ctx.fragment_storage._fragments.values()))
+    ctx.fragment_ids_this_run = ["some_id"]
+    mock_coordinator.submit.reset_mock()
+    saved_fragment()
+    mock_coordinator.submit.assert_not_called()
