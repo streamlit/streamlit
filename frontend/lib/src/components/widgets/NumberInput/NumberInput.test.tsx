@@ -228,9 +228,10 @@ describe("NumberInput widget", () => {
     expect(numberInput).toHaveAttribute("type", "number")
   })
 
-  it("does not set min/max HTML attributes to suppress browser-native validation", () => {
-    // We use Streamlit-themed error UI instead of browser-native validation,
-    // so min/max HTML attributes are intentionally removed
+  it("sets min/max HTML attributes for accessibility while suppressing browser validation", () => {
+    // We keep min/max HTML attributes to preserve bounded spinbutton semantics
+    // for assistive technology. The browser-native validation popup is suppressed
+    // via formNoValidate while the Streamlit-themed error UI is shown instead.
     const props = getIntProps({
       hasMin: true,
       hasMax: true,
@@ -241,8 +242,11 @@ describe("NumberInput widget", () => {
     render(<NumberInput {...props} />)
     const numberInput = screen.getByTestId("stNumberInputField")
 
-    expect(numberInput).not.toHaveAttribute("min")
-    expect(numberInput).not.toHaveAttribute("max")
+    // min/max attributes should be present for accessibility
+    expect(numberInput).toHaveAttribute("min", "0")
+    expect(numberInput).toHaveAttribute("max", "10")
+    // formNoValidate should suppress the native validation popup
+    expect(numberInput).toHaveAttribute("formnovalidate")
   })
 
   it("resets its value when form is cleared", async () => {
@@ -1464,6 +1468,8 @@ describe("NumberInput widget", () => {
       expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
       // Input should have aria-invalid attribute
       expect(input).toHaveAttribute("aria-invalid", "true")
+      // Tooltip error message should contain the expected text
+      expect(screen.getByText(/Value must be at least 5/)).toBeVisible()
       // Value should NOT be committed to widgetMgr
       expect(props.widgetMgr.setIntValue).not.toHaveBeenCalledWith(
         expect.anything(),
@@ -1489,6 +1495,8 @@ describe("NumberInput widget", () => {
       expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
       // Input should have aria-invalid attribute
       expect(input).toHaveAttribute("aria-invalid", "true")
+      // Tooltip error message should contain the expected text
+      expect(screen.getByText(/Value must be at most 50/)).toBeVisible()
       // Value should NOT be committed to widgetMgr
       expect(props.widgetMgr.setIntValue).not.toHaveBeenCalledWith(
         expect.anything(),

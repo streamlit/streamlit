@@ -640,8 +640,9 @@ def test_number_input_error_state(
     number_input = get_element_by_key(themed_app, "number_input_error_test")
     input_field = number_input.get_by_test_id("stNumberInputField")
 
-    # Test 1: Enter value below minimum (min=0)
-    input_field.fill("-10")
+    # Test 1: Enter value below minimum (min=0) - use type() for character-by-character input
+    input_field.clear()
+    input_field.type("-10")
     input_field.press("Enter")
 
     # Error icon (via tooltip hover target) should be visible
@@ -661,7 +662,7 @@ def test_number_input_error_state(
     reset_hovering(themed_app)
     assert_snapshot(number_input, name="st_number_input-error_below_min")
 
-    # Test 2: Enter value above maximum (max=100)
+    # Test 2: Enter value above maximum (max=100) - use fill() for instant value
     input_field.fill("150")
     input_field.press("Enter")
 
@@ -675,8 +676,9 @@ def test_number_input_error_state(
     expect(tooltip).to_contain_text("Error")
     expect(tooltip).to_contain_text("Value must be at most 100")
 
-    # Test 3: Error clears when valid value is entered
-    input_field.fill("50")
+    # Test 3: Error clears when valid value is entered - use press_sequentially() for coverage
+    input_field.clear()
+    input_field.press_sequentially("50")
     input_field.press("Enter")
     wait_for_app_run(themed_app)
 
@@ -686,7 +688,3 @@ def test_number_input_error_state(
 
     # Value should be committed
     expect_prefixed_markdown(themed_app, "number input 23 (error test) - value:", "50")
-
-    # Test 4: No error for initially valid value (negative test)
-    # The widget should already be in valid state from above
-    expect(number_input.get_by_test_id("stTooltipErrorHoverTarget")).not_to_be_visible()

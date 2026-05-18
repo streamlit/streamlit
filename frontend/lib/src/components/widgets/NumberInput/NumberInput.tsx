@@ -54,10 +54,12 @@ import {
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
+  StyledErrorIconButton,
   StyledInputContainer,
   StyledInputControl,
   StyledInputControls,
   StyledInstructionsContainer,
+  StyledVisuallyHidden,
 } from "./styled-components"
 import {
   canDecrement,
@@ -139,14 +141,17 @@ const NumberInput: React.FC<Props> = ({
       }
     : undefined
 
-  // Error state for validation messages
+  /** Error state for validation messages displayed via the themed error UI. */
   const [error, setError] = useState<string | null>(null)
 
   const resetError = useCallback((): void => {
     setError(null)
   }, [])
 
-  // Helper to create error messages for min/max validation
+  /**
+   * Creates error messages for min/max validation.
+   * Returns markdown-formatted error text for display in the error tooltip.
+   */
   const createErrorMessage = useCallback(
     (value: number): string => {
       if (value < min) {
@@ -184,6 +189,7 @@ const NumberInput: React.FC<Props> = ({
   const [isFocused, setIsFocused] = useState(false)
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null)
   const id = useId()
+  const errorId = `${id}-error`
 
   const inForm = isInForm({ formId: elementFormId })
   // Allows form submission on Enter & displays Enter instructions, or if not in form and state is dirty
@@ -442,19 +448,30 @@ const NumberInput: React.FC<Props> = ({
           }
           endEnhancer={
             error && (
-              <Tooltip
-                content={
-                  <StreamlitMarkdown source={error} allowHTML={false} />
-                }
-                placement={Placement.TOP_RIGHT}
-                error
-              >
-                <Icon
-                  content={ErrorOutline}
-                  size="lg"
-                  testid="stNumberInputErrorIcon"
-                />
-              </Tooltip>
+              <>
+                {/* Visually hidden error message for screen readers */}
+                <StyledVisuallyHidden id={errorId}>
+                  {error.replace(/\*\*/g, "")}
+                </StyledVisuallyHidden>
+                <Tooltip
+                  content={
+                    <StreamlitMarkdown source={error} allowHTML={false} />
+                  }
+                  placement={Placement.TOP_RIGHT}
+                  error
+                >
+                  <StyledErrorIconButton
+                    type="button"
+                    aria-label="Validation error"
+                  >
+                    <Icon
+                      content={ErrorOutline}
+                      size="lg"
+                      testid="stNumberInputErrorIcon"
+                    />
+                  </StyledErrorIconButton>
+                </Tooltip>
+              </>
             )
           }
           id={id}
@@ -486,7 +503,17 @@ const NumberInput: React.FC<Props> = ({
               props: {
                 "data-testid": "stNumberInputField",
                 "aria-invalid": Boolean(error),
+                // Reference the error message element for screen readers when in error state
+                ...(error && { "aria-errormessage": errorId }),
                 step: step,
+                // Keep min/max attributes for accessibility (bounded spinbutton semantics).
+                // We suppress the native validation popup via formNoValidate while preserving
+                // the range semantics that assistive tech relies on.
+                min: min,
+                max: max,
+                // formNoValidate suppresses the native browser validation popup
+                // while preserving min/max for accessibility semantics
+                formNoValidate: true,
                 // We specify the type as "number" to have numeric keyboard on mobile devices.
                 // We also set inputMode to "" since by default BaseWeb sets "text",
                 // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.

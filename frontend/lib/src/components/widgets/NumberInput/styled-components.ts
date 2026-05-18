@@ -120,8 +120,37 @@ export const StyledInstructionsContainer =
       // The instructions should be placed after the two controls
       // and the clear button if it's present.
       // Also account for the error icon if there is an error.
+      // Note: theme.iconSizes.lg and theme.spacing.twoXS are CSS length strings
+      // (e.g., "1.25rem"). If these values were ever changed to unitless numbers,
+      // this calc() expression would silently break.
       right: `calc(${theme.sizes.numberInputControlsWidth} * 2 + ${
         clearable ? "1em" : "0em"
       } + ${hasError ? `${theme.iconSizes.lg} + ${theme.spacing.twoXS}` : "0em"})`,
     })
   )
+
+/* eslint-disable streamlit-custom/no-hardcoded-theme-values */
+/** Visually hidden span for screen reader accessibility. */
+// Uses standard CSS visually-hidden pattern (hardcoded values required)
+export const StyledVisuallyHidden = styled.span({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  padding: 0,
+  margin: "-1px",
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+})
+/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+
+/** Unstyled button wrapper for the error icon tooltip trigger. */
+export const StyledErrorIconButton = styled.button(({ theme }) => ({
+  background: "none",
+  border: "none",
+  padding: theme.spacing.none,
+  cursor: "default",
+  display: "flex",
+  alignItems: "center",
+}))
