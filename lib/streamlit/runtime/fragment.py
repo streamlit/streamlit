@@ -44,6 +44,8 @@ from streamlit.util import calc_hash
 if TYPE_CHECKING:
     from datetime import timedelta
 
+    from streamlit.delta_generator import DeltaGenerator
+
 _LOGGER: Final = get_logger(__name__)
 
 
@@ -662,7 +664,7 @@ def _dispatch_parallel_fragment(
 def _run_parallel_fragment(
     fragment_id: str,
     wrapped_fragment: Callable[[], Any],
-    dg_stack_snapshot: list[Any],
+    dg_stack_snapshot: tuple[DeltaGenerator, ...],
 ) -> None:
     """Worker entry point for parallel fragment execution.
 

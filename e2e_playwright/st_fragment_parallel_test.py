@@ -32,12 +32,12 @@ def test_parallel_fragments_render_concurrently(app: Page) -> None:
 
 def test_parallel_fragment_widget_interaction(app: Page) -> None:
     """Button in parallel fragment, click triggers sequential rerun."""
-    expect(app.get_by_text("Counter: 0")).to_be_visible()
+    expect(app.get_by_text("Counter: 0", exact=True)).to_be_visible()
 
     click_button(app, "Click me")
     wait_for_app_run(app)
 
-    expect(app.get_by_text("Counter: 1")).to_be_visible()
+    expect(app.get_by_text("Counter: 1", exact=True)).to_be_visible()
 
 
 def test_parallel_fragment_rerun_only_reruns_self(app: Page) -> None:
