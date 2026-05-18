@@ -76,20 +76,23 @@ def test_parallel_fragments_preserve_source_order(app: Page) -> None:
     Despite Fragment 3 finishing first (0.1s sleep), Fragment 1 finishing last (0.3s),
     the DOM order should match the source declaration order: 1, 2, 3.
     """
-    expect(app.get_by_text("Fragment 1 done", exact=True)).to_be_visible()
-    expect(app.get_by_text("Fragment 2 done", exact=True)).to_be_visible()
-    expect(app.get_by_text("Fragment 3 done", exact=True)).to_be_visible()
+    frag1 = app.get_by_text("Fragment 1 done", exact=True)
+    frag2 = app.get_by_text("Fragment 2 done", exact=True)
+    frag3 = app.get_by_text("Fragment 3 done", exact=True)
 
-    main_view = app.get_by_test_id("stAppViewBlockContainer")
-    fragment_texts = main_view.locator("p").filter(
-        has_text=re.compile(r"Fragment \d done")
-    )
-    expect(fragment_texts).to_have_count(3)
+    expect(frag1).to_be_visible()
+    expect(frag2).to_be_visible()
+    expect(frag3).to_be_visible()
 
-    texts = fragment_texts.all_text_contents()
-    assert texts == ["Fragment 1 done", "Fragment 2 done", "Fragment 3 done"], (
-        f"DOM order {texts} does not match declaration order"
-    )
+    box1 = frag1.bounding_box()
+    box2 = frag2.bounding_box()
+    box3 = frag3.bounding_box()
+
+    assert box1 is not None
+    assert box2 is not None
+    assert box3 is not None
+    assert box1["y"] < box2["y"], "Fragment 1 should be above Fragment 2"
+    assert box2["y"] < box3["y"], "Fragment 2 should be above Fragment 3"
 
 
 def test_parallel_fragment_container_matches_main_thread(app: Page) -> None:
