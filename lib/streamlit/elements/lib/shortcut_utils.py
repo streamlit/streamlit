@@ -93,6 +93,8 @@ _BROWSER_RESERVED_SHORTCUTS: Final[frozenset[str]] = frozenset(
     }
 )
 
+_warned_browser_reserved_shortcuts: set[str] = set()
+
 
 def _normalize_key_token(lower_token: str) -> str:
     """Normalize a key token to a format that can be used on the client side."""
@@ -179,7 +181,11 @@ def normalize_shortcut(shortcut: str) -> str:
         normalized_tokens.append(key)
 
     normalized = "+".join(normalized_tokens)
-    if normalized in _BROWSER_RESERVED_SHORTCUTS:
+    if (
+        normalized in _BROWSER_RESERVED_SHORTCUTS
+        and normalized not in _warned_browser_reserved_shortcuts
+    ):
+        _warned_browser_reserved_shortcuts.add(normalized)
         _LOGGER.warning(
             "The shortcut %r is typically reserved by the browser or operating "
             "system and may never reach Streamlit. Consider choosing a "
