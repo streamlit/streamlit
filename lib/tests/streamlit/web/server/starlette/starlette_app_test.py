@@ -64,6 +64,24 @@ if TYPE_CHECKING:
     from starlette.requests import Request
 
 
+@pytest.fixture(autouse=True)
+def _reset_main_script_path_and_config_options() -> Iterator[None]:
+    """Snapshot and restore module-level config state between tests.
+
+    `App.__init__` now sets `config._main_script_path` (so script-level
+    `.streamlit/config.toml` is discoverable under direct uvicorn launches).
+    That mutation, plus the lazily cached `_config_options` dict that depends
+    on it, would leak across tests without this autouse reset.
+    """
+    from streamlit import config
+
+    original_main_script_path = config._main_script_path
+    original_config_options = config._config_options
+    yield
+    config._main_script_path = original_main_script_path
+    config._config_options = original_config_options
+
+
 class _DummyStatsManager:
     def __init__(self) -> None:
         self._stats: dict[str, list[CacheStat | CounterStat | GaugeStat]] = {
@@ -1636,6 +1654,147 @@ class TestAppScriptPathResolution:
         # Error message should include the path and be descriptive
         assert "does_not_exist.py" in str(exc_info.value)
         assert "not found" in str(exc_info.value).lower()
+
+    def test_init_sets_main_script_path_when_unset(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """App.__init__ sets config._main_script_path when it is unset.
+
+        This makes the script-level `.streamlit/config.toml` discoverable when
+        st.App is launched directly via an external ASGI server (regression
+        guard for issue #15215).
+        """
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        script = tmp_path / "app.py"
+        script.write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App("app.py")
+
+        assert config._main_script_path == str(script.resolve())
+
+    def test_init_does_not_overwrite_main_script_path_when_set(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """App.__init__ must not clobber a value already set by `streamlit run`."""
+        from streamlit import config
+
+        cli_script = tmp_path / "cli_entry.py"
+        cli_script.touch()
+        monkeypatch.setattr(config, "_main_script_path", str(cli_script))
+
+        App("dashboard/app.py")
+
+        assert config._main_script_path == str(cli_script)
+
+    def test_init_caches_resolved_script_path_against_main_script_path_mutation(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The cached _resolved_script_path keeps _resolve_script_path() stable.
+
+        After __init__ assigns config._main_script_path, a second call to
+        _resolve_script_path() must NOT re-route the relative path through the
+        CLI branch (which would mis-resolve `myapp/app.py` to
+        `<cwd>/myapp/myapp/app.py`).
+        """
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        myapp.mkdir(parents=True)
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        app = App("myapp/app.py")
+
+        expected = (myapp / "app.py").resolve()
+        # Calling _resolve_script_path() again must return the original cached
+        # value, not a path with a duplicated `myapp/` segment.
+        assert app._resolve_script_path() == expected
+        assert app._resolve_script_path() == expected
+        # And the public script_path property still reflects the user input.
+        assert app.script_path == Path("myapp/app.py")
+
+
+class TestAppConfigDiscovery:
+    """Regression tests for issue #15215.
+
+    `st.App` launched directly via uvicorn (or another external ASGI server)
+    from a working directory that is not the script's directory must still
+    discover the script-level `.streamlit/config.toml`.
+    """
+
+    def test_script_level_config_discovered_with_relative_script_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Reproduce issue #15215: cwd != script dir, relative script path."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        project = tmp_path / "myproject"
+        myapp = project / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[theme]\nprimaryColor = "#ff0000"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(project)
+
+        App("myapp/app.py")
+        config.get_config_options(force_reparse=True)
+
+        assert config.get_option("theme.primaryColor") == "#ff0000"
+
+    def test_script_level_config_discovered_with_absolute_script_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Same regression as #15215, but with an absolute script path."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+        monkeypatch.setattr(config, "_config_options", None)
+
+        myapp = tmp_path / "myapp"
+        (myapp / ".streamlit").mkdir(parents=True)
+        (myapp / ".streamlit" / "config.toml").write_text(
+            '[theme]\nprimaryColor = "#00ff00"\n'
+        )
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App(str((myapp / "app.py").resolve()))
+        config.get_config_options(force_reparse=True)
+
+        assert config.get_option("theme.primaryColor") == "#00ff00"
+
+    def test_get_config_files_includes_script_level_path(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Anti-regression: `config.get_config_files` must include the
+        script-level config path after `App.__init__` runs."""
+        from streamlit import config
+
+        monkeypatch.setattr(config, "_main_script_path", None)
+
+        myapp = tmp_path / "myapp"
+        myapp.mkdir()
+        (myapp / "app.py").write_text("import streamlit as st\n")
+        monkeypatch.chdir(tmp_path)
+
+        App("myapp/app.py")
+
+        expected = file_util.get_main_script_streamlit_file_path(
+            str((myapp / "app.py").resolve()), "config.toml"
+        )
+        files = config.get_config_files("config.toml")
+        assert expected in files
 
 
 class TestAppExports:

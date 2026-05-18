@@ -423,6 +423,26 @@ class App:
         self._auto_started: bool = False
         self._startup_lock: asyncio.Lock | None = None
 
+        # Cache the resolved script path so _resolve_script_path() is idempotent
+        # even after we set config._main_script_path below. We initialize to
+        # None first so the inner _resolve_script_path() call falls through to
+        # the existing branches; the result is then cached for subsequent
+        # invocations.
+        self._resolved_script_path: Path | None = None
+        self._resolved_script_path = self._resolve_script_path()
+
+        # Mirror what `streamlit run` does in cli.py so the script-level
+        # `.streamlit/config.toml` is discoverable when st.App is launched
+        # directly via an external ASGI server (e.g. uvicorn) from a working
+        # directory that is not the script's directory. We assign here in
+        # __init__ (not in _combined_lifespan) because config.get_option() is
+        # read by _build_starlette_app -> create_streamlit_routes BEFORE the
+        # lifespan startup runs, which would otherwise cache a config_options
+        # dict that omits the script-level config. The guard preserves any
+        # value already set by `streamlit run`.
+        if config._main_script_path is None:
+            config._main_script_path = str(self._resolved_script_path)
+
         # Validate user routes don't conflict with reserved routes
         self._validate_routes()
 
@@ -484,10 +504,20 @@ class App:
         """Resolve the script path to an absolute path.
 
         Resolution order:
-        1. If already absolute, return as-is
-        2. If CLI set main_script_path (via `streamlit run`), resolve relative to it
-        3. Otherwise, resolve relative to current working directory (e.g. when started via uvicorn)
+        1. If `__init__` has already cached a resolved path, return it (so the
+           result remains stable even after config._main_script_path is set
+           by this App instance).
+        2. If already absolute, return as-is.
+        3. If CLI set main_script_path (via `streamlit run`), resolve relative to it.
+        4. Otherwise, resolve relative to current working directory (e.g. when
+           started via uvicorn).
         """
+        # Use getattr with a default so this method is safe to call from inside
+        # __init__ before self._resolved_script_path has been assigned.
+        cached: Path | None = getattr(self, "_resolved_script_path", None)
+        if cached is not None:
+            return cached
+
         if self._script_path.is_absolute():
             return self._script_path
 
