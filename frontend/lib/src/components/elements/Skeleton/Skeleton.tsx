@@ -42,6 +42,9 @@ const RawSkeleton: FC<SkeletonProps> = (_props: SkeletonProps) => (
     data-testid="stSkeletonElement"
     height="100%"
     width="100%"
+    role="status"
+    aria-busy="true"
+    aria-label="Loading"
   />
 )
 

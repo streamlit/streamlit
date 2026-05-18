@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING, Final, Literal
+from typing import TYPE_CHECKING, Any, Final, Literal
 
 from typing_extensions import Self
 
@@ -85,16 +85,7 @@ class SkeletonPlaceholder:
             layout_config=self._layout_config,
         )
 
-    @staticmethod
-    def _create(
-        parent: DeltaGenerator,
-        skeleton_proto: SkeletonProto,
-        layout_config: LayoutConfig | None,
-    ) -> SkeletonPlaceholder:
-        """Create a skeleton placeholder (factory method for singleton compatibility)."""
-        return SkeletonPlaceholder(parent, skeleton_proto, layout_config)
-
-    def __getattr__(self, name: str) -> object:
+    def __getattr__(self, name: str) -> Any:
         # Skip internal attributes
         if name.startswith("_"):
             raise AttributeError(
@@ -185,11 +176,12 @@ class SkeletonPlaceholder:
         if self._timer is not None:
             self._timer.cancel()
 
+        # Clear the transient element inside the lock to match st.spinner's pattern.
+        # This removes a class of subtle reordering concerns where an in-flight
+        # show_skeleton could see _should_display=False after the clear is enqueued.
         with self._display_lock:
             self._should_display = False
-
-        # Clear the transient element
-        if self._clear_transient is not None:
-            enqueue_message(self._clear_transient())
+            if self._clear_transient is not None:
+                enqueue_message(self._clear_transient())
 
         return False

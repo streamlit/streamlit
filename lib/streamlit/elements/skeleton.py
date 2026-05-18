@@ -131,10 +131,14 @@ class SkeletonMixin:
         skeleton_proto = SkeletonProto()
         # Set pixel height on the proto if an integer is provided.
         # Exclude bool since isinstance(True, int) is True in Python.
+        # Note: For the public API, this proto field is not used visually.
+        # The frontend reads height from layout_config instead. This assignment
+        # is kept for parity with the legacy internal _skeleton() method and
+        # potential future use cases (e.g., server-side height validation).
         if isinstance(height, int) and not isinstance(height, bool):
             skeleton_proto.height = height
 
-        return get_dg_singleton_instance().skeleton_placeholder_cls._create(
+        return get_dg_singleton_instance().skeleton_placeholder_cls(
             parent=self.dg,
             skeleton_proto=skeleton_proto,
             layout_config=layout_config,

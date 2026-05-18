@@ -98,11 +98,13 @@ class SkeletonContextManagerTest(DeltaGeneratorTestCase):
         import time
         from unittest.mock import patch
 
-        # Patch the delay to a very short value for faster tests
-        with patch("streamlit.elements.lib.skeleton_placeholder._DELAY_SECS", 0.01):
+        # Patch the delay to a smaller value for faster tests.
+        # Use 0.1s with 0.3s sleep (200ms buffer) to avoid CI flakiness.
+        # A 10ms buffer (0.01s delay, 0.02s sleep) is too tight under load.
+        with patch("streamlit.elements.lib.skeleton_placeholder._DELAY_SECS", 0.1):
             with st.skeleton():
-                # Sleep just longer than the patched delay
-                time.sleep(0.02)
+                # Sleep longer than the patched delay to ensure timer fires
+                time.sleep(0.3)
                 # Check the skeleton element was enqueued as a transient
                 create_delta = self.get_delta_from_queue()
                 assert create_delta.HasField("new_transient")

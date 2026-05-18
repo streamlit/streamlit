@@ -33,8 +33,11 @@ def test_skeleton_width_configurations(app: Page):
     # Should have at least 3 skeletons: 1 static + 2 width configs
     expect(skeletons).to_have_count(4)  # 1 static + 2 width + 1 in form
 
-    # The fixed width skeleton (200px) should be visible
-    expect(skeletons.nth(1)).to_be_visible()
+    # The fixed width skeleton (200px) should be visible and have correct width
+    fixed_width_skeleton = skeletons.nth(1)
+    expect(fixed_width_skeleton).to_be_visible()
+    expect(fixed_width_skeleton).to_have_css("width", "200px")
+
     # The stretch width skeleton should be visible
     expect(skeletons.nth(2)).to_be_visible()
 
@@ -56,12 +59,19 @@ def test_skeleton_context_manager_instant(app: Page):
 
 def test_skeleton_context_manager_with_delay(app: Page):
     """Test context manager mode shows skeleton during delay then clears."""
+    # Get initial count of skeletons (static ones in the page)
+    initial_skeleton_count = app.get_by_test_id("stSkeletonElement").count()
+
     # Click the button to run the context manager
     get_button(app, "Run skeleton context manager (with delay)").click()
 
-    # Wait for app to finish running - the context manager has a 1s sleep,
-    # so we need to wait for the success message which appears after the skeleton clears.
-    # Use a longer timeout to account for the delay + script execution time.
+    # Verify the skeleton is visible during the delay (1s sleep > 0.5s delay threshold).
+    # The skeleton count should increase by 1 during the delay.
+    expect(app.get_by_test_id("stSkeletonElement")).to_have_count(
+        initial_skeleton_count + 1, timeout=3000
+    )
+
+    # Wait for the success message which appears after the skeleton clears.
     expect(app.get_by_text("Data loaded after delay!")).to_be_visible(timeout=10000)
 
 
