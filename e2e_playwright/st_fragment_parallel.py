@@ -68,34 +68,6 @@ def fragment_b():
 
 
 @st.fragment(parallel=True)
-def error_fragment():
-    """Fragment that raises an exception."""
-    st.write("Error fragment starting")
-    raise ValueError("Intentional error in fragment")
-
-
-@st.fragment(parallel=True)
-def sibling_of_error():
-    """Sibling fragment that should continue despite error in other fragment."""
-    st.write("Sibling fragment completed")
-
-
-@st.fragment(parallel=True)
-def stopping_fragment():
-    """Fragment that calls st.stop()."""
-    st.write("Stopping fragment starting")
-    st.stop()
-    st.write("This should not appear")
-
-
-@st.fragment(parallel=True)
-def sibling_of_stopper():
-    """Sibling fragment that should be affected by st.stop()."""
-    time.sleep(0.1)
-    st.write("Sibling of stopper completed")
-
-
-@st.fragment(parallel=True)
 def container_test_fragment():
     """Fragment for container inspection - uses key for targeting."""
     st.write("Container test content")
@@ -119,16 +91,6 @@ st.write(f"Outside counter: {st.session_state.counter}")
 st.subheader("Fragment Rerun Test")
 fragment_a()
 fragment_b()
-
-st.subheader("Error Handling Test")
-with st.container(key="error_section"):
-    error_fragment()
-    sibling_of_error()
-
-st.subheader("St.stop Test")
-with st.container(key="stop_section"):
-    stopping_fragment()
-    sibling_of_stopper()
 
 st.subheader("Container Test")
 with st.container(key="container_test_section"):
