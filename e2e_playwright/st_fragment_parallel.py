@@ -24,6 +24,8 @@ if "fragment_b_count" not in st.session_state:
     st.session_state.fragment_b_count = 0
 if "counter" not in st.session_state:
     st.session_state.counter = 0
+if "start_time" not in st.session_state:
+    st.session_state.start_time = time.time()
 
 
 @st.fragment(parallel=True)
@@ -65,13 +67,50 @@ def fragment_b():
     st.write(f"Fragment B ran {st.session_state.fragment_b_count} times")
 
 
+@st.fragment(parallel=True)
+def error_fragment():
+    """Fragment that raises an exception."""
+    st.write("Error fragment starting")
+    raise ValueError("Intentional error in fragment")
+
+
+@st.fragment(parallel=True)
+def sibling_of_error():
+    """Sibling fragment that should continue despite error in other fragment."""
+    st.write("Sibling fragment completed")
+
+
+@st.fragment(parallel=True)
+def stopping_fragment():
+    """Fragment that calls st.stop()."""
+    st.write("Stopping fragment starting")
+    st.stop()
+    st.write("This should not appear")
+
+
+@st.fragment(parallel=True)
+def sibling_of_stopper():
+    """Sibling fragment that should be affected by st.stop()."""
+    time.sleep(0.1)
+    st.write("Sibling of stopper completed")
+
+
+@st.fragment(parallel=True)
+def container_test_fragment():
+    """Fragment for container inspection - uses key for targeting."""
+    st.write("Container test content")
+
+
 st.header("Parallel Fragments Test App")
 
 st.subheader("Concurrent Rendering Test")
+st.session_state.start_time = time.time()
 slow_fragment_1()
 slow_fragment_2()
 slow_fragment_3()
+elapsed = time.time() - st.session_state.start_time
 st.write("All fragments dispatched")
+st.write(f"Dispatch time: {elapsed:.2f}s")
 
 st.subheader("Widget Interaction Test")
 fragment_with_button()
@@ -80,3 +119,17 @@ st.write(f"Outside counter: {st.session_state.counter}")
 st.subheader("Fragment Rerun Test")
 fragment_a()
 fragment_b()
+
+st.subheader("Error Handling Test")
+with st.container(key="error_section"):
+    error_fragment()
+    sibling_of_error()
+
+st.subheader("St.stop Test")
+with st.container(key="stop_section"):
+    stopping_fragment()
+    sibling_of_stopper()
+
+st.subheader("Container Test")
+with st.container(key="container_test_section"):
+    container_test_fragment()
