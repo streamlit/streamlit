@@ -16,6 +16,8 @@
 
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from streamlit.elements.lib.shortcut_utils import normalize_shortcut
@@ -154,3 +156,70 @@ def test_normalize_shortcut_rejects_reserved_keys(shortcut: str) -> None:
     """Test that normalize_shortcut raises StreamlitAPIException for reserved keys."""
     with pytest.raises(StreamlitAPIException):
         normalize_shortcut(shortcut)
+
+
+@pytest.fixture
+def shortcut_logger_propagates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Allow caplog to capture warnings from the shortcut_utils logger."""
+    logger = logging.getLogger("streamlit.elements.lib.shortcut_utils")
+    monkeypatch.setattr(logger, "propagate", True)
+
+
+@pytest.mark.parametrize(
+    "shortcut",
+    [
+        "Ctrl+T",
+        "Cmd+T",
+        "Ctrl+W",
+        "Cmd+W",
+        "Ctrl+N",
+        "Cmd+N",
+        "Ctrl+Shift+T",
+        "Cmd+Shift+T",
+        "Ctrl+Shift+N",
+        "Cmd+Shift+N",
+        "Ctrl+Shift+W",
+        "Cmd+Shift+W",
+        "Ctrl+Tab",
+        "Ctrl+Shift+Tab",
+        "Cmd+Tab",
+        "Cmd+Shift+Tab",
+        "Ctrl+PageUp",
+        "Ctrl+PageDown",
+        "Ctrl+L",
+        "Cmd+L",
+        "F11",
+        "Mod+T",
+        "Mod+PageDown",
+    ],
+)
+def test_normalize_shortcut_warns_for_browser_reserved(
+    shortcut: str,
+    caplog: pytest.LogCaptureFixture,
+    shortcut_logger_propagates: None,
+) -> None:
+    """Browser-reserved combos produce a logger warning but still normalize."""
+    with caplog.at_level(
+        logging.WARNING, logger="streamlit.elements.lib.shortcut_utils"
+    ):
+        result = normalize_shortcut(shortcut)
+    assert result
+    assert any("reserved by the browser" in record.message for record in caplog.records)
+
+
+@pytest.mark.parametrize("shortcut", ["Ctrl+K", "Alt+S", "Cmd+Shift+P", "Enter", "F1"])
+def test_normalize_shortcut_does_not_warn_for_safe(
+    shortcut: str,
+    caplog: pytest.LogCaptureFixture,
+    shortcut_logger_propagates: None,
+) -> None:
+    """Non-reserved combos must not emit the browser-reserved warning."""
+    with caplog.at_level(
+        logging.WARNING, logger="streamlit.elements.lib.shortcut_utils"
+    ):
+        normalize_shortcut(shortcut)
+    assert not any(
+        "reserved by the browser" in record.message for record in caplog.records
+    )
