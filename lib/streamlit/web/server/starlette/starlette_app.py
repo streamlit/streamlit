@@ -440,6 +440,12 @@ class App:
         # lifespan startup runs, which would otherwise cache a config_options
         # dict that omits the script-level config. The guard preserves any
         # value already set by `streamlit run`.
+        #
+        # Note: `config._main_script_path` is process-global (like
+        # `config._config_options`), so the first `App` constructed in a
+        # process pins the script-level config directory. Hosting multiple
+        # `App` instances with different configs in one process is not
+        # supported and was not supported prior to this change.
         if config._main_script_path is None:
             config._main_script_path = str(self._resolved_script_path)
 
