@@ -544,6 +544,22 @@ def fragment(
         If ``run_every`` is ``None``, the fragment will only rerun from
         user-triggered events.
 
+    parallel : bool
+        Whether to execute the fragment in parallel during full app reruns.
+        If ``True``, the fragment is dispatched to a thread pool and executes
+        concurrently with other parallel fragments and the main app script.
+        If ``False`` (default), the fragment executes inline on the main thread.
+
+        Parallel fragments are useful for independent, slow operations that
+        don't need to block the rest of the app. When a user interacts with
+        a widget inside a parallel fragment, the subsequent fragment rerun
+        executes sequentially (not in parallel) to ensure consistent state.
+
+        .. note::
+
+            Parallel execution is only used during full app reruns. Fragment
+            reruns triggered by widget interactions always execute sequentially.
+
     Examples
     --------
     The following example demonstrates basic usage of
