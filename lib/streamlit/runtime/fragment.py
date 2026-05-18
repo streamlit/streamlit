@@ -350,6 +350,11 @@ class ParallelFragmentCoordinator:
         max_workers: int | None = None,
         poll_interval: float = 0.1,
     ) -> None:
+        if max_workers is not None and max_workers < 1:
+            raise ValueError(
+                f"runner.parallelMaxWorkers must be None or a positive "
+                f"integer, got {max_workers!r}"
+            )
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._outstanding = 0
         self._outstanding_lock = threading.Lock()
