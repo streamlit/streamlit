@@ -82,6 +82,7 @@ class FragmentThreadState:
     delta_path: tuple[int, ...] | None = None
     in_fragment_callback: bool = False
     active_script_hash: str = ""
+    pre_allocated_container_fragment_id: str | None = None
 
 
 class _FragmentThreadStateFields(TypedDict, total=False):
@@ -96,6 +97,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     delta_path: tuple[int, ...] | None
     in_fragment_callback: bool
     active_script_hash: str
+    pre_allocated_container_fragment_id: str | None
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(

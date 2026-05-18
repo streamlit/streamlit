@@ -21,10 +21,11 @@ from abc import abstractmethod
 from collections.abc import Callable, Iterator
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_user_script_exception
 from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
@@ -32,6 +33,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -41,6 +43,8 @@ from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
+_LOGGER: Final = get_logger(__name__)
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -304,6 +308,7 @@ def _fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
     additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
@@ -319,6 +324,7 @@ def _fragment(
             return fragment(
                 func=f,
                 run_every=run_every,
+                parallel=parallel,
             )
 
         return wrapper
@@ -377,10 +383,19 @@ def _fragment(
                 != ThreadState.get().active_script_hash
                 else contextlib.nullcontext()
             )
+
+            ts = ThreadState.get()
+            skip_container = ts.pre_allocated_container_fragment_id == fragment_id
+            if skip_container:
+                ThreadState.update(pre_allocated_container_fragment_id=None)
+
             with ThreadState.scoped(fragment_id=fragment_id):
                 result = None
                 with active_hash_context:
-                    with st.container():
+                    container_ctx = (
+                        contextlib.nullcontext() if skip_container else st.container()
+                    )
+                    with container_ctx:
                         try:
                             # use dg_stack instead of active_dg to have correct copy
                             # during execution (otherwise we can run into concurrency
@@ -427,7 +442,9 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        # Immediate execute the wrapped fragment since we are in a full app run
+        if parallel and not ctx.fragment_ids_this_run:
+            _dispatch_parallel_fragment(ctx, fragment_id, wrapped_fragment)
+            return None
         return wrapped_fragment()
 
     with contextlib.suppress(AttributeError, NameError):
@@ -446,6 +463,7 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> F: ...
 
 
@@ -456,6 +474,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F]: ...
 
 
@@ -464,6 +483,7 @@ def fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -603,4 +623,73 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(func, run_every=run_every)
+    return _fragment(func, run_every=run_every, parallel=parallel)
+
+
+def _dispatch_parallel_fragment(
+    ctx: ScriptRunContext,
+    fragment_id: str,
+    wrapped_fragment: Callable[[], Any],
+) -> None:
+    """Dispatch a parallel fragment to the coordinator's thread pool.
+
+    Pre-allocates the fragment's container on the main thread (so the frontend
+    sees the container delta immediately), then submits the fragment body to
+    run on a worker thread.
+
+    The coordinator's submit() handles context propagation: it captures
+    copy_context() and get_script_run_ctx() at submit time, and the worker
+    runs inside captured.run() with _scoped_ctx_attach().
+    """
+    import streamlit as st
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    with st.container():
+        dg_stack_with_container = deepcopy(context_dg_stack.get())
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        return
+
+    coordinator.submit(
+        _run_parallel_fragment,
+        fragment_id,
+        wrapped_fragment,
+        dg_stack_with_container,
+    )
+
+
+def _run_parallel_fragment(
+    fragment_id: str,
+    wrapped_fragment: Callable[[], Any],
+    dg_stack_snapshot: list[Any],
+) -> None:
+    """Worker entry point for parallel fragment execution.
+
+    Runs inside the coordinator's context propagation boundary (copy_context +
+    _scoped_ctx_attach). Sets up the skip signal for container pre-allocation
+    and handles control flow exceptions.
+    """
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    ctx = get_script_run_ctx(suppress_warning=True)
+    if ctx is None:  # pragma: no cover - defensive
+        return
+
+    context_dg_stack.set(dg_stack_snapshot)
+    ThreadState.update(pre_allocated_container_fragment_id=fragment_id)
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        return
+
+    try:
+        wrapped_fragment()
+    except RerunException as e:
+        coordinator.request_rerun(e)
+    except StopException:
+        coordinator.request_stop()
+    except FragmentHandledException:
+        pass
+    except Exception as e:  # pragma: no cover - defensive
+        _LOGGER.exception("Uncaught exception in parallel fragment worker", exc_info=e)
