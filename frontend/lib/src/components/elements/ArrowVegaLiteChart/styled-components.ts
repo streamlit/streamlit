@@ -182,6 +182,12 @@ export const StyledVegaLiteChartContainer =
           "&.fit-y": {
             height: "100%",
           },
+          // Reset pointer events on background/foreground SVG paths to display tooltips on all layers in dialogs.
+          "svg.marks g.role-scope": {
+            "path.background, path.foreground": {
+              pointerEvents: "auto",
+            },
+          },
         },
         summary: {
           position: "absolute",
