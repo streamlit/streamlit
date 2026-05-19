@@ -11,15 +11,15 @@ on:
         required: true
         type: number
       model:
-        description: "Model(s) to use for the review (comma-separated for multi-model). The last model serves as the 'judge' for consolidating reviews."
+        description: "Model(s) to use for the review (comma-separated for multi-model). The last model serves as the 'judge' for consolidating reviews. Leave empty to use the repository default."
         required: false
         type: string
-        default: "gpt-5.3-codex-high,claude-4.6-opus-high-thinking"
 
 # Computed PR number and model for use in jobs
+# Model priority: manual input > repository variable (AI_PR_REVIEW_MODELS) > default
 env:
   PR_NUMBER: ${{ github.event.inputs.pr_number || github.event.pull_request.number }}
-  MODEL: ${{ github.event.inputs.model || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking' }}
+  MODEL: ${{ github.event.inputs.model || vars.AI_PR_REVIEW_MODELS || 'gpt-5.3-codex-high,claude-4.6-opus-high-thinking' }}
 
 jobs:
   # Job 1: Parse model list and check for API key
