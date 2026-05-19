@@ -653,7 +653,11 @@ def test_number_input_error_state(
     expect(input_field).to_have_attribute("aria-invalid", "true")
 
     # Snapshot the input field in error state (before hovering to show tooltip)
-    assert_snapshot(number_input, name="st_number_input-error_input_field")
+    # Use slightly higher image_threshold (0.003 vs default 0.002) to account for
+    # subpixel rendering differences in error icon across CI environments
+    assert_snapshot(
+        number_input, name="st_number_input-error_input_field", image_threshold=0.003
+    )
 
     # Hover over error icon and verify tooltip content
     error_icon.hover()
