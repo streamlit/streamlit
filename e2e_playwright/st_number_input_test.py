@@ -655,12 +655,15 @@ def test_number_input_error_state(
     # Hover over error icon and verify tooltip content
     error_icon.hover()
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
+    expect(tooltip).to_be_visible()
     expect(tooltip).to_contain_text("Error")
     expect(tooltip).to_contain_text("Value must be at least 0")
 
-    # Snapshot the error state (below min)
+    # Snapshot the error tooltip while still hovered (tooltips are portals to <body>)
+    assert_snapshot(tooltip, name="st_number_input-error_below_min")
+
+    # Reset hover state before next test section
     reset_hovering(themed_app)
-    assert_snapshot(number_input, name="st_number_input-error_below_min")
 
     # Test 2: Enter value above maximum (max=100) - use fill() for instant value
     input_field.fill("150")
