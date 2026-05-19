@@ -652,6 +652,9 @@ def test_number_input_error_state(
     # Input should have aria-invalid attribute for accessibility
     expect(input_field).to_have_attribute("aria-invalid", "true")
 
+    # Snapshot the input field in error state (before hovering to show tooltip)
+    assert_snapshot(number_input, name="st_number_input-error_input_field")
+
     # Hover over error icon and verify tooltip content
     error_icon.hover()
     tooltip = themed_app.get_by_test_id("stTooltipErrorContent")
