@@ -25,6 +25,7 @@ from streamlit.commands.execution_control import (
 )
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.scriptrunner import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 
@@ -314,6 +315,17 @@ def test_st_switch_page_raises_no_session_context_when_ctx_has_no_requests(
 
     with pytest.raises(NoSessionContext):
         switch_page("any_page.py")
+
+
+def test_switch_page_raises_from_parallel_worker():
+    """st.switch_page raises StreamlitAPIException when called from a parallel worker."""
+    ThreadState.initialize(is_parallel_worker=True)
+
+    with pytest.raises(StreamlitAPIException) as exc_info:
+        switch_page("pages/test.py")
+
+    assert "st.switch_page" in str(exc_info.value)
+    assert "parallel fragment" in str(exc_info.value)
 
 
 def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
