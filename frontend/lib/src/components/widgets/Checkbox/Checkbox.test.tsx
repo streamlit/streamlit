@@ -136,7 +136,7 @@ describe("Checkbox widget", () => {
     vi.spyOn(props.widgetMgr, "setBoolValue")
     render(<Checkbox {...props} />)
 
-    await act(async () => {
+    act(() => {
       screen.getByRole("checkbox").focus()
     })
     await user.keyboard(" ")
@@ -278,7 +278,7 @@ describe("Checkbox TOGGLE type", () => {
     vi.spyOn(props.widgetMgr, "setBoolValue")
     render(<Checkbox {...props} />)
 
-    await act(async () => {
+    act(() => {
       screen.getByRole("switch").focus()
     })
     await user.keyboard(" ")

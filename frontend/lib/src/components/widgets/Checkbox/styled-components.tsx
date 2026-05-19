@@ -93,7 +93,9 @@ export const StyledCheckboxIndicator =
         flexShrink: 0,
         width: theme.sizes.checkbox,
         height: theme.sizes.checkbox,
-        marginTop: theme.spacing.twoXS,
+        // Vertically center the indicator with the first text line.
+        // = (lineHeight × fontSize − indicatorSize) / 2 = (1.5 × 0.875rem − 1rem) / 2 = 2.5px
+        marginTop: `calc((${theme.lineHeights.small} * ${theme.fontSizes.sm} - ${theme.sizes.checkbox}) / 2)`,
         borderRadius: theme.radii.sm,
         border: `${theme.sizes.borderWidth} solid ${borderColor}`,
         backgroundColor,
@@ -148,23 +150,23 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
     let backgroundColor: string
 
     if ($isDisabled) {
-      backgroundColor = theme.colors.borderColor
+      backgroundColor = theme.colors.secondaryBg
     } else if ($isSelected) {
       backgroundColor = theme.colors.primary
     } else if ($isHovered) {
       backgroundColor = theme.colors.darkenedBgMix15
     } else {
-      backgroundColor = theme.colors.borderColor
+      backgroundColor = theme.colors.gray40
     }
 
     return {
       flexShrink: 0,
       marginTop: theme.spacing.twoXS,
-      padding: `0 ${theme.spacing.threeXS}`,
-      width: `calc(2 * ${theme.sizes.checkbox})`,
-      minWidth: `calc(2 * ${theme.sizes.checkbox})`,
-      height: theme.sizes.checkbox,
-      minHeight: theme.sizes.checkbox,
+      // Width matches BaseWeb scale1000 (40px); height matches scale550 (14px).
+      // The thumb (xl = 20px) intentionally overflows the track by 3px each side,
+      // giving the classic "lollipop" toggle look — overflow: visible is the default.
+      width: `calc(2 * ${theme.spacing.xl})`,
+      height: `calc(${theme.sizes.checkbox} - 2px)`,
       borderRadius: theme.radii.full,
       backgroundColor,
       display: "flex",
@@ -182,25 +184,25 @@ interface StyledToggleThumbProps {
 
 export const StyledToggleThumb = styled.div<StyledToggleThumbProps>(
   ({ theme, $isSelected, $isDisabled, $isLightTheme }) => {
-    let backgroundColor: string
-
-    if ($isDisabled) {
-      backgroundColor = $isLightTheme
+    // Disabled thumb uses a gray color; enabled always uses bgColor (white in
+    // light mode, near-black in dark mode) matching BaseWeb's mono100 = bgColor.
+    const backgroundColor = $isDisabled
+      ? $isLightTheme
         ? theme.colors.gray70
         : theme.colors.gray90
-    } else {
-      backgroundColor = $isLightTheme
-        ? theme.colors.bgColor
-        : theme.colors.bodyText
-    }
+      : theme.colors.bgColor
 
     return {
-      width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
-      height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+      // xl (1.25rem = 20px) matches BaseWeb scale700; larger than the 14px track
+      // so the circle overflows to create the classic toggle-switch silhouette.
+      width: theme.spacing.xl,
+      height: theme.spacing.xl,
       borderRadius: theme.radii.full,
       backgroundColor,
+      // Translation = xl (20px) = thumb width, so thumb moves from the left
+      // half to the right half of the 40px track.
       transform: $isSelected
-        ? `translateX(${theme.sizes.checkbox})`
+        ? `translateX(${theme.spacing.xl})`
         : "translateX(0)",
       transition: "transform 150ms ease",
     }
