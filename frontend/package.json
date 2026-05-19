@@ -52,7 +52,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.68.1",
-    "@eslint-react/eslint-plugin": "^5.7.3",
+    "@eslint-react/eslint-plugin": "^5.7.8",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
@@ -78,7 +78,7 @@
     "oxfmt": "^0.49.0",
     "oxlint": "^1.64.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.2",
+    "typescript-eslint": "^8.59.3",
     "vitest": "^4.1.6"
   }
 }
