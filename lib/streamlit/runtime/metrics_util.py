@@ -342,7 +342,7 @@ def _detect_installed_agents() -> list[str]:
     """Detect agent harnesses installed under the user's home directory.
 
     Returns a sorted, deduplicated list of harness name tokens (``agents``,
-    ``claude``, ``codex``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
+    ``claude``, ``codex``, ``copilot``, ``cortex``, ``cursor``, ``gemini``, ``opencode``)
     for each harness whose home-level config directory exists. Independent
     of whether Streamlit-specific skills are installed for that harness.
 
