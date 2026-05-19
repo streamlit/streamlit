@@ -1179,7 +1179,9 @@ This does not look like a valid color argument: `{color_from_user}`.
 
 The color argument can be:
 
-* A hex string like "#ffaa00" or "#ffaa0088".
+* A CSS color string supported by Streamlit's frontend color parser, like
+  "#ffaa00", "rgb(255, 170, 0)", "hsl(40, 100%, 50%)", or
+  "oklch(0.75 0.15 70)".
 * An RGB or RGBA tuple with the red, green, blue, and alpha
   components specified as ints from 0 to 255 or floats from 0.0 to
   1.0.

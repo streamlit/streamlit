@@ -677,21 +677,20 @@ function createRemarkHelpIcon() {
 }
 
 /**
- * Validates that a string is a valid CSS color value.
+ * Validates that a string is a supported CSS color value.
  * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
- * and named colors. Uses CSS.supports when available to also support modern CSS
- * color formats like hwb(), oklch(), oklab().
+ * named colors, and chroma-js supported modern formats like lab(), lch(),
+ * oklab(), oklch(), and space-separated rgb()/hsl().
  *
  * @param color - The color string to validate
  * @returns true if the color is valid, false otherwise
  */
+const UNPREFIXED_HEX_COLOR_RE =
+  /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+
 export function isValidCssColor(color: string): boolean {
   if (!color) return false
-  // Use CSS.supports for modern CSS color validation when available
-  if (typeof CSS !== "undefined" && CSS.supports) {
-    return CSS.supports("color", color)
-  }
-  // Fallback to chroma-js parsing for legacy environments
+  if (UNPREFIXED_HEX_COLOR_RE.test(color)) return false
   return parseToRgba(color) !== null
 }
 

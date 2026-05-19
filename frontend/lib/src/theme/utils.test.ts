@@ -506,44 +506,46 @@ describe("createTheme", () => {
     "lch(50 30 270)",
     "rgb(34 139 34)",
     "hsl(145 63% 49%)",
-    "hwb(120 0% 0%)",
   ]
 
-  const acceptedColors = new Set(modernThemeColors)
-
   it.each(modernThemeColors)(
-    "keeps accepted modern theme color syntax '%s'",
+    "keeps chroma-supported modern theme color syntax '%s'",
     color => {
-      class MockOption {
-        style = {
-          storedColor: "",
-          get color(): string {
-            return this.storedColor
-          },
-          set color(value: string) {
-            this.storedColor = acceptedColors.has(value) ? value : ""
-          },
-        }
-      }
+      const customTheme = createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({
+          backgroundColor: color,
+          primaryColor: color,
+        })
+      )
 
-      vi.stubGlobal("Option", MockOption)
+      expect(customTheme.emotion.colors.bgColor).toBe(color)
+      expect(customTheme.emotion.colors.primary).toBe(color)
+      expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
+      expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
+    }
+  )
 
-      try {
-        const customTheme = createTheme(
-          CUSTOM_THEME_NAME,
-          new CustomThemeConfig({
-            backgroundColor: color,
-            primaryColor: color,
-          })
-        )
+  it.each(["hwb(120 0% 0%)", "color(srgb 1 0 0)"])(
+    "rejects unsupported modern theme color syntax '%s'",
+    color => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const customTheme = createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({
+          backgroundColor: color,
+          primaryColor: color,
+        })
+      )
 
-        expect(customTheme.emotion.colors.bgColor).toBe(color)
-        expect(customTheme.emotion.colors.primary).toBe(color)
-        expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
-        expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
-      } finally {
-        vi.unstubAllGlobals()
-      }
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for backgroundColor in theme: "${color}"`
+      )
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for primaryColor in theme: "${color}"`
+      )
+      expect(customTheme.emotion.colors.bgColor).not.toBe(color)
+      expect(customTheme.emotion.colors.primary).not.toBe(color)
     }
   )
 })
@@ -773,7 +775,6 @@ describe("isColor", () => {
   it("works with valid colors", () => {
     expect(isColor("#fff")).toBe(true)
     expect(isColor("#ffffff")).toBe(true)
-    expect(isColor("#ffffff0")).toBe(true)
     expect(isColor("#000")).toBe(true)
     expect(isColor("#000000")).toBe(true)
     expect(isColor("#fafafa")).toBe(true)
@@ -784,15 +785,24 @@ describe("isColor", () => {
     expect(isColor("rgb(-1, 0, -255)")).toBe(true)
     expect(isColor("rgba(0,0,0,.5)")).toBe(true)
     expect(isColor("hsl(120,50%,40%)")).toBe(true)
-    expect(isColor("hsl(120,50%,40%, .4)")).toBe(true)
-    expect(isColor("currentColor")).toBe(true)
+    expect(isColor("rgb(34 139 34)")).toBe(true)
+    expect(isColor("hsl(145 63% 49%)")).toBe(true)
+    expect(isColor("lab(50 40 -20)")).toBe(true)
+    expect(isColor("lch(50 30 270)")).toBe(true)
+    expect(isColor("oklab(0.5 0.1 -0.1)")).toBe(true)
+    expect(isColor("oklch(0.21 0.01 260)")).toBe(true)
   })
 
   it("works with invalid colors", () => {
+    expect(isColor("#ffffff0")).toBe(false)
     expect(isColor("fff")).toBe(false)
     expect(isColor("cookies are delicious")).toBe(false)
     expect(isColor("")).toBe(false)
     expect(isColor("hsl(120,50,40)")).toBe(false)
+    expect(isColor("hsl(120,50%,40%, .4)")).toBe(false)
+    expect(isColor("currentColor")).toBe(false)
+    expect(isColor("hwb(120 0% 0%)")).toBe(false)
+    expect(isColor("color(srgb 1 0 0)")).toBe(false)
   })
 })
 

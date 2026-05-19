@@ -89,6 +89,37 @@ class ConfigTest(unittest.TestCase):
 
         return theme_config_options
 
+    def test_theme_color_validation_accepts_chroma_supported_formats(self):
+        """Test that backend theme warnings match frontend chroma-js color support."""
+        supported_colors = [
+            "red",
+            "#ff0000",
+            "rgb(255, 0, 0)",
+            "rgb(255 0 0 / 50%)",
+            "hsl(120, 100%, 50%)",
+            "hsl(145 63% 49%)",
+            "lab(50 40 -20)",
+            "lch(50 30 270)",
+            "oklab(0.5 0.1 -0.1)",
+            "oklch(0.21 0.01 260)",
+        ]
+
+        with patch.object(config_util._get_logger(), "warning") as warning_mock:
+            for color in supported_colors:
+                config_util._check_color_value(color, "theme.primaryColor")
+
+        warning_mock.assert_not_called()
+
+    def test_theme_color_validation_warns_for_unsupported_modern_formats(self):
+        """Test that backend theme warnings reject formats unsupported by chroma-js."""
+        unsupported_colors = ["hwb(120 0% 0%)", "color(srgb 1 0 0)", "currentColor"]
+
+        with patch.object(config_util._get_logger(), "warning") as warning_mock:
+            for color in unsupported_colors:
+                config_util._check_color_value(color, "theme.primaryColor")
+
+        assert warning_mock.call_count == len(unsupported_colors)
+
     def _create_subsection_config_options(self, section: str):
         """Create a list of the valid config options for a subsection of the theme section."""
 

@@ -160,11 +160,11 @@ export const isPresetTheme = (themeConfig: ThemeConfig): boolean => {
 export const bgColorToBaseString = (bgColor?: string): string =>
   bgColor === undefined || getLuminance(bgColor) > 0.5 ? "light" : "dark"
 
-export const isColor = (strColor: string): boolean => {
-  const s = new Option().style
-  s.color = strColor
-  return s.color !== ""
-}
+const UNPREFIXED_HEX_COLOR_RE =
+  /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+
+export const isColor = (strColor: string): boolean =>
+  !UNPREFIXED_HEX_COLOR_RE.test(strColor) && parseToRgba(strColor) !== null
 
 /**
  * Helper function that rounds a font size (in rem) to the nearest eighth of a rem

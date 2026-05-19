@@ -29,7 +29,8 @@ from streamlit.elements import deck_gl_json_chart
 from streamlit.elements.lib.color_util import (
     Color,
     IntColorTuple,
-    is_color_like,
+    is_color_tuple_like,
+    is_hex_color_like,
     to_int_color_tuple,
 )
 from streamlit.elements.lib.layout_utils import (
@@ -443,7 +444,11 @@ def _convert_color_arg_or_column(
 
     if color_col_name is not None:
         # Convert color column to the right format.
-        if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):  # type: ignore[arg-type]
+        first_color = (
+            data[color_col_name].iat[0] if len(data[color_col_name]) > 0 else None
+        )
+        first_color = cast("Any", first_color)
+        if is_hex_color_like(first_color) or is_color_tuple_like(first_color):
             # Use .loc[] to avoid a SettingWithCopyWarning in some cases.
             # Convert to object dtype first to support tuple values (pandas 3.x infers
             # string columns as StringDtype which can't hold tuples).

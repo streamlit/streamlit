@@ -48,9 +48,8 @@ function toCSS(c: chroma.Color): string {
  *
  * Chroma-js v3 natively supports most CSS color formats including:
  * oklch(), oklab(), lab(), lch(), and modern space-separated rgb()/hsl().
- * Only hwb() and exotic color(<colorspace> ...) syntaxes fall through to
- * the catch block. This function returns null instead of throwing for
- * unsupported formats.
+ * hwb() and color(<colorspace> ...) are not supported. This function returns
+ * null instead of throwing for unsupported formats.
  */
 function tryParse(color: string): chroma.Color | null {
   try {
@@ -65,7 +64,7 @@ function tryParse(color: string): chroma.Color | null {
  * Unlike color2k's transparentize which subtracts, this sets the exact alpha.
  * Returns the original color string if parsing fails (e.g., unsupported format).
  *
- * @param color - Any valid CSS color string
+ * @param color - A chroma-js supported CSS color string
  * @param alpha - Target alpha value (0-1), will be clamped to valid range
  * @returns CSS color string with the specified alpha
  */
@@ -82,7 +81,7 @@ export function setAlpha(color: string, alpha: number): string {
  * This matches color2k's behavior by subtracting from the L (lightness) channel.
  * Returns the original color string if parsing fails.
  *
- * @param color - Any valid CSS color string
+ * @param color - A chroma-js supported CSS color string
  * @param amount - Amount to darken (0-1), subtracted from the lightness channel
  * @returns Darkened CSS color string
  */
@@ -103,7 +102,7 @@ export function darken(color: string, amount = 0.1): string {
  * This matches color2k's behavior by adding to the L (lightness) channel.
  * Returns the original color string if parsing fails.
  *
- * @param color - Any valid CSS color string
+ * @param color - A chroma-js supported CSS color string
  * @param amount - Amount to lighten (0-1), added to the lightness channel
  * @returns Lightened CSS color string
  */

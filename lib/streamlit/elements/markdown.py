@@ -123,21 +123,18 @@ class MarkdownMixin:
 
               - Custom CSS colors: Use the syntax
                 ``:color[your text]{foreground="..." background="..."}`` with a
-                valid CSS color value. Both ``foreground`` and ``background`` are
-                optional. Supported formats include named CSS colors, HEX, RGB(A),
-                and HSL(A). For example,
+                supported CSS color value. Both ``foreground`` and ``background``
+                are optional. Supported formats include named CSS colors, HEX,
+                RGB(A), HSL(A), Lab, LCH, OKLab, OKLCH, and space-separated
+                RGB/HSL syntax. For example,
                 ``:color[warning]{foreground="#d50000"}`` or
                 ``:color[note]{foreground="rgb(0,100,200)" background="hsl(60,100%,90%)"}``.
 
                 .. note::
                    When using ``:color[...]{}`` with custom CSS colors, a named
                    color like ``"red"`` refers to the standard CSS named color,
-                   not the Streamlit palette color. Supported color formats include
-                   named colors, HEX, RGB(A), and HSL(A). Modern CSS Color 4 formats
-                   (such as ``hwb()``, ``lab()``, ``lch()``, ``oklab()``, ``oklch()``,
-                   and space-separated ``rgb()``/``hsl()`` syntax) are supported in
-                   browsers that implement ``CSS.supports()``, with a fallback to
-                   standard formats for older browsers.
+                   not the Streamlit palette color. ``hwb()`` and
+                   ``color(<colorspace> ...)`` are not supported.
 
             - Colored badges, using the syntax ``:color-badge[text in the badge]``.
               ``color`` must be replaced with any of the following supported

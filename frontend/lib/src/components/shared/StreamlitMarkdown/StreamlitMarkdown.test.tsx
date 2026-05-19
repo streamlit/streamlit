@@ -333,6 +333,36 @@ describe("isValidCssColor", () => {
       expected: true,
       description: "hsla with alpha",
     },
+    {
+      input: "rgb(34 139 34)",
+      expected: true,
+      description: "modern space-separated rgb",
+    },
+    {
+      input: "hsl(145 63% 49%)",
+      expected: true,
+      description: "modern space-separated hsl",
+    },
+    {
+      input: "lab(50 40 -20)",
+      expected: true,
+      description: "lab color",
+    },
+    {
+      input: "lch(50 30 270)",
+      expected: true,
+      description: "lch color",
+    },
+    {
+      input: "oklab(0.5 0.1 -0.1)",
+      expected: true,
+      description: "oklab color",
+    },
+    {
+      input: "oklch(0.21 0.01 260)",
+      expected: true,
+      description: "oklch color",
+    },
 
     // Named colors - should return true
     { input: "red", expected: true, description: "named color red" },
@@ -343,6 +373,11 @@ describe("isValidCssColor", () => {
     { input: "#", expected: false, description: "hash only" },
     { input: "#12", expected: false, description: "2-digit hex (invalid)" },
     { input: "#12345", expected: false, description: "5-digit hex (invalid)" },
+    {
+      input: "fff",
+      expected: false,
+      description: "hex color without #",
+    },
     {
       input: "#1234567",
       expected: false,
@@ -365,6 +400,17 @@ describe("isValidCssColor", () => {
       input: "expression(alert(1))",
       expected: false,
       description: "CSS expression",
+    },
+    { input: "hwb(120 0% 0%)", expected: false, description: "hwb color" },
+    {
+      input: "color(srgb 1 0 0)",
+      expected: false,
+      description: "color function",
+    },
+    {
+      input: "currentColor",
+      expected: false,
+      description: "currentColor keyword",
     },
   ])("validates $description correctly", ({ input, expected }) => {
     expect(isValidCssColor(input)).toBe(expected)

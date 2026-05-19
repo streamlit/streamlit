@@ -118,8 +118,7 @@ def _validate_chart_color(maybe_color: str) -> None:
             "color",
             [
                 *supported_colors,
-                "a valid hex color",
-                "an rgb() or rgba() color",
+                "a chroma-js supported CSS color",
             ],
         )
 
