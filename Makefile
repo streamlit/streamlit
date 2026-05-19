@@ -505,8 +505,6 @@ update-emojis:
 update-notices:
 	cd frontend; \
 		yarn licenses generate-disclaimer --production --recursive > ../NOTICES
-	# Normalize line endings to LF (yarn may produce CRLF on some platforms)
-	perl -pi -e 's/\r$$//' NOTICES
 
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Code/Source-Code.LICENSE
 	./scripts/append_license.sh frontend/app/src/assets/fonts/Source_Sans/Source-Sans.LICENSE
