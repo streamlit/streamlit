@@ -669,12 +669,16 @@ def _dispatch_parallel_fragment(
     import streamlit as st
     from streamlit.delta_generator_singletons import context_dg_stack
 
-    with st.container():
-        dg_stack_with_container = deepcopy(context_dg_stack.get())
-
     coordinator = ctx.parallel_coordinator
     if coordinator is None:  # pragma: no cover - defensive
+        _LOGGER.warning(
+            "Parallel coordinator not available for fragment %s, skipping dispatch",
+            fragment_id,
+        )
         return
+
+    with st.container():
+        dg_stack_with_container = deepcopy(context_dg_stack.get())
 
     coordinator.submit(
         _run_parallel_fragment,
@@ -716,5 +720,5 @@ def _run_parallel_fragment(
         coordinator.request_stop()
     except FragmentHandledException:
         pass
-    except Exception as e:  # pragma: no cover - defensive
-        _LOGGER.exception("Uncaught exception in parallel fragment worker", exc_info=e)
+    except Exception:  # pragma: no cover - defensive
+        _LOGGER.exception("Uncaught exception in parallel fragment worker")
