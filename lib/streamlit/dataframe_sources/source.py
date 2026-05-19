@@ -263,8 +263,12 @@ class PolarsDataframeSource:
         df = self._df
 
         # Apply sorting if requested
+        # Note: Polars sort is unstable by default - use maintain_order=True to ensure
+        # deterministic ordering of equal elements across chunk requests
         if sort is not None and sort.column in df.columns:
-            df = df.sort(sort.column, descending=not sort.ascending)
+            df = df.sort(
+                sort.column, descending=not sort.ascending, maintain_order=True
+            )
 
         # Slice the requested range using Polars' efficient slice method
         chunk_df = df.slice(offset, limit)

@@ -989,13 +989,19 @@ class ArrowMixin:
 
         has_range_index: bool = False
         if isinstance(data, pa.Table):
+            # PyArrow tables don't support lazy mode in Phase 1
+            if lazy is True:
+                raise StreamlitAPIException(
+                    "lazy=True is not compatible with PyArrow tables. "
+                    "Convert to a pandas or Polars DataFrame to use lazy mode, "
+                    "or use lazy=False/lazy=None for eager rendering."
+                )
             # For pyarrow tables, we can just serialize the table directly
             proto.arrow_data.data = dataframe_util.convert_arrow_table_to_arrow_bytes(
                 data
             )
             num_rows = data.num_rows
             column_names = data.column_names
-            # PyArrow tables don't support lazy mode in Phase 1
         else:
             # For all other data formats, we need to convert them to a pandas.DataFrame
             # thereby, we also apply some data specific configs
