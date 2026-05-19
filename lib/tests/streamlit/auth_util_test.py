@@ -794,7 +794,7 @@ def test_get_joserfc_signing_key_logs_weak_secret_once(
 ) -> None:
     """Emit a single Streamlit-level log for sub-112-bit ``cookie_secret``s."""
     monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
-    monkeypatch.setattr(auth_util, "_short_signing_secret_warning_logged", False)
+    auth_util._warn_short_signing_secret_once.cache_clear()
 
     with patch.object(auth_util._LOGGER, "warning") as mock_warning:
         auth_util._get_joserfc_signing_key()
@@ -804,7 +804,7 @@ def test_get_joserfc_signing_key_logs_weak_secret_once(
     assert "112 bits" in mock_warning.call_args.args[0]
 
     # A long-enough secret on a fresh flag must not log.
-    monkeypatch.setattr(auth_util, "_short_signing_secret_warning_logged", False)
+    auth_util._warn_short_signing_secret_once.cache_clear()
     monkeypatch.setattr(
         auth_util, "get_signing_secret", lambda: "this-secret-is-long-enough"
     )

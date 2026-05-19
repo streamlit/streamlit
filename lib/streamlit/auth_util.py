@@ -19,6 +19,7 @@ import re
 import warnings
 from collections.abc import Callable, Mapping
 from datetime import datetime, timedelta, timezone
+from functools import cache
 from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
 from urllib.parse import urlencode, urlparse
 
@@ -47,10 +48,6 @@ _PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
 # (112 bits). We track the same threshold to surface a one-time Streamlit-level
 # warning when callers configure a weak ``cookie_secret``.
 _JOSERFC_MIN_KEY_BYTES: Final = 14
-
-# One-time guard for the weak-secret log emitted by ``_warn_short_signing_secret_once``.
-# Races between threads at most produce a duplicate log line, which is harmless.
-_short_signing_secret_warning_logged = False
 
 
 class AuthCache:
@@ -274,6 +271,7 @@ def _ensure_joserfc_security_warning_suppressed() -> None:
     warnings.filterwarnings("ignore", category=SecurityWarning)
 
 
+@cache
 def _warn_short_signing_secret_once() -> None:
     """Emit a single Streamlit-level warning for sub-112-bit cookie secrets.
 
@@ -282,10 +280,6 @@ def _warn_short_signing_secret_once() -> None:
     every app on every request, but a too-short ``cookie_secret`` is still a
     real signal we want operators to see at least once per process.
     """
-    global _short_signing_secret_warning_logged  # noqa: PLW0603
-    if _short_signing_secret_warning_logged:
-        return
-    _short_signing_secret_warning_logged = True
     _LOGGER.warning(
         "auth.cookie_secret / server.cookieSecret is shorter than %d bytes "
         "(112 bits). Use a longer, randomly generated secret to ensure "
