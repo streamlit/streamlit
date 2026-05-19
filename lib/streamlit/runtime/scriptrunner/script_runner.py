@@ -40,6 +40,7 @@ from streamlit.runtime.scriptrunner.exec_code import (
     modified_sys_path,
 )
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.scriptrunner.thread import ScriptThread
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
@@ -282,7 +283,7 @@ class ScriptRunner:
         self._execing = False
 
         # This is initialized in the start() method
-        self._script_thread: threading.Thread | None = None
+        self._script_thread: ScriptThread | None = None
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -319,7 +320,7 @@ class ScriptRunner:
         if self._script_thread is not None:
             raise RuntimeError("ScriptRunner was already started")
 
-        self._script_thread = threading.Thread(
+        self._script_thread = ScriptThread(
             target=self._run_script_thread,
             name="ScriptRunner.scriptThread",
         )
@@ -387,6 +388,7 @@ class ScriptRunner:
             context_info=None,
             on_script_error=self._on_script_error,
         )
+
         add_script_run_ctx(threading.current_thread(), ctx)
 
         request = self._requests.on_scriptrunner_ready()
@@ -400,7 +402,9 @@ class ScriptRunner:
 
         if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
             raise RuntimeError(
-                f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
+                f"Unrecognized ScriptRequestType: {
+                    request.type
+                }. This should never happen."
             )
 
         # Send a SHUTDOWN event before exiting, so some state can be saved
@@ -467,7 +471,9 @@ class ScriptRunner:
 
         if request.type != ScriptRequestType.STOP:  # pragma: no cover - defensive
             raise RuntimeError(
-                f"Unrecognized ScriptRequestType: {request.type}. This should never happen."
+                f"Unrecognized ScriptRequestType: {
+                    request.type
+                }. This should never happen."
             )
         raise StopException()
 
@@ -508,7 +514,8 @@ class ScriptRunner:
 
             _LOGGER.debug("Running script")
             start_time: float = timer()
-            prep_time: float = 0  # This will be overwritten once preparations are done.
+            # This will be overwritten once preparations are done.
+            prep_time: float = 0
 
             if not rerun_data.fragment_id_queue:
                 # Don't clear session refs for media files if we're running a fragment.
@@ -739,6 +746,9 @@ class ScriptRunner:
                             new_fragment_ids=ctx.new_fragment_ids.snapshot()
                         )
 
+                    cast(
+                        "ScriptThread", threading.current_thread()
+                    ).wait_for_subthreads()
                     self._session_state.maybe_check_serializable()
                     # check for control requests, e.g. rerun requests have arrived
                     self._maybe_handle_execution_control_request()
