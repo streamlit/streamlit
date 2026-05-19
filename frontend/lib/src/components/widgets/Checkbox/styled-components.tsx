@@ -47,7 +47,7 @@ export const StyledContent = styled.div<StyledContentProps>(
 /** Wrapper around React Aria Checkbox — handles layout and keyboard-focus background. */
 export const StyledCheckboxRoot = styled(RACheckbox)(({ theme }) => ({
   display: "flex",
-  alignItems: "start",
+  alignItems: "flex-start",
   gap: theme.spacing.sm,
   marginBottom: 0,
   marginTop: 0,
@@ -122,7 +122,7 @@ export const StyledCheckboxIndicator =
 /** Wrapper around React Aria Switch — handles layout for the toggle variant. */
 export const StyledSwitchRoot = styled(RASwitch)(({ theme }) => ({
   display: "flex",
-  alignItems: "start",
+  alignItems: "flex-start",
   gap: theme.spacing.sm,
   marginBottom: 0,
   marginTop: 0,
