@@ -788,6 +788,46 @@ def test_provider_token_round_trip_suppresses_auth_warnings(
     assert caught == []
 
 
+@_REQUIRES_JOSERFC
+def test_get_joserfc_signing_key_logs_weak_secret_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Emit a single Streamlit-level log for sub-112-bit ``cookie_secret``s."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(auth_util, "_short_signing_secret_warning_logged", False)
+
+    with patch.object(auth_util._LOGGER, "warning") as mock_warning:
+        auth_util._get_joserfc_signing_key()
+        auth_util._get_joserfc_signing_key()
+
+    assert mock_warning.call_count == 1
+    assert "112 bits" in mock_warning.call_args.args[0]
+
+    # A long-enough secret on a fresh flag must not log.
+    monkeypatch.setattr(auth_util, "_short_signing_secret_warning_logged", False)
+    monkeypatch.setattr(
+        auth_util, "get_signing_secret", lambda: "this-secret-is-long-enough"
+    )
+    with patch.object(auth_util._LOGGER, "warning") as mock_warning:
+        auth_util._get_joserfc_signing_key()
+    assert mock_warning.call_count == 0
+
+
+@_REQUIRES_JOSERFC
+def test_ensure_joserfc_security_warning_suppressed_is_idempotent() -> None:
+    """``_ensure_joserfc_security_warning_suppressed`` does not duplicate filters."""
+    from joserfc.errors import SecurityWarning
+
+    with warnings.catch_warnings():
+        warnings.resetwarnings()
+        auth_util._ensure_joserfc_security_warning_suppressed()
+        auth_util._ensure_joserfc_security_warning_suppressed()
+        matching = [
+            f for f in warnings.filters if f[0] == "ignore" and f[2] is SecurityWarning
+        ]
+        assert len(matching) == 1
+
+
 def test_decode_provider_token_expired_raises_streamlit_auth_error(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -807,10 +847,14 @@ def test_decode_provider_token_expired_raises_streamlit_auth_error(
 @pytest.mark.parametrize(
     ("claims", "expected_message"),
     [
-        pytest.param({"exp": 9999999999}, "provider claim", id="missing_provider"),
+        pytest.param(
+            {"exp": 9999999999},
+            "provider claim is missing",
+            id="missing_provider",
+        ),
         pytest.param(
             {"provider": "", "exp": 9999999999},
-            "provider claim",
+            "provider claim is empty",
             id="empty_provider",
         ),
         pytest.param(

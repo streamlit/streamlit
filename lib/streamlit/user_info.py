@@ -27,13 +27,15 @@ from typing import (
 
 from streamlit import config, logger, runtime
 from streamlit.auth_util import (
-    AUTH_INSTALLATION_MESSAGE,
     encode_provider_token,
     get_secrets_auth_section,
     is_authlib_installed,
     validate_auth_credentials,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitAuthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingAuthlibError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -299,7 +301,7 @@ def login(provider: str | None = None) -> None:
     context = _get_script_run_ctx()
     if context is not None:
         if not is_authlib_installed():
-            raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE)
+            raise StreamlitMissingAuthlibError()
         validate_auth_credentials(provider)
         fwd_msg = ForwardMsg()
         fwd_msg.auth_redirect.url = generate_login_redirect_url(provider)

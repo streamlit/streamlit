@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any, Final, TypedDict, cast
 from urllib.parse import urlencode, urlparse
 
 from streamlit import config
-from streamlit.errors import StreamlitAuthError
+from streamlit.errors import StreamlitAuthError, StreamlitMissingAuthlibError
 from streamlit.logger import get_logger
 from streamlit.runtime.secrets import AttrDict, secrets_singleton
 
@@ -43,11 +43,14 @@ SIGNING_OVERHEAD_SAFETY_BUFFER: Final = 50
 # Base64 encoding of 1 byte = 4 bytes, so overhead = total - 4
 SINGLE_BYTE_BASE64_SIZE: Final = 4
 _PROVIDER_TOKEN_ALGORITHM: Final = "HS256"  # noqa: S105
-_JOSERFC_SHORT_KEY_WARNING: Final = "Key size should be >= 112 bits"
-AUTH_INSTALLATION_MESSAGE: Final = (
-    "Authentication requires Authlib>=1.3.2. "
-    "Install it via `pip install streamlit[auth]`."
-)
+# joserfc emits SecurityWarning when the symmetric key is shorter than 14 bytes
+# (112 bits). We track the same threshold to surface a one-time Streamlit-level
+# warning when callers configure a weak ``cookie_secret``.
+_JOSERFC_MIN_KEY_BYTES: Final = 14
+
+# One-time guard for the weak-secret log emitted by ``_warn_short_signing_secret_once``.
+# Races between threads at most produce a duplicate log line, which is harmless.
+_short_signing_secret_warning_logged = False
 
 
 class AuthCache:
@@ -246,25 +249,62 @@ def _get_provider_token_expiration_timestamp() -> int:
     return int((datetime.now(timezone.utc) + timedelta(minutes=2)).timestamp())
 
 
+def _ensure_joserfc_security_warning_suppressed() -> None:
+    """Idempotently suppress joserfc's ``SecurityWarning`` for this process.
+
+    ``warnings.catch_warnings()`` is documented as not thread-safe: it saves
+    and restores the shared ``warnings.filters`` list, so concurrent calls
+    from the encode/decode hot path can racily leak filter state into other
+    sessions. We instead append a single category-only filter to the global
+    list (an O(1) check protects against duplicates), which is safe under the
+    GIL and survives ``warnings.simplefilter`` resets in a self-healing way.
+
+    The category-only match (rather than a string-matched message filter) is
+    intentional: ``OctKey.import_key`` is the only joserfc call site Streamlit
+    uses, so suppressing the entire ``SecurityWarning`` category here cannot
+    hide warnings from unrelated code, and it does not regress when joserfc
+    rewords the message.
+    """
+    from joserfc.errors import SecurityWarning
+
+    for entry in warnings.filters:
+        action, _msg, category, _module, _lineno = entry
+        if action == "ignore" and category is SecurityWarning:
+            return
+    warnings.filterwarnings("ignore", category=SecurityWarning)
+
+
+def _warn_short_signing_secret_once() -> None:
+    """Emit a single Streamlit-level warning for sub-112-bit cookie secrets.
+
+    joserfc's ``SecurityWarning`` is suppressed by
+    ``_ensure_joserfc_security_warning_suppressed`` so it does not surface to
+    every app on every request, but a too-short ``cookie_secret`` is still a
+    real signal we want operators to see at least once per process.
+    """
+    global _short_signing_secret_warning_logged  # noqa: PLW0603
+    if _short_signing_secret_warning_logged:
+        return
+    _short_signing_secret_warning_logged = True
+    _LOGGER.warning(
+        "auth.cookie_secret / server.cookieSecret is shorter than %d bytes "
+        "(112 bits). Use a longer, randomly generated secret to ensure "
+        "adequate cryptographic strength.",
+        _JOSERFC_MIN_KEY_BYTES,
+    )
+
+
 def _get_joserfc_signing_key() -> Any:
     """Create the signing key used for provider tokens with ``joserfc``."""
-    from joserfc.errors import SecurityWarning
     from joserfc.jwk import OctKey
 
-    # TODO(auth): Revisit weak ``cookie_secret`` handling at the Streamlit level.
-    # ``joserfc`` warns when the symmetric key is shorter than 14 bytes
-    # ("Key size should be >= 112 bits"). We intentionally suppress that warning
-    # here so the Authlib deprecation fix does not also introduce a new runtime
-    # warning for existing apps. Follow up by deciding whether Streamlit should
-    # validate, warn on, or reject weak ``auth.cookie_secret`` /
-    # ``server.cookieSecret`` values directly.
-    with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore",
-            message=re.escape(_JOSERFC_SHORT_KEY_WARNING),
-            category=SecurityWarning,
-        )
-        return OctKey.import_key(get_signing_secret())
+    # TODO(auth): Revisit weak ``cookie_secret`` handling at the Streamlit level
+    # so we can validate / reject (rather than just log) sub-112-bit secrets.
+    _ensure_joserfc_security_warning_suppressed()
+    secret = get_signing_secret()
+    if len(secret) < _JOSERFC_MIN_KEY_BYTES:
+        _warn_short_signing_secret_once()
+    return OctKey.import_key(secret)
 
 
 def _encode_provider_token_with_joserfc(provider: str) -> str:
@@ -306,7 +346,7 @@ def _validate_provider_token_claims(
     if not isinstance(provider, str):
         raise TypeError("provider claim is invalid")
     if provider == "":
-        raise ValueError("provider claim is missing")
+        raise ValueError("provider claim is empty")
 
     exp = claims.get("exp")
     if exp is None:
@@ -363,7 +403,7 @@ def encode_provider_token(provider: str) -> str:
         try:
             return _encode_provider_token_with_authlib(provider)
         except ImportError:
-            raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE) from None
+            raise StreamlitMissingAuthlibError() from None
 
 
 def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
@@ -374,7 +414,7 @@ def decode_provider_token(provider_token: str) -> ProviderTokenPayload:
         try:
             return _decode_provider_token_with_authlib(provider_token)
         except ImportError:
-            raise StreamlitAuthError(AUTH_INSTALLATION_MESSAGE) from None
+            raise StreamlitMissingAuthlibError() from None
 
 
 def generate_default_provider_section(auth_section: AttrDict) -> dict[str, Any]:
