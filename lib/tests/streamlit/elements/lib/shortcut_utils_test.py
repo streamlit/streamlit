@@ -191,6 +191,7 @@ def _reset_browser_reserved_warning_cache() -> None:
         "Cmd+PageDown",
         "Ctrl+L",
         "Cmd+L",
+        "Alt+F4",
         "F11",
         "Mod+T",
         "Mod+PageDown",

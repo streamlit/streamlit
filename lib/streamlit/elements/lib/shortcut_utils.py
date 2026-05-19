@@ -91,6 +91,7 @@ _BROWSER_RESERVED_SHORTCUTS: Final[frozenset[str]] = frozenset(
         "cmd+pagedown",
         "ctrl+l",
         "cmd+l",
+        "alt+f4",
         "f11",
     }
 )
@@ -189,7 +190,7 @@ def normalize_shortcut(shortcut: str) -> str:
     ):
         _warned_browser_reserved_shortcuts.add(normalized)
         _LOGGER.warning(
-            "The shortcut %r is typically reserved by the browser or operating "
+            "The shortcut %s is typically reserved by the browser or operating "
             "system and may never reach Streamlit. Consider choosing a "
             "different combination.",
             shortcut,
