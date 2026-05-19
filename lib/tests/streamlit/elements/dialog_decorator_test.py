@@ -74,4 +74,6 @@ def test_dialog_allowed_when_not_parallel_worker() -> None:
         except Exception:
             pass
 
-        assert not raised_parallel_error, "Dialog raised parallel worker error unexpectedly"
+        assert not raised_parallel_error, (
+            "Dialog raised parallel worker error unexpectedly"
+        )

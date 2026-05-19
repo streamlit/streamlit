@@ -316,7 +316,7 @@ def test_st_switch_page_raises_no_session_context_when_ctx_has_no_requests(
         switch_page("any_page.py")
 
 
-def test_switch_page_raises_from_parallel_worker():
+def test_switch_page_raises_from_parallel_worker() -> None:
     """st.switch_page raises StreamlitAPIException when called from a parallel worker."""
     ThreadState.initialize(is_parallel_worker=True)
 
