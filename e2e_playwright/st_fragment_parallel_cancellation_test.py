@@ -70,6 +70,8 @@ def test_parallel_fragment_error_renders_in_container(
     page.goto(build_app_url(app_base_url, query="test=error_container"))
     wait_for_app_run(page)
 
-    expect(page.get_by_text("ValueError")).to_be_visible()
-    expect(page.get_by_text("Test error in fragment")).to_be_visible()
+    exception_message = page.get_by_test_id("stExceptionMessage")
+    expect(exception_message).to_be_visible()
+    expect(exception_message).to_contain_text("ValueError")
+    expect(exception_message).to_contain_text("Test error in fragment")
     expect(page.get_by_text("Fragment B success")).to_be_visible()
