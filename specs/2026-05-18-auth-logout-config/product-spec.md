@@ -103,14 +103,12 @@ include_id_token_hint = false
 logout_hint = "{email}"
 ```
 
-**Resolution order:** `[auth.<provider>.logout]` > `[auth.logout]` > defaults.
-
 Per-provider config is a **complete override**, not a key-by-key merge -- consistent with
 how `[auth.<provider>]` sections work elsewhere. If `[auth.cognito.logout]` exists, the
 global `[auth.logout]` is ignored entirely for that provider. Keys not specified in the
 provider section fall back to the built-in defaults, not to the global section.
 
-If a provider section has no `[auth.<provider>.logout]`, the global `[auth.logout]` applies.
+If a provider has no `[auth.<provider>.logout]`, the global `[auth.logout]` applies.
 If neither exists, the OIDC-spec defaults are used.
 
 ### Examples
@@ -138,7 +136,7 @@ redirect_uri_name = "returnTo"
 include_id_token_hint = false
 
 [auth.logout.additional_params]
-client_id = "{sub}"
+audience = "{sub}"
 federated = "true"
 ```
 
@@ -148,8 +146,8 @@ federated = "true"
 |-----------|-------------------------------|--------------|
 | `post_logout_redirect_uri` | Defined in spec (Section 2) | We allow renaming the key |
 | `id_token_hint` | Defined in spec (Section 2) | We allow renaming/suppressing |
-| `client_id` | Defined in spec (Section 2) | Always included (not configurable) |
-| `additional_params` | N/A | Our extension for non-standard params |
+| `client_id` | Defined in spec (Section 2) | Always included automatically; not configurable |
+| `additional_params` | N/A | Arbitrary extra query params appended after the standard ones |
 
 The OIDC spec defines the standard parameter names. Our configuration exists solely to
 accommodate providers that don't follow the spec.
