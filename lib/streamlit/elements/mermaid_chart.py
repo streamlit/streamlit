@@ -61,14 +61,17 @@ class MermaidChartMixin:
 
         Examples
         --------
-        >>> import streamlit as st
-        >>>
-        >>> st.mermaid_chart('''
-        ...     graph LR
-        ...         A[Start] --> B{Decision}
-        ...         B -->|Yes| C[OK]
-        ...         B -->|No| D[Cancel]
-        ... ''')
+        .. code-block:: python
+           :filename: streamlit_app.py
+
+           import streamlit as st
+
+           st.mermaid_chart('''
+               graph LR
+                   A[Start] --> B{Decision}
+                   B -->|Yes| C[OK]
+                   B -->|No| D[Cancel]
+           ''')
 
         .. output::
            https://doc-mermaid-chart.streamlit.app/
