@@ -35,9 +35,12 @@ function toCSS(c: chroma.Color): string {
     return c.hex("rgb")
   }
   // Round RGB values to integers since chroma can return floats after
-  // Lab-space transformations (darken, brighten, mix in non-RGB mode)
+  // Lab-space transformations (darken, brighten, mix in non-RGB mode).
+  // Round alpha to 4 decimal places to avoid floating-point precision issues
+  // from operations like mix() that can produce values like 0.6500000000000001.
   const [r, g, b] = c.rgb()
-  return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${c.alpha()})`
+  const alpha = Math.round(c.alpha() * 10000) / 10000
+  return `rgba(${Math.round(r)}, ${Math.round(g)}, ${Math.round(b)}, ${alpha})`
 }
 
 /**

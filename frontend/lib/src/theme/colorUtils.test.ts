@@ -73,6 +73,16 @@ describe("colorUtils", () => {
       const result = setAlpha("rgba(255, 0, 0, 0.5)", 0.5)
       expect(result).toBe("rgba(255, 0, 0, 0.5)")
     })
+
+    it("rounds alpha to avoid floating-point precision issues", () => {
+      // When mixing colors, chroma.mix can produce alpha values like
+      // 0.6500000000000001 instead of 0.65. The toCSS function should
+      // round alpha to 4 decimal places to ensure clean CSS output.
+      const result = setAlpha("#ff0000", 0.65)
+      expect(result).toBe("rgba(255, 0, 0, 0.65)")
+      // Verify no extra decimal places
+      expect(result).not.toContain("0.6500000")
+    })
   })
 
   describe("darken", () => {
