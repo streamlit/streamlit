@@ -110,4 +110,15 @@ def test_custom_chart_colors_sidebar(app: Page, assert_snapshot: ImageCompareFun
     expand_sidebar(app)
     sidebar_content = app.get_by_test_id("stSidebarContent")
     expect(sidebar_content).to_be_visible()
-    assert_snapshot(sidebar_content, name="custom_chart_colors-sidebar")
+    # The sidebar charts only start rendering once the sidebar is expanded;
+    # wait for any skeletons inside the sidebar to disappear and give the chart
+    # libraries time to settle before snapshotting to avoid sub-percent
+    # flakiness.
+    expect_no_skeletons(sidebar_content, timeout=25000)
+    app.wait_for_timeout(2000)
+    # Use a slightly relaxed image_threshold to absorb minor sub-percent
+    # rendering differences in the chart libraries (occasional ~0.7% diff
+    # observed on chromium).
+    assert_snapshot(
+        sidebar_content, name="custom_chart_colors-sidebar", image_threshold=0.01
+    )
