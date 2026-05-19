@@ -25,7 +25,6 @@ from streamlit.commands.execution_control import (
 )
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.navigation.page import StreamlitPage
-from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.scriptrunner import RerunData
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 

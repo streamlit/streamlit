@@ -507,7 +507,9 @@ class DeltaGenerator(
         if ctx and ts.is_parallel_worker:
             fragment_path = ts.delta_path
             cursor_path = dg._cursor.delta_path if dg._cursor else ()
-            if fragment_path and not _is_inside_fragment_path(cursor_path, fragment_path):
+            if fragment_path and not _is_inside_fragment_path(
+                cursor_path, fragment_path
+            ):
                 raise StreamlitAPIException(
                     "Writing to containers outside a parallel fragment is not "
                     "allowed during the initial page load, because parallel "

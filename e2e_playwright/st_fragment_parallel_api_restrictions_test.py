@@ -29,7 +29,9 @@ def test_parallel_fragment_blocks_dialog_during_initial_run(
     page.goto(f"http://localhost:{app_port}/?test=dialog_block")
     wait_for_app_run(page)
 
-    expect(page.get_by_text("cannot be called from a parallel fragment")).to_be_visible()
+    expect(
+        page.get_by_text("cannot be called from a parallel fragment")
+    ).to_be_visible()
     expect(page.get_by_text("@st.dialog")).to_be_visible()
 
 
@@ -40,7 +42,9 @@ def test_parallel_fragment_blocks_switch_page_during_initial_run(
     page.goto(f"http://localhost:{app_port}/?test=switch_page_block")
     wait_for_app_run(page)
 
-    expect(page.get_by_text("cannot be called from a parallel fragment")).to_be_visible()
+    expect(
+        page.get_by_text("cannot be called from a parallel fragment")
+    ).to_be_visible()
     expect(page.get_by_text("st.switch_page")).to_be_visible()
 
 
@@ -64,7 +68,9 @@ def test_nested_sequential_fragment_blocks_dialog_during_parallel_batch(
     page.goto(f"http://localhost:{app_port}/?test=nested_sequential_block")
     wait_for_app_run(page)
 
-    expect(page.get_by_text("cannot be called from a parallel fragment")).to_be_visible()
+    expect(
+        page.get_by_text("cannot be called from a parallel fragment")
+    ).to_be_visible()
 
 
 def test_nested_parallel_fragments_both_restricted(page: Page, app_port: int) -> None:
@@ -72,7 +78,9 @@ def test_nested_parallel_fragments_both_restricted(page: Page, app_port: int) ->
     page.goto(f"http://localhost:{app_port}/?test=nested_parallel_block")
     wait_for_app_run(page)
 
-    expect(page.get_by_text("cannot be called from a parallel fragment")).to_be_visible()
+    expect(
+        page.get_by_text("cannot be called from a parallel fragment")
+    ).to_be_visible()
 
 
 def test_nested_parallel_fragment_allows_dialog_on_rerun(

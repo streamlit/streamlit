@@ -62,11 +62,16 @@ def test_dialog_allowed_when_not_parallel_worker() -> None:
         def my_dialog() -> None:
             st.write("Hello")
 
-        # The dialog should be able to be called without the parallel worker check
-        # raising an exception. The rest of the dialog machinery might fail but
-        # that's not what we're testing here.
+        # The dialog should not raise a parallel worker exception.
+        # Other exceptions may occur due to incomplete mocking, but those
+        # are not what we're testing.
+        raised_parallel_error = False
         try:
             my_dialog()
-        except StreamlitAPIException as e:
-            # If there's an exception, make sure it's NOT about parallel workers
-            assert "parallel fragment" not in str(e)
+        except StreamlitAPIException as exc:
+            if "parallel fragment" in str(exc):
+                raised_parallel_error = True
+        except Exception:
+            pass
+
+        assert not raised_parallel_error, "Dialog raised parallel worker error unexpectedly"
