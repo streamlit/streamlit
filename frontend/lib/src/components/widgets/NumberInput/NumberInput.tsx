@@ -516,13 +516,10 @@ const NumberInput: React.FC<Props> = ({
                 ...(error && { "aria-errormessage": errorId }),
                 step: step,
                 // Keep min/max attributes for accessibility (bounded spinbutton semantics).
-                // We suppress the native validation popup via formNoValidate while preserving
-                // the range semantics that assistive tech relies on.
+                // The native validation popup is suppressed because Streamlit doesn't use
+                // native form submission and reportValidity() is not called.
                 min: min,
                 max: max,
-                // formNoValidate suppresses the native browser validation popup
-                // while preserving min/max for accessibility semantics
-                formNoValidate: true,
                 // We specify the type as "number" to have numeric keyboard on mobile devices.
                 // We also set inputMode to "" since by default BaseWeb sets "text",
                 // and for "decimal" / "numeric" IOS shows keyboard without a minus sign.

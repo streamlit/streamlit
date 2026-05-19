@@ -230,8 +230,8 @@ describe("NumberInput widget", () => {
 
   it("sets min/max HTML attributes for accessibility while suppressing browser validation", () => {
     // We keep min/max HTML attributes to preserve bounded spinbutton semantics
-    // for assistive technology. The browser-native validation popup is suppressed
-    // via formNoValidate while the Streamlit-themed error UI is shown instead.
+    // for assistive technology. The native validation popup is suppressed because
+    // Streamlit doesn't use native form submission and reportValidity() is not called.
     const props = getIntProps({
       hasMin: true,
       hasMax: true,
@@ -245,8 +245,6 @@ describe("NumberInput widget", () => {
     // min/max attributes should be present for accessibility
     expect(numberInput).toHaveAttribute("min", "0")
     expect(numberInput).toHaveAttribute("max", "10")
-    // formNoValidate should suppress the native validation popup
-    expect(numberInput).toHaveAttribute("formnovalidate")
   })
 
   it("resets its value when form is cleared", async () => {
