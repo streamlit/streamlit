@@ -95,6 +95,21 @@ updates:
           # Due to the coupling between vite plugins and underlying swc
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      d3:
+        patterns:
+          - "d3"
+          - "d3-*"
+          - "@types/d3*"
+      plotly:
+        patterns:
+          - "*plotly*"
+      oxc:
+        patterns:
+          - "oxlint"
+          - "oxfmt"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
