@@ -23,11 +23,13 @@ import { WidgetLabelHelpIconInline } from "~lib/components/widgets/BaseWidget/Wi
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 import {
+  StyledRadioCaption,
+  StyledRadioContent,
   StyledRadioGroup,
   StyledRadioInner,
   StyledRadioItem,
-  StyledRadioLabel,
   StyledRadioOuter,
+  StyledRadioRow,
 } from "./styled-components"
 
 export interface Props {
@@ -121,29 +123,31 @@ function Radio({
             data-testid="stRadioOption"
           >
             {({ isSelected, isDisabled }) => (
-              <>
-                <StyledRadioOuter
-                  $isSelected={isSelected}
-                  $isDisabled={isDisabled}
-                >
-                  <StyledRadioInner $isSelected={isSelected} />
-                </StyledRadioOuter>
-                <StyledRadioLabel $isDisabled={isDisabled}>
+              <StyledRadioContent $isDisabled={isDisabled}>
+                <StyledRadioRow>
+                  <StyledRadioOuter
+                    $isSelected={isSelected}
+                    $isDisabled={isDisabled}
+                  >
+                    <StyledRadioInner $isSelected={isSelected} />
+                  </StyledRadioOuter>
                   <StreamlitMarkdown
                     source={option}
                     allowHTML={false}
                     isLabel
                   />
-                  {hasCaptions && (
+                </StyledRadioRow>
+                {hasCaptions && (
+                  <StyledRadioCaption>
                     <StreamlitMarkdown
                       source={spacerNeeded(captions[index])}
                       allowHTML={false}
                       isCaption
                       isLabel
                     />
-                  )}
-                </StyledRadioLabel>
-              </>
+                  </StyledRadioCaption>
+                )}
+              </StyledRadioContent>
             )}
           </StyledRadioItem>
         ))}

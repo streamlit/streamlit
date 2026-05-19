@@ -50,14 +50,15 @@ export const StyledRadioGroup = styled(RARadioGroup, {
 
 /**
  * Outer `<label>` wrapper for each individual radio option.
- * React Aria renders a `<label>` element and sets `data-focus-visible`,
- * `data-disabled`, `data-selected` etc. as data attributes — we use those for
- * state-driven styles rather than render-prop props, keeping this component
- * free of custom transient props.
+ * React Aria sets `data-focus-visible`, `data-disabled`, `data-selected` etc.
+ * as data attributes — we use those for state-driven styles.
+ *
+ * This element is intentionally a plain block container. Layout (circle + text
+ * alignment) is handled by the children so that the caption can live outside
+ * the circle/text row without requiring any manual offset calculations.
  */
 export const StyledRadioItem = styled(RARadio)(({ theme }) => ({
-  display: "flex",
-  alignItems: "start",
+  display: "block",
   cursor: "pointer",
   userSelect: "none",
   paddingLeft: theme.spacing.none,
@@ -72,6 +73,35 @@ export const StyledRadioItem = styled(RARadio)(({ theme }) => ({
   },
 }))
 
+interface StyledRadioContentProps {
+  $isDisabled: boolean
+}
+
+/**
+ * Flex column that wraps all visible content (option row + caption) for a
+ * single radio option. Owns the disabled text-colour so both the option label
+ * and the caption dim together without each needing their own prop.
+ */
+export const StyledRadioContent = styled.div<StyledRadioContentProps>(
+  ({ theme, $isDisabled }) => ({
+    display: "flex",
+    flexDirection: "column",
+    color: $isDisabled ? theme.colors.fadedText40 : theme.colors.bodyText,
+  })
+)
+
+/**
+ * Flex row that contains only the radio circle and the option label text.
+ * Using `align-items: center` here centers the circle with the label text
+ * naturally — no `marginTop` offset calculations needed, regardless of font
+ * size or line height.
+ */
+export const StyledRadioRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: theme.spacing.sm,
+}))
+
 interface StyledRadioOuterProps {
   $isSelected: boolean
   $isDisabled: boolean
@@ -80,18 +110,14 @@ interface StyledRadioOuterProps {
 /**
  * Visual outer circle of the radio button indicator.
  * Background color reflects checked + enabled state.
+ * No margin offset needed: the parent `StyledRadioRow` uses `align-items:
+ * center` and contains only this circle and the option text, so centering is
+ * automatic.
  */
 export const StyledRadioOuter = styled.div<StyledRadioOuterProps>(
   ({ theme, $isSelected, $isDisabled }) => ({
     width: theme.sizes.checkbox,
     height: theme.sizes.checkbox,
-    // margin-top aligns the radio circle with the text label baseline.
-    // The text label has line-height 1.6 (~1.6rem tall) while the circle is
-    // theme.sizes.checkbox (~1rem), so 0.35rem centers them visually.
-    //eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values
-    marginTop: "0.35rem",
-    marginRight: theme.spacing.none,
-    marginLeft: theme.spacing.none,
     flexShrink: 0,
     borderRadius: "50%",
     display: "flex",
@@ -144,20 +170,12 @@ export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
   }
 )
 
-interface StyledRadioLabelProps {
-  $isDisabled: boolean
-}
-
 /**
- * Text content area for a radio option's label (and optional caption).
- * Uses column flex so captions stack below the label text.
+ * Indents the caption text so it aligns with the option label (i.e. starts
+ * after the radio circle + gap), not with the circle itself.
+ * `paddingLeft = circle width + row gap` is derived entirely from theme tokens
+ * with no hardcoded values.
  */
-export const StyledRadioLabel = styled.div<StyledRadioLabelProps>(
-  ({ theme, $isDisabled }) => ({
-    display: "flex",
-    flexDirection: "column",
-    color: $isDisabled ? theme.colors.fadedText40 : theme.colors.bodyText,
-    position: "relative",
-    top: theme.spacing.px,
-  })
-)
+export const StyledRadioCaption = styled.div(({ theme }) => ({
+  paddingLeft: `calc(${theme.sizes.checkbox} + ${theme.spacing.sm})`,
+}))
