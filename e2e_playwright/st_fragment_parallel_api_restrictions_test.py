@@ -18,15 +18,15 @@ from __future__ import annotations
 
 from playwright.sync_api import Page, expect
 
-from e2e_playwright.conftest import wait_for_app_run
+from e2e_playwright.conftest import build_app_url, wait_for_app_run
 from e2e_playwright.shared.app_utils import click_button
 
 
 def test_parallel_fragment_blocks_dialog_during_initial_run(
-    page: Page, app_port: int
+    page: Page, app_base_url: str
 ) -> None:
     """Parallel fragment unconditionally calling @st.dialog shows error."""
-    page.goto(f"http://localhost:{app_port}/?test=dialog_block")
+    page.goto(build_app_url(app_base_url, query="test=dialog_block"))
     wait_for_app_run(page)
 
     expect(
@@ -36,10 +36,10 @@ def test_parallel_fragment_blocks_dialog_during_initial_run(
 
 
 def test_parallel_fragment_blocks_switch_page_during_initial_run(
-    page: Page, app_port: int
+    page: Page, app_base_url: str
 ) -> None:
     """Parallel fragment calling st.switch_page shows error."""
-    page.goto(f"http://localhost:{app_port}/?test=switch_page_block")
+    page.goto(build_app_url(app_base_url, query="test=switch_page_block"))
     wait_for_app_run(page)
 
     expect(
@@ -48,9 +48,11 @@ def test_parallel_fragment_blocks_switch_page_during_initial_run(
     expect(page.get_by_text("st.switch_page")).to_be_visible()
 
 
-def test_parallel_fragment_allows_dialog_on_rerun(page: Page, app_port: int) -> None:
+def test_parallel_fragment_allows_dialog_on_rerun(
+    page: Page, app_base_url: str
+) -> None:
     """Parallel fragment allows dialog when triggered by button click."""
-    page.goto(f"http://localhost:{app_port}/?test=dialog_allow_rerun")
+    page.goto(build_app_url(app_base_url, query="test=dialog_allow_rerun"))
     wait_for_app_run(page)
 
     expect(page.get_by_text("Fragment content")).to_be_visible()
@@ -62,10 +64,10 @@ def test_parallel_fragment_allows_dialog_on_rerun(page: Page, app_port: int) -> 
 
 
 def test_nested_sequential_fragment_blocks_dialog_during_parallel_batch(
-    page: Page, app_port: int
+    page: Page, app_base_url: str
 ) -> None:
     """Non-parallel fragment nested inside parallel fragment inherits restriction."""
-    page.goto(f"http://localhost:{app_port}/?test=nested_sequential_block")
+    page.goto(build_app_url(app_base_url, query="test=nested_sequential_block"))
     wait_for_app_run(page)
 
     expect(
@@ -73,9 +75,11 @@ def test_nested_sequential_fragment_blocks_dialog_during_parallel_batch(
     ).to_be_visible()
 
 
-def test_nested_parallel_fragments_both_restricted(page: Page, app_port: int) -> None:
+def test_nested_parallel_fragments_both_restricted(
+    page: Page, app_base_url: str
+) -> None:
     """Parallel fragment nested inside parallel fragment is also restricted."""
-    page.goto(f"http://localhost:{app_port}/?test=nested_parallel_block")
+    page.goto(build_app_url(app_base_url, query="test=nested_parallel_block"))
     wait_for_app_run(page)
 
     expect(
@@ -84,10 +88,10 @@ def test_nested_parallel_fragments_both_restricted(page: Page, app_port: int) ->
 
 
 def test_nested_parallel_fragment_allows_dialog_on_rerun(
-    page: Page, app_port: int
+    page: Page, app_base_url: str
 ) -> None:
     """Nested parallel fragment allows dialog on rerun."""
-    page.goto(f"http://localhost:{app_port}/?test=nested_parallel_allow_rerun")
+    page.goto(build_app_url(app_base_url, query="test=nested_parallel_allow_rerun"))
     wait_for_app_run(page)
 
     expect(page.get_by_text("Inner fragment")).to_be_visible()

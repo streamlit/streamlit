@@ -503,23 +503,27 @@ class DeltaGenerator(
                 "fragment function inside a `with st.sidebar` context manager."
             )
 
-        ts = ThreadState.get()
-        if ctx and ts.is_parallel_worker:
-            fragment_path = ts.delta_path
-            cursor_path = dg._cursor.delta_path if dg._cursor else ()
-            if fragment_path and not _is_inside_fragment_path(
-                cursor_path, fragment_path
-            ):
-                raise StreamlitAPIException(
-                    "Writing to containers outside a parallel fragment is not "
-                    "allowed during the initial page load, because parallel "
-                    "fragments run concurrently on separate threads and "
-                    "external container writes are not thread-safe.\n\n"
-                    "To fix this, move the element inside the fragment body, "
-                    "or gate the write behind a widget interaction "
-                    "(e.g., `if st.button(...):`) so it runs during a "
-                    "sequential fragment rerun instead."
-                )
+        if ctx:
+            ts = ThreadState.get()
+            if ts.is_parallel_worker:
+                fragment_path = ts.delta_path
+                cursor_path = dg._cursor.delta_path if dg._cursor else ()
+                # Empty fragment_path means the fragment's cursor was None; in that
+                # case _is_inside_fragment_path would always return True anyway, so
+                # skip the check.
+                if fragment_path and not _is_inside_fragment_path(
+                    cursor_path, fragment_path
+                ):
+                    raise StreamlitAPIException(
+                        "Writing to containers outside a parallel fragment is not "
+                        "allowed during the initial page load, because parallel "
+                        "fragments run concurrently on separate threads and "
+                        "external container writes are not thread-safe.\n\n"
+                        "To fix this, move the element inside the fragment body, "
+                        "or gate the write behind a widget interaction "
+                        "(e.g., `if st.button(...):`) so it runs during a "
+                        "sequential fragment rerun instead."
+                    )
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
