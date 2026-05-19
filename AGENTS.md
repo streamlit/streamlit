@@ -98,3 +98,24 @@ Selection of `make` commands for development (run in the repo root):
 - **E2E Tests**: Test the entire app logic end-to-end with Playwright. Located at `e2e_playwright/<name>_test.py` with app code in `e2e_playwright/<name>.py`. User-facing features should be covered by E2E tests (e.g., parameters and commands in the public `st.` API).
 - **(Python) Type Tests**: Verify public API typing with mypy `assert_type`. Located at `lib/tests/streamlit/typing/<command>_types.py`.
 - Prefer running specific tests / test scripts for newly added tests instead the entire test suite.
+
+## Cursor Cloud specific instructions
+
+### Environment prerequisites
+
+The VM update script handles: `uv sync --group dev`, Playwright browser installation, Node.js 24 activation via nvm, `corepack enable yarn && corepack install`, `yarn install --immutable`, and protobuf compilation. System packages (`protobuf-compiler`, `rsync`) and the `python` symlink are pre-installed in the snapshot.
+
+### Running Streamlit in dev mode
+
+- The editable install sets `global.developmentMode=true` by default. To run Streamlit serving its own built static frontend (non-debug mode), pass `--global.developmentMode=false`.
+- `make debug <script.py>` is the recommended way to develop: it starts both the backend (port 8501) and Vite dev server (proxied on port 3001) with hot-reload.
+- `server.port` cannot be used when `global.developmentMode=true`; in debug mode the port is auto-assigned.
+
+### Frontend workspace builds
+
+- Before running `make frontend-types` or `make frontend-tests`, workspace dependency packages must be built first. Run: `cd frontend && yarn workspaces foreach --all --exclude @streamlit/app --exclude @streamlit/lib --topological --parallel run build`
+- The update script handles this automatically, but if you see "Cannot find module" TypeScript errors, re-run the workspace build above.
+
+### Key commands reference
+
+All standard commands are documented in the `make` commands section above. Use `make help` for the full list.
