@@ -185,11 +185,14 @@ if TYPE_CHECKING:
     # Invalid width value (not "stretch", "content", or int)
     title("Title", width="invalid")  # type: ignore[arg-type]
     header("Header", width="auto")  # type: ignore[arg-type]
+    subheader("Subheader", width="auto")  # type: ignore[arg-type]
 
     # Invalid text_alignment value (not "left", "center", "right", or "justify")
     title("Title", text_alignment="start")  # type: ignore[arg-type]
     header("Header", text_alignment="end")  # type: ignore[arg-type]
+    subheader("Subheader", text_alignment="end")  # type: ignore[arg-type]
 
     # Passing keyword-only parameters as positional (help is keyword-only)
     title("Title", "anchor", "help text")  # type: ignore[misc]
     header("Header", "anchor", "help text")  # type: ignore[misc]
+    subheader("Subheader", "anchor", "help text")  # type: ignore[misc]
