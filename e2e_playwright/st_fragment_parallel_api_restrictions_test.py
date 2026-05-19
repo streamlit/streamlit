@@ -29,10 +29,10 @@ def test_parallel_fragment_blocks_dialog_during_initial_run(
     page.goto(build_app_url(app_base_url, query="test=dialog_block"))
     wait_for_app_run(page)
 
-    expect(
-        page.get_by_text("cannot be called from a parallel fragment")
-    ).to_be_visible()
-    expect(page.get_by_text("@st.dialog")).to_be_visible()
+    exception_message = page.get_by_test_id("stExceptionMessage")
+    expect(exception_message).to_be_visible()
+    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
+    expect(exception_message).to_contain_text("@st.dialog")
 
 
 def test_parallel_fragment_blocks_switch_page_during_initial_run(
@@ -42,10 +42,10 @@ def test_parallel_fragment_blocks_switch_page_during_initial_run(
     page.goto(build_app_url(app_base_url, query="test=switch_page_block"))
     wait_for_app_run(page)
 
-    expect(
-        page.get_by_text("cannot be called from a parallel fragment")
-    ).to_be_visible()
-    expect(page.get_by_text("st.switch_page")).to_be_visible()
+    exception_message = page.get_by_test_id("stExceptionMessage")
+    expect(exception_message).to_be_visible()
+    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
+    expect(exception_message).to_contain_text("st.switch_page")
 
 
 def test_parallel_fragment_allows_dialog_on_rerun(
@@ -70,9 +70,9 @@ def test_nested_sequential_fragment_blocks_dialog_during_parallel_batch(
     page.goto(build_app_url(app_base_url, query="test=nested_sequential_block"))
     wait_for_app_run(page)
 
-    expect(
-        page.get_by_text("cannot be called from a parallel fragment")
-    ).to_be_visible()
+    exception_message = page.get_by_test_id("stExceptionMessage")
+    expect(exception_message).to_be_visible()
+    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
 
 
 def test_nested_parallel_fragments_both_restricted(
@@ -82,9 +82,9 @@ def test_nested_parallel_fragments_both_restricted(
     page.goto(build_app_url(app_base_url, query="test=nested_parallel_block"))
     wait_for_app_run(page)
 
-    expect(
-        page.get_by_text("cannot be called from a parallel fragment")
-    ).to_be_visible()
+    exception_message = page.get_by_test_id("stExceptionMessage")
+    expect(exception_message).to_be_visible()
+    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
 
 
 def test_nested_parallel_fragment_allows_dialog_on_rerun(
