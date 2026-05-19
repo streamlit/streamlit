@@ -415,7 +415,7 @@ class CacheResourceAPI:
             - A number specifying the time in seconds.
             - A string specifying the time in a format supported by `Pandas's
               Timedelta constructor <https://pandas.pydata.org/docs/reference/api/pandas.Timedelta.html>`_,
-              e.g. ``"1d"``, ``"1.5 days"``, or ``"1h23s"``. Note that number strings
+              e.g. ``"1D"``, ``"1.5 days"``, or ``"1h23s"``. Note that number strings
               without units are treated by Pandas as nanoseconds.
             - A ``timedelta`` object from `Python's built-in datetime library
               <https://docs.python.org/3/library/datetime.html#timedelta-objects>`_,
