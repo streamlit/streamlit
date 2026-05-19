@@ -131,7 +131,7 @@ SOFTWARE.
 
 -----
 
-The following software may be included in this product: @chevrotain/cst-dts-gen, @chevrotain/gast, @chevrotain/regexp-to-ast, @chevrotain/types, @chevrotain/utils, chevrotain, flatbuffers, long. A copy of the source code may be downloaded from git://github.com/Chevrotain/chevrotain.git (@chevrotain/cst-dts-gen), git://github.com/Chevrotain/chevrotain.git (@chevrotain/gast), git://github.com/Chevrotain/chevrotain.git (@chevrotain/regexp-to-ast), git://github.com/Chevrotain/chevrotain.git (@chevrotain/types), git://github.com/Chevrotain/chevrotain.git (@chevrotain/utils), git://github.com/Chevrotain/chevrotain.git (chevrotain), git+https://github.com/google/flatbuffers.git (flatbuffers), https://github.com/dcodeIO/long.js.git (long). This software contains the following license and notice below:
+The following software may be included in this product: @chevrotain/types, flatbuffers, long. A copy of the source code may be downloaded from git://github.com/Chevrotain/chevrotain.git (@chevrotain/types), git+https://github.com/google/flatbuffers.git (flatbuffers), https://github.com/dcodeIO/long.js.git (long). This software contains the following license and notice below:
 
 Apache License
                            Version 2.0, January 2004
@@ -3593,27 +3593,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 -----
 
-The following software may be included in this product: chevrotain-allstar. A copy of the source code may be downloaded from https://github.com/langium/chevrotain-allstar. This software contains the following license and notice below:
-
-Copyright 2022 TypeFox GmbH
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-associated documentation files (the "Software"), to deal in the Software without restriction,
-including without limitation the rights to use, copy, modify, merge, publish, distribute,
-sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or
-substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
------
-
 The following software may be included in this product: chokidar. A copy of the source code may be downloaded from git+https://github.com/paulmillr/chokidar.git. This software contains the following license and notice below:
 
 The MIT License (MIT)
@@ -6469,6 +6448,36 @@ The following software may be included in this product: es-set-tostringtag. A co
 MIT License
 
 Copyright (c) 2022 ECMAScript Shims
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+-----
+
+The following software may be included in this product: es-toolkit. A copy of the source code may be downloaded from https://github.com/toss/es-toolkit.git. This software contains the following license and notice below:
+
+MIT License
+
+Copyright (c) 2024 Viva Republica, Inc
+
+Copyright OpenJS Foundation and other contributors
+
+Parts of the test suite and compatibility layer in `es-toolkit/compat` are derived from Lodash (https://github.com/lodash/lodash) by the OpenJS Foundation (https://openjsf.org/) and Underscore.js by Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors (http://underscorejs.org/)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -10124,27 +10133,6 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
------
-
-The following software may be included in this product: langium. A copy of the source code may be downloaded from git+https://github.com/eclipse-langium/langium.git. This software contains the following license and notice below:
-
-Copyright 2021 TypeFox GmbH
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
-associated documentation files (the "Software"), to deal in the Software without restriction,
-including without limitation the rights to use, copy, modify, merge, publish, distribute,
-sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or
-substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
-BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
@@ -16511,36 +16499,6 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
------
-
-The following software may be included in this product: vscode-jsonrpc, vscode-languageserver, vscode-languageserver-protocol, vscode-languageserver-textdocument, vscode-languageserver-types. A copy of the source code may be downloaded from https://github.com/Microsoft/vscode-languageserver-node.git (vscode-jsonrpc), https://github.com/Microsoft/vscode-languageserver-node.git (vscode-languageserver), https://github.com/Microsoft/vscode-languageserver-node.git (vscode-languageserver-protocol), https://github.com/Microsoft/vscode-languageserver-node.git (vscode-languageserver-textdocument), https://github.com/Microsoft/vscode-languageserver-node.git (vscode-languageserver-types). This software contains the following license and notice below:
-
-Copyright (c) Microsoft Corporation
-
-All rights reserved.
-
-MIT License
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED *AS IS*, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
------
-
-The following software may be included in this product: vscode-uri. A copy of the source code may be downloaded from git+https://github.com/microsoft/vscode-uri.git. This software contains the following license and notice below:
-
-The MIT License (MIT)
-
-Copyright (c) Microsoft
-
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 -----
 
