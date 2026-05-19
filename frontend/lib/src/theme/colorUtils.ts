@@ -75,37 +75,45 @@ export function setAlpha(color: string, alpha: number): string {
 }
 
 /**
- * Darken a color by the specified amount.
+ * Darken a color by the specified amount using HSL color space.
+ * This matches color2k's behavior by subtracting from the L (lightness) channel.
  * Returns the original color string if parsing fails.
  *
  * @param color - Any valid CSS color string
- * @param amount - Amount to darken (0-1, where 0.1 = slight, 0.3 = moderate)
+ * @param amount - Amount to darken (0-1), subtracted from the lightness channel
  * @returns Darkened CSS color string
  */
 export function darken(color: string, amount = 0.1): string {
   const c = tryParse(color)
   if (!c) return color
-  // Multiply by 5 to roughly match color2k's visual intensity.
-  // color2k used HSL-based darkening with 0-1 range, while chroma-js uses
-  // Lab-space with a different scale. The factor of 5 was empirically
-  // calibrated to produce visually similar results.
-  return toCSS(c.darken(amount * 5))
+  // Use HSL-based darkening to match color2k's behavior.
+  // This subtracts `amount` from the L (lightness) channel, which preserves
+  // hue and saturation better than Lab-space darkening.
+  const [h, s, l] = c.hsl()
+  const newL = Math.max(0, l - amount)
+  // Use h || 0 because hue is NaN for achromatic colors (white, black, grays)
+  return toCSS(chroma.hsl(h || 0, s, newL).alpha(c.alpha()))
 }
 
 /**
- * Lighten a color by the specified amount.
+ * Lighten a color by the specified amount using HSL color space.
+ * This matches color2k's behavior by adding to the L (lightness) channel.
  * Returns the original color string if parsing fails.
  *
  * @param color - Any valid CSS color string
- * @param amount - Amount to lighten (0-1, where 0.1 = slight, 0.3 = moderate)
+ * @param amount - Amount to lighten (0-1), added to the lightness channel
  * @returns Lightened CSS color string
  */
 export function lighten(color: string, amount = 0.1): string {
   const c = tryParse(color)
   if (!c) return color
-  // Multiply by 5 to roughly match color2k's visual intensity.
-  // See darken() for the rationale behind this calibration factor.
-  return toCSS(c.brighten(amount * 5))
+  // Use HSL-based lightening to match color2k's behavior.
+  // This adds `amount` to the L (lightness) channel, which preserves
+  // hue and saturation better than Lab-space lightening.
+  const [h, s, l] = c.hsl()
+  const newL = Math.min(1, l + amount)
+  // Use h || 0 because hue is NaN for achromatic colors (white, black, grays)
+  return toCSS(chroma.hsl(h || 0, s, newL).alpha(c.alpha()))
 }
 
 /**
