@@ -1611,14 +1611,26 @@ class TestAppScriptPathResolution:
         resolved = app._resolve_script_path()
         assert resolved == script_path
 
-    def test_relative_path_is_resolved_to_cwd(self) -> None:
+    def test_relative_path_is_resolved_to_cwd(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Test that relative script paths are resolved relative to cwd."""
+        from streamlit import config
+
+        # Ensure _main_script_path is None at construction so __init__ takes
+        # the CWD branch. The autouse fixture restores state between tests but
+        # does not reset to None at start, so we pin it here for robustness
+        # against any cross-module test-order pollution.
+        monkeypatch.setattr(config, "_main_script_path", None)
+
         app = App("main.py")
-        # The relative path should be resolved to an absolute path
+        # The relative path should be resolved to an absolute path. Note that
+        # App.__init__ caches the resolved path and sets config._main_script_path
+        # as a side-effect, so this call returns the cached value computed via
+        # the CWD branch during __init__.
         resolved = app._resolve_script_path()
         assert resolved.is_absolute()
         assert resolved.name == "main.py"
-        # Without config._main_script_path set, should resolve relative to cwd
         assert resolved == (Path.cwd() / "main.py").resolve()
 
     def test_relative_path_uses_main_script_path_when_set(

@@ -252,6 +252,14 @@ class App:
         This feature is experimental and may change or be removed in future
         versions without warning. Use at your own risk.
 
+    .. warning::
+        Hosting multiple ``App`` instances with different ``script_path`` values
+        in the same process is not supported. The first ``App`` constructed in a
+        process pins the script-level config directory (via the process-global
+        ``config._main_script_path``), and subsequent ``App`` instances will
+        resolve relative ``script_path`` values against that first directory
+        rather than the current working directory.
+
     This class provides a way to configure and run Streamlit applications
     with custom routes, middleware, lifespan hooks, and exception handlers.
 
