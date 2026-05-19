@@ -122,10 +122,15 @@ export const formatValue = ({
 export const canDecrement = (
   value: number | null,
   step: number,
-  min: number
+  min: number,
+  hasMin: boolean
 ): boolean => {
   if (isNullOrUndefined(value)) {
     return false
+  }
+  // Only check min bound if hasMin is true
+  if (!hasMin) {
+    return true
   }
   return value - step >= min
 }
@@ -133,10 +138,15 @@ export const canDecrement = (
 export const canIncrement = (
   value: number | null,
   step: number,
-  max: number
+  max: number,
+  hasMax: boolean
 ): boolean => {
   if (isNullOrUndefined(value)) {
     return false
+  }
+  // Only check max bound if hasMax is true
+  if (!hasMax) {
+    return true
   }
   return value + step <= max
 }

@@ -1698,6 +1698,143 @@ describe("NumberInput widget", () => {
       expect(input).toHaveAttribute("aria-invalid", "false")
       expect(input).toHaveValue(0)
     })
+
+    it("does NOT show error when hasMin=false and hasMax=false (unconstrained)", async () => {
+      // Test case for the proto3 default value bug: when min_value=None and max_value=None
+      // are passed to st.number_input(), the proto hasMin and hasMax fields are false,
+      // but min and max fields default to 0.0. Without checking hasMin/hasMax, the
+      // validation would incorrectly reject any non-zero value.
+      const user = userEvent.setup()
+      const props = getProps({
+        dataType: NumberInputProto.DataType.INT,
+        default: 0,
+        hasMin: false, // No minimum constraint
+        hasMax: false, // No maximum constraint
+        min: 0, // Proto3 default value
+        max: 0, // Proto3 default value
+      })
+      vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+
+      // Enter a large positive value - should NOT trigger error
+      await user.clear(input)
+      await user.type(input, "999")
+      await user.keyboard("{enter}")
+
+      // No error should be shown
+      expect(
+        screen.queryByTestId("stNumberInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(input).toHaveAttribute("aria-invalid", "false")
+      // Value should be committed
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        999,
+        { fromUi: true },
+        undefined
+      )
+
+      // Enter a negative value - should NOT trigger error
+      await user.clear(input)
+      await user.type(input, "-500")
+      await user.keyboard("{enter}")
+
+      // No error should be shown
+      expect(
+        screen.queryByTestId("stNumberInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(input).toHaveAttribute("aria-invalid", "false")
+      // Value should be committed
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        -500,
+        { fromUi: true },
+        undefined
+      )
+    })
+
+    it("validates only min when hasMin=true and hasMax=false", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        dataType: NumberInputProto.DataType.INT,
+        default: 5,
+        hasMin: true,
+        hasMax: false,
+        min: 0,
+        max: 0, // Proto3 default, but hasMax=false so this should be ignored
+      })
+      vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+
+      // Large positive value should be allowed (no max constraint)
+      await user.clear(input)
+      await user.type(input, "99999")
+      await user.keyboard("{enter}")
+
+      expect(
+        screen.queryByTestId("stNumberInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        99999,
+        { fromUi: true },
+        undefined
+      )
+
+      // Negative value should trigger error (below min=0)
+      await user.clear(input)
+      await user.type(input, "-1")
+      await user.keyboard("{enter}")
+
+      expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
+      expect(input).toHaveAttribute("aria-invalid", "true")
+    })
+
+    it("validates only max when hasMin=false and hasMax=true", async () => {
+      const user = userEvent.setup()
+      const props = getProps({
+        dataType: NumberInputProto.DataType.INT,
+        default: 5,
+        hasMin: false,
+        hasMax: true,
+        min: 0, // Proto3 default, but hasMin=false so this should be ignored
+        max: 100,
+      })
+      vi.spyOn(props.widgetMgr, "setIntValue")
+
+      render(<NumberInput {...props} />)
+
+      const input = screen.getByTestId("stNumberInputField")
+
+      // Large negative value should be allowed (no min constraint)
+      await user.clear(input)
+      await user.type(input, "-99999")
+      await user.keyboard("{enter}")
+
+      expect(
+        screen.queryByTestId("stNumberInputErrorIcon")
+      ).not.toBeInTheDocument()
+      expect(props.widgetMgr.setIntValue).toHaveBeenLastCalledWith(
+        props.element,
+        -99999,
+        { fromUi: true },
+        undefined
+      )
+
+      // Value above max should trigger error
+      await user.clear(input)
+      await user.type(input, "101")
+      await user.keyboard("{enter}")
+
+      expect(screen.getByTestId("stNumberInputErrorIcon")).toBeVisible()
+      expect(input).toHaveAttribute("aria-invalid", "true")
+    })
   })
 })
 

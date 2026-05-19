@@ -96,6 +96,8 @@ const NumberInput: React.FC<Props> = ({
     icon,
     min,
     max,
+    hasMin,
+    hasMax,
   } = element
 
   const { width, elementRef } = useCalculatedDimensions()
@@ -154,12 +156,12 @@ const NumberInput: React.FC<Props> = ({
    */
   const createErrorMessage = useCallback(
     (value: number): string => {
-      if (value < min) {
+      if (hasMin && value < min) {
         return `**Error**: Value must be at least ${min}.`
       }
       return `**Error**: Value must be at most ${max}.`
     },
-    [min, max]
+    [hasMin, min, max]
   )
 
   // Use useBasicWidgetState for core value management
@@ -222,10 +224,15 @@ const NumberInput: React.FC<Props> = ({
       value: number | null
       fromUi: boolean
     }) => {
-      // Validate range and show Streamlit-themed error UI if out of range
-      if (notNullOrUndefined(valueArg) && (min > valueArg || valueArg > max)) {
-        setError(createErrorMessage(valueArg))
-        return
+      // Validate range and show Streamlit-themed error UI if out of range.
+      // Only validate against min/max when they are actually set (hasMin/hasMax).
+      // In proto3, unset double fields default to 0.0, so we must check the
+      // has* flags to avoid false validation errors for unconstrained widgets.
+      if (notNullOrUndefined(valueArg)) {
+        if ((hasMin && valueArg < min) || (hasMax && valueArg > max)) {
+          setError(createErrorMessage(valueArg))
+          return
+        }
       }
 
       // Clear any error when a valid value is committed (e.g., via step buttons)
@@ -239,6 +246,8 @@ const NumberInput: React.FC<Props> = ({
       setFormattedValue(formatCurrentValue(newValue))
     },
     [
+      hasMin,
+      hasMax,
       min,
       max,
       elementDefault,
@@ -310,8 +319,8 @@ const NumberInput: React.FC<Props> = ({
   }, [formattedValue, element.dataType])
 
   // Calculate button enabled states based on the currently displayed value, not the committed value
-  const canDec = canDecrement(currentNumericValue, step, min)
-  const canInc = canIncrement(currentNumericValue, step, max)
+  const canDec = canDecrement(currentNumericValue, step, min, hasMin)
+  const canInc = canIncrement(currentNumericValue, step, max, hasMax)
 
   const handleBlur = useCallback((): void => {
     if (dirty) {

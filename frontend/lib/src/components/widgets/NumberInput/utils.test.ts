@@ -25,30 +25,52 @@ import {
 } from "./utils"
 
 describe("canDecrement function", () => {
-  it("returns true if decrementing stays above min", () => {
-    expect(canDecrement(5, 1, 0)).toBe(true)
+  it("returns true if decrementing stays above min (hasMin=true)", () => {
+    expect(canDecrement(5, 1, 0, true)).toBe(true)
   })
 
-  it("returns true if decrementing equals min", () => {
-    expect(canDecrement(1, 1, 0)).toBe(true)
+  it("returns true if decrementing equals min (hasMin=true)", () => {
+    expect(canDecrement(1, 1, 0, true)).toBe(true)
   })
 
-  it("returns false if decrementing goes below min", () => {
-    expect(canDecrement(0, 1, 0)).toBe(false)
+  it("returns false if decrementing goes below min (hasMin=true)", () => {
+    expect(canDecrement(0, 1, 0, true)).toBe(false)
+  })
+
+  it("returns true for any value when hasMin=false (no min constraint)", () => {
+    // Even if min=0, decrementing should be allowed when hasMin=false
+    expect(canDecrement(0, 1, 0, false)).toBe(true)
+    expect(canDecrement(-100, 1, 0, false)).toBe(true)
+  })
+
+  it("returns false for null value regardless of hasMin", () => {
+    expect(canDecrement(null, 1, 0, true)).toBe(false)
+    expect(canDecrement(null, 1, 0, false)).toBe(false)
   })
 })
 
 describe("canIncrement function", () => {
-  it("returns true if incrementing stays below max", () => {
-    expect(canIncrement(5, 1, 10)).toBe(true)
+  it("returns true if incrementing stays below max (hasMax=true)", () => {
+    expect(canIncrement(5, 1, 10, true)).toBe(true)
   })
 
-  it("returns true if incrementing equals max", () => {
-    expect(canIncrement(5, 5, 10)).toBe(true)
+  it("returns true if incrementing equals max (hasMax=true)", () => {
+    expect(canIncrement(5, 5, 10, true)).toBe(true)
   })
 
-  it("returns false if incrementing goes above max", () => {
-    expect(canIncrement(10, 1, 10)).toBe(false)
+  it("returns false if incrementing goes above max (hasMax=true)", () => {
+    expect(canIncrement(10, 1, 10, true)).toBe(false)
+  })
+
+  it("returns true for any value when hasMax=false (no max constraint)", () => {
+    // Even if max=10, incrementing should be allowed when hasMax=false
+    expect(canIncrement(10, 1, 10, false)).toBe(true)
+    expect(canIncrement(1000, 1, 10, false)).toBe(true)
+  })
+
+  it("returns false for null value regardless of hasMax", () => {
+    expect(canIncrement(null, 1, 10, true)).toBe(false)
+    expect(canIncrement(null, 1, 10, false)).toBe(false)
   })
 })
 
