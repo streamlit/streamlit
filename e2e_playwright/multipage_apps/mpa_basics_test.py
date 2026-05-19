@@ -503,7 +503,7 @@ def test_completes_script_lifecycle(app: Page):
 
     # Update the radio button and verify the state is updated
     radio_button = app.get_by_test_id("stRadio").first
-    radio_option = radio_button.locator('label[data-baseweb="radio"]').nth(1)
+    radio_option = radio_button.get_by_test_id("stRadioOption").nth(1)
     radio_option.click(delay=50)
     wait_for_app_run(app)
     expect(app.get_by_text("radio value: B, state value: B")).to_be_visible()
