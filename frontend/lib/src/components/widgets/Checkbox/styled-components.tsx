@@ -162,9 +162,9 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
     return {
       flexShrink: 0,
       marginTop: theme.spacing.twoXS,
-      // Width matches BaseWeb scale1000 (40px); height matches scale550 (14px).
-      // The thumb (xl = 20px) intentionally overflows the track by 3px each side,
-      // giving the classic "lollipop" toggle look — overflow: visible is the default.
+      // Track: 40px wide × 14px tall. The thumb (xl = 20px) intentionally
+      // overflows the track by 3px on each side, giving the classic "lollipop"
+      // toggle silhouette — overflow: visible is the default.
       width: `calc(2 * ${theme.spacing.xl})`,
       height: `calc(${theme.sizes.checkbox} - 2px)`,
       borderRadius: theme.radii.full,
@@ -179,26 +179,22 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
 interface StyledToggleThumbProps {
   $isSelected: boolean
   $isDisabled: boolean
-  $isLightTheme: boolean
 }
 
 export const StyledToggleThumb = styled.div<StyledToggleThumbProps>(
-  ({ theme, $isSelected, $isDisabled, $isLightTheme }) => {
-    // Disabled thumb uses a gray color; enabled always uses bgColor (white in
-    // light mode, near-black in dark mode) matching BaseWeb's mono100 = bgColor.
-    const backgroundColor = $isDisabled
-      ? $isLightTheme
-        ? theme.colors.gray70
-        : theme.colors.gray90
-      : theme.colors.bgColor
-
+  ({ theme, $isSelected }) => {
     return {
-      // xl (1.25rem = 20px) matches BaseWeb scale700; larger than the 14px track
-      // so the circle overflows to create the classic toggle-switch silhouette.
+      // xl = 1.25rem (20px) — larger than the 14px track so the circle overflows
+      // to create the classic toggle-switch silhouette.
       width: theme.spacing.xl,
       height: theme.spacing.xl,
       borderRadius: theme.radii.full,
-      backgroundColor,
+      // Thumb is always bgColor (white in light mode, near-black in dark mode)
+      // for all states. Disabled appearance comes from the lighter track
+      // (secondaryBg) and faded label text. A subtle drop-shadow provides
+      // separation in low-contrast situations (e.g. disabled track colors).
+      backgroundColor: theme.colors.bgColor,
+      boxShadow: "0 1px 4px hsla(0, 0%, 0%, 0.16)",
       // Translation = xl (20px) = thumb width, so thumb moves from the left
       // half to the right half of the 40px track.
       transform: $isSelected

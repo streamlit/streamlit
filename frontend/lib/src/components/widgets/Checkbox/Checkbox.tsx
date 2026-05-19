@@ -25,8 +25,6 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -83,8 +81,6 @@ function Checkbox({
     [setValueWithSource]
   )
 
-  const theme = useEmotionTheme()
-  const isLightTheme = hasLightBackgroundColor(theme)
   const isToggle = element.type === CheckboxProto.StyleType.TOGGLE
   const labelVisibility = labelVisibilityProtoValueToEnum(
     element.labelVisibility?.value
@@ -125,7 +121,6 @@ function Checkbox({
                 <StyledToggleThumb
                   $isSelected={isSelected}
                   $isDisabled={isDisab}
-                  $isLightTheme={isLightTheme}
                 />
               </StyledToggleTrack>
               {labelContent}
