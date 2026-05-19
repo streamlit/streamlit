@@ -31,11 +31,13 @@ from streamlit.delta_generator_singletons import context_dg_stack
 from streamlit.errors import (
     FragmentHandledException,
     FragmentStorageKeyError,
+    StreamlitAPIException,
     StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.runtime.fragment import (
     FragmentStorage,
     MemoryFragmentStorage,
+    _check_not_parallel_worker,
     _dispatch_parallel_fragment,
     _fragment,
     _run_parallel_fragment,
@@ -1786,3 +1788,129 @@ def test_rerun_exception_propagates_from_nested_fragment_inside_worker() -> None
     # RerunException propagates from inner fragment to _run_parallel_fragment
     # which catches it and calls coordinator.request_rerun()
     mock_coordinator.request_rerun.assert_called_once_with(rerun_exc)
+
+
+# PARALLEL FRAGMENT API RESTRICTIONS TESTS
+
+
+class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
+    """Tests for API restrictions in parallel fragment workers."""
+
+    def test_check_not_parallel_worker_raises_when_flag_is_true(self) -> None:
+        """_check_not_parallel_worker raises StreamlitAPIException when is_parallel_worker=True."""
+        ThreadState.initialize(is_parallel_worker=True)
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            _check_not_parallel_worker("st.test_api")
+
+        assert "st.test_api" in str(exc_info.value)
+        assert "parallel fragment" in str(exc_info.value)
+
+    def test_check_not_parallel_worker_allows_when_flag_is_false(self) -> None:
+        """_check_not_parallel_worker does not raise when is_parallel_worker=False."""
+        ThreadState.initialize(is_parallel_worker=False)
+
+        _check_not_parallel_worker("st.test_api")
+
+    def test_check_not_parallel_worker_allows_when_no_thread_state(self) -> None:
+        """_check_not_parallel_worker does not raise when ThreadState is not initialized."""
+        import contextvars
+
+        ctx = contextvars.copy_context()
+
+        def run_in_fresh_context() -> None:
+            _check_not_parallel_worker("st.test_api")
+
+        ctx.run(run_in_fresh_context)
+
+    def test_run_parallel_fragment_sets_is_parallel_worker(self) -> None:
+        """_run_parallel_fragment sets is_parallel_worker=True."""
+        mock_coordinator = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.parallel_coordinator = mock_coordinator
+
+        captured_is_parallel_worker: bool | None = None
+
+        def capturing_fragment() -> None:
+            nonlocal captured_is_parallel_worker
+            captured_is_parallel_worker = ThreadState.get().is_parallel_worker
+
+        with (
+            patch(
+                "streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx
+            ),
+            patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        ):
+            ThreadState.initialize()
+            _run_parallel_fragment("test_id", capturing_fragment, [])
+
+        assert captured_is_parallel_worker is True
+
+    def test_nested_sequential_fragment_inherits_is_parallel_worker(self) -> None:
+        """Nested sequential fragment via ThreadState.scoped() inherits is_parallel_worker."""
+        ThreadState.initialize(is_parallel_worker=True)
+
+        assert ThreadState.get().is_parallel_worker is True
+
+        with ThreadState.scoped(fragment_id="inner"):
+            assert ThreadState.get().is_parallel_worker is True
+            with pytest.raises(StreamlitAPIException):
+                _check_not_parallel_worker("@st.dialog")
+
+        assert ThreadState.get().is_parallel_worker is True
+
+    def test_is_parallel_worker_false_during_sequential_rerun(self) -> None:
+        """_check_not_parallel_worker does not raise during sequential rerun."""
+        ThreadState.initialize(is_parallel_worker=False)
+
+        _check_not_parallel_worker("@st.dialog")
+        _check_not_parallel_worker("st.switch_page")
+
+
+# PARALLEL FRAGMENT CANCELLATION TESTS
+
+
+class ParallelFragmentCancellationTest(unittest.TestCase):
+    """Tests for cooperative cancellation in parallel fragments."""
+
+    def test_parallel_worker_st_stop_signals_coordinator(self) -> None:
+        """_run_parallel_fragment calls coordinator.request_stop() on StopException."""
+        mock_coordinator = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.parallel_coordinator = mock_coordinator
+
+        def raising_fragment() -> None:
+            raise StopException()
+
+        with (
+            patch(
+                "streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx
+            ),
+            patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        ):
+            ThreadState.initialize()
+            _run_parallel_fragment("test_id", raising_fragment, [])
+
+        mock_coordinator.request_stop.assert_called_once()
+
+    def test_parallel_worker_st_rerun_app_signals_coordinator(self) -> None:
+        """_run_parallel_fragment calls coordinator.request_rerun() on RerunException."""
+        mock_coordinator = MagicMock()
+        mock_ctx = MagicMock()
+        mock_ctx.parallel_coordinator = mock_coordinator
+
+        rerun_exc = RerunException(rerun_data=None)
+
+        def raising_fragment() -> None:
+            raise rerun_exc
+
+        with (
+            patch(
+                "streamlit.runtime.fragment.get_script_run_ctx", return_value=mock_ctx
+            ),
+            patch("streamlit.delta_generator_singletons.context_dg_stack"),
+        ):
+            ThreadState.initialize()
+            _run_parallel_fragment("test_id", raising_fragment, [])
+
+        mock_coordinator.request_rerun.assert_called_once_with(rerun_exc)

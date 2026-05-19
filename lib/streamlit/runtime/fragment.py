@@ -24,7 +24,11 @@ from functools import wraps
 from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_user_script_exception
-from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.errors import (
+    FragmentHandledException,
+    FragmentStorageKeyError,
+    StreamlitAPIException,
+)
 from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
@@ -47,6 +51,25 @@ if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
 
 _LOGGER: Final = get_logger(__name__)
+
+
+def _check_not_parallel_worker(api_name: str) -> None:
+    """Raise StreamlitAPIException if called from a parallel fragment worker."""
+    try:
+        ts = ThreadState.get()
+    except RuntimeError:
+        return
+
+    if ts.is_parallel_worker:
+        raise StreamlitAPIException(
+            f"`{api_name}` cannot be called from a parallel fragment during "
+            f"the initial page load, because parallel fragments run "
+            f"concurrently on separate threads where `{api_name}` is not "
+            f"safe.\n\n"
+            f"To fix this, gate the call behind a widget interaction "
+            f"(e.g., `if st.button(...):`) so it runs during a sequential "
+            f"fragment rerun instead."
+        )
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -701,7 +724,10 @@ def _run_parallel_fragment(
         return
 
     context_dg_stack.set(dg_stack_snapshot)
-    ThreadState.update(pre_allocated_container_fragment_id=fragment_id)
+    ThreadState.update(
+        pre_allocated_container_fragment_id=fragment_id,
+        is_parallel_worker=True,
+    )
 
     coordinator = ctx.parallel_coordinator
     if coordinator is None:  # pragma: no cover - defensive

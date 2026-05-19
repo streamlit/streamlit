@@ -86,6 +86,7 @@ class FragmentThreadState:
     # second st.container(); the main thread already pre-allocated one before
     # dispatching the worker.  Cleared after first use.
     pre_allocated_container_fragment_id: str | None = None
+    is_parallel_worker: bool = False
 
 
 class _FragmentThreadStateFields(TypedDict, total=False):
@@ -101,6 +102,7 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     in_fragment_callback: bool
     active_script_hash: str
     pre_allocated_container_fragment_id: str | None
+    is_parallel_worker: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
