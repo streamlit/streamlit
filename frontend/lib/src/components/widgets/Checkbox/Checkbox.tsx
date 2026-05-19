@@ -118,10 +118,7 @@ function Checkbox({
                 $isHovered={isHovered}
                 $isDisabled={isDisab}
               >
-                <StyledToggleThumb
-                  $isSelected={isSelected}
-                  $isDisabled={isDisab}
-                />
+                <StyledToggleThumb $isSelected={isSelected} />
               </StyledToggleTrack>
               {labelContent}
             </>

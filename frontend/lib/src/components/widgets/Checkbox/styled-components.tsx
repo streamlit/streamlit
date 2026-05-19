@@ -178,7 +178,6 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
 
 interface StyledToggleThumbProps {
   $isSelected: boolean
-  $isDisabled: boolean
 }
 
 export const StyledToggleThumb = styled.div<StyledToggleThumbProps>(
