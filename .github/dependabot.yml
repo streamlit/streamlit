@@ -98,14 +98,6 @@ updates:
       testing-library:
         patterns:
           - "@testing-library/*"
-      moment:
-        patterns:
-          - "moment"
-          - "moment-*"
-      styletron:
-        patterns:
-          - "styletron-*"
-          - "@types/styletron-*"
       d3:
         patterns:
           - "d3"
@@ -113,10 +105,7 @@ updates:
           - "@types/d3*"
       plotly:
         patterns:
-          - "plotly.js"
-          - "react-plotly.js"
-          - "@types/plotly*"
-          - "@types/react-plotly*"
+          - "*plotly*"
       oxc:
         patterns:
           - "oxlint"
