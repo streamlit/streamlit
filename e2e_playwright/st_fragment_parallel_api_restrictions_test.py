@@ -31,7 +31,9 @@ def test_parallel_fragment_blocks_dialog_during_initial_run(
 
     exception_message = page.get_by_test_id("stExceptionMessage")
     expect(exception_message).to_be_visible()
-    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
+    expect(exception_message).to_contain_text(
+        "cannot be called from a parallel fragment"
+    )
     expect(exception_message).to_contain_text("@st.dialog")
 
 
@@ -44,7 +46,9 @@ def test_parallel_fragment_blocks_switch_page_during_initial_run(
 
     exception_message = page.get_by_test_id("stExceptionMessage")
     expect(exception_message).to_be_visible()
-    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
+    expect(exception_message).to_contain_text(
+        "cannot be called from a parallel fragment"
+    )
     expect(exception_message).to_contain_text("st.switch_page")
 
 
@@ -72,7 +76,9 @@ def test_nested_sequential_fragment_blocks_dialog_during_parallel_batch(
 
     exception_message = page.get_by_test_id("stExceptionMessage")
     expect(exception_message).to_be_visible()
-    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
+    expect(exception_message).to_contain_text(
+        "cannot be called from a parallel fragment"
+    )
 
 
 def test_nested_parallel_fragments_both_restricted(
@@ -84,7 +90,9 @@ def test_nested_parallel_fragments_both_restricted(
 
     exception_message = page.get_by_test_id("stExceptionMessage")
     expect(exception_message).to_be_visible()
-    expect(exception_message).to_contain_text("cannot be called from a parallel fragment")
+    expect(exception_message).to_contain_text(
+        "cannot be called from a parallel fragment"
+    )
 
 
 def test_nested_parallel_fragment_allows_dialog_on_rerun(
