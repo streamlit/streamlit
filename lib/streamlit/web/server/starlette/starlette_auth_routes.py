@@ -33,7 +33,7 @@ from streamlit.auth_util import (
     get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
-from streamlit.errors import StreamlitAuthError
+from streamlit.errors import StreamlitAuthError, StreamlitMissingAuthlibError
 from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.server_util import get_cookie_secret
@@ -255,10 +255,7 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     try:
         from authlib.integrations import starlette_client
     except ModuleNotFoundError:  # pragma: no cover - optional dependency
-        raise StreamlitAuthError(
-            "Authentication requires Authlib>=1.3.2. "
-            "Install it via `pip install streamlit[auth]`."
-        )
+        raise StreamlitMissingAuthlibError()
 
     auth_section = get_secrets_auth_section()
     if auth_section:
