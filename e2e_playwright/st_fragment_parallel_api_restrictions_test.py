@@ -74,7 +74,8 @@ def test_nested_sequential_fragment_blocks_dialog_during_parallel_batch(
     page.goto(build_app_url(app_base_url, query="test=nested_sequential_block"))
     wait_for_app_run(page)
 
-    exception_message = page.get_by_test_id("stExceptionMessage")
+    # There may be multiple exception messages (original + wrapped), use first()
+    exception_message = page.get_by_test_id("stExceptionMessage").first
     expect(exception_message).to_be_visible()
     expect(exception_message).to_contain_text(
         "cannot be called from a parallel fragment"
