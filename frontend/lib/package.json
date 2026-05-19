@@ -64,7 +64,7 @@
     "@streamlit/protobuf": "workspace:^",
     "@streamlit/utils": "workspace:^",
     "apache-arrow": "^21.1.0",
-    "axios": "^1.16.0",
+    "axios": "^1.16.1",
     "baseui": "12.2.0",
     "classnames": "^2.3.2",
     "color2k": "^2.0.2",
