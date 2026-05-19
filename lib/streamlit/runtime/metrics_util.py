@@ -207,7 +207,6 @@ _ATTRIBUTIONS_TO_CHECK: Final = [
     "snowflake",
     "pydantic",
     "fastapi",
-    "starlette",
     "playwright",
     "folium",
     "geopandas",

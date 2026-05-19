@@ -15,9 +15,11 @@
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
 import sys
 import unittest
+import warnings
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
@@ -43,6 +45,17 @@ from streamlit.runtime.secrets import AttrDict
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+# ``joserfc`` is a transitive dependency of ``Authlib>=1.7`` but is not yet
+# declared directly by the ``streamlit[auth]`` extra. The affected tests
+# below assert behavior that only holds on the ``joserfc`` decode/encode path
+# (warning suppression and Streamlit's own claim-validation error messages),
+# so we skip them when only the Authlib fallback is available.
+_JOSERFC_AVAILABLE = importlib.util.find_spec("joserfc") is not None
+_REQUIRES_JOSERFC = pytest.mark.skipif(
+    not _JOSERFC_AVAILABLE,
+    reason="requires joserfc; Authlib fallback path uses different error/warning text",
+)
 
 # Simulates realistic cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
@@ -81,6 +94,14 @@ SECRETS_MOCK = {
         "server_metadata_url": "https://YOUR_DOMAIN/.well-known/openid-configuration",
     },
 }
+
+
+def _create_test_provider_token(claims: dict[str, Any]) -> str:
+    """Create a provider token with the joserfc backend used by guarded tests."""
+    header = {"alg": "HS256"}
+    from joserfc import jwt
+
+    return jwt.encode(header, claims, auth_util._get_joserfc_signing_key())
 
 
 class AuthUtilTest(unittest.TestCase):
@@ -748,6 +769,249 @@ def test_is_authlib_installed_old_version(monkeypatch: pytest.MonkeyPatch) -> No
     fake_authlib.__version__ = "1.3.1"
     monkeypatch.setitem(sys.modules, "authlib", fake_authlib)
     assert is_authlib_installed() is False
+
+
+@_REQUIRES_JOSERFC
+def test_provider_token_round_trip_suppresses_auth_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Round-trip provider tokens without surfacing Authlib or key-size warnings."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        token = auth_util.encode_provider_token("google")
+        payload = auth_util.decode_provider_token(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+    assert caught == []
+
+
+@_REQUIRES_JOSERFC
+def test_get_joserfc_signing_key_logs_weak_secret_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Emit a single Streamlit-level log for sub-112-bit ``cookie_secret``s."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    auth_util._warn_short_signing_secret_once.cache_clear()
+
+    with patch.object(auth_util._LOGGER, "warning") as mock_warning:
+        auth_util._get_joserfc_signing_key()
+        auth_util._get_joserfc_signing_key()
+
+    assert mock_warning.call_count == 1
+    assert "112 bits" in mock_warning.call_args.args[0]
+
+    # A long-enough secret on a fresh flag must not log.
+    auth_util._warn_short_signing_secret_once.cache_clear()
+    monkeypatch.setattr(
+        auth_util, "get_signing_secret", lambda: "this-secret-is-long-enough"
+    )
+    with patch.object(auth_util._LOGGER, "warning") as mock_warning:
+        auth_util._get_joserfc_signing_key()
+    assert mock_warning.call_count == 0
+
+
+@_REQUIRES_JOSERFC
+def test_ensure_joserfc_security_warning_suppressed_is_idempotent() -> None:
+    """``_ensure_joserfc_security_warning_suppressed`` does not duplicate filters."""
+    from joserfc.errors import SecurityWarning
+
+    with warnings.catch_warnings():
+        warnings.resetwarnings()
+        auth_util._ensure_joserfc_security_warning_suppressed()
+        auth_util._ensure_joserfc_security_warning_suppressed()
+        matching = [
+            f for f in warnings.filters if f[0] == "ignore" and f[2] is SecurityWarning
+        ]
+        assert len(matching) == 1
+
+
+def test_decode_provider_token_expired_raises_streamlit_auth_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject provider tokens whose ``exp`` claim is already in the past."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(
+        auth_util, "_get_provider_token_expiration_timestamp", lambda: 1
+    )
+
+    token = auth_util.encode_provider_token("google")
+
+    with pytest.raises(StreamlitAuthError, match="expired"):
+        auth_util.decode_provider_token(token)
+
+
+@_REQUIRES_JOSERFC
+@pytest.mark.parametrize(
+    ("claims", "expected_message"),
+    [
+        pytest.param(
+            {"exp": 9999999999},
+            "provider claim is missing",
+            id="missing_provider",
+        ),
+        pytest.param(
+            {"provider": "", "exp": 9999999999},
+            "provider claim is empty",
+            id="empty_provider",
+        ),
+        pytest.param(
+            {"provider": "google"},
+            "exp claim",
+            id="missing_exp",
+        ),
+        pytest.param(
+            {"provider": "google", "exp": "bad"},
+            "exp claim",
+            id="invalid_exp_type",
+        ),
+    ],
+)
+def test_decode_provider_token_invalid_claims_raise_streamlit_auth_error(
+    claims: dict[str, Any],
+    expected_message: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject provider tokens when required claims are missing or malformed."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    token = _create_test_provider_token(claims)
+
+    with pytest.raises(StreamlitAuthError, match=expected_message):
+        auth_util.decode_provider_token(token)
+
+
+def test_authlib_provider_token_round_trip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise the real Authlib provider-token helpers end to end."""
+    pytest.importorskip("authlib")
+    from authlib.deprecate import AuthlibDeprecationWarning
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", AuthlibDeprecationWarning)
+        token = auth_util._encode_provider_token_with_authlib("google")
+        payload = auth_util._decode_provider_token_with_authlib(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+
+
+def test_encode_provider_token_falls_back_to_authlib(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the Authlib encoder when ``joserfc`` is unavailable."""
+    recorded_providers: list[str] = []
+
+    def mock_encode_with_authlib(provider: str) -> str:
+        recorded_providers.append(provider)
+        return "fallback-token"
+
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_authlib",
+        mock_encode_with_authlib,
+    )
+
+    assert auth_util.encode_provider_token("google") == "fallback-token"
+    assert recorded_providers == ["google"]
+
+
+def test_decode_provider_token_falls_back_to_authlib(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the Authlib decoder when ``joserfc`` is unavailable."""
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_authlib",
+        MagicMock(return_value={"provider": "google", "exp": 1}),
+    )
+
+    assert auth_util.decode_provider_token("token") == {
+        "provider": "google",
+        "exp": 1,
+    }
+
+
+def test_provider_token_round_trips_through_real_authlib_when_joserfc_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public encode/decode round-trip works end-to-end on the Authlib fallback path.
+
+    The mocked dispatch tests above prove the public helpers pick the Authlib branch
+    when joserfc raises ``ImportError``, and ``test_authlib_provider_token_round_trip``
+    proves the Authlib helpers work in isolation. This test bridges the two by driving
+    the public API with a real Authlib backend, covering the path a user on
+    ``Authlib<1.7`` (no transitive joserfc) actually exercises in production.
+    """
+    pytest.importorskip("authlib")
+    from authlib.deprecate import AuthlibDeprecationWarning
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError("joserfc unavailable")),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError("joserfc unavailable")),
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", AuthlibDeprecationWarning)
+        token = auth_util.encode_provider_token("google")
+        payload = auth_util.decode_provider_token(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+
+
+@pytest.mark.parametrize(
+    ("operation", "args"),
+    [
+        pytest.param("encode_provider_token", ("google",), id="encode"),
+        pytest.param("decode_provider_token", ("ignored-token",), id="decode"),
+    ],
+)
+def test_provider_token_raises_install_hint_when_no_jose_backend_available(
+    operation: str,
+    args: tuple[Any, ...],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Surface the ``streamlit[auth]`` install hint when neither JOSE backend is available.
+
+    Anti-regression for the user-facing error path on installs that have neither
+    ``joserfc`` nor ``Authlib`` (e.g. plain ``pip install streamlit`` without the
+    ``auth`` extra). Both private helpers are forced to raise ``ImportError`` to
+    simulate the missing optional dependencies.
+    """
+    for helper in (
+        "_encode_provider_token_with_joserfc",
+        "_encode_provider_token_with_authlib",
+        "_decode_provider_token_with_joserfc",
+        "_decode_provider_token_with_authlib",
+    ):
+        monkeypatch.setattr(
+            auth_util, helper, MagicMock(side_effect=ImportError("missing"))
+        )
+
+    with pytest.raises(StreamlitAuthError, match=r"pip install streamlit\[auth\]"):
+        getattr(auth_util, operation)(*args)
 
 
 def test_set_split_cookie_single_chunk_path() -> None:
