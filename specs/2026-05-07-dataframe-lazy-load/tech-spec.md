@@ -774,7 +774,7 @@ Then each chunk is a range predicate against the materialized row index:
 
 ```sql
 SELECT <user_columns>
-FROM __st_dataframe_<source_id>
+FROM "__st_dataframe_<source_id>"
 WHERE __st_row_num >= :offset
   AND __st_row_num < :offset + :limit
 ORDER BY __st_row_num;
