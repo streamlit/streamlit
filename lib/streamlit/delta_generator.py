@@ -507,7 +507,7 @@ class DeltaGenerator(
             ts = ThreadState.get()
             if ts.is_parallel_worker:
                 fragment_path = ts.delta_path
-                cursor_path = dg._cursor.delta_path if dg._cursor else ()
+                cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
                 # Empty fragment_path means the fragment's cursor was None; in that
                 # case _is_inside_fragment_path would always return True anyway, so
                 # skip the check.
