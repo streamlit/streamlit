@@ -34,30 +34,20 @@ type SubElement = {
 }
 
 /**
- * Extracts layout-relevant fields from a proto message's type-specific sub-message.
- *
- * This helper exists because protobufjs 8.3.0 changed how generated classes expose
- * properties, adding a `$unknowns` field to all interfaces. This breaks the previous
- * pattern of using computed property access like `element[element.type]` since TypeScript
- * can no longer guarantee type safety with the union of all possible field types plus
- * `$unknowns`. We use explicit record casting to safely access the type-specific
- * sub-message and extract only the layout fields we need.
- *
- * @param protoMessage - A proto message with a `type` field indicating which sub-message
- *   contains the actual data (e.g., Element or BlockProto)
- * @returns The layout-relevant fields from the sub-message, or undefined if not present
+ * Extract layout-related sub-element properties from an Element or BlockProto.
+ * Some element/block types store width/height config in nested fields.
  */
 export const extractLayoutSubElement = (
-  protoMessage: Element | BlockProto
-): SubElement | undefined => {
-  const typeKey = protoMessage.type as keyof typeof protoMessage | undefined
+  element: Element | BlockProto
+): UseLayoutStylesArgs["subElement"] => {
+  const typeKey = element.type as keyof typeof element | undefined
   const raw = typeKey
-    ? (protoMessage as unknown as Record<string, unknown>)[typeKey]
+    ? (element as unknown as Record<string, unknown>)[typeKey]
     : undefined
   if (!raw || typeof raw !== "object") return undefined
 
   const candidate = raw as Record<string, unknown>
-  const subElement: SubElement = {
+  const subElement = {
     useContainerWidth: candidate.useContainerWidth as
       | boolean
       | null
