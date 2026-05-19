@@ -19,6 +19,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, cast
 
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.string_util import max_char_sequence
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
@@ -74,8 +75,12 @@ class MermaidChartMixin:
            height: 300px
 
         """
-        # Use four backticks to safely handle diagrams containing triple backticks
-        mermaid_body = f"````mermaid\n{body}\n````"
+        # Dynamically calculate the fence length to be longer than any backtick
+        # sequence in the body, ensuring the fence cannot be prematurely closed.
+        # This follows the same pattern used in st.write for safe code block wrapping.
+        backtick_count = max(4, max_char_sequence(body, "`") + 1)
+        backtick_fence = "`" * backtick_count
+        mermaid_body = f"{backtick_fence}mermaid\n{body}\n{backtick_fence}"
         return self.dg._markdown(mermaid_body, width=width)
 
     @property

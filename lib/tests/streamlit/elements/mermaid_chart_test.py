@@ -49,3 +49,22 @@ graph LR
 
         element = self.get_delta_from_queue().new_element.markdown
         assert element.body == "````mermaid\n\n````"
+
+    def test_mermaid_chart_with_backticks_in_body(self) -> None:
+        """Test mermaid_chart handles body containing backticks safely."""
+        # Body with 4 backticks should use 5 backticks for the fence
+        diagram = "graph TD\n    A[```code```] --> B[````more````]"
+        st.mermaid_chart(diagram)
+
+        element = self.get_delta_from_queue().new_element.markdown
+        # Should use 5 backticks since body contains 4 consecutive backticks
+        assert element.body == f"`````mermaid\n{diagram}\n`````"
+
+    def test_mermaid_chart_with_triple_backticks(self) -> None:
+        """Test mermaid_chart handles body with triple backticks."""
+        diagram = "graph TD\n    A[```code```] --> B"
+        st.mermaid_chart(diagram)
+
+        element = self.get_delta_from_queue().new_element.markdown
+        # Should still use 4 backticks since body only has 3 consecutive
+        assert element.body == f"````mermaid\n{diagram}\n````"
