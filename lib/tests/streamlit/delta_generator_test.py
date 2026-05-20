@@ -48,6 +48,7 @@ from streamlit.proto.Empty_pb2 import Empty as EmptyProto
 from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.proto.Text_pb2 import Text as TextProto
 from streamlit.runtime.scriptrunner import add_script_run_ctx, get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.streamlit_test import ELEMENT_COMMANDS
 
@@ -290,8 +291,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
         assert msg.delta.new_element.text.body == test_data
 
     def test_enqueue_adds_fragment_id_to_delta_if_set(self):
-        ctx = get_script_run_ctx()
-        ctx.current_fragment_id = "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
 
         dg = DeltaGenerator(root_container=RootContainer.MAIN)
         dg._enqueue("text", TextProto())
@@ -301,7 +301,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
 
     def test_enqueue_explodes_if_fragment_writes_to_sidebar(self):
         ctx = get_script_run_ctx()
-        ctx.current_fragment_id = "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
         ctx.fragment_ids_this_run = ["my_fragment_id"]
 
         exc = "is not supported"
@@ -310,7 +310,7 @@ class DeltaGeneratorClassTest(DeltaGeneratorTestCase):
 
     def test_enqueue_can_write_to_container_in_sidebar(self):
         ctx = get_script_run_ctx()
-        ctx.current_fragment_id = "my_fragment_id"
+        ThreadState.update(fragment_id="my_fragment_id")
         ctx.fragment_ids_this_run = ["my_fragment_id"]
 
         get_dg_singleton_instance().sidebar_dg.container().write("Hello world")

@@ -182,7 +182,7 @@ Any state -> DISCONNECTED_FOREVER (on fatal error)
 - `ViewStateContext`: Fullscreen state
 - `ScriptRunContext`: Script run state/ID, fragment IDs (critical for staleness)
 - `FormsContext`: Forms data (pending changes, uploads)
-- `DownloadContext`: Deferred file request handler
+- `BackendOperationContext`: Backend operation client for server-side operations without script rerun (deferred downloads, lazy dataframe loading, validation)
 
 ## Key patterns
 

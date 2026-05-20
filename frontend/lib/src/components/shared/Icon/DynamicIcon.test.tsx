@@ -35,6 +35,12 @@ const getProps = (
 })
 
 describe("Dynamic icon", () => {
+  it("renders spinner with aria-hidden", () => {
+    render(<DynamicIcon iconValue="spinner" />)
+    const spinnerIcon = screen.getByTestId("stSpinnerIcon")
+    expect(spinnerIcon).toHaveAttribute("aria-hidden", "true")
+  })
+
   it("renders without crashing with Material icon", () => {
     const props = getProps({ iconValue: ":material/add_circle:" })
     render(<DynamicIcon {...props} />)
