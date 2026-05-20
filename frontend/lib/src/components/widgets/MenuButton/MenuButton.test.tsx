@@ -281,4 +281,20 @@ describe("MenuButton widget", () => {
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
   })
+
+  it("renders no options gracefully", () => {
+    const props = getProps({ options: [] })
+    render(<MenuButton {...props} />)
+
+    // Trigger button should be disabled with an empty options list.
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toBeDisabled()
+  })
+
+  it("falls back to the secondary kind for unrecognized button types", () => {
+    const props = getProps({ type: "unknown" })
+    render(<MenuButton {...props} />)
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toHaveAttribute("kind", "secondary")
+  })
 })
