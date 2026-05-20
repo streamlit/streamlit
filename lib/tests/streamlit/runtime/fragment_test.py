@@ -1632,7 +1632,7 @@ def test_skip_signal_isolation_inner_fragment_sees_none_after_outer_consumes(
 
     # First call registers fragments and gets their IDs
     outer_fragment()
-    outer_fragment_id = list(mock_ctx.fragment_storage._fragments.keys())[0]
+    outer_fragment_id = next(iter(mock_ctx.fragment_storage._fragments.keys()))
 
     # Get saved wrapped_fragment for outer
     outer_saved = mock_ctx.fragment_storage._fragments[outer_fragment_id]
