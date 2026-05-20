@@ -128,7 +128,10 @@ picture = st.camera_input("Scan QR code", resolution="720p")
 if picture:
     from PIL import Image
     img = Image.open(picture)
-    st.write(f"Captured: {img.size}")  # e.g., (1280, 720) for 16:9 camera
+    st.write(f"Captured: {img.size}")
+    # Width varies by camera aspect ratio:
+    # - 16:9 camera → (1280, 720)
+    # - 4:3 camera  → (960, 720)
 ```
 
 **High resolution for document capture:**
@@ -151,8 +154,16 @@ picture = st.camera_input("Take photo", resolution="480p")
 
 #### Browser Constraint Type: `ideal` (Not `exact`)
 
-The implementation uses `getUserMedia({ video: { height: { ideal: resolution } } })` rather than
-`exact` constraints. This is critical because:
+The frontend maps preset strings to integer pixel values before calling `getUserMedia`:
+
+| Preset | Height (pixels) |
+|--------|-----------------|
+| `"480p"` | 480 |
+| `"720p"` | 720 |
+| `"1080p"` | 1080 |
+
+The implementation uses `getUserMedia({ video: { height: { ideal: <pixels> } } })` with `ideal`
+rather than `exact` constraints. This is critical because:
 
 - Cameras support discrete resolution sets (e.g., 480, 720, 1080), not arbitrary values
 - Using `exact` would throw `OverconstrainedError` for unsupported resolutions
@@ -298,12 +309,14 @@ Both PRs use the tuple approach, which raises the aspect ratio concerns addresse
 ### HTML getUserMedia API
 
 The [MediaDevices.getUserMedia()](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
-API supports `width` and `height` constraints with `min`, `max`, `ideal`, and `exact` modifiers:
+API supports `width` and `height` constraints with `min`, `max`, `ideal`, and `exact` modifiers.
+Our implementation uses height-only constraints to let the camera's native aspect ratio determine
+width:
 
 ```javascript
+// Our approach: height-only constraint
 navigator.mediaDevices.getUserMedia({
   video: {
-    width: { ideal: 1280 },
     height: { ideal: 720 }
   }
 })
@@ -312,6 +325,7 @@ navigator.mediaDevices.getUserMedia({
 Key behaviors:
 - `exact` throws `OverconstrainedError` if the value isn't supported
 - `ideal` selects the closest supported value
+- Setting only `height` lets the browser choose width based on camera aspect ratio
 - Cameras report supported resolutions via `getCapabilities()`
 
 ### React Webcam Libraries
@@ -324,8 +338,7 @@ Key behaviors:
 - **iOS AVFoundation**: Uses session presets like `AVCaptureSessionPreset720p`
 - **Android CameraX**: Uses `ResolutionSelector` with preferred resolution hints
 
-The preset approach in mobile SDKs influenced our recommendation to include presets alongside
-integer values.
+The preset approach in mobile SDKs influenced our recommendation to use presets.
 
 ## Out of Scope (Future Work)
 
@@ -347,6 +360,6 @@ integer values.
 | Works on SiS, Cloud, etc?    | ✅ Uses standard browser `getUserMedia` API                 |
 | No breaking API changes      | ✅ New optional parameter only                              |
 | No new dependencies          | ✅ Browser-native resolution constraints                    |
-| Metrics collected            | ✅ Existing camera_input metrics apply                      |
+| Metrics collected            | ✅ Track: (1) preset values used, (2) resolution mismatch frequency |
 | Any security/legal impact?   | ✅ No — uses existing camera permissions                    |
 | Any docs changes needed?     | ✅ Update st.camera_input docstring and API reference       |
