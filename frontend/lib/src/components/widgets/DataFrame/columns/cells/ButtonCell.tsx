@@ -294,7 +294,8 @@ const renderer: CustomRenderer<ButtonCell> = {
     const { data, buttonType, alignment } = cell.data
     const padding = theme.cellHorizontalPadding
 
-    if (!data) return true
+    // Skip rendering for null, undefined, or empty array data
+    if (!data || (Array.isArray(data) && data.length === 0)) return true
 
     const label = getSingleButtonLabel(data)
     const isMultiAction = Array.isArray(data) && data.length > 1
@@ -430,7 +431,10 @@ const renderer: CustomRenderer<ButtonCell> = {
   },
   measure: (ctx, cell, theme) => {
     const { data } = cell.data
-    if (!data) return theme.cellHorizontalPadding * 2
+    // Return minimal width for null, undefined, or empty array data
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      return theme.cellHorizontalPadding * 2
+    }
 
     const label = getSingleButtonLabel(data)
     const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
