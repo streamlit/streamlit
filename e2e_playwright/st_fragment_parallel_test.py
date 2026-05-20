@@ -221,13 +221,22 @@ def test_nested_parallel_fragment_allows_dialog_on_rerun(
 
 
 def test_parallel_st_stop_ends_script(page: Page, app_base_url: str) -> None:
-    """Fragment A calls st.stop, should end quickly without waiting for Fragment B."""
+    """Fragment A calls st.stop, Fragment B output is discarded even though it started.
+
+    This test verifies that when a parallel fragment calls st.stop(), other parallel
+    fragments that have started will have their output discarded. Fragment B sets a
+    session_state marker early (before its 5s sleep), so we know it started, but
+    st.stop() in Fragment A should cause Fragment B's output to be discarded.
+    """
     page.goto(build_app_url(app_base_url, query="test=st_stop"))
     wait_for_app_run(page)
 
     expect(page.get_by_text("Fragment A content")).to_be_visible()
-    # Fragment B should not complete due to st.stop in Fragment A
-    expect(page.get_by_text("Fragment B done after 5s")).not_to_be_visible()
+    # Fragment B should not complete due to st.stop in Fragment A.
+    # Use timeout to give the page a moment to settle and avoid timing flakiness.
+    expect(page.get_by_text("Fragment B done after 5s")).not_to_be_visible(
+        timeout=2000
+    )
 
 
 def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
@@ -241,10 +250,16 @@ def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
     expect(page.get_by_text("Run count: 3", exact=True)).to_be_visible()
 
 
-def test_widget_interaction_during_parallel_execution(
+def test_widget_interaction_after_parallel_load(
     page: Page, app_base_url: str
 ) -> None:
-    """Button click in fast fragment while slow fragment is running."""
+    """Button click after initial parallel load triggers sequential fragment rerun.
+
+    This test verifies that after the initial parallel fragment execution completes,
+    widget interactions work correctly by triggering sequential reruns (not parallel
+    execution). The "Increment" button click occurs after both fragments have loaded,
+    so it's a sequential rerun scenario.
+    """
     page.goto(build_app_url(app_base_url, query="test=widget_interaction"))
     wait_for_app_run(page)
 

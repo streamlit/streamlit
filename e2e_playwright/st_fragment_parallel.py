@@ -214,6 +214,8 @@ elif test_mode == "st_stop":
 
     @st.fragment(parallel=True)
     def fragment_b():
+        # Set marker early so test can verify Fragment B started
+        st.session_state.fragment_b_started = True
         time.sleep(5)
         st.write("Fragment B done after 5s")
 
