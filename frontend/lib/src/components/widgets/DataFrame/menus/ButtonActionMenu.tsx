@@ -89,24 +89,19 @@ function ButtonActionMenu({
     return () => document.removeEventListener("mousedown", handleMouseDown)
   }, [onCloseMenu])
 
-  // Close menu on scroll of ancestor containers or window (fixed positioning
-  // would misalign with cell). Ignores scroll events from the menu itself
-  // if it ever gets overflow:auto, and ignores unrelated scroll containers.
+  // Close menu on any scroll in the document (fixed positioning would misalign
+  // with cell). The menu is rendered via createPortal outside the dataframe's
+  // DOM tree, so we cannot rely on ancestor containment checks - we must close
+  // on any scroll except within the menu itself.
   useEffect(() => {
     function handleScroll(event: Event): void {
       // Ignore if the scroll is on the menu itself
       if (menuRef.current?.contains(event.target as Node)) {
         return
       }
-      // Close on window/document scroll or any ancestor scroll
-      const target = event.target
-      if (
-        target === document ||
-        target === window ||
-        (target instanceof Element && target.contains(menuRef.current))
-      ) {
-        onCloseMenu()
-      }
+      // Close on any scroll event outside the menu (including dataframe scroll,
+      // window scroll, or any other scroll container)
+      onCloseMenu()
     }
 
     document.addEventListener("scroll", handleScroll, { capture: true })

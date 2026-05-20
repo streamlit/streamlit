@@ -432,11 +432,17 @@ const renderer: CustomRenderer<ButtonCell> = {
     const { data } = cell.data
     if (!data) return theme.cellHorizontalPadding * 2
 
-    // For multi-action buttons, use placeholder width
-    const label = getSingleButtonLabel(data) ?? "..."
+    const label = getSingleButtonLabel(data)
+    const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
+
+    // For multi-action buttons (label is null), measure "more_vert" with icon font
+    if (!label) {
+      ctx.font = iconFont
+      const iconWidth = ctx.measureText("more_vert").width
+      return iconWidth + theme.cellHorizontalPadding * 2 + BUTTON_PADDING * 2
+    }
 
     const { icon, text } = parseButtonLabel(label)
-    const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
 
     let width = 0
     if (icon) {

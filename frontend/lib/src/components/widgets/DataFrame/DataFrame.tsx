@@ -330,6 +330,19 @@ function DataFrame({
     [widgetMgr, element.buttonClickWidgets, element.formId, fragmentId]
   )
 
+  // Store the rAF handle so we can cancel any pending frame when a new menu
+  // is requested (prevents flicker from stale callbacks on rapid clicks).
+  const menuRafRef = useRef<number | null>(null)
+
+  // Cleanup rAF on unmount
+  useEffect(() => {
+    return () => {
+      if (menuRafRef.current !== null) {
+        cancelAnimationFrame(menuRafRef.current)
+      }
+    }
+  }, [])
+
   /** Handle opening the button action menu for multi-action buttons. */
   const handleOpenButtonMenu = useCallback(
     (
@@ -338,6 +351,12 @@ function DataFrame({
       actions: string[],
       bounds: Rectangle & { clickX: number; clickY: number }
     ): void => {
+      // Cancel any pending rAF from a prior call to prevent stale callbacks
+      if (menuRafRef.current !== null) {
+        cancelAnimationFrame(menuRafRef.current)
+        menuRafRef.current = null
+      }
+
       // When clicking between menu items or buttons, we need a clean transition.
       // The pattern below clears the menu state first, then sets the new state
       // after a frame. Without rAF, React 18's batching would collapse the
@@ -345,7 +364,8 @@ function DataFrame({
       // mounted with stale position. The frame boundary forces BaseUI's Popover
       // to remount cleanly at the new click coordinates.
       setButtonActionMenu(undefined)
-      requestAnimationFrame(() => {
+      menuRafRef.current = requestAnimationFrame(() => {
+        menuRafRef.current = null
         setButtonActionMenu({
           columnName,
           rowIndex,
