@@ -77,9 +77,11 @@ st.header("Parallel Fragments Test App")
 
 st.subheader("Concurrent Rendering Test")
 st.session_state.start_time = time.time()
+# Invocation order deliberately not 1 → 2 → 3 so ordering tests prove DOM follows
+# call order (pre-allocated placeholders), not definition or label numbering.
+slow_fragment_3()
 slow_fragment_1()
 slow_fragment_2()
-slow_fragment_3()
 elapsed = time.time() - st.session_state.start_time
 st.write("All fragments dispatched")
 st.write(f"Dispatch time: {elapsed:.2f}s")
