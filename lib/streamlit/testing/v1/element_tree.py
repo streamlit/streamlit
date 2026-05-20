@@ -2208,7 +2208,7 @@ class SpecialBlock(Block):
             ty = proto.WhichOneof("type")
             assert ty is not None
             self.type = ty
-        elif proto is None:
+        else:
             self.type = "unknown"
 
 
