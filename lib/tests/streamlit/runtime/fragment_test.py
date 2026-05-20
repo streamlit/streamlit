@@ -1277,9 +1277,17 @@ def test_parallel_fragment_returns_none(
 def test_parallel_fragment_sequential_during_fragment_rerun(
     patched_get_script_run_ctx: MagicMock,
 ) -> None:
-    """When fragment_ids_this_run is set, parallel fragment executes inline."""
+    """Skip coordinator dispatch whenever ``fragment_ids_this_run`` is set.
+
+    The runtime populates ``fragment_ids_this_run`` during fragment-only script
+    portions so DG/cursor snapshots restore correctly (see ``wrapped_fragment``
+    guard). `_fragment(..., parallel=True)` only dispatches via
+    ``_dispatch_parallel_fragment`` when this field is falsy. A mocked non-empty
+    list proxies that rerun mode without invoking the production runner wiring.
+    """
     ctx = MagicMock()
     ctx.fragment_storage = MagicMock()
+    # Non-empty ⇒ fragment rerun path; mocked stand-in ID is irrelevant to the assertion.
     ctx.fragment_ids_this_run = ["some_fragment_id"]
     ctx.new_fragment_ids = ThreadSafeSet()
     ctx.cursors = {}

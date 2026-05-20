@@ -546,26 +546,21 @@ def fragment(
 
     parallel : bool
         Whether to execute the fragment in parallel during full app reruns.
-        If ``True``, the fragment is dispatched to a thread pool and executes
-        concurrently with other parallel fragments and the main app script.
+        If ``True``, the fragment is dispatched to a thread pool and may execute
+        concurrently with other parallel fragments and the rest of the app script.
         If ``False`` (default), the fragment executes inline on the main thread.
 
         Parallel fragments are useful for independent, slow operations that
-        don't need to block the rest of the app. When a user interacts with
-        a widget inside a parallel fragment, the subsequent fragment rerun
-        executes sequentially (not in parallel) to ensure consistent state.
-
-        .. note::
-
-            Parallel execution is only used during full app reruns. Fragment
-            reruns triggered by widget interactions always execute sequentially.
+        should not block overall app throughput. Full app reruns may overlap
+        several parallel fragments with the main script; reruns confined to a
+        single fragment (such as those triggered after widget interactions)
+        remain sequential so state updates stay deterministic.
 
         .. warning::
 
-            ``st.session_state`` is not thread-safe for concurrent writes.
-            Parallel fragments that write to the **same** ``session_state``
-            key have undefined behavior. Use distinct keys per fragment to
-            avoid race conditions.
+            Fragments dispatched in parallel can run concurrently. Avoid
+            unsynchronized mutations of shared mutable resources across fragments
+            unless you coordinate access explicitly.
 
     Examples
     --------

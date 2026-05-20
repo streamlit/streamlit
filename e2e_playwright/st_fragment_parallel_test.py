@@ -57,10 +57,13 @@ def test_parallel_fragment_rerun_only_reruns_self(app: Page) -> None:
 
 
 def test_parallel_fragments_preserve_source_order(app: Page) -> None:
-    """Fragments render in DOM order matching declaration order.
+    """Fragments render in DOM order matching **invocation** order in the script.
 
-    Despite Fragment 3 finishing first (0.1s sleep), Fragment 1 finishing last (0.3s),
-    the DOM order should match the source declaration order: 1, 2, 3.
+    The test app invokes slow_fragment_3, then 1, then 2 — not 1→2→3 — so DOM
+    order is not predictable from numeric labels alone.
+
+    Despite staggered sleeps (Fragment 3 finishes first), DOM order follows
+    invocation (3 above 1 above 2), not completion time.
     """
     frag1 = app.get_by_text("Fragment 1 done", exact=True)
     frag2 = app.get_by_text("Fragment 2 done", exact=True)
@@ -77,8 +80,8 @@ def test_parallel_fragments_preserve_source_order(app: Page) -> None:
     assert box1 is not None
     assert box2 is not None
     assert box3 is not None
+    assert box3["y"] < box1["y"], "Fragment 3 (invoked first) should be above Fragment 1"
     assert box1["y"] < box2["y"], "Fragment 1 should be above Fragment 2"
-    assert box2["y"] < box3["y"], "Fragment 2 should be above Fragment 3"
 
 
 def test_parallel_fragment_container_matches_main_thread(app: Page) -> None:
