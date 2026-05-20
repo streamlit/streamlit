@@ -130,9 +130,11 @@ class Element(ABC):
     root: ElementTree = field(repr=False)
     key: str | None
 
-    def __init__(self, proto: ElementProto, root: ElementTree) -> None:
+
+    def __init__(self, proto: ElementProto | None, root: ElementTree) -> None:
         self.proto = proto
         self.root = root
+
 
     def __iter__(self) -> Iterator[Self]:
         yield self
