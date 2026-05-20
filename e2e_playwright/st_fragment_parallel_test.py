@@ -226,9 +226,7 @@ def test_parallel_st_stop_ends_script(page: Page, app_base_url: str) -> None:
     expect(page.get_by_text("Fragment A content")).to_be_visible()
     # Fragment B should not complete due to st.stop in Fragment A.
     # Use timeout to give the page a moment to settle and avoid timing flakiness.
-    expect(page.get_by_text("Fragment B done after 5s")).not_to_be_visible(
-        timeout=2000
-    )
+    expect(page.get_by_text("Fragment B done after 5s")).not_to_be_visible(timeout=2000)
 
 
 def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
@@ -242,9 +240,7 @@ def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
     expect(page.get_by_text("Run count: 3", exact=True)).to_be_visible()
 
 
-def test_widget_interaction_after_parallel_load(
-    page: Page, app_base_url: str
-) -> None:
+def test_widget_interaction_after_parallel_load(page: Page, app_base_url: str) -> None:
     """Button click after initial parallel load triggers sequential fragment rerun.
 
     This test verifies that after the initial parallel fragment execution completes,

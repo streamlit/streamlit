@@ -1166,7 +1166,7 @@ class DeltaGeneratorImageTest(DeltaGeneratorTestCase):
 
 
 @pytest.mark.parametrize(
-    "cursor_path,fragment_path,expected",
+    ("cursor_path", "fragment_path", "expected"),
     [
         # Equal paths → True
         ((0, 1, 2), (0, 1, 2), True),

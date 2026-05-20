@@ -1858,4 +1858,3 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
                 _check_not_parallel_worker("@st.dialog")
 
         assert ThreadState.get().is_parallel_worker is True
-
