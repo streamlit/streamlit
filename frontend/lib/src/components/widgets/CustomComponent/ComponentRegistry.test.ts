@@ -20,6 +20,8 @@ import { mockEndpoints } from "~lib/mocks/mocks"
 
 import { ComponentRegistry } from "./ComponentRegistry"
 
+const TEST_MESSAGE_ORIGIN = window.location.origin
+
 describe("ComponentRegistry", () => {
   it("Constructs component URLs", () => {
     const endpoint = mockEndpoints()
@@ -47,7 +49,8 @@ describe("ComponentRegistry", () => {
     const msgListener2 = vi.fn()
 
     // This should not error (and will not be handled).
-    onMessageEvent(new MessageEvent("message", { source: msgSource1 }))
+    onMessageEvent(new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: msgSource1 }))
 
     // Register a listener for message events from the window.
     registry.registerListener(msgSource1, msgListener1)
@@ -59,20 +62,23 @@ describe("ComponentRegistry", () => {
       type: "setComponentValue",
     }
     onMessageEvent(
-      new MessageEvent("message", { source: msgSource1, data: messageData })
+      new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: msgSource1, data: messageData })
     )
     expect(msgListener1).toHaveBeenCalledWith(messageData.type, messageData)
 
     // Send a message that's missing data. It should *not* be re-dispatched.
     msgListener1.mockReset()
-    onMessageEvent(new MessageEvent("message", { source: msgSource1 }))
+    onMessageEvent(new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: msgSource1 }))
     expect(msgListener1).not.toHaveBeenCalled()
 
     // De-register our listener. Messages should not be re-dispatched.
     msgListener1.mockReset()
     registry.deregisterListener(msgSource1)
     onMessageEvent(
-      new MessageEvent("message", { source: msgSource1, data: messageData })
+      new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: msgSource1, data: messageData })
     )
     expect(msgListener1).not.toHaveBeenCalled()
 
@@ -83,7 +89,8 @@ describe("ComponentRegistry", () => {
     msgListener1.mockReset()
     msgListener2.mockReset()
     onMessageEvent(
-      new MessageEvent("message", { source: msgSource1, data: messageData })
+      new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: msgSource1, data: messageData })
     )
     expect(msgListener1).toHaveBeenCalledWith(messageData.type, messageData)
     expect(msgListener2).not.toHaveBeenCalled()
@@ -91,7 +98,8 @@ describe("ComponentRegistry", () => {
     msgListener1.mockReset()
     msgListener2.mockReset()
     onMessageEvent(
-      new MessageEvent("message", { source: msgSource2, data: messageData })
+      new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: msgSource2, data: messageData })
     )
     expect(msgListener1).not.toHaveBeenCalled()
     expect(msgListener2).toHaveBeenCalledWith(messageData.type, messageData)
@@ -168,6 +176,23 @@ describe("ComponentRegistry", () => {
     warnSpy.mockRestore()
   })
 
+  it("ignores postMessage from an untrusted origin", () => {
+    const registry = new ComponentRegistry(mockEndpoints())
+    // @ts-expect-error
+    const { onMessageEvent } = registry
+    const source = {} as MessageEventSource
+    const listener = vi.fn()
+    registry.registerListener(source, listener)
+    onMessageEvent(
+      new MessageEvent("message", {
+        origin: "https://evil.example",
+        source,
+        data: { isStreamlitMessage: true, type: "setComponentValue" },
+      })
+    )
+    expect(listener).not.toHaveBeenCalled()
+  })
+
   it("ignores postMessage data that does not own isStreamlitMessage", () => {
     const registry = new ComponentRegistry(mockEndpoints())
     // @ts-expect-error
@@ -177,6 +202,7 @@ describe("ComponentRegistry", () => {
     registry.registerListener(source, listener)
     onMessageEvent(
       new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN,
         source,
         data: { other: true },
       })
@@ -195,7 +221,8 @@ describe("ComponentRegistry", () => {
       type: string
     }
     data.type = "setComponentValue"
-    onMessageEvent(new MessageEvent("message", { source, data }))
+    onMessageEvent(new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source, data }))
     expect(listener).not.toHaveBeenCalled()
   })
 
@@ -206,7 +233,8 @@ describe("ComponentRegistry", () => {
     // @ts-expect-error
     const { onMessageEvent } = registry
     const data = { isStreamlitMessage: true, type: "setComponentValue" }
-    onMessageEvent(new MessageEvent("message", { source: null, data }))
+    onMessageEvent(new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source: null, data }))
     expect(warnSpy).toHaveBeenCalledWith(
       "Received component message with no eventSource!",
       data
@@ -223,7 +251,8 @@ describe("ComponentRegistry", () => {
     const source = {} as MessageEventSource
     registry.registerListener(source, vi.fn())
     const data = { isStreamlitMessage: true }
-    onMessageEvent(new MessageEvent("message", { source, data }))
+    onMessageEvent(new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source, data }))
     expect(warnSpy).toHaveBeenCalledWith(
       "Received Streamlit message with no type!",
       data
@@ -244,7 +273,8 @@ describe("ComponentRegistry", () => {
     // @ts-expect-error
     const { onMessageEvent } = registry
     const data = { isStreamlitMessage: true, type: "setComponentValue" }
-    onMessageEvent(new MessageEvent("message", { source, data }))
+    onMessageEvent(new MessageEvent("message", {
+        origin: TEST_MESSAGE_ORIGIN, source, data }))
     expect(warnSpy).toHaveBeenCalledWith(
       "Received component message for unregistered ComponentInstance!",
       data

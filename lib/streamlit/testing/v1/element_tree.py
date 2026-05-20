@@ -130,8 +130,9 @@ class Element(ABC):
     root: ElementTree = field(repr=False)
     key: str | None
 
-    @abstractmethod
-    def __init__(self, proto: ElementProto, root: ElementTree) -> None: ...
+    def __init__(self, proto: ElementProto, root: ElementTree) -> None:
+        self.proto = proto
+        self.root = root
 
     def __iter__(self) -> Iterator[Self]:
         yield self
@@ -164,10 +165,10 @@ class Element(ABC):
 @dataclass(repr=False)
 class UnknownElement(Element):
     def __init__(self, proto: ElementProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
         ty = proto.WhichOneof("type")
         assert ty is not None
         self.proto = getattr(proto, ty)
-        self.root = root
         self.type = ty
         self.key = None
 
@@ -192,8 +193,7 @@ class Widget(Element, ABC):
     _value: Any
 
     def __init__(self, proto: Any, root: ElementTree) -> None:
-        self.proto = proto
-        self.root = root
+        super().__init__(proto, root)
         self.key = user_key_from_element_id(self.id)
         self._value = None
 
@@ -269,9 +269,8 @@ class AlertBase(Element):
     icon: str
 
     def __init__(self, proto: AlertProto, root: ElementTree) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
 
     @property
     def value(self) -> str:
@@ -439,9 +438,8 @@ class Code(Element):
     key: None
 
     def __init__(self, proto: CodeProto, root: ElementTree) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = "code"
 
     @property
@@ -502,8 +500,7 @@ class Dataframe(Element):
     proto: DataframeProto = field(repr=False)
 
     def __init__(self, proto: DataframeProto, root: ElementTree) -> None:
-        self.proto = proto
-        self.root = root
+        super().__init__(proto, root)
         self.type = "dataframe"
         # Extract user key from the element id if present
         self.key = user_key_from_element_id(proto.id) if proto.id else None
@@ -572,9 +569,8 @@ class Exception(Element):  # noqa: A001
     is_warning: bool
 
     def __init__(self, proto: ExceptionProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
-        self.proto = proto
         self.type = "exception"
 
         self.is_markdown = proto.message_is_markdown
@@ -595,9 +591,8 @@ class HeadingBase(Element, ABC):
     key: None
 
     def __init__(self, proto: HeadingProto, root: ElementTree, type_: str) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = type_
 
     @property
@@ -630,9 +625,8 @@ class Json(Element):
     expanded: bool
 
     def __init__(self, proto: JsonProto, root: ElementTree) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = "json"
 
     @property
@@ -648,9 +642,8 @@ class Markdown(Element):
     key: None
 
     def __init__(self, proto: MarkdownProto, root: ElementTree) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = "markdown"
 
     @property
@@ -693,8 +686,7 @@ class Space(Element):
     key: None = None
 
     def __init__(self, proto: SpaceProto, root: ElementTree) -> None:
-        self.proto = proto
-        self.root = root
+        super().__init__(proto, root)
         self.type = "space"
 
 
@@ -707,9 +699,8 @@ class Metric(Element):
     help: str
 
     def __init__(self, proto: MetricProto, root: ElementTree) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = "metric"
 
     @property
@@ -1583,9 +1574,8 @@ class Table(Element):
     proto: TableProto = field(repr=False)
 
     def __init__(self, proto: TableProto, root: ElementTree) -> None:
+        super().__init__(proto, root)
         self.key = None
-        self.proto = proto
-        self.root = root
         self.type = "table"
 
     @property
@@ -1602,8 +1592,7 @@ class Text(Element):
     key: None = None
 
     def __init__(self, proto: TextProto, root: ElementTree) -> None:
-        self.proto = proto
-        self.root = root
+        super().__init__(proto, root)
         self.type = "text"
 
     @property
@@ -1840,9 +1829,8 @@ class Toast(Element):
     icon: str
 
     def __init__(self, proto: ToastProto, root: ElementTree) -> None:
-        self.proto = proto
+        super().__init__(proto, root)
         self.key = None
-        self.root = root
         self.type = "toast"
 
     @property
@@ -2211,17 +2199,15 @@ class SpecialBlock(Block):
         root: ElementTree,
         type: str | None = None,
     ) -> None:
-        self.children = {}
-        self.proto = proto
+        super().__init__(proto, root)
         if type:
             self.type = type
         elif proto and proto.WhichOneof("type"):
             ty = proto.WhichOneof("type")
             assert ty is not None
             self.type = ty
-        else:
+        elif proto is None:
             self.type = "unknown"
-        self.root = root
 
 
 @dataclass(repr=False)
@@ -2238,9 +2224,8 @@ class ChatMessage(Block):
         proto: BlockProto.ChatMessage,
         root: ElementTree,
     ) -> None:
-        self.children = {}
+        super().__init__(None, root)
         self.proto = proto
-        self.root = root
         self.type = "chat_message"
         self.name = proto.name
         self.avatar = proto.avatar
@@ -2272,9 +2257,8 @@ class Column(Block):
         proto: BlockProto.Column,
         root: ElementTree,
     ) -> None:
-        self.children = {}
+        super().__init__(None, root)
         self.proto = proto
-        self.root = root
         self.type = "column"
         self.weight = proto.weight
         self.gap = self._GAP_SIZE_TO_STRING.get(proto.gap_config.gap_size)
@@ -2288,9 +2272,8 @@ class Expander(Block):
     label: str
 
     def __init__(self, proto: BlockProto.Expandable, root: ElementTree) -> None:
-        self.children = {}
+        super().__init__(None, root)
         self.proto = proto
-        self.root = root
         # The internal name is "expandable" but the public API uses "expander"
         # so the naming of the class and type follows the public name.
         self.type = "expander"
@@ -2306,9 +2289,8 @@ class Status(Block):
     label: str
 
     def __init__(self, proto: BlockProto.Expandable, root: ElementTree) -> None:
-        self.children = {}
+        super().__init__(None, root)
         self.proto = proto
-        self.root = root
         self.type = "status"
         self.icon = proto.icon
         self.label = proto.label
@@ -2337,9 +2319,8 @@ class Tab(Block):
         proto: BlockProto.Tab,
         root: ElementTree,
     ) -> None:
-        self.children = {}
+        super().__init__(None, root)
         self.proto = proto
-        self.root = root
         self.type = "tab"
         self.label = proto.label
 
@@ -2381,8 +2362,7 @@ class ElementTree(Block):
     _runner: AppTest | None = field(repr=False, default=None)
 
     def __init__(self) -> None:
-        self.children = {}
-        self.root = self
+        super().__init__(None, self)
         self.type = "root"
 
     @property

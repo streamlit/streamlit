@@ -24,6 +24,10 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import LinkColumn from "./LinkColumn"
 import { ErrorCell, isErrorCell, isMissingValueCell } from "./utils"
 
+// Avoid nested quantifiers that can trigger ReDoS (CodeQL js/redos).
+const STREAMLIT_APP_URL_VALIDATE =
+  /^https:\/\/(?:www\.)?[\w.-]*streamlit\.app(?:\/.*)?$/
+
 const MOCK_LINK_COLUMN_PROPS = {
   id: "1",
   name: "link_column",
@@ -93,8 +97,7 @@ describe("LinkColumn", () => {
     const mockColumn = LinkColumn({
       ...MOCK_LINK_COLUMN_PROPS,
       columnTypeOptions: {
-        validate:
-          "^https://(?:www.)?(?:[a-zA-Z0-9-]+.)*streamlit.app(?:/.*)?$",
+        validate: STREAMLIT_APP_URL_VALIDATE.source,
       },
     })
 
@@ -117,8 +120,7 @@ describe("LinkColumn", () => {
       ...MOCK_LINK_COLUMN_PROPS,
       columnTypeOptions: {
         max_chars: 40,
-        validate:
-          "^https://(?:www.)?(?:[a-zA-Z0-9-]+.)*streamlit.app(?:/.*)?$",
+        validate: STREAMLIT_APP_URL_VALIDATE.source,
       },
     })
 

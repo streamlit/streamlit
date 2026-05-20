@@ -107,6 +107,10 @@ export class ComponentRegistry {
   }
 
   private readonly onMessageEvent = (event: MessageEvent): void => {
+    if (event.origin !== window.location.origin) {
+      return
+    }
+
     if (
       isNullOrUndefined(event.data) ||
       !Object.hasOwn(event.data, "isStreamlitMessage")

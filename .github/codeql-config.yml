@@ -12,6 +12,10 @@ query-filters:
       id: py/unsafe-cyclic-import
   - exclude:
       id: py/unused-import
+  - exclude:
+      id: py/bind-socket-all-network-interfaces
+      paths:
+        - lib/streamlit/web/server/starlette/starlette_server.py
 paths:
   - lib/streamlit
   - frontend/lib/src

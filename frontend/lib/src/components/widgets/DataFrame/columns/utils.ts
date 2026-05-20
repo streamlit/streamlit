@@ -671,7 +671,8 @@ const LINE_BREAK_REGEX = new RegExp(/(\r\n|\n|\r)/gm)
  */
 export function removeLineBreaks(text: string): string {
   if (text.indexOf("\n") !== -1) {
-    return text.replace(LINE_BREAK_REGEX, " ")
+    // Use a replacer function so `$` in matched text is not interpreted.
+    return text.replace(LINE_BREAK_REGEX, () => " ")
   }
   return text
 }

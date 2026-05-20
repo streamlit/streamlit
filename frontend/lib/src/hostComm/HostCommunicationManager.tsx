@@ -185,8 +185,6 @@ export default class HostCommunicationManager {
    * Register a function to handle a message from the Host
    */
   public receiveHostMessage = (event: MessageEvent): void => {
-    const message = event.data as VersionedMessage<IHostToGuestMessage>
-
     // Messages coming from the parent frame of a deployed Streamlit app
     // may not be coming from a trusted source (even if we've set the CSP
     // frame-anscestors header, it doesn't hurt to be extra safe). We avoid
@@ -194,11 +192,15 @@ export default class HostCommunicationManager {
     // labeled as trusted here to lower the probability that we end up
     // processing malicious input.
     if (
-      message.stCommVersion !== HOST_COMM_VERSION ||
       !this.allowedOrigins.find(allowed =>
         isValidOrigin(allowed, event.origin)
       )
     ) {
+      return
+    }
+
+    const message = event.data as VersionedMessage<IHostToGuestMessage>
+    if (message.stCommVersion !== HOST_COMM_VERSION) {
       return
     }
 
