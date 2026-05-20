@@ -79,7 +79,7 @@
     "@types/styletron-react": "^5.0.3",
     "@types/ua-parser-js": "^0.7.39",
     "@types/uuid": "^11.0.0",
-    "@vitejs/plugin-react-swc": "^4.3.0",
+    "@vitejs/plugin-react-swc": "^4.3.1",
     "axios-mock-adapter": "^2.1.0",
     "buffer": "^6.0.3",
     "chrome-launcher": "^1.2.1",
