@@ -18,7 +18,9 @@ import asyncio
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
+from urllib.parse import parse_qs, urlparse
 
+from authlib.integrations import starlette_client
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import PlainTextResponse, RedirectResponse
@@ -210,6 +212,109 @@ def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> N
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302
         assert response.headers["location"].endswith("/")
+
+
+def test_callback_token_exchange_failure_clears_auth_cookies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that OAuth token exchange failures log users out gracefully."""
+
+    class _DummyClient:
+        async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+            raise RuntimeError("invalid code verifier")
+
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_create_oauth_client",
+        lambda provider: (_DummyClient(), "/redirect"),
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_provider_by_state",
+        lambda request, state: "default",
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_origin_from_secrets",
+        lambda: "http://testserver",
+    )
+
+    app = Starlette(routes=create_auth_routes(""))
+    with TestClient(app) as client:
+        client.cookies.set(USER_COOKIE_NAME, "stale-user-cookie")
+        client.cookies.set(TOKENS_COOKIE_NAME, "stale-token-cookie")
+
+        response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"].endswith("/")
+
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    assert any(
+        header.startswith(f"{USER_COOKIE_NAME}=") and "Max-Age=0" in header
+        for header in set_cookie_headers
+    )
+    assert any(
+        header.startswith(f"{TOKENS_COOKIE_NAME}=") and "Max-Age=0" in header
+        for header in set_cookie_headers
+    )
+
+
+class TestStreamlitStarletteOAuth:
+    """Tests for Streamlit-specific Authlib Starlette behavior."""
+
+    def test_enables_s256_pkce_from_provider_metadata(self) -> None:
+        """Test that S256 provider metadata generates PKCE authorize data."""
+        oauth_class = starlette_auth_routes._create_streamlit_oauth_class(
+            starlette_client
+        )
+        client = oauth_class.oauth2_client_cls(
+            MagicMock(),
+            "default",
+            client_id="client-id",
+            client_kwargs={"scope": "openid email profile"},
+            authorization_endpoint="https://provider.example/authorize",
+            code_challenge_methods_supported=["plain", "S256"],
+        )
+
+        auth_context = asyncio.run(
+            client.create_authorization_url("http://localhost:8501/oauth2callback")
+        )
+
+        parsed_url = urlparse(auth_context["url"])
+        query_params = parse_qs(parsed_url.query)
+
+        assert client.client_kwargs["code_challenge_method"] == "S256"
+        assert "code_verifier" in auth_context
+        assert query_params["code_challenge_method"] == ["S256"]
+        assert "code_challenge" in query_params
+        assert "code_verifier" not in query_params
+
+    def test_does_not_enable_pkce_without_s256_provider_metadata(self) -> None:
+        """Test that PKCE is not forced for providers that do not advertise S256."""
+        oauth_class = starlette_auth_routes._create_streamlit_oauth_class(
+            starlette_client
+        )
+        client = oauth_class.oauth2_client_cls(
+            MagicMock(),
+            "default",
+            client_id="client-id",
+            client_kwargs={"scope": "openid email profile"},
+            authorization_endpoint="https://provider.example/authorize",
+            code_challenge_methods_supported=["plain"],
+        )
+
+        auth_context = asyncio.run(
+            client.create_authorization_url("http://localhost:8501/oauth2callback")
+        )
+
+        parsed_url = urlparse(auth_context["url"])
+        query_params = parse_qs(parsed_url.query)
+
+        assert "code_challenge_method" not in client.client_kwargs
+        assert "code_verifier" not in auth_context
+        assert "code_challenge_method" not in query_params
+        assert "code_challenge" not in query_params
 
 
 class TestCookiePath:

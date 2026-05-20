@@ -83,6 +83,26 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
     return any(key in value for key in provider_keys)
 
 
+def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
+    """Create a Starlette OAuth class with Streamlit-specific OIDC behavior."""
+
+    class StreamlitStarletteOAuth2App(starlette_client.StarletteOAuth2App):  # type: ignore[misc]
+        async def load_server_metadata(self) -> dict[str, Any]:
+            """Enforce S256 PKCE if supported by the provider.
+
+            This preserves the behavior from the old Tornado OAuth integration.
+            """
+            metadata = cast("dict[str, Any]", await super().load_server_metadata())
+            if "S256" in metadata.get("code_challenge_methods_supported", []):
+                self.client_kwargs["code_challenge_method"] = "S256"
+            return metadata
+
+    class StreamlitStarletteOAuth(starlette_client.OAuth):  # type: ignore[misc]
+        oauth2_client_cls = StreamlitStarletteOAuth2App
+
+    return StreamlitStarletteOAuth
+
+
 class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
     """Config adapter that exposes provider data via Authlib's flat lookup.
 
@@ -279,9 +299,10 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    oauth = starlette_client.OAuth(config=_AuthlibConfig(config))
+    oauth_class = _create_streamlit_oauth_class(starlette_client)
+    oauth = oauth_class(config=_AuthlibConfig(config))
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
+    return oauth.create_client(provider), redirect_uri
 
 
 def _parse_provider_token(provider_token: str | None) -> str | None:
@@ -499,7 +520,18 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
         return await _redirect_to_base(base_url)
 
     client, _ = _create_oauth_client(provider)
-    token = await client.authorize_access_token(request)
+    try:
+        token = await client.authorize_access_token(request)
+    except Exception:
+        _LOGGER.warning(
+            "OAuth token exchange failed for provider '%s'. Clearing auth cookies.",
+            provider,
+            exc_info=True,
+        )
+        response = await _redirect_to_base(base_url)
+        _clear_auth_cookie(response, request)
+        return response
+
     user = token.get("userinfo") or {}
 
     response = await _redirect_to_base(base_url)
