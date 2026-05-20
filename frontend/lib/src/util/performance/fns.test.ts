@@ -16,7 +16,13 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { ScriptRunState } from "~lib/ScriptRunState"
+
 import { mark, measure } from "./fns"
+import type { StPerformanceMetric } from "./types"
+
+// Typed metric name from StPerformanceMetric
+const SCRIPT_RUN_CYCLE: StPerformanceMetric = "script-run-cycle"
 
 describe("performance fns", () => {
   afterEach(() => {
@@ -29,11 +35,13 @@ describe("performance fns", () => {
         .spyOn(performance, "mark")
         .mockImplementation(name => ({ name }) as unknown as PerformanceMark)
 
-      const result = mark("running")
+      const result = mark(ScriptRunState.RUNNING)
 
       expect(spy).toHaveBeenCalledTimes(1)
-      expect(spy).toHaveBeenCalledWith("running")
-      expect((result as unknown as { name: string }).name).toBe("running")
+      expect(spy).toHaveBeenCalledWith(ScriptRunState.RUNNING)
+      expect((result as unknown as { name: string }).name).toBe(
+        ScriptRunState.RUNNING
+      )
     })
   })
 
@@ -45,16 +53,20 @@ describe("performance fns", () => {
           name => ({ name }) as unknown as PerformanceMeasure
         )
 
-      const result = measure("script-run-cycle", "running", "notRunning")
+      const result = measure(
+        SCRIPT_RUN_CYCLE,
+        ScriptRunState.RUNNING,
+        ScriptRunState.NOT_RUNNING
+      )
 
       expect(spy).toHaveBeenCalledTimes(1)
       expect(spy).toHaveBeenCalledWith(
-        "script-run-cycle",
-        "running",
-        "notRunning"
+        SCRIPT_RUN_CYCLE,
+        ScriptRunState.RUNNING,
+        ScriptRunState.NOT_RUNNING
       )
       expect((result as unknown as { name: string }).name).toBe(
-        "script-run-cycle"
+        SCRIPT_RUN_CYCLE
       )
     })
 
@@ -70,9 +82,9 @@ describe("performance fns", () => {
         end: 10,
         detail: { reason: "test" },
       }
-      measure("script-run-cycle", options)
+      measure(SCRIPT_RUN_CYCLE, options)
 
-      expect(spy).toHaveBeenCalledWith("script-run-cycle", options, undefined)
+      expect(spy).toHaveBeenCalledWith(SCRIPT_RUN_CYCLE, options, undefined)
     })
   })
 })

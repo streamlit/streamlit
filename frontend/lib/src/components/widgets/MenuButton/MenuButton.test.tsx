@@ -20,6 +20,7 @@ import { vi } from "vitest"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -295,6 +296,9 @@ describe("MenuButton widget", () => {
     const props = getProps({ type: "unknown" })
     render(<MenuButton {...props} />)
     const button = screen.getByTestId("stMenuButtonButton")
-    expect(button).toHaveAttribute("kind", "secondary")
+    // Note: This assertion checks the forwarded 'kind' prop on the underlying
+    // <button> element. This is an implementation detail exposed by Emotion's
+    // prop forwarding. See BaseButton.tsx for the styled-component definition.
+    expect(button).toHaveAttribute("kind", BaseButtonKind.SECONDARY)
   })
 })
