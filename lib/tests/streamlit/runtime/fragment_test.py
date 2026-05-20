@@ -1185,8 +1185,8 @@ def test_order_fragment_ids_preserves_order_on_malformed_cycle() -> None:
     """When every queued fragment has a queued ancestor (e.g. a parent cycle),
     ``order_fragment_ids`` preserves the original order rather than looping."""
     storage = MemoryFragmentStorage()
-    storage.register("a", "a_value")
-    storage.register("b", "b_value")
+    storage.register("a", lambda: None)
+    storage.register("b", lambda: None)
     # Hand-construct a cycle in the parent map: a <-> b.
     storage._parent_by_id["a"] = "b"
     storage._parent_by_id["b"] = "a"

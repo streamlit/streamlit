@@ -1523,7 +1523,7 @@ def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None
 
     config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
 
-    [output] = (
+    output = "\n".join(
         re.sub(r"\x1b[^m]*m", "", c.args[0]) for c in patched_echo.call_args_list
     )
     assert "THIS IS DEPRECATED." in output
