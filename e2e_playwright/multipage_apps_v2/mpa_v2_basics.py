@@ -77,6 +77,10 @@ def page_14() -> None:
     fragment_number_input()
 
 
+def unicode_page() -> None:
+    st.header("Págé_Wíth_Spêcîãl_Chäracters")
+
+
 page7 = st.Page(page_7, default=set_default)
 page8 = st.Page(page_8, url_path="my_url_path")
 page9 = st.Page(page_9)
@@ -85,6 +89,11 @@ page11 = st.Page(page_8, title="page `11`", url_path="page_11")
 page12 = st.Page(page_9, title=":blue[page] 12", url_path="page_12")
 page13 = st.Page(page_8, title="page 13", url_path="page_13")
 page14 = st.Page(page_14, title="page 14")
+page_unicode = st.Page(
+    unicode_page,
+    title="Págé_Wíth_Spêcîãl_Chäracters",
+    url_path="Págé_Wíth_Spêcîãl_Chäracters",
+)
 
 hide_sidebar = st.checkbox("Hide sidebar")
 dynamic_nav = st.checkbox("Change navigation dynamically")
@@ -125,7 +134,7 @@ else:
         "Section 3": [page6],
         "Section 4": [page7, page8, page9],
         "Section 5": [page10, page11, page12],
-        "Section 6": [page13, page14],
+        "Section 6": [page13, page14, page_unicode],
     }
 
 pg = st.navigation(
