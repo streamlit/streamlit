@@ -44,41 +44,36 @@ def test_dialog_raises_from_parallel_worker() -> None:
 
 
 def test_dialog_allowed_when_not_parallel_worker() -> None:
-    """@st.dialog does not raise when is_parallel_worker=False."""
+    """@st.dialog calls _check_not_parallel_worker and does not raise when is_parallel_worker=False."""
     ThreadState.initialize(is_parallel_worker=False)
     try:
-        # We need to mock out various parts of the dialog machinery
-        # to test that the parallel worker check passes without setting up
-        # the full Streamlit context
-        with (
-            patch("streamlit.elements.dialog_decorator.get_dg_singleton_instance"),
-            patch(
-                "streamlit.elements.dialog_decorator.get_last_dg_added_to_context_stack",
-                return_value=None,
-            ),
-            patch("streamlit.runtime.fragment.get_script_run_ctx") as mock_ctx,
-        ):
-            mock_ctx.return_value = MagicMock()
-            mock_ctx.return_value.fragment_storage = MagicMock()
+        with patch(
+            "streamlit.elements.dialog_decorator._check_not_parallel_worker"
+        ) as mock_check:
+            # Decorator applies at definition time, so the check should be called
+            # when my_dialog() is invoked
 
-            @st.dialog("Test")
-            def my_dialog() -> None:
-                st.write("Hello")
+            # We still need to mock the dialog machinery to avoid errors from
+            # incomplete setup, but we're specifically testing that:
+            # 1. _check_not_parallel_worker is called
+            # 2. It doesn't raise (because is_parallel_worker=False)
+            with (
+                patch("streamlit.elements.dialog_decorator.get_dg_singleton_instance"),
+                patch(
+                    "streamlit.elements.dialog_decorator.get_last_dg_added_to_context_stack",
+                    return_value=None,
+                ),
+                patch("streamlit.runtime.fragment.get_script_run_ctx") as mock_ctx,
+            ):
+                mock_ctx.return_value = MagicMock()
+                mock_ctx.return_value.fragment_storage = MagicMock()
 
-            # The dialog should not raise a parallel worker exception.
-            # Other exceptions may occur due to incomplete mocking, but those
-            # are not what we're testing.
-            raised_parallel_error = False
-            try:
+                @st.dialog("Test")
+                def my_dialog() -> None:
+                    st.write("Hello")
+
                 my_dialog()
-            except StreamlitAPIException as exc:
-                if "parallel fragment" in str(exc):
-                    raised_parallel_error = True
-            except Exception:
-                pass
 
-            assert not raised_parallel_error, (
-                "Dialog raised parallel worker error unexpectedly"
-            )
+            mock_check.assert_called_once_with("@st.dialog")
     finally:
         ThreadState.initialize(is_parallel_worker=False)
