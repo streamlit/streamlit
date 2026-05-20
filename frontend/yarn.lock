@@ -3479,13 +3479,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rolldown/pluginutils@npm:1.0.0-rc.7":
-  version: 1.0.0-rc.7
-  resolution: "@rolldown/pluginutils@npm:1.0.0-rc.7"
-  checksum: 10c0/9d5490b5805b25bcd1720ca01c4c032b55a0ef953dab36a8dd42c568e82214576baa464f3027cd5dff3fabcfbe3bf3db2251d12b60220f5d1cd2ffde5ee37082
-  languageName: node
-  linkType: hard
-
 "@rolldown/pluginutils@npm:^1.0.0":
   version: 1.0.1
   resolution: "@rolldown/pluginutils@npm:1.0.1"
@@ -3662,7 +3655,7 @@ __metadata:
     "@types/styletron-react": "npm:^5.0.3"
     "@types/ua-parser-js": "npm:^0.7.39"
     "@types/uuid": "npm:^11.0.0"
-    "@vitejs/plugin-react-swc": "npm:^4.3.0"
+    "@vitejs/plugin-react-swc": "npm:^4.3.1"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     buffer: "npm:^6.0.3"
@@ -3727,7 +3720,7 @@ __metadata:
     "@streamlit/protobuf": "workspace:^"
     "@streamlit/utils": "workspace:^"
     "@types/lodash-es": "npm:^4.17.12"
-    axios: "npm:^1.16.0"
+    axios: "npm:^1.16.1"
     axios-mock-adapter: "npm:^2.1.0"
     lodash-es: "npm:^4.18.1"
     loglevel: "npm:^1.9.2"
@@ -3794,9 +3787,9 @@ __metadata:
     "@types/uuid": "npm:^11.0.0"
     "@types/wavesurfer.js": "npm:^6.0.12"
     "@types/xxhashjs": "npm:^0.2.2"
-    "@vitejs/plugin-react-swc": "npm:^4.3.0"
+    "@vitejs/plugin-react-swc": "npm:^4.3.1"
     apache-arrow: "npm:^21.1.0"
-    axios: "npm:^1.16.0"
+    axios: "npm:^1.16.1"
     axios-mock-adapter: "npm:^2.1.0"
     baseui: "npm:12.2.0"
     classnames: "npm:^2.3.2"
@@ -3806,7 +3799,7 @@ __metadata:
     date-fns: "npm:^4.1.0"
     decamelize: "npm:^6.0.1"
     deck.gl: "npm:^9.3.2"
-    dompurify: "npm:^3.4.1"
+    dompurify: "npm:^3.4.3"
     hoist-non-react-statics: "npm:^3.3.2"
     immer: "npm:^11.1.7"
     json5: "npm:^2.2.3"
@@ -3867,7 +3860,7 @@ __metadata:
     vitest: "npm:^4.1.6"
     vitest-canvas-mock: "npm:^1.1.4"
     vitest-fetch-mock: "npm:^0.4.5"
-    wavesurfer.js: "npm:^7.12.6"
+    wavesurfer.js: "npm:^7.12.7"
     xxhashjs: "npm:^0.2.2"
   peerDependencies:
     react: ^17.0.0 || ^18.0.0
@@ -5676,15 +5669,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/plugin-react-swc@npm:^4.3.0":
-  version: 4.3.0
-  resolution: "@vitejs/plugin-react-swc@npm:4.3.0"
+"@vitejs/plugin-react-swc@npm:^4.3.1":
+  version: 4.3.1
+  resolution: "@vitejs/plugin-react-swc@npm:4.3.1"
   dependencies:
-    "@rolldown/pluginutils": "npm:1.0.0-rc.7"
+    "@rolldown/pluginutils": "npm:^1.0.0"
     "@swc/core": "npm:^1.15.11"
   peerDependencies:
     vite: ^4 || ^5 || ^6 || ^7 || ^8
-  checksum: 10c0/36228152f549e0db226ad59a41fcd4fc3df636575637c9190d5927081162f2c0f592756aa11d4fd4a7e34c734b911b319b0e87570f73b1cd67d7a38d8cbff80d
+  checksum: 10c0/1c77f2214df83175c15db9b0045ed212d96e3f375a7396304441eb82614e9a2969db948daf66346159376ee8c2b45c01a01dad79756d19f75cbbd323075e3d79
   languageName: node
   linkType: hard
 
@@ -5940,6 +5933,15 @@ __metadata:
   bin:
     acorn: bin/acorn
   checksum: 10c0/c9c52697227661b68d0debaf972222d4f622aa06b185824164e153438afa7b08273432ca43ea792cadb24dada1d46f6f6bb1ef8de9956979288cc1b96bf9914e
+  languageName: node
+  linkType: hard
+
+"agent-base@npm:6":
+  version: 6.0.2
+  resolution: "agent-base@npm:6.0.2"
+  dependencies:
+    debug: "npm:4"
+  checksum: 10c0/dc4f757e40b5f3e3d674bc9beb4f1048f4ee83af189bae39be99f57bf1f48dde166a8b0a5342a84b5944ee8e6ed1e5a9d801858f4ad44764e84957122fe46261
   languageName: node
   linkType: hard
 
@@ -6332,14 +6334,15 @@ __metadata:
   languageName: node
   linkType: hard
 
-"axios@npm:^1.16.0":
-  version: 1.16.0
-  resolution: "axios@npm:1.16.0"
+"axios@npm:^1.16.1":
+  version: 1.16.1
+  resolution: "axios@npm:1.16.1"
   dependencies:
     follow-redirects: "npm:^1.16.0"
     form-data: "npm:^4.0.5"
+    https-proxy-agent: "npm:^5.0.1"
     proxy-from-env: "npm:^2.1.0"
-  checksum: 10c0/1c91a5221b77b76072026b4cc95ecdf38f7c3e33e63423abec09a85e6e9a12279637dcc9ac2ba1fc333e0c447fb3b0f46d7965acb5d7cea02d188e9c6d425c0b
+  checksum: 10c0/2f77e37e6552bbff8a772d058fb09500198e9188c6b20dc799d82dbe12a8cb506f6eed4e4e62a9ba612a35cbab496faa26d68f9bff14a53af6d15c3e136391a7
   languageName: node
   linkType: hard
 
@@ -11232,6 +11235,16 @@ __metadata:
     agent-base: "npm:^7.1.0"
     debug: "npm:^4.3.4"
   checksum: 10c0/4207b06a4580fb85dd6dff521f0abf6db517489e70863dca1a0291daa7f2d3d2d6015a57bd702af068ea5cf9f1f6ff72314f5f5b4228d299c0904135d2aef921
+  languageName: node
+  linkType: hard
+
+"https-proxy-agent@npm:^5.0.1":
+  version: 5.0.1
+  resolution: "https-proxy-agent@npm:5.0.1"
+  dependencies:
+    agent-base: "npm:6"
+    debug: "npm:4"
+  checksum: 10c0/6dd639f03434003577c62b27cafdb864784ef19b2de430d8ae2a1d45e31c4fd60719e5637b44db1a88a046934307da7089e03d6089ec3ddacc1189d8de8897d1
   languageName: node
   linkType: hard
 
@@ -19476,10 +19489,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"wavesurfer.js@npm:^7.12.6":
-  version: 7.12.6
-  resolution: "wavesurfer.js@npm:7.12.6"
-  checksum: 10c0/537847b4926f26350f20479b06c55471538273efe04f874d084b85d3c12bfc94b7e7554eb48308073ebb6dd408762a7a2ef6a4ce7d7e01b469ceb2de26803d2d
+"wavesurfer.js@npm:^7.12.7":
+  version: 7.12.7
+  resolution: "wavesurfer.js@npm:7.12.7"
+  checksum: 10c0/066b34586abcc27e2b80e28b19645e3413f0c37ba983e48de2ebc9c8ca69cd5664cafacd090b91d3b7ac4695413149b7d7db2f20fe201198847da03672be5e2e
   languageName: node
   linkType: hard
 
