@@ -229,6 +229,17 @@ function DataFrame({
     []
   )
 
+  /** Close the button action menu. */
+  const handleCloseButtonMenu = useCallback(
+    () => setButtonActionMenu(undefined),
+    []
+  )
+
+  // Ref to access current menu state in stable callbacks without
+  // re-creating them when menu state changes.
+  const buttonActionMenuRef = useRef(buttonActionMenu)
+  buttonActionMenuRef.current = buttonActionMenu
+
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
   // would still work. Those messages don't have the
@@ -328,6 +339,20 @@ function DataFrame({
       )
     },
     [widgetMgr, element.buttonClickWidgets, element.formId, fragmentId]
+  )
+
+  /**
+   * Handle action selection from the button action menu dropdown.
+   * Uses ref to avoid recreating callback when menu state changes.
+   */
+  const handleMenuSelectAction = useCallback(
+    (label: string): void => {
+      const menu = buttonActionMenuRef.current
+      if (menu) {
+        handleButtonClick(menu.columnName, menu.rowIndex, label)
+      }
+    },
+    [handleButtonClick]
   )
 
   // Store the rAF handle so we can cancel any pending frame when a new menu
@@ -1425,14 +1450,8 @@ function DataFrame({
             top={buttonActionMenu.screenTop}
             left={buttonActionMenu.screenLeft}
             actions={buttonActionMenu.actions}
-            onSelectAction={(label: string) => {
-              handleButtonClick(
-                buttonActionMenu.columnName,
-                buttonActionMenu.rowIndex,
-                label
-              )
-            }}
-            onCloseMenu={() => setButtonActionMenu(undefined)}
+            onSelectAction={handleMenuSelectAction}
+            onCloseMenu={handleCloseButtonMenu}
           />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
