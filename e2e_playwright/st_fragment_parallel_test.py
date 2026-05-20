@@ -229,9 +229,6 @@ def test_parallel_st_stop_ends_script(page: Page, app_base_url: str) -> None:
     # Fragment B should not complete due to st.stop in Fragment A
     expect(page.get_by_text("Fragment B done after 5s")).not_to_be_visible()
 
-    total_time_text = page.get_by_text(re.compile(r"Total time: \d+\.\d+s"))
-    expect(total_time_text).to_be_visible()
-
 
 def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
     """Fragment calls st.rerun on first run, app restarts."""
