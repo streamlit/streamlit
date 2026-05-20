@@ -429,6 +429,11 @@ def get_script_run_ctx(suppress_warning: bool = False) -> ScriptRunContext | Non
     return ctx
 
 
+def has_script_run_ctx() -> bool:
+    """Return whether the current thread has an active ScriptRunContext."""
+    return get_script_run_ctx(suppress_warning=True) is not None
+
+
 def enqueue_message(msg: ForwardMsg) -> None:
     """Enqueues a ForwardMsg proto to send to the app."""
     ctx = get_script_run_ctx()

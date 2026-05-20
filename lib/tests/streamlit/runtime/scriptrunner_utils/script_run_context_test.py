@@ -32,6 +32,7 @@ from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ThreadState,
     add_script_run_ctx,
     enqueue_message,
+    has_script_run_ctx,
 )
 from streamlit.runtime.state import SafeSessionState, SessionState
 from streamlit.testing.v1.util import patch_config_options
@@ -149,6 +150,14 @@ class ScriptRunContextTest(unittest.TestCase):
             fake_enqueue_result["msg"].delta.new_element.markdown.body
             == msg.delta.new_element.markdown.body
         )
+
+    def test_has_script_run_ctx_false_when_unset(self):
+        assert has_script_run_ctx() is False
+
+    def test_has_script_run_ctx_true_when_set(self):
+        ctx = _create_script_run_context(lambda _msg: None)
+        add_script_run_ctx(ctx=ctx)
+        assert has_script_run_ctx() is True
 
     def test_enqueue_message_sets_cacheable_flag(self):
         """Test that the metadata.cacheable flag is set correctly on outgoing ForwardMsgs."""

@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -52,6 +53,29 @@ def test_from_file_str():
 def test_from_file_path():
     script = AppTest.from_file(Path("../test_data/widgets_script.py"))
     script.run()
+
+
+def test_dialog_module_import_patch_before_apptest_run(tmp_path, monkeypatch):
+    app_path = tmp_path / "foo.py"
+    app_path.write_text(
+        "import streamlit as st\n"
+        "@st.dialog('Test')\n"
+        "def dialog_func():\n"
+        "    st.write('Hello, world!')\n"
+        "def dummy_func():\n"
+        "    pass\n"
+        "dialog_func()\n",
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.syspath_prepend(str(tmp_path))
+
+    with patch("foo.dummy_func"):
+        at = AppTest.from_file("foo.py").run()
+
+    assert not at.exception
+    assert at.markdown[0].value == "Hello, world!"
 
 
 def test_get_query_params():

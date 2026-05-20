@@ -26,6 +26,7 @@ from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     enqueue_message,
     get_script_run_ctx,
+    has_script_run_ctx,
 )
 from streamlit.runtime.state import register_widget
 from streamlit.string_util import validate_icon_or_emoji
@@ -95,6 +96,10 @@ class Dialog(DeltaGenerator):
             raise StreamlitAPIException(
                 f"You have passed {on_dismiss} to `on_dismiss`. But only 'ignore', "
                 "'rerun', or a callable is supported."
+            )
+        if not has_script_run_ctx():
+            raise StreamlitAPIException(
+                "Dialogs can only be created during an active Streamlit script run."
             )
 
         block_proto = BlockProto()
