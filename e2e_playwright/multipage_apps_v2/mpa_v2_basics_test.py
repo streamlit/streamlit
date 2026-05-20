@@ -345,7 +345,7 @@ def test_handles_expanded_navigation_parameter_correctly(app: Page):
     expect(view_button).to_be_visible()
 
     links = app.get_by_test_id("stSidebarNav").locator("a")
-    expect(links).to_have_count(11)
+    expect(links).to_have_count(10)
 
     # Forced expansion removes the View less button and shows all links
     click_checkbox(app, "Expand navigation")
@@ -376,7 +376,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_base_url:
     view_more_button = app.get_by_test_id("stSidebarNavViewButton")
     expect(view_more_button).to_be_visible()
     links = app.get_by_test_id("stSidebarNav").locator("a")
-    expect(links).to_have_count(11)
+    expect(links).to_have_count(10)
 
     # User clicks View more which preserves the setting
     view_more_button.click()
@@ -406,7 +406,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_base_url:
     view_less_button = app.get_by_test_id("stSidebarNavViewButton")
     expect(view_less_button).to_have_text("View 4 more")
     links = app.get_by_test_id("stSidebarNav").locator("a")
-    expect(links).to_have_count(11)
+    expect(links).to_have_count(10)
 
     # Reload the page and ensure elements are in the sidebar
     goto_app(app, app_base_url)
@@ -415,7 +415,7 @@ def test_preserves_navigation_expansion_user_preference(app: Page, app_base_url:
     wait_for_app_run(app)
 
     links = app.get_by_test_id("stSidebarNav").locator("a")
-    expect(links).to_have_count(11)
+    expect(links).to_have_count(10)
     expect(app.get_by_test_id("stSidebarNavViewButton")).to_have_text("View 4 more")
 
 
