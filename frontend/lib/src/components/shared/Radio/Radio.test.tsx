@@ -230,4 +230,24 @@ describe("Radio widget", () => {
     const group = screen.getByRole("radiogroup")
     expect(group).not.toHaveAttribute("aria-label")
   })
+
+  it("sets data-orientation=vertical for vertical layout", () => {
+    const props = getProps({ horizontal: false })
+    render(<Radio {...props} />)
+
+    expect(screen.getByRole("radiogroup")).toHaveAttribute(
+      "data-orientation",
+      "vertical"
+    )
+  })
+
+  it("sets data-orientation=horizontal for horizontal layout", () => {
+    const props = getProps({ horizontal: true })
+    render(<Radio {...props} />)
+
+    expect(screen.getByRole("radiogroup")).toHaveAttribute(
+      "data-orientation",
+      "horizontal"
+    )
+  })
 })

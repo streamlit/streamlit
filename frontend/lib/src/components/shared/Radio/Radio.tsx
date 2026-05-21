@@ -110,6 +110,7 @@ function Radio({
         onChange={handleChange}
         value={value !== null ? value.toString() : null}
         isDisabled={shouldDisable}
+        orientation={horizontal ? "horizontal" : "vertical"}
         aria-label={label}
         data-testid="stRadioGroup"
         $horizontal={horizontal}

@@ -30,7 +30,9 @@ interface StyledRadioGroupProps {
 /**
  * Flex container for the radio group. Controls direction, wrap, gap, and
  * minimum height. `shouldForwardProp` prevents `$`-prefixed layout props from
- * being forwarded to React Aria's RadioGroup component.
+ * being forwarded to React Aria's RadioGroup component. The native `orientation`
+ * prop passes through so React Aria sets the correct `data-orientation`
+ * attribute and uses the right arrow-key direction for keyboard navigation.
  */
 export const StyledRadioGroup = styled(RARadioGroup, {
   shouldForwardProp: (prop: string) => !prop.startsWith("$"),
@@ -39,12 +41,11 @@ export const StyledRadioGroup = styled(RARadioGroup, {
   flexDirection: $horizontal ? "row" : "column",
   flexWrap: "wrap",
   alignItems: "start",
-  gap:
-    $horizontal && !$hasCaptions
-      ? theme.spacing.lg
-      : $hasCaptions
-        ? theme.spacing.sm
-        : theme.spacing.none,
+  gap: $horizontal
+    ? theme.spacing.lg
+    : $hasCaptions
+      ? theme.spacing.sm
+      : theme.spacing.none,
   minHeight: theme.sizes.minElementHeight,
 }))
 
