@@ -52,7 +52,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.68.1",
-    "@eslint-react/eslint-plugin": "^5.7.3",
+    "@eslint-react/eslint-plugin": "^5.7.8",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
@@ -60,10 +60,10 @@
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
-    "@vitest/coverage-v8": "^4.1.5",
+    "@vitest/coverage-v8": "^4.1.6",
     "@vitest/eslint-plugin": "^1.6.17",
     "concurrently": "^9.2.1",
-    "eslint": "^10.3.0",
+    "eslint": "^10.4.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.2",
     "eslint-plugin-jsx-a11y": "^6.10.2",
@@ -74,11 +74,11 @@
     "eslint-plugin-testing-library": "^7.16.2",
     "globals": "^17.6.0",
     "jiti": "^2.7.0",
-    "knip": "^6.12.0",
-    "oxfmt": "^0.48.0",
-    "oxlint": "^1.63.0",
+    "knip": "^6.13.1",
+    "oxfmt": "^0.50.0",
+    "oxlint": "^1.64.0",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.2",
-    "vitest": "^4.1.5"
+    "typescript-eslint": "^8.59.3",
+    "vitest": "^4.1.6"
   }
 }

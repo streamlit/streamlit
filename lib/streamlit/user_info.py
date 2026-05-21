@@ -32,7 +32,10 @@ from streamlit.auth_util import (
     is_authlib_installed,
     validate_auth_credentials,
 )
-from streamlit.errors import StreamlitAPIException, StreamlitAuthError
+from streamlit.errors import (
+    StreamlitAPIException,
+    StreamlitMissingAuthlibError,
+)
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -298,10 +301,7 @@ def login(provider: str | None = None) -> None:
     context = _get_script_run_ctx()
     if context is not None:
         if not is_authlib_installed():
-            raise StreamlitAuthError(
-                """To use authentication features, you need to install """
-                """Authlib>=1.3.2, e.g. via `pip install Authlib`."""
-            )
+            raise StreamlitMissingAuthlibError()
         validate_auth_credentials(provider)
         fwd_msg = ForwardMsg()
         fwd_msg.auth_redirect.url = generate_login_redirect_url(provider)
@@ -658,7 +658,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     def __getattr__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
-            return self.tokens
+            return self.tokens  # pragma: no cover - defensive, ``tokens`` property wins via descriptor protocol
         try:
             return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
