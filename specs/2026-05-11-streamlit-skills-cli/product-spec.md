@@ -89,7 +89,7 @@ project-local bundled skills.
 | **Project root detection** | Heuristic: existing dir > git root > cwd | Respects existing setup, finds repo root |
 | **Target directories** | `.agents/skills/` + `.claude/skills/` if detected | Works for Claude and other agents |
 | **Command naming** | `streamlit skills` | Clear, matches library-skills naming |
-| **Global install source** | Fetch from GitHub, pinned to versioned tag | Decoupled from releases, reproducible, breaking changes align with Streamlit versions |
+| **Global install source** | Fetch from GitHub, pinned to versioned tag | Decoupled from Streamlit releases, reproducible, explicit control over breaking changes |
 
 ### Interactive Flow
 
@@ -172,10 +172,10 @@ developing-with-streamlit/
 On network failure, exits with clear error message.
 
 **Versioning strategy:** The CLI pins to a major version tag (`v1`, `v2`, etc.) that is
-updated in-place for non-breaking changes. Breaking changes that require new Streamlit
-features ship as a new major tag (e.g., `v2`) aligned with a Streamlit release. This
-allows skill improvements without Streamlit releases while ensuring compatibility—older
-Streamlit versions continue fetching `v1` even after `v2` exists.
+updated in-place for non-breaking changes. Breaking changes in the skill itself ship as
+a new major tag (e.g., `v2`), independent of Streamlit releases. This allows skill
+improvements without Streamlit releases while providing explicit control over when
+breaking changes roll out to users.
 
 ---
 
