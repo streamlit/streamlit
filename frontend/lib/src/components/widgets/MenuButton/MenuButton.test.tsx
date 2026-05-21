@@ -20,6 +20,7 @@ import { vi } from "vitest"
 
 import { MenuButton as MenuButtonProto } from "@streamlit/protobuf"
 
+import { BaseButtonKind } from "~lib/components/shared/BaseButton/styled-components"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -280,5 +281,24 @@ describe("MenuButton widget", () => {
 
     const button = screen.getByTestId("stMenuButtonButton")
     expect(button).toHaveTextContent("expand_more")
+  })
+
+  it("renders no options gracefully", () => {
+    const props = getProps({ options: [] })
+    render(<MenuButton {...props} />)
+
+    // Trigger button should be disabled with an empty options list.
+    const button = screen.getByTestId("stMenuButtonButton")
+    expect(button).toBeDisabled()
+  })
+
+  it("falls back to the secondary kind for unrecognized button types", () => {
+    const props = getProps({ type: "unknown" })
+    render(<MenuButton {...props} />)
+    const button = screen.getByTestId("stMenuButtonButton")
+    // Note: This assertion checks the forwarded 'kind' prop on the underlying
+    // <button> element. This is an implementation detail exposed by Emotion's
+    // prop forwarding. See BaseButton.tsx for the styled-component definition.
+    expect(button).toHaveAttribute("kind", BaseButtonKind.SECONDARY)
   })
 })

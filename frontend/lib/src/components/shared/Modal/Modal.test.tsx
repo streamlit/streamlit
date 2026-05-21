@@ -17,10 +17,17 @@
 import { screen } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 
+import { BaseButtonKind } from "~lib/components/shared/BaseButton/BaseButton"
 import { render } from "~lib/test_util"
 import { sizes } from "~lib/theme/primitives/sizes"
 
-import Modal, { calculateModalSize } from "./Modal"
+import Modal, {
+  calculateModalSize,
+  ModalBody,
+  ModalButton,
+  ModalFooter,
+  ModalHeader,
+} from "./Modal"
 
 describe("Modal component", () => {
   it("renders without crashing", () => {
@@ -52,5 +59,59 @@ describe("calculateModalSize", () => {
   it("calculates the size based on the spacing and content width when size is 'large'", () => {
     const size = calculateModalSize("large", "100px", "100px", "80rem")
     expect(size).toBe(sizes.dialogLargeWidth)
+  })
+
+  it("returns the default size when 'medium' is provided without width and padding", () => {
+    expect(calculateModalSize("medium")).toBe("default")
+  })
+
+  it("returns the default size when 'large' is provided without a largeWidth", () => {
+    expect(calculateModalSize("large", "100px", "100px")).toBe("default")
+  })
+})
+
+describe("Modal subcomponents", () => {
+  it("renders the modal header content", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Modal isOpen>
+          <ModalHeader>Header Title</ModalHeader>
+        </Modal>
+      </BaseProvider>
+    )
+    expect(screen.getByText("Header Title")).toBeVisible()
+  })
+
+  it("renders the modal body content", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Modal isOpen>
+          <ModalBody>Body Content</ModalBody>
+        </Modal>
+      </BaseProvider>
+    )
+    expect(screen.getByText("Body Content")).toBeVisible()
+  })
+
+  it("renders the modal footer content", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <Modal isOpen>
+          <ModalFooter>
+            <span>Footer Content</span>
+          </ModalFooter>
+        </Modal>
+      </BaseProvider>
+    )
+    expect(screen.getByText("Footer Content")).toBeVisible()
+  })
+
+  it("renders a ModalButton with the provided label", () => {
+    render(
+      <BaseProvider theme={LightTheme}>
+        <ModalButton kind={BaseButtonKind.SECONDARY}>Confirm</ModalButton>
+      </BaseProvider>
+    )
+    expect(screen.getByRole("button", { name: "Confirm" })).toBeVisible()
   })
 })
