@@ -34,6 +34,7 @@ from streamlit.errors import (
     StreamlitFragmentWidgetsNotAllowedOutsideError,
 )
 from streamlit.runtime.fragment import (
+    FragmentStorage,
     MemoryFragmentStorage,
     _fragment,
     fragment,
@@ -1141,3 +1142,54 @@ def test_fragment_decorator_handles_pep649_annotations() -> None:
         assert decorated.__name__ == "base_func"
     finally:
         context_dg_stack.set(original_dg_stack)
+
+
+@pytest.mark.parametrize(
+    ("method_name", "args", "kwargs"),
+    [
+        ("clear", (), {}),
+        ("lookup", ("key",), {}),
+        ("register", ("key", "fragment"), {"parent_fragment_id": None}),
+        ("clear_stale_descendants", ("root", frozenset()), {}),
+        ("registration_sequence", (), {}),
+        ("ids_registered_after", (0,), {}),
+        ("order_fragment_ids", ([],), {}),
+        ("delete", ("key",), {}),
+        ("contains", ("key",), {}),
+    ],
+)
+def test_fragment_storage_abstract_methods_raise_not_implemented(
+    method_name: str, args: tuple, kwargs: dict
+) -> None:
+    """Each abstract ``FragmentStorage`` method raises ``NotImplementedError``.
+
+    ``FragmentStorage`` is a ``Protocol`` with ``@abstractmethod`` markers,
+    so we call the unbound method on a sentinel ``self`` to exercise the body.
+    """
+    unbound = getattr(FragmentStorage, method_name)
+    with pytest.raises(NotImplementedError):
+        unbound(object(), *args, **kwargs)
+
+
+@pytest.mark.parametrize("op", [copy.copy, copy.deepcopy], ids=["copy", "deepcopy"])
+def test_memory_fragment_storage_rejects_copy_and_deepcopy(
+    op: Callable[[MemoryFragmentStorage], MemoryFragmentStorage],
+) -> None:
+    """``MemoryFragmentStorage`` rejects ``copy`` and ``deepcopy`` since it
+    holds a lock and shared mutable state that would silently desync."""
+    with pytest.raises(TypeError):
+        op(MemoryFragmentStorage())
+
+
+def test_order_fragment_ids_preserves_order_on_malformed_cycle() -> None:
+    """When every queued fragment has a queued ancestor (e.g. a parent cycle),
+    ``order_fragment_ids`` preserves the original order rather than looping."""
+    storage = MemoryFragmentStorage()
+    storage.register("a", lambda: None)
+    storage.register("b", lambda: None)
+    # Hand-construct a cycle in the parent map: a <-> b.
+    storage._parent_by_id["a"] = "b"
+    storage._parent_by_id["b"] = "a"
+
+    assert storage.order_fragment_ids(["a", "b"]) == ["a", "b"]
+    assert storage.order_fragment_ids(["b", "a"]) == ["b", "a"]

@@ -36,6 +36,7 @@
 - `streamlit/web`: Web server and CLI implementation
 - `streamlit/commands`: `st` commands that don't add UI elements.
 - `streamlit/components`: Backend-implementation of custom components.
+- `streamlit/connections`: `st.connection` backends (SQL, Snowflake, Snowpark, and callers-rights variants).
 - `streamlit/hello`: `streamlit hello` app implementation.
 - `streamlit/navigation`: Multi-page app implementation.
 - `streamlit/proto`: Generated protobuf definitions for client-server communication.

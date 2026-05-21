@@ -471,6 +471,33 @@ def test_unsafe_allow_html(app: Page, assert_snapshot: ImageCompareFunction):
     assert_snapshot(markdown_element, name="st_markdown-unsafe_allow_html")
 
 
+def test_unsafe_allow_html_with_help(app: Page, assert_snapshot: ImageCompareFunction):
+    """Regression test for gh-15211: help icon must render next to single-line HTML.
+
+    CommonMark's HTML-block rule consumes single-line block-level HTML as a raw
+    HTML block, swallowing any trailing ``:help[]`` directive. The fix renders
+    the tooltip icon directly instead of relying on the directive.
+    """
+    container = get_element_by_key(app, "markdown_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+    assert_snapshot(container, name="st_markdown-unsafe_allow_html_with_help")
+
+
+def test_unsafe_allow_html_multiline_with_help(app: Page):
+    """Regression test for gh-15211: help icon also renders for multi-line HTML."""
+    container = get_element_by_key(app, "markdown_multiline_html_help")
+    container.scroll_into_view_if_needed()
+    expect(container).to_be_visible()
+
+    expect(container).not_to_contain_text(":help[]")
+    expect_help_tooltip(app, container, "HTML help tooltip!")
+
+
 def test_long_word_in_container(app: Page, assert_snapshot: ImageCompareFunction):
     """Test that a long word in a container is displayed correctly (doesn't overflow the container)."""
     container = get_element_by_key(app, "long_word")

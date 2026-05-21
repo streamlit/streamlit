@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock
@@ -33,6 +34,7 @@ from streamlit.web.server.starlette.starlette_auth_routes import (
     create_auth_routes,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
 )
@@ -242,6 +244,46 @@ class TestCookiePath:
 class TestAuthCookieFlags:
     """Tests for auth cookie flags (httponly, samesite, path)."""
 
+    @patch_config_options({"server.baseUrlPath": "myapp"})
+    def test_set_auth_cookie_uses_full_cookie_attribute_size(self) -> None:
+        """Test that auth cookie chunking accounts for all emitted attributes."""
+        captured_calls: list[tuple[str, int]] = []
+
+        def mock_set_cookie_with_chunks(
+            set_single_cookie_fn: Any,
+            create_signed_value_fn: Any,
+            cookie_name: str,
+            value: dict[str, Any],
+            *,
+            cookie_attr_size: int,
+        ) -> None:
+            captured_calls.append((cookie_name, cookie_attr_size))
+
+        response = PlainTextResponse("ok")
+        original_set_cookie_with_chunks = starlette_auth_routes.set_cookie_with_chunks
+        starlette_auth_routes.set_cookie_with_chunks = mock_set_cookie_with_chunks
+        try:
+            asyncio.run(
+                starlette_auth_routes._set_auth_cookie(
+                    response,
+                    {"email": "user@example.com"},
+                    {"access_token": "token"},
+                )
+            )
+        finally:
+            starlette_auth_routes.set_cookie_with_chunks = (
+                original_set_cookie_with_chunks
+            )
+
+        expected_attr_size = len(
+            f"; Path=/myapp; HttpOnly; SameSite=lax; "
+            f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}"
+        )
+        assert captured_calls == [
+            (USER_COOKIE_NAME, expected_attr_size),
+            (TOKENS_COOKIE_NAME, expected_attr_size),
+        ]
+
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
     )
@@ -297,6 +339,25 @@ class TestAuthCookieFlags:
 
             # Check path flag (should be "/" when no baseUrlPath)
             assert cookie["path"] == "/"
+
+            # Check max-age is present and equals 30 days.
+            assert cookie["max-age"] == str(AUTH_COOKIE_MAX_AGE_SECONDS)
+
+            # Same persistence check on the tokens cookie.
+            tokens_cookie_header = next(
+                (
+                    h
+                    for h in set_cookie_headers
+                    if h.startswith(f"{TOKENS_COOKIE_NAME}=")
+                ),
+                None,
+            )
+            assert tokens_cookie_header is not None, "Tokens cookie not found"
+            tokens_cookies = SimpleCookie()
+            tokens_cookies.load(tokens_cookie_header)
+            assert tokens_cookies[TOKENS_COOKIE_NAME]["max-age"] == str(
+                AUTH_COOKIE_MAX_AGE_SECONDS
+            )
 
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}

@@ -19,10 +19,14 @@ from __future__ import annotations
 import binascii
 import time
 import unittest
+from unittest.mock import patch
 
 import pytest
 
 from streamlit.web.server.starlette import starlette_app_utils
+from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
+)
 
 
 def _reference_websocket_mask(mask: bytes, data: bytes) -> bytes:
@@ -169,6 +173,49 @@ class StarletteServerUtilsTest(unittest.TestCase):
             "wrong_secret", name, signed_value
         )
         assert result is None
+
+    def test_decode_signed_value_allows_default_grace_period(self):
+        """Test that the default decode window allows a 1-day grace period."""
+        secret = "test_secret_key"
+        name = "test_cookie"
+        value = "test_value"
+        issued_at = 1_700_000_000
+        within_grace_age = AUTH_COOKIE_MAX_AGE_SECONDS + 12 * 60 * 60
+
+        with patch("itsdangerous.timed.time.time", return_value=issued_at):
+            signed_value = starlette_app_utils.create_signed_value(secret, name, value)
+
+        with patch(
+            "itsdangerous.timed.time.time",
+            return_value=issued_at + within_grace_age,
+        ):
+            decoded = starlette_app_utils.decode_signed_value(
+                secret, name, signed_value
+            )
+
+        assert decoded is not None
+        assert decoded.decode("utf-8") == value
+
+    def test_decode_signed_value_expires_after_default_grace_period(self):
+        """Test that the default decode window expires after the grace period."""
+        secret = "test_secret_key"
+        name = "test_cookie"
+        value = "test_value"
+        issued_at = 1_700_000_000
+        past_grace_age = AUTH_COOKIE_MAX_AGE_SECONDS + 24 * 60 * 60 + 1
+
+        with patch("itsdangerous.timed.time.time", return_value=issued_at):
+            signed_value = starlette_app_utils.create_signed_value(secret, name, value)
+
+        with patch(
+            "itsdangerous.timed.time.time",
+            return_value=issued_at + past_grace_age,
+        ):
+            decoded = starlette_app_utils.decode_signed_value(
+                secret, name, signed_value
+            )
+
+        assert decoded is None
 
     def test_decode_signed_value_empty_value(self):
         """Test that empty value returns None."""
