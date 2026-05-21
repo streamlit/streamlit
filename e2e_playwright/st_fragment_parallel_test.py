@@ -213,20 +213,12 @@ def test_nested_parallel_fragment_allows_dialog_on_rerun(
 
 
 def test_parallel_st_stop_ends_script(page: Page, app_base_url: str) -> None:
-    """Fragment A calls st.stop, Fragment B output is discarded even though it started.
-
-    This test verifies that when a parallel fragment calls st.stop(), other parallel
-    fragments that have started will have their output discarded. Fragment B sets a
-    session_state marker early (before its 5s sleep), so we know it started, but
-    st.stop() in Fragment A should cause Fragment B's output to be discarded.
-    """
+    """Fragment A calls st.stop, Fragment B output is discarded even though it started."""
     page.goto(build_app_url(app_base_url, query="test=st_stop"))
     wait_for_app_run(page)
 
     expect(page.get_by_text("Fragment A content")).to_be_visible()
-    # Fragment B should not complete due to st.stop in Fragment A.
-    # Use timeout to give the page a moment to settle and avoid timing flakiness.
-    expect(page.get_by_text("Fragment B done after 5s")).not_to_be_visible(timeout=2000)
+    expect(page.get_by_text("Fragment B done after sleep")).not_to_be_visible(timeout=2000)
 
 
 def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:

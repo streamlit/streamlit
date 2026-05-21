@@ -1799,12 +1799,14 @@ class ParallelFragmentAPIRestrictionsTest(unittest.TestCase):
     def test_check_not_parallel_worker_raises_when_flag_is_true(self) -> None:
         """_check_not_parallel_worker raises StreamlitAPIException when is_parallel_worker=True."""
         ThreadState.initialize(is_parallel_worker=True)
+        try:
+            with pytest.raises(StreamlitAPIException) as exc_info:
+                _check_not_parallel_worker("st.test_api")
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            _check_not_parallel_worker("st.test_api")
-
-        assert "st.test_api" in str(exc_info.value)
-        assert "parallel fragment" in str(exc_info.value)
+            assert "st.test_api" in str(exc_info.value)
+            assert "parallel fragment" in str(exc_info.value)
+        finally:
+            ThreadState.initialize(is_parallel_worker=False)
 
     def test_check_not_parallel_worker_allows_when_flag_is_false(self) -> None:
         """_check_not_parallel_worker does not raise when is_parallel_worker=False."""

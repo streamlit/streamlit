@@ -214,10 +214,9 @@ elif test_mode == "st_stop":
 
     @st.fragment(parallel=True)
     def fragment_b():
-        # Set marker early so test can verify Fragment B started
         st.session_state.fragment_b_started = True
-        time.sleep(5)
-        st.write("Fragment B done after 5s")
+        time.sleep(1)
+        st.write("Fragment B done after sleep")
 
     fragment_a()
     fragment_b()
@@ -253,7 +252,7 @@ elif test_mode == "widget_interaction":
 
     @st.fragment(parallel=True)
     def slow_fragment():
-        time.sleep(5)
+        time.sleep(1)
         st.write("Slow fragment done")
 
     fast_fragment()
