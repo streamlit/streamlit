@@ -287,6 +287,8 @@ class ScriptRunner:
 
         # Coordinator blocking the script thread in join(); other threads poke
         # notify_yield_waiters() when rerun/stop is enqueued during that window.
+        # Lock-protected so this is safe under free-threaded Python (PEP 703).
+        self._join_wake_lock = threading.Lock()
         self._join_wake_coordinator: ParallelFragmentCoordinator | None = None
 
     def __repr__(self) -> str:
@@ -324,7 +326,8 @@ class ScriptRunner:
         Rerun/stop requests can arrive on other threads; join() sleeps on a
         Condition bounded by poll_interval unless notified.
         """
-        coord = self._join_wake_coordinator
+        with self._join_wake_lock:
+            coord = self._join_wake_coordinator
         if coord is not None:
             coord.notify_yield_waiters()
 
@@ -622,7 +625,8 @@ class ScriptRunner:
                 context_info=rerun_data.context_info,
                 yield_check=self._maybe_handle_execution_control_request,
             )
-            self._join_wake_coordinator = ctx.parallel_coordinator
+            with self._join_wake_lock:
+                self._join_wake_coordinator = ctx.parallel_coordinator
 
             self.on_event.send(
                 self,
@@ -659,7 +663,8 @@ class ScriptRunner:
                 # We got a compile error. Send an error event and bail immediately.
                 _LOGGER.exception("Script compilation error", exc_info=ex)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
-                self._join_wake_coordinator = None
+                with self._join_wake_lock:
+                    self._join_wake_coordinator = None
                 self.on_event.send(
                     self,
                     event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
@@ -856,7 +861,8 @@ class ScriptRunner:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
-        self._join_wake_coordinator = None
+        with self._join_wake_lock:
+            self._join_wake_coordinator = None
 
         # Tell session_state to update itself in response
         if not premature_stop:
