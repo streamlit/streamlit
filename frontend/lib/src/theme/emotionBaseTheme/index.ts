@@ -31,6 +31,7 @@ import {
 } from "~lib/theme/primitives/typography"
 import { zIndices } from "~lib/theme/primitives/zIndices"
 
+import { themeVars } from "../themeCssVariables"
 import genericColors from "./themeColors"
 
 // Create colors (includes derived colors)
@@ -38,7 +39,6 @@ const colors = createEmotionColors(genericColors)
 
 // Create shadows (dependent on colors/derived colors)
 const shadows = createShadows(colors)
-
 export default {
   inSidebar: false,
   showSidebarBorder: false,
@@ -56,5 +56,6 @@ export default {
   shadows,
   sizes,
   spacing,
+  vars: themeVars,
   zIndices,
 }

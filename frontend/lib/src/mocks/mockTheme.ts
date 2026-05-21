@@ -37,6 +37,7 @@ import {
   lineHeights,
 } from "~lib/theme/primitives/typography"
 import { zIndices } from "~lib/theme/primitives/zIndices"
+import { themeVars } from "~lib/theme/themeCssVariables"
 import type { ThemeConfig } from "~lib/theme/types"
 
 const requiredThemeColors = {
@@ -108,6 +109,7 @@ const emotionMockTheme = {
   shadows,
   sizes,
   spacing,
+  vars: themeVars,
   zIndices,
 }
 

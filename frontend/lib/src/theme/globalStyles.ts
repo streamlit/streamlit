@@ -15,7 +15,6 @@
  */
 
 import { css, SerializedStyles } from "@emotion/react"
-import { transparentize } from "color2k"
 
 import type { EmotionTheme } from "./types"
 
@@ -60,10 +59,10 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     font-family: ${theme.genericFonts.bodyFont};
     font-weight: ${theme.fontWeights.normal};
     line-height: ${theme.lineHeights.base};
-    color: ${theme.colors.bodyText};
-    background-color: ${theme.colors.bgColor}; // 2
+    color: ${theme.vars.colors.bodyText};
+    background-color: ${theme.vars.colors.bgColor}; // 2
     -webkit-text-size-adjust: 100%; // 3
-    -webkit-tap-highlight-color: ${transparentize(theme.colors.black, 1)}; // 4
+    -webkit-tap-highlight-color: transparent; // 4
     -webkit-font-smoothing: auto;
   }
 
@@ -189,7 +188,7 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     }
 
     *:hover {
-      scrollbar-color: ${theme.colors.fadedText40} transparent;
+      scrollbar-color: ${theme.vars.colors.fadedText40} transparent;
     }
   }
 
@@ -204,12 +203,12 @@ export const globalStyles = (theme: EmotionTheme): SerializedStyles => css`
     }
 
     ::-webkit-scrollbar:active {
-      background: ${theme.colors.fadedText10};
+      background: ${theme.vars.colors.fadedText10};
     }
 
     :hover::-webkit-scrollbar-thumb:vertical,
     :hover::-webkit-scrollbar-thumb:horizontal {
-      background: ${theme.colors.fadedText40};
+      background: ${theme.vars.colors.fadedText40};
       border-radius: ${theme.radii.full};
     }
   }

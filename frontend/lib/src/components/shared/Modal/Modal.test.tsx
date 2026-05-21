@@ -18,11 +18,13 @@ import { screen } from "@testing-library/react"
 import { BaseProvider, LightTheme } from "baseui"
 
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/BaseButton"
+import { mockTheme } from "~lib/mocks/mockTheme"
 import { render } from "~lib/test_util"
 import { sizes } from "~lib/theme/primitives/sizes"
 
 import Modal, {
   calculateModalSize,
+  createModalOverrides,
   ModalBody,
   ModalButton,
   ModalFooter,
@@ -40,6 +42,30 @@ describe("Modal component", () => {
     const modalElement = screen.getByTestId("stDialog")
     expect(modalElement).toBeInTheDocument()
     expect(modalElement).toHaveClass("stDialog")
+  })
+
+  it("adds theme CSS variables to the modal portal overrides", () => {
+    const nestedTheme = {
+      ...mockTheme.emotion,
+      colors: {
+        ...mockTheme.emotion.colors,
+        bgColor: "rgb(1, 2, 3)",
+        primary: "rgb(4, 5, 6)",
+      },
+      shadows: {
+        ...mockTheme.emotion.shadows,
+        focusRing: "rgb(7, 8, 9)",
+      },
+    }
+
+    const overrides = createModalOverrides(nestedTheme)
+
+    expect(overrides.Root.style["--st-color-bg"]).toBe(
+      nestedTheme.colors.bgColor
+    )
+    expect(overrides.Root.style["--st-color-primary"]).toBe(
+      nestedTheme.colors.primary
+    )
   })
 })
 describe("calculateModalSize", () => {

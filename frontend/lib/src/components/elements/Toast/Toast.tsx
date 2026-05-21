@@ -35,6 +35,7 @@ import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { createThemeCssVariableValueMap } from "~lib/theme/themeCssVariables"
 import type { EmotionTheme } from "~lib/theme/types"
 
 import {
@@ -47,7 +48,7 @@ export interface ToastProps {
   element: ToastProto
 }
 
-function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
+export function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
   const lightBackground = hasLightBackgroundColor(theme)
   return {
     Body: {
@@ -56,6 +57,7 @@ function generateToastOverrides(theme: EmotionTheme): ToastOverrides {
         className: "stToast",
       },
       style: {
+        ...createThemeCssVariableValueMap(theme),
         display: "flex",
         flexDirection: "row",
         gap: theme.spacing.md,

@@ -15,7 +15,6 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
 interface StyledTabContainerProps {
   isOverflowing: boolean
@@ -50,22 +49,16 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
     padding: 0,
     border: "none",
     cursor: "pointer",
-    color: theme.colors.fadedText60,
-    background: "transparent",
+    color: theme.vars.colors.fadedText60,
+    background: theme.vars.colors.transparent,
     // Apply gradient background on the side closest to the content
     backgroundImage:
       position === "right"
-        ? `linear-gradient(to right, ${transparentize(
-            theme.colors.bgColor,
-            1
-          )}, ${theme.colors.bgColor} 40%)`
-        : `linear-gradient(to left, ${transparentize(
-            theme.colors.bgColor,
-            1
-          )}, ${theme.colors.bgColor} 40%)`,
+        ? `linear-gradient(to right, ${theme.vars.colors.bgColorTransparent}, ${theme.vars.colors.bgColor} 40%)`
+        : `linear-gradient(to left, ${theme.vars.colors.bgColorTransparent}, ${theme.vars.colors.bgColor} 40%)`,
 
     "&:hover": {
-      color: theme.colors.bodyText,
+      color: theme.vars.colors.bodyText,
     },
 
     "&:focus": {
@@ -73,7 +66,7 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
     },
 
     "&:focus-visible": {
-      boxShadow: theme.shadows.focusRing,
+      boxShadow: theme.vars.shadows.focusRing,
     },
   })
 )

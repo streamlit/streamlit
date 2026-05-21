@@ -19,6 +19,7 @@ import { CSSProperties } from "react"
 import styled from "@emotion/styled"
 
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { createThemeCssVariableValueMap } from "~lib/theme/themeCssVariables"
 import type { EmotionTheme, EmotionThemeColors } from "~lib/theme/types"
 
 export const Box = styled.div<{
@@ -52,6 +53,7 @@ export const getPopoverContainerStyle = (
 ): Record<string, string> => {
   const lightBackground = hasLightBackgroundColor(theme)
   return {
+    ...createThemeCssVariableValueMap(theme),
     boxSizing: "border-box",
 
     borderTopLeftRadius: theme.radii.default,

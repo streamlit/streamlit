@@ -60,6 +60,33 @@ const getMarkdownElement = (body: string): ReactElement => {
   return <ReactMarkdown components={components}>{body}</ReactMarkdown>
 }
 
+const mockCssSupports = (
+  supportsImplementation: (property: string, value: string) => boolean
+): { restore: () => void; supports: ReturnType<typeof vi.fn> } => {
+  const originalCssDescriptor = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "CSS"
+  )
+  const supports = vi.fn(supportsImplementation)
+
+  Object.defineProperty(globalThis, "CSS", {
+    configurable: true,
+    writable: true,
+    value: { supports },
+  })
+
+  return {
+    supports,
+    restore: () => {
+      if (originalCssDescriptor) {
+        Object.defineProperty(globalThis, "CSS", originalCssDescriptor)
+      } else {
+        Reflect.deleteProperty(globalThis, "CSS")
+      }
+    },
+  }
+}
+
 describe("createAnchorFromText", () => {
   it.each([
     // Basic cases
@@ -368,6 +395,39 @@ describe("isValidCssColor", () => {
     },
   ])("validates $description correctly", ({ input, expected }) => {
     expect(isValidCssColor(input)).toBe(expected)
+  })
+
+  it("uses native CSS.supports semantics for browser-supported modern values", () => {
+    const { restore } = mockCssSupports(
+      (property: string, value: string) =>
+        property === "color" &&
+        [
+          "rgb(0 0 0 / 50%)",
+          "oklch(62% 0.18 264)",
+          "var(--streamlit-accent)",
+        ].includes(value)
+    )
+
+    try {
+      expect(isValidCssColor("rgb(0 0 0 / 50%)")).toBe(true)
+      expect(isValidCssColor("oklch(62% 0.18 264)")).toBe(true)
+      expect(isValidCssColor("var(--streamlit-accent)")).toBe(true)
+      expect(isValidCssColor("not-a-native-color")).toBe(false)
+    } finally {
+      restore()
+    }
+  })
+
+  it("rejects dangerous values before consulting CSS.supports", () => {
+    const { restore, supports } = mockCssSupports(() => true)
+
+    try {
+      expect(isValidCssColor(" javascript:alert(1)")).toBe(false)
+      expect(isValidCssColor("expression(alert(1))")).toBe(false)
+      expect(supports).not.toHaveBeenCalled()
+    } finally {
+      restore()
+    }
   })
 })
 
@@ -1127,6 +1187,71 @@ describe("StreamlitMarkdown", () => {
       expect(markdown).toHaveStyle("color: rgb(255, 0, 0)")
     })
 
+    it("applies browser-supported modern CSS color syntax", () => {
+      const { restore } = mockCssSupports(
+        (property: string, value: string) =>
+          property === "color" && value === "rgb(255 87 51 / 0.5)"
+      )
+
+      try {
+        const source = `:color[text]{foreground="rgb(255 87 51 / 0.5)"}`
+        render(<StreamlitMarkdown source={source} allowHTML={false} />)
+        const markdown = screen.getByText("text")
+
+        expect(markdown.classList.contains("stMarkdownColoredText")).toBe(true)
+        expect(markdown.style.color).toBe("rgba(255, 87, 51, 0.5)")
+      } finally {
+        restore()
+      }
+    })
+
+    it("applies browser-supported CSS custom properties", () => {
+      const { restore } = mockCssSupports(
+        (property: string, value: string) =>
+          property === "color" && value === "var(--streamlit-accent)"
+      )
+
+      try {
+        const source = `:color[text]{background="var(--streamlit-accent)"}`
+        render(<StreamlitMarkdown source={source} allowHTML={false} />)
+        const markdown = screen.getByText("text")
+
+        expect(
+          markdown.classList.contains("stMarkdownColoredBackground")
+        ).toBe(true)
+        expect(markdown.getAttribute("style")).toContain(
+          "background-color: var(--streamlit-accent)"
+        )
+      } finally {
+        restore()
+      }
+    })
+
+    it("applies theme CSS custom properties from the active provider scope", () => {
+      const { restore } = mockCssSupports(
+        (property: string, value: string) =>
+          property === "color" && value === "var(--st-color-primary)"
+      )
+
+      try {
+        const source = `:color[text]{background="var(--st-color-primary)"}`
+        render(<StreamlitMarkdown source={source} allowHTML={false} />)
+        const markdown = screen.getByText("text")
+
+        expect(markdown.getAttribute("style")).toContain(
+          "background-color: var(--st-color-primary)"
+        )
+        expect(
+          window
+            .getComputedStyle(markdown)
+            .getPropertyValue("--st-color-primary")
+            .trim()
+        ).toBe(mockTheme.emotion.colors.primary)
+      } finally {
+        restore()
+      }
+    })
+
     it("renders content as plain text when color values are invalid", () => {
       const source = `:color[text]{foreground="notacolor"}`
       render(<StreamlitMarkdown source={source} allowHTML={false} />)
@@ -1138,13 +1263,20 @@ describe("StreamlitMarkdown", () => {
     })
 
     it("ignores potential XSS in color values and renders content safely", () => {
-      const source = `:color[text]{foreground="javascript:alert(1)"}`
-      render(<StreamlitMarkdown source={source} allowHTML={false} />)
-      // Invalid/dangerous colors should still render the content as plain text
-      const markdown = screen.getByText("text")
-      expect(markdown.tagName.toLowerCase()).toBe("span")
-      // Should not have the dangerous value in any attribute
-      expect(markdown).not.toHaveAttribute("style")
+      const { restore, supports } = mockCssSupports(() => true)
+
+      try {
+        const source = `:color[text]{foreground="javascript:alert(1)"}`
+        render(<StreamlitMarkdown source={source} allowHTML={false} />)
+        // Invalid/dangerous colors should still render the content as plain text
+        const markdown = screen.getByText("text")
+        expect(markdown.tagName.toLowerCase()).toBe("span")
+        // Should not have the dangerous value in any attribute
+        expect(markdown.getAttribute("style")).toBeNull()
+        expect(supports).not.toHaveBeenCalled()
+      } finally {
+        restore()
+      }
     })
 
     it("applies only valid colors when mixed with invalid colors", () => {

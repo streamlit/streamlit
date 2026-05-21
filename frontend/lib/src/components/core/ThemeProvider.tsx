@@ -23,6 +23,8 @@ import { baseuiLightTheme } from "~lib/theme/baseui"
 import type { BaseUILightTheme } from "~lib/theme/baseui"
 import type { EmotionTheme } from "~lib/theme/types"
 
+import ThemeCssVariables from "./ThemeCssVariables"
+
 interface ThemeProviderProps {
   theme: EmotionTheme
   baseuiTheme?: BaseUILightTheme
@@ -38,7 +40,9 @@ function ThemeProvider({
     // Type error coming from BaseUI "property children doesn't exist"
     // @ts-expect-error
     <BaseUIThemeProvider theme={baseuiTheme || baseuiLightTheme}>
-      <EmotionThemeProvider theme={theme}>{children}</EmotionThemeProvider>
+      <EmotionThemeProvider theme={theme}>
+        <ThemeCssVariables theme={theme}>{children}</ThemeCssVariables>
+      </EmotionThemeProvider>
     </BaseUIThemeProvider>
   )
 }

@@ -30,6 +30,8 @@ import BaseButton, {
   BaseButtonProps,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { createThemeCssVariableValueMap } from "~lib/theme/themeCssVariables"
+import type { EmotionTheme } from "~lib/theme/types"
 
 import { StyledModalButton } from "./styled-components"
 
@@ -172,12 +174,13 @@ export function calculateModalSize(
   return SIZE.default
 }
 
-function Modal(props: StreamlitModalProps): ReactElement {
-  const { spacing, radii, colors, sizes } = useEmotionTheme()
+export function createModalOverrides(theme: EmotionTheme) {
+  const { spacing, radii, colors, sizes } = theme
 
-  const defaultOverrides = {
+  return {
     Root: {
       style: {
+        ...createThemeCssVariableValueMap(theme),
         background: colors.darkenedBgMix25,
       },
       props: {
@@ -208,6 +211,12 @@ function Modal(props: StreamlitModalProps): ReactElement {
       },
     },
   }
+}
+
+function Modal(props: StreamlitModalProps): ReactElement {
+  const theme = useEmotionTheme()
+  const { spacing, sizes } = theme
+  const defaultOverrides = createModalOverrides(theme)
 
   const modalSize: ModalProps["size"] = calculateModalSize(
     props.size,

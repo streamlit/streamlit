@@ -33,6 +33,7 @@ import {
 
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { hasLightBackgroundColor } from "~lib/theme/getColors"
+import { createThemeCssVariableValueMap } from "~lib/theme/themeCssVariables"
 import type { EmotionTheme } from "~lib/theme/types"
 
 import { StyledTooltipContentWrapper } from "./styled-components"
@@ -67,7 +68,7 @@ export interface TooltipProps {
 }
 
 // Allows re-use/customization of default tooltip overrides
-const generateDefaultTooltipOverrides = (
+export const generateDefaultTooltipOverrides = (
   theme: EmotionTheme,
   overrides?: PopoverOverrides
 ): PopoverOverrides => {
@@ -76,6 +77,7 @@ const generateDefaultTooltipOverrides = (
   return {
     Body: {
       style: {
+        ...createThemeCssVariableValueMap(theme),
         // This is annoying, but a bunch of warnings get logged when the
         // shorthand version `borderRadius` is used here since the long
         // names are used by BaseWeb and mixing the two is apparently

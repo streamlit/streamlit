@@ -21,9 +21,12 @@ import {
   CacheProvider,
   ThemeProvider as EmotionThemeProvider,
   Global,
+  css,
 } from "@emotion/react"
 import { BaseProvider } from "baseui"
 
+import ThemeCssVariables from "./components/core/ThemeCssVariables"
+import { createThemeCssVariables } from "./theme/getThemeCssVariables"
 import { globalStyles } from "./theme/globalStyles"
 import type { ThemeConfig } from "./theme/types"
 
@@ -57,8 +60,15 @@ export function RootStyleProvider(
     >
       <CacheProvider value={cache}>
         <EmotionThemeProvider theme={theme.emotion}>
-          <Global styles={globalStyles} />
-          {children}
+          <Global
+            styles={css({
+              ":root": createThemeCssVariables(theme.emotion),
+            })}
+          />
+          <ThemeCssVariables theme={theme.emotion}>
+            <Global styles={globalStyles} />
+            {children}
+          </ThemeCssVariables>
         </EmotionThemeProvider>
       </CacheProvider>
     </BaseProvider>

@@ -17,7 +17,6 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darken } from "color2k"
 
 import {
   BaseButtonKind,
@@ -26,6 +25,10 @@ import {
 import type { EmotionTheme } from "~lib/theme/types"
 
 export { BaseButtonKind, BaseButtonSize }
+
+function getThemeVars(theme: EmotionTheme): EmotionTheme["vars"] {
+  return theme.vars
+}
 
 export interface BaseLinkButtonProps {
   kind:
@@ -70,6 +73,8 @@ function getSizeStyle(size: BaseButtonSize, theme: EmotionTheme): CSSObject {
 
 const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
   ({ containerWidth, size, theme }) => {
+    const vars = getThemeVars(theme)
+
     return {
       display: "inline-flex",
       alignItems: "center",
@@ -80,12 +85,12 @@ const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
       minHeight: theme.sizes.minElementHeight,
       margin: 0,
       lineHeight: theme.lineHeights.base,
-      color: theme.colors.primary,
+      color: vars.colors.primary,
       textDecoration: "none",
       width: containerWidth ? "100%" : "auto",
       userSelect: "none",
       "&:visited": {
-        color: theme.colors.primary,
+        color: vars.colors.primary,
       },
       "&:focus": {
         outline: "none",
@@ -94,7 +99,7 @@ const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: theme.shadows.focusRing,
+        boxShadow: vars.shadows.focusRing,
       },
       "&:hover": {
         textDecoration: "none",
@@ -110,25 +115,25 @@ const StyledBaseLinkButton = styled.a<RequiredBaseLinkButtonProps>(
 export const StyledPrimaryLinkButton = styled(
   StyledBaseLinkButton
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.primary,
-  color: theme.colors.white,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+  backgroundColor: getThemeVars(theme).colors.primary,
+  color: getThemeVars(theme).colors.white,
+  border: `${theme.sizes.borderWidth} solid ${getThemeVars(theme).colors.primary}`,
   "&:hover, &:focus-visible": {
-    backgroundColor: darken(theme.colors.primary, 0.15),
-    borderColor: darken(theme.colors.primary, 0.15),
+    backgroundColor: getThemeVars(theme).colors.primaryHover,
+    borderColor: getThemeVars(theme).colors.primaryHover,
   },
   "&:active": {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: getThemeVars(theme).colors.primary,
     // Keep the border darker when clicked so that the button looks "pressed"
-    borderColor: darken(theme.colors.primary, 0.15),
+    borderColor: getThemeVars(theme).colors.primaryHover,
   },
   "&:visited:not(:active)": {
-    color: theme.colors.white,
+    color: getThemeVars(theme).colors.white,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active, &[disabled]:visited": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
+    borderColor: getThemeVars(theme).colors.borderColor,
+    backgroundColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
@@ -136,22 +141,22 @@ export const StyledPrimaryLinkButton = styled(
 export const StyledSecondaryLinkButton = styled(
   StyledBaseLinkButton
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.lightenedBg05,
-  color: theme.colors.bodyText,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  backgroundColor: getThemeVars(theme).colors.lightenedBg05,
+  color: getThemeVars(theme).colors.bodyText,
+  border: `${theme.sizes.borderWidth} solid ${getThemeVars(theme).colors.borderColor}`,
   "&:visited": {
-    color: theme.colors.bodyText,
+    color: getThemeVars(theme).colors.bodyText,
   },
   "&:hover, &:focus-visible": {
-    backgroundColor: theme.colors.darkenedBgMix15,
+    backgroundColor: getThemeVars(theme).colors.darkenedBgMix15,
   },
   "&:active": {
-    backgroundColor: theme.colors.darkenedBgMix25,
+    backgroundColor: getThemeVars(theme).colors.darkenedBgMix25,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
+    borderColor: getThemeVars(theme).colors.borderColor,
+    backgroundColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
@@ -160,14 +165,14 @@ export const StyledTertiaryLinkButton = styled(
   StyledBaseLinkButton
 )<RequiredBaseLinkButtonProps>(({ theme }) => ({
   padding: theme.spacing.none,
-  backgroundColor: theme.colors.transparent,
-  color: theme.colors.bodyText,
+  backgroundColor: getThemeVars(theme).colors.transparent,
+  color: getThemeVars(theme).colors.bodyText,
   border: "none",
   "&:visited": {
-    color: theme.colors.bodyText,
+    color: getThemeVars(theme).colors.bodyText,
   },
   "&:hover, &:focus-visible": {
-    color: theme.colors.primary,
+    color: getThemeVars(theme).colors.primary,
   },
   "&:hover:not([disabled]), &:focus-visible:not([disabled])": {
     // Also make colored text have the primary color on hover. Since text color is
@@ -179,11 +184,11 @@ export const StyledTertiaryLinkButton = styled(
     },
   },
   "&:active": {
-    color: darken(theme.colors.primary, 0.25),
+    color: getThemeVars(theme).colors.primaryEmphasis,
   },
   "&[disabled], &[disabled]:hover, &[disabled]:active": {
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
+    backgroundColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.fadedText40,
     cursor: "not-allowed",
   },
 }))

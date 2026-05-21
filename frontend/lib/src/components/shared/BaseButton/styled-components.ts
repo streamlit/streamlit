@@ -17,9 +17,12 @@
 import { MouseEvent, ReactNode } from "react"
 
 import styled, { CSSObject } from "@emotion/styled"
-import { darken, transparentize } from "color2k"
 
 import type { EmotionTheme } from "~lib/theme/types"
+
+function getThemeVars(theme: EmotionTheme): EmotionTheme["vars"] {
+  return theme.vars
+}
 
 export enum BaseButtonKind {
   PRIMARY = "primary",
@@ -118,7 +121,7 @@ const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
         // When focus-visible (e.g. if the button was focused via keyboard navigation)
         // we use the hover style of the respective button type (see below) and
         // additionally show a colored focus ring
-        boxShadow: theme.shadows.focusRing,
+        boxShadow: getThemeVars(theme).shadows.focusRing,
       },
       ...getSizeStyle(size, theme),
     }
@@ -128,22 +131,22 @@ const StyledBaseButton = styled.button<RequiredBaseButtonProps>(
 export const StyledPrimaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.primary,
-  color: theme.colors.white,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.primary}`,
+  backgroundColor: getThemeVars(theme).colors.primary,
+  color: getThemeVars(theme).colors.white,
+  border: `${theme.sizes.borderWidth} solid ${getThemeVars(theme).colors.primary}`,
   "&:hover, &:focus-visible": {
-    backgroundColor: darken(theme.colors.primary, 0.15),
-    borderColor: darken(theme.colors.primary, 0.15),
+    backgroundColor: getThemeVars(theme).colors.primaryHover,
+    borderColor: getThemeVars(theme).colors.primaryHover,
   },
   "&:active": {
-    backgroundColor: theme.colors.primary,
+    backgroundColor: getThemeVars(theme).colors.primary,
     // Keep the border darker when clicked so that the button looks "pressed"
-    borderColor: darken(theme.colors.primary, 0.15),
+    borderColor: getThemeVars(theme).colors.primaryHover,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
+    borderColor: getThemeVars(theme).colors.borderColor,
+    backgroundColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
@@ -151,18 +154,18 @@ export const StyledPrimaryButton = styled(
 export const StyledSecondaryButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.lightenedBg05,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  backgroundColor: getThemeVars(theme).colors.lightenedBg05,
+  border: `${theme.sizes.borderWidth} solid ${getThemeVars(theme).colors.borderColor}`,
   "&:hover, &:focus-visible": {
-    backgroundColor: theme.colors.darkenedBgMix15,
+    backgroundColor: getThemeVars(theme).colors.darkenedBgMix15,
   },
   "&:active": {
-    backgroundColor: theme.colors.darkenedBgMix25,
+    backgroundColor: getThemeVars(theme).colors.darkenedBgMix25,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    borderColor: theme.colors.borderColor,
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText40,
+    borderColor: getThemeVars(theme).colors.borderColor,
+    backgroundColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
@@ -172,10 +175,10 @@ export const StyledTertiaryButton = styled(
 )<RequiredBaseButtonProps>(({ theme }) => {
   return {
     padding: theme.spacing.none,
-    backgroundColor: theme.colors.transparent,
+    backgroundColor: getThemeVars(theme).colors.transparent,
     border: "none",
     "&:hover, &:focus-visible": {
-      color: theme.colors.primary,
+      color: getThemeVars(theme).colors.primary,
     },
     "&:hover:not(:disabled), &:focus-visible:not(:disabled)": {
       // Also make colored text have the primary color on hover. Since text color is
@@ -187,11 +190,11 @@ export const StyledTertiaryButton = styled(
       },
     },
     "&:active": {
-      color: darken(theme.colors.primary, 0.25),
+      color: getThemeVars(theme).colors.primaryEmphasis,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
+      backgroundColor: getThemeVars(theme).colors.transparent,
+      color: getThemeVars(theme).colors.fadedText40,
       cursor: "not-allowed",
     },
   }
@@ -200,36 +203,36 @@ export const StyledTertiaryButton = styled(
 export const StyledGhostButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.transparent,
-  border: `${theme.sizes.borderWidth} solid ${theme.colors.transparent}`,
+  backgroundColor: getThemeVars(theme).colors.transparent,
+  border: `${theme.sizes.borderWidth} solid ${getThemeVars(theme).colors.transparent}`,
   "&:hover, &:focus-visible": {
-    borderColor: theme.colors.transparent,
-    color: theme.colors.primary,
+    borderColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.primary,
   },
   "&:active": {
-    color: theme.colors.primary,
-    borderColor: theme.colors.transparent,
-    backgroundColor: theme.colors.transparent,
+    color: getThemeVars(theme).colors.primary,
+    borderColor: getThemeVars(theme).colors.transparent,
+    backgroundColor: getThemeVars(theme).colors.transparent,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    backgroundColor: theme.colors.gray30,
-    borderColor: theme.colors.transparent,
-    color: theme.colors.gray60,
+    backgroundColor: getThemeVars(theme).colors.gray30,
+    borderColor: getThemeVars(theme).colors.transparent,
+    color: getThemeVars(theme).colors.gray60,
   },
 }))
 
 export const StyledMinimalButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => ({
-  backgroundColor: theme.colors.transparent,
+  backgroundColor: getThemeVars(theme).colors.transparent,
   border: "none",
   boxShadow: "none",
   padding: theme.spacing.none,
   "&:hover, &:active, &:focus-visible": {
-    color: theme.colors.primary,
+    color: getThemeVars(theme).colors.primary,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
-    color: theme.colors.fadedText40,
+    color: getThemeVars(theme).colors.fadedText40,
     cursor: "not-allowed",
   },
 }))
@@ -248,9 +251,11 @@ export const StyledTertiaryFormSubmitButton = styled(
 const StyledButtonGroupBaseButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
+  const vars = getThemeVars(theme)
+
   return {
-    background: theme.colors.bgColor,
-    border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+    background: vars.colors.bgColor,
+    border: `${theme.sizes.borderWidth} solid ${vars.colors.borderColor}`,
     fontSize: theme.fontSizes.sm,
     lineHeight: theme.lineHeights.base,
     fontWeight: theme.fontWeights.normal,
@@ -264,12 +269,12 @@ const StyledButtonGroupBaseButton = styled(
     textOverflow: "ellipsis",
 
     "&:hover, &:focus-visible": {
-      backgroundColor: theme.colors.darkenedBgMix15,
+      backgroundColor: vars.colors.darkenedBgMix15,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.transparent,
-      color: theme.colors.fadedText40,
+      borderColor: vars.colors.borderColor,
+      backgroundColor: vars.colors.transparent,
+      color: vars.colors.fadedText40,
       cursor: "not-allowed",
     },
 
@@ -298,19 +303,21 @@ export const StyledPillsButton = styled(
 export const StyledPillsButtonActive = styled(
   StyledPillsButton
 )<RequiredBaseButtonProps>(({ theme }) => {
+  const vars = getThemeVars(theme)
+
   return {
-    backgroundColor: transparentize(theme.colors.primary, 0.9),
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: vars.colors.primarySoftBg,
+    borderColor: vars.colors.primary,
+    color: vars.colors.primary,
     "&:hover, &:focus-visible": {
-      backgroundColor: transparentize(theme.colors.primary, 0.8),
-      borderColor: theme.colors.primary,
-      color: theme.colors.primary,
+      backgroundColor: vars.colors.primarySoftBgHover,
+      borderColor: vars.colors.primary,
+      color: vars.colors.primary,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.fadedText05,
-      color: theme.colors.fadedText40,
+      borderColor: vars.colors.borderColor,
+      backgroundColor: vars.colors.fadedText05,
+      color: vars.colors.fadedText40,
       cursor: "not-allowed",
     },
   }
@@ -332,6 +339,8 @@ const SEGMENTED_CONTROL_NEUTRAL_ENABLED =
 export const StyledSegmentedControlButton = styled(
   StyledButtonGroupBaseButton
 )<RequiredBaseButtonProps>(({ theme, containerWidth }) => {
+  const vars = getThemeVars(theme)
+
   return {
     padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
     borderRadius: "0",
@@ -358,21 +367,21 @@ export const StyledSegmentedControlButton = styled(
     // neutral and interactive neighbors.
     [`&[kind='segmented_controlActive']:not(:disabled) + ${SEGMENTED_CONTROL_INACTIVE_ENABLED}`]:
       {
-        borderLeftColor: theme.colors.transparent,
+        borderLeftColor: vars.colors.transparent,
       },
     [`&[kind='segmented_control']:not(:disabled):has(+ ${SEGMENTED_CONTROL_ACTIVE_ENABLED})`]:
       {
-        borderRightColor: theme.colors.transparent,
+        borderRightColor: vars.colors.transparent,
       },
     // Hover/focus ownership is only applied between neutral neighbors so we
     // never hide the active border in active+hover adjacency.
     [`&[kind='segmented_control']:not(:disabled):is(:hover, :focus-visible) + ${SEGMENTED_CONTROL_NEUTRAL_ENABLED}`]:
       {
-        borderLeftColor: theme.colors.transparent,
+        borderLeftColor: vars.colors.transparent,
       },
     [`&[kind='segmented_control']:not(:disabled):not(:hover):not(:focus-visible):has(+ ${SEGMENTED_CONTROL_INTERACTIVE_ENABLED})`]:
       {
-        borderRightColor: theme.colors.transparent,
+        borderRightColor: vars.colors.transparent,
       },
     "&:focus-visible": {
       // Make sure the focus ring isn't below the previous/next button.
@@ -384,18 +393,20 @@ export const StyledSegmentedControlButton = styled(
 export const StyledSegmentedControlButtonActive = styled(
   StyledSegmentedControlButton
 )<RequiredBaseButtonProps>(({ theme }) => {
+  const vars = getThemeVars(theme)
+
   return {
-    backgroundColor: transparentize(theme.colors.primary, 0.9),
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
+    backgroundColor: vars.colors.primarySoftBg,
+    borderColor: vars.colors.primary,
+    color: vars.colors.primary,
     zIndex: theme.zIndices.priority,
     "&:hover, &:focus-visible": {
-      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      backgroundColor: vars.colors.primarySoftBgHover,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      borderColor: theme.colors.borderColor,
-      backgroundColor: theme.colors.fadedText05,
-      color: theme.colors.fadedText40,
+      borderColor: vars.colors.borderColor,
+      backgroundColor: vars.colors.fadedText05,
+      color: vars.colors.fadedText40,
       cursor: "not-allowed",
     },
   }
@@ -404,8 +415,10 @@ export const StyledSegmentedControlButtonActive = styled(
 export const StyledHeaderButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
+  const vars = getThemeVars(theme)
+
   return {
-    backgroundColor: theme.colors.transparent,
+    backgroundColor: vars.colors.transparent,
     border: "none",
     padding: `0 ${theme.spacing.sm}`,
     fontSize: theme.fontSizes.sm,
@@ -421,18 +434,18 @@ export const StyledHeaderButton = styled(
       outline: "none",
     },
     "&:focus-visible": {
-      boxShadow: theme.shadows.focusRingMuted,
+      boxShadow: vars.shadows.focusRingMuted,
     },
     "&:hover": {
-      backgroundColor: theme.colors.darkenedBgMix15,
+      backgroundColor: vars.colors.darkenedBgMix15,
     },
     "&:active": {
-      backgroundColor: theme.colors.darkenedBgMix25,
+      backgroundColor: vars.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.gray30,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray60,
+      backgroundColor: vars.colors.gray30,
+      borderColor: vars.colors.transparent,
+      color: vars.colors.gray60,
     },
   }
 })
@@ -449,6 +462,7 @@ export const StyledHeaderNoPaddingButton = styled(
 export const StyledBorderlessIconButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ size, theme }) => {
+  const vars = getThemeVars(theme)
   const iconPadding: Record<BaseButtonSize, string> = {
     [BaseButtonSize.XSMALL]: theme.spacing.threeXS,
     [BaseButtonSize.SMALL]: theme.spacing.twoXS,
@@ -457,8 +471,8 @@ export const StyledBorderlessIconButton = styled(
   }
 
   return {
-    backgroundColor: theme.colors.transparent,
-    color: theme.colors.fadedText60,
+    backgroundColor: vars.colors.transparent,
+    color: vars.colors.fadedText60,
     padding: iconPadding[size],
     marginLeft: theme.spacing.none,
     marginRight: theme.spacing.none,
@@ -476,10 +490,10 @@ export const StyledBorderlessIconButton = styled(
       outline: "none",
     },
     "&:hover": {
-      color: theme.colors.bodyText,
+      color: vars.colors.bodyText,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText10,
+      color: vars.colors.fadedText10,
       cursor: "not-allowed",
 
       // For image content
@@ -493,10 +507,12 @@ export const StyledBorderlessIconButton = styled(
 export const StyledBorderlessIconButtonActive = styled(
   StyledBorderlessIconButton
 )<RequiredBaseButtonProps>(({ theme }) => {
+  const vars = getThemeVars(theme)
+
   return {
-    color: theme.colors.bodyText,
+    color: vars.colors.bodyText,
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      color: theme.colors.fadedText40,
+      color: vars.colors.fadedText40,
     },
   }
 })
@@ -518,8 +534,10 @@ export const StyledTooltipMobile = styled.div(({ theme }) => ({
 export const StyledElementToolbarButton = styled(
   StyledBaseButton
 )<RequiredBaseButtonProps>(({ theme }) => {
+  const vars = getThemeVars(theme)
+
   return {
-    backgroundColor: theme.colors.transparent,
+    backgroundColor: vars.colors.transparent,
     border: "none",
     padding: theme.spacing.twoXS,
     fontSize: theme.fontSizes.twoSm,
@@ -542,18 +560,18 @@ export const StyledElementToolbarButton = styled(
       outline: "none",
       border: "none",
       boxShadow: "none",
-      backgroundColor: theme.colors.darkenedBgMix25,
+      backgroundColor: vars.colors.darkenedBgMix25,
     },
     "&:hover": {
-      backgroundColor: theme.colors.darkenedBgMix15,
+      backgroundColor: vars.colors.darkenedBgMix15,
     },
     "&:active": {
-      backgroundColor: theme.colors.darkenedBgMix25,
+      backgroundColor: vars.colors.darkenedBgMix25,
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
-      backgroundColor: theme.colors.gray30,
-      borderColor: theme.colors.transparent,
-      color: theme.colors.gray60,
+      backgroundColor: vars.colors.gray30,
+      borderColor: vars.colors.transparent,
+      color: vars.colors.gray60,
     },
   }
 })

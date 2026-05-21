@@ -132,10 +132,11 @@ class MarkdownMixin:
                 .. note::
                    When using ``:color[...]{}`` with custom CSS colors, a named
                    color like ``"red"`` refers to the standard CSS named color,
-                   not the Streamlit palette color. RGB and HSL values must use
-                   comma-separated syntax; the modern space-separated syntax
-                   isn't supported. Colors are parsed by `color2k
-                   <https://color2k.com>`_.
+                   not the Streamlit palette color. Custom colors are validated
+                   with the browser's native CSS parser, so supported formats
+                   depend on the user's browser. This includes CSS custom
+                   properties and newer color syntaxes when the browser
+                   supports them.
 
             - Colored badges, using the syntax ``:color-badge[text in the badge]``.
               ``color`` must be replaced with any of the following supported

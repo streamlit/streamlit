@@ -27,6 +27,7 @@ import {
 import { ThemeShadows } from "./getShadows"
 import type { NamedColor } from "./namedColors"
 import { type PrimitiveColors } from "./primitives/colors"
+import type { ThemeVars } from "./themeCssVariables"
 
 /**
  * Comprehensive type for emotion theme colors.
@@ -100,10 +101,11 @@ type SpecialEmotionColors = {
  */
 export interface EmotionTheme extends Omit<
   typeof emotionBaseTheme,
-  "colors" | "shadows"
+  "colors" | "shadows" | "vars"
 > {
   colors: EmotionThemeColors
   shadows: ThemeShadows
+  vars: ThemeVars
 }
 
 export type ThemeConfig = {

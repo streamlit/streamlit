@@ -32,7 +32,6 @@ import {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
-import { parseToRgba } from "color2k"
 import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
@@ -677,21 +676,49 @@ function createRemarkHelpIcon() {
 }
 
 /**
- * Validates that a string is a valid CSS color value.
- * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
- * and named colors.
+ * Returns true for obvious CSS injection strings that should never be treated
+ * as color values, even if a browser parser is mocked permissively in tests.
+ */
+function isObviouslyDangerousCssColorValue(color: string): boolean {
+  const normalizedColor = color
+    .replace(C0_CONTROL_CHARS_REGEX, "")
+    .trim()
+    .toLowerCase()
+
+  return (
+    normalizedColor.startsWith("javascript:") ||
+    normalizedColor.startsWith("vbscript:") ||
+    normalizedColor.includes("expression(")
+  )
+}
+
+/**
+ * Validates that a string is a safe, browser-supported CSS color value.
+ * Uses native CSS parsing via CSS.supports when available, and falls back to
+ * assigning style.color in environments like jsdom where CSS.supports is missing.
  *
  * @param color - The color string to validate
  * @returns true if the color is valid, false otherwise
  */
 export function isValidCssColor(color: string): boolean {
-  if (!color) return false
-  try {
-    parseToRgba(color)
-    return true
-  } catch {
+  if (!color || isObviouslyDangerousCssColorValue(color)) {
     return false
   }
+
+  if (
+    typeof globalThis.CSS !== "undefined" &&
+    typeof globalThis.CSS.supports === "function"
+  ) {
+    return globalThis.CSS.supports("color", color)
+  }
+
+  if (typeof document !== "undefined") {
+    const style = document.createElement("span").style
+    style.color = color
+    return style.color !== ""
+  }
+
+  return false
 }
 
 /**

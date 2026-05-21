@@ -14,40 +14,30 @@
  * limitations under the License.
  */
 
+import type { Theme } from "@emotion/react"
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
-
-import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
 
 /**
  * Returns the color of the text in the sidebar nav.
  *
- * @param theme The theme to use.
  * @param isActive Whether the nav text should show as active.
  * @returns The color of the text in the sidebar nav.
  */
 const getNavTextColor = (
-  theme: EmotionTheme,
+  theme: Theme,
   isActive: boolean,
   disabled: boolean = false,
   isTopNav?: boolean
 ): string => {
   if (disabled) {
-    return theme.colors.fadedText40
+    return theme.vars.colors.fadedText40
   }
 
-  if (isTopNav) {
-    return theme.colors.bodyText
+  if (isTopNav || isActive) {
+    return theme.vars.colors.bodyText
   }
 
-  const isLightTheme = hasLightBackgroundColor(theme)
-
-  if (isActive) {
-    return theme.colors.bodyText
-  }
-  return isLightTheme
-    ? transparentize(theme.colors.bodyText, 0.2)
-    : transparentize(theme.colors.bodyText, 0.25)
+  return theme.vars.colors.bodyTextDim
 }
 
 export const StyledSidebarNavContainer = styled.div(({ theme }) => ({
@@ -130,14 +120,16 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       lineHeight: theme.lineHeights.menuItem,
 
       color: getNavTextColor(theme, isActive),
-      backgroundColor: isActive ? theme.colors.darkenedBgMix25 : "transparent",
+      backgroundColor: isActive
+        ? theme.vars.colors.darkenedBgMix25
+        : "transparent",
 
       ...(disabled && {
         pointerEvents: "none",
       }),
 
       "&:hover": {
-        backgroundColor: theme.colors.darkenedBgMix15,
+        backgroundColor: theme.vars.colors.darkenedBgMix15,
       },
 
       "&:active,&:visited,&:hover": {
@@ -149,7 +141,8 @@ export const StyledSidebarNavLink = styled.a<StyledSidebarNavLinkProps>(
       },
 
       "&:focus-visible": {
-        backgroundColor: theme.colors.darkenedBgMix15,
+        backgroundColor: theme.vars.colors.darkenedBgMix15,
+        boxShadow: theme.vars.shadows.focusRing,
       },
 
       [`@media print`]: {
@@ -231,7 +224,7 @@ export const StyledViewButton = styled.button(({ theme }) => {
     fontFamily: "inherit",
     lineHeight: theme.lineHeights.base,
     color: getNavTextColor(theme, true),
-    backgroundColor: theme.colors.transparent,
+    backgroundColor: theme.vars.colors.transparent,
     border: "none",
     borderRadius: theme.radii.default,
     marginTop: theme.spacing.twoXS,
@@ -245,14 +238,14 @@ export const StyledViewButton = styled.button(({ theme }) => {
       boxShadow: "none",
     },
     "&:hover": {
-      backgroundColor: theme.colors.darkenedBgMix15,
+      backgroundColor: theme.vars.colors.darkenedBgMix15,
     },
   }
 })
 
 export const StyledSidebarNavSeparator = styled.div(({ theme }) => ({
   paddingTop: theme.spacing.lg,
-  borderBottom: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
+  borderBottom: `${theme.sizes.borderWidth} solid ${theme.vars.colors.borderColor}`,
 }))
 
 export const StyledNavSectionContainer = styled.div(({ theme }) => ({
@@ -276,26 +269,30 @@ interface StyledNavSectionProps {
 }
 
 export const StyledNavSection = styled.div<StyledNavSectionProps>(
-  ({ theme, isOpen }) => ({
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    position: "relative",
-    lineHeight: theme.lineHeights.menuItem,
-    fontSize: theme.fontSizes.sm,
-    padding: `0 ${theme.spacing.sm}`,
-    color: getNavTextColor(theme, false, false, true),
-    borderRadius: theme.radii.default,
-    marginRight: theme.spacing.twoXS,
-    "&:not(:first-of-type)": {
-      marginLeft: theme.spacing.twoXS,
-    },
-    ...(isOpen ? { backgroundColor: theme.colors.darkenedBgMix25 } : {}),
-    "&:hover": {
-      backgroundColor: theme.colors.darkenedBgMix15,
-    },
-  })
+  ({ theme, isOpen }) => {
+    return {
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      cursor: "pointer",
+      position: "relative",
+      lineHeight: theme.lineHeights.menuItem,
+      fontSize: theme.fontSizes.sm,
+      padding: `0 ${theme.spacing.sm}`,
+      color: getNavTextColor(theme, false, false, true),
+      borderRadius: theme.radii.default,
+      marginRight: theme.spacing.twoXS,
+      "&:not(:first-of-type)": {
+        marginLeft: theme.spacing.twoXS,
+      },
+      ...(isOpen
+        ? { backgroundColor: theme.vars.colors.darkenedBgMix25 }
+        : {}),
+      "&:hover": {
+        backgroundColor: theme.vars.colors.darkenedBgMix15,
+      },
+    }
+  }
 )
 
 export const StyledTopNavLinkContainer = styled.div(({ theme }) => ({
