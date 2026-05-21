@@ -27,7 +27,6 @@ from __future__ import annotations
 import contextlib
 import contextvars
 import threading
-import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import TYPE_CHECKING, Any
 
@@ -97,7 +96,7 @@ class ParallelFragmentCoordinator:
             )
         self._executor = ThreadPoolExecutor(max_workers=max_workers)
         self._outstanding = 0
-        self._outstanding_lock = threading.Lock()
+        self._join_condition = threading.Condition(threading.Lock())
         self._stop_event = threading.Event()
         self._worker_exception: RerunException | StopException | None = None
         self._exception_lock = threading.Lock()
@@ -123,7 +122,7 @@ class ParallelFragmentCoordinator:
         ctx = get_script_run_ctx()
         captured = contextvars.copy_context()
 
-        with self._outstanding_lock:
+        with self._join_condition:
             self._outstanding += 1
 
         def tracked() -> None:
@@ -131,14 +130,16 @@ class ParallelFragmentCoordinator:
                 with _scoped_ctx_attach(ctx):
                     captured.run(fn, *args)
             finally:
-                with self._outstanding_lock:
+                with self._join_condition:
                     self._outstanding -= 1
+                    self._join_condition.notify_all()
 
         try:
             self._executor.submit(tracked)
         except RuntimeError:
-            with self._outstanding_lock:
+            with self._join_condition:
                 self._outstanding -= 1
+                self._join_condition.notify_all()
             raise
 
     def request_stop(self) -> None:
@@ -147,6 +148,7 @@ class ParallelFragmentCoordinator:
             if self._worker_exception is None:
                 self._worker_exception = StopException()
         self._stop_event.set()
+        self.notify_yield_waiters()
 
     def request_rerun(self, exc: RerunException) -> None:
         """Record an st.rerun(scope='app') from a worker. First writer wins."""
@@ -154,6 +156,7 @@ class ParallelFragmentCoordinator:
             if self._worker_exception is None:
                 self._worker_exception = exc
         self._stop_event.set()
+        self.notify_yield_waiters()
 
     def should_stop(self) -> bool:
         """Whether worker threads should cooperatively exit at their next
@@ -175,25 +178,40 @@ class ParallelFragmentCoordinator:
         if stored is not None:
             raise stored
 
+    def notify_yield_waiters(self) -> None:
+        """Wake the thread blocked in :meth:`join` so ``yield_check`` runs promptly.
+
+        Called from workers (:meth:`request_stop` / :meth:`request_rerun`) and from
+        ``ScriptRunner`` when a rerun/stop request is enqueued from another thread
+        while the script thread is blocked inside :meth:`join`.
+        """
+        with self._join_condition:
+            self._join_condition.notify_all()
+
     def join(self) -> None:
         """Block until all outstanding work completes.
 
-        Polls _outstanding (lock-protected) and calls _yield_check() each
-        poll interval so the script thread stays responsive to external
-        RERUN/STOP requests. If a worker stored an exception, raise it
-        instead of returning normally.
+        Uses ``_join_condition`` so the script thread wakes immediately when a
+        worker finishes (via ``notify_all`` on ``_outstanding`` decrement) or when
+        :meth:`notify_yield_waiters` is called.  Falls back to
+        ``poll_interval`` as a worst-case ceiling so ``yield_check()`` still runs
+        periodically even when ``_outstanding`` is unchanged (e.g. one slow
+        fragment still running).
 
+        If a worker stored an exception, raises it instead of returning normally.
         If join() raises (worker exception or yield-check exception), the
         executor is left running and the caller is responsible for calling
         drain() to shut down in-flight workers.
         """
         while True:
-            with self._outstanding_lock:
+            with self._join_condition:
                 if self._outstanding == 0:
                     break
             self._yield_check()
             self._raise_if_worker_exception()
-            time.sleep(self._poll_interval)
+            with self._join_condition:
+                if self._outstanding > 0:
+                    self._join_condition.wait(timeout=self._poll_interval)
         self._raise_if_worker_exception()
         self._executor.shutdown(wait=False)
 

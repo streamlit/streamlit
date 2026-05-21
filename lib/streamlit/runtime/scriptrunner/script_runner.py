@@ -285,6 +285,10 @@ class ScriptRunner:
         # This is initialized in the start() method
         self._script_thread: threading.Thread | None = None
 
+        # Coordinator blocking the script thread in join(); other threads poke
+        # notify_yield_waiters() when rerun/stop is enqueued during that window.
+        self._join_wake_coordinator: ParallelFragmentCoordinator | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -296,6 +300,7 @@ class ScriptRunner:
         Safe to call from any thread.
         """
         self._requests.request_stop()
+        self._wake_parallel_join_barrier_if_waiting()
 
     def request_rerun(self, rerun_data: RerunData) -> bool:
         """Request that the ScriptRunner interrupt its currently-running
@@ -309,7 +314,19 @@ class ScriptRunner:
 
         Safe to call from any thread.
         """
-        return self._requests.request_rerun(rerun_data)
+        rv = self._requests.request_rerun(rerun_data)
+        self._wake_parallel_join_barrier_if_waiting()
+        return rv
+
+    def _wake_parallel_join_barrier_if_waiting(self) -> None:
+        """If the script thread is blocked in ParallelFragmentCoordinator.join(), wake it.
+
+        Rerun/stop requests can arrive on other threads; join() sleeps on a
+        Condition bounded by poll_interval unless notified.
+        """
+        coord = self._join_wake_coordinator
+        if coord is not None:
+            coord.notify_yield_waiters()
 
     def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
@@ -605,6 +622,7 @@ class ScriptRunner:
                 context_info=rerun_data.context_info,
                 yield_check=self._maybe_handle_execution_control_request,
             )
+            self._join_wake_coordinator = ctx.parallel_coordinator
 
             self.on_event.send(
                 self,
@@ -641,6 +659,7 @@ class ScriptRunner:
                 # We got a compile error. Send an error event and bail immediately.
                 _LOGGER.exception("Script compilation error", exc_info=ex)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+                self._join_wake_coordinator = None
                 self.on_event.send(
                     self,
                     event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
@@ -837,6 +856,8 @@ class ScriptRunner:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
+        self._join_wake_coordinator = None
+
         # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())

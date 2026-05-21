@@ -52,11 +52,11 @@ def _wait_for_outstanding_zero(
     """
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        with c._outstanding_lock:
+        with c._join_condition:
             if c._outstanding == 0:
                 return
         time.sleep(0.01)
-    with c._outstanding_lock:
+    with c._join_condition:
         last_value = c._outstanding
     raise AssertionError(
         f"outstanding never reached 0 within {timeout}s (last value: {last_value})"
