@@ -264,8 +264,8 @@ class ScriptRunContext:
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
         )
-        # Deferred: parallel_coordinator imports from this module, and
-        # config pulls in the heavy streamlit.__init__ chain.
+        # Deferred to avoid circular import: parallel_coordinator imports
+        # ScriptRunContext and get_script_run_ctx from this module.
         from streamlit import config
         from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 
