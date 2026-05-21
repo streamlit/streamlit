@@ -73,15 +73,6 @@ class TestDiscoverSkills:
         result = skills._discover_skills(tmp_path)
         assert result == []
 
-    def test_excludes_finding_streamlit_skills(self, tmp_path: Path) -> None:
-        """Excludes the meta skill 'finding-streamlit-skills' from project installs."""
-        meta_skill = tmp_path / "finding-streamlit-skills"
-        meta_skill.mkdir()
-        (meta_skill / "SKILL.md").write_text("# Meta\n", encoding="utf-8")
-
-        result = skills._discover_skills(tmp_path)
-        assert result == []
-
     def test_returns_sorted_skills(self, tmp_path: Path) -> None:
         """Returns skills sorted alphabetically."""
         for name in ["z-skill", "a-skill", "m-skill"]:
@@ -146,13 +137,13 @@ class TestFindProjectRoot:
         assert result == subdir
 
 
-class TestGetTargetDirs:
-    """Tests for _get_target_dirs."""
+class TestGetProjectTargetDirs:
+    """Tests for _get_project_target_dirs."""
 
     def test_always_includes_agents_skills(self, tmp_path: Path) -> None:
         """Always includes .agents/skills/ in targets."""
         with patch("pathlib.Path.home", return_value=tmp_path / "home"):
-            result = skills._get_target_dirs(tmp_path)
+            result = skills._get_project_target_dirs(tmp_path)
         assert tmp_path / ".agents" / "skills" in result
 
     def test_includes_claude_skills_when_claude_home_exists(
@@ -163,7 +154,7 @@ class TestGetTargetDirs:
         (home / ".claude").mkdir(parents=True)
 
         with patch("pathlib.Path.home", return_value=home):
-            result = skills._get_target_dirs(tmp_path)
+            result = skills._get_project_target_dirs(tmp_path)
 
         assert tmp_path / ".claude" / "skills" in result
 
@@ -175,13 +166,51 @@ class TestGetTargetDirs:
         home.mkdir(parents=True)
 
         with patch("pathlib.Path.home", return_value=home):
-            result = skills._get_target_dirs(tmp_path)
+            result = skills._get_project_target_dirs(tmp_path)
 
         assert tmp_path / ".claude" / "skills" not in result
 
 
-class TestInstallSkill:
-    """Tests for _install_skill."""
+class TestGetGlobalTargetDirs:
+    """Tests for _get_global_target_dirs."""
+
+    def test_always_includes_home_agents_skills(self, tmp_path: Path) -> None:
+        """Always includes ~/.agents/skills/ in targets."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with patch("pathlib.Path.home", return_value=home):
+            result = skills._get_global_target_dirs()
+
+        assert home / ".agents" / "skills" in result
+
+    def test_includes_claude_skills_when_claude_home_exists(
+        self, tmp_path: Path
+    ) -> None:
+        """Includes ~/.claude/skills/ when ~/.claude exists."""
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        with patch("pathlib.Path.home", return_value=home):
+            result = skills._get_global_target_dirs()
+
+        assert home / ".claude" / "skills" in result
+
+    def test_excludes_claude_skills_when_claude_home_missing(
+        self, tmp_path: Path
+    ) -> None:
+        """Excludes ~/.claude/skills/ when ~/.claude doesn't exist."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with patch("pathlib.Path.home", return_value=home):
+            result = skills._get_global_target_dirs()
+
+        assert home / ".claude" / "skills" not in result
+
+
+class TestInstallSkillSymlink:
+    """Tests for _install_skill_symlink."""
 
     def test_creates_symlink(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -191,7 +220,7 @@ class TestInstallSkill:
         result = skills._InstallResult()
 
         with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
-            skills._install_skill(
+            success = skills._install_skill_symlink(
                 "developing-with-streamlit",
                 mock_source_skills_dir,
                 target_dir,
@@ -199,6 +228,7 @@ class TestInstallSkill:
             )
 
         target = target_dir / "developing-with-streamlit"
+        assert success
         assert target.is_symlink()
         assert (
             target.resolve()
@@ -218,13 +248,14 @@ class TestInstallSkill:
 
         result = skills._InstallResult()
         with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
-            skills._install_skill(
+            success = skills._install_skill_symlink(
                 "developing-with-streamlit",
                 mock_source_skills_dir,
                 target_dir,
                 result,
             )
 
+        assert success
         assert ".agents/skills/developing-with-streamlit" in result.up_to_date
         assert len(result.installed) == 0
 
@@ -239,13 +270,14 @@ class TestInstallSkill:
 
         result = skills._InstallResult()
         with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
-            skills._install_skill(
+            success = skills._install_skill_symlink(
                 "developing-with-streamlit",
                 mock_source_skills_dir,
                 target_dir,
                 result,
             )
 
+        assert success
         assert any("existing file or directory" in s for s in result.skipped)
         assert len(result.installed) == 0
 
@@ -260,13 +292,14 @@ class TestInstallSkill:
 
         result = skills._InstallResult()
         with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
-            skills._install_skill(
+            success = skills._install_skill_symlink(
                 "developing-with-streamlit",
                 mock_source_skills_dir,
                 target_dir,
                 result,
             )
 
+        assert success
         assert any("existing file or directory" in s for s in result.skipped)
         assert len(result.installed) == 0
 
@@ -282,15 +315,87 @@ class TestInstallSkill:
 
         result = skills._InstallResult()
         with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
-            skills._install_skill(
+            success = skills._install_skill_symlink(
                 "developing-with-streamlit",
                 mock_source_skills_dir,
                 target_dir,
                 result,
             )
 
+        assert success
         assert target.is_symlink()
         assert ".agents/skills/developing-with-streamlit" in result.installed
+
+
+class TestInstallSkillCopy:
+    """Tests for _install_skill_copy."""
+
+    def test_copies_skill_directory(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Copies skill directory to target location."""
+        target_dir = tmp_path / "target" / "skills"
+        result = skills._InstallResult()
+
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        target = target_dir / "developing-with-streamlit"
+        assert target.is_dir()
+        assert (target / "SKILL.md").is_file()
+        assert (target / ".streamlit-skills").is_file()
+        assert len(result.installed) == 1
+
+    def test_skips_existing_user_directory(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Skips and reports conflict for existing user directory."""
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / "user-file.txt").write_text("user content", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert any("existing file or directory" in s for s in result.skipped)
+        assert (target / "user-file.txt").is_file()
+
+    def test_replaces_streamlit_owned_directory(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Replaces directories marked as Streamlit-owned."""
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        (target / ".streamlit-skills").write_text("", encoding="utf-8")
+        (target / "old-file.txt").write_text("old content", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert len(result.installed) == 1
+        assert (target / "SKILL.md").is_file()
+        assert not (target / "old-file.txt").exists()
 
 
 class TestIsStreamlitOwnedSymlink:
@@ -342,6 +447,32 @@ class TestIsStreamlitOwnedSymlink:
         assert not skills._is_streamlit_owned_symlink(regular_file, source)
 
 
+class TestIsStreamlitOwnedDirectory:
+    """Tests for _is_streamlit_owned_directory."""
+
+    def test_returns_true_for_directory_with_marker(self, tmp_path: Path) -> None:
+        """Returns True for directories containing .streamlit-skills marker."""
+        target = tmp_path / "skill"
+        target.mkdir()
+        (target / ".streamlit-skills").write_text("", encoding="utf-8")
+
+        assert skills._is_streamlit_owned_directory(target)
+
+    def test_returns_false_for_directory_without_marker(self, tmp_path: Path) -> None:
+        """Returns False for directories without the marker file."""
+        target = tmp_path / "skill"
+        target.mkdir()
+
+        assert not skills._is_streamlit_owned_directory(target)
+
+    def test_returns_false_for_non_directory(self, tmp_path: Path) -> None:
+        """Returns False for files."""
+        regular_file = tmp_path / "file.txt"
+        regular_file.write_text("content", encoding="utf-8")
+
+        assert not skills._is_streamlit_owned_directory(regular_file)
+
+
 class TestInstallSkillsCli:
     """Integration tests for the `streamlit skills` CLI command."""
 
@@ -350,6 +481,13 @@ class TestInstallSkillsCli:
         result = runner.invoke(cli.main, ["skills", "--help"])
         assert result.exit_code == 0
         assert "Install Streamlit AI-agent skills" in result.output
+
+    def test_skills_help_shows_global_option(self, runner: CliRunner) -> None:
+        """The --global option is documented in help."""
+        result = runner.invoke(cli.main, ["skills", "--help"])
+        assert result.exit_code == 0
+        assert "--global" in result.output
+        assert "Install globally" in result.output
 
     def test_skills_yes_flag_skips_prompts(
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
@@ -370,6 +508,26 @@ class TestInstallSkillsCli:
 
         assert result.exit_code == 0
         assert "Installed:" in result.output
+
+    def test_skills_global_flag_triggers_global_install(
+        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """The --global flag triggers global installation mode."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills,
+                "_download_global_skill",
+                return_value=mock_source_skills_dir / "developing-with-streamlit",
+            ),
+        ):
+            result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
+
+        assert result.exit_code == 0
+        assert "Successfully installed globally" in result.output
 
     def test_skills_fails_without_tty_and_no_yes_flag(
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
@@ -478,3 +636,58 @@ class TestInstallSkillsCli:
 
         assert result.exit_code == 0
         assert "Up to date:" in result.output
+
+    def test_skills_global_installs_to_home_dirs(
+        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Global install copies skills to home directories."""
+        home = tmp_path / "home"
+        (home / ".claude").mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills,
+                "_download_global_skill",
+                return_value=mock_source_skills_dir / "developing-with-streamlit",
+            ),
+        ):
+            result = runner.invoke(cli.main, ["skills", "-g", "-y"])
+
+        assert result.exit_code == 0
+        assert (home / ".agents" / "skills" / "developing-with-streamlit").is_dir()
+        assert (home / ".claude" / "skills" / "developing-with-streamlit").is_dir()
+
+
+class TestPromptInstallMode:
+    """Tests for _prompt_install_mode."""
+
+    def test_accepts_p_for_project(self) -> None:
+        """Accepts 'p' input for project mode."""
+        with patch("click.prompt", return_value="p"):
+            result = skills._prompt_install_mode()
+        assert result == "project"
+
+    def test_accepts_project_for_project(self) -> None:
+        """Accepts 'project' input for project mode."""
+        with patch("click.prompt", return_value="project"):
+            result = skills._prompt_install_mode()
+        assert result == "project"
+
+    def test_accepts_g_for_global(self) -> None:
+        """Accepts 'g' input for global mode."""
+        with patch("click.prompt", return_value="g"):
+            result = skills._prompt_install_mode()
+        assert result == "global"
+
+    def test_accepts_global_for_global(self) -> None:
+        """Accepts 'global' input for global mode."""
+        with patch("click.prompt", return_value="global"):
+            result = skills._prompt_install_mode()
+        assert result == "global"
+
+    def test_default_empty_is_project(self) -> None:
+        """Default selection (empty input) is project mode."""
+        with patch("click.prompt", return_value=""):
+            result = skills._prompt_install_mode()
+        assert result == "project"

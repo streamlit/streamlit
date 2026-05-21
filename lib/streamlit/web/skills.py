@@ -16,20 +16,29 @@
 
 from __future__ import annotations
 
+import io
 import os
+import shutil
 import sys
+import tarfile
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Final
+from urllib import request
+from urllib.error import URLError
 
 import click
 
 import streamlit
 
-# Skills excluded from project installs (meta/discovery skills)
-_EXCLUDED_PROJECT_SKILLS: Final[frozenset[str]] = frozenset(
-    {"finding-streamlit-skills"}
+# GitHub URL for downloading global skills (versioned tag)
+_GLOBAL_SKILLS_URL: Final[str] = (
+    "https://github.com/streamlit/agent-skills/archive/refs/tags/v1.tar.gz"
 )
+
+# Skill name installed in global mode
+_GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 
 
 @dataclass
@@ -51,7 +60,6 @@ def _discover_skills(source_dir: Path) -> list[str]:
     """Discover installable skills from the source directory.
 
     A valid skill is a directory containing SKILL.md.
-    Excludes meta/discovery skills from project installs.
     """
     if not source_dir.is_dir():
         return []
@@ -59,8 +67,6 @@ def _discover_skills(source_dir: Path) -> list[str]:
     skills = []
     for entry in sorted(source_dir.iterdir()):
         if not entry.is_dir():
-            continue
-        if entry.name in _EXCLUDED_PROJECT_SKILLS:
             continue
         if (entry / "SKILL.md").is_file():
             skills.append(entry.name)
@@ -90,8 +96,8 @@ def _find_project_root() -> Path:
     return cwd
 
 
-def _get_target_dirs(project_root: Path) -> list[Path]:
-    """Get target directories for skill installation.
+def _get_project_target_dirs(project_root: Path) -> list[Path]:
+    """Get target directories for project skill installation.
 
     Always targets .agents/skills/. Also targets .claude/skills/
     when ~/.claude exists (Claude Code is installed).
@@ -101,6 +107,22 @@ def _get_target_dirs(project_root: Path) -> list[Path]:
     claude_home = Path.home() / ".claude"
     if claude_home.exists():
         targets.append(project_root / ".claude" / "skills")
+
+    return targets
+
+
+def _get_global_target_dirs() -> list[Path]:
+    """Get target directories for global skill installation.
+
+    Always targets ~/.agents/skills/. Also targets ~/.claude/skills/
+    when ~/.claude exists (Claude Code is installed).
+    """
+    home = Path.home()
+    targets = [home / ".agents" / "skills"]
+
+    claude_home = home / ".claude"
+    if claude_home.exists():
+        targets.append(claude_home / "skills")
 
     return targets
 
@@ -138,19 +160,35 @@ def _is_streamlit_owned_symlink(link_path: Path, source_skills_dir: Path) -> boo
     return False
 
 
-def _install_skill(
+def _is_streamlit_owned_directory(dir_path: Path) -> bool:
+    """Check if a directory appears to be a Streamlit-managed skill copy.
+
+    Returns True if the directory contains a .streamlit-skills marker file,
+    indicating it was installed by this command.
+    """
+    if not dir_path.is_dir():
+        return False
+    return (dir_path / ".streamlit-skills").is_file()
+
+
+def _install_skill_symlink(
     skill_name: str,
     source_dir: Path,
     target_dir: Path,
     result: _InstallResult,
-) -> None:
-    """Install a single skill to a target directory.
+) -> bool:
+    """Install a single skill as a symlink to the source directory.
 
-    Creates a relative symlink from target_dir/skill_name to the source.
+    Returns True if symlink was created successfully, False if symlinks
+    are not supported (for fallback handling).
     """
     source_path = source_dir / skill_name
     target_path = target_dir / skill_name
-    rel_target_path = target_path.relative_to(Path.cwd())
+
+    try:
+        rel_target_path = target_path.relative_to(Path.cwd())
+    except ValueError:
+        rel_target_path = target_path
 
     # Ensure parent directory exists
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -162,21 +200,20 @@ def _install_skill(
                 resolved = target_path.resolve()
                 if resolved == source_path.resolve():
                     result.up_to_date.append(str(rel_target_path))
-                    return
+                    return True
             except (OSError, ValueError):
                 pass
 
             # Check if it's a Streamlit-owned symlink we can replace
             if _is_streamlit_owned_symlink(target_path, source_dir.parent):
-                # Remove and reinstall
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
-                return
+                return True
         else:
             # Regular file or directory - skip
             result.skipped.append(f"{rel_target_path} (existing file or directory)")
-            return
+            return True
 
     # Compute relative symlink target
     try:
@@ -189,9 +226,102 @@ def _install_skill(
     try:
         target_path.symlink_to(rel_source, target_is_directory=True)
         result.installed.append(str(rel_target_path))
+        return True
+    except OSError:
+        # Symlink not supported (e.g., Windows without Developer Mode)
+        return False
+
+
+def _install_skill_copy(
+    skill_name: str,
+    source_dir: Path,
+    target_dir: Path,
+    result: _InstallResult,
+) -> None:
+    """Install a single skill by copying files to target directory."""
+    source_path = source_dir / skill_name
+    target_path = target_dir / skill_name
+
+    try:
+        rel_target_path = target_path.relative_to(Path.home())
+        rel_target_path = Path("~") / rel_target_path
+    except ValueError:
+        rel_target_path = target_path
+
+    # Ensure parent directory exists
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    if target_path.exists() or target_path.is_symlink():
+        # Target exists - check if it's a Streamlit-owned copy we can replace
+        if target_path.is_symlink():
+            if _is_streamlit_owned_symlink(target_path, source_dir.parent):
+                target_path.unlink()
+            else:
+                result.skipped.append(f"{rel_target_path} (existing symlink)")
+                return
+        elif _is_streamlit_owned_directory(target_path):
+            # Check if content matches (up to date)
+            marker = target_path / ".streamlit-skills"
+            if marker.is_file():
+                shutil.rmtree(target_path)
+        else:
+            result.skipped.append(f"{rel_target_path} (existing file or directory)")
+            return
+
+    # Copy skill directory
+    try:
+        shutil.copytree(source_path, target_path)
+        # Add marker file to indicate Streamlit ownership
+        (target_path / ".streamlit-skills").write_text("", encoding="utf-8")
+        result.installed.append(str(rel_target_path))
     except OSError as e:
-        # Symlink not supported - could implement copy fallback here
-        result.skipped.append(f"{rel_target_path} (symlink failed: {e})")
+        result.skipped.append(f"{rel_target_path} (copy failed: {e})")
+
+
+def _download_global_skill(url: str, skill_name: str) -> Path:
+    """Download and extract global skill from GitHub.
+
+    Returns path to extracted skill directory in a temporary location.
+    Raises click.ClickException on network or extraction errors.
+    """
+    try:
+        with request.urlopen(url, timeout=30) as response:  # noqa: S310
+            data = response.read()
+    except URLError as e:
+        raise click.ClickException(
+            f"Failed to download skills from GitHub: {e}\n"
+            "Check your network connection and try again."
+        ) from e
+
+    # Extract tarball to temp directory
+    temp_dir = Path(tempfile.mkdtemp(prefix="streamlit-skills-"))
+    try:
+        with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
+            # Security: validate paths before extraction
+            for member in tar.getmembers():
+                if member.name.startswith("/") or ".." in member.name:
+                    raise click.ClickException("Invalid archive: contains unsafe paths")
+            tar.extractall(temp_dir)  # noqa: S202
+    except tarfile.TarError as e:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise click.ClickException(f"Failed to extract skills archive: {e}") from e
+
+    # Find extracted skill directory (tarball root is typically repo-name-tag/)
+    extracted_dirs = list(temp_dir.iterdir())
+    if not extracted_dirs:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise click.ClickException("Downloaded archive is empty")
+
+    archive_root = extracted_dirs[0]
+    skill_path = archive_root / skill_name
+
+    if not skill_path.is_dir() or not (skill_path / "SKILL.md").is_file():
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise click.ClickException(
+            f"Skill '{skill_name}' not found in downloaded archive"
+        )
+
+    return skill_path
 
 
 def _print_result(result: _InstallResult) -> None:
@@ -227,21 +357,28 @@ def _prompt_install_mode() -> str:
         f"Project {click.style('(recommended)', fg='green')} - "
         "skills available in this project only"
     )
+    click.echo(
+        f"  {click.style('[g]', fg='cyan', bold=True)} "
+        f"Global - "
+        "skills available across all projects"
+    )
     click.echo()
 
     while True:
         choice = click.prompt("Choice", default="p", show_default=True).strip().lower()
         if choice in {"", "p", "project"}:
             return "project"
-        click.echo("Invalid choice. Enter 'p' for project install.")
+        if choice in {"g", "global"}:
+            return "global"
+        click.echo("Invalid choice. Enter 'p' for project or 'g' for global install.")
 
 
-def _confirm_installation(
+def _confirm_project_installation(
     project_root: Path,
     skills: list[str],
     target_dirs: list[Path],
 ) -> bool:
-    """Show installation plan and confirm with user."""
+    """Show project installation plan and confirm with user."""
     click.echo()
     click.echo(
         f"Installing to project: {click.style(str(project_root), fg='bright_blue')}"
@@ -255,29 +392,52 @@ def _confirm_installation(
 
     click.secho("\nTarget directories:", bold=True)
     for target_dir in target_dirs:
-        rel_path = target_dir.relative_to(project_root)
+        try:
+            rel_path = target_dir.relative_to(project_root)
+        except ValueError:
+            rel_path = target_dir
         click.echo(
-            f"  {click.style('•', fg='magenta')} {click.style(str(rel_path) + '/', fg='cyan')}"
+            f"  {click.style('•', fg='magenta')} "
+            f"{click.style(str(rel_path) + '/', fg='cyan')}"
         )
 
     click.echo()
     return click.confirm("Proceed with installation?", default=True)
 
 
-def install_skills(*, yes: bool = False) -> None:
-    """Install bundled Streamlit skills to the current project.
+def _confirm_global_installation(target_dirs: list[Path]) -> bool:
+    """Show global installation plan and confirm with user."""
+    click.echo()
+    click.echo("Installing globally (downloads from GitHub)")
 
-    Parameters
-    ----------
-    yes
-        If True, skip all confirmation prompts.
-    """
-    # Check if running interactively
-    if not yes and not sys.stdin.isatty():
-        raise click.ClickException(
-            "Non-interactive terminal detected. Use --yes to skip prompts."
+    click.secho("\nSkill to install:", bold=True)
+    click.echo(
+        f"  {click.style('•', fg='magenta')} "
+        f"{click.style(_GLOBAL_SKILL_NAME, fg='cyan')}"
+    )
+
+    click.secho("\nTarget directories:", bold=True)
+    home = Path.home()
+    for target_dir in target_dirs:
+        try:
+            rel_path = Path("~") / target_dir.relative_to(home)
+        except ValueError:
+            rel_path = target_dir
+        click.echo(
+            f"  {click.style('•', fg='magenta')} "
+            f"{click.style(str(rel_path) + '/', fg='cyan')}"
         )
 
+    click.echo()
+    return click.confirm("Proceed with installation?", default=True)
+
+
+def _install_project_skills(
+    *,
+    yes: bool = False,
+    fallback_to_global: bool = True,
+) -> None:
+    """Install bundled skills to the current project via symlinks."""
     # Discover bundled skills
     source_skills_dir = _get_source_skills_dir()
     if not source_skills_dir.is_dir():
@@ -289,24 +449,46 @@ def install_skills(*, yes: bool = False) -> None:
     if not skills:
         raise click.ClickException("No installable skills found in Streamlit package.")
 
-    # Interactive mode selection
-    if not yes:
-        _prompt_install_mode()
-
     # Determine targets
     project_root = _find_project_root()
-    target_dirs = _get_target_dirs(project_root)
+    target_dirs = _get_project_target_dirs(project_root)
 
     # Confirm installation
-    if not yes and not _confirm_installation(project_root, skills, target_dirs):
+    if not yes and not _confirm_project_installation(project_root, skills, target_dirs):
         click.echo("Installation cancelled.")
         return
 
     # Install skills
     result = _InstallResult()
+    symlink_failed = False
+
     for skill_name in skills:
         for target_dir in target_dirs:
-            _install_skill(skill_name, source_skills_dir, target_dir, result)
+            success = _install_skill_symlink(
+                skill_name, source_skills_dir, target_dir, result
+            )
+            if not success:
+                symlink_failed = True
+                break
+        if symlink_failed:
+            break
+
+    # Handle symlink failure (Windows without Developer Mode)
+    if symlink_failed and fallback_to_global:
+        click.secho(
+            "\n⚠ Symlinks not supported on this system.",
+            fg="yellow",
+            bold=True,
+        )
+        click.echo("Falling back to global installation mode...")
+        click.echo()
+        _install_global_skills(yes=yes)
+        return
+
+    if symlink_failed:
+        raise click.ClickException(
+            "Symlinks not supported. Use --global for global installation."
+        )
 
     # Report results
     _print_result(result)
@@ -331,3 +513,84 @@ def install_skills(*, yes: bool = False) -> None:
             "No skills were installed due to conflicts. "
             "Remove conflicting files and try again."
         )
+
+
+def _install_global_skills(*, yes: bool = False) -> None:
+    """Install skills globally by downloading from GitHub."""
+    target_dirs = _get_global_target_dirs()
+
+    # Confirm installation
+    if not yes and not _confirm_global_installation(target_dirs):
+        click.echo("Installation cancelled.")
+        return
+
+    # Download skill from GitHub
+    click.echo("Downloading skills from GitHub...")
+    skill_path = _download_global_skill(_GLOBAL_SKILLS_URL, _GLOBAL_SKILL_NAME)
+
+    try:
+        # Install to each target directory
+        result = _InstallResult()
+        for target_dir in target_dirs:
+            _install_skill_copy(
+                _GLOBAL_SKILL_NAME, skill_path.parent, target_dir, result
+            )
+
+        # Report results
+        _print_result(result)
+
+        if result.installed or result.up_to_date:
+            click.echo()
+            click.secho(
+                "✨ Successfully installed globally",
+                fg="green",
+                bold=True,
+            )
+            if result.installed:
+                click.echo()
+                click.secho("Note: ", fg="bright_black", bold=True, nl=False)
+                click.secho(
+                    "Global skills include a discover.py script that finds",
+                    fg="bright_black",
+                )
+                click.secho(
+                    "      project-specific bundled skills at runtime.",
+                    fg="bright_black",
+                )
+        elif result.skipped:
+            raise click.ClickException(
+                "No skills were installed due to conflicts. "
+                "Remove conflicting files and try again."
+            )
+    finally:
+        # Clean up temp directory
+        shutil.rmtree(skill_path.parent.parent, ignore_errors=True)
+
+
+def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
+    """Install Streamlit AI-agent skills.
+
+    Parameters
+    ----------
+    global_mode
+        If True, install globally to home directories.
+        If False (default), install to project directories via symlinks.
+    yes
+        If True, skip all confirmation prompts.
+    """
+    # Check if running interactively
+    if not yes and not sys.stdin.isatty():
+        raise click.ClickException(
+            "Non-interactive terminal detected. Use --yes to skip prompts."
+        )
+
+    # Interactive mode selection (when not using flags)
+    if not yes and not global_mode:
+        mode = _prompt_install_mode()
+        if mode == "global":
+            global_mode = True
+
+    if global_mode:
+        _install_global_skills(yes=yes)
+    else:
+        _install_project_skills(yes=yes)

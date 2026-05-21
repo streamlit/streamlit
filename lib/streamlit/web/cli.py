@@ -417,22 +417,35 @@ def test_prog_name() -> None:
 
 
 @main.command("skills")
+@click.option("-g", "--global", "global_mode", is_flag=True, help="Install globally.")
 @click.option("-y", "--yes", is_flag=True, help="Skip confirmation prompts.")
-def main_skills(yes: bool) -> None:
+def main_skills(global_mode: bool, yes: bool) -> None:
     r"""Install Streamlit AI-agent skills.
 
-    Installs bundled Streamlit skills from the active Streamlit package to
-    the current project. Skills are installed as symlinks so they stay in
-    sync when Streamlit is upgraded.
+    Installs bundled Streamlit skills to help AI agents build Streamlit apps.
+
+    \b
+    Project mode (default):
+        Creates symlinks from .agents/skills/ and .claude/skills/ to the
+        bundled skills in your Streamlit installation. Skills stay in sync
+        when Streamlit is upgraded.
+
+    \b
+    Global mode (--global):
+        Downloads skills from GitHub and copies them to ~/.agents/skills/
+        and ~/.claude/skills/. Includes a discover.py script that finds
+        project-specific bundled skills at runtime.
 
     \b
     Examples:
-        $ streamlit skills           # Interactive install
-        $ streamlit skills --yes     # Non-interactive install
+        $ streamlit skills              # Interactive project install
+        $ streamlit skills --global     # Interactive global install
+        $ streamlit skills --yes        # Non-interactive project install
+        $ streamlit skills -g -y        # Non-interactive global install
     """
     from streamlit.web.skills import install_skills
 
-    install_skills(yes=yes)
+    install_skills(global_mode=global_mode, yes=yes)
 
 
 @main.command("init")
