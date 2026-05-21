@@ -26,6 +26,15 @@
 import chroma from "chroma-js"
 
 /**
+ * Regex to detect unprefixed hex color strings (without #).
+ * Chroma-js accepts bare hex strings like "f00" or "ff0000" and interprets them as colors,
+ * but we only want to accept properly prefixed hex colors (#RGB, #RRGGBB, etc).
+ * This guards against user input being accidentally interpreted as hex colors.
+ */
+export const UNPREFIXED_HEX_COLOR_RE =
+  /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
+
+/**
  * Convert a chroma color to a CSS string in legacy format.
  * Uses hex for opaque colors and rgba() for transparent colors.
  */

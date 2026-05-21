@@ -60,7 +60,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { parseToRgba } from "~lib/theme/colorUtils"
+import { parseToRgba, UNPREFIXED_HEX_COLOR_RE } from "~lib/theme/colorUtils"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -685,9 +685,6 @@ function createRemarkHelpIcon() {
  * @param color - The color string to validate
  * @returns true if the color is valid, false otherwise
  */
-const UNPREFIXED_HEX_COLOR_RE =
-  /^(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/
-
 export function isValidCssColor(color: string): boolean {
   if (!color) return false
   if (UNPREFIXED_HEX_COLOR_RE.test(color)) return false

@@ -505,8 +505,9 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
             selectedColorParsed[2],
             selectedOpacity,
           ]
+          // gray20 is #f0f2f6 = rgb(240, 242, 246) - a light gray
           const unselectedColorParsed = parseToRgba(theme.colors.gray20) ?? [
-            49, 51, 63, 1,
+            240, 242, 246, 1,
           ]
           const unselectedColor: [number, number, number, number] = [
             unselectedColorParsed[0],
