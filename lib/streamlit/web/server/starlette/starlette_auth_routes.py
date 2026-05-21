@@ -90,7 +90,8 @@ def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
         async def load_server_metadata(self) -> dict[str, Any]:
             """Enforce S256 PKCE if supported by the provider.
 
-            This preserves the behavior from the old Tornado OAuth integration.
+            PKCE (Proof Key for Code Exchange) with S256 is a security best practice
+            that protects against authorization code interception attacks.
             """
             metadata = cast("dict[str, Any]", await super().load_server_metadata())
             if "S256" in metadata.get("code_challenge_methods_supported", []):
