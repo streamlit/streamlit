@@ -218,7 +218,9 @@ def test_parallel_st_stop_ends_script(page: Page, app_base_url: str) -> None:
     wait_for_app_run(page)
 
     expect(page.get_by_text("Fragment A content")).to_be_visible()
-    expect(page.get_by_text("Fragment B done after sleep")).not_to_be_visible(timeout=2000)
+    expect(page.get_by_text("Fragment B done after sleep")).not_to_be_visible(
+        timeout=2000
+    )
 
 
 def test_parallel_st_rerun_restarts_app(page: Page, app_base_url: str) -> None:
