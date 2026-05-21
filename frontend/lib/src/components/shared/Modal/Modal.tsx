@@ -216,8 +216,8 @@ function Modal(props: StreamlitModalProps): ReactElement {
     sizes.dialogLargeWidth
   )
   const mergedOverrides = merge(defaultOverrides, props.overrides)
-  const overridenProps = { ...props, size: modalSize }
-  return <UIModal {...overridenProps} overrides={mergedOverrides} />
+  const overriddenProps = { ...props, size: modalSize }
+  return <UIModal {...overriddenProps} overrides={mergedOverrides} />
 }
 
 export default Modal
