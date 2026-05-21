@@ -714,6 +714,8 @@ def _run_parallel_fragment(
     except StopException:
         coordinator.request_stop()
     except FragmentHandledException:
-        pass
+        # This exception indicates fragment-level handling already occurred.
+        # Intentionally swallow it at the worker boundary.
+        return
     except Exception:  # pragma: no cover - defensive
         _LOGGER.exception("Uncaught exception in parallel fragment worker")
