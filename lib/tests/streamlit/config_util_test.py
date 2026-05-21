@@ -31,6 +31,7 @@ from streamlit import config, config_util
 from streamlit.config_option import ConfigOption
 from streamlit.errors import (
     StreamlitAPIException,
+    StreamlitInvalidThemeError,
     StreamlitInvalidThemeOptionError,
     StreamlitInvalidThemeSectionError,
 )
@@ -1478,3 +1479,53 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             )
 
         assert "cannot reference another theme file" in str(cm.value)
+
+    def test_process_theme_inheritance_none_options_short_circuits(self) -> None:
+        """``None`` config options short-circuits so early bootstrap does not crash."""
+        set_option_mock = MagicMock()
+
+        config_util.process_theme_inheritance(
+            None, self.config_template, set_option_mock
+        )
+
+        set_option_mock.assert_not_called()
+
+    @patch("streamlit.config_util._load_theme_file")
+    def test_process_theme_inheritance_wraps_unexpected_errors(
+        self, mock_load_theme: MagicMock
+    ) -> None:
+        """Unexpected exceptions during processing are wrapped in
+        ``StreamlitInvalidThemeError`` so users see a clear, actionable error."""
+        base_option = ConfigOption("theme.base", description="", default_val=None)
+        base_option.set_value("custom_theme.toml", "test")
+        mock_load_theme.side_effect = RuntimeError("disk on fire")
+
+        with pytest.raises(StreamlitInvalidThemeError, match="disk on fire"):
+            config_util.process_theme_inheritance(
+                {"theme.base": base_option}, self.config_template, MagicMock()
+            )
+
+
+@patch("click.secho")
+def test_show_config_includes_deprecation_block(patched_echo: MagicMock) -> None:
+    """``show_config`` renders the deprecation banner, message, and expiration date."""
+    config_options = {
+        "server.legacyOption": ConfigOption(
+            key="server.legacyOption",
+            description="A legacy option used in unit tests.",
+            default_val="legacy",
+            type_=str,
+            deprecated=True,
+            deprecation_text="Use server.newOption instead.",
+            expiration_date="2030-01-01",
+        )
+    }
+
+    config_util.show_config(CONFIG_SECTION_DESCRIPTIONS, config_options)
+
+    output = "\n".join(
+        re.sub(r"\x1b[^m]*m", "", c.args[0]) for c in patched_echo.call_args_list
+    )
+    assert "THIS IS DEPRECATED." in output
+    assert "Use server.newOption instead." in output
+    assert "This option will be removed on or after 2030-01-01" in output
