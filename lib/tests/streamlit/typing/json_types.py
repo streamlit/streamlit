@@ -83,6 +83,9 @@ if TYPE_CHECKING:
     # Invalid width value (not "stretch" or int)
     json({"data": "value"}, width="invalid")  # type: ignore[arg-type]
 
+    # "content" is accepted by some sibling commands but NOT by st.json
+    json({"data": "value"}, width="content")  # type: ignore[arg-type]
+
     # Invalid expanded type (not bool or int)
     json({"data": "value"}, expanded="true")  # type: ignore[arg-type]
 
