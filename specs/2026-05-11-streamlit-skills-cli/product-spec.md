@@ -15,7 +15,7 @@ Two installation modes are supported:
 - **Global:** Fetches the `developing-with-streamlit` meta skill from the
   [`streamlit/agent-skills`](https://github.com/streamlit/agent-skills) GitHub
   repository and installs it to the user's global agent skills directories
-  (`~/.agents/skills/` and `~/.claude/skills/` if Claude Code is detected).
+  (`~/.agents/skills/` and `~/.claude/skills/` if `~/.claude` exists).
   This meta skill includes a discovery script that dynamically locates
   project-specific bundled skills at runtime.
 
@@ -85,11 +85,11 @@ project-local bundled skills.
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| **Symlink vs copy** | Hybrid (symlink default, copy fallback) | Auto-updates on upgrade; fallback for Windows |
+| **Symlink vs copy** | Symlink only (global install fallback) | Auto-updates on upgrade; global fallback for no-symlink environments |
 | **Project root detection** | Heuristic: existing dir > git root > cwd | Respects existing setup, finds repo root |
 | **Target directories** | `.agents/skills/` + `.claude/skills/` if detected | Works for Claude and other agents |
 | **Command naming** | `streamlit skills` | Clear, matches library-skills naming |
-| **Global install source** | Fetch from GitHub | Decoupled from releases, allows fast iteration |
+| **Global install source** | Fetch from GitHub, pinned to versioned tag | Decoupled from releases, reproducible, breaking changes align with Streamlit versions |
 
 ### Interactive Flow
 
@@ -130,10 +130,15 @@ active Streamlit installation, ensuring version-matched guidance.
 
 **Symlink behavior:**
 - Symlinks preferred (auto-updates on Streamlit upgrade)
-- Copy fallback for platforms without symlink support (stores version marker for
-  staleness detection)
 - A symlink is Streamlit-owned if it resolves inside the `streamlit` package
   directory; others are user-managed and skipped with conflict warning
+
+**Environments without symlink support (e.g., Windows without Developer Mode):**
+- Skip project install entirely and fall back to global install
+- Show informational message explaining the fallback and how to enable symlinks
+- Rationale: Copying bundled skills defeats the version-matching benefit (copies become
+  stale on upgrade), and the global meta skill's `discover.py` provides equivalent
+  functionality by locating project-specific skills at runtime
 
 ---
 
@@ -163,16 +168,27 @@ developing-with-streamlit/
 - No re-run needed when Streamlit is upgraded
 - Works across projects with different Streamlit versions
 
-**GitHub fetch:** Downloads from `main` branch via raw URLs or GitHub API.
+**GitHub fetch:** Downloads from a versioned tag (e.g., `v1`) via raw URLs or GitHub API.
 On network failure, exits with clear error message.
+
+**Versioning strategy:** The CLI pins to a major version tag (`v1`, `v2`, etc.) that is
+updated in-place for non-breaking changes. Breaking changes that require new Streamlit
+features ship as a new major tag (e.g., `v2`) aligned with a Streamlit release. This
+allows skill improvements without Streamlit releases while ensuring compatibility—older
+Streamlit versions continue fetching `v1` even after `v2` exists.
 
 ---
 
 ### Common Behavior
 
+- **Claude Code detection:** The presence of `~/.claude` in the user's home
+  directory is used to determine whether to install to `.claude/skills/`
+  directories (both project-local and global). This simple heuristic may
+  produce false positives (leftover dir after uninstall) or false negatives
+  (custom `CLAUDE_HOME`), but keeps the implementation straightforward.
 - **Idempotent:** Safe to run multiple times; reports "up to date" for existing
   installs, repairs broken links, skips user-managed files with conflict warning,
-  and updates global skill if changed on GitHub
+  and updates global skill if the versioned tag has changed on GitHub
 - **Non-interactive:** Pass `--yes` for automation; fails with actionable message
   if prompts unavailable
 - **Git hygiene:** Does not edit `.gitignore`; CLI output clarifies whether files
@@ -206,5 +222,5 @@ On network failure, exits with clear error message.
 | No breaking API changes    | Yes - new command only                                                                   |
 | No new dependencies        | Yes - Click already exists, otherwise stdlib                                             |
 | Metrics collected          | Existing runtime metrics already detect installed skills; no new CLI telemetry proposed  |
-| Any security/legal impact? | Low - local filesystem writes only; must avoid overwriting user-managed files            |
+| Any security/legal impact? | Low - local filesystem writes only; global install pins to versioned tag for reproducibility |
 | Any docs changes needed?   | Yes - CLI reference plus a short setup note for bundled agent skills                     |
