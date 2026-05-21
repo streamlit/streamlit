@@ -59,13 +59,10 @@ describe("Modal component", () => {
     }
 
     const overrides = createModalOverrides(nestedTheme)
+    const rootStyle = overrides.Root.style as Record<string, string>
 
-    expect(overrides.Root.style["--st-color-bg"]).toBe(
-      nestedTheme.colors.bgColor
-    )
-    expect(overrides.Root.style["--st-color-primary"]).toBe(
-      nestedTheme.colors.primary
-    )
+    expect(rootStyle["--st-color-bg"]).toBe(nestedTheme.colors.bgColor)
+    expect(rootStyle["--st-color-primary"]).toBe(nestedTheme.colors.primary)
   })
 })
 describe("calculateModalSize", () => {

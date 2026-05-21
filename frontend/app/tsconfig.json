@@ -4,12 +4,13 @@
   "compilerOptions": {
     "paths": {
       "~lib/*": ["../lib/src/*"],
+      "@streamlit/component-v2-lib": ["../component-v2-lib/src/index.ts"],
       "@streamlit/lib": ["../lib/src"],
       "@streamlit/lib/testing": ["../lib/src/testing.ts"],
       "@streamlit/app": ["./src"],
       "@streamlit/connection": ["../connection/src"],
-      "@streamlit/protobuf": ["../protobuf/src"],
-      "@streamlit/utils": ["../utils/src"]
+      "@streamlit/protobuf": ["../protobuf/proto.d.ts"],
+      "@streamlit/utils": ["../utils/src/index.ts"]
     }
   },
   "include": [

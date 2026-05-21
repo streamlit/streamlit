@@ -21,6 +21,7 @@ import { Mock } from "vitest"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
+  SpecialArg as SpecialArgProto,
   type ISpecialArg,
 } from "@streamlit/protobuf"
 
@@ -274,17 +275,15 @@ describe("test componentUtils", () => {
       const arrowDataframe = new ArrowDataframe()
       arrowDataframe.height = 100
       const specialArgs = [
-        {
+        new SpecialArgProto({
           key: "some-dataframe",
-          value: "arrowDataframe",
           arrowDataframe: arrowDataframe,
-        },
-        {
+        }),
+        new SpecialArgProto({
           key: "some-bytes",
-          value: "bytes",
           bytes: someBytes,
-        },
-      ] satisfies ISpecialArg[]
+        }),
+      ]
 
       const [newArgs, dataframeArgs] = parseArgs(
         JSON.stringify(args),

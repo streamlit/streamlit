@@ -92,7 +92,10 @@ type DataExporterReturn = {
  * @returns {Promise<void>} Promise that resolves when the CSV has been fully written.
  */
 async function writeCsv(
-  writable: WritableStreamDefaultWriter,
+  writable: {
+    write(chunk: Uint8Array): Promise<unknown>
+    close(): Promise<void>
+  },
   getCellContent: DataEditorProps["getCellContent"],
   columns: BaseColumn[],
   numRows: number

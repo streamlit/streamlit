@@ -41,9 +41,11 @@ type ThemeCssVariableSource = {
   }
 }
 
+type AnyCssVariableName = `--${string}`
 type ThemeCssVariableName = `--st-${string}`
-type ThemeCssVariableReference<Name extends ThemeCssVariableName> =
-  `var(${Name})`
+type ThemeCssVariableReference<
+  Name extends AnyCssVariableName = AnyCssVariableName,
+> = `var(${Name})`
 
 type ThemeCssVariableDefinition<Name extends ThemeCssVariableName> = {
   cssVariable: Name
@@ -81,6 +83,13 @@ function createCssVariableReference<Name extends ThemeCssVariableName>(
   return `var(${cssVariable})` as ThemeCssVariableReference<Name>
 }
 
+const bodyTextCssVariableReference = createCssVariableReference(
+  "--st-color-body-text"
+)
+const primaryCssVariableReference = createCssVariableReference(
+  "--st-color-primary"
+)
+
 export const themeCssVariableContract = {
   colors: {
     bgColor: {
@@ -103,7 +112,7 @@ export const themeCssVariableContract = {
           getInactiveBodyTextTransparency(theme)
         ),
       getEnhancedValue: theme =>
-        `color-mix(in srgb, ${themeVars.colors.bodyText} ${getInactiveBodyTextOpacityPercent(
+        `color-mix(in srgb, ${bodyTextCssVariableReference} ${getInactiveBodyTextOpacityPercent(
           theme
         )}, transparent)`,
     },
@@ -115,25 +124,25 @@ export const themeCssVariableContract = {
       cssVariable: "--st-color-primary-hover",
       getValue: theme => darken(theme.colors.primary, 0.15),
       getEnhancedValue: () =>
-        `color-mix(in srgb, ${themeVars.colors.primary} 85%, black)`,
+        `color-mix(in srgb, ${primaryCssVariableReference} 85%, black)`,
     },
     primaryEmphasis: {
       cssVariable: "--st-color-primary-emphasis",
       getValue: theme => darken(theme.colors.primary, 0.25),
       getEnhancedValue: () =>
-        `color-mix(in srgb, ${themeVars.colors.primary} 75%, black)`,
+        `color-mix(in srgb, ${primaryCssVariableReference} 75%, black)`,
     },
     primarySoftBg: {
       cssVariable: "--st-color-primary-soft-bg",
       getValue: theme => transparentize(theme.colors.primary, 0.9),
       getEnhancedValue: () =>
-        `color-mix(in srgb, ${themeVars.colors.primary} 10%, transparent)`,
+        `color-mix(in srgb, ${primaryCssVariableReference} 10%, transparent)`,
     },
     primarySoftBgHover: {
       cssVariable: "--st-color-primary-soft-bg-hover",
       getValue: theme => transparentize(theme.colors.primary, 0.8),
       getEnhancedValue: () =>
-        `color-mix(in srgb, ${themeVars.colors.primary} 20%, transparent)`,
+        `color-mix(in srgb, ${primaryCssVariableReference} 20%, transparent)`,
     },
     white: {
       cssVariable: "--st-color-white",
@@ -198,14 +207,18 @@ export const themeCssVariableContract = {
 
 type ThemeCssVariableContract = typeof themeCssVariableContract
 type ValueOf<T> = T[keyof T]
+type ThemeCssVariableContractDefinition =
+  | ValueOf<ThemeCssVariableContract["colors"]>
+  | ValueOf<ThemeCssVariableContract["shadows"]>
 type ThemeVarsForGroup<Group extends ThemeCssVariableGroup> = {
-  [Key in keyof Group]: ThemeCssVariableReference<Group[Key]["cssVariable"]>
+  -readonly [Key in keyof Group]: ThemeCssVariableReference
 }
 
 export type ThemeVars = {
-  [Group in keyof ThemeCssVariableContract]: ThemeVarsForGroup<
-    ThemeCssVariableContract[Group]
-  >
+  [Group in keyof ThemeCssVariableContract]: ThemeCssVariableContract[Group] extends infer ContractGroup extends
+    ThemeCssVariableGroup
+    ? ThemeVarsForGroup<ContractGroup>
+    : never
 }
 
 export type StreamlitThemeCssVariableName = ValueOf<
@@ -214,29 +227,26 @@ export type StreamlitThemeCssVariableName = ValueOf<
 
 type ThemeCssVariableValueMap = Record<StreamlitThemeCssVariableName, string>
 
-function getThemeCssVariableEntries<
-  Contract extends Record<string, ThemeCssVariableGroup>,
->(contract: Contract): Array<[keyof Contract, Contract[keyof Contract]]> {
-  return Object.entries(contract) as Array<
-    [keyof Contract, Contract[keyof Contract]]
-  >
+function createThemeVarGroup<Group extends ThemeCssVariableGroup>(
+  group: Group
+): ThemeVarsForGroup<Group> {
+  return Object.fromEntries(
+    (
+      Object.entries(group) as Array<
+        [keyof Group & string, Group[keyof Group]]
+      >
+    ).map(([key, definition]) => [
+      key,
+      createCssVariableReference(definition.cssVariable),
+    ])
+  ) as ThemeVarsForGroup<Group>
 }
 
 export function createThemeVars(): ThemeVars {
-  const vars = {} as ThemeVars
-
-  getThemeCssVariableEntries(themeCssVariableContract).forEach(
-    ([groupName, groupContract]) => {
-      vars[groupName] = Object.fromEntries(
-        Object.entries(groupContract).map(([key, definition]) => [
-          key,
-          createCssVariableReference(definition.cssVariable),
-        ])
-      ) as ThemeVars[typeof groupName]
-    }
-  )
-
-  return vars
+  return {
+    colors: createThemeVarGroup(themeCssVariableContract.colors),
+    shadows: createThemeVarGroup(themeCssVariableContract.shadows),
+  }
 }
 
 function freezeThemeVars(vars: ThemeVars): ThemeVars {
@@ -246,17 +256,20 @@ function freezeThemeVars(vars: ThemeVars): ThemeVars {
 
 export const themeVars = freezeThemeVars(createThemeVars())
 
+function getThemeCssVariableDefinitions(): ThemeCssVariableContractDefinition[] {
+  return Object.values(themeCssVariableContract).flatMap(group =>
+    Object.values(group)
+  ) as ThemeCssVariableContractDefinition[]
+}
+
 export function createThemeCssVariableValueMap(
   theme: ThemeCssVariableSource
 ): ThemeCssVariableValueMap {
   return Object.fromEntries(
-    getThemeCssVariableEntries(themeCssVariableContract).flatMap(
-      ([, groupContract]) =>
-        Object.values(groupContract).map(definition => [
-          definition.cssVariable,
-          definition.getValue(theme),
-        ])
-    )
+    getThemeCssVariableDefinitions().map(definition => [
+      definition.cssVariable,
+      definition.getValue(theme),
+    ])
   ) as ThemeCssVariableValueMap
 }
 
@@ -264,13 +277,10 @@ function createEnhancedThemeCssVariableValueMap(
   theme: ThemeCssVariableSource
 ): Partial<ThemeCssVariableValueMap> {
   return Object.fromEntries(
-    getThemeCssVariableEntries(themeCssVariableContract).flatMap(
-      ([, groupContract]) =>
-        Object.values(groupContract).flatMap(definition =>
-          definition.getEnhancedValue
-            ? [[definition.cssVariable, definition.getEnhancedValue(theme)]]
-            : []
-        )
+    getThemeCssVariableDefinitions().flatMap(definition =>
+      "getEnhancedValue" in definition && definition.getEnhancedValue
+        ? [[definition.cssVariable, definition.getEnhancedValue(theme)]]
+        : []
     )
   ) as Partial<ThemeCssVariableValueMap>
 }
@@ -289,8 +299,5 @@ export function createThemeCssVariables(
 }
 
 export const themeCssVariableNames = Object.freeze(
-  getThemeCssVariableEntries(themeCssVariableContract).flatMap(
-    ([, groupContract]) =>
-      Object.values(groupContract).map(definition => definition.cssVariable)
-  )
+  getThemeCssVariableDefinitions().map(definition => definition.cssVariable)
 ) as readonly StreamlitThemeCssVariableName[]

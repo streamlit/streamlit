@@ -1,5 +1,10 @@
 {
   "root": true,
   "extends": "@streamlit/typescript-config/base.tsconfig.json",
+  "compilerOptions": {
+    "paths": {
+      "@streamlit/utils": ["../utils/src/index.ts"]
+    }
+  },
   "include": ["src/**/*", "../test-globals.d.ts"]
 }
