@@ -177,7 +177,7 @@ $ curl -LsSf https://astral.sh/uv/install.sh | sh
 $ sudo dnf install -y ripgrep
 ```
 
-> [!Note]
+> [!NOTE]
 > If you're not on Debian, Ubuntu, or macOS, `make python-init` skips `playwright install --with-deps`. That command only officially supports those platforms. Browser binaries still download fine. If e2e tests later complain about missing system libraries, grab them through your package manager. See Playwright's [system requirements](https://playwright.dev/python/docs/intro#system-requirements) for the list. To force or skip the deps step, set `INSTALL_PLAYWRIGHT_DEPS=true` or `false`.
 
 #### Windows
