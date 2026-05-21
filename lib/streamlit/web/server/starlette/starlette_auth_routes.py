@@ -380,7 +380,7 @@ def _get_cookie_value_from_request(request: Request, cookie_name: str) -> bytes 
     return get_cookie_with_chunks(get_single_cookie, cookie_name)
 
 
-def _get_provider_logout_url(request: Request) -> str | None:
+async def _get_provider_logout_url(request: Request) -> str | None:
     """Get the OAuth provider's logout URL from OIDC metadata.
 
     Returns the end_session_endpoint URL with proper parameters for OIDC logout,
@@ -403,8 +403,7 @@ def _get_provider_logout_url(request: Request) -> str | None:
         client, _ = _create_oauth_client(provider)
 
         # Load OIDC metadata - Authlib's Starlette client uses async methods
-        # but load_server_metadata is synchronous in both implementations
-        metadata = client.load_server_metadata()
+        metadata = await client.load_server_metadata()
         end_session_endpoint = metadata.get("end_session_endpoint")
 
         if not end_session_endpoint:
@@ -471,7 +470,7 @@ async def _auth_logout(request: Request, base_url: str) -> Response:
     """
     from starlette.responses import RedirectResponse
 
-    provider_logout_url = _get_provider_logout_url(request)
+    provider_logout_url = await _get_provider_logout_url(request)
 
     if provider_logout_url:
         response = RedirectResponse(provider_logout_url, status_code=302)

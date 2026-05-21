@@ -681,7 +681,7 @@ class TestGetProviderLogoutUrl:
         mock_request = MagicMock()
         mock_request.cookies = {}
 
-        assert _get_provider_logout_url(mock_request) is None
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
     def test_returns_none_when_no_provider_in_cookie(
         self, monkeypatch: pytest.MonkeyPatch
@@ -700,7 +700,7 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        assert _get_provider_logout_url(mock_request) is None
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
     def test_returns_none_when_no_end_session_endpoint(
         self, monkeypatch: pytest.MonkeyPatch
@@ -722,7 +722,7 @@ class TestGetProviderLogoutUrl:
         class MockClient:
             client_id = "test-client-id"
 
-            def load_server_metadata(self) -> dict[str, Any]:
+            async def load_server_metadata(self) -> dict[str, Any]:
                 return {"issuer": "https://example.com"}
 
         monkeypatch.setattr(
@@ -732,7 +732,7 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        assert _get_provider_logout_url(mock_request) is None
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_returns_logout_url_with_end_session_endpoint(
@@ -762,7 +762,7 @@ class TestGetProviderLogoutUrl:
         class MockClient:
             client_id = "test-client-id"
 
-            def load_server_metadata(self) -> dict[str, Any]:
+            async def load_server_metadata(self) -> dict[str, Any]:
                 return {
                     "issuer": "https://example.com",
                     "end_session_endpoint": "https://example.com/logout",
@@ -782,7 +782,7 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        result = _get_provider_logout_url(mock_request)
+        result = asyncio.run(_get_provider_logout_url(mock_request))
 
         assert result is not None
         assert "https://example.com/logout" in result
@@ -814,7 +814,7 @@ class TestGetProviderLogoutUrl:
         class MockClient:
             client_id = "test-client-id"
 
-            def load_server_metadata(self) -> dict[str, Any]:
+            async def load_server_metadata(self) -> dict[str, Any]:
                 return {
                     "issuer": "https://example.com",
                     "end_session_endpoint": "https://example.com/logout",
@@ -834,7 +834,7 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        result = _get_provider_logout_url(mock_request)
+        result = asyncio.run(_get_provider_logout_url(mock_request))
 
         # Should return None when redirect_uri is invalid
         assert result is None
@@ -849,13 +849,14 @@ class TestLogoutWithProviderRedirect:
     ) -> None:
         """Test that logout redirects to provider logout URL when available."""
 
-        # Mock _get_provider_logout_url to return a URL
+        # Mock _get_provider_logout_url to return a URL (as an async function)
+        async def mock_get_provider_logout_url(request: Any) -> str:
+            return "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
+
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_logout_url",
-            lambda request: (
-                "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
-            ),
+            mock_get_provider_logout_url,
         )
 
         app = Starlette(routes=create_auth_routes(""))
@@ -868,11 +869,15 @@ class TestLogoutWithProviderRedirect:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that logout redirects to base URL when no end_session_endpoint."""
-        # Mock _get_provider_logout_url to return None
+
+        # Mock _get_provider_logout_url to return None (as an async function)
+        async def mock_get_provider_logout_url(request: Any) -> None:
+            return None
+
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_logout_url",
-            lambda request: None,
+            mock_get_provider_logout_url,
         )
 
         app = Starlette(routes=create_auth_routes(""))
