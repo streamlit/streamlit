@@ -20,6 +20,7 @@ import {
   Switch as RASwitch,
 } from "react-aria-components"
 
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
 import { LabelVisibilityOptions } from "~lib/util/utils"
 
 export const StyledCheckbox = styled.div(({ theme }) => ({
@@ -110,7 +111,11 @@ export const StyledCheckboxIndicator =
           width: "65%",
           height: "65%",
           fill: "none",
-          stroke: $isDisabled ? theme.colors.bgColor : "white",
+          stroke: $isDisabled
+            ? hasLightBackgroundColor(theme)
+              ? theme.colors.bgColor
+              : theme.colors.bodyText
+            : "white",
           strokeWidth: "2.5px",
           strokeLinecap: "round",
           strokeLinejoin: "round",
@@ -149,24 +154,21 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
   ({ theme, $isSelected, $isHovered, $isDisabled }) => {
     let backgroundColor: string
 
-    if ($isDisabled) {
-      backgroundColor = theme.colors.secondaryBg
-    } else if ($isSelected) {
+    if ($isSelected && !$isDisabled) {
       backgroundColor = theme.colors.primary
-    } else if ($isHovered) {
+    } else if ($isHovered && !$isDisabled) {
       backgroundColor = theme.colors.darkenedBgMix15
     } else {
-      backgroundColor = theme.colors.gray40
+      backgroundColor = theme.colors.borderColor
     }
 
     return {
       flexShrink: 0,
       marginTop: theme.spacing.twoXS,
-      // Track: 40px wide × 14px tall. The thumb (xl = 20px) intentionally
-      // overflows the track by 3px on each side, giving the classic "lollipop"
-      // toggle silhouette — overflow: visible is the default.
-      width: `calc(2 * ${theme.spacing.xl})`,
-      height: `calc(${theme.sizes.checkbox} - 2px)`,
+      width: `calc(2 * ${theme.sizes.checkbox})`,
+      height: theme.sizes.checkbox,
+      paddingLeft: theme.spacing.threeXS,
+      paddingRight: theme.spacing.threeXS,
       borderRadius: theme.radii.full,
       backgroundColor,
       display: "flex",
@@ -178,26 +180,28 @@ export const StyledToggleTrack = styled.div<StyledToggleTrackProps>(
 
 interface StyledToggleThumbProps {
   $isSelected: boolean
+  $isDisabled: boolean
 }
 
 export const StyledToggleThumb = styled.div<StyledToggleThumbProps>(
-  ({ theme, $isSelected }) => {
+  ({ theme, $isSelected, $isDisabled }) => {
+    const isLightTheme = hasLightBackgroundColor(theme)
+    const backgroundColor = $isDisabled
+      ? isLightTheme
+        ? theme.colors.gray70
+        : theme.colors.gray90
+      : isLightTheme
+        ? theme.colors.bgColor
+        : theme.colors.bodyText
+
     return {
-      // xl = 1.25rem (20px) — larger than the 14px track so the circle overflows
-      // to create the classic toggle-switch silhouette.
-      width: theme.spacing.xl,
-      height: theme.spacing.xl,
+      flexShrink: 0,
+      width: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
+      height: `calc(${theme.sizes.checkbox} - ${theme.spacing.twoXS})`,
       borderRadius: theme.radii.full,
-      // Thumb is always bgColor (white in light mode, near-black in dark mode)
-      // for all states. Disabled appearance comes from the lighter track
-      // (secondaryBg) and faded label text. A subtle drop-shadow provides
-      // separation in low-contrast situations (e.g. disabled track colors).
-      backgroundColor: theme.colors.bgColor,
-      boxShadow: "0 1px 4px hsla(0, 0%, 0%, 0.16)",
-      // Translation = xl (20px) = thumb width, so thumb moves from the left
-      // half to the right half of the 40px track.
+      backgroundColor,
       transform: $isSelected
-        ? `translateX(${theme.spacing.xl})`
+        ? `translateX(${theme.sizes.checkbox})`
         : "translateX(0)",
       transition: "transform 150ms ease",
     }
