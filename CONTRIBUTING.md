@@ -159,7 +159,7 @@ $ sudo apt-get install -y ripgrep
 
 ```bash
 # Install some essentials
-$ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler ripgrep
+$ sudo dnf install -y make gcc-c++ curl git rsync unzip protobuf-compiler
 
 # Set frontend dependencies:
 $ curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
@@ -172,10 +172,13 @@ $ curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # (Recommended) Install GitHub CLI - used by AI agents for PR and issue management
 # See https://cli.github.com/ for installation instructions
+
+# (Recommended) Install ripgrep - used by AI agents for fast log/code search
+$ sudo dnf install -y ripgrep
 ```
 
 > [!Note]
-> If you're not on Debian or Ubuntu, `make python-init` skips `playwright install --with-deps`. That command only officially supports those two distros. Browser binaries still download fine. If e2e tests later complain about missing system libraries, grab them through your package manager. See Playwright's [system requirements](https://playwright.dev/python/docs/intro#system-requirements) for the list. To force or skip the deps step, set `INSTALL_PLAYWRIGHT_DEPS=true` or `false`.
+> If you're not on Debian, Ubuntu, or macOS, `make python-init` skips `playwright install --with-deps`. That command only officially supports those platforms. Browser binaries still download fine. If e2e tests later complain about missing system libraries, grab them through your package manager. See Playwright's [system requirements](https://playwright.dev/python/docs/intro#system-requirements) for the list. To force or skip the deps step, set `INSTALL_PLAYWRIGHT_DEPS=true` or `false`.
 
 #### Windows
 
