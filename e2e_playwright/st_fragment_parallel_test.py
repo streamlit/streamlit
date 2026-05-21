@@ -80,7 +80,9 @@ def test_parallel_fragments_preserve_source_order(app: Page) -> None:
     assert box1 is not None
     assert box2 is not None
     assert box3 is not None
-    assert box3["y"] < box1["y"], "Fragment 3 (invoked first) should be above Fragment 1"
+    assert box3["y"] < box1["y"], (
+        "Fragment 3 (invoked first) should be above Fragment 1"
+    )
     assert box1["y"] < box2["y"], "Fragment 1 should be above Fragment 2"
 
 
