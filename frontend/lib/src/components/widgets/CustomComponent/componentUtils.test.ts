@@ -21,8 +21,8 @@ import { Mock } from "vitest"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
-  SpecialArg as SpecialArgProto,
   type ISpecialArg,
+  SpecialArg as SpecialArgProto,
 } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"

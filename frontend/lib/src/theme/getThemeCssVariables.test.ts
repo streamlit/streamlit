@@ -15,8 +15,8 @@
  */
 
 import { createThemeCssVariables } from "./getThemeCssVariables"
-import { themeCssVariableNames } from "./themeCssVariables"
 import { darkTheme, lightTheme } from "./themeConfigs"
+import { themeCssVariableNames } from "./themeCssVariables"
 
 describe("createThemeCssVariables", () => {
   it("creates fallback theme variables for light themes", () => {

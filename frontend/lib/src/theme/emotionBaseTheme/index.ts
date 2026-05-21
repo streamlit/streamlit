@@ -30,8 +30,8 @@ import {
   lineHeights,
 } from "~lib/theme/primitives/typography"
 import { zIndices } from "~lib/theme/primitives/zIndices"
+import { themeVars } from "~lib/theme/themeCssVariables"
 
-import { themeVars } from "../themeCssVariables"
 import genericColors from "./themeColors"
 
 // Create colors (includes derived colors)

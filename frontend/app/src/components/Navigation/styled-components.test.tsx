@@ -15,6 +15,7 @@
  */
 
 import type { CSSProperties } from "react"
+
 import { ThemeProvider as EmotionThemeProvider } from "@emotion/react"
 import { screen } from "@testing-library/react"
 

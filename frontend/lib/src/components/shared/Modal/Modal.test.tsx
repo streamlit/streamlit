@@ -59,8 +59,13 @@ describe("Modal component", () => {
     }
 
     const overrides = createModalOverrides(nestedTheme)
-    const rootStyle = overrides.Root.style as Record<string, string>
+    const rootStyle = overrides.Root?.style as
+      | Record<string, string>
+      | undefined
 
+    if (!rootStyle) {
+      throw new Error("Root style is undefined")
+    }
     expect(rootStyle["--st-color-bg"]).toBe(nestedTheme.colors.bgColor)
     expect(rootStyle["--st-color-primary"]).toBe(nestedTheme.colors.primary)
   })

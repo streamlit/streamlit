@@ -19,9 +19,9 @@ import { ReactElement } from "react"
 import createCache from "@emotion/cache"
 import {
   CacheProvider,
+  css,
   ThemeProvider as EmotionThemeProvider,
   Global,
-  css,
 } from "@emotion/react"
 import { BaseProvider } from "baseui"
 

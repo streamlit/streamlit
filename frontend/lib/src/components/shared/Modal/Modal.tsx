@@ -17,6 +17,7 @@
 import { FunctionComponent, ReactElement, ReactNode } from "react"
 
 import {
+  type ModalOverrides,
   type ModalProps,
   SIZE,
   Modal as UIModal,
@@ -174,7 +175,7 @@ export function calculateModalSize(
   return SIZE.default
 }
 
-export function createModalOverrides(theme: EmotionTheme) {
+export function createModalOverrides(theme: EmotionTheme): ModalOverrides {
   const { spacing, radii, colors, sizes } = theme
 
   return {

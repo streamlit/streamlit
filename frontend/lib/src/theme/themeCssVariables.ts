@@ -80,7 +80,7 @@ function getInactiveBodyTextOpacityPercent(
 function createCssVariableReference<Name extends ThemeCssVariableName>(
   cssVariable: Name
 ): ThemeCssVariableReference<Name> {
-  return `var(${cssVariable})` as ThemeCssVariableReference<Name>
+  return `var(${cssVariable})`
 }
 
 const bodyTextCssVariableReference = createCssVariableReference(
@@ -90,7 +90,7 @@ const primaryCssVariableReference = createCssVariableReference(
   "--st-color-primary"
 )
 
-export const themeCssVariableContract = {
+const themeCssVariableContract = {
   colors: {
     bgColor: {
       cssVariable: "--st-color-bg",
@@ -242,7 +242,7 @@ function createThemeVarGroup<Group extends ThemeCssVariableGroup>(
   ) as ThemeVarsForGroup<Group>
 }
 
-export function createThemeVars(): ThemeVars {
+function createThemeVars(): ThemeVars {
   return {
     colors: createThemeVarGroup(themeCssVariableContract.colors),
     shadows: createThemeVarGroup(themeCssVariableContract.shadows),
@@ -270,7 +270,7 @@ export function createThemeCssVariableValueMap(
       definition.cssVariable,
       definition.getValue(theme),
     ])
-  ) as ThemeCssVariableValueMap
+  )
 }
 
 function createEnhancedThemeCssVariableValueMap(
@@ -282,7 +282,7 @@ function createEnhancedThemeCssVariableValueMap(
         ? [[definition.cssVariable, definition.getEnhancedValue(theme)]]
         : []
     )
-  ) as Partial<ThemeCssVariableValueMap>
+  )
 }
 
 export function createThemeCssVariables(
