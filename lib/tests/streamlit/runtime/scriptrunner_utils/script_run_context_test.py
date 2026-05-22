@@ -26,6 +26,7 @@ from streamlit.runtime.forward_msg_cache import populate_hash_if_needed
 from streamlit.runtime.fragment import MemoryFragmentStorage
 from streamlit.runtime.memory_uploaded_file_manager import MemoryUploadedFileManager
 from streamlit.runtime.pages_manager import PagesManager
+from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
     ScriptRunContext,
@@ -345,6 +346,54 @@ class ScriptRunContextTest(unittest.TestCase):
         t.join()
 
         assert captured["fragment_id"] == "frag2"
+
+    def test_reset_raises_when_called_from_non_main_thread(self):
+        """``reset()`` may only be called from the script thread that
+        constructed the context. Worker threads (parallel fragments) must
+        not be able to mutate the context's coordinator out from under the
+        main thread."""
+        ctx = _create_script_run_context(lambda _msg: None)
+        captured: list[Exception] = []
+
+        def worker() -> None:
+            try:
+                ctx.reset()
+            except RuntimeError as e:
+                captured.append(e)
+
+        t = threading.Thread(target=worker)
+        t.start()
+        t.join()
+        assert len(captured) == 1
+        assert "main script thread" in str(captured[0])
+
+    def test_reset_creates_fresh_coordinator_each_run(self):
+        """Each ``reset()`` constructs a new coordinator. Reusing one across
+        runs would let a previous run's stop event / worker exception leak
+        into the next run."""
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ctx.reset(page_script_hash=pages_manager.main_script_hash)
+        first = ctx.parallel_coordinator
+        assert isinstance(first, ParallelFragmentCoordinator)
+
+        ctx.reset(page_script_hash=pages_manager.main_script_hash)
+        second = ctx.parallel_coordinator
+        assert isinstance(second, ParallelFragmentCoordinator)
+        assert first is not second
+
+    def test_reset_passes_yield_check_to_coordinator(self):
+        """The yield_check supplied to ``reset()`` is wired into the
+        coordinator so ``join()`` can drive the script runner's
+        execution-control hook."""
+        ctx = _create_script_run_context(lambda _msg: None)
+        calls: list[int] = []
+        ctx.reset(yield_check=lambda: calls.append(1))
+        assert ctx.parallel_coordinator is not None
+        ctx.parallel_coordinator._yield_check()
+        assert calls == [1]
 
     def test_add_script_run_ctx_propagates_thread_state_to_child(self):
         """Child threads observe the parent's ``FragmentThreadState``

@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
+    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -176,6 +177,9 @@ class ScriptRunContext:
 
     Streamlit code typically retrieves the active ScriptRunContext via the
     `get_script_run_ctx` function.
+
+    Note: ``__post_init__`` adds a non-field ``_main_thread_ident`` used
+    by ``reset()``'s thread guard.
     """
 
     session_id: str
@@ -208,6 +212,12 @@ class ScriptRunContext:
     new_fragment_ids: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
+    parallel_coordinator: ParallelFragmentCoordinator | None = None
+
+    def __post_init__(self) -> None:
+        # Capture the main script thread's identity so reset() can refuse to
+        # run from worker threads.
+        self._main_thread_ident = threading.get_ident()
 
     @property
     def page_script_hash(self) -> str:
@@ -233,7 +243,14 @@ class ScriptRunContext:
         fragment_ids_this_run: list[str] | None = None,
         cached_message_hashes: set[str] | None = None,
         context_info: ContextInfo | None = None,
+        # Checked by fragment workers to cease execution.
+        yield_check: Callable[[], None] = lambda: None,
     ) -> None:
+        if threading.get_ident() != self._main_thread_ident:
+            raise RuntimeError(
+                "ScriptRunContext.reset() must only be called from the main "
+                "script thread"
+            )
         # Check if this is a same-page rerun BEFORE updating page_script_hash
         is_same_page = self.page_script_hash == page_script_hash
 
@@ -246,6 +263,15 @@ class ScriptRunContext:
         self.pages_manager.set_current_page_script_hash(page_script_hash)
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
+        )
+        # Deferred to avoid circular import: parallel_coordinator imports
+        # ScriptRunContext and get_script_run_ctx from this module.
+        from streamlit import config
+        from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
+
+        self.parallel_coordinator = ParallelFragmentCoordinator(
+            yield_check=yield_check,
+            max_workers=config.get_option("runner.parallelMaxWorkers"),
         )
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False

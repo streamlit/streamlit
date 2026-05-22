@@ -304,6 +304,60 @@ describe("AppNavigation", () => {
     expect(page!.pageName).toEqual("streamlit app")
   })
 
+  it("finds page when pathname contains URL-encoded non-ASCII characters", () => {
+    const navigation = new Navigation({
+      sections: [],
+      appPages: [
+        new AppPage({
+          pageName: "Home",
+          pageScriptHash: "home_hash",
+          isDefault: true,
+          urlPathname: "home",
+        }),
+        new AppPage({
+          pageName: "Págé_Wíth_Spêcîãl_Chäracters",
+          pageScriptHash: "special_hash",
+          isDefault: false,
+          urlPathname: "Págé_Wíth_Spêcîãl_Chäracters",
+        }),
+      ],
+      position: Navigation.Position.SIDEBAR,
+      pageScriptHash: "home_hash",
+      expanded: false,
+    })
+    appNavigation.handleNavigation(navigation)
+
+    // Browsers URL-encode Unicode during Back/Forward navigation (popstate).
+    const encodedPathname =
+      "/P%C3%A1g%C3%A9_W%C3%ADth_Sp%C3%AAc%C3%AE%C3%A3l_Ch%C3%A4racters"
+    const page = appNavigation.findPageByUrlPath(encodedPathname)
+
+    expect(page!.pageScriptHash).toEqual("special_hash")
+    expect(page!.pageName).toEqual("Págé_Wíth_Spêcîãl_Chäracters")
+  })
+
+  it("falls back to main page for malformed URL-encoded pathnames", () => {
+    const navigation = new Navigation({
+      sections: [],
+      appPages: [
+        new AppPage({
+          pageName: "Home",
+          pageScriptHash: "home_hash",
+          isDefault: true,
+          urlPathname: "home",
+        }),
+      ],
+      position: Navigation.Position.SIDEBAR,
+      pageScriptHash: "home_hash",
+      expanded: false,
+    })
+    appNavigation.handleNavigation(navigation)
+
+    // Incomplete percent encoding should not throw
+    const page = appNavigation.findPageByUrlPath("/test%E0%A4")
+    expect(page!.pageScriptHash).toEqual("home_hash")
+  })
+
   it("sets navigation state to hidden on navigation", () => {
     const appPages = [
       new AppPage({
