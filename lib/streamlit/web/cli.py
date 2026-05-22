@@ -438,9 +438,8 @@ def main_skills(global_mode: bool, yes: bool) -> None:
 
     \b
     Global mode (--global):
-        Downloads skills from GitHub and copies them to ~/.agents/skills/
-        and ~/.claude/skills/. Includes a discover.py script that finds
-        project-specific bundled skills at runtime.
+        Installs a meta skill globally (in user directory) that is available
+        to all projects.
 
     \b
     Examples:
