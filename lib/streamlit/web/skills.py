@@ -225,8 +225,26 @@ def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
             link_path = Path(temp_dir) / "skill-link"
             link_path.symlink_to(source_path, target_is_directory=True)
             return link_path.is_symlink()
-    except OSError:
+    except (OSError, NotImplementedError):
         return False
+
+
+def _cleanup_partial_symlinks(symlinks: list[Path], source_skills_dir: Path) -> None:
+    """Remove partial symlinks created during a failed installation attempt.
+
+    Best-effort cleanup: errors are silently ignored.
+    """
+    for link_path in symlinks:
+        # The try-except is intentionally inside the loop to continue cleanup
+        # even if one symlink removal fails. Performance overhead is acceptable
+        # since this is only called during error recovery with few symlinks.
+        try:
+            if link_path.is_symlink() and _is_streamlit_owned_symlink(
+                link_path, source_skills_dir
+            ):
+                link_path.unlink()
+        except OSError:  # noqa: PERF203
+            pass  # Best-effort cleanup
 
 
 def _get_display_path(
@@ -359,10 +377,22 @@ def _download_global_skill(url: str, skill_name: str) -> Path:
     temp_dir = Path(tempfile.mkdtemp(prefix="streamlit-skills-"))
     try:
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-            # Security: use filter='data' to prevent path traversal and other attacks.
-            # This blocks absolute paths, parent directory references (..),
-            # and special files (devices, fifos, etc.).
-            tar.extractall(temp_dir, filter="data")
+            # Security: prevent path traversal and other attacks by filtering members.
+            # On Python 3.12+, use filter='data' which blocks absolute paths,
+            # parent directory references (..), and special files (devices, fifos, etc.).
+            # On earlier versions, manually filter to regular files and directories only.
+            if sys.version_info >= (3, 12):
+                tar.extractall(temp_dir, filter="data")
+            else:
+                # Manual safe extraction for Python 3.10/3.11
+                safe_members = [
+                    m
+                    for m in tar.getmembers()
+                    if (m.isfile() or m.isdir())
+                    and not os.path.isabs(m.name)
+                    and ".." not in m.name.split("/")
+                ]
+                tar.extractall(temp_dir, members=safe_members)  # noqa: S202
     except tarfile.TarError as e:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise click.ClickException(f"Failed to extract skills archive: {e}") from e
@@ -551,20 +581,29 @@ def _install_project_skills(
     # Install skills
     result = _InstallResult()
     symlink_failed = False
+    created_symlinks: list[Path] = []
 
     for skill_name in skills:
         for target_dir in target_dirs:
+            target_path = target_dir / skill_name
             success = _install_skill_symlink(
                 skill_name, source_skills_dir, target_dir, result
             )
             if not success:
                 symlink_failed = True
                 break
+            # Track successfully created symlinks for potential cleanup
+            if target_path.is_symlink() and str(target_path) in [
+                str(Path.cwd() / p) for p in result.installed
+            ]:
+                created_symlinks.append(target_path)
         if symlink_failed:
             break
 
     # Handle symlink failure (Windows without Developer Mode)
     if symlink_failed and fallback_to_global:
+        # Clean up any partial symlinks created before the failure
+        _cleanup_partial_symlinks(created_symlinks, source_skills_dir)
         click.secho(
             "\n⚠ Symlinks not supported on this system.",
             fg="yellow",
