@@ -277,20 +277,27 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Only resize if at least one dimension uses container-driven sizing.
   // For fixed-dimension charts, the dimensions are defined in the spec and
   // should not be overridden by container size changes.
-  const shouldResize = useStretchWidth || useStretchHeight || isFullScreen
+  const shouldResizeWidth = useStretchWidth || isFullScreen
+  const shouldResizeHeight = useStretchHeight || isFullScreen
+  const shouldResize = shouldResizeWidth || shouldResizeHeight
   useEffect(() => {
     if (!isViewReady || !shouldResize) {
       return
     }
 
     const lastDims = lastDimensionsRef.current
-    if (
-      lastDims?.width !== currentWidth ||
-      lastDims?.height !== currentHeight
-    ) {
+    // Only track changes for dimensions we're actually resizing
+    const widthChanged = shouldResizeWidth && lastDims?.width !== currentWidth
+    const heightChanged =
+      shouldResizeHeight && lastDims?.height !== currentHeight
+    if (widthChanged || heightChanged) {
       // Use an async IIFE to await resizeView and only update cache on success
+      // Pass 0 for dimensions that shouldn't be resized (e.g., height='content')
       void (async () => {
-        const success = await resizeView(currentWidth, currentHeight)
+        const success = await resizeView(
+          shouldResizeWidth ? currentWidth : 0,
+          shouldResizeHeight ? currentHeight : 0
+        )
         if (success) {
           lastDimensionsRef.current = {
             width: currentWidth,
@@ -299,7 +306,15 @@ const ArrowVegaLiteChart: FC<Props> = ({
         }
       })()
     }
-  }, [isViewReady, shouldResize, resizeView, currentWidth, currentHeight])
+  }, [
+    isViewReady,
+    shouldResize,
+    shouldResizeWidth,
+    shouldResizeHeight,
+    resizeView,
+    currentWidth,
+    currentHeight,
+  ])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
