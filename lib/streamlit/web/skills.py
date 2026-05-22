@@ -39,6 +39,13 @@ _GLOBAL_SKILLS_URL: Final[str] = (
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
+_MANAGED_COPY_MARKER: Final[str] = ".streamlit-skills"
+
+_PROJECT_GITIGNORE_SNIPPET: Final[str] = (
+    "# Streamlit agent skills (environment-specific symlinks)\n"
+    ".agents/skills/developing-with-streamlit/\n"
+    ".claude/skills/developing-with-streamlit/"
+)
 
 
 @dataclass
@@ -64,28 +71,31 @@ def _discover_skills(source_dir: Path) -> list[str]:
     if not source_dir.is_dir():
         return []
 
-    skills = []
-    for entry in sorted(source_dir.iterdir()):
-        if not entry.is_dir():
-            continue
-        if (entry / "SKILL.md").is_file():
-            skills.append(entry.name)
-
-    return skills
+    return [
+        entry.name
+        for entry in sorted(source_dir.iterdir())
+        if entry.is_dir() and (entry / "SKILL.md").is_file()
+    ]
 
 
 def _find_project_root() -> Path:
     """Find the project root directory for installation.
 
-    1. If cwd has .agents or .claude, use cwd
+    1. If cwd or a non-home ancestor has .agents or .claude, use it
     2. Otherwise, walk up to find nearest .git
     3. Otherwise, use cwd
     """
     cwd = Path.cwd()
+    home = Path.home()
 
-    # Check if cwd already has agent directories
-    if (cwd / ".agents").exists() or (cwd / ".claude").exists():
-        return cwd
+    # Check if cwd or a project ancestor already has agent directories.
+    # Stop before the user's home directory so ~/.claude is not mistaken for
+    # a project-local Claude configuration.
+    for parent in [cwd, *cwd.parents]:
+        if parent != cwd and parent == home:
+            break
+        if (parent / ".agents").exists() or (parent / ".claude").exists():
+            return parent
 
     # Walk up to find git root
     for parent in [cwd, *cwd.parents]:
@@ -168,7 +178,62 @@ def _is_streamlit_owned_directory(dir_path: Path) -> bool:
     """
     if not dir_path.is_dir():
         return False
-    return (dir_path / ".streamlit-skills").is_file()
+    return (dir_path / _MANAGED_COPY_MARKER).is_file()
+
+
+def _relative_skill_paths(root: Path) -> list[tuple[str, str]]:
+    """Return relative paths and path types for a copied skill directory."""
+    paths = [
+        (
+            rel_path.as_posix(),
+            "dir" if path.is_dir() and not path.is_symlink() else "file",
+        )
+        for path in root.rglob("*")
+        if _MANAGED_COPY_MARKER not in (rel_path := path.relative_to(root)).parts
+    ]
+    return sorted(paths)
+
+
+def _skill_copy_matches(source_path: Path, target_path: Path) -> bool:
+    """Check whether a managed copied skill matches the source skill."""
+    if not target_path.is_dir():
+        return False
+
+    if _relative_skill_paths(source_path) != _relative_skill_paths(target_path):
+        return False
+
+    for source_file in source_path.rglob("*"):
+        rel_path = source_file.relative_to(source_path)
+        if source_file.is_dir() and not source_file.is_symlink():
+            continue
+        if (target_path / rel_path).read_bytes() != source_file.read_bytes():
+            return False
+
+    return True
+
+
+def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
+    """Return whether project install can create directory symlinks."""
+    try:
+        with tempfile.TemporaryDirectory(
+            prefix=".streamlit-skills-", dir=project_root
+        ) as temp_dir:
+            link_path = Path(temp_dir) / "skill-link"
+            link_path.symlink_to(source_path, target_is_directory=True)
+            return link_path.is_symlink()
+    except OSError:
+        return False
+
+
+def _get_display_path(
+    target_path: Path, base_path: Path, use_tilde: bool = False
+) -> Path:
+    """Get a user-friendly display path, relative to base if possible."""
+    try:
+        rel_path = target_path.relative_to(base_path)
+        return Path("~") / rel_path if use_tilde else rel_path
+    except ValueError:
+        return target_path
 
 
 def _install_skill_symlink(
@@ -184,11 +249,7 @@ def _install_skill_symlink(
     """
     source_path = source_dir / skill_name
     target_path = target_dir / skill_name
-
-    try:
-        rel_target_path = target_path.relative_to(Path.cwd())
-    except ValueError:
-        rel_target_path = target_path
+    rel_target_path = _get_display_path(target_path, Path.cwd())
 
     # Ensure parent directory exists
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -241,12 +302,7 @@ def _install_skill_copy(
     """Install a single skill by copying files to target directory."""
     source_path = source_dir / skill_name
     target_path = target_dir / skill_name
-
-    try:
-        rel_target_path = target_path.relative_to(Path.home())
-        rel_target_path = Path("~") / rel_target_path
-    except ValueError:
-        rel_target_path = target_path
+    rel_target_path = _get_display_path(target_path, Path.home(), use_tilde=True)
 
     # Ensure parent directory exists
     target_dir.mkdir(parents=True, exist_ok=True)
@@ -260,10 +316,10 @@ def _install_skill_copy(
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
                 return
         elif _is_streamlit_owned_directory(target_path):
-            # Check if content matches (up to date)
-            marker = target_path / ".streamlit-skills"
-            if marker.is_file():
-                shutil.rmtree(target_path)
+            if _skill_copy_matches(source_path, target_path):
+                result.up_to_date.append(str(rel_target_path))
+                return
+            shutil.rmtree(target_path)
         else:
             result.skipped.append(f"{rel_target_path} (existing file or directory)")
             return
@@ -272,7 +328,7 @@ def _install_skill_copy(
     try:
         shutil.copytree(source_path, target_path)
         # Add marker file to indicate Streamlit ownership
-        (target_path / ".streamlit-skills").write_text("", encoding="utf-8")
+        (target_path / _MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
         result.installed.append(str(rel_target_path))
     except OSError as e:
         result.skipped.append(f"{rel_target_path} (copy failed: {e})")
@@ -410,6 +466,12 @@ def _confirm_global_installation(target_dirs: list[Path]) -> bool:
     click.echo()
     click.echo("Installing globally (downloads from GitHub)")
 
+    click.secho("\nSource:", bold=True)
+    click.echo(
+        f"  {click.style('•', fg='magenta')} "
+        f"{click.style(_GLOBAL_SKILLS_URL, fg='cyan')}"
+    )
+
     click.secho("\nSkill to install:", bold=True)
     click.echo(
         f"  {click.style('•', fg='magenta')} "
@@ -452,6 +514,29 @@ def _install_project_skills(
     # Determine targets
     project_root = _find_project_root()
     target_dirs = _get_project_target_dirs(project_root)
+
+    if not _symlinks_supported(project_root, source_skills_dir / skills[0]):
+        if fallback_to_global:
+            click.secho(
+                "\n⚠ Symlinks not supported on this system.",
+                fg="yellow",
+                bold=True,
+            )
+            click.echo(
+                "Project install uses symlinks so skills stay matched to your "
+                "active Streamlit environment."
+            )
+            click.echo(
+                "Falling back to global installation. On Windows, enable "
+                "Developer Mode to use project installs."
+            )
+            click.echo()
+            _install_global_skills(yes=yes)
+            return
+
+        raise click.ClickException(
+            "Symlinks not supported. Use --global for global installation."
+        )
 
     # Confirm installation
     if not yes and not _confirm_project_installation(project_root, skills, target_dirs):
@@ -508,6 +593,10 @@ def _install_project_skills(
                 "      They generally should not be committed to git.",
                 fg="bright_black",
             )
+        click.echo()
+        click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
+        for line in _PROJECT_GITIGNORE_SNIPPET.splitlines():
+            click.secho(f"  {line}", fg="bright_black")
     elif result.skipped:
         raise click.ClickException(
             "No skills were installed due to conflicts. "
@@ -564,7 +653,9 @@ def _install_global_skills(*, yes: bool = False) -> None:
             )
     finally:
         # Clean up temp directory
-        shutil.rmtree(skill_path.parent.parent, ignore_errors=True)
+        temp_root = skill_path.parent.parent
+        if temp_root.name.startswith("streamlit-skills-"):
+            shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:

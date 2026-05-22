@@ -445,7 +445,11 @@ def main_skills(global_mode: bool, yes: bool) -> None:
     """
     from streamlit.web.skills import install_skills
 
-    install_skills(global_mode=global_mode, yes=yes)
+    try:
+        install_skills(global_mode=global_mode, yes=yes)
+    except click.Abort:
+        click.echo("Aborted.")
+        raise click.exceptions.Exit(1) from None
 
 
 @main.command("init")
