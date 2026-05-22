@@ -933,6 +933,32 @@ describe("Multiselect widget", () => {
       expect(screen.getByText("Select all")).toBeInTheDocument()
       expect(screen.queryByText(/Select.*matches/)).not.toBeInTheDocument()
     })
+
+    it("does not show Select all when there are >= 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 1000 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.queryByText("Select all")).not.toBeInTheDocument()
+      // Options should still be visible
+      expect(screen.getByText("option_0")).toBeVisible()
+    })
+
+    it("shows Select all when there are less than 1000 options", async () => {
+      const user = userEvent.setup()
+      const options = Array.from({ length: 999 }, (_, i) => `option_${i}`)
+      const props = getProps({ default: [], options })
+      render(<Multiselect {...props} />)
+
+      const expandListButton = screen.getAllByTitle("open")[0]
+      await user.click(expandListButton)
+
+      expect(screen.getByText("Select all")).toBeVisible()
+    })
   })
 })
 
