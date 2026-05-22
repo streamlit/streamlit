@@ -417,12 +417,18 @@ def test_prog_name() -> None:
 
 
 @main.command("skills")
-@click.option("-g", "--global", "global_mode", is_flag=True, help="Install globally.")
+@click.option(
+    "-g",
+    "--global",
+    "global_mode",
+    is_flag=True,
+    help="Install globally (in user directory).",
+)
 @click.option("-y", "--yes", is_flag=True, help="Skip confirmation prompts.")
 def main_skills(global_mode: bool, yes: bool) -> None:
     r"""Install Streamlit AI-agent skills.
 
-    Installs bundled Streamlit skills to help AI agents build Streamlit apps.
+    Installs bundled Streamlit skills to help AI agents build better Streamlit apps.
 
     \b
     Project mode (default):
