@@ -384,22 +384,20 @@ def _download_global_skill(url: str, skill_name: str) -> Path:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise click.ClickException(f"Failed to extract skills archive: {e}") from e
 
-    # Find extracted skill directory (tarball root is typically repo-name-tag/)
-    extracted_dirs = list(temp_dir.iterdir())
+    # Find skill directory - search all top-level directories in case archive has
+    # multiple entries (typically GitHub archives have one: repo-name-tag/)
+    extracted_dirs = [d for d in temp_dir.iterdir() if d.is_dir()]
     if not extracted_dirs:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise click.ClickException("Downloaded archive is empty")
 
-    archive_root = extracted_dirs[0]
-    skill_path = archive_root / skill_name
+    for archive_root in extracted_dirs:
+        skill_path = archive_root / skill_name
+        if skill_path.is_dir() and (skill_path / "SKILL.md").is_file():
+            return skill_path
 
-    if not skill_path.is_dir() or not (skill_path / "SKILL.md").is_file():
-        shutil.rmtree(temp_dir, ignore_errors=True)
-        raise click.ClickException(
-            f"Skill '{skill_name}' not found in downloaded archive"
-        )
-
-    return skill_path
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    raise click.ClickException(f"Skill '{skill_name}' not found in downloaded archive")
 
 
 def _print_result(result: _InstallResult) -> None:
