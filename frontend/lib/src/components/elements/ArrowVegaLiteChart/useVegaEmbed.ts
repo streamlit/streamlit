@@ -48,6 +48,8 @@ interface UseVegaEmbedOutput {
     datasets: WrappedNamedDataset[]
   ) => Promise<VegaView | null>
   finalizeView: () => void
+  resizeView: (width: number, height: number) => Promise<boolean>
+  isViewReady: boolean
 }
 
 /**
@@ -270,5 +272,29 @@ export function useVegaEmbed(
     [updateData, isCreatingView]
   )
 
-  return { createView, updateView, finalizeView }
+  const resizeView = useCallback(
+    async (width: number, height: number): Promise<boolean> => {
+      if (vegaViewRef.current === null || isCreatingView) {
+        return false
+      }
+      try {
+        if (width > 0) {
+          vegaViewRef.current.width(width)
+        }
+        if (height > 0) {
+          vegaViewRef.current.height(height)
+        }
+        await vegaViewRef.current.resize().runAsync()
+        return true
+      } catch (error) {
+        LOG.warn("Failed to resize Vega view:", error)
+        return false
+      }
+    },
+    [isCreatingView]
+  )
+
+  const isViewReady = vegaViewRef.current !== null && !isCreatingView
+
+  return { createView, updateView, finalizeView, resizeView, isViewReady }
 }

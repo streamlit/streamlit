@@ -221,6 +221,9 @@ const generateSpec = (
  * Preprocesses the element to generate the VegaLite spec.
  * It stabilizes some of the references (e.g. selectionMode and spec)
  * and avoids further processing if unnecessary.
+ *
+ * Returns the processed element along with a `baseSpecKey` that is stable
+ * across container dimension changes (for use with native Vega resize API).
  */
 export const useVegaElementPreprocessor = (
   element: VegaLiteChartElement,
@@ -228,7 +231,7 @@ export const useVegaElementPreprocessor = (
   containerHeight: number,
   useContainerWidth: boolean,
   useContainerHeight: boolean
-): VegaLiteChartElement => {
+): VegaLiteChartElement & { baseSpecKey: string } => {
   const theme = useEmotionTheme()
 
   const {
@@ -249,6 +252,31 @@ export const useVegaElementPreprocessor = (
     return inputSelectionMode
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
+
+  // Stable key that changes only when non-dimension parts of the spec change.
+  // Allows distinguishing between spec changes (require full view recreation) and
+  // dimension-only changes (can use Vega's native resize API for better performance).
+  const baseSpecKey = useMemo(() => {
+    const baseSpec = generateSpec(
+      inputSpec,
+      useContainerWidth,
+      useContainerHeight,
+      vegaLiteTheme,
+      selectionMode,
+      theme,
+      0, // Use 0 for dimensions to create a dimension-independent key
+      0
+    )
+    const { width: _w, height: _h, ...specWithoutDimensions } = baseSpec
+    return JSON.stringify(specWithoutDimensions)
+  }, [
+    inputSpec,
+    useContainerWidth,
+    useContainerHeight,
+    vegaLiteTheme,
+    selectionMode,
+    theme,
+  ])
 
   const spec = useMemo(
     () =>
@@ -286,5 +314,6 @@ export const useVegaElementPreprocessor = (
     data,
     datasets,
     useContainerWidth,
+    baseSpecKey,
   }
 }

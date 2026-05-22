@@ -98,6 +98,8 @@ describe("useVegaEmbed hook", () => {
       setState: vi.fn().mockReturnThis(),
       data: vi.fn().mockReturnThis(),
       remove: vi.fn().mockReturnThis(),
+      width: vi.fn().mockReturnThis(),
+      height: vi.fn().mockReturnThis(),
     } as unknown as Mocked<VegaView>
 
     // vega-embed returns { vgSpec, view, finalize }
@@ -511,5 +513,136 @@ describe("useVegaEmbed hook", () => {
       "old",
       expect.any(Function)
     )
+  })
+
+  describe("resizeView", () => {
+    it("returns false when view is not ready", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      // View hasn't been created yet
+      const resizeResult = await result.current.resizeView(800, 600)
+      expect(resizeResult).toBe(false)
+    })
+
+    it("calls view.width(), view.height(), and view.resize().runAsync() on resize", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Now resize
+      let resizeResult: boolean = false
+      await act(async () => {
+        resizeResult = await result.current.resizeView(800, 600)
+      })
+
+      expect(resizeResult).toBe(true)
+      expect(mockVegaView.width).toHaveBeenCalledWith(800)
+      expect(mockVegaView.height).toHaveBeenCalledWith(600)
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+
+    it("skips width/height calls for non-positive values", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Reset mocks
+      mockVegaView.width.mockClear()
+      mockVegaView.height.mockClear()
+
+      // Resize with 0 values - should skip width/height calls
+      await act(async () => {
+        await result.current.resizeView(0, 0)
+      })
+
+      expect(mockVegaView.width).not.toHaveBeenCalled()
+      expect(mockVegaView.height).not.toHaveBeenCalled()
+      expect(mockVegaView.resize).toHaveBeenCalled()
+    })
+  })
+
+  describe("isViewReady", () => {
+    it("is false before view is created", () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      expect(result.current.isViewReady).toBe(false)
+    })
+
+    it("is true after view is created", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result, rerender } = renderHook(() =>
+        useVegaEmbed(element, mockWidgetMgr)
+      )
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Force a re-render to pick up the state change from setIsCreatingView(false)
+      rerender()
+
+      expect(result.current.isViewReady).toBe(true)
+    })
   })
 })
