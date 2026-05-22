@@ -16,10 +16,14 @@
 
 from __future__ import annotations
 
+import io
 import os
+import tarfile
 from typing import TYPE_CHECKING
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
+from urllib.error import URLError
 
+import click
 import pytest
 from click.testing import CliRunner
 
@@ -909,3 +913,400 @@ class TestInstallProjectSkillsCancellation:
         assert not (
             project_dir / ".agents" / "skills" / "developing-with-streamlit"
         ).exists()
+
+
+class TestDownloadGlobalSkill:
+    """Tests for _download_global_skill."""
+
+    def test_raises_on_network_error(self) -> None:
+        """Raises ClickException on network failure."""
+        with patch.object(skills.request, "urlopen", side_effect=URLError("Network")):
+            with pytest.raises(click.ClickException, match="Failed to download"):
+                skills._download_global_skill(
+                    "https://example.com/test.tar.gz", "skill"
+                )
+
+    def test_raises_on_empty_archive(self, tmp_path: Path) -> None:
+        """Raises ClickException when archive is empty."""
+        # Create an empty tar.gz
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode="w:gz"):
+            pass  # Empty archive
+        tar_buffer.seek(0)
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = tar_buffer.getvalue()
+        mock_response.__enter__ = MagicMock(return_value=mock_response)
+        mock_response.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(skills.request, "urlopen", return_value=mock_response):
+            with pytest.raises(click.ClickException, match="archive is empty"):
+                skills._download_global_skill(
+                    "https://example.com/test.tar.gz", "skill"
+                )
+
+    def test_raises_on_missing_skill(self, tmp_path: Path) -> None:
+        """Raises ClickException when skill not found in archive."""
+        # Create archive with a different skill
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
+            # Add a root directory
+            root_info = tarfile.TarInfo(name="repo-v1/")
+            root_info.type = tarfile.DIRTYPE
+            tar.addfile(root_info)
+            # Add a different skill
+            other_skill = tarfile.TarInfo(name="repo-v1/other-skill/")
+            other_skill.type = tarfile.DIRTYPE
+            tar.addfile(other_skill)
+        tar_buffer.seek(0)
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = tar_buffer.getvalue()
+        mock_response.__enter__ = MagicMock(return_value=mock_response)
+        mock_response.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(skills.request, "urlopen", return_value=mock_response):
+            with pytest.raises(click.ClickException, match="not found in downloaded"):
+                skills._download_global_skill(
+                    "https://example.com/test.tar.gz", "missing-skill"
+                )
+
+    def test_extracts_skill_successfully(self, tmp_path: Path) -> None:
+        """Successfully extracts skill from valid archive."""
+        # Create archive with the expected skill
+        tar_buffer = io.BytesIO()
+        with tarfile.open(fileobj=tar_buffer, mode="w:gz") as tar:
+            # Add root directory
+            root_info = tarfile.TarInfo(name="repo-v1/")
+            root_info.type = tarfile.DIRTYPE
+            tar.addfile(root_info)
+            # Add skill directory
+            skill_dir = tarfile.TarInfo(name="repo-v1/test-skill/")
+            skill_dir.type = tarfile.DIRTYPE
+            tar.addfile(skill_dir)
+            # Add SKILL.md file
+            skill_md = tarfile.TarInfo(name="repo-v1/test-skill/SKILL.md")
+            content = b"# Test Skill\n"
+            skill_md.size = len(content)
+            tar.addfile(skill_md, io.BytesIO(content))
+        tar_buffer.seek(0)
+
+        mock_response = MagicMock()
+        mock_response.read.return_value = tar_buffer.getvalue()
+        mock_response.__enter__ = MagicMock(return_value=mock_response)
+        mock_response.__exit__ = MagicMock(return_value=False)
+
+        with patch.object(skills.request, "urlopen", return_value=mock_response):
+            result = skills._download_global_skill(
+                "https://example.com/test.tar.gz", "test-skill"
+            )
+
+        assert result.name == "test-skill"
+        assert (result / "SKILL.md").is_file()
+
+
+class TestSkillCopyMatches:
+    """Tests for _skill_copy_matches."""
+
+    def test_returns_false_when_target_missing(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Returns False when target directory doesn't exist."""
+        source = mock_source_skills_dir / "developing-with-streamlit"
+        target = tmp_path / "nonexistent"
+
+        assert not skills._skill_copy_matches(source, target)
+
+    def test_returns_false_when_files_differ(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Returns False when file contents differ."""
+        source = mock_source_skills_dir / "developing-with-streamlit"
+        target = tmp_path / "developing-with-streamlit"
+        target.mkdir(parents=True)
+        # Create file with different content
+        (target / "SKILL.md").write_text("# Different Content\n", encoding="utf-8")
+
+        assert not skills._skill_copy_matches(source, target)
+
+    def test_returns_false_when_files_missing(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Returns False when target is missing files from source."""
+        source = mock_source_skills_dir / "developing-with-streamlit"
+        target = tmp_path / "developing-with-streamlit"
+        target.mkdir(parents=True)
+        # Don't create SKILL.md, leaving it missing
+
+        assert not skills._skill_copy_matches(source, target)
+
+
+class TestInstallSkillCopyEdgeCases:
+    """Additional edge case tests for _install_skill_copy."""
+
+    def test_skips_existing_unrelated_symlink(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Skips existing symlinks that aren't Streamlit-owned."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        # Create symlink pointing to unrelated location
+        unrelated = tmp_path / "unrelated"
+        unrelated.mkdir()
+        target.symlink_to(unrelated)
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert any("existing symlink" in s for s in result.skipped)
+        assert target.is_symlink()
+
+    def test_reports_copy_failure(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Reports error when copy operation fails."""
+        target_dir = tmp_path / "target" / "skills"
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.shutil, "copytree", side_effect=OSError("Disk full")),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert any("copy failed" in s for s in result.skipped)
+
+
+class TestInstallSkillSymlinkEdgeCases:
+    """Additional edge case tests for _install_skill_symlink."""
+
+    def test_skips_existing_unrelated_symlink(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Skips existing symlinks that aren't Streamlit-owned."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        # Create symlink pointing to unrelated location
+        unrelated = tmp_path / "unrelated"
+        unrelated.mkdir()
+        target.symlink_to(unrelated)
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.cwd", return_value=tmp_path / "project"):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert success
+        assert any("existing symlink" in s for s in result.skipped)
+
+    def test_returns_false_when_symlink_creation_fails(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Returns False when symlink creation raises OSError."""
+        target_dir = tmp_path / "project" / ".agents" / "skills"
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.cwd", return_value=tmp_path / "project"),
+            patch("pathlib.Path.symlink_to", side_effect=OSError("Permission denied")),
+        ):
+            success = skills._install_skill_symlink(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert not success
+
+
+class TestCleanupPartialSymlinks:
+    """Tests for _cleanup_partial_symlinks."""
+
+    def test_removes_streamlit_owned_symlinks(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Removes symlinks that are identified as Streamlit-owned."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        link = target_dir / "developing-with-streamlit"
+        source = mock_source_skills_dir / "developing-with-streamlit"
+        link.symlink_to(source)
+
+        skills._cleanup_partial_symlinks([link], mock_source_skills_dir)
+
+        assert not link.exists()
+
+    def test_ignores_non_streamlit_symlinks(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Does not remove symlinks that aren't Streamlit-owned."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        link = target_dir / "user-skill"
+        unrelated = tmp_path / "unrelated"
+        unrelated.mkdir()
+        link.symlink_to(unrelated)
+
+        skills._cleanup_partial_symlinks([link], mock_source_skills_dir)
+
+        assert link.exists()
+
+    def test_continues_on_removal_error(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Continues cleanup even if one removal fails."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target_dir = tmp_path / ".agents" / "skills"
+        target_dir.mkdir(parents=True)
+        link1 = target_dir / "skill1"
+        link2 = target_dir / "skill2"
+        source = mock_source_skills_dir / "developing-with-streamlit"
+        link1.symlink_to(source)
+        link2.symlink_to(source)
+
+        call_count = 0
+        original_unlink = type(link1).unlink
+
+        def unlink_with_first_failure(self: Path, missing_ok: bool = False) -> None:
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise OSError("Permission denied")
+            return original_unlink(self, missing_ok=missing_ok)
+
+        # Mock Path.unlink to fail on first call
+        with patch.object(type(link1), "unlink", unlink_with_first_failure):
+            # Should not raise, and should continue to try link2
+            skills._cleanup_partial_symlinks([link1, link2], mock_source_skills_dir)
+
+        # At least one link should have been attempted for removal
+        assert call_count >= 1
+
+
+class TestPromptInstallModeRetry:
+    """Tests for _prompt_install_mode retry behavior."""
+
+    def test_retries_on_invalid_then_accepts_valid(self) -> None:
+        """Reprompts on invalid input until valid input is given."""
+        # First return invalid, then valid
+        with patch("click.prompt", side_effect=["invalid", "x", "p"]):
+            result = skills._prompt_install_mode()
+        assert result == "project"
+
+
+class TestGlobalInstallationCancellation:
+    """Tests for global installation cancellation."""
+
+    def test_global_install_cancelled_by_user(
+        self, runner: CliRunner, tmp_path: Path
+    ) -> None:
+        """Returns early when user declines global installation."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "sys") as mock_sys,
+            patch.object(skills, "_prompt_install_mode", return_value="global"),
+            patch.object(skills, "_confirm_global_installation", return_value=False),
+        ):
+            mock_sys.stdin.isatty.return_value = True
+            result = runner.invoke(cli.main, ["skills"])
+
+        assert result.exit_code == 0
+        assert "Installation cancelled" in result.output
+
+
+class TestGlobalInstallationConflicts:
+    """Tests for global installation conflicts."""
+
+    def test_raises_when_all_targets_skipped(
+        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Raises ClickException when all targets are skipped due to conflicts."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        # Create conflicting user directory
+        conflict_dir = home / ".agents" / "skills" / "developing-with-streamlit"
+        conflict_dir.mkdir(parents=True)
+        (conflict_dir / "user-file.txt").write_text("user content", encoding="utf-8")
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(
+                skills,
+                "_download_global_skill",
+                return_value=mock_source_skills_dir / "developing-with-streamlit",
+            ),
+        ):
+            result = runner.invoke(cli.main, ["skills", "--global", "--yes"])
+
+        assert result.exit_code != 0
+        assert "No skills were installed due to conflicts" in result.output
+
+
+class TestInteractiveModeSelection:
+    """Tests for interactive mode selection."""
+
+    def test_interactive_selects_global_mode(
+        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Interactive prompt can select global installation mode."""
+        home = tmp_path / "home"
+        home.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch.object(skills, "sys") as mock_sys,
+            patch.object(skills, "_prompt_install_mode", return_value="global"),
+            patch.object(skills, "_confirm_global_installation", return_value=True),
+            patch.object(
+                skills,
+                "_download_global_skill",
+                return_value=mock_source_skills_dir / "developing-with-streamlit",
+            ),
+        ):
+            mock_sys.stdin.isatty.return_value = True
+            result = runner.invoke(cli.main, ["skills"])
+
+        assert result.exit_code == 0
+        assert "Successfully installed globally" in result.output
+
+
+class TestIsStreamlitOwnedSymlinkErrorPaths:
+    """Tests for error handling in _is_streamlit_owned_symlink."""
+
+    def test_handles_broken_symlink_resolution_error(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Handles OSError during symlink resolution gracefully."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        link = tmp_path / "developing-with-streamlit"
+        # Create broken symlink with Streamlit-like pattern
+        link.symlink_to("../nonexistent/.agents/skills/developing-with-streamlit")
+
+        # Should return True based on raw target pattern check
+        assert skills._is_streamlit_owned_symlink(link, mock_source_skills_dir)
