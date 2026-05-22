@@ -220,47 +220,54 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   const { data, datasets, spec, baseSpecKey } = element
 
-  // Track the last baseSpecKey to detect structural spec changes
-  const lastBaseSpecKeyRef = useRef<string | null>(null)
   // Track the last dimensions to avoid redundant resize calls
   const lastDimensionsRef = useRef<{ width: number; height: number } | null>(
     null
   )
+  // Keep a ref to the latest spec so we can access it in the effect without
+  // adding spec to the dependency array (which would cause unnecessary re-renders
+  // when only dimensions change).
+  const latestSpecRef = useRef(spec)
+  latestSpecRef.current = spec
 
   const currentWidth = isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth
   const currentHeight =
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
 
+  // Keep refs to dimensions updated so we can access them in the effect below
+  const latestDimensionsRef = useRef({
+    width: currentWidth,
+    height: currentHeight,
+  })
+  latestDimensionsRef.current = { width: currentWidth, height: currentHeight }
+
   // Create the view when the structural spec changes (not on dimension-only changes).
   // useLayoutEffect ensures the view is created after the container is mounted to
   // avoid layout shift.
+  // IMPORTANT: The cleanup (finalizeView) should only run when the view needs to be
+  // recreated, NOT when dimensions change. Using baseSpecKey (not spec) as the key
+  // dependency ensures this - baseSpecKey excludes dimension info and only changes
+  // when the structural parts of the spec change.
   useLayoutEffect(() => {
-    // Only recreate the view if the baseSpecKey changed (structural spec change)
-    // or if this is the initial render
-    const specChanged =
-      lastBaseSpecKeyRef.current === null ||
-      lastBaseSpecKeyRef.current !== baseSpecKey
-
-    if (containerRef.current !== null && specChanged) {
-      lastBaseSpecKeyRef.current = baseSpecKey
+    if (containerRef.current !== null) {
+      // Initialize lastDimensionsRef with current dimensions when view is created
       lastDimensionsRef.current = {
-        width: currentWidth,
-        height: currentHeight,
+        width: latestDimensionsRef.current.width,
+        height: latestDimensionsRef.current.height,
       }
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
-      createView(containerRef, spec)
+      createView(containerRef, latestSpecRef.current)
     }
 
     return finalizeView
   }, [
     createView,
     finalizeView,
-    spec,
+    // Use baseSpecKey as the structural change detector, not spec.
+    // spec includes dimensions which change frequently during resize;
+    // we handle those via resizeView in a separate effect.
     baseSpecKey,
-    currentWidth,
-    currentHeight,
-    fullScreenWidth,
-    fullScreenHeight,
+    // showData affects which container ref is active
     showData,
     containerRef,
   ])
