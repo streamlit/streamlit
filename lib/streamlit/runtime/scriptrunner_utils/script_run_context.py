@@ -82,6 +82,9 @@ class FragmentThreadState:
     delta_path: tuple[int, ...] | None = None
     in_fragment_callback: bool = False
     active_script_hash: str = ""
+    # Set on parallel-fragment workers so wrapped_fragment() skips creating a
+    # second st.container(); the main thread already pre-allocated one before
+    # dispatching the worker.  Cleared after first use.
     pre_allocated_container_fragment_id: str | None = None
 
 
