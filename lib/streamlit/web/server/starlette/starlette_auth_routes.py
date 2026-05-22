@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
@@ -83,6 +84,7 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
     return any(key in value for key in provider_keys)
 
 
+@lru_cache(maxsize=1)
 def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
     """Create a Starlette OAuth class with Streamlit-specific OIDC behavior."""
 
