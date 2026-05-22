@@ -554,6 +554,12 @@ describe("useVegaEmbed hook", () => {
         await result.current.createView(containerRef, {})
       })
 
+      // Clear mocks after createView to ensure we only assert resizeView calls
+      mockVegaView.width.mockClear()
+      mockVegaView.height.mockClear()
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+
       // Now resize
       let resizeResult: boolean = false
       await act(async () => {
