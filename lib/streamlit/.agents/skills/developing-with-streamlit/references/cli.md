@@ -148,10 +148,10 @@ streamlit hello
 ### AI-agent skills
 
 ```bash
-# Install AI-agent skills for the current project (creates symlinks)
+# Interactive installer for AI-agent skills
 streamlit skills
 
-# Install globally (downloads from GitHub to ~/.agents/skills/ and ~/.claude/skills/)
+# Install globally in the user directory
 streamlit skills --global
 
 # Non-interactive installation (skip prompts)
@@ -161,9 +161,8 @@ streamlit skills --global --yes
 
 The `streamlit skills` command installs bundled Streamlit skills that help AI coding assistants (Claude Code, Cursor, etc.) build better Streamlit applications.
 
-**Project mode (default):** Creates symlinks from `.agents/skills/` and `.claude/skills/` in your project to the bundled skills in your Streamlit installation. Skills stay in sync when Streamlit is upgraded.
-
-**Global mode (`--global`):** Downloads skills from GitHub and copies them to `~/.agents/skills/` and `~/.claude/skills/`. Useful when symlinks are not supported (e.g., Windows without Developer Mode) or when you want skills available across all projects.
+- **Project mode (default):** Installs skills via symlinks for the current project.
+- **Global mode (`--global`):** Installs a meta skill that gets applied for all projects.
 
 ## Configuration precedence
 
