@@ -579,6 +579,13 @@ def fragment(
         single fragment (such as those triggered after widget interactions)
         remain sequential so state updates stay deterministic.
 
+        During the initial parallel run, some Streamlit commands are
+        restricted because they are not safe to call from concurrent
+        threads. These include ``st.dialog``, ``st.switch_page``, and
+        writing to containers created outside the fragment. These
+        commands work normally during sequential fragment reruns
+        (e.g., after a widget interaction).
+
         .. warning::
 
             Fragments dispatched in parallel can run concurrently. Avoid
