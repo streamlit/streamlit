@@ -82,10 +82,12 @@ st.multiselect(
 
 | Value | Behavior |
 |-------|----------|
-| `True` | Always show "Select all" regardless of option count |
+| `True` | Always show "Select all" (subject to the 2+ selectable options minimum) |
 | `False` | Never show "Select all" |
 | `0` | Never show "Select all" (same as `False`) |
 | Integer > 0 | Show "Select all" only when there are 2 or more selectable options AND the count is at or below the threshold |
+
+> **Note:** The 2+ selectable options requirement is an underlying constraint that applies to all modes, including `select_all=True`. A "Select all" option with only one selectable item provides no value over simply clicking that item.
 
 The term "selectable options" refers to the options currently available for selection in the dropdown. For "Select all" (no search query), this is the total number of options minus already-selected options. For "Select X matches" (with search query), this is the number of filtered matches minus already-selected options.
 
@@ -154,14 +156,17 @@ The `select_all` threshold is evaluated against the number of unselected options
 
 For threshold evaluation purposes, "selectable options" means options that are currently unselected, regardless of whether `max_selections` would prevent selecting all of them. This keeps the threshold calculation simple and predictable.
 
+When `max_selections` is already reached (i.e., `len(selected) >= max_selections`), "Select all" is hidden since no additional selections can be made.
+
 **Edge cases:**
 
 | Scenario | Behavior |
 |----------|----------|
 | `select_all=0` | Same as `select_all=False` |
 | `select_all < 0` (any negative integer) | Raises `StreamlitAPIException` |
-| Single option remaining | "Select all" never shown (requires 2+ selectable options) |
+| Single option remaining | "Select all" never shown (requires 2+ selectable options, even with `select_all=True`) |
 | All options selected | "Select all" not shown (no selectable options) |
+| `max_selections` reached | "Select all" not shown (no additional selections can be made) |
 
 ### Default Value Rationale
 
