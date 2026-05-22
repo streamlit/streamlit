@@ -15,7 +15,7 @@ Add a `select_all` parameter to `st.multiselect` that allows users to control th
 
 `st.multiselect` automatically shows a "Select all" option at the top of the dropdown when there are multiple selectable options. When the user is typing a search query, this becomes "Select X matches" to select all filtered results.
 
-This feature was added in [PR #13015](https://github.com/streamlit/streamlit/pull/13015) and is always enabled with no way to disable or limit it.
+This feature was added in PR [#13015](https://github.com/streamlit/streamlit/pull/13015) and is always enabled with no way to disable or limit it.
 
 ### User Pain Points
 
