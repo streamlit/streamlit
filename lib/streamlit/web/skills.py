@@ -336,9 +336,11 @@ def _install_skill_copy(
             shutil.copytree(source_path, target_path)
         result.installed.append(str(rel_target_path))
     except OSError as e:
-        # Clean up temp path if it exists
+        # Clean up temp path only if target still exists (meaning old wasn't removed).
+        # If target is gone, the old directory was deleted and temp is our only copy -
+        # keep it so the user isn't left with nothing.
         temp_path = target_path.with_name(f".{skill_name}.tmp")
-        if temp_path.exists():
+        if temp_path.exists() and target_path.exists():
             shutil.rmtree(temp_path, ignore_errors=True)
         result.skipped.append(f"{rel_target_path} (copy failed: {e})")
 
