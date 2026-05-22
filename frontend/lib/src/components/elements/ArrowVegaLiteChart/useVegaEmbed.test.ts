@@ -604,6 +604,48 @@ describe("useVegaEmbed hook", () => {
       expect(mockVegaView.height).not.toHaveBeenCalled()
       expect(mockVegaView.resize).toHaveBeenCalled()
     })
+
+    it("returns false and logs warning when resize throws an error", async () => {
+      const element: VegaLiteChartElement = {
+        id: "chartId",
+        data: null,
+        datasets: [],
+        spec: "",
+        useContainerWidth: false,
+        vegaLiteTheme: "",
+        selectionMode: [],
+        formId: "",
+      }
+
+      const { result } = renderHook(() => useVegaEmbed(element, mockWidgetMgr))
+
+      const containerRef = { current: document.createElement("div") }
+      await act(async () => {
+        await result.current.createView(containerRef, {})
+      })
+
+      // Clear mocks after createView
+      mockVegaView.width.mockClear()
+      mockVegaView.height.mockClear()
+      mockVegaView.resize.mockClear()
+      mockVegaView.runAsync.mockClear()
+
+      // Make resize throw an error
+      const resizeError = new Error("Resize failed")
+      mockVegaView.resize.mockImplementation(() => {
+        throw resizeError
+      })
+
+      let resizeResult: boolean = true
+      await act(async () => {
+        resizeResult = await result.current.resizeView(800, 600)
+      })
+
+      // Verify resizeView catches the error and returns false
+      expect(resizeResult).toBe(false)
+      // The width was set before resize threw
+      expect(mockVegaView.width).toHaveBeenCalledWith(800)
+    })
   })
 
   describe("isViewReady", () => {
