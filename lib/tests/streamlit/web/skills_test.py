@@ -107,6 +107,54 @@ class TestDiscoverSkills:
         assert result == []
 
 
+class TestGenerateGitignoreSnippet:
+    """Tests for _generate_gitignore_snippet."""
+
+    def test_generates_snippet_for_single_skill_single_target(
+        self, tmp_path: Path
+    ) -> None:
+        """Generates correct snippet for one skill and one target directory."""
+        project_root = tmp_path / "project"
+        target_dirs = [project_root / ".agents" / "skills"]
+        skill_names = ["developing-with-streamlit"]
+
+        result = skills._generate_gitignore_snippet(
+            skill_names, target_dirs, project_root
+        )
+
+        assert "# Streamlit agent skills" in result
+        assert ".agents/skills/developing-with-streamlit/" in result
+
+    def test_generates_snippet_for_multiple_targets(self, tmp_path: Path) -> None:
+        """Generates entries for both .agents and .claude target directories."""
+        project_root = tmp_path / "project"
+        target_dirs = [
+            project_root / ".agents" / "skills",
+            project_root / ".claude" / "skills",
+        ]
+        skill_names = ["developing-with-streamlit"]
+
+        result = skills._generate_gitignore_snippet(
+            skill_names, target_dirs, project_root
+        )
+
+        assert ".agents/skills/developing-with-streamlit/" in result
+        assert ".claude/skills/developing-with-streamlit/" in result
+
+    def test_generates_snippet_for_multiple_skills(self, tmp_path: Path) -> None:
+        """Generates entries for all discovered skills."""
+        project_root = tmp_path / "project"
+        target_dirs = [project_root / ".agents" / "skills"]
+        skill_names = ["developing-with-streamlit", "debugging-apps"]
+
+        result = skills._generate_gitignore_snippet(
+            skill_names, target_dirs, project_root
+        )
+
+        assert ".agents/skills/developing-with-streamlit/" in result
+        assert ".agents/skills/debugging-apps/" in result
+
+
 class TestFindProjectRoot:
     """Tests for _find_project_root."""
 

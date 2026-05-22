@@ -40,11 +40,23 @@ _GLOBAL_SKILLS_URL: Final[str] = (
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
 
-_PROJECT_GITIGNORE_SNIPPET: Final[str] = (
-    "# Streamlit agent skills (environment-specific symlinks)\n"
-    ".agents/skills/developing-with-streamlit/\n"
-    ".claude/skills/developing-with-streamlit/"
-)
+
+def _generate_gitignore_snippet(
+    skills: list[str], target_dirs: list[Path], project_root: Path
+) -> str:
+    """Generate a .gitignore snippet for installed skills.
+
+    Creates entries for each skill in each target directory, using paths
+    relative to the project root.
+    """
+    lines = ["# Streamlit agent skills (environment-specific symlinks)"]
+    for target_dir in target_dirs:
+        try:
+            rel_dir = target_dir.relative_to(project_root)
+        except ValueError:
+            rel_dir = target_dir
+        lines.extend(f"{rel_dir}/{skill_name}/" for skill_name in skills)
+    return "\n".join(lines)
 
 
 @dataclass
@@ -619,7 +631,10 @@ def _install_project_skills(
             )
         click.echo()
         click.secho("Recommended .gitignore snippet:", fg="bright_black", bold=True)
-        for line in _PROJECT_GITIGNORE_SNIPPET.splitlines():
+        gitignore_snippet = _generate_gitignore_snippet(
+            skills, target_dirs, project_root
+        )
+        for line in gitignore_snippet.splitlines():
             click.secho(f"  {line}", fg="bright_black")
     elif result.skipped:
         raise click.ClickException(
