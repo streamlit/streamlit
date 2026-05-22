@@ -460,18 +460,16 @@ class TestInstallSkillCopy:
         target = target_dir / "developing-with-streamlit"
         assert target.is_dir()
         assert (target / "SKILL.md").is_file()
-        assert (target / ".streamlit-skills").is_file()
         assert len(result.installed) == 1
 
-    def test_reports_up_to_date_for_matching_streamlit_owned_directory(
+    def test_reports_up_to_date_for_matching_directory(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Reports up to date when a managed copied skill matches source."""
+        """Reports up to date when copied skill matches source."""
         target_dir = tmp_path / "target" / "skills"
         target = target_dir / "developing-with-streamlit"
         target.mkdir(parents=True)
         (target / "SKILL.md").write_text("# Test Skill\n", encoding="utf-8")
-        (target / ".streamlit-skills").write_text("", encoding="utf-8")
 
         result = skills._InstallResult()
         with patch("pathlib.Path.home", return_value=tmp_path):
@@ -485,10 +483,10 @@ class TestInstallSkillCopy:
         assert len(result.installed) == 0
         assert len(result.up_to_date) == 1
 
-    def test_skips_existing_user_directory(
+    def test_replaces_existing_directory_with_skill_name(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Skips and reports conflict for existing user directory."""
+        """Replaces existing directory with skill name."""
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
         target = target_dir / "developing-with-streamlit"
@@ -504,18 +502,19 @@ class TestInstallSkillCopy:
                 result,
             )
 
-        assert any("existing file or directory" in s for s in result.skipped)
-        assert (target / "user-file.txt").is_file()
+        assert len(result.installed) == 1
+        assert (target / "SKILL.md").is_file()
+        # Old user file should be gone after replacement
+        assert not (target / "user-file.txt").exists()
 
-    def test_replaces_streamlit_owned_directory(
+    def test_replaces_existing_directory_with_different_content(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Replaces directories marked as Streamlit-owned."""
+        """Replaces existing directory even with different content."""
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
         target = target_dir / "developing-with-streamlit"
         target.mkdir()
-        (target / ".streamlit-skills").write_text("", encoding="utf-8")
         (target / "old-file.txt").write_text("old content", encoding="utf-8")
 
         result = skills._InstallResult()
@@ -530,6 +529,29 @@ class TestInstallSkillCopy:
         assert len(result.installed) == 1
         assert (target / "SKILL.md").is_file()
         assert not (target / "old-file.txt").exists()
+
+    def test_skips_existing_regular_file(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Skips when target is a regular file (not directory)."""
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.write_text("some file content", encoding="utf-8")
+
+        result = skills._InstallResult()
+        with patch("pathlib.Path.home", return_value=tmp_path):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        assert any("existing file" in s for s in result.skipped)
+        # Original file should be preserved
+        assert target.is_file()
+        assert target.read_text() == "some file content"
 
 
 class TestIsStreamlitOwnedSymlink:
@@ -582,35 +604,6 @@ class TestIsStreamlitOwnedSymlink:
         source.mkdir()
 
         assert not skills._is_streamlit_owned_symlink(regular_file, source)
-
-
-class TestIsStreamlitOwnedDirectory:
-    """Tests for _is_streamlit_owned_directory."""
-
-    def test_returns_true_for_directory_with_marker(self, tmp_path: Path) -> None:
-        """Returns True for directories containing .streamlit-skills marker."""
-        target = tmp_path / "skill"
-        target.mkdir()
-        (target / ".streamlit-skills").write_text("", encoding="utf-8")
-
-        assert skills._is_streamlit_owned_directory(target)
-
-    @pytest.mark.parametrize(
-        "setup",
-        ["dir_no_marker", "regular_file"],
-        ids=["directory-without-marker", "non-directory"],
-    )
-    def test_returns_false_for_non_owned_paths(
-        self, tmp_path: Path, setup: str
-    ) -> None:
-        """Returns False for directories without marker or regular files."""
-        target = tmp_path / "target"
-        if setup == "dir_no_marker":
-            target.mkdir()
-        else:
-            target.write_text("content", encoding="utf-8")
-
-        assert not skills._is_streamlit_owned_directory(target)
 
 
 class TestInstallSkillsCli:
@@ -1148,16 +1141,14 @@ class TestInstallSkillCopyEdgeCases:
 
         assert any("copy failed" in s for s in result.skipped)
 
-    def test_preserves_existing_owned_directory_on_copy_failure(
+    def test_preserves_existing_directory_on_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Preserves existing Streamlit-owned directory when copy to temp fails."""
+        """Preserves existing directory when copy to temp fails."""
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
         target = target_dir / "developing-with-streamlit"
         target.mkdir()
-        # Mark it as Streamlit-owned with old content
-        (target / skills._MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
         (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
 
         result = skills._InstallResult()
@@ -1173,9 +1164,8 @@ class TestInstallSkillCopyEdgeCases:
                 result,
             )
 
-        # Original should be preserved (has marker and old content)
+        # Original should be preserved with old content
         assert target.is_dir()
-        assert (target / skills._MANAGED_COPY_MARKER).is_file()
         assert (target / "SKILL.md").read_text() == "# Old version\n"
         assert any("copy failed" in s for s in result.skipped)
 
@@ -1339,10 +1329,11 @@ class TestGlobalInstallationConflicts:
         home = tmp_path / "home"
         home.mkdir(parents=True)
 
-        # Create conflicting user directory
-        conflict_dir = home / ".agents" / "skills" / "developing-with-streamlit"
-        conflict_dir.mkdir(parents=True)
-        (conflict_dir / "user-file.txt").write_text("user content", encoding="utf-8")
+        # Create conflicting regular file (not directory - directories are replaced)
+        skills_dir = home / ".agents" / "skills"
+        skills_dir.mkdir(parents=True)
+        conflict_file = skills_dir / "developing-with-streamlit"
+        conflict_file.write_text("existing file content", encoding="utf-8")
 
         with (
             patch("pathlib.Path.home", return_value=home),

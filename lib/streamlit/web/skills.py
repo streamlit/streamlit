@@ -39,7 +39,6 @@ _GLOBAL_SKILLS_URL: Final[str] = (
 
 # Skill name installed in global mode
 _GLOBAL_SKILL_NAME: Final[str] = "developing-with-streamlit"
-_MANAGED_COPY_MARKER: Final[str] = ".streamlit-skills"
 
 _PROJECT_GITIGNORE_SNIPPET: Final[str] = (
     "# Streamlit agent skills (environment-specific symlinks)\n"
@@ -179,26 +178,14 @@ def _is_streamlit_owned_symlink(link_path: Path, source_skills_dir: Path) -> boo
     return False
 
 
-def _is_streamlit_owned_directory(dir_path: Path) -> bool:
-    """Check if a directory appears to be a Streamlit-managed skill copy.
-
-    Returns True if the directory contains a .streamlit-skills marker file,
-    indicating it was installed by this command.
-    """
-    if not dir_path.is_dir():
-        return False
-    return (dir_path / _MANAGED_COPY_MARKER).is_file()
-
-
 def _relative_skill_paths(root: Path) -> list[tuple[str, str]]:
     """Return relative paths and path types for a copied skill directory."""
     paths = [
         (
-            rel_path.as_posix(),
+            path.relative_to(root).as_posix(),
             "dir" if path.is_dir() and not path.is_symlink() else "file",
         )
         for path in root.rglob("*")
-        if _MANAGED_COPY_MARKER not in (rel_path := path.relative_to(root)).parts
     ]
     return sorted(paths)
 
@@ -339,22 +326,21 @@ def _install_skill_copy(
     old_target_to_remove: Path | None = None
 
     if target_path.exists() or target_path.is_symlink():
-        # Target exists - check if it's a Streamlit-owned copy we can replace
+        # Target exists - check if we can replace it
         if target_path.is_symlink():
             if _is_streamlit_owned_symlink(target_path, source_dir):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
                 return
-        elif _is_streamlit_owned_directory(target_path):
+        elif target_path.is_dir():
             if _skill_copy_matches(source_path, target_path):
                 result.up_to_date.append(str(rel_target_path))
                 return
-            # Defer removal until after successful copy to avoid losing ownership
-            # marker if copy fails partway through
+            # Defer removal until after successful copy to ensure atomicity
             old_target_to_remove = target_path
         else:
-            result.skipped.append(f"{rel_target_path} (existing file or directory)")
+            result.skipped.append(f"{rel_target_path} (existing file)")
             return
 
     # Copy skill directory - use temp location first to ensure atomicity
@@ -365,15 +351,11 @@ def _install_skill_copy(
             if temp_path.exists():
                 shutil.rmtree(temp_path)
             shutil.copytree(source_path, temp_path)
-            # Add marker file to indicate Streamlit ownership
-            (temp_path / _MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
             # Now safe to remove old and rename new
             shutil.rmtree(old_target_to_remove)
             temp_path.rename(target_path)
         else:
             shutil.copytree(source_path, target_path)
-            # Add marker file to indicate Streamlit ownership
-            (target_path / _MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
         result.installed.append(str(rel_target_path))
     except OSError as e:
         # Clean up temp path if it exists
