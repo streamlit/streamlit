@@ -97,8 +97,11 @@ def _find_project_root() -> Path:
         if (parent / ".agents").exists() or (parent / ".claude").exists():
             return parent
 
-    # Walk up to find git root
+    # Walk up to find git root, also excluding home directory to avoid
+    # treating ~/.git as the project root.
     for parent in [cwd, *cwd.parents]:
+        if parent != cwd and parent == home:
+            break
         git_path = parent / ".git"
         if git_path.exists():
             return parent

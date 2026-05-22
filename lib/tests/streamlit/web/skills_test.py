@@ -180,6 +180,22 @@ class TestFindProjectRoot:
 
         assert result == subdir
 
+    def test_does_not_use_home_git_dir_as_project_root(self, tmp_path: Path) -> None:
+        """Does not treat ~/.git as the project root (rare but possible)."""
+        home = tmp_path / "home"
+        (home / ".git").mkdir(parents=True)
+        subdir = home / "workspace" / "project"
+        subdir.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=home),
+        ):
+            result = skills._find_project_root()
+
+        # Should fall back to cwd since ~/.git should be excluded
+        assert result == subdir
+
 
 class TestGetProjectTargetDirs:
     """Tests for _get_project_target_dirs."""
