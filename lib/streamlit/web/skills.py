@@ -156,15 +156,19 @@ def _is_streamlit_owned_symlink(link_path: Path, source_skills_dir: Path) -> boo
         ):
             return True
     except (OSError, ValueError):
+        # Broken symlink or resolution error - fall through to raw target check
         pass
 
     # Check raw link target for Streamlit skill pattern
     try:
         raw_target = os.readlink(link_path)
         skill_name = link_path.name
-        if f".agents/skills/{skill_name}" in raw_target:
+        # Normalize backslashes for Windows compatibility
+        normalized_target = raw_target.replace("\\", "/")
+        if f".agents/skills/{skill_name}" in normalized_target:
             return True
     except OSError:
+        # Unable to read symlink - treat as not Streamlit-owned
         pass
 
     return False
@@ -263,10 +267,11 @@ def _install_skill_symlink(
                     result.up_to_date.append(str(rel_target_path))
                     return True
             except (OSError, ValueError):
+                # Broken symlink or resolution error - check ownership pattern below
                 pass
 
             # Check if it's a Streamlit-owned symlink we can replace
-            if _is_streamlit_owned_symlink(target_path, source_dir.parent):
+            if _is_streamlit_owned_symlink(target_path, source_dir):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -288,8 +293,9 @@ def _install_skill_symlink(
         target_path.symlink_to(rel_source, target_is_directory=True)
         result.installed.append(str(rel_target_path))
         return True
-    except OSError:
-        # Symlink not supported (e.g., Windows without Developer Mode)
+    except (OSError, NotImplementedError):
+        # Symlink not supported (e.g., Windows without Developer Mode, or some
+        # environments where symlinks are not implemented)
         return False
 
 
@@ -310,7 +316,7 @@ def _install_skill_copy(
     if target_path.exists() or target_path.is_symlink():
         # Target exists - check if it's a Streamlit-owned copy we can replace
         if target_path.is_symlink():
-            if _is_streamlit_owned_symlink(target_path, source_dir.parent):
+            if _is_streamlit_owned_symlink(target_path, source_dir):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -353,11 +359,10 @@ def _download_global_skill(url: str, skill_name: str) -> Path:
     temp_dir = Path(tempfile.mkdtemp(prefix="streamlit-skills-"))
     try:
         with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-            # Security: validate paths before extraction
-            for member in tar.getmembers():
-                if member.name.startswith("/") or ".." in member.name:
-                    raise click.ClickException("Invalid archive: contains unsafe paths")
-            tar.extractall(temp_dir)  # noqa: S202
+            # Security: use filter='data' to prevent path traversal and other attacks.
+            # This blocks absolute paths, parent directory references (..),
+            # and special files (devices, fifos, etc.).
+            tar.extractall(temp_dir, filter="data")
     except tarfile.TarError as e:
         shutil.rmtree(temp_dir, ignore_errors=True)
         raise click.ClickException(f"Failed to extract skills archive: {e}") from e

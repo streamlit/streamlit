@@ -29,6 +29,20 @@ if TYPE_CHECKING:
     from pathlib import Path
 
 
+def _skip_if_symlinks_not_supported(tmp_path: Path) -> None:
+    """Skip test if symlinks are not supported on this system."""
+    test_link = tmp_path / ".symlink_test"
+    test_target = tmp_path / ".symlink_target"
+    test_target.mkdir(parents=True, exist_ok=True)
+    try:
+        test_link.symlink_to(test_target)
+        test_link.unlink()
+    except (OSError, NotImplementedError):
+        pytest.skip(
+            "Symlinks not supported on this system (requires privileges on Windows)"
+        )
+
+
 @pytest.fixture
 def runner() -> CliRunner:
     """Create a CliRunner for testing CLI commands."""
@@ -236,6 +250,7 @@ class TestInstallSkillSymlink:
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Creates a symlink to the source skill directory."""
+        _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "project" / ".agents" / "skills"
         result = skills._InstallResult()
 
@@ -260,6 +275,7 @@ class TestInstallSkillSymlink:
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Reports 'up to date' for existing symlink pointing to same source."""
+        _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "project" / ".agents" / "skills"
         target_dir.mkdir(parents=True)
         target = target_dir / "developing-with-streamlit"
@@ -327,6 +343,7 @@ class TestInstallSkillSymlink:
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Replaces broken symlinks that appear to be Streamlit-owned."""
+        _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "project" / ".agents" / "skills"
         target_dir.mkdir(parents=True)
         target = target_dir / "developing-with-streamlit"
@@ -447,6 +464,7 @@ class TestIsStreamlitOwnedSymlink:
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Returns True for symlinks resolving to the source skills dir."""
+        _skip_if_symlinks_not_supported(tmp_path)
         link = tmp_path / "link"
         target = mock_source_skills_dir / "developing-with-streamlit"
         link.symlink_to(target)
@@ -457,6 +475,7 @@ class TestIsStreamlitOwnedSymlink:
         self, tmp_path: Path
     ) -> None:
         """Returns True when raw target contains .agents/skills/<skill-name>."""
+        _skip_if_symlinks_not_supported(tmp_path)
         link = tmp_path / "developing-with-streamlit"
         link.symlink_to("../../old-env/.agents/skills/developing-with-streamlit")
 
@@ -468,6 +487,7 @@ class TestIsStreamlitOwnedSymlink:
 
     def test_returns_false_for_unrelated_symlink(self, tmp_path: Path) -> None:
         """Returns False for symlinks pointing elsewhere."""
+        _skip_if_symlinks_not_supported(tmp_path)
         link = tmp_path / "link"
         target = tmp_path / "unrelated"
         target.mkdir()
@@ -538,6 +558,7 @@ class TestInstallSkillsCli:
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """The --yes flag skips all confirmation prompts."""
+        _skip_if_symlinks_not_supported(tmp_path)
         project_dir = tmp_path / "project"
         project_dir.mkdir()
         (project_dir / ".git").mkdir()
@@ -618,6 +639,7 @@ class TestInstallSkillsCli:
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Installs skills to .agents/skills/ directory."""
+        _skip_if_symlinks_not_supported(tmp_path)
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
@@ -639,6 +661,7 @@ class TestInstallSkillsCli:
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Also installs to .claude/skills/ when ~/.claude exists."""
+        _skip_if_symlinks_not_supported(tmp_path)
         project_dir = tmp_path / "project"
         project_dir.mkdir()
         home = tmp_path / "home"
@@ -690,6 +713,7 @@ class TestInstallSkillsCli:
         self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
         """Re-running the command reports skills as up to date."""
+        _skip_if_symlinks_not_supported(tmp_path)
         project_dir = tmp_path / "project"
         project_dir.mkdir()
 
@@ -770,3 +794,102 @@ class TestPromptInstallMode:
         with patch("click.prompt", return_value=user_input):
             result = skills._prompt_install_mode()
         assert result == expected
+
+
+class TestConfirmProjectInstallation:
+    """Tests for _confirm_project_installation."""
+
+    def test_returns_false_when_user_declines(self, tmp_path: Path) -> None:
+        """Returns False when user declines installation."""
+        with patch("click.confirm", return_value=False):
+            result = skills._confirm_project_installation(
+                project_root=tmp_path,
+                skills=["test-skill"],
+                target_dirs=[tmp_path / ".agents" / "skills"],
+            )
+        assert result is False
+
+    def test_returns_true_when_user_confirms(self, tmp_path: Path) -> None:
+        """Returns True when user confirms installation."""
+        with patch("click.confirm", return_value=True):
+            result = skills._confirm_project_installation(
+                project_root=tmp_path,
+                skills=["test-skill"],
+                target_dirs=[tmp_path / ".agents" / "skills"],
+            )
+        assert result is True
+
+
+class TestConfirmGlobalInstallation:
+    """Tests for _confirm_global_installation."""
+
+    def test_returns_false_when_user_declines(self, tmp_path: Path) -> None:
+        """Returns False when user declines installation."""
+        with (
+            patch("click.confirm", return_value=False),
+            patch("pathlib.Path.home", return_value=tmp_path),
+        ):
+            result = skills._confirm_global_installation(
+                target_dirs=[tmp_path / ".agents" / "skills"],
+            )
+        assert result is False
+
+
+class TestInstallProjectSkillsConflicts:
+    """Tests for conflicts in project skills installation."""
+
+    def test_raises_when_all_skills_skipped_due_to_conflicts(
+        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Raises ClickException when all skills are skipped due to conflicts."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        # Create conflicting user directory that will cause skip
+        conflict_dir = project_dir / ".agents" / "skills" / "developing-with-streamlit"
+        conflict_dir.mkdir(parents=True)
+        (conflict_dir / "user-file.txt").write_text("user content", encoding="utf-8")
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = runner.invoke(cli.main, ["skills", "--yes"])
+
+        assert result.exit_code != 0
+        assert "No skills were installed due to conflicts" in result.output
+
+
+class TestInstallProjectSkillsCancellation:
+    """Tests for installation cancellation."""
+
+    def test_project_install_cancelled_by_user(
+        self, runner: CliRunner, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Returns early when user declines confirmation."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        project_dir = tmp_path / "project"
+        project_dir.mkdir()
+
+        with (
+            patch.object(
+                skills, "_get_source_skills_dir", return_value=mock_source_skills_dir
+            ),
+            patch("pathlib.Path.cwd", return_value=project_dir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+            patch.object(skills, "sys") as mock_sys,
+            patch.object(skills, "_prompt_install_mode", return_value="project"),
+            patch.object(skills, "_confirm_project_installation", return_value=False),
+        ):
+            mock_sys.stdin.isatty.return_value = True
+            result = runner.invoke(cli.main, ["skills"])
+
+        assert result.exit_code == 0
+        assert "Installation cancelled" in result.output
+        assert not (
+            project_dir / ".agents" / "skills" / "developing-with-streamlit"
+        ).exists()
