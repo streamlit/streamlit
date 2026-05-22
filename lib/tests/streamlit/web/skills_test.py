@@ -1202,57 +1202,6 @@ class TestInstallSkillSymlinkEdgeCases:
         assert not success
 
 
-class TestCleanupPartialSymlinks:
-    """Tests for _cleanup_partial_symlinks."""
-
-    def test_removes_streamlit_owned_symlinks(
-        self, tmp_path: Path, mock_source_skills_dir: Path
-    ) -> None:
-        """Removes symlinks that are named developing-with-streamlit."""
-        _skip_if_symlinks_not_supported(tmp_path)
-        target_dir = tmp_path / ".agents" / "skills"
-        target_dir.mkdir(parents=True)
-        link = target_dir / "developing-with-streamlit"
-        source = mock_source_skills_dir / "developing-with-streamlit"
-        link.symlink_to(source)
-
-        skills._cleanup_partial_symlinks([link])
-
-        assert not link.exists()
-
-    def test_ignores_non_streamlit_symlinks(self, tmp_path: Path) -> None:
-        """Does not remove symlinks with different names."""
-        _skip_if_symlinks_not_supported(tmp_path)
-        target_dir = tmp_path / ".agents" / "skills"
-        target_dir.mkdir(parents=True)
-        link = target_dir / "user-skill"
-        unrelated = tmp_path / "unrelated"
-        unrelated.mkdir()
-        link.symlink_to(unrelated)
-
-        skills._cleanup_partial_symlinks([link])
-
-        assert link.exists()
-
-    def test_continues_on_removal_error(
-        self, tmp_path: Path, mock_source_skills_dir: Path
-    ) -> None:
-        """Continues cleanup even if one removal fails."""
-        _skip_if_symlinks_not_supported(tmp_path)
-        target_dir = tmp_path / ".agents" / "skills"
-        target_dir.mkdir(parents=True)
-        link1 = target_dir / "developing-with-streamlit"
-        source = mock_source_skills_dir / "developing-with-streamlit"
-        link1.symlink_to(source)
-
-        # Mock unlink to fail
-        with patch.object(
-            type(link1), "unlink", side_effect=OSError("Permission denied")
-        ):
-            # Should not raise
-            skills._cleanup_partial_symlinks([link1])
-
-
 class TestPromptInstallModeRetry:
     """Tests for _prompt_install_mode retry behavior."""
 

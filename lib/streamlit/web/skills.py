@@ -201,22 +201,6 @@ def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
         return False
 
 
-def _cleanup_partial_symlinks(symlinks: list[Path]) -> None:
-    """Remove partial symlinks created during a failed installation attempt.
-
-    Best-effort cleanup: errors are silently ignored.
-    """
-    for link_path in symlinks:
-        # The try-except is intentionally inside the loop to continue cleanup
-        # even if one symlink removal fails. Performance overhead is acceptable
-        # since this is only called during error recovery with few symlinks.
-        try:
-            if _is_streamlit_owned_symlink(link_path):
-                link_path.unlink()
-        except OSError:  # noqa: PERF203
-            pass  # Best-effort cleanup
-
-
 def _get_display_path(
     target_path: Path, base_path: Path, use_tilde: bool = False
 ) -> Path:
@@ -570,29 +554,23 @@ def _install_project_skills(
     # Install skills
     result = _InstallResult()
     symlink_failed = False
-    created_symlinks: list[Path] = []
 
     for skill_name in skills:
         for target_dir in target_dirs:
-            target_path = target_dir / skill_name
-            installed_before = len(result.installed)
             success = _install_skill_symlink(
                 skill_name, source_skills_dir, target_dir, result
             )
             if not success:
                 symlink_failed = True
                 break
-            # Track successfully created symlinks for potential cleanup.
-            # A new entry in result.installed means this symlink was just created.
-            if len(result.installed) > installed_before:
-                created_symlinks.append(target_path)
         if symlink_failed:
             break
 
     # Handle symlink failure (Windows without Developer Mode)
     if symlink_failed and fallback_to_global:
-        # Clean up any partial symlinks created before the failure
-        _cleanup_partial_symlinks(created_symlinks)
+        # Don't clean up partial project symlinks - they're in a different location
+        # than global install (~/.agents vs project/.agents) and serve as fallback
+        # if global install fails.
         click.secho(
             "\n⚠ Symlinks not supported on this system.",
             fg="yellow",
@@ -600,7 +578,17 @@ def _install_project_skills(
         )
         click.echo("Falling back to global installation mode...")
         click.echo()
-        _install_global_skills(yes=yes)
+        try:
+            _install_global_skills(yes=yes)
+        except click.ClickException:
+            # Global install failed - partial project symlinks remain as fallback
+            raise
+        except click.exceptions.Abort:
+            # User cancelled global install - report that nothing was fully installed
+            raise click.ClickException(
+                "Installation incomplete. Project symlinks failed and global install "
+                "was cancelled."
+            )
         return
 
     if symlink_failed:
