@@ -976,10 +976,12 @@ class TestDownloadGlobalSkill:
             # Add a root directory
             root_info = tarfile.TarInfo(name="repo-v1/")
             root_info.type = tarfile.DIRTYPE
+            root_info.mode = 0o755  # Ensure directory is traversable
             tar.addfile(root_info)
             # Add a different skill
             other_skill = tarfile.TarInfo(name="repo-v1/other-skill/")
             other_skill.type = tarfile.DIRTYPE
+            other_skill.mode = 0o755
             tar.addfile(other_skill)
         tar_buffer.seek(0)
 
@@ -1002,10 +1004,12 @@ class TestDownloadGlobalSkill:
             # Add root directory
             root_info = tarfile.TarInfo(name="repo-v1/")
             root_info.type = tarfile.DIRTYPE
+            root_info.mode = 0o755  # Ensure directory is traversable
             tar.addfile(root_info)
             # Add skill directory
             skill_dir = tarfile.TarInfo(name="repo-v1/test-skill/")
             skill_dir.type = tarfile.DIRTYPE
+            skill_dir.mode = 0o755
             tar.addfile(skill_dir)
             # Add SKILL.md file
             skill_md = tarfile.TarInfo(name="repo-v1/test-skill/SKILL.md")
