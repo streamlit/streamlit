@@ -551,7 +551,7 @@ def _install_project_skills(
     # Confirm installation
     if not yes and not _confirm_project_installation(project_root, skills, target_dirs):
         click.echo("Installation cancelled.")
-        return
+        raise click.Abort()
 
     # Install skills
     result = _InstallResult()
@@ -635,7 +635,7 @@ def _install_global_skills(*, yes: bool = False) -> None:
     # Confirm installation
     if not yes and not _confirm_global_installation(target_dirs):
         click.echo("Installation cancelled.")
-        return
+        raise click.Abort()
 
     # Download skill from GitHub
     click.echo("Downloading skills from GitHub...")

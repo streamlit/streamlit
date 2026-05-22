@@ -964,7 +964,7 @@ class TestInstallProjectSkillsCancellation:
             mock_sys.stdin.isatty.return_value = True
             result = runner.invoke(cli.main, ["skills"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "Installation cancelled" in result.output
         assert not (
             project_dir / ".agents" / "skills" / "developing-with-streamlit"
@@ -1264,7 +1264,7 @@ class TestGlobalInstallationCancellation:
             mock_sys.stdin.isatty.return_value = True
             result = runner.invoke(cli.main, ["skills"])
 
-        assert result.exit_code == 0
+        assert result.exit_code == 1
         assert "Installation cancelled" in result.output
 
 
