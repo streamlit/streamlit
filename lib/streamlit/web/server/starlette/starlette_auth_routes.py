@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
@@ -81,6 +82,29 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
         "request_token_url",
     }
     return any(key in value for key in provider_keys)
+
+
+@lru_cache(maxsize=1)
+def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
+    """Create a Starlette OAuth class with Streamlit-specific OIDC behavior."""
+
+    class StreamlitStarletteOAuth2App(starlette_client.StarletteOAuth2App):  # type: ignore[misc]
+        async def load_server_metadata(self) -> dict[str, Any]:
+            """Enforce S256 PKCE if supported by the provider.
+
+            PKCE (Proof Key for Code Exchange) with S256 is a security best practice
+            that protects against authorization code interception attacks.
+            """
+            metadata = cast("dict[str, Any]", await super().load_server_metadata())
+            # Use `or []` to handle providers that return null for this field
+            if "S256" in (metadata.get("code_challenge_methods_supported") or []):
+                self.client_kwargs["code_challenge_method"] = "S256"
+            return metadata
+
+    class StreamlitStarletteOAuth(starlette_client.OAuth):  # type: ignore[misc]
+        oauth2_client_cls = StreamlitStarletteOAuth2App
+
+    return StreamlitStarletteOAuth
 
 
 class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
@@ -279,9 +303,10 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    oauth = starlette_client.OAuth(config=_AuthlibConfig(config))
+    oauth_class = _create_streamlit_oauth_class(starlette_client)
+    oauth = oauth_class(config=_AuthlibConfig(config))
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
+    return oauth.create_client(provider), redirect_uri
 
 
 def _parse_provider_token(provider_token: str | None) -> str | None:
@@ -359,7 +384,7 @@ def _get_cookie_value_from_request(request: Request, cookie_name: str) -> bytes 
     return get_cookie_with_chunks(get_single_cookie, cookie_name)
 
 
-def _get_provider_logout_url(request: Request) -> str | None:
+async def _get_provider_logout_url(request: Request) -> str | None:
     """Get the OAuth provider's logout URL from OIDC metadata.
 
     Returns the end_session_endpoint URL with proper parameters for OIDC logout,
@@ -382,8 +407,7 @@ def _get_provider_logout_url(request: Request) -> str | None:
         client, _ = _create_oauth_client(provider)
 
         # Load OIDC metadata - Authlib's Starlette client uses async methods
-        # but load_server_metadata is synchronous in both implementations
-        metadata = client.load_server_metadata()
+        metadata = await client.load_server_metadata()
         end_session_endpoint = metadata.get("end_session_endpoint")
 
         if not end_session_endpoint:
@@ -450,7 +474,7 @@ async def _auth_logout(request: Request, base_url: str) -> Response:
     """
     from starlette.responses import RedirectResponse
 
-    provider_logout_url = _get_provider_logout_url(request)
+    provider_logout_url = await _get_provider_logout_url(request)
 
     if provider_logout_url:
         response = RedirectResponse(provider_logout_url, status_code=302)
@@ -499,7 +523,18 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
         return await _redirect_to_base(base_url)
 
     client, _ = _create_oauth_client(provider)
-    token = await client.authorize_access_token(request)
+    try:
+        token = await client.authorize_access_token(request)
+    except Exception:
+        _LOGGER.warning(
+            "OAuth token exchange failed for provider '%s'. Clearing auth cookies.",
+            provider,
+            exc_info=True,
+        )
+        response = await _redirect_to_base(base_url)
+        _clear_auth_cookie(response, request)
+        return response
+
     user = token.get("userinfo") or {}
 
     response = await _redirect_to_base(base_url)
