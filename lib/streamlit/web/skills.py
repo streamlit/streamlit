@@ -85,7 +85,15 @@ def _find_project_root() -> Path:
     3. Otherwise, use cwd
     """
     cwd = Path.cwd()
-    home = Path.home()
+    # Resolve home to handle symlinks/bind mounts reaching home via another path
+    resolved_home = Path.home().resolve()
+
+    def _is_home(path: Path) -> bool:
+        """Check if path is the home directory, handling symlinks."""
+        try:
+            return path.resolve() == resolved_home
+        except OSError:
+            return False
 
     # Check if cwd or a project ancestor already has agent directories.
     # Exclude the user's home directory so ~/.claude is not mistaken for
@@ -93,7 +101,7 @@ def _find_project_root() -> Path:
     # Use is_dir() to ensure we only match directories, not files that happen
     # to be named .agents or .claude.
     for parent in [cwd, *cwd.parents]:
-        if parent == home:
+        if _is_home(parent):
             break
         if (parent / ".agents").is_dir() or (parent / ".claude").is_dir():
             return parent
@@ -101,7 +109,7 @@ def _find_project_root() -> Path:
     # Walk up to find git root, also excluding home directory to avoid
     # treating ~/.git as the project root (including when cwd == home).
     for parent in [cwd, *cwd.parents]:
-        if parent == home:
+        if _is_home(parent):
             break
         git_path = parent / ".git"
         if git_path.exists():
@@ -141,41 +149,13 @@ def _get_global_target_dirs() -> list[Path]:
     return targets
 
 
-def _is_streamlit_owned_symlink(link_path: Path, source_skills_dir: Path) -> bool:
+def _is_streamlit_owned_symlink(link_path: Path) -> bool:
     """Check if a symlink appears to be a Streamlit-managed skill link.
 
-    Returns True if the link resolves to the current source_skills_dir
-    or its raw target contains .agents/skills/<skill-name> pattern
-    (indicating a previous Streamlit install).
+    Returns True for any symlink named 'developing-with-streamlit' since
+    this name is specific enough that users are unlikely to create their own.
     """
-    if not link_path.is_symlink():
-        return False
-
-    # Check if it resolves to current source
-    try:
-        resolved = link_path.resolve()
-        if (
-            source_skills_dir in resolved.parents
-            or resolved.parent == source_skills_dir
-        ):
-            return True
-    except (OSError, ValueError):
-        # Broken symlink or resolution error - fall through to raw target check
-        pass
-
-    # Check raw link target for Streamlit skill pattern
-    try:
-        raw_target = os.readlink(link_path)
-        skill_name = link_path.name
-        # Normalize backslashes for Windows compatibility
-        normalized_target = raw_target.replace("\\", "/")
-        if f".agents/skills/{skill_name}" in normalized_target:
-            return True
-    except OSError:
-        # Unable to read symlink - treat as not Streamlit-owned
-        pass
-
-    return False
+    return link_path.is_symlink() and link_path.name == _GLOBAL_SKILL_NAME
 
 
 def _relative_skill_paths(root: Path) -> list[tuple[str, str]]:
@@ -221,7 +201,7 @@ def _symlinks_supported(project_root: Path, source_path: Path) -> bool:
         return False
 
 
-def _cleanup_partial_symlinks(symlinks: list[Path], source_skills_dir: Path) -> None:
+def _cleanup_partial_symlinks(symlinks: list[Path]) -> None:
     """Remove partial symlinks created during a failed installation attempt.
 
     Best-effort cleanup: errors are silently ignored.
@@ -231,9 +211,7 @@ def _cleanup_partial_symlinks(symlinks: list[Path], source_skills_dir: Path) -> 
         # even if one symlink removal fails. Performance overhead is acceptable
         # since this is only called during error recovery with few symlinks.
         try:
-            if link_path.is_symlink() and _is_streamlit_owned_symlink(
-                link_path, source_skills_dir
-            ):
+            if _is_streamlit_owned_symlink(link_path):
                 link_path.unlink()
         except OSError:  # noqa: PERF203
             pass  # Best-effort cleanup
@@ -281,7 +259,7 @@ def _install_skill_symlink(
                 pass
 
             # Check if it's a Streamlit-owned symlink we can replace
-            if _is_streamlit_owned_symlink(target_path, source_dir):
+            if _is_streamlit_owned_symlink(target_path):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -328,7 +306,7 @@ def _install_skill_copy(
     if target_path.exists() or target_path.is_symlink():
         # Target exists - check if we can replace it
         if target_path.is_symlink():
-            if _is_streamlit_owned_symlink(target_path, source_dir):
+            if _is_streamlit_owned_symlink(target_path):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -614,7 +592,7 @@ def _install_project_skills(
     # Handle symlink failure (Windows without Developer Mode)
     if symlink_failed and fallback_to_global:
         # Clean up any partial symlinks created before the failure
-        _cleanup_partial_symlinks(created_symlinks, source_skills_dir)
+        _cleanup_partial_symlinks(created_symlinks)
         click.secho(
             "\n⚠ Symlinks not supported on this system.",
             fg="yellow",

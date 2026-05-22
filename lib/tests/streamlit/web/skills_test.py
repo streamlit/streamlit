@@ -557,53 +557,34 @@ class TestInstallSkillCopy:
 class TestIsStreamlitOwnedSymlink:
     """Tests for _is_streamlit_owned_symlink."""
 
-    def test_returns_true_for_symlink_to_source_dir(
-        self, tmp_path: Path, mock_source_skills_dir: Path
-    ) -> None:
-        """Returns True for symlinks resolving to the source skills dir."""
+    def test_returns_true_for_symlink_with_skill_name(self, tmp_path: Path) -> None:
+        """Returns True for symlinks named developing-with-streamlit."""
         _skip_if_symlinks_not_supported(tmp_path)
-        link = tmp_path / "link"
-        target = mock_source_skills_dir / "developing-with-streamlit"
+        target = tmp_path / "target"
+        target.mkdir()
+        link = tmp_path / "developing-with-streamlit"
         link.symlink_to(target)
 
-        assert skills._is_streamlit_owned_symlink(link, mock_source_skills_dir)
+        assert skills._is_streamlit_owned_symlink(link)
 
-    def test_returns_true_for_agents_skills_pattern_in_target(
+    def test_returns_false_for_symlink_with_different_name(
         self, tmp_path: Path
     ) -> None:
-        """Returns True when raw target contains .agents/skills/<skill-name>."""
+        """Returns False for symlinks with a different name."""
         _skip_if_symlinks_not_supported(tmp_path)
-        link = tmp_path / "developing-with-streamlit"
-        link.symlink_to("../../old-env/.agents/skills/developing-with-streamlit")
-
-        # Use a different source dir to test pattern matching
-        other_source = tmp_path / "other"
-        other_source.mkdir()
-
-        assert skills._is_streamlit_owned_symlink(link, other_source)
-
-    def test_returns_false_for_unrelated_symlink(self, tmp_path: Path) -> None:
-        """Returns False for symlinks pointing elsewhere."""
-        _skip_if_symlinks_not_supported(tmp_path)
-        link = tmp_path / "link"
-        target = tmp_path / "unrelated"
+        target = tmp_path / "target"
         target.mkdir()
+        link = tmp_path / "other-skill"
         link.symlink_to(target)
 
-        source = tmp_path / "source"
-        source.mkdir()
-
-        assert not skills._is_streamlit_owned_symlink(link, source)
+        assert not skills._is_streamlit_owned_symlink(link)
 
     def test_returns_false_for_non_symlink(self, tmp_path: Path) -> None:
-        """Returns False for regular files."""
-        regular_file = tmp_path / "file.txt"
+        """Returns False for regular files or directories."""
+        regular_file = tmp_path / "developing-with-streamlit"
         regular_file.write_text("content", encoding="utf-8")
 
-        source = tmp_path / "source"
-        source.mkdir()
-
-        assert not skills._is_streamlit_owned_symlink(regular_file, source)
+        assert not skills._is_streamlit_owned_symlink(regular_file)
 
 
 class TestInstallSkillsCli:
@@ -1096,10 +1077,10 @@ class TestSkillCopyMatches:
 class TestInstallSkillCopyEdgeCases:
     """Additional edge case tests for _install_skill_copy."""
 
-    def test_skips_existing_unrelated_symlink(
+    def test_replaces_existing_symlink_with_skill_name(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Skips existing symlinks that aren't Streamlit-owned."""
+        """Replaces existing symlinks named developing-with-streamlit."""
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "target" / "skills"
         target_dir.mkdir(parents=True)
@@ -1118,8 +1099,9 @@ class TestInstallSkillCopyEdgeCases:
                 result,
             )
 
-        assert any("existing symlink" in s for s in result.skipped)
-        assert target.is_symlink()
+        assert len(result.installed) == 1
+        assert target.is_dir()
+        assert (target / "SKILL.md").is_file()
 
     def test_reports_copy_failure(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1173,10 +1155,10 @@ class TestInstallSkillCopyEdgeCases:
 class TestInstallSkillSymlinkEdgeCases:
     """Additional edge case tests for _install_skill_symlink."""
 
-    def test_skips_existing_unrelated_symlink(
+    def test_replaces_existing_symlink_with_skill_name(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Skips existing symlinks that aren't Streamlit-owned."""
+        """Replaces existing symlinks named developing-with-streamlit."""
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / "project" / ".agents" / "skills"
         target_dir.mkdir(parents=True)
@@ -1196,7 +1178,8 @@ class TestInstallSkillSymlinkEdgeCases:
             )
 
         assert success
-        assert any("existing symlink" in s for s in result.skipped)
+        assert len(result.installed) == 1
+        assert target.is_symlink()
 
     def test_returns_false_when_symlink_creation_fails(
         self, tmp_path: Path, mock_source_skills_dir: Path
@@ -1225,7 +1208,7 @@ class TestCleanupPartialSymlinks:
     def test_removes_streamlit_owned_symlinks(
         self, tmp_path: Path, mock_source_skills_dir: Path
     ) -> None:
-        """Removes symlinks that are identified as Streamlit-owned."""
+        """Removes symlinks that are named developing-with-streamlit."""
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / ".agents" / "skills"
         target_dir.mkdir(parents=True)
@@ -1233,14 +1216,12 @@ class TestCleanupPartialSymlinks:
         source = mock_source_skills_dir / "developing-with-streamlit"
         link.symlink_to(source)
 
-        skills._cleanup_partial_symlinks([link], mock_source_skills_dir)
+        skills._cleanup_partial_symlinks([link])
 
         assert not link.exists()
 
-    def test_ignores_non_streamlit_symlinks(
-        self, tmp_path: Path, mock_source_skills_dir: Path
-    ) -> None:
-        """Does not remove symlinks that aren't Streamlit-owned."""
+    def test_ignores_non_streamlit_symlinks(self, tmp_path: Path) -> None:
+        """Does not remove symlinks with different names."""
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / ".agents" / "skills"
         target_dir.mkdir(parents=True)
@@ -1249,7 +1230,7 @@ class TestCleanupPartialSymlinks:
         unrelated.mkdir()
         link.symlink_to(unrelated)
 
-        skills._cleanup_partial_symlinks([link], mock_source_skills_dir)
+        skills._cleanup_partial_symlinks([link])
 
         assert link.exists()
 
@@ -1260,29 +1241,16 @@ class TestCleanupPartialSymlinks:
         _skip_if_symlinks_not_supported(tmp_path)
         target_dir = tmp_path / ".agents" / "skills"
         target_dir.mkdir(parents=True)
-        link1 = target_dir / "skill1"
-        link2 = target_dir / "skill2"
+        link1 = target_dir / "developing-with-streamlit"
         source = mock_source_skills_dir / "developing-with-streamlit"
         link1.symlink_to(source)
-        link2.symlink_to(source)
 
-        call_count = 0
-        original_unlink = type(link1).unlink
-
-        def unlink_with_first_failure(self: Path, missing_ok: bool = False) -> None:
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                raise OSError("Permission denied")
-            return original_unlink(self, missing_ok=missing_ok)
-
-        # Mock Path.unlink to fail on first call
-        with patch.object(type(link1), "unlink", unlink_with_first_failure):
-            # Should not raise, and should continue to try link2
-            skills._cleanup_partial_symlinks([link1, link2], mock_source_skills_dir)
-
-        # At least one link should have been attempted for removal
-        assert call_count >= 1
+        # Mock unlink to fail
+        with patch.object(
+            type(link1), "unlink", side_effect=OSError("Permission denied")
+        ):
+            # Should not raise
+            skills._cleanup_partial_symlinks([link1])
 
 
 class TestPromptInstallModeRetry:
@@ -1380,14 +1348,12 @@ class TestInteractiveModeSelection:
 class TestIsStreamlitOwnedSymlinkErrorPaths:
     """Tests for error handling in _is_streamlit_owned_symlink."""
 
-    def test_handles_broken_symlink_resolution_error(
-        self, tmp_path: Path, mock_source_skills_dir: Path
-    ) -> None:
-        """Handles OSError during symlink resolution gracefully."""
+    def test_handles_broken_symlink(self, tmp_path: Path) -> None:
+        """Returns True for broken symlink with the correct name."""
         _skip_if_symlinks_not_supported(tmp_path)
         link = tmp_path / "developing-with-streamlit"
-        # Create broken symlink with Streamlit-like pattern
-        link.symlink_to("../nonexistent/.agents/skills/developing-with-streamlit")
+        # Create broken symlink
+        link.symlink_to("../nonexistent/target")
 
-        # Should return True based on raw target pattern check
-        assert skills._is_streamlit_owned_symlink(link, mock_source_skills_dir)
+        # Should return True based on name check
+        assert skills._is_streamlit_owned_symlink(link)
