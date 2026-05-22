@@ -67,9 +67,9 @@ export interface Props {
 }
 
 /**
- * Threshold above which "Select all" / "Select X matches" is disabled.
- * Selecting all items at once with very large option lists causes severe
- * performance issues (browser freezes, large serialization payloads).
+ * Threshold at or above which "Select all" / "Select X matches" is disabled.
+ * Selecting all items at once with very large option lists (>= 1000) causes
+ * severe performance issues (browser freezes, large serialization payloads).
  * See: https://github.com/streamlit/streamlit/issues/15299
  */
 const SELECT_ALL_THRESHOLD = 1000
