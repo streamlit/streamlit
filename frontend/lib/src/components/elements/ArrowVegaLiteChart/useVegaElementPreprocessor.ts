@@ -253,9 +253,12 @@ export const useVegaElementPreprocessor = (
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
 
-  // Stable key that changes only when non-dimension parts of the spec change.
-  // Allows distinguishing between spec changes (require full view recreation) and
-  // dimension-only changes (can use Vega's native resize API for better performance).
+  // Stable key that changes only when non-dimension parts of the spec change,
+  // OR when fixed (non-container-driven) dimensions change.
+  // Container-driven dimensions are excluded because they change frequently during
+  // resize and we handle those via Vega's native resize API for better performance.
+  // Fixed dimensions (from the spec itself) are included because they represent
+  // intentional user-specified sizes that should trigger a view recreation.
   const baseSpecKey = useMemo(() => {
     const baseSpec = generateSpec(
       inputSpec,
@@ -264,11 +267,19 @@ export const useVegaElementPreprocessor = (
       vegaLiteTheme,
       selectionMode,
       theme,
-      0, // Use 0 for dimensions to create a dimension-independent key
+      0, // Use 0 for container dimensions
       0
     )
-    const { width: _w, height: _h, ...specWithoutDimensions } = baseSpec
-    return JSON.stringify(specWithoutDimensions)
+    // Only strip dimensions that are container-driven.
+    // Fixed dimensions from the spec should be included in the key.
+    const specForKey = { ...baseSpec }
+    if (useContainerWidth) {
+      delete specForKey.width
+    }
+    if (useContainerHeight) {
+      delete specForKey.height
+    }
+    return JSON.stringify(specForKey)
   }, [
     inputSpec,
     useContainerWidth,

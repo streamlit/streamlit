@@ -183,7 +183,7 @@ const ArrowVegaLiteChart: FC<Props> = ({
     [showData]
   )
 
-  const useStretchWidth =
+  const baseStretchWidth =
     shouldWidthStretch(widthConfig) || inputElement.useContainerWidth
 
   const useStretchHeight = shouldHeightStretch(heightConfig)
@@ -197,6 +197,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // well with forced stretch width, as it can cause "infinite extent" errors.
   const hasNestedComp = hasNestedComposition(inputElement.spec)
 
+  // Facet charts should only use container width in fullscreen mode.
+  // Outside fullscreen, they use their natural size (determined by Vega-Lite).
+  // This prevents the infinite loop caused by container-driven facet sizing.
+  const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
+
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
   //    theming, container width, and full screen mode
@@ -205,8 +210,13 @@ const ArrowVegaLiteChart: FC<Props> = ({
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
   const element = useVegaElementPreprocessor(
     inputElement,
-    // Facet charts enter a loop when using the width/height from the StyledVegaLiteChartContainer.
-    isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth,
+    // Facet charts in fullscreen use fullScreenWidth; otherwise they use natural sizing (0).
+    // Non-facet charts always use chartContainerWidth.
+    isFacet
+      ? isFullScreen
+        ? (fullScreenWidth ?? 0)
+        : 0
+      : chartContainerWidth,
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
     // Don't force stretch width for nested compositions - they need natural sizing
     isFullScreen && !hasNestedComp ? true : useStretchWidth,
@@ -230,7 +240,13 @@ const ArrowVegaLiteChart: FC<Props> = ({
   const latestSpecRef = useRef(spec)
   latestSpecRef.current = spec
 
-  const currentWidth = isFacet ? (fullScreenWidth ?? 0) : chartContainerWidth
+  // For facet charts, only use fullScreenWidth when in fullscreen mode;
+  // otherwise, they use natural sizing (dimensions from the spec).
+  const currentWidth = isFacet
+    ? isFullScreen
+      ? (fullScreenWidth ?? 0)
+      : 0
+    : chartContainerWidth
   const currentHeight =
     (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
 
