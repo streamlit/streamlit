@@ -250,4 +250,60 @@ describe("Radio widget", () => {
       "horizontal"
     )
   })
+
+  it("ArrowDown moves selection to next option in vertical group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0, horizontal: false })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(first)
+    await user.keyboard("{ArrowDown}")
+
+    expect(second).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(1)
+  })
+
+  it("ArrowRight moves selection to next option in horizontal group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0, horizontal: true })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(first)
+    await user.keyboard("{ArrowRight}")
+
+    expect(second).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(1)
+  })
+
+  it("ArrowLeft moves selection to previous option in horizontal group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 1, horizontal: true })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(second)
+    await user.keyboard("{ArrowLeft}")
+
+    expect(first).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(0)
+  })
+
+  it("ArrowUp moves selection to previous option in vertical group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 1, horizontal: false })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(second)
+    await user.keyboard("{ArrowUp}")
+
+    expect(first).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(0)
+  })
 })

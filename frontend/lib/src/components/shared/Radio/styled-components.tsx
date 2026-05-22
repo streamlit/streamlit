@@ -41,6 +41,10 @@ export const StyledRadioGroup = styled(RARadioGroup, {
   flexDirection: $horizontal ? "row" : "column",
   flexWrap: "wrap",
   alignItems: "start",
+  // Horizontal groups always use `lg` (16px) between items regardless of
+  // captions, matching the effective spacing of the old BaseWeb implementation
+  // (which combined a `sm` per-item marginRight with a `sm` group gap = 16px).
+  // Vertical groups add `sm` between items only when captions are present.
   gap: $horizontal
     ? theme.spacing.lg
     : $hasCaptions
