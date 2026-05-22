@@ -72,6 +72,8 @@ st.multiselect(
 )
 ```
 
+> **Implementation note:** In Python, `bool` is a subclass of `int` (`True == 1`, `False == 0`). Implementations must check `isinstance(value, bool)` before `isinstance(value, int)` to avoid treating `True` as threshold `1` and `False` as threshold `0`.
+
 ### Parameter: `select_all`
 
 - **Type:** `bool | int`
@@ -83,7 +85,7 @@ st.multiselect(
 | `True` | Always show "Select all" regardless of option count |
 | `False` | Never show "Select all" |
 | `0` | Never show "Select all" (same as `False`) |
-| Integer > 0 | Show "Select all" only when the number of selectable options is at or below the threshold |
+| Integer > 0 | Show "Select all" only when there are 2 or more selectable options AND the count is at or below the threshold |
 
 The term "selectable options" refers to the options currently available for selection in the dropdown. For "Select all" (no search query), this is the total number of options minus already-selected options. For "Select X matches" (with search query), this is the number of filtered matches minus already-selected options.
 
@@ -138,9 +140,9 @@ selected = st.multiselect(
 The threshold is evaluated dynamically against the number of currently selectable options:
 
 - When no search query: threshold compared against `len(options) - len(selected)`
-- When search query is active: threshold compared against `len(filtered_matches) - len(selected)`
+- When search query is active: threshold compared against `len(filtered_matches) - len(selected_in_filtered)`, where `selected_in_filtered` is the count of already-selected options that appear in the filtered results
 
-This means "Select all" may appear or disappear as the user selects/deselects options or types a search query.
+This means "Select all" may appear or disappear as the user selects/deselects options or types a search query. Note: This dynamic behavior is intentional—it ensures users don't accidentally bulk-select large result sets when filtering narrows the view.
 
 **Interaction with "Select X matches":**
 
@@ -148,14 +150,16 @@ Both "Select all" and "Select X matches" are controlled by the same parameter. W
 
 **Interaction with `max_selections`:**
 
-The `select_all` threshold is independent of `max_selections`. If `max_selections=5` and `select_all=True`, "Select all" still appears but only selects up to 5 options. The existing behavior where `max_selections` limits how many get selected remains unchanged.
+The `select_all` threshold is evaluated against the number of unselected options, independent of `max_selections`. If `max_selections=5` and `select_all=True`, "Select all" still appears but only selects up to 5 options. The existing behavior where `max_selections` limits how many get selected remains unchanged.
+
+For threshold evaluation purposes, "selectable options" means options that are currently unselected, regardless of whether `max_selections` would prevent selecting all of them. This keeps the threshold calculation simple and predictable.
 
 **Edge cases:**
 
 | Scenario | Behavior |
 |----------|----------|
 | `select_all=0` | Same as `select_all=False` |
-| `select_all=-1` | Raises `StreamlitAPIException` |
+| `select_all < 0` (any negative integer) | Raises `StreamlitAPIException` |
 | Single option remaining | "Select all" never shown (requires 2+ selectable options) |
 | All options selected | "Select all" not shown (no selectable options) |
 
@@ -163,9 +167,11 @@ The `select_all` threshold is independent of `max_selections`. If `max_selection
 
 The default of `1000` was chosen because:
 
-1. **Backward compatibility:** Most `st.multiselect` uses have fewer than 1000 options, so existing apps won't notice a change
-2. **Performance safety:** Prevents browser freezes for very large option sets while still allowing the feature for typical use cases
-3. **Reasonable UX:** Users rarely need to select more than 1000 items at once; beyond that, server-side filtering or pagination is usually more appropriate
+1. **Performance safety:** Prevents browser freezes for very large option sets while still allowing the feature for typical use cases
+2. **Reasonable UX:** Users rarely need to select more than 1000 items at once; beyond that, server-side filtering or pagination is usually more appropriate
+3. **Compatibility for typical use cases:** Most `st.multiselect` uses have fewer than 1000 options, so existing apps won't notice a change
+
+> **Note:** Apps with more than 1000 options will no longer show "Select all" by default after this change. Set `select_all=True` to restore the previous behavior.
 
 ## Alternatives Considered
 
@@ -211,9 +217,9 @@ The frontend could measure device capabilities and auto-adjust the threshold.
 
 ## Checklist
 
-| Item                         | Status |
-|------------------------------|--------|
-| Works on SiS, Cloud, etc?    | Yes, frontend-only change |
+| Item                         | ✅ or comment |
+|------------------------------|---------------|
+| Works on SiS, Cloud, etc?    | Yes, full-stack change (Python + proto + frontend) |
 | No breaking API changes      | Yes, new optional parameter with sensible default |
 | No new dependencies          | Yes |
 | Metrics collected            | Track `select_all` parameter usage |
