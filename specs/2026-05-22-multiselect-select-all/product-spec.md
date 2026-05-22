@@ -225,9 +225,9 @@ The frontend could measure device capabilities and auto-adjust the threshold.
 
 | Item                         | ✅ or comment |
 |------------------------------|---------------|
-| Works on SiS, Cloud, etc?    | Yes, full-stack change (Python + proto + frontend) |
-| No breaking API changes      | Yes, new optional parameter with sensible default |
-| No new dependencies          | Yes |
-| Metrics collected            | Track `select_all` parameter usage |
-| Any security/legal impact?   | No impact |
-| Any docs changes needed?     | Yes, document new parameter |
+| Works on SiS, Cloud, etc?    | ✅ Yes, full-stack change (Python + proto + frontend) |
+| No breaking API changes      | ✅ Yes, new optional parameter with sensible default |
+| No new dependencies          | ✅ Yes |
+| Metrics collected            | ✅ Track `select_all` parameter usage |
+| Any security/legal impact?   | ✅ No impact |
+| Any docs changes needed?     | ✅ Yes, document new parameter |
