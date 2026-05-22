@@ -465,7 +465,11 @@ def _print_result(result: _InstallResult) -> None:
 def _prompt_install_mode() -> str:
     """Prompt user to select install mode."""
     click.echo()
-    click.secho("Streamlit Skills Installer", fg="magenta", bold=True)
+    click.secho(
+        "Install skills to enable agents to build better Streamlit apps",
+        fg="magenta",
+        bold=True,
+    )
     click.echo()
     click.echo("Install mode:")
     click.echo(
