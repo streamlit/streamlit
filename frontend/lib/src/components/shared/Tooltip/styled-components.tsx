@@ -14,7 +14,38 @@
  * limitations under the License.
  */
 
+import { keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
+import { Tooltip as RATooltip } from "react-aria-components"
+
+import { hasLightBackgroundColor } from "~lib/theme/getColors"
+
+const tooltipFadeIn = keyframes`
+  from { opacity: 0 }
+  to   { opacity: 1 }
+`
+
+// Pin the overlay to the viewport origin so React Aria's inline left/top
+// values have no visual effect. TooltipContentArea applies the correct
+// position via a JS-computed transform (translate) using getBoundingClientRect(),
+// which is immune to StrictMode double-runs, ResizeObserver cascades, and
+// CSS-transform ancestors in Streamlit's DOM.
+//
+// Stay hidden until React Aria sets data-placement (after updatePosition()
+// runs). By that point our useLayoutEffect transform is already applied,
+// so the tooltip reveals at the correct position without any flash.
+export const StyledTooltip = styled(RATooltip)`
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: max-content;
+  /* Prevent the large transparent portal area from blocking page scroll/clicks. */
+  pointer-events: none;
+
+  &:not([data-placement]) {
+    visibility: hidden;
+  }
+`
 
 export const StyledWrapper = styled.div({
   display: "table",
@@ -31,11 +62,24 @@ export const StyledEllipsizedDiv = styled.div({
 
 export const StyledTooltipContentWrapper = styled.div(({ theme }) => ({
   boxSizing: "border-box",
-  fontSize: `${theme.fontSizes.sm}`,
+  pointerEvents: "auto",
+  backgroundColor: hasLightBackgroundColor(theme)
+    ? theme.colors.bgColor
+    : theme.colors.secondaryBg,
+  color: theme.colors.bodyText,
+  fontSize: theme.fontSizes.sm,
+  fontWeight: theme.fontWeights.normal,
+  borderRadius: theme.radii.default,
+  boxShadow: theme.shadows.tooltip,
   maxWidth: `calc(${theme.sizes.contentMaxWidth} - 2 * ${theme.spacing.threeXL})`,
   maxHeight: theme.sizes.maxTooltipHeight,
   overflow: "auto",
   padding: `${theme.spacing.xs} ${theme.spacing.md}`,
+
+  // Fade in after a brief delay. The tooltip is hidden via the overlay's
+  // &:not([data-placement]) rule until React Aria finishes positioning, so
+  // this animation provides a smooth reveal from the correct final position.
+  animation: `${tooltipFadeIn} 120ms ease-in 50ms both`,
 
   [`@media (max-width: ${theme.breakpoints.sm})`]: {
     maxWidth: `calc(100% - ${theme.spacing.threeXL})`,

@@ -15,28 +15,32 @@
  */
 
 import {
+  createContext,
+  type CSSProperties,
   memo,
+  type MutableRefObject,
   ReactElement,
   ReactNode,
-  useCallback,
-  useEffect,
+  type Ref,
+  useContext,
+  useLayoutEffect,
   useRef,
-  useState,
 } from "react"
 
+import { useFocusWithin } from "react-aria"
 import {
-  ACCESSIBILITY_TYPE,
-  PLACEMENT,
-  type PopoverOverrides,
-  StatefulTooltip,
-} from "baseui/tooltip"
+  Focusable,
+  type Placement as RAPlacement,
+  TooltipTrigger,
+  TooltipTriggerStateContext,
+} from "react-aria-components"
 
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { hasLightBackgroundColor } from "~lib/theme/getColors"
-import type { EmotionTheme } from "~lib/theme/types"
+import { useWindowDimensionsContext } from "~lib/components/shared/WindowDimensions/useWindowDimensionsContext"
 
-import { StyledTooltipContentWrapper } from "./styled-components"
-import { useTooltipMeasurementSideEffect } from "./useTooltipMeasurementSideEffect"
+import {
+  StyledTooltip,
+  StyledTooltipContentWrapper,
+} from "./styled-components"
 
 export enum Placement {
   AUTO = "auto",
@@ -54,65 +58,287 @@ export enum Placement {
   LEFT_TOP = "leftTop",
 }
 
+/**
+ * Maps Streamlit's Placement enum to React Aria placement strings.
+ *
+ * TOP_LEFT and TOP_RIGHT both map to "top" (centered above the trigger).
+ * React Aria flips to "bottom" automatically when there is not enough space
+ * above (shouldFlip defaults to true).
+ */
+const REACT_ARIA_PLACEMENT: Record<Placement, RAPlacement> = {
+  [Placement.AUTO]: "top",
+  [Placement.TOP]: "top",
+  [Placement.TOP_LEFT]: "top",
+  [Placement.TOP_RIGHT]: "top",
+  [Placement.BOTTOM]: "bottom",
+  [Placement.BOTTOM_LEFT]: "bottom left",
+  [Placement.BOTTOM_RIGHT]: "bottom right",
+  [Placement.LEFT]: "left",
+  [Placement.LEFT_TOP]: "left top",
+  [Placement.LEFT_BOTTOM]: "left bottom",
+  [Placement.RIGHT]: "right",
+  [Placement.RIGHT_TOP]: "right top",
+  [Placement.RIGHT_BOTTOM]: "right bottom",
+}
+
 export interface TooltipProps {
   content: ReactNode
   placement: Placement
   children: ReactNode
   inline?: boolean
-  style?: React.CSSProperties
+  style?: CSSProperties
   onMouseEnterDelay?: number
-  overrides?: PopoverOverrides
   containerWidth?: boolean
   error?: boolean
 }
 
-// Allows re-use/customization of default tooltip overrides
-const generateDefaultTooltipOverrides = (
-  theme: EmotionTheme,
-  overrides?: PopoverOverrides
-): PopoverOverrides => {
-  const { colors, fontSizes, radii, fontWeights } = theme
+/** Shared ref to the trigger's DOM element, readable inside the tooltip portal. */
+const TriggerRefContext = createContext<MutableRefObject<Element | null>>({
+  current: null,
+})
+TriggerRefContext.displayName = "TriggerRefContext"
 
-  return {
-    Body: {
-      style: {
-        // This is annoying, but a bunch of warnings get logged when the
-        // shorthand version `borderRadius` is used here since the long
-        // names are used by BaseWeb and mixing the two is apparently
-        // bad :(
-        borderTopLeftRadius: radii.default,
-        borderTopRightRadius: radii.default,
-        borderBottomLeftRadius: radii.default,
-        borderBottomRightRadius: radii.default,
+/** px gap between trigger edge and tooltip edge */
+const TOOLTIP_OFFSET = 10
+/** px minimum distance between tooltip edge and viewport edge */
+const TOOLTIP_PADDING = 8
 
-        paddingTop: "0 !important",
-        paddingBottom: "0 !important",
-        paddingLeft: "0 !important",
-        paddingRight: "0 !important",
+/**
+ * Computes `position: fixed` (x, y) coordinates for the tooltip overlay using
+ * getBoundingClientRect() on the trigger. The result is always viewport-relative
+ * and correct regardless of page scroll, CSS transform ancestors, or any other
+ * DOM complexities that trip up React Aria's useOverlayPosition.
+ */
+function computeTooltipTransform(
+  triggerRect: DOMRect,
+  overlayW: number,
+  overlayH: number,
+  placement: RAPlacement,
+  viewportWidth: number,
+  viewportHeight: number
+): { x: number; y: number } {
+  const primaryAxis = (placement as string).split(" ")[0]
+  let x: number
+  let y: number
 
-        backgroundColor: "transparent",
-      },
-    },
-    Inner: {
-      style: {
-        backgroundColor: hasLightBackgroundColor(theme)
-          ? colors.bgColor
-          : colors.secondaryBg,
-        color: colors.bodyText,
-        fontSize: fontSizes.sm,
-        fontWeight: fontWeights.normal,
-
-        // See the long comment about `borderRadius`. The same applies here
-        // to `padding`.
-        paddingTop: "0 !important",
-        paddingBottom: "0 !important",
-        paddingLeft: "0 !important",
-        paddingRight: "0 !important",
-      },
-      // overrides prop replaces tooltip subcomponent overrides
-      ...overrides,
-    },
+  if (primaryAxis === "bottom") {
+    y = triggerRect.bottom + TOOLTIP_OFFSET
+    x = triggerRect.left + triggerRect.width / 2 - overlayW / 2
+    if (y + overlayH > viewportHeight - TOOLTIP_PADDING) {
+      y = triggerRect.top - overlayH - TOOLTIP_OFFSET
+    }
+  } else if (primaryAxis === "left") {
+    x = triggerRect.left - overlayW - TOOLTIP_OFFSET
+    y = triggerRect.top + triggerRect.height / 2 - overlayH / 2
+    if (x < TOOLTIP_PADDING) {
+      x = triggerRect.right + TOOLTIP_OFFSET
+    }
+  } else if (primaryAxis === "right") {
+    x = triggerRect.right + TOOLTIP_OFFSET
+    y = triggerRect.top + triggerRect.height / 2 - overlayH / 2
+    if (x + overlayW > viewportWidth - TOOLTIP_PADDING) {
+      x = triggerRect.left - overlayW - TOOLTIP_OFFSET
+    }
+  } else {
+    // "top" (default) and "auto"
+    y = triggerRect.top - overlayH - TOOLTIP_OFFSET
+    x = triggerRect.left + triggerRect.width / 2 - overlayW / 2
+    if (y < TOOLTIP_PADDING) {
+      y = triggerRect.bottom + TOOLTIP_OFFSET
+    }
   }
+
+  x = Math.max(
+    TOOLTIP_PADDING,
+    Math.min(x, viewportWidth - overlayW - TOOLTIP_PADDING)
+  )
+  y = Math.max(
+    TOOLTIP_PADDING,
+    Math.min(y, viewportHeight - overlayH - TOOLTIP_PADDING)
+  )
+
+  return { x, y }
+}
+
+interface TooltipContentAreaProps {
+  className: string
+  testId: string
+  placement: RAPlacement
+  children: ReactNode
+}
+
+/**
+ * TooltipContentArea renders the styled tooltip content and handles positioning.
+ *
+ * Positioning strategy: React Aria's useOverlayPosition sets inline left/top
+ * values that compound on each re-render in Streamlit's DOM (the calculated
+ * position doubles with each StrictMode or ResizeObserver re-run). We bypass
+ * this entirely with CSS `left: 0 !important; top: 0 !important` on the overlay
+ * and apply the correct position via `transform: translate(X, Y)` here, computed
+ * from getBoundingClientRect() on the trigger. This is immune to:
+ *   - StrictMode double-effects (same trigger rect → same result each run)
+ *   - ResizeObserver cascades (transform persists through React re-renders)
+ *   - CSS transform ancestors in Streamlit's DOM
+ *
+ * Interactive content: onPointerEnter/Leave keep the tooltip open while hovering
+ * interactive content like code blocks with copy buttons.
+ */
+function TooltipContentArea({
+  className,
+  testId,
+  placement,
+  children,
+}: TooltipContentAreaProps): ReactElement {
+  const state = useContext(TooltipTriggerStateContext)
+  const triggerRef = useContext(TriggerRefContext)
+  const wrapperRef = useRef<HTMLDivElement>(null)
+  const { innerWidth: viewportWidth, innerHeight: viewportHeight } =
+    useWindowDimensionsContext()
+
+  // Stable ref so applyPosition always calls close() on the latest state
+  // without adding state to the useLayoutEffect deps (which would re-attach
+  // the scroll listener whenever the context object identity changes).
+  const stateRef = useRef(state)
+  stateRef.current = state
+
+  useLayoutEffect(() => {
+    const triggerEl = triggerRef.current
+    const overlayEl = wrapperRef.current?.closest(
+      '[role="tooltip"]'
+    ) as HTMLElement | null
+    if (!triggerEl || !overlayEl) return
+
+    const applyPosition = (): void => {
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      const triggerRect = triggerEl.getBoundingClientRect()
+
+      // Close the tooltip if the trigger has scrolled fully out of the viewport.
+      // Without this, our clamping logic keeps the tooltip pinned at the viewport
+      // edge (e.g. y=8px) even after the trigger is no longer visible.
+      if (
+        triggerRect.bottom < 0 ||
+        triggerRect.top > viewportHeight ||
+        triggerRect.right < 0 ||
+        triggerRect.left > viewportWidth
+      ) {
+        stateRef.current?.close()
+        return
+      }
+
+      // Measure the CONTENT WRAPPER (wrapperRef) rather than the outer portal
+      // element (overlayEl). React Aria resets the portal's maxHeight to '100vh'
+      // between StrictMode double-invocations, inflating overlayEl.offsetHeight to
+      // the CSS max-height resolved value (e.g. 18.75rem → 353px at the user's
+      // browser font size). The content wrapper's CSS max-height caps it at the
+      // true visual height, giving a stable measurement across both runs.
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      const W = wrapperRef.current?.offsetWidth ?? overlayEl.offsetWidth
+      // eslint-disable-next-line streamlit-custom/no-force-reflow-access
+      const H = wrapperRef.current?.offsetHeight ?? overlayEl.offsetHeight
+      const { x, y } = computeTooltipTransform(
+        triggerRect,
+        W,
+        H,
+        placement,
+        viewportWidth,
+        viewportHeight
+      )
+      overlayEl.style.transform = `translate(${x}px, ${y}px)`
+    }
+
+    applyPosition()
+    // Reapply after a frame to capture the overlay's final rendered size.
+    const raf = requestAnimationFrame(applyPosition)
+
+    // Recompute on scroll: getBoundingClientRect() is viewport-relative, so the
+    // trigger's coordinates change when the page scrolls.
+    window.addEventListener("scroll", applyPosition, {
+      passive: true,
+      capture: true,
+    })
+
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("scroll", applyPosition, { capture: true })
+    }
+  }, [placement, triggerRef, viewportWidth, viewportHeight])
+
+  return (
+    <StyledTooltipContentWrapper
+      ref={wrapperRef}
+      className={className}
+      data-testid={testId}
+      onPointerEnter={() => state?.open(true)}
+      onPointerLeave={() => state?.close()}
+    >
+      {children}
+    </StyledTooltipContentWrapper>
+  )
+}
+
+interface TriggerAreaProps {
+  tag: "div" | "span"
+  style: CSSProperties
+  testId: string
+  className: string
+  children: ReactNode
+}
+
+/**
+ * TriggerArea renders the hoverable/focusable wrapper that activates the tooltip.
+ *
+ * It combines two event-routing strategies:
+ *
+ * 1. `Focusable` (from react-aria-components): forwards hover event handlers
+ *    (onPointerEnter/Leave) from FocusableContext into the DOM element.
+ *    TooltipTrigger injects these handlers via FocusableProvider context;
+ *    a plain div/span would ignore them entirely.
+ *
+ * 2. `useFocusWithin`: opens/closes the tooltip when any descendant receives
+ *    or loses focus.  React Aria's useFocus has a `target === currentTarget`
+ *    guard, so the triggerProps.onFocus injected via FocusableContext only
+ *    fires when the wrapper itself is the focused element — it never fires
+ *    when a child button is tabbed to.  useFocusWithin bypasses that guard by
+ *    listening to the native focusin/focusout events (which bubble) and
+ *    calling state.open/close directly via TooltipTriggerStateContext.
+ *
+ * The TriggerRefContext ref is attached to the Tag element. Focusable uses
+ * mergeRefs() under the hood (React 18 compatible), so both refs are called.
+ */
+function TriggerArea({
+  tag: Tag,
+  style,
+  testId,
+  className,
+  children,
+}: TriggerAreaProps): ReactElement {
+  const state = useContext(TooltipTriggerStateContext)
+  const triggerRef = useContext(TriggerRefContext)
+
+  const { focusWithinProps } = useFocusWithin({
+    onFocusWithin() {
+      state?.open(true)
+    },
+    onBlurWithin() {
+      state?.close(true)
+    },
+  })
+
+  return (
+    <Focusable excludeFromTabOrder>
+      <Tag
+        // Focusable wraps cloneElement with mergeRefs, so both this ref and
+        // Focusable's internal ref are called safely in React 18.
+        ref={triggerRef as Ref<HTMLDivElement>}
+        style={style}
+        data-testid={testId}
+        className={className}
+        {...focusWithinProps}
+      >
+        {children}
+      </Tag>
+    </Focusable>
+  )
 }
 
 function Tooltip({
@@ -122,114 +348,51 @@ function Tooltip({
   inline,
   style,
   onMouseEnterDelay,
-  overrides,
   containerWidth,
   error,
 }: TooltipProps): ReactElement {
-  const theme = useEmotionTheme()
-
-  // This section of code is to work around a timing issue with BaseWeb's Tooltip component
-
-  const [tooltipElement, setTooltipElement] = useState<HTMLDivElement | null>(
-    null
-  )
-  const [isOpen, setIsOpen] = useState(false)
-  const closeRef = useRef<(() => void) | null>(null)
-
-  const handleOpen = useCallback(() => {
-    setIsOpen(true)
-  }, [])
-  const handleClose = useCallback(() => {
-    setIsOpen(false)
-    closeRef.current = null
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      closeRef.current = null
-    }
-  }, [])
-
-  const handleKeyDownCapture = useCallback(
-    (event: React.KeyboardEvent<HTMLElement>) => {
-      if (event.key !== "Escape" || !isOpen) {
-        return
-      }
-
-      // BaseWeb tooltips don't consistently dismiss on Escape across trigger
-      // types. Close the tooltip without blurring the trigger to avoid
-      // disrupting keyboard navigation.
-      //
-      // Only close if the active element is inside this tooltip's wrapper to
-      // avoid unintended dismissal for unrelated controls.
-      const wrapper = event.currentTarget
-      const activeElement = wrapper.ownerDocument?.activeElement
-
-      if (
-        activeElement instanceof HTMLElement &&
-        wrapper.contains(activeElement)
-      ) {
-        closeRef.current?.()
-        event.preventDefault()
-        event.stopPropagation()
-      }
-    },
-    [isOpen]
-  )
-
-  useTooltipMeasurementSideEffect(tooltipElement, isOpen)
-
-  const tooltipOverrides = generateDefaultTooltipOverrides(theme, overrides)
-  const TooltipTargetTag = inline ? "span" : "div"
-
-  const renderContent = useCallback(
-    ({ close }: { close: () => void }) => {
-      closeRef.current = close
-      return (
-        <StyledTooltipContentWrapper
-          className={error ? "stTooltipErrorContent" : "stTooltipContent"}
-          data-testid={error ? "stTooltipErrorContent" : "stTooltipContent"}
-          ref={setTooltipElement}
-        >
-          {content}
-        </StyledTooltipContentWrapper>
-      )
-    },
-    [content, error, setTooltipElement]
-  )
+  const triggerRef = useRef<Element | null>(null)
+  const raPlacement = REACT_ARIA_PLACEMENT[placement]
 
   return (
-    <StatefulTooltip
-      onOpen={handleOpen}
-      onClose={handleClose}
-      content={content ? renderContent : null}
-      placement={PLACEMENT[placement]}
-      accessibilityType={ACCESSIBILITY_TYPE.tooltip}
-      showArrow={false}
-      popoverMargin={10}
-      onMouseEnterDelay={onMouseEnterDelay}
-      overrides={tooltipOverrides}
-    >
-      {/* BaseWeb manipulates its child, so we create a wrapper div for protection */}
-      <TooltipTargetTag
-        style={{
-          display: "flex",
-          flexDirection: "row",
-          justifyContent: inline ? "flex-end" : "",
-          width: containerWidth ? "100%" : "auto",
-          ...style,
-        }}
-        onKeyDownCapture={handleKeyDownCapture}
-        data-testid={
-          error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-        }
-        className={
-          error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
-        }
+    <TriggerRefContext.Provider value={triggerRef}>
+      <TooltipTrigger
+        delay={onMouseEnterDelay ?? 200}
+        closeDelay={300}
+        isDisabled={!content}
       >
-        {children}
-      </TooltipTargetTag>
-    </StatefulTooltip>
+        <TriggerArea
+          tag={inline ? "span" : "div"}
+          style={{
+            display: "flex",
+            flexDirection: "row",
+            justifyContent: inline ? "flex-end" : "",
+            width: containerWidth ? "100%" : "auto",
+            ...style,
+          }}
+          testId={error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"}
+          className={
+            error ? "stTooltipErrorHoverTarget" : "stTooltipHoverTarget"
+          }
+        >
+          {children}
+        </TriggerArea>
+        <StyledTooltip
+          placement={raPlacement}
+          offset={10}
+          shouldFlip
+          containerPadding={8}
+        >
+          <TooltipContentArea
+            className={error ? "stTooltipErrorContent" : "stTooltipContent"}
+            testId={error ? "stTooltipErrorContent" : "stTooltipContent"}
+            placement={raPlacement}
+          >
+            {content}
+          </TooltipContentArea>
+        </StyledTooltip>
+      </TooltipTrigger>
+    </TriggerRefContext.Provider>
   )
 }
 
