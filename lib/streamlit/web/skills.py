@@ -149,13 +149,13 @@ def _get_global_target_dirs() -> list[Path]:
     return targets
 
 
-def _is_streamlit_owned_symlink(link_path: Path) -> bool:
+def _is_streamlit_owned_symlink(link_path: Path, bundled_skill_names: set[str]) -> bool:
     """Check if a symlink appears to be a Streamlit-managed skill link.
 
-    Returns True for any symlink named 'developing-with-streamlit' since
-    this name is specific enough that users are unlikely to create their own.
+    Returns True for any symlink whose name matches a bundled skill, since
+    these names are specific enough that users are unlikely to create their own.
     """
-    return link_path.is_symlink() and link_path.name == _GLOBAL_SKILL_NAME
+    return link_path.is_symlink() and link_path.name in bundled_skill_names
 
 
 def _relative_skill_paths(root: Path) -> list[tuple[str, str]]:
@@ -217,6 +217,7 @@ def _install_skill_symlink(
     source_dir: Path,
     target_dir: Path,
     result: _InstallResult,
+    bundled_skill_names: set[str],
 ) -> bool:
     """Install a single skill as a symlink to the source directory.
 
@@ -243,7 +244,7 @@ def _install_skill_symlink(
                 pass
 
             # Check if it's a Streamlit-owned symlink we can replace
-            if _is_streamlit_owned_symlink(target_path):
+            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -276,6 +277,7 @@ def _install_skill_copy(
     source_dir: Path,
     target_dir: Path,
     result: _InstallResult,
+    bundled_skill_names: set[str],
 ) -> None:
     """Install a single skill by copying files to target directory."""
     source_path = source_dir / skill_name
@@ -290,7 +292,7 @@ def _install_skill_copy(
     if target_path.exists() or target_path.is_symlink():
         # Target exists - check if we can replace it
         if target_path.is_symlink():
-            if _is_streamlit_owned_symlink(target_path):
+            if _is_streamlit_owned_symlink(target_path, bundled_skill_names):
                 target_path.unlink()
             else:
                 result.skipped.append(f"{rel_target_path} (existing symlink)")
@@ -554,11 +556,12 @@ def _install_project_skills(
     # Install skills
     result = _InstallResult()
     symlink_failed = False
+    bundled_skill_names = set(skills)
 
     for skill_name in skills:
         for target_dir in target_dirs:
             success = _install_skill_symlink(
-                skill_name, source_skills_dir, target_dir, result
+                skill_name, source_skills_dir, target_dir, result, bundled_skill_names
             )
             if not success:
                 symlink_failed = True
@@ -641,9 +644,15 @@ def _install_global_skills(*, yes: bool = False) -> None:
     try:
         # Install to each target directory
         result = _InstallResult()
+        # For global install, only one skill is installed but we use a set for consistency
+        bundled_skill_names = {_GLOBAL_SKILL_NAME}
         for target_dir in target_dirs:
             _install_skill_copy(
-                _GLOBAL_SKILL_NAME, skill_path.parent, target_dir, result
+                _GLOBAL_SKILL_NAME,
+                skill_path.parent,
+                target_dir,
+                result,
+                bundled_skill_names,
             )
 
         # Report results

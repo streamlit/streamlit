@@ -335,6 +335,7 @@ class TestInstallSkillSymlink:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         target = target_dir / "developing-with-streamlit"
@@ -364,6 +365,7 @@ class TestInstallSkillSymlink:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert success
@@ -386,6 +388,7 @@ class TestInstallSkillSymlink:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert success
@@ -408,6 +411,7 @@ class TestInstallSkillSymlink:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert success
@@ -432,6 +436,7 @@ class TestInstallSkillSymlink:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert success
@@ -455,6 +460,7 @@ class TestInstallSkillCopy:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         target = target_dir / "developing-with-streamlit"
@@ -478,6 +484,7 @@ class TestInstallSkillCopy:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert len(result.installed) == 0
@@ -500,6 +507,7 @@ class TestInstallSkillCopy:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert len(result.installed) == 1
@@ -524,6 +532,7 @@ class TestInstallSkillCopy:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert len(result.installed) == 1
@@ -546,6 +555,7 @@ class TestInstallSkillCopy:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert any("existing file" in s for s in result.skipped)
@@ -565,7 +575,7 @@ class TestIsStreamlitOwnedSymlink:
         link = tmp_path / "developing-with-streamlit"
         link.symlink_to(target)
 
-        assert skills._is_streamlit_owned_symlink(link)
+        assert skills._is_streamlit_owned_symlink(link, {"developing-with-streamlit"})
 
     def test_returns_false_for_symlink_with_different_name(
         self, tmp_path: Path
@@ -577,14 +587,31 @@ class TestIsStreamlitOwnedSymlink:
         link = tmp_path / "other-skill"
         link.symlink_to(target)
 
-        assert not skills._is_streamlit_owned_symlink(link)
+        assert not skills._is_streamlit_owned_symlink(
+            link, {"developing-with-streamlit"}
+        )
+
+    def test_returns_true_for_symlink_in_bundled_set(self, tmp_path: Path) -> None:
+        """Returns True for symlinks whose name is in the bundled skill set."""
+        _skip_if_symlinks_not_supported(tmp_path)
+        target = tmp_path / "target"
+        target.mkdir()
+        link = tmp_path / "my-custom-skill"
+        link.symlink_to(target)
+
+        # When the skill name is in the bundled set, it should return True
+        assert skills._is_streamlit_owned_symlink(
+            link, {"developing-with-streamlit", "my-custom-skill"}
+        )
 
     def test_returns_false_for_non_symlink(self, tmp_path: Path) -> None:
         """Returns False for regular files or directories."""
         regular_file = tmp_path / "developing-with-streamlit"
         regular_file.write_text("content", encoding="utf-8")
 
-        assert not skills._is_streamlit_owned_symlink(regular_file)
+        assert not skills._is_streamlit_owned_symlink(
+            regular_file, {"developing-with-streamlit"}
+        )
 
 
 class TestInstallSkillsCli:
@@ -1097,6 +1124,7 @@ class TestInstallSkillCopyEdgeCases:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert len(result.installed) == 1
@@ -1119,6 +1147,7 @@ class TestInstallSkillCopyEdgeCases:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert any("copy failed" in s for s in result.skipped)
@@ -1144,6 +1173,7 @@ class TestInstallSkillCopyEdgeCases:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         # Original should be preserved with old content
@@ -1175,6 +1205,7 @@ class TestInstallSkillSymlinkEdgeCases:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert success
@@ -1197,6 +1228,7 @@ class TestInstallSkillSymlinkEdgeCases:
                 mock_source_skills_dir,
                 target_dir,
                 result,
+                {"developing-with-streamlit"},
             )
 
         assert not success
@@ -1305,4 +1337,4 @@ class TestIsStreamlitOwnedSymlinkErrorPaths:
         link.symlink_to("../nonexistent/target")
 
         # Should return True based on name check
-        assert skills._is_streamlit_owned_symlink(link)
+        assert skills._is_streamlit_owned_symlink(link, {"developing-with-streamlit"})
