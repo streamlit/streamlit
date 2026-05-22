@@ -200,6 +200,29 @@ class TestFindProjectRoot:
         # Should fall back to cwd since ~/.git should be excluded
         assert result == subdir
 
+    @pytest.mark.parametrize(
+        "marker_name",
+        [".agents", ".claude"],
+        ids=["agents-file", "claude-file"],
+    )
+    def test_ignores_marker_files_only_matches_directories(
+        self, tmp_path: Path, marker_name: str
+    ) -> None:
+        """Ignores .agents or .claude files (only directories count as markers)."""
+        # Create a file named .agents or .claude (not a directory)
+        (tmp_path / marker_name).write_text("not a directory", encoding="utf-8")
+        subdir = tmp_path / "sub" / "dir"
+        subdir.mkdir(parents=True)
+
+        with (
+            patch("pathlib.Path.cwd", return_value=subdir),
+            patch("pathlib.Path.home", return_value=tmp_path / "home"),
+        ):
+            result = skills._find_project_root()
+
+        # Should fall back to cwd since file markers don't count
+        assert result == subdir
+
 
 class TestGetProjectTargetDirs:
     """Tests for _get_project_target_dirs."""
@@ -1087,6 +1110,37 @@ class TestInstallSkillCopyEdgeCases:
                 result,
             )
 
+        assert any("copy failed" in s for s in result.skipped)
+
+    def test_preserves_existing_owned_directory_on_copy_failure(
+        self, tmp_path: Path, mock_source_skills_dir: Path
+    ) -> None:
+        """Preserves existing Streamlit-owned directory when copy to temp fails."""
+        target_dir = tmp_path / "target" / "skills"
+        target_dir.mkdir(parents=True)
+        target = target_dir / "developing-with-streamlit"
+        target.mkdir()
+        # Mark it as Streamlit-owned with old content
+        (target / skills._MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
+        (target / "SKILL.md").write_text("# Old version\n", encoding="utf-8")
+
+        result = skills._InstallResult()
+
+        with (
+            patch("pathlib.Path.home", return_value=tmp_path),
+            patch.object(skills.shutil, "copytree", side_effect=OSError("Disk full")),
+        ):
+            skills._install_skill_copy(
+                "developing-with-streamlit",
+                mock_source_skills_dir,
+                target_dir,
+                result,
+            )
+
+        # Original should be preserved (has marker and old content)
+        assert target.is_dir()
+        assert (target / skills._MANAGED_COPY_MARKER).is_file()
+        assert (target / "SKILL.md").read_text() == "# Old version\n"
         assert any("copy failed" in s for s in result.skipped)
 
 

@@ -91,10 +91,12 @@ def _find_project_root() -> Path:
     # Check if cwd or a project ancestor already has agent directories.
     # Stop before the user's home directory so ~/.claude is not mistaken for
     # a project-local Claude configuration.
+    # Use is_dir() to ensure we only match directories, not files that happen
+    # to be named .agents or .claude.
     for parent in [cwd, *cwd.parents]:
         if parent != cwd and parent == home:
             break
-        if (parent / ".agents").exists() or (parent / ".claude").exists():
+        if (parent / ".agents").is_dir() or (parent / ".claude").is_dir():
             return parent
 
     # Walk up to find git root, also excluding home directory to avoid
@@ -334,6 +336,8 @@ def _install_skill_copy(
     # Ensure parent directory exists
     target_dir.mkdir(parents=True, exist_ok=True)
 
+    old_target_to_remove: Path | None = None
+
     if target_path.exists() or target_path.is_symlink():
         # Target exists - check if it's a Streamlit-owned copy we can replace
         if target_path.is_symlink():
@@ -346,18 +350,36 @@ def _install_skill_copy(
             if _skill_copy_matches(source_path, target_path):
                 result.up_to_date.append(str(rel_target_path))
                 return
-            shutil.rmtree(target_path)
+            # Defer removal until after successful copy to avoid losing ownership
+            # marker if copy fails partway through
+            old_target_to_remove = target_path
         else:
             result.skipped.append(f"{rel_target_path} (existing file or directory)")
             return
 
-    # Copy skill directory
+    # Copy skill directory - use temp location first to ensure atomicity
     try:
-        shutil.copytree(source_path, target_path)
-        # Add marker file to indicate Streamlit ownership
-        (target_path / _MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
+        if old_target_to_remove is not None:
+            # Copy to temp location, then swap
+            temp_path = target_path.with_name(f".{skill_name}.tmp")
+            if temp_path.exists():
+                shutil.rmtree(temp_path)
+            shutil.copytree(source_path, temp_path)
+            # Add marker file to indicate Streamlit ownership
+            (temp_path / _MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
+            # Now safe to remove old and rename new
+            shutil.rmtree(old_target_to_remove)
+            temp_path.rename(target_path)
+        else:
+            shutil.copytree(source_path, target_path)
+            # Add marker file to indicate Streamlit ownership
+            (target_path / _MANAGED_COPY_MARKER).write_text("", encoding="utf-8")
         result.installed.append(str(rel_target_path))
     except OSError as e:
+        # Clean up temp path if it exists
+        temp_path = target_path.with_name(f".{skill_name}.tmp")
+        if temp_path.exists():
+            shutil.rmtree(temp_path, ignore_errors=True)
         result.skipped.append(f"{rel_target_path} (copy failed: {e})")
 
 
