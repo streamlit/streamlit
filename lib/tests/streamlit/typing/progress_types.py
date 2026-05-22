@@ -74,3 +74,16 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid value type (not int or float)
+    progress("invalid_string")  # type: ignore[arg-type]
+
+    # Invalid text type (not str or None)
+    progress(50, text=123)  # type: ignore[arg-type]
+
+    # Invalid width value (not "stretch" or int)
+    progress(50, width="full")  # type: ignore[arg-type]
