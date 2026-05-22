@@ -201,6 +201,7 @@ st.multiselect(..., select_all=True)  # Default True
 | Name | Pros | Cons |
 |------|------|------|
 | `select_all` (chosen) | Clear, matches feature name | - |
+| `enable_select_all` | Explicit about enabling/disabling | Verbose, less natural with threshold values |
 | `show_select_all` | More explicit about visibility | Verbose |
 | `select_all_threshold` | Clear about threshold behavior | Doesn't work well with `False` |
 | `bulk_select` | Avoids "all" confusion | Less intuitive |
