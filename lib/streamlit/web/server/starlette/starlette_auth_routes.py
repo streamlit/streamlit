@@ -96,7 +96,8 @@ def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
             that protects against authorization code interception attacks.
             """
             metadata = cast("dict[str, Any]", await super().load_server_metadata())
-            if "S256" in metadata.get("code_challenge_methods_supported", []):
+            # Use `or []` to handle providers that return null for this field
+            if "S256" in (metadata.get("code_challenge_methods_supported") or []):
                 self.client_kwargs["code_challenge_method"] = "S256"
             return metadata
 
