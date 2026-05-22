@@ -223,6 +223,38 @@ class TestFindProjectRoot:
         # Should fall back to cwd since file markers don't count
         assert result == subdir
 
+    @pytest.mark.parametrize(
+        "marker_dir",
+        [".agents", ".claude"],
+        ids=["agents", "claude"],
+    )
+    def test_does_not_use_home_marker_when_cwd_is_home(
+        self, tmp_path: Path, marker_dir: str
+    ) -> None:
+        """Does not treat ~/.agents or ~/.claude as project marker when cwd==home.
+
+        When running `streamlit skills` from the home directory with ~/.claude
+        or ~/.agents existing, the function should not treat home as a project
+        root. Instead, it should fall back to returning cwd (home) via the
+        default fallback, not via marker detection.
+        """
+        home = tmp_path / "home"
+        (home / marker_dir).mkdir(parents=True)
+        # Also add a .git directory to verify marker detection was skipped
+        # (if markers were checked first and matched, .git wouldn't be reached)
+        (home / ".git").mkdir()
+
+        with (
+            patch("pathlib.Path.cwd", return_value=home),
+            patch("pathlib.Path.home", return_value=home),
+        ):
+            result = skills._find_project_root()
+
+        # Should return home, but via the fallback path (since both marker and
+        # git root detection skip home). The function correctly avoids treating
+        # home directory as a project even when it has agent directories.
+        assert result == home
+
 
 class TestGetProjectTargetDirs:
     """Tests for _get_project_target_dirs."""

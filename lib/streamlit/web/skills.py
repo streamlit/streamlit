@@ -89,20 +89,20 @@ def _find_project_root() -> Path:
     home = Path.home()
 
     # Check if cwd or a project ancestor already has agent directories.
-    # Stop before the user's home directory so ~/.claude is not mistaken for
-    # a project-local Claude configuration.
+    # Exclude the user's home directory so ~/.claude is not mistaken for
+    # a project-local Claude configuration (including when cwd == home).
     # Use is_dir() to ensure we only match directories, not files that happen
     # to be named .agents or .claude.
     for parent in [cwd, *cwd.parents]:
-        if parent != cwd and parent == home:
+        if parent == home:
             break
         if (parent / ".agents").is_dir() or (parent / ".claude").is_dir():
             return parent
 
     # Walk up to find git root, also excluding home directory to avoid
-    # treating ~/.git as the project root.
+    # treating ~/.git as the project root (including when cwd == home).
     for parent in [cwd, *cwd.parents]:
-        if parent != cwd and parent == home:
+        if parent == home:
             break
         git_path = parent / ".git"
         if git_path.exists():
@@ -611,16 +611,16 @@ def _install_project_skills(
     for skill_name in skills:
         for target_dir in target_dirs:
             target_path = target_dir / skill_name
+            installed_before = len(result.installed)
             success = _install_skill_symlink(
                 skill_name, source_skills_dir, target_dir, result
             )
             if not success:
                 symlink_failed = True
                 break
-            # Track successfully created symlinks for potential cleanup
-            if target_path.is_symlink() and str(target_path) in [
-                str(Path.cwd() / p) for p in result.installed
-            ]:
+            # Track successfully created symlinks for potential cleanup.
+            # A new entry in result.installed means this symlink was just created.
+            if len(result.installed) > installed_before:
                 created_symlinks.append(target_path)
         if symlink_failed:
             break
