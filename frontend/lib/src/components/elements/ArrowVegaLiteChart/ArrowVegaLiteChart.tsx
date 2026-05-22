@@ -274,8 +274,12 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // Handle dimension-only changes using Vega's native resize API.
   // This is much faster than recreating the entire view (~3.6x speedup).
+  // Only resize if at least one dimension uses container-driven sizing.
+  // For fixed-dimension charts, the dimensions are defined in the spec and
+  // should not be overridden by container size changes.
+  const shouldResize = useStretchWidth || useStretchHeight || isFullScreen
   useEffect(() => {
-    if (!isViewReady) {
+    if (!isViewReady || !shouldResize) {
       return
     }
 
@@ -284,13 +288,18 @@ const ArrowVegaLiteChart: FC<Props> = ({
       lastDims?.width !== currentWidth ||
       lastDims?.height !== currentHeight
     ) {
-      lastDimensionsRef.current = {
-        width: currentWidth,
-        height: currentHeight,
-      }
-      void resizeView(currentWidth, currentHeight)
+      // Use an async IIFE to await resizeView and only update cache on success
+      void (async () => {
+        const success = await resizeView(currentWidth, currentHeight)
+        if (success) {
+          lastDimensionsRef.current = {
+            width: currentWidth,
+            height: currentHeight,
+          }
+        }
+      })()
     }
-  }, [isViewReady, resizeView, currentWidth, currentHeight])
+  }, [isViewReady, shouldResize, resizeView, currentWidth, currentHeight])
 
   // The references to data and datasets will always change each rerun
   // because the forward message always produces new references, so
