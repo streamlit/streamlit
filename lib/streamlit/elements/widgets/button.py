@@ -478,6 +478,12 @@ class ButtonMixin:
             your data for download. For more information, see the Example 1
             below.
 
+            .. note::
+                When passing a file path via :class:`pathlib.Path`, the file is
+                read into memory during widget rendering on each script rerun.
+                For large files, prefer the callable form to avoid loading the
+                file into memory until the user clicks the download button.
+
         file_name: str
             An optional string to use as the name of the file to be downloaded,
             such as ``"my_file.csv"``. If not specified, the name will be
@@ -1362,8 +1368,13 @@ class ButtonMixin:
                 guessed_mime, _ = mimetypes.guess_type(path_str)
                 if guessed_mime is not None:
                     mime = guessed_mime
-            with open(path_str, "rb") as f:
-                data = f.read()
+            try:
+                with open(path_str, "rb") as f:
+                    data = f.read()
+            except (FileNotFoundError, PermissionError) as e:
+                raise StreamlitAPIException(
+                    f"Path does not exist or is not readable: {path_str}"
+                ) from e
 
         check_widget_policies(
             self.dg,

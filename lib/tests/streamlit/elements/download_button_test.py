@@ -164,6 +164,13 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         assert not c2.HasField("deferred_file_id")
         assert "/media/" in c2.url
 
+    def _last_file(self):
+        """Return the most recently stored MemoryFile."""
+        files = self.media_file_storage._files_by_id
+        # Get the last inserted file (Python 3.7+ dict order)
+        last_id = next(reversed(files))
+        return files[last_id]
+
     def test_path_data(self, tmp_path):
         """Test that Path objects are handled correctly."""
         p = tmp_path / "test.txt"
@@ -173,6 +180,8 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         c = self.get_delta_from_queue().new_element.download_button
         assert not c.HasField("deferred_file_id")
         assert "/media/" in c.url
+        f = self._last_file()
+        assert f.content == b"hello from path"
 
     def test_path_data_infers_file_name(self, tmp_path):
         """Test that file_name is inferred from path when not provided."""
@@ -182,8 +191,8 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         assert "/media/" in c.url
-        # The file is stored with the inferred name; the URL should contain it
-        assert "myfile" in c.url
+        f = self._last_file()
+        assert f.file_name == "myfile.txt"
 
     def test_path_data_infers_mime(self, tmp_path):
         """Test that mime is inferred from file extension when not provided."""
@@ -193,7 +202,8 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         assert "/media/" in c.url
-        assert "data" in c.url
+        f = self._last_file()
+        assert f.mimetype == "text/csv"
 
     def test_path_data_explicit_file_name(self, tmp_path):
         """Test that explicit file_name overrides path inference."""
@@ -203,7 +213,8 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         assert "/media/" in c.url
-        assert "custom" in c.url
+        f = self._last_file()
+        assert f.file_name == "custom.txt"
 
     def test_path_data_explicit_mime(self, tmp_path):
         """Test that explicit mime overrides path inference."""
@@ -213,3 +224,5 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
 
         c = self.get_delta_from_queue().new_element.download_button
         assert "/media/" in c.url
+        f = self._last_file()
+        assert f.mimetype == "application/json"
