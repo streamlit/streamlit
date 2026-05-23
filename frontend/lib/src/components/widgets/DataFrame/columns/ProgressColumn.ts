@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  GridCell,
-  GridCellKind,
-  LoadingCell,
-} from "@glideapps/glide-data-grid"
+import { GridCell, GridCellKind, LoadingCell } from "@glideapps/glide-data-grid"
 import { RangeCellType } from "@glideapps/glide-data-grid-cells"
 
 import { isIntegerType } from "~lib/dataframes/arrowTypeUtils"
@@ -67,14 +63,15 @@ export interface ProgressColumnParams {
   readonly color?: ChartColor
 }
 
+type ProgressCellData = RangeCellType["data"] & {
+  readonly rawValue?: number
+}
+
 /**
  * A read-only column type to support rendering values that have a defined
  * range. This is rendered via a progress-bar-like visualization.
  */
-function ProgressColumn(
-  props: BaseColumnProps,
-  theme: EmotionTheme
-): BaseColumn {
+function ProgressColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn {
   const isInteger = isIntegerType(props.arrowType)
 
   const parameters = mergeColumnParameters<ProgressColumnParams>(
@@ -98,11 +95,7 @@ function ProgressColumn(
   // Measure the display value of the max value, so that all progress bars are aligned correctly:
   let measureLabel: string
   try {
-    measureLabel = formatNumber(
-      parameters.max_value as number,
-      parameters.format,
-      fixedDecimals
-    )
+    measureLabel = formatNumber(parameters.max_value as number, parameters.format, fixedDecimals)
   } catch {
     measureLabel = toSafeString(parameters.max_value)
   }
@@ -152,10 +145,7 @@ function ProgressColumn(
         )
       }
 
-      if (
-        notNullOrUndefined(parameters.step) &&
-        Number.isNaN(parameters.step)
-      ) {
+      if (notNullOrUndefined(parameters.step) && Number.isNaN(parameters.step)) {
         return getErrorCell(
           "Invalid step parameter",
           `The step parameter (${parameters.step}) must be a valid number.`
@@ -165,10 +155,7 @@ function ProgressColumn(
       const cellData = toSafeNumber(data)
 
       if (Number.isNaN(cellData) || isNullOrUndefined(cellData)) {
-        return getErrorCell(
-          toSafeString(data),
-          "The value cannot be interpreted as a number."
-        )
+        return getErrorCell(toSafeString(data), "The value cannot be interpreted as a number.")
       }
 
       // Check if the value is larger than the maximum supported value:
@@ -206,17 +193,12 @@ function ProgressColumn(
       if (parameters.color === "auto" || parameters.color === "auto-inverse") {
         // Use min/max to determine threshold at 50%
         const range = parameters.max_value - parameters.min_value
-        const ratio =
-          range === 0 ? 0 : (normalizeCellValue - parameters.min_value) / range
+        const ratio = range === 0 ? 0 : (normalizeCellValue - parameters.min_value) / range
         const isAbove = ratio > 0.5
         if (parameters.color === "auto") {
-          progressColor = isAbove
-            ? theme?.colors.greenColor
-            : theme?.colors.redColor
+          progressColor = isAbove ? theme?.colors.greenColor : theme?.colors.redColor
         } else {
-          progressColor = isAbove
-            ? theme?.colors.redColor
-            : theme?.colors.greenColor
+          progressColor = isAbove ? theme?.colors.redColor : theme?.colors.greenColor
         }
       } else if (parameters.color) {
         progressColor = resolveNamedColor(parameters.color, theme)
@@ -228,6 +210,7 @@ function ProgressColumn(
         copyData: String(cellData), // Column sorting is done via the copyData value
         data: {
           ...cellTemplate.data,
+          rawValue: cellData,
           value: normalizeCellValue,
           label: displayData,
           measureLabel:
@@ -244,6 +227,12 @@ function ProgressColumn(
       if (cell.kind === GridCellKind.Loading) {
         return null
       }
+
+      const rawValue = (cell.data as ProgressCellData | undefined)?.rawValue
+      if (rawValue !== undefined) {
+        return rawValue
+      }
+
       return cell.data?.value === undefined ? null : cell.data?.value
     },
   }

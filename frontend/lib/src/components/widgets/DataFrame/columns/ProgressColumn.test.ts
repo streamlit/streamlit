@@ -47,9 +47,7 @@ const PROGRESS_COLUMN_TEMPLATE = {
   },
 } as BaseColumnProps
 
-function getProgressColumn(
-  params?: ProgressColumnParams
-): ReturnType<typeof ProgressColumn> {
+function getProgressColumn(params?: ProgressColumnParams): ReturnType<typeof ProgressColumn> {
   return ProgressColumn(
     {
       ...PROGRESS_COLUMN_TEMPLATE,
@@ -110,6 +108,24 @@ describe("ProgressColumn", () => {
     expect(isErrorCell(mockCell3)).toEqual(true)
   })
 
+  it("returns the original value when the displayed progress is clipped", () => {
+    const mockColumn = getProgressColumn({
+      min_value: 0,
+      max_value: 10,
+      format: "%d",
+    })
+
+    const aboveMaxCell = mockColumn.getCell(11)
+    expect((aboveMaxCell as RangeCellType).data?.value).toEqual(10)
+    expect((aboveMaxCell as RangeCellType).data?.label).toEqual("11")
+    expect(mockColumn.getCellValue(aboveMaxCell)).toEqual(11)
+
+    const belowMinCell = mockColumn.getCell(-2)
+    expect((belowMinCell as RangeCellType).data?.value).toEqual(0)
+    expect((belowMinCell as RangeCellType).data?.label).toEqual("-2")
+    expect(mockColumn.getCellValue(belowMinCell)).toEqual(-2)
+  })
+
   it.each([
     // Supports almost the same as toSafeNumber
     [null, null],
@@ -127,19 +143,14 @@ describe("ProgressColumn", () => {
     }
   )
 
-  it.each([
-    ["foo"],
-    [[]],
-    ["foo"],
-    [[1, 2]],
-    ["123.124.123"],
-    ["--123"],
-    ["2,,2"],
-  ])("%p results in error cell", (input: unknown) => {
-    const mockColumn = getProgressColumn()
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+  it.each([["foo"], [[]], ["foo"], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
+    "%p results in error cell",
+    (input: unknown) => {
+      const mockColumn = getProgressColumn()
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it.each([
     // This should support everything that is supported by formatNumber
@@ -208,17 +219,14 @@ describe("ProgressColumn", () => {
     [255, "%#x"],
     [4096, "%#X"],
     [42, "% d"],
-  ])(
-    "cannot format %p using the sprintf format %p",
-    (input: number, format: string) => {
-      const mockColumn = getProgressColumn({
-        format,
-      })
+  ])("cannot format %p using the sprintf format %p", (input: number, format: string) => {
+    const mockColumn = getProgressColumn({
+      format,
+    })
 
-      const cell = mockColumn.getCell(input)
-      expect(isErrorCell(cell)).toEqual(true)
-    }
-  )
+    const cell = mockColumn.getCell(input)
+    expect(isErrorCell(cell)).toEqual(true)
+  })
 
   it("correctly formats float values to percentage", () => {
     const mockColumn = getProgressColumn()
