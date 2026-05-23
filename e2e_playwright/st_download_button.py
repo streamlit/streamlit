@@ -194,3 +194,9 @@ st.download_button(
     icon_position="right",
     key="download_emoji_right",
 )
+
+st.download_button(
+    "Download by path",
+    data=CAT_IMAGE,
+    key="path_download_button",
+)

@@ -15,6 +15,7 @@
 """download_button unit test."""
 
 import io
+from pathlib import Path
 
 from parameterized import parameterized
 
@@ -162,3 +163,53 @@ class DownloadButtonTest(DeltaGeneratorTestCase):
         c2 = self.get_delta_from_queue().new_element.download_button
         assert not c2.HasField("deferred_file_id")
         assert "/media/" in c2.url
+
+    def test_path_data(self, tmp_path):
+        """Test that Path objects are handled correctly."""
+        p = tmp_path / "test.txt"
+        p.write_text("hello from path")
+        st.download_button("Download Path", data=Path(p))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert not c.HasField("deferred_file_id")
+        assert "/media/" in c.url
+
+    def test_path_data_infers_file_name(self, tmp_path):
+        """Test that file_name is inferred from path when not provided."""
+        p = tmp_path / "myfile.txt"
+        p.write_text("content")
+        st.download_button("Download Path", data=Path(p))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert "/media/" in c.url
+        # The file is stored with the inferred name; the URL should contain it
+        assert "myfile" in c.url
+
+    def test_path_data_infers_mime(self, tmp_path):
+        """Test that mime is inferred from file extension when not provided."""
+        p = tmp_path / "data.csv"
+        p.write_text("a,b,c\n1,2,3")
+        st.download_button("Download Path", data=Path(p))
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert "/media/" in c.url
+        assert "data" in c.url
+
+    def test_path_data_explicit_file_name(self, tmp_path):
+        """Test that explicit file_name overrides path inference."""
+        p = tmp_path / "actual_name.dat"
+        p.write_text("data")
+        st.download_button("Download Path", data=Path(p), file_name="custom.txt")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert "/media/" in c.url
+        assert "custom" in c.url
+
+    def test_path_data_explicit_mime(self, tmp_path):
+        """Test that explicit mime overrides path inference."""
+        p = tmp_path / "data.bin"
+        p.write_text("binary")
+        st.download_button("Download Path", data=Path(p), mime="application/json")
+
+        c = self.get_delta_from_queue().new_element.download_button
+        assert "/media/" in c.url
