@@ -82,6 +82,14 @@ class FragmentThreadState:
     delta_path: tuple[int, ...] | None = None
     in_fragment_callback: bool = False
     active_script_hash: str = ""
+    # Set on parallel-fragment workers so wrapped_fragment() skips creating a
+    # second st.container(); the main thread already pre-allocated one before
+    # dispatching the worker.  Cleared after first use.
+    pre_allocated_container_fragment_id: str | None = None
+    # True while executing inside a parallel fragment worker thread; used by
+    # _check_not_parallel_worker() to gate APIs that are unsafe during
+    # concurrent execution (e.g. st.dialog, st.switch_page).
+    is_parallel_worker: bool = False
 
 
 class _FragmentThreadStateFields(TypedDict, total=False):
@@ -96,6 +104,8 @@ class _FragmentThreadStateFields(TypedDict, total=False):
     delta_path: tuple[int, ...] | None
     in_fragment_callback: bool
     active_script_hash: str
+    pre_allocated_container_fragment_id: str | None
+    is_parallel_worker: bool
 
 
 _thread_state: contextvars.ContextVar[FragmentThreadState] = contextvars.ContextVar(
