@@ -47,7 +47,9 @@ const PROGRESS_COLUMN_TEMPLATE = {
   },
 } as BaseColumnProps
 
-function getProgressColumn(params?: ProgressColumnParams): ReturnType<typeof ProgressColumn> {
+function getProgressColumn(
+  params?: ProgressColumnParams
+): ReturnType<typeof ProgressColumn> {
   return ProgressColumn(
     {
       ...PROGRESS_COLUMN_TEMPLATE,
@@ -219,14 +221,17 @@ describe("ProgressColumn", () => {
     [255, "%#x"],
     [4096, "%#X"],
     [42, "% d"],
-  ])("cannot format %p using the sprintf format %p", (input: number, format: string) => {
-    const mockColumn = getProgressColumn({
-      format,
-    })
+  ])(
+    "cannot format %p using the sprintf format %p",
+    (input: number, format: string) => {
+      const mockColumn = getProgressColumn({
+        format,
+      })
 
-    const cell = mockColumn.getCell(input)
-    expect(isErrorCell(cell)).toEqual(true)
-  })
+      const cell = mockColumn.getCell(input)
+      expect(isErrorCell(cell)).toEqual(true)
+    }
+  )
 
   it("correctly formats float values to percentage", () => {
     const mockColumn = getProgressColumn()
