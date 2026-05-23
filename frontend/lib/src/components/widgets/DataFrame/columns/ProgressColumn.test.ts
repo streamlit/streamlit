@@ -143,7 +143,7 @@ describe("ProgressColumn", () => {
     }
   )
 
-  it.each([["foo"], [[]], ["foo"], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
+  it.each([["foo"], [[]], [[1, 2]], ["123.124.123"], ["--123"], ["2,,2"]])(
     "%p results in error cell",
     (input: unknown) => {
       const mockColumn = getProgressColumn()

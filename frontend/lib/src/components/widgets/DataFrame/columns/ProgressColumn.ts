@@ -64,7 +64,16 @@ export interface ProgressColumnParams {
 }
 
 type ProgressCellData = RangeCellType["data"] & {
-  readonly rawValue?: number
+  readonly rawValue: number
+}
+
+function hasRawValue(data: RangeCellType["data"] | undefined): data is ProgressCellData {
+  return (
+    data !== undefined &&
+    typeof data === "object" &&
+    "rawValue" in data &&
+    typeof data.rawValue === "number"
+  )
 }
 
 /**
@@ -228,9 +237,8 @@ function ProgressColumn(props: BaseColumnProps, theme: EmotionTheme): BaseColumn
         return null
       }
 
-      const rawValue = (cell.data as ProgressCellData | undefined)?.rawValue
-      if (rawValue !== undefined) {
-        return rawValue
+      if (hasRawValue(cell.data)) {
+        return cell.data.rawValue
       }
 
       return cell.data?.value === undefined ? null : cell.data?.value
