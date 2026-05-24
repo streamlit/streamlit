@@ -44,6 +44,7 @@ class PyplotMixin:
         *,
         width: Width = "stretch",
         use_container_width: bool | None = None,
+        alt_text: str | None = None,
         **kwargs: Any,
     ) -> DeltaGenerator:
         """Display a matplotlib.pyplot figure.
@@ -105,6 +106,9 @@ class PyplotMixin:
                 future release. For ``use_container_width=True``, use
                 ``width="stretch"``. For ``use_container_width=False``, use
                 ``width="content"``.
+        alt_text : str or None
+            Alternative text for the figure, used by screen readers. If this
+            is ``None`` (default), the figure will have an empty alt attribute.
 
         **kwargs : any
             Arguments to pass to Matplotlib's savefig function.
@@ -177,6 +181,7 @@ know via [issue on Github](https://github.com/streamlit/streamlit/issues).
             layout_config,
             fig,
             clear_figure,
+            alt_text=alt_text,
             **kwargs,
         )
         return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
@@ -193,6 +198,7 @@ def marshall(
     layout_config: LayoutConfig,
     fig: Figure | None = None,
     clear_figure: bool | None = True,
+    alt_text: str | None = None,
     **kwargs: Any,
 ) -> None:
     try:
@@ -232,6 +238,7 @@ def marshall(
         clamp=False,
         channels="RGB",
         output_format="PNG",
+        alt_text=alt_text,
     )
 
     # Clear the figure after rendering it. This means that subsequent

@@ -61,6 +61,7 @@ class ImageMixin:
         *,
         use_container_width: bool | None = None,
         link: str | None = None,
+        alt_text: str | list[str] | None = None,
     ) -> DeltaGenerator:
         """Display an image or list of images.
 
@@ -162,11 +163,20 @@ class ImageMixin:
             image will not include a hyperlink.
 
             This parameter is only supported when displaying a single image.
+        alt_text : str, list of str, or None
+            Alternative text for the image(s), used by screen readers. If this
+            is ``None`` (default), the image will have an empty alt attribute.
+            If ``image`` is a list of multiple images, ``alt_text`` must be a
+            list of strings (one alternative text for each image) or ``None``.
 
         Examples
         --------
         >>> import streamlit as st
-        >>> st.image("sunrise.jpg", caption="Sunrise by the mountains")
+        >>> st.image(
+        ...     "sunrise.jpg",
+        ...     caption="Sunrise by the mountains",
+        ...     alt_text="A sunrise over a mountain range",
+        ... )
 
         .. output::
            https://doc-image.streamlit.app/
@@ -223,6 +233,7 @@ class ImageMixin:
             clamp,
             channels,
             output_format,
+            alt_text=alt_text,
         )
 
         if link:

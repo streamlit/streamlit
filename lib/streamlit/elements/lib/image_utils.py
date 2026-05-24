@@ -359,6 +359,7 @@ def marshall_images(
     clamp: bool,
     channels: Channels = "RGB",
     output_format: ImageFormatOrAuto = "auto",
+    alt_text: str | npt.NDArray[Any] | list[str] | None = None,
 ) -> None:
     """Fill an ImageListProto with a list of images and their captions.
     The images will be resized and reformatted as necessary.
@@ -372,6 +373,9 @@ def marshall_images(
     caption
         Image caption. If displaying multiple images, caption should be a
         list of captions (one for each image).
+    alt_text
+        Alternative text for the image. If displaying multiple images,
+        alt_text should be a list of strings (one for each image).
     layout_config
         The layout configuration for the image, including width settings.
     proto_imgs
@@ -428,13 +432,36 @@ def marshall_images(
             f"Cannot pair {len(captions)} captions with {len(images)} images."
         )
 
+    if isinstance(alt_text, list):
+        alt_texts: Sequence[str | None] = alt_text
+    elif isinstance(alt_text, str):
+        alt_texts = [alt_text]
+    elif isinstance(alt_text, np.ndarray) and len(alt_text.shape) == 1:
+        alt_texts = alt_text.tolist()
+    elif alt_text is None:
+        alt_texts = [None] * len(images)
+    else:
+        alt_texts = [str(alt_text)]
+
+    if not isinstance(alt_texts, list):
+        raise StreamlitAPIException(
+            "If image is a list then alt_text should be a list as well."
+        )
+
+    if len(alt_texts) != len(images):
+        raise StreamlitAPIException(
+            f"Cannot pair {len(alt_texts)} alt_text values with {len(images)} images."
+        )
+
     # Each image in an image list needs to be kept track of at its own coordinates.
-    for coord_suffix, (single_image, single_caption) in enumerate(
-        zip(images, captions, strict=False)
+    for coord_suffix, (single_image, single_caption, single_alt_text) in enumerate(
+        zip(images, captions, alt_texts, strict=False)
     ):
         proto_img = proto_imgs.imgs.add()
         if single_caption is not None:
             proto_img.caption = str(single_caption)
+        if single_alt_text is not None:
+            proto_img.alt_text = str(single_alt_text)
 
         # We use the index of the image in the input image list to identify this image inside
         # MediaFileManager. For this, we just add the index to the image's "coordinates".

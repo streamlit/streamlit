@@ -64,10 +64,37 @@ describe("ImageList Element", () => {
     })
   })
 
+  const getImages = (): HTMLImageElement[] =>
+    Array.from(document.querySelectorAll("img"))
+
   it("renders without crashing", () => {
     const props = getProps()
     render(<ImageList {...props} />)
-    expect(screen.getAllByRole("img")).toHaveLength(2)
+    expect(getImages()).toHaveLength(2)
+  })
+
+  it("sets image alt text from the proto", () => {
+    const props = getProps({
+      imgs: [
+        {
+          altText: "A mock test image",
+          caption: "a",
+          url: "/media/mockImage1.jpeg",
+        },
+      ],
+    })
+    render(<ImageList {...props} />)
+
+    expect(screen.getByRole("img")).toHaveAttribute("alt", "A mock test image")
+  })
+
+  it("uses empty alt text by default", () => {
+    const props = getProps({
+      imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
+    })
+    render(<ImageList {...props} />)
+
+    expect(getImages()[0]).toHaveAttribute("alt", "")
   })
 
   describe("Link parameter", () => {
@@ -86,7 +113,7 @@ describe("ImageList Element", () => {
       expect(link).toHaveAttribute("aria-label", "a")
 
       // Image should be inside the link
-      const image = screen.getByRole("img")
+      const image = getImages()[0]
       expect(link).toContainElement(image)
     })
 
@@ -101,6 +128,17 @@ describe("ImageList Element", () => {
       expect(link).toHaveAttribute("aria-label", "https://streamlit.io")
     })
 
+    it("uses alt text as link aria-label when provided", () => {
+      const props = getProps({
+        imgs: [{ altText: "A linked image", url: "/media/mockImage1.jpeg" }],
+        link: "https://streamlit.io",
+      })
+      render(<ImageList {...props} />)
+
+      const link = screen.getByTestId("stImageLink")
+      expect(link).toHaveAttribute("aria-label", "A linked image")
+    })
+
     it("does not render link wrapper when link is not provided", () => {
       const props = getProps({
         imgs: [{ caption: "a", url: "/media/mockImage1.jpeg" }],
@@ -108,7 +146,7 @@ describe("ImageList Element", () => {
       render(<ImageList {...props} />)
 
       expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
-      expect(screen.getByRole("img")).toBeVisible()
+      expect(getImages()[0]).toBeVisible()
     })
 
     it("does not render link wrapper when link is empty string", () => {
@@ -119,7 +157,7 @@ describe("ImageList Element", () => {
       render(<ImageList {...props} />)
 
       expect(screen.queryByTestId("stImageLink")).not.toBeInTheDocument()
-      expect(screen.getByRole("img")).toBeVisible()
+      expect(getImages()[0]).toBeVisible()
     })
 
     it("renders image with caption and link", () => {
@@ -142,7 +180,7 @@ describe("ImageList Element", () => {
       const props = getProps({}, { pixelWidth: 300 })
       render(<ImageList {...props} />)
 
-      const images = screen.getAllByRole("img")
+      const images = getImages()
       expect(images).toHaveLength(2)
       images.forEach(image => {
         expect(image).toHaveStyle("width: 300px")
@@ -153,7 +191,7 @@ describe("ImageList Element", () => {
       const props = getProps({}, { useStretch: true })
       render(<ImageList {...props} />)
 
-      const images = screen.getAllByRole("img")
+      const images = getImages()
       expect(images).toHaveLength(2)
       // When useStretch is true, width should match the element width (250px from mock)
       images.forEach(image => {
@@ -165,7 +203,7 @@ describe("ImageList Element", () => {
       const props = getProps({}, { useContent: true })
       render(<ImageList {...props} />)
 
-      const images = screen.getAllByRole("img")
+      const images = getImages()
       expect(images).toHaveLength(2)
       // When useContent is true, width should be 100% (original size)
       images.forEach(image => {
@@ -179,7 +217,7 @@ describe("ImageList Element", () => {
       const props = getProps()
       render(<ImageList {...props} />)
 
-      const images = screen.getAllByRole("img")
+      const images = getImages()
       expect(images).toHaveLength(2)
       images.forEach(image => {
         expect(image).toHaveStyle("width: 100%")
@@ -190,7 +228,7 @@ describe("ImageList Element", () => {
       const props = getProps({}, null)
       render(<ImageList {...props} />)
 
-      const images = screen.getAllByRole("img")
+      const images = getImages()
       images.forEach(image => {
         expect(image).toHaveStyle("width: 100%")
       })
@@ -200,7 +238,7 @@ describe("ImageList Element", () => {
   it("creates its `src` attribute using buildMediaURL", () => {
     const props = getProps()
     render(<ImageList {...props} />)
-    const images = screen.getAllByRole("img")
+    const images = getImages()
     expect(images).toHaveLength(2)
 
     expect(buildMediaURL).toHaveBeenNthCalledWith(1, "/media/mockImage1.jpeg")
@@ -235,7 +273,7 @@ describe("ImageList Element", () => {
   it("sends an CLIENT_ERROR message when the image source fails to load", () => {
     const props = getProps()
     render(<ImageList {...props} />)
-    const images = screen.getAllByRole("img")
+    const images = getImages()
     expect(images).toHaveLength(2)
 
     // Trigger the error event on the first image using fireEvent
@@ -264,7 +302,7 @@ describe("ImageList Element", () => {
             resourceCrossOriginMode,
           },
         })
-        const images = screen.getAllByRole("img")
+        const images = getImages()
         expect(images).toHaveLength(2)
         images.forEach(image => {
           expect(image).not.toHaveAttribute("crossOrigin")
@@ -341,7 +379,7 @@ describe("ImageList Element", () => {
               resourceCrossOriginMode,
             },
           })
-          const images = screen.getAllByRole("img")
+          const images = getImages()
           expect(images).toHaveLength(2)
           images.forEach(image => {
             expect(image).toHaveAttribute("crossOrigin", expected)
@@ -423,7 +461,7 @@ describe("ImageList Element", () => {
               resourceCrossOriginMode,
             },
           })
-          const images = screen.getAllByRole("img")
+          const images = getImages()
           expect(images).toHaveLength(2)
           images.forEach(image => {
             expect(image).not.toHaveAttribute("crossOrigin")

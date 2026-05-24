@@ -44,6 +44,14 @@ if TYPE_CHECKING:
         DeltaGenerator,
     )
 
+    # Image with alt_text parameter - str or list of str
+    assert_type(image("image.png", alt_text="An accessible image"), DeltaGenerator)
+    assert_type(image("image.png", alt_text=None), DeltaGenerator)
+    assert_type(
+        image(["img1.png", "img2.png"], alt_text=["Alt 1", "Alt 2"]),
+        DeltaGenerator,
+    )
+
     # Image with width parameter - "content", "stretch", or int
     assert_type(image("image.png", width="content"), DeltaGenerator)
     assert_type(image("image.png", width="stretch"), DeltaGenerator)
@@ -92,6 +100,7 @@ if TYPE_CHECKING:
             output_format="auto",
             use_container_width=None,
             link="https://streamlit.io",
+            alt_text="Full example alt text",
         ),
         DeltaGenerator,
     )

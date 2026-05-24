@@ -444,11 +444,17 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         """Test st.image with single url."""
         url = "http://server/fake0.jpg"
 
-        st.image(url, caption="some caption", width=300)
+        st.image(
+            url,
+            caption="some caption",
+            alt_text="A fake test image",
+            width=300,
+        )
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 300
         assert el.imgs.imgs[0].caption == "some caption"
+        assert el.imgs.imgs[0].alt_text == "A fake test image"
         assert el.imgs.imgs[0].url == url
 
     def test_st_image_with_list_of_urls(self):
@@ -458,12 +464,14 @@ class ImageProtoTest(DeltaGeneratorTestCase):
             "http://server/fake1.png",
             "http://server/fake2.gif",
         ]
-        st.image(urls, caption=["some caption"] * 3, width=300)
+        alt_text = ["Fake image 0", "Fake image 1", "Fake image 2"]
+        st.image(urls, caption=["some caption"] * 3, alt_text=alt_text, width=300)
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.pixel_width == 300
         for idx, url in enumerate(urls):
             assert el.imgs.imgs[idx].caption == "some caption"
+            assert el.imgs.imgs[idx].alt_text == alt_text[idx]
             assert el.imgs.imgs[idx].url == url
 
     def test_st_image_bad_width(self):

@@ -20,6 +20,7 @@ syntax = "proto3";
 message Image {
   string url = 3;
   string caption = 2;
+  string alt_text = 5;
 
   reserved 1, 4;
 }

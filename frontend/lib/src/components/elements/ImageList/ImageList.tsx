@@ -80,7 +80,6 @@ function getImageWidth(
 }
 
 const Image = ({
-  itemKey,
   image,
   imgStyle,
   buildMediaURL,
@@ -88,7 +87,6 @@ const Image = ({
   shouldStretch,
   link,
 }: {
-  itemKey: string
   image: ImageProto
   imgStyle: CSSProperties
   buildMediaURL: (url: string) => string
@@ -102,7 +100,7 @@ const Image = ({
     <img
       style={imgStyle}
       src={buildMediaURL(image.url)}
-      alt={itemKey}
+      alt={image.altText || ""}
       onError={handleImageError}
       crossOrigin={crossOrigin}
     />
@@ -118,7 +116,7 @@ const Image = ({
           href={link}
           target="_blank"
           rel="noreferrer"
-          aria-label={image.caption || link}
+          aria-label={image.altText || image.caption || link}
           data-testid="stImageLink"
         >
           {imageElement}
@@ -221,7 +219,6 @@ function ImageList({
               // TODO: Update to match React best practices
               // eslint-disable-next-line @eslint-react/no-array-index-key
               key={idx}
-              itemKey={idx.toString()}
               image={iimage as ImageProto}
               imgStyle={imgStyle}
               buildMediaURL={(url: string) => endpoints.buildMediaURL(url)}

@@ -256,12 +256,38 @@ def test_marshall_images_splits_4d_ndarray_into_list(no_runtime: None) -> None:
         coordinates="0",
         image=np.zeros((3, 4, 4, 3), dtype=np.uint8),
         caption=["a", "b", "c"],
+        alt_text=["alt a", "alt b", "alt c"],
         layout_config=_DEFAULT_LAYOUT,
         proto_imgs=proto,
         clamp=False,
     )
 
     assert [img.caption for img in proto.imgs] == ["a", "b", "c"]
+    assert [img.alt_text for img in proto.imgs] == ["alt a", "alt b", "alt c"]
+
+
+def test_marshall_images_rejects_alt_text_length_mismatch(
+    no_runtime: None,
+) -> None:
+    """``marshall_images`` requires one alt text value per image."""
+    proto = ImageListProto()
+
+    with pytest.raises(
+        StreamlitAPIException,
+        match=r"Cannot pair 1 alt_text values with 2 images.",
+    ):
+        marshall_images(
+            coordinates="0",
+            image=[
+                np.zeros((4, 4, 3), dtype=np.uint8),
+                np.zeros((4, 4, 3), dtype=np.uint8),
+            ],
+            caption=None,
+            alt_text=["only one"],
+            layout_config=_DEFAULT_LAYOUT,
+            proto_imgs=proto,
+            clamp=False,
+        )
 
 
 def test_marshall_images_caption_from_1d_ndarray(no_runtime: None) -> None:

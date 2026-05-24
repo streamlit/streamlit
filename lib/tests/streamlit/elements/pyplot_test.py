@@ -58,11 +58,12 @@ class PyplotTest(DeltaGeneratorTestCase):
         # Add 20 random points to scatter plot.
         ax.scatter(data[0], data[1])
 
-        st.pyplot(fig)
+        st.pyplot(fig, alt_text="Scatter plot of random data")
 
         el = self.get_delta_from_queue().new_element
         assert el.width_config.use_stretch
         assert el.imgs.imgs[0].caption == ""
+        assert el.imgs.imgs[0].alt_text == "Scatter plot of random data"
         assert el.imgs.imgs[0].url.startswith(MEDIA_ENDPOINT)
 
     @parameterized.expand([("true", True), ("false", False), ("none", None)])
