@@ -34,9 +34,17 @@ QueryParamsInput = Mapping[str, QueryParamValue] | Iterable[tuple[str, QueryPara
 
 EMBED_QUERY_PARAM: Final[str] = "embed"
 EMBED_OPTIONS_QUERY_PARAM: Final[str] = "embed_options"
+# Snowflake host-injected system params that should not surface in
+# st.query_params. Match is case-insensitive (see uses below).
+PARENT_ORIGIN_QUERY_PARAM: Final[str] = "__parentorigin"
+CLIENT_VERSION_QUERY_PARAM: Final[str] = "__clientversion"
+EMBEDDED_APP_QUERY_PARAM: Final[str] = "embeddedapp"
 EMBED_QUERY_PARAMS_KEYS: Final[list[str]] = [
     EMBED_QUERY_PARAM,
     EMBED_OPTIONS_QUERY_PARAM,
+    PARENT_ORIGIN_QUERY_PARAM,
+    CLIENT_VERSION_QUERY_PARAM,
+    EMBEDDED_APP_QUERY_PARAM,
 ]
 
 # Protected parameters that cannot be bound to widgets

@@ -172,13 +172,37 @@ export default class HostCommunicationManager {
    * Register a function to deliver a message to the Host
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
-    window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      },
-      "*"
-    )
+    const embedParentOrigin =
+      (
+        window as {
+          __snowsight?: {
+            STREAMLIT_EMBED_MODE?: boolean
+            STREAMLIT_PREAMBLE_PARENT_ORIGIN?: string
+          }
+        }
+      ).__snowsight?.STREAMLIT_EMBED_MODE === true
+        ? (
+            window as {
+              __snowsight?: { STREAMLIT_PREAMBLE_PARENT_ORIGIN?: string }
+            }
+          ).__snowsight?.STREAMLIT_PREAMBLE_PARENT_ORIGIN
+        : null
+    const targetOrigin =
+      typeof embedParentOrigin === "string" && embedParentOrigin.length > 0
+        ? embedParentOrigin
+        : "*"
+    const versioned = {
+      stCommVersion: HOST_COMM_VERSION,
+      ...message,
+    }
+    window.parent.postMessage(versioned, targetOrigin)
+
+    // In embed mode, also self-dispatch so iframe-side listeners (e.g. the
+    // embed adapter's navigationListener listening for SET_QUERY_PARAM) can
+    // catch host-bound messages without monkey-patching window.parent.
+    if (embedParentOrigin) {
+      window.postMessage(versioned, window.location.origin)
+    }
   }
 
   /**
