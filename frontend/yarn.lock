@@ -3766,7 +3766,7 @@ __metadata:
     numbro: "npm:^2.5.0"
     plotly.js: "npm:^3.5.1"
     postinstall-postinstall: "npm:^2.1.0"
-    protobufjs: "npm:^8.3.0"
+    protobufjs: "npm:^8.4.0"
     query-string: "npm:^9.3.1"
     re-resizable: "npm:^6.11.2"
     react-aria-components: "npm:^1.17.0"
@@ -3820,8 +3820,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@streamlit/protobuf@workspace:protobuf"
   dependencies:
-    protobufjs: "npm:^8.3.0"
-    protobufjs-cli: "npm:^2.3.0"
+    protobufjs: "npm:^8.4.0"
+    protobufjs-cli: "npm:^2.4.0"
     typesync: "npm:^0.14.3"
   languageName: unknown
   linkType: soft
@@ -12521,7 +12521,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"long@npm:^5.0.0, long@npm:^5.2.1":
+"long@npm:^5.2.1, long@npm:^5.3.2":
   version: 5.3.2
   resolution: "long@npm:5.3.2"
   checksum: 10c0/7130fe1cbce2dca06734b35b70d380ca3f70271c7f8852c922a7c62c86c4e35f0c39290565eca7133c625908d40e126ac57c02b1b1a4636b9457d77e1e60b981
@@ -15132,9 +15132,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs-cli@npm:^2.3.0":
-  version: 2.3.0
-  resolution: "protobufjs-cli@npm:2.3.0"
+"protobufjs-cli@npm:^2.4.0":
+  version: 2.4.0
+  resolution: "protobufjs-cli@npm:2.4.0"
   dependencies:
     chalk: "npm:^4.0.0"
     escodegen: "npm:^1.13.0"
@@ -15147,21 +15147,21 @@ __metadata:
     tmp: "npm:^0.2.1"
     uglify-js: "npm:^3.7.7"
   peerDependencies:
-    protobufjs: ">=8.2.1 <9"
+    protobufjs: ">=8.4.0 <9"
   bin:
     pbjs: bin/pbjs
     pbts: bin/pbts
     protoc-gen-pbjs: bin/protoc-gen-pbjs
-  checksum: 10c0/ab91ef4b4359ec866c20075518820de4fdd5ee80bd9b704effe1460f0f5324a328292b3b23c2f3837f0bee34bbc4b4895e9de3d998ce66ce83a2d69012e5bb32
+  checksum: 10c0/be846d235303eaac3e4fc8b6c01b340a6bccff8720573708d776a3279b02abe0a1c587f35adc64ffcc9c9dc9cf7913b374107125f067829cec47653f35d69cee
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^8.3.0":
-  version: 8.3.0
-  resolution: "protobufjs@npm:8.3.0"
+"protobufjs@npm:^8.4.0":
+  version: 8.4.0
+  resolution: "protobufjs@npm:8.4.0"
   dependencies:
-    long: "npm:^5.0.0"
-  checksum: 10c0/dfdb7224b44cff678e971671b6edff6653f29970b4c593b43f220a433ca30a1468465064761b8360488f2531c34651289421af3d60275485582194b21131d639
+    long: "npm:^5.3.2"
+  checksum: 10c0/d692c1741e04c9eb777b7aecfed4bb5a5407cc0aa4b601850f73e1bb0b12ba6a28bf06602463b2479bfcd4498089d8812b47df61a5ea2a790d3dc1fc5b6eadb7
   languageName: node
   linkType: hard
 
