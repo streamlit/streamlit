@@ -62,7 +62,7 @@
     "typesync": "^0.14.3",
     "vite": "^8.0.13",
     "vite-plugin-dts": "^5.0.0",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   },
   "resolutions": {
     "@types/react": "^18.2.0",
