@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { CSSProperties, memo, ReactElement } from "react"
+import { CSSProperties, memo, ReactElement, useContext } from "react"
 
 import { getLogger } from "loglevel"
 
@@ -25,6 +25,7 @@ import {
 } from "@streamlit/protobuf"
 
 import { ElementFullscreenContext } from "~lib/components/shared/ElementFullscreen/ElementFullscreenContext"
+import { NavigationContext } from "~lib/components/core/NavigationContext"
 import withFullScreenWrapper from "~lib/components/shared/FullScreenWrapper/withFullScreenWrapper"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { StyledToolbarElementContainer } from "~lib/components/shared/Toolbar/styled-components"
@@ -87,6 +88,8 @@ const Image = ({
   handleImageError,
   shouldStretch,
   link,
+  isInternal,
+  pageScriptHash,
 }: {
   itemKey: string
   image: ImageProto
@@ -95,8 +98,18 @@ const Image = ({
   handleImageError: (e: React.SyntheticEvent<HTMLImageElement>) => void
   shouldStretch?: boolean
   link?: string
+  isInternal?: boolean
+  pageScriptHash?: string
 }): ReactElement => {
+  const { onPageChange } = useContext(NavigationContext)
   const crossOrigin = useCrossOriginAttribute(image.url)
+
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
+    if (isInternal && pageScriptHash) {
+      e.preventDefault()
+      onPageChange(pageScriptHash)
+    }
+  }
 
   const imageElement = (
     <img
@@ -116,10 +129,11 @@ const Image = ({
       {link ? (
         <StyledImageLink
           href={link}
-          target="_blank"
+          target={isInternal ? "" : "_blank"}
           rel="noreferrer"
           aria-label={image.caption || link}
           data-testid="stImageLink"
+          onClick={handleClick}
         >
           {imageElement}
         </StyledImageLink>
@@ -228,6 +242,8 @@ function ImageList({
               handleImageError={handleImageError}
               shouldStretch={shouldStretch}
               link={element.imgs.length === 1 ? element.link : undefined}
+              isInternal={element.imgs.length === 1 ? element.isInternal : undefined}
+              pageScriptHash={element.imgs.length === 1 ? element.pageScriptHash : undefined}
             />
           )
         )}

@@ -35,6 +35,10 @@ from streamlit.elements.lib.image_utils import (
 )
 from streamlit.elements.lib.layout_utils import create_layout_config
 from streamlit.errors import StreamlitAPIException
+import os
+from streamlit.file_util import get_main_script_directory, normalize_path_join
+from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.url_util import is_url
 from streamlit.proto.Image_pb2 import ImageList as ImageListProto
 from streamlit.runtime.metrics_util import gather_metrics
 
@@ -232,7 +236,35 @@ class ImageMixin:
                     "The `link` parameter is only supported when displaying a single image. "
                     f"You passed {len(image_list_proto.imgs)} images."
                 )
-            image_list_proto.link = link
+
+            # If it's a standard external link, behave normally
+            if is_url(link):
+                image_list_proto.link = link
+                image_list_proto.is_internal = False
+            else:
+                # It's not an external URL, so we treat it as an internal page path
+                ctx = get_script_run_ctx()
+                if ctx:
+                    all_app_pages = ctx.pages_manager.get_pages()
+                    main_script_dir = get_main_script_directory(ctx.main_script_path)
+                    requested_page = os.path.realpath(normalize_path_join(main_script_dir, link))
+
+                    page_found = False
+                    for page_data in all_app_pages.values():
+                        if requested_page == page_data["script_path"]:
+                            page_found = True
+                            # Overwrite the link with the internal routing path
+                            image_list_proto.link = page_data["url_pathname"]
+                            image_list_proto.page_script_hash = page_data["page_script_hash"]
+                            break
+
+                    if page_found:
+                        image_list_proto.is_internal = True
+                    else:
+                        raise StreamlitAPIException(
+                            f"Could not find internal page: '{link}'. "
+                            "Please provide a valid internal page path or an external URL."
+                        )
 
         return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 

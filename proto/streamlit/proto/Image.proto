@@ -32,5 +32,11 @@ message ImageList {
   // Only supported when there is exactly one image in the list.
   string link = 3;
 
+  // Flag to indicate if the 'link' corresponds to an internal page navigation.
+  bool is_internal = 4;
+
+  // The unique hash of the internal page to navigate.
+  string page_script_hash = 5;
+
   reserved 2;
 }
