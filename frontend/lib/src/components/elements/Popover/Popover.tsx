@@ -202,6 +202,10 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         shouldCloseOnInteractOutside={(element): boolean =>
           !triggerRef.current?.contains(element)
         }
+        // Prevent React Aria from rendering a position:fixed underlay div that
+        // blocks all pointer events in webkit when the popover is open.
+        // Outside-click dismissal is still handled by shouldCloseOnInteractOutside.
+        isNonModal
         $stretchWidth={stretchWidth}
         $calculatedWidth={calculatedWidth}
       >

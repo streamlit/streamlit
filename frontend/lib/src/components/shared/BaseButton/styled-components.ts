@@ -136,7 +136,7 @@ export const StyledPrimaryButton = styled(
     backgroundColor: darken(theme.colors.primary, 0.15),
     borderColor: darken(theme.colors.primary, 0.15),
   },
-  "&:active": {
+  "&:active, &[aria-expanded='true']": {
     backgroundColor: theme.colors.primary,
     // Keep the border darker when clicked so that the button looks "pressed"
     borderColor: darken(theme.colors.primary, 0.15),
@@ -157,7 +157,7 @@ export const StyledSecondaryButton = styled(
   "&:hover, &:focus-visible": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
-  "&:active": {
+  "&:active, &[aria-expanded='true']": {
     backgroundColor: theme.colors.darkenedBgMix25,
   },
   "&:disabled, &:disabled:hover, &:disabled:active": {
@@ -187,7 +187,7 @@ export const StyledTertiaryButton = styled(
         color: "inherit !important",
       },
     },
-    "&:active": {
+    "&:active, &[aria-expanded='true']": {
       color: darken(theme.colors.primary, 0.25),
     },
     "&:disabled, &:disabled:hover, &:disabled:active": {
