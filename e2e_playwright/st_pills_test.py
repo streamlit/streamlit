@@ -38,9 +38,7 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_pill_button(locator: Locator, text: str) -> Locator:
-    return locator.get_by_test_id(re.compile(r"stBaseButton-pills(Active)?")).filter(
-        has_text=text
-    )
+    return locator.get_by_role("button").filter(has_text=text)
 
 
 def test_pills_regression_no_wrap_at_app_start(
