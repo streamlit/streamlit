@@ -22,7 +22,15 @@ import {
   Modal as RAModal,
 } from "react-aria-components"
 
-/** Full-screen backdrop overlay rendered in a portal. */
+/**
+ * Full-screen backdrop overlay rendered in a portal.
+ *
+ * overflow-y: auto matches the original BaseUI Root behavior, allowing the
+ * dialog panel to grow to its natural height and scroll via the backdrop when
+ * content is taller than the viewport. This keeps the body free of any
+ * overflow container so that absolutely-positioned element toolbars (which
+ * use top: -2.65rem) are never clipped.
+ */
 export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
   position: "fixed",
   inset: 0,
@@ -32,9 +40,16 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
   justifyContent: "center",
   paddingTop: theme.spacing.threeXL,
   zIndex: theme.zIndices.popup,
+  overflowY: "auto",
 }))
 
-/** The white dialog panel box. Accepts an optional explicit CSS width via $dialogWidth. */
+/**
+ * The white dialog panel box. Accepts an optional explicit CSS width via $dialogWidth.
+ *
+ * overflow: hidden clips content to the rounded corners. No maxHeight is set
+ * so the panel grows to fit its content; the overlay handles scrolling for
+ * very tall dialogs (matching original BaseUI behavior).
+ */
 export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
   ({ theme, $dialogWidth }) => ({
     background: theme.colors.bgColor,
@@ -42,7 +57,6 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
     boxShadow: theme.shadows.popover,
     minWidth: theme.sizes.minPopupWidth,
     maxWidth: "100%",
-    maxHeight: "80vh",
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
@@ -55,17 +69,13 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
  * Flex column wrapper that fills the panel and contains the close button,
  * header, body, and footer. Styled as the role="dialog" element.
  *
- * flex: 0 1 auto — takes natural content height (no forced grow), shrinks when
- * the panel hits its max-height so the body scroll region activates.
- * overflow: visible — allows absolutely-positioned toolbar overlays (which use
- * top: -2.65rem) to escape the body area into the header space without clipping.
+ * overflow: visible ensures absolutely-positioned toolbar overlays (top: -2.65rem)
+ * are not clipped between the body and the panel boundary.
  */
 export const StyledDialogInner = styled(Dialog)({
   display: "flex",
   flexDirection: "column",
   overflow: "visible",
-  flex: "0 1 auto",
-  minHeight: 0,
 })
 
 /** Absolutely-positioned close (×) button in the top-right of the dialog. */
@@ -108,9 +118,6 @@ export const StyledModalBody = styled.div(({ theme }) => ({
   padding: `${theme.spacing.md} ${theme.spacing.twoXL} ${theme.spacing.twoXL}`,
   color: theme.colors.bodyText,
   fontSize: theme.fontSizes.md,
-  overflowY: "auto",
-  flex: 1,
-  minHeight: 0,
 }))
 
 export const StyledModalFooter = styled.div(({ theme }) => ({
