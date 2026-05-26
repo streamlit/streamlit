@@ -35,11 +35,16 @@ def safe_sizeof(obj: Any) -> int:
     references). This function catches those exceptions and returns 0 instead
     of propagating the error.
     """
+    # Import inside function for lazy loading (reduces startup time).
+    # Python's import system caches modules, so repeated calls have minimal overhead.
     from streamlit.vendor.pympler.asizeof import asizeof
 
     try:
         return asizeof(obj)
-    except Exception:
+    except (TypeError, ReferenceError):
+        # TypeError: objects that don't support weak references (e.g., SQLAlchemy's
+        # _EmptyListener). ReferenceError: weak references that have been garbage
+        # collected during traversal.
         _LOGGER.debug(
             "Failed to calculate size for object of type %s",
             type(obj).__name__,

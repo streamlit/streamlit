@@ -430,10 +430,18 @@ class SafeSizeofTest(unittest.TestCase):
         """safe_sizeof returns a positive size for normal Python objects."""
         assert safe_sizeof(obj) > 0
 
-    def test_returns_zero_on_exception(self) -> None:
-        """safe_sizeof returns 0 when sizing fails."""
+    def test_returns_zero_on_type_error(self) -> None:
+        """safe_sizeof returns 0 when TypeError is raised (e.g., weak reference issue)."""
         with patch(
             "streamlit.vendor.pympler.asizeof.asizeof",
             side_effect=TypeError("cannot create weak reference"),
+        ):
+            assert safe_sizeof(object()) == 0
+
+    def test_returns_zero_on_reference_error(self) -> None:
+        """safe_sizeof returns 0 when ReferenceError is raised (e.g., dead weak ref)."""
+        with patch(
+            "streamlit.vendor.pympler.asizeof.asizeof",
+            side_effect=ReferenceError("weakly-referenced object no longer exists"),
         ):
             assert safe_sizeof(object()) == 0
