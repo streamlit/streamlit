@@ -3752,7 +3752,7 @@ __metadata:
     color2k: "npm:^2.0.2"
     d3: "npm:^7.9.0"
     d3-graphviz: "npm:^5.6.0"
-    date-fns: "npm:^4.1.0"
+    date-fns: "npm:^4.2.1"
     decamelize: "npm:^6.0.1"
     deck.gl: "npm:^9.3.2"
     dompurify: "npm:^3.4.3"
@@ -8360,10 +8360,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"date-fns@npm:^4.1.0":
-  version: 4.1.0
-  resolution: "date-fns@npm:4.1.0"
-  checksum: 10c0/b79ff32830e6b7faa009590af6ae0fb8c3fd9ffad46d930548fbb5acf473773b4712ae887e156ba91a7b3dc30591ce0f517d69fd83bd9c38650fdc03b4e0bac8
+"date-fns@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "date-fns@npm:4.2.1"
+  checksum: 10c0/1694c57a180a76c1001401fde85925cebb3b89594d37625063be0a571eddde278a87d3c76ecad5759c3dbeabcc34a5c5757eb6b3487d89a9a61ef48571791166
   languageName: node
   linkType: hard
 

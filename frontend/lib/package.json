@@ -70,7 +70,7 @@
     "color2k": "^2.0.2",
     "d3": "^7.9.0",
     "d3-graphviz": "^5.6.0",
-    "date-fns": "^4.1.0",
+    "date-fns": "^4.2.1",
     "decamelize": "^6.0.1",
     "deck.gl": "^9.3.2",
     "dompurify": "^3.4.3",
