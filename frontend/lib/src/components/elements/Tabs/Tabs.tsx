@@ -305,6 +305,9 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   const handleSelectionChange = useCallback(
     (key: Key): void => {
       const newIndex = Number(key)
+      // RAC guarantees key matches the id prop passed to <Tab> (always String(index)),
+      // but guard against NaN in case id generation ever changes.
+      if (Number.isNaN(newIndex)) return
       const newLabel = allTabLabels[newIndex]
       setActiveTabKey(newIndex)
       activeTabNameRef.current = newLabel

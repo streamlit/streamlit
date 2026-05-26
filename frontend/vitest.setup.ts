@@ -139,7 +139,10 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn(), cancel: vi.fn() }))
 
-// Add fake getAnimations for RAC's SelectionIndicator (SharedElementTransition)
+// JSDOM does not implement the Web Animations API. RAC's SelectionIndicator uses
+// SharedElementTransition which calls getAnimations() in an async cleanup callback.
+// Returning [] prevents TypeError crashes in tests; the SelectionIndicator itself is
+// also mocked as a no-op in Tabs.test.tsx to avoid async act() warnings.
 Element.prototype.getAnimations = vi.fn().mockReturnValue([])
 
 // scrollIntoView is not implemented in JSDOM
