@@ -269,7 +269,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
 
   const handleSelectionChange = useCallback(
     (key: Key): void => {
-      const newIndex = parseInt(key as string, 10)
+      const newIndex = Number(key)
       const newLabel = allTabLabels[newIndex]
       setActiveTabKey(newIndex)
       activeTabNameRef.current = newLabel
@@ -310,8 +310,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         selectedKey={String(activeTabKey)}
         onSelectionChange={handleSelectionChange}
       >
-        {/* All tab panels are rendered (shouldForceMount) to avoid a scrolling
-            issue when panels are unmounted/remounted: https://github.com/streamlit/streamlit/issues/5069 */}
         <StyledTabList ref={tabListRef} $isStale={isStale}>
           {node.children.map(
             (appNode: AppNode, index: number): ReactElement => {
@@ -343,6 +341,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
             }
           )}
         </StyledTabList>
+        {/* shouldForceMount keeps all panels in the DOM to preserve scroll position
+            when switching tabs: https://github.com/streamlit/streamlit/issues/5069 */}
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
           const isStaleTab = isElementStale(
             appNode,

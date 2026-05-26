@@ -90,7 +90,6 @@ export const StyledTabsRoot = styled(RATabs)({
   display: "flex",
   flexDirection: "column",
   width: "100%",
-  transform: "none",
 })
 
 /** Tab list strip with bottom border separator. overflow-y: clip (the official RAC
@@ -106,7 +105,6 @@ export const StyledTabList = styled(RATabList)<{ $isStale: boolean }>(
     scrollbarWidth: "none",
     "&::-webkit-scrollbar": { display: "none" },
     borderBottom: `${theme.spacing.threeXS} solid ${theme.colors.borderColorLight}`,
-    outline: "none",
     ...($isStale ? STALE_STYLES : {}),
   })
 )
@@ -126,7 +124,6 @@ export const StyledTab = styled(RATab)<{ $isStale: boolean }>(
     background: "transparent",
     color: theme.colors.bodyText,
     cursor: "pointer",
-    border: "none",
     outline: "none",
     "& .react-aria-SelectionIndicator": {
       position: "absolute",
@@ -135,7 +132,7 @@ export const StyledTab = styled(RATab)<{ $isStale: boolean }>(
       width: "100%",
       height: theme.spacing.threeXS,
       backgroundColor: "transparent",
-      transition: "translate 200ms",
+      transition: "translate 200ms, background-color 200ms",
     },
     "&[data-selected]": {
       color: theme.colors.primary,
