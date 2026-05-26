@@ -61,7 +61,7 @@
     "uuid": "^14.0.0"
   },
   "devDependencies": {
-    "@swc/plugin-emotion": "^14.9.0",
+    "@swc/plugin-emotion": "^14.10.0",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -91,7 +91,7 @@
     "tsconfig-paths-webpack-plugin": "^4.2.0",
     "typesync": "^0.14.3",
     "util": "^0.12.5",
-    "vite": "^8.0.13",
+    "vite": "^8.0.14",
     "vite-bundle-analyzer": "^1.3.8",
     "vite-plugin-svgr": "^5.2.0",
     "vite-plugin-terminal": "^1.4.0",
