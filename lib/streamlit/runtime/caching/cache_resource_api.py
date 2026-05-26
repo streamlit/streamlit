@@ -744,14 +744,20 @@ class ResourceCache(Cache[R]):
         # Lazy-load vendored package to prevent import of numpy
         from streamlit.vendor.pympler.asizeof import asizeof
 
-        stats = [
-            CacheStat(
-                category_name="st_cache_resource",
-                cache_name=self.display_name,
-                byte_length=asizeof(entry),
+        stats = []
+        for entry in cache_entries:
+            try:
+                b_len = asizeof(entry)
+            except TypeError:
+                b_len = 0
+
+            stats.append(
+                CacheStat(
+                    category_name="st_cache_resource",
+                    cache_name=self.display_name,
+                    byte_length=b_len,
+                )
             )
-            for entry in cache_entries
-        ]
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.
