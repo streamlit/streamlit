@@ -37,7 +37,6 @@
     "d3-color": "^3.1.0",
     "dompurify": "^3.2.4",
     "prismjs": "^1.30.0",
-    "@protobufjs/inquire@npm:^1.1.0": "patch:@protobufjs/inquire@npm%3A1.1.0#~/.yarn/patches/@protobufjs-inquire-npm-1.1.0-3c7759e9ce.patch",
     "@swc/core": "^1.15.3",
     "@typescript-eslint/utils": "^8.58.2",
     "@typescript-eslint/scope-manager": "^8.58.2",
@@ -52,7 +51,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.68.1",
-    "@eslint-react/eslint-plugin": "^5.7.8",
+    "@eslint-react/eslint-plugin": "^5.8.3",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
@@ -60,7 +59,7 @@
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
-    "@vitest/coverage-v8": "^4.1.6",
+    "@vitest/coverage-v8": "^4.1.7",
     "@vitest/eslint-plugin": "^1.6.17",
     "concurrently": "^9.2.1",
     "eslint": "^10.4.0",
@@ -79,6 +78,6 @@
     "oxlint": "^1.64.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.3",
-    "vitest": "^4.1.6"
+    "vitest": "^4.1.7"
   }
 }
