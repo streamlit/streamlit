@@ -127,9 +127,9 @@ describe("Modal component", () => {
 })
 
 describe("calculateModalSize", () => {
-  it("returns '34rem' (default width) when no size is provided", () => {
+  it("returns '31.25rem' (default width) when no size is provided", () => {
     const size = calculateModalSize(undefined)
-    expect(size).toBe("34rem")
+    expect(size).toBe("31.25rem")
   })
 
   it("returns undefined (content-sized) when size is 'auto'", () => {
@@ -147,12 +147,12 @@ describe("calculateModalSize", () => {
     expect(size).toBe(sizes.dialogLargeWidth)
   })
 
-  it("returns '34rem' when 'medium' is provided without width and padding", () => {
-    expect(calculateModalSize("medium")).toBe("34rem")
+  it("returns '31.25rem' when 'medium' is provided without width and padding", () => {
+    expect(calculateModalSize("medium")).toBe("31.25rem")
   })
 
-  it("returns '34rem' when 'large' is provided without a largeWidth", () => {
-    expect(calculateModalSize("large", "100px", "100px")).toBe("34rem")
+  it("returns '31.25rem' when 'large' is provided without a largeWidth", () => {
+    expect(calculateModalSize("large", "100px", "100px")).toBe("31.25rem")
   })
 })
 

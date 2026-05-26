@@ -104,8 +104,9 @@ export function calculateModalSize(
   if (size === "auto") {
     return undefined
   }
-  // Default: ~544px, matching BaseUI SIZE.default
-  return "34rem"
+  // Default: 31.25rem (= 500px at 16px base)
+  // rem is used so the dialog scales with the user's browser font-size preference.
+  return "31.25rem"
 }
 
 function Modal({

@@ -43,6 +43,7 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
     minWidth: theme.sizes.minPopupWidth,
     maxWidth: "100%",
     maxHeight: "80vh",
+    overflow: "hidden",
     display: "flex",
     flexDirection: "column",
     position: "relative",
@@ -56,11 +57,13 @@ export const StyledDialogPanel = styled(RAModal)<{ $dialogWidth?: string }>(
  *
  * flex: 0 1 auto — takes natural content height (no forced grow), shrinks when
  * the panel hits its max-height so the body scroll region activates.
+ * overflow: visible — allows absolutely-positioned toolbar overlays (which use
+ * top: -2.65rem) to escape the body area into the header space without clipping.
  */
 export const StyledDialogInner = styled(Dialog)({
   display: "flex",
   flexDirection: "column",
-  overflow: "hidden",
+  overflow: "visible",
   flex: "0 1 auto",
   minHeight: 0,
 })
@@ -73,14 +76,14 @@ export const StyledDialogClose = styled.button(({ theme }) => ({
   background: "transparent",
   border: "none",
   cursor: "pointer",
-  color: theme.colors.fadedText60,
+  color: theme.colors.bodyText,
   padding: 0,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   borderRadius: theme.radii.sm,
   "&:hover": {
-    color: theme.colors.bodyText,
+    color: theme.colors.fadedText60,
   },
   "&:focus-visible": {
     outline: "none",
