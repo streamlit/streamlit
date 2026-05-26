@@ -15,12 +15,38 @@
 from __future__ import annotations
 
 import itertools
-from typing import TYPE_CHECKING, Final, NamedTuple, Protocol, runtime_checkable
+from typing import TYPE_CHECKING, Any, Final, NamedTuple, Protocol, runtime_checkable
+
+from streamlit.logger import get_logger
+
+_LOGGER: Final = get_logger(__name__)
 
 CACHE_MEMORY_FAMILY: Final = "cache_memory_bytes"
 SESSION_EVENTS_FAMILY: Final = "session_events"
 SESSION_DURATION_FAMILY: Final = "session_duration_seconds"
 ACTIVE_SESSIONS_FAMILY: Final = "active_sessions"
+
+
+def safe_sizeof(obj: Any) -> int:
+    """Return the memory size of an object in bytes, or 0 if sizing fails.
+
+    Some objects (e.g., SQLAlchemy connections) contain internal references that
+    cannot be sized by pympler.asizeof (e.g., objects that don't support weak
+    references). This function catches those exceptions and returns 0 instead
+    of propagating the error.
+    """
+    from streamlit.vendor.pympler.asizeof import asizeof
+
+    try:
+        return asizeof(obj)
+    except Exception:
+        _LOGGER.debug(
+            "Failed to calculate size for object of type %s",
+            type(obj).__name__,
+            exc_info=True,
+        )
+        return 0
+
 
 if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
