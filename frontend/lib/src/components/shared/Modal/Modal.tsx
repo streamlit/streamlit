@@ -143,7 +143,11 @@ function Modal({
           {({ close }) => (
             <>
               {closeable && (
-                <StyledDialogClose aria-label="Close" onClick={close}>
+                <StyledDialogClose
+                  aria-label="Close"
+                  type="button"
+                  onClick={close}
+                >
                   <svg
                     aria-hidden="true"
                     height="10"

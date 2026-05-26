@@ -20,7 +20,6 @@ import { vi } from "vitest"
 
 import { BaseButtonKind } from "~lib/components/shared/BaseButton/BaseButton"
 import { render } from "~lib/test_util"
-import { sizes } from "~lib/theme/primitives/sizes"
 
 import Modal, {
   calculateModalSize,
@@ -142,9 +141,9 @@ describe("calculateModalSize", () => {
     expect(size).toBe("calc(100px + 100px)")
   })
 
-  it("returns largeWidth when size is 'large'", () => {
-    const size = calculateModalSize("large", "100px", "100px", "80rem")
-    expect(size).toBe(sizes.dialogLargeWidth)
+  it("returns the caller-supplied largeWidth when size is 'large'", () => {
+    const size = calculateModalSize("large", "100px", "100px", "77rem")
+    expect(size).toBe("77rem")
   })
 
   it("returns '31.25rem' when 'medium' is provided without width and padding", () => {
@@ -204,5 +203,16 @@ describe("Modal subcomponents", () => {
   it("renders a ModalButton with the provided label", () => {
     render(<ModalButton kind={BaseButtonKind.SECONDARY}>Confirm</ModalButton>)
     expect(screen.getByRole("button", { name: "Confirm" })).toBeVisible()
+  })
+
+  it("applies the width prop as an explicit CSS width, overriding the size prop", () => {
+    render(
+      <Modal isOpen size="default" width="80vw">
+        <ModalBody>content</ModalBody>
+      </Modal>
+    )
+    // React Aria portals the dialog into document.body, so query from document.
+    const panel = document.querySelector("[role='dialog']")?.parentElement
+    expect(panel).toHaveStyle({ width: "80vw" })
   })
 })

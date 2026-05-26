@@ -39,6 +39,7 @@ export const StyledDialogOverlay = styled(ModalOverlay)(({ theme }) => ({
   alignItems: "flex-start",
   justifyContent: "center",
   paddingTop: theme.spacing.threeXL,
+  paddingBottom: theme.spacing.threeXL,
   zIndex: theme.zIndices.popup,
   overflowY: "auto",
 }))
@@ -81,13 +82,13 @@ export const StyledDialogInner = styled(Dialog)({
 /** Absolutely-positioned close (×) button in the top-right of the dialog. */
 export const StyledDialogClose = styled.button(({ theme }) => ({
   position: "absolute",
-  top: `calc(${theme.spacing.twoXL} + ${theme.spacing.xs})`,
+  top: `calc(${theme.spacing.twoXL} + ${theme.spacing.xs} - ${theme.spacing.twoXS})`,
   right: theme.spacing.twoXL,
   background: "transparent",
   border: "none",
   cursor: "pointer",
   color: theme.colors.bodyText,
-  padding: 0,
+  padding: theme.spacing.twoXS,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
