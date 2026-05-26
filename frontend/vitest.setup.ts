@@ -139,6 +139,9 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn(), cancel: vi.fn() }))
 
+// Add fake getAnimations for RAC's SelectionIndicator (SharedElementTransition)
+Element.prototype.getAnimations = vi.fn().mockReturnValue([])
+
 class ResizeObserverMock {
   public callback: (
     entries: ResizeObserverEntry[],

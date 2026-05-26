@@ -26,8 +26,8 @@ import {
 } from "react"
 
 import { ChevronLeft, ChevronRight } from "@emotion-icons/material-outlined"
-import { Tab as UITab, Tabs as UITabs } from "baseui/tabs-motion"
 import classNames from "classnames"
+import { Key, SelectionIndicator } from "react-aria-components"
 
 import { AppNode, BlockNode } from "~lib/AppNode"
 import { BlockPropsWithoutWidth } from "~lib/components/core/Block/Block"
@@ -39,11 +39,16 @@ import {
 import { ScriptRunContext } from "~lib/components/core/ScriptRunContext"
 import Icon from "~lib/components/shared/Icon/Icon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
-import { STALE_STYLES } from "~lib/theme/consts"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledScrollArrow, StyledTabContainer } from "./styled-components"
+import {
+  StyledScrollArrow,
+  StyledTab,
+  StyledTabContainer,
+  StyledTabList,
+  StyledTabPanel,
+  StyledTabsRoot,
+} from "./styled-components"
 
 const SCROLL_AMOUNT = 200
 const SCROLL_TOLERANCE = 1
@@ -111,7 +116,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     [node.children]
   )
 
-  const [activeTabKey, setActiveTabKey] = useState<React.Key>(() => {
+  const [activeTabKey, setActiveTabKey] = useState<number>(() => {
     if (isPassivelyKeyed) {
       const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
       if (persisted) return persisted.index
@@ -133,8 +138,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     }
   }
 
-  const tabListRef = useRef<HTMLUListElement>(null)
-  const theme = useEmotionTheme()
+  const tabListRef = useRef<HTMLDivElement>(null)
 
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
@@ -263,8 +267,36 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [node.children.length, updateScrollState])
 
-  const TAB_HEIGHT = theme.sizes.tabHeight
-  const TAB_BORDER_HEIGHT = theme.spacing.threeXS
+  const handleSelectionChange = useCallback(
+    (key: Key): void => {
+      const newIndex = parseInt(key as string, 10)
+      const newLabel = allTabLabels[newIndex]
+      setActiveTabKey(newIndex)
+      activeTabNameRef.current = newLabel
+
+      if (isPassivelyKeyed) {
+        widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
+      }
+
+      if (isDynamic && widgetId && widgetMgr) {
+        widgetMgr.setStringValue(
+          { id: widgetId, formId: "" },
+          newLabel,
+          { fromUi: true },
+          fragmentId
+        )
+      }
+    },
+    [
+      allTabLabels,
+      blockId,
+      fragmentId,
+      isDynamic,
+      isPassivelyKeyed,
+      widgetId,
+      widgetMgr,
+    ]
+  )
 
   return (
     <StyledTabContainer
@@ -274,147 +306,72 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       width={width}
       flex={flex}
     >
-      <UITabs
-        activateOnFocus
-        activeKey={activeTabKey}
-        onChange={({ activeKey }) => {
-          const newLabel = allTabLabels[activeKey as number]
-          setActiveTabKey(activeKey)
-          activeTabNameRef.current = newLabel
-
-          if (isPassivelyKeyed) {
-            widgetMgr.setElementState(blockId, "activeTabLabel", newLabel)
-          }
-
-          if (isDynamic && widgetId && widgetMgr) {
-            widgetMgr.setStringValue(
-              { id: widgetId, formId: "" },
-              newLabel,
-              { fromUi: true },
-              fragmentId
-            )
-          }
-        }}
-        /* renderAll on UITabs should always be set to true to avoid scrolling issue
-           https://github.com/streamlit/streamlit/issues/5069
-         */
-        renderAll={true}
-        overrides={{
-          TabHighlight: {
-            style: () => ({
-              backgroundColor: theme.colors.primary,
-              height: TAB_BORDER_HEIGHT,
-            }),
-          },
-          TabBorder: {
-            style: () => ({
-              backgroundColor: theme.colors.borderColorLight,
-              height: TAB_BORDER_HEIGHT,
-            }),
-          },
-          TabList: {
-            props: { ref: tabListRef },
-            style: () => ({
-              gap: theme.spacing.lg,
-              marginBottom: `-${TAB_BORDER_HEIGHT}`,
-              paddingBottom: TAB_BORDER_HEIGHT,
-              overflowY: "hidden",
-              ...(isStale && STALE_STYLES),
-            }),
-          },
-          Root: {
-            style: () => ({
-              // resetting transform to fix full screen wrapper
-              transform: "none",
-            }),
-          },
-        }}
+      <StyledTabsRoot
+        selectedKey={String(activeTabKey)}
+        onSelectionChange={handleSelectionChange}
       >
+        {/* All tab panels are rendered (shouldForceMount) to avoid a scrolling
+            issue when panels are unmounted/remounted: https://github.com/streamlit/streamlit/issues/5069 */}
+        <StyledTabList ref={tabListRef} $isStale={isStale}>
+          {node.children.map(
+            (appNode: AppNode, index: number): ReactElement => {
+              const isStaleTab = isElementStale(
+                appNode,
+                scriptRunState,
+                scriptRunId,
+                fragmentIdsThisRun
+              )
+              const nodeLabel = allTabLabels[index] ?? index.toString()
+              return (
+                <StyledTab
+                  data-testid="stTab"
+                  id={String(index)}
+                  // TODO: Update to match React best practices
+                  // eslint-disable-next-line @eslint-react/no-array-index-key
+                  key={index}
+                  isDisabled={!isStale && isStaleTab}
+                  $isStale={!isStale && isStaleTab}
+                >
+                  <StreamlitMarkdown
+                    source={nodeLabel}
+                    allowHTML={false}
+                    isLabel
+                  />
+                  <SelectionIndicator />
+                </StyledTab>
+              )
+            }
+          )}
+        </StyledTabList>
         {node.children.map((appNode: AppNode, index: number): ReactElement => {
-          // If the tab is stale, disable it
           const isStaleTab = isElementStale(
             appNode,
             scriptRunState,
             scriptRunId,
             fragmentIdsThisRun
           )
-
-          // Ensure stale tab's elements are also marked stale/disabled
           const childProps = {
             ...props,
             isStale: isStale || isStaleTab,
             widgetsDisabled,
             node: appNode as BlockNode,
           }
-          const nodeLabel = allTabLabels[index] ?? index.toString()
-
-          const isSelected = activeTabKey.toString() === index.toString()
-
           return (
-            <UITab
-              data-testid="stTab"
-              title={
-                <StreamlitMarkdown
-                  source={nodeLabel}
-                  allowHTML={false}
-                  isLabel
-                />
-              }
+            <StyledTabPanel
+              id={String(index)}
               // TODO: Update to match React best practices
               // eslint-disable-next-line @eslint-react/no-array-index-key
               key={index}
-              // Disable tab if the tab is stale but not the entire tab container:
-              disabled={!isStale && isStaleTab}
-              overrides={{
-                TabPanel: {
-                  style: () => ({
-                    paddingLeft: theme.spacing.none,
-                    paddingRight: theme.spacing.none,
-                    paddingBottom: theme.spacing.none,
-                    paddingTop: theme.spacing.lg,
-                  }),
-                },
-                Tab: {
-                  style: () => ({
-                    height: TAB_HEIGHT,
-                    whiteSpace: "nowrap",
-                    paddingLeft: theme.spacing.none,
-                    paddingRight: theme.spacing.none,
-                    paddingTop: theme.spacing.none,
-                    paddingBottom: theme.spacing.none,
-                    fontSize: theme.fontSizes.sm,
-                    background: "transparent",
-                    color: theme.colors.bodyText,
-                    ":focus": {
-                      outline: "none",
-                      color: theme.colors.primary,
-                      background: "none",
-                    },
-                    ":hover": {
-                      color: theme.colors.primary,
-                      background: "none",
-                    },
-                    ...(isSelected
-                      ? {
-                          color: theme.colors.primary,
-                        }
-                      : {}),
-                    // Apply stale effect if only this specific
-                    // tab is stale but not the entire tab container.
-                    ...(!isStale && isStaleTab && STALE_STYLES),
-                  }),
-                },
-              }}
+              shouldForceMount
             >
               {props.renderTabContent(childProps)}
-            </UITab>
+            </StyledTabPanel>
           )
         })}
-      </UITabs>
+      </StyledTabsRoot>
       {canScrollLeft && (
         <StyledScrollArrow
           position="left"
-          tabHeight={TAB_HEIGHT}
           onClick={handleScrollLeft}
           aria-label="Scroll tabs left"
           data-testid="stTabsScrollLeft"
@@ -425,7 +382,6 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       {canScrollRight && (
         <StyledScrollArrow
           position="right"
-          tabHeight={TAB_HEIGHT}
           onClick={handleScrollRight}
           aria-label="Scroll tabs right"
           data-testid="stTabsScrollRight"
