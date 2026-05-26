@@ -116,6 +116,21 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     [node.children]
   )
 
+  // Memoize stale flags once so both the tab-button and tab-panel maps share
+  // the same computation instead of calling isElementStale twice per child.
+  const staleTabFlags = useMemo(
+    () =>
+      node.children.map(appNode =>
+        isElementStale(
+          appNode,
+          scriptRunState,
+          scriptRunId,
+          fragmentIdsThisRun
+        )
+      ),
+    [node.children, scriptRunState, scriptRunId, fragmentIdsThisRun]
+  )
+
   const [activeTabKey, setActiveTabKey] = useState<number>(() => {
     if (isPassivelyKeyed) {
       const persisted = getPersistedTabIndex(widgetMgr, blockId, allTabLabels)
@@ -219,14 +234,18 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   // Scroll the active tab into view when the selection changes programmatically
   // (e.g. defaultTabIndex update, passive state restore). block:"nearest" avoids
   // vertical page scroll; inline:"nearest" only scrolls if the tab is not visible.
+  // Respects the OS reduced-motion preference by using "instant" when set.
   useEffect(() => {
     const tabList = tabListRef.current
     if (!tabList) return
     const activeTab = tabList.querySelector<HTMLElement>(
       "[aria-selected='true']"
     )
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches
     activeTab?.scrollIntoView({
-      behavior: "smooth",
+      behavior: reduceMotion ? "instant" : "smooth",
       block: "nearest",
       inline: "nearest",
     })
@@ -328,13 +347,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       >
         <StyledTabList ref={tabListRef} $isStale={isStale}>
           {node.children.map(
-            (appNode: AppNode, index: number): ReactElement => {
-              const isStaleTab = isElementStale(
-                appNode,
-                scriptRunState,
-                scriptRunId,
-                fragmentIdsThisRun
-              )
+            (_appNode: AppNode, index: number): ReactElement => {
+              const isStaleTab = staleTabFlags[index]
               const nodeLabel = allTabLabels[index] ?? index.toString()
               return (
                 <StyledTab
@@ -359,31 +373,28 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
         </StyledTabList>
         {/* shouldForceMount keeps all panels in the DOM to preserve scroll position
             when switching tabs: https://github.com/streamlit/streamlit/issues/5069 */}
-        {node.children.map((appNode: AppNode, index: number): ReactElement => {
-          const isStaleTab = isElementStale(
-            appNode,
-            scriptRunState,
-            scriptRunId,
-            fragmentIdsThisRun
-          )
-          const childProps = {
-            ...props,
-            isStale: isStale || isStaleTab,
-            widgetsDisabled,
-            node: appNode as BlockNode,
+        {node.children.map(
+          (_appNode: AppNode, index: number): ReactElement => {
+            const isStaleTab = staleTabFlags[index]
+            const childProps = {
+              ...props,
+              isStale: isStale || isStaleTab,
+              widgetsDisabled,
+              node: node.children[index] as BlockNode,
+            }
+            return (
+              <StyledTabPanel
+                id={String(index)}
+                // TODO: Update to match React best practices
+                // eslint-disable-next-line @eslint-react/no-array-index-key
+                key={index}
+                shouldForceMount
+              >
+                {props.renderTabContent(childProps)}
+              </StyledTabPanel>
+            )
           }
-          return (
-            <StyledTabPanel
-              id={String(index)}
-              // TODO: Update to match React best practices
-              // eslint-disable-next-line @eslint-react/no-array-index-key
-              key={index}
-              shouldForceMount
-            >
-              {props.renderTabContent(childProps)}
-            </StyledTabPanel>
-          )
-        })}
+        )}
       </StyledTabsRoot>
       {canScrollLeft && (
         <StyledScrollArrow

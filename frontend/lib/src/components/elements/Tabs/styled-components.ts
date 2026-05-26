@@ -96,59 +96,62 @@ export const StyledTabsRoot = styled(RATabs)({
  * recommendation) prevents a Y-scroll container from being created while still
  * allowing the absolutely-positioned SelectionIndicator inside each Tab to be visible,
  * because the indicator is within the tab's own height — not overflowing the tablist. */
-export const StyledTabList = styled(RATabList)<{ $isStale: boolean }>(
-  ({ theme, $isStale }) => ({
-    display: "flex",
-    gap: theme.spacing.lg,
-    overflowX: "auto",
-    overflowY: "clip",
-    scrollbarWidth: "none",
-    "&::-webkit-scrollbar": { display: "none" },
-    borderBottom: `${theme.spacing.threeXS} solid ${theme.colors.borderColorLight}`,
-    ...($isStale ? STALE_STYLES : {}),
-  })
-)
+export const StyledTabList = styled(RATabList, {
+  shouldForwardProp: prop => prop !== "$isStale",
+})<{ $isStale: boolean }>(({ theme, $isStale }) => ({
+  display: "flex",
+  gap: theme.spacing.lg,
+  overflowX: "auto",
+  overflowY: "clip",
+  scrollbarWidth: "none",
+  "&::-webkit-scrollbar": { display: "none" },
+  borderBottom: `${theme.spacing.threeXS} solid ${theme.colors.borderColorLight}`,
+  ...($isStale ? STALE_STYLES : {}),
+}))
 
 /** Individual tab button — RAC renders as `<div role="tab">`.
  * position:relative establishes the containing block for the absolutely-positioned
  * SelectionIndicator child. The indicator slides to show which tab is active. */
-export const StyledTab = styled(RATab)<{ $isStale: boolean }>(
-  ({ theme, $isStale }) => ({
-    display: "flex",
-    alignItems: "center",
-    position: "relative",
-    height: theme.sizes.tabHeight,
-    whiteSpace: "nowrap",
-    padding: 0,
-    fontSize: theme.fontSizes.sm,
-    background: "transparent",
-    color: theme.colors.bodyText,
-    cursor: "pointer",
-    outline: "none",
+export const StyledTab = styled(RATab, {
+  shouldForwardProp: prop => prop !== "$isStale",
+})<{ $isStale: boolean }>(({ theme, $isStale }) => ({
+  display: "flex",
+  alignItems: "center",
+  position: "relative",
+  height: theme.sizes.tabHeight,
+  whiteSpace: "nowrap",
+  padding: 0,
+  fontSize: theme.fontSizes.sm,
+  background: "transparent",
+  color: theme.colors.bodyText,
+  cursor: "pointer",
+  outline: "none",
+  "& .react-aria-SelectionIndicator": {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: "100%",
+    height: theme.spacing.threeXS,
+    backgroundColor: "transparent",
+    transition: "translate 200ms, background-color 200ms",
+    "@media (prefers-reduced-motion: reduce)": {
+      transition: "none",
+    },
+  },
+  "&[data-selected]": {
+    color: theme.colors.primary,
     "& .react-aria-SelectionIndicator": {
-      position: "absolute",
-      bottom: 0,
-      left: 0,
-      width: "100%",
-      height: theme.spacing.threeXS,
-      backgroundColor: "transparent",
-      transition: "translate 200ms, background-color 200ms",
+      backgroundColor: theme.colors.primary,
     },
-    "&[data-selected]": {
-      color: theme.colors.primary,
-      "& .react-aria-SelectionIndicator": {
-        backgroundColor: theme.colors.primary,
-      },
-    },
-    "&[data-hovered]": { color: theme.colors.primary },
-    "&[data-focus-visible]": {
-      color: theme.colors.primary,
-      boxShadow: theme.shadows.focusRing,
-    },
-    "&[data-disabled]": { opacity: 0.4, cursor: "default" },
-    ...($isStale ? STALE_STYLES : {}),
-  })
-)
+  },
+  "&[data-hovered]": { color: theme.colors.primary },
+  "&[data-focus-visible]": {
+    color: theme.colors.primary,
+    boxShadow: theme.shadows.focusRing,
+  },
+  "&[data-disabled]": { opacity: 0.4, cursor: "default" },
+  ...($isStale ? STALE_STYLES : {}),
+}))
 
 /** Tab panel content area. Inactive force-mounted panels receive `inert="true"` from
  * RAC (not `hidden`), which prevents interaction but does NOT hide them visually.
