@@ -107,6 +107,32 @@ auto_refresh_metrics()
 
 Use for: live metrics, refresh buttons, interactive charts that don't affect global state.
 
+### Parallel fragments for independent slow sections
+
+When a page has multiple independent slow sections (different queries, API calls, or model inferences), wrap each in `@st.fragment(parallel=True)` so they execute concurrently during full app reruns instead of sequentially.
+
+```python
+# BAD: Sections load one after another — total time = sum of all sections
+@st.fragment
+def sales_dashboard():
+    st.line_chart(fetch_sales_data())  # 2s
+
+@st.fragment
+def inventory_status():
+    st.dataframe(fetch_inventory())    # 2s
+
+# GOOD: Sections load concurrently — total time = slowest section
+@st.fragment(parallel=True)
+def sales_dashboard():
+    st.line_chart(fetch_sales_data())  # 2s
+
+@st.fragment(parallel=True)
+def inventory_status():
+    st.dataframe(fetch_inventory())    # 2s
+```
+
+Use when sections are truly independent (no shared mutable state between them). During the initial parallel run, some commands are restricted on worker threads — `st.dialog`, `st.switch_page`, and writing to containers created outside the fragment. These work normally during sequential fragment reruns triggered by widget interactions.
+
 ## Forms to batch interactions
 
 By default, every widget interaction triggers a full rerun. Use `st.form` to batch multiple inputs and only rerun on submit.
