@@ -378,3 +378,29 @@ def test_main_menu_version_footer_copies_version(app: Page):
     copied_text = app.evaluate("navigator.clipboard.readText()")
     assert copied_text
     assert re.match(r"^\d+(?:\.\d+){2}.*$", copied_text)
+
+
+def test_clear_cache_dialog_dismisses_on_escape(app: Page):
+    """Test that the clear cache dialog can be dismissed with the Escape key."""
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Clear cache").click()
+
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+
+    app.keyboard.press("Escape")
+
+    expect(dialog).not_to_be_visible()
+
+
+def test_clear_cache_dialog_dismisses_via_close_button(app: Page):
+    """Test that the clear cache dialog can be dismissed with the close (x) button."""
+    app.get_by_test_id("stMainMenu").click()
+    app.get_by_text("Clear cache").click()
+
+    dialog = app.get_by_test_id("stDialog")
+    expect(dialog).to_be_visible()
+
+    dialog.get_by_role("dialog").get_by_label("Close").click()
+
+    expect(dialog).not_to_be_visible()
