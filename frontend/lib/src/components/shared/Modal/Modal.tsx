@@ -72,8 +72,6 @@ interface StreamlitModalProps {
   size?: "auto" | "default" | "medium" | "large"
   /** Explicit CSS width override, takes precedence over size. Used for non-standard widths like "80vw". */
   width?: string
-  /** @deprecated React Aria manages focus per ARIA spec; this prop has no effect. */
-  autoFocus?: boolean
   children?: ReactNode
 }
 

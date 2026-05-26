@@ -41,25 +41,17 @@ def test_deploy_button_displays_correctly(
     assert_snapshot(deploy_dialog.get_by_role("dialog"), name="deploy_dialog")
 
 
-def test_deploy_dialog_dismisses_on_escape(app: Page):
-    """Test that the deploy dialog can be dismissed with the Escape key."""
+def test_deploy_dialog_dismisses(app: Page):
+    """Test that the deploy dialog can be dismissed via Escape key and close button."""
+    # Dismiss via Escape key
     app.get_by_test_id("stAppDeployButton").click()
-
     dialog = app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
-
     app.keyboard.press("Escape")
-
     expect(dialog).not_to_be_visible()
 
-
-def test_deploy_dialog_dismisses_via_close_button(app: Page):
-    """Test that the deploy dialog can be dismissed with the close (x) button."""
+    # Re-open and dismiss via close button
     app.get_by_test_id("stAppDeployButton").click()
-
-    dialog = app.get_by_test_id("stDialog")
     expect(dialog).to_be_visible()
-
     dialog.get_by_role("dialog").get_by_label("Close").click()
-
     expect(dialog).not_to_be_visible()
