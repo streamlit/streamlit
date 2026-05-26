@@ -216,6 +216,22 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
   }, [allTabLabels])
 
+  // Scroll the active tab into view when the selection changes programmatically
+  // (e.g. defaultTabIndex update, passive state restore). block:"nearest" avoids
+  // vertical page scroll; inline:"nearest" only scrolls if the tab is not visible.
+  useEffect(() => {
+    const tabList = tabListRef.current
+    if (!tabList) return
+    const activeTab = tabList.querySelector<HTMLElement>(
+      "[aria-selected='true']"
+    )
+    activeTab?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    })
+  }, [activeTabKey])
+
   // Set up scroll event listener and resize observer
   useEffect(() => {
     const tabList = tabListRef.current

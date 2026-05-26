@@ -142,6 +142,9 @@ Element.prototype.animate = vi
 // Add fake getAnimations for RAC's SelectionIndicator (SharedElementTransition)
 Element.prototype.getAnimations = vi.fn().mockReturnValue([])
 
+// scrollIntoView is not implemented in JSDOM
+Element.prototype.scrollIntoView = vi.fn()
+
 class ResizeObserverMock {
   public callback: (
     entries: ResizeObserverEntry[],
