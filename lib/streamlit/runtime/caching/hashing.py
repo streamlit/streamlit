@@ -255,10 +255,9 @@ def _key(obj: Any | None) -> Any:
         return None
 
     def is_simple(obj: Any) -> bool:
-        return (
-            isinstance(obj, (bytes, bytearray, str, float, int, bool, uuid.UUID))
-            or obj is None
-        )
+        # Note: bytearray is excluded because it's unhashable and cannot be
+        # used as a dictionary key for memoization
+        return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
 
     if is_simple(obj):
         return obj
