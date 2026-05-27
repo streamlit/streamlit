@@ -189,16 +189,26 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       ? "multiple"
       : "single"
 
+  // Each ToggleButton's `id` doubles as its React Aria selection key.
+  // Namespace with element.id so identical-index keys from sibling widgets
+  // are never the same DOM `id`, which would violate the HTML uniqueness spec.
+  const buttonId = useCallback(
+    (index: number) => `${element.id}-${index}`,
+    [element.id]
+  )
+
   const selectedKeys = useMemo(
-    () => new Set(contentStringsToIndices(options, value).map(String)),
-    [options, value]
+    () =>
+      new Set(contentStringsToIndices(options, value).map(i => buttonId(i))),
+    [options, value, buttonId]
   )
 
   const handleSelectionChange = useCallback(
     (keys: Selection): void => {
       if (keys === "all") return
-      const newSelection = [...keys].map(i =>
-        getOptionBaseContent(options[Number(i)])
+      const idPrefix = `${element.id}-`
+      const newSelection = [...keys].map(k =>
+        getOptionBaseContent(options[Number(String(k).slice(idPrefix.length))])
       )
       // Avoid redundant state updates (e.g., when disallowEmptySelection blocks
       // deselection of the last item, React Aria still fires onSelectionChange
@@ -213,7 +223,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       }
       setValueWithSource({ value: newSelection, fromUi: true })
     },
-    [options, value, setValueWithSource]
+    [options, value, setValueWithSource, element.id]
   )
 
   const isPills = style === ButtonGroupProto.Style.PILLS
@@ -227,7 +237,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       <ButtonEl
         // eslint-disable-next-line @eslint-react/no-array-index-key
         key={`${getOptionBaseContent(option)}-${index}`}
-        id={String(index)}
+        id={buttonId(index)}
         data-variant={dataVariant}
         $containerWidth={containerWidth}
       >
@@ -238,7 +248,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         />
       </ButtonEl>
     ))
-  }, [options, isPills, containerWidth])
+  }, [options, isPills, containerWidth, buttonId])
 
   return (
     <StyledButtonGroup
