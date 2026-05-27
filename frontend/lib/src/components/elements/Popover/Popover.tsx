@@ -173,13 +173,16 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // blocking.
   //
   // Side-effect: with isNonModal=true, React Aria never auto-focuses the
-  // overlay and never installs its own useInteractOutside handler, so we own
-  // both outside-click dismissal (pointerdown listener) and Escape-key
-  // dismissal (onKeyDown on BaseButton).
+  // overlay and never installs its own useInteractOutside or keyboard handlers.
+  // We implement both outside-click and Escape-key dismissal ourselves.
+  //
+  // We use `click` (not `pointerdown`) so that a focused input inside the
+  // popover fires its blur/change handlers before we call handleClose, ensuring
+  // its value is committed to Streamlit's widget manager before the rerun.
   useEffect(() => {
     if (!open) return
 
-    const handlePointerDown = (e: PointerEvent): void => {
+    const handleClick = (e: MouseEvent): void => {
       const target = e.target as Node
       if (
         !triggerRef.current?.contains(target) &&
@@ -189,8 +192,26 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
-    document.addEventListener("pointerdown", handlePointerDown)
-    return () => document.removeEventListener("pointerdown", handlePointerDown)
+    // Capture phase: fires before any child handler, including React Aria's own
+    // overlay onKeyDown. This prevents a double-close (our handler + React
+    // Aria's) that would send two widget updates to the backend. The trade-off
+    // is that nested overlays inside the popover (e.g. a Select dropdown) won't
+    // get the first chance at Escape — pressing Escape always closes the
+    // popover. This is acceptable given Streamlit's typical popover content.
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        e.preventDefault()
+        handleClose()
+      }
+    }
+
+    document.addEventListener("click", handleClick)
+    document.addEventListener("keydown", handleKeyDown, true)
+    return () => {
+      document.removeEventListener("click", handleClick)
+      document.removeEventListener("keydown", handleKeyDown, true)
+    }
   }, [open, handleClose])
 
   return (
@@ -204,13 +225,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             disabled={(empty && !widgetId) || element.disabled}
             containerWidth={true}
             onClick={handleToggle}
-            onKeyDown={(e): void => {
-              if (e.key === "Escape" && open) {
-                e.stopPropagation()
-                e.preventDefault()
-                handleClose()
-              }
-            }}
             aria-expanded={open}
             aria-haspopup="dialog"
           >
