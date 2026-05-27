@@ -206,9 +206,18 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
       }
     }
 
-    document.addEventListener("click", handleClick)
-    document.addEventListener("keydown", handleKeyDown, true)
+    // Defer by one tick so that the trigger click that opened the popover
+    // finishes propagating before we begin watching for outside clicks.
+    // Without this, in some chromium scenarios the opening click can race
+    // with useEffect and be caught by our listener, immediately closing
+    // the popover.
+    const timerId = setTimeout(() => {
+      document.addEventListener("click", handleClick)
+      document.addEventListener("keydown", handleKeyDown, true)
+    }, 0)
+
     return () => {
+      clearTimeout(timerId)
       document.removeEventListener("click", handleClick)
       document.removeEventListener("keydown", handleKeyDown, true)
     }
