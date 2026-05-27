@@ -257,6 +257,10 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
         app, "Markdown column return:", "Saved via keyboard", exact_match=False
     )
 
+    # Re-fetch the dataframe locator since the page has been rerendered
+    markdown_column_df = _get_editor(app, "markdown-column")
+    expect_canvas_to_be_visible(markdown_column_df)
+
     # Re-open the cell to test Escape to cancel
     click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(app)
