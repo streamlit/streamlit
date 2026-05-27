@@ -621,24 +621,6 @@ class ImageProtoTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.imgs.link == ""
 
-    def test_st_image_with_relative_link(self):
-        """Test st.image with a relative link."""
-        img = Image.new("RGB", (64, 64), color="red")
-
-        st.image(img, link="/my_page")
-
-        el = self.get_delta_from_queue().new_element
-        assert el.imgs.link == "/my_page"
-
-    def test_st_image_with_link_no_scheme(self):
-        """Test st.image with a link without scheme."""
-        img = Image.new("RGB", (64, 64), color="red")
-
-        st.image(img, link="example.com/path")
-
-        el = self.get_delta_from_queue().new_element
-        assert el.imgs.link == "example.com/path"
-
     def test_st_image_link_with_multiple_images(self):
         """Test st.image with link and multiple images raises an error."""
         imgs = [
@@ -651,6 +633,49 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         assert "single image" in str(exc_info.value)
         assert "2 images" in str(exc_info.value)
+
+    @mock.patch("streamlit.elements.image.get_script_run_ctx")
+    @mock.patch("streamlit.elements.image.get_main_script_directory")
+    def test_st_image_with_invalid_internal_link(self, mock_get_main_script_dir, mock_get_script_run_ctx):
+        """Testa se st.image dispara erro com um link interno inválido (Sad Path)."""
+        mock_ctx = mock.MagicMock()
+        mock_ctx.pages_manager.get_pages.return_value = {}
+        mock_get_script_run_ctx.return_value = mock_ctx
+        mock_get_main_script_dir.return_value = "/root"
+
+        img = Image.new("RGB", (64, 64), color="red")
+
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            st.image(img, link="pages/invalid.py")
+
+        assert "Could not find internal page" in str(exc_info.value)
+
+    @mock.patch("streamlit.elements.image.get_script_run_ctx")
+    @mock.patch("streamlit.elements.image.get_main_script_directory")
+    @mock.patch("os.path.realpath")
+    def test_st_image_with_valid_internal_link(self, mock_realpath, mock_get_main_script_dir, mock_get_script_run_ctx):
+        """Testa se st.image configura as propriedades corretas para um link interno válido (Happy Path)."""
+        mock_ctx = mock.MagicMock()
+        mock_ctx.main_script_path = "/root/main.py"
+        mock_ctx.pages_manager.get_pages.return_value = {
+            "page_hash_123": {
+                "script_path": "/root/pages/details.py",
+                "url_pathname": "details",
+                "page_script_hash": "page_hash_123"
+            }
+        }
+        mock_get_script_run_ctx.return_value = mock_ctx
+        mock_get_main_script_dir.return_value = "/root"
+        mock_realpath.side_effect = lambda x: x
+
+        img = Image.new("RGB", (64, 64), color="red")
+
+        st.image(img, link="pages/details.py")
+
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "details"
+        assert el.imgs.is_internal is True
+        assert el.imgs.page_script_hash == "page_hash_123"
 
 
 @pytest.mark.parametrize(
