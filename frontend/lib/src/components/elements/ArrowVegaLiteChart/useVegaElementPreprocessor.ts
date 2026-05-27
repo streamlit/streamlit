@@ -259,6 +259,9 @@ export const useVegaElementPreprocessor = (
   // resize and we handle those via Vega's native resize API for better performance.
   // Fixed dimensions (from the spec itself) are included because they represent
   // intentional user-specified sizes that should trigger a view recreation.
+  // We also include useContainerWidth/useContainerHeight booleans in the key because
+  // transitioning to/from container-driven sizing (e.g., entering fullscreen) requires
+  // a full view recreation to properly apply the new dimensions.
   const baseSpecKey = useMemo(() => {
     const baseSpec = generateSpec(
       inputSpec,
@@ -279,7 +282,13 @@ export const useVegaElementPreprocessor = (
     if (useContainerHeight) {
       delete specForKey.height
     }
-    return JSON.stringify(specForKey)
+    // Include the sizing mode flags so that transitioning to/from
+    // container-driven sizing triggers a view recreation.
+    return JSON.stringify({
+      spec: specForKey,
+      useContainerWidth,
+      useContainerHeight,
+    })
   }, [
     inputSpec,
     useContainerWidth,
