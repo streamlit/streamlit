@@ -955,8 +955,8 @@ font-src {app_url_for_endpoints}/static/fonts/ {app_url_for_endpoints}/static/me
                 </head>
                 <body style="height: 100%;">
                     <iframe
-                        src={src}
-                        id={_iframe_element_attrs.element_id or ""}
+                        src="{src}"
+                        id="{_iframe_element_attrs.element_id or ""}"
                         title="Iframed Streamlit App"
                         allow="clipboard-read; clipboard-write; microphone; camera;"
                         sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
