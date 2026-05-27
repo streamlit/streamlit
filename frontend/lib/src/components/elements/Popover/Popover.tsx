@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useRef, useState } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 import { notNullOrUndefined } from "@streamlit/utils"
@@ -155,6 +162,37 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
   // outside BaseButtonTooltip is always rendered once and correctly positioned.
   const triggerRef = useRef<HTMLDivElement>(null)
 
+  // Ref for the popover body used in the outside-click handler below.
+  const popoverBodyRef = useRef<HTMLDivElement>(null)
+
+  // isNonModal disables React Aria's ariaHideOutside, which would otherwise
+  // mark every element outside the popover as `inert`. In webkit (Safari),
+  // `inert` fully prevents pointer events, making it impossible to click
+  // anything on the page while the popover is open. isNonModal also skips
+  // the position:fixed underlay div that independently causes the same webkit
+  // blocking.
+  //
+  // Side-effect: with isNonModal=true, React Aria never auto-focuses the
+  // overlay and never installs its own useInteractOutside handler, so we own
+  // both outside-click dismissal (pointerdown listener) and Escape-key
+  // dismissal (onKeyDown on BaseButton).
+  useEffect(() => {
+    if (!open) return
+
+    const handlePointerDown = (e: PointerEvent): void => {
+      const target = e.target as Node
+      if (
+        !triggerRef.current?.contains(target) &&
+        !popoverBodyRef.current?.contains(target)
+      ) {
+        handleClose()
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown)
+    return () => document.removeEventListener("pointerdown", handlePointerDown)
+  }, [open, handleClose])
+
   return (
     <Box data-testid="stPopover" className="stPopover" ref={elementRef}>
       <div ref={triggerRef}>
@@ -166,6 +204,13 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
             disabled={(empty && !widgetId) || element.disabled}
             containerWidth={true}
             onClick={handleToggle}
+            onKeyDown={(e): void => {
+              if (e.key === "Escape" && open) {
+                e.stopPropagation()
+                e.preventDefault()
+                handleClose()
+              }
+            }}
             aria-expanded={open}
             aria-haspopup="dialog"
           >
@@ -188,6 +233,7 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         </BaseButtonTooltip>
       </div>
       <StyledPopoverBody
+        ref={popoverBodyRef}
         data-testid="stPopoverBody"
         isOpen={open}
         onOpenChange={(isOpen): void => {
@@ -197,14 +243,6 @@ const Popover: React.FC<React.PropsWithChildren<PopoverProps>> = ({
         placement="bottom left"
         offset={convertRemToPx(theme.spacing.twoXS)}
         containerPadding={convertRemToPx(theme.spacing.lg)}
-        // Prevent React Aria from also calling onOpenChange(false) when the
-        // trigger button is clicked — the button's own onClick handles the toggle.
-        shouldCloseOnInteractOutside={(element): boolean =>
-          !triggerRef.current?.contains(element)
-        }
-        // Prevent React Aria from rendering a position:fixed underlay div that
-        // blocks all pointer events in webkit when the popover is open.
-        // Outside-click dismissal is still handled by shouldCloseOnInteractOutside.
         isNonModal
         $stretchWidth={stretchWidth}
         $calculatedWidth={calculatedWidth}
