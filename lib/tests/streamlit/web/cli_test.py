@@ -692,6 +692,93 @@ class CliTest(unittest.TestCase):
         assert result.exit_code == 0
 
 
+def test_run_no_extension_raises_helpful_message() -> None:
+    """``streamlit run`` errors when the file argument has no extension at all."""
+    result = CliRunner().invoke(cli.main, ["run", "no_extension"])
+
+    assert result.exit_code != 0
+    assert "no extension" in result.output
+
+
+def test_convert_deprecated_config_option_with_no_description() -> None:
+    """A deprecated config option without a description starts from an empty string."""
+    config_option = ConfigOption(
+        "deprecated.noDescriptionKey",
+        description=None,
+        deprecated=True,
+        deprecation_text="Foo",
+        expiration_date="Bar",
+        type_=int,
+    )
+
+    result = _convert_config_option_to_click_option(config_option)
+
+    assert result["description"] == "\n Foo - Bar"
+
+
+def test_get_command_line_raises_for_streamlit_cli_invocation() -> None:
+    """Calling Streamlit via ``python -m streamlit.cli`` is unsupported and raises."""
+    mock_context = MagicMock()
+    mock_context.parent.command_path = "python -m streamlit.cli run"
+    with (
+        patch("click.get_current_context", return_value=mock_context),
+        pytest.raises(RuntimeError, match=r"streamlit\.cli"),
+    ):
+        cli._get_command_line_as_string()
+
+
+def test_main_run_handles_none_flag_options() -> None:
+    """``_main_run`` accepts ``flag_options=None`` and forwards empty ``args``/``flag_options`` to ``bootstrap.run``."""
+    from streamlit.web.server.app_discovery import AppDiscoveryResult
+
+    discovery = AppDiscoveryResult(is_asgi_app=False, app_name=None, import_string=None)
+
+    with (
+        patch("streamlit.web.bootstrap.load_config_options"),
+        patch("streamlit.web.cli.check_credentials"),
+        patch(
+            "streamlit.web.server.app_discovery.discover_asgi_app",
+            return_value=discovery,
+        ),
+        patch("streamlit.web.bootstrap.run") as mock_run,
+        patch("streamlit.web.cli._get_command_line_as_string", return_value=None),
+    ):
+        cli._main_run("script.py", args=None, flag_options=None)
+
+    # bootstrap.run is called as run(main_script_path, is_hello, args, flag_options).
+    mock_run.assert_called_once()
+    _, _, args_, flag_opts = mock_run.call_args.args
+    assert args_ == []
+    assert flag_opts == {}
+
+
+def test_init_command_runs_app_when_user_confirms() -> None:
+    """``streamlit init`` invokes ``_main_run`` when the user confirms 'Run the app now?'."""
+    runner = CliRunner()
+    with (
+        runner.isolated_filesystem(),
+        patch("streamlit.web.cli._main_run") as mock_main_run,
+    ):
+        result = runner.invoke(cli.main, ["init"], input="y\n")
+
+    assert result.exit_code == 0
+    mock_main_run.assert_called_once()
+    assert "streamlit_app.py" in mock_main_run.call_args.args[0]
+
+
+def test_init_command_raises_click_exception_on_oserror() -> None:
+    """``streamlit init <dir>`` surfaces ``OSError`` as a Click exception."""
+    runner = CliRunner()
+    with (
+        runner.isolated_filesystem(),
+        patch("pathlib.Path.mkdir", side_effect=OSError("disk full")),
+    ):
+        result = runner.invoke(cli.main, ["init", "some-dir"])
+
+    assert result.exit_code != 0
+    assert "Failed to create directory" in result.output
+
+
 class HTTPServerIntegrationTest(unittest.TestCase):
     def tearDown(self) -> None:
         from streamlit.watcher.event_based_path_watcher import EventBasedPathWatcher

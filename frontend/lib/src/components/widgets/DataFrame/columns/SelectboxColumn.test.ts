@@ -305,12 +305,7 @@ describe("prepareOptions", () => {
     ],
     [
       // Filters out empty string and null entries
-      ["", "A", null, "B"] as unknown as (
-        | string
-        | number
-        | boolean
-        | { value: string; label?: string }
-      )[],
+      ["", "A", null, "B"],
       [
         { value: "A", label: "A" },
         { value: "B", label: "B" },

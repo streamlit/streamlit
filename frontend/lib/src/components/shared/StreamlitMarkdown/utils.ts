@@ -35,7 +35,7 @@ export type EmojiPlugin = Awaited<
 
 /** Sentinel value for failed plugin loads */
 export const LOAD_FAILED = Symbol("plugin_load_failed")
-export type FailedPlugin = typeof LOAD_FAILED
+type FailedPlugin = typeof LOAD_FAILED
 
 /** Represents a plugin's loading state: loaded, failed, or not yet attempted */
 export type PluginState<T> = T | FailedPlugin | null

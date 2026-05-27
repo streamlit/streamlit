@@ -33,7 +33,7 @@ dependencies = []
 
 [tool.uv]
 # Minimum uv version required for this project
-required-version = ">=0.9.0"
+required-version = ">=0.9.17"
 # Exclude packages published in the last 24 hours to lower risk from supply chain attacks
 exclude-newer = "24 hours"
 # Explicit pandas version constraints by Python version:
@@ -58,9 +58,9 @@ dev = [
   "streamlit",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
-  "ty==0.0.29",
+  "ty==0.0.38",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.9",
+  "ruff==0.15.13",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.21",
@@ -116,7 +116,7 @@ test = [
   "httpx>=0.24.1",
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
-  "playwright==1.58.*",
+  "playwright==1.60.*",
   "pytest-playwright>=0.3.3",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",
@@ -140,9 +140,6 @@ integration = [
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
   "snowflake-connector-python>=3.3.0",
-  # Required for testing the langchain integration:
-  "langchain>=0.2.0,<0.4",
-  "langchain-community>=0.2.0,<0.4",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
@@ -303,6 +300,11 @@ extend-safe-fixes = ["TC002", "TC003"]
   "TRY",     # Ignore tryceratops rules (simpler exception handling in tests).
 ]
 "scripts/**" = ["T20", "INP", "PERF", "S", "TRY002"]
+"lib/streamlit/.agents/**" = [
+  # Each template is a standalone app, not a package. Adding __init__.py would
+  # misrepresent them as importable modules.
+  "INP",
+]
 
 [tool.ruff.lint.flake8-tidy-imports]
 # Disallow all relative imports.
@@ -411,6 +413,8 @@ module = [
   "authlib.*",
   "uvloop.*",
   "polars.*",
+  # yfinance is a template-only dependency (used by dashboard-stock-peers) and has no stubs.
+  "yfinance.*",
   # SQLAlchemy is optional and its stubs are only installed with integration extras
   "sqlalchemy.*",
   # tomllib is only available in Python 3.11+, tomli is the fallback for Python 3.10

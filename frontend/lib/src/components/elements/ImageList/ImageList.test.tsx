@@ -16,11 +16,7 @@
 
 import { fireEvent, screen } from "@testing-library/react"
 
-import {
-  type IImage,
-  ImageList as ImageListProto,
-  streamlit,
-} from "@streamlit/protobuf"
+import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
 import { mockEndpoints } from "~lib/mocks/mocks"
@@ -339,7 +335,7 @@ describe("ImageList Element", () => {
       ])(
         "sets crossOrigin to $expected when $scenario",
         ({ expected, resourceCrossOriginMode, imgs }) => {
-          const props = getProps({ imgs: imgs as IImage[] })
+          const props = getProps({ imgs: imgs })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,
@@ -421,7 +417,7 @@ describe("ImageList Element", () => {
       ])(
         "does not set crossOrigin when $scenario",
         ({ resourceCrossOriginMode, imgs }) => {
-          const props = getProps({ imgs: imgs as IImage[] })
+          const props = getProps({ imgs: imgs })
           renderWithContexts(<ImageList {...props} />, {
             libConfigContext: {
               resourceCrossOriginMode,

@@ -19,7 +19,7 @@
 from __future__ import annotations
 
 import json
-import time
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
@@ -34,7 +34,7 @@ from streamlit.auth_util import (
     get_validated_redirect_uri,
     set_cookie_with_chunks,
 )
-from streamlit.errors import StreamlitAuthError
+from streamlit.errors import StreamlitAuthError, StreamlitMissingAuthlibError
 from streamlit.logger import get_logger
 from streamlit.url_util import make_url_path
 from streamlit.web.server.server_util import get_cookie_secret
@@ -43,6 +43,7 @@ from streamlit.web.server.starlette.starlette_app_utils import (
     decode_signed_value,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
 )
@@ -58,70 +59,7 @@ _LOGGER: Final = get_logger(__name__)
 _ROUTE_AUTH_LOGIN: Final = "auth/login"
 _ROUTE_AUTH_LOGOUT: Final = "auth/logout"
 _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
-
-
-class _AsyncAuthCache:
-    """Async cache for Authlib's Starlette integration.
-
-    Authlib's Starlette OAuth client expects an async cache interface.
-    This implementation tracks per-item expiration times to automatically
-    expire OAuth state entries, preventing unbounded memory growth from
-    abandoned auth flows.
-
-    Cache size is expected to be very small: one entry is created per login
-    attempt (not per user/session) and exists only during the OAuth flow—from
-    clicking "Login" until the OAuth callback completes (typically seconds).
-    Each entry is a few hundred bytes. Entries expire after 1 hour (Authlib's
-    default) or are consumed upon successful callback.
-    """
-
-    # Fallback TTL if authlib doesn't provide an expiration time.
-    # This is the same TTL used internally in Authlib (1 hour).
-    _DEFAULT_TTL_SECONDS: Final = 3600
-
-    def __init__(self) -> None:
-        # Cache structure: {key: (value, expiration_timestamp)}
-        # where key is Authlib's state key (e.g., "_state_google_abc123"),
-        # value is the OAuth state data, and expiration_timestamp is a Unix timestamp.
-        self._cache: dict[str, tuple[Any, float]] = {}
-
-    def _evict_expired(self) -> None:
-        """Evict expired items from the cache."""
-        now = time.time()
-        expired_keys = [k for k, (_, exp) in self._cache.items() if exp <= now]
-        for key in expired_keys:
-            del self._cache[key]
-
-    async def get(self, key: str) -> Any:
-        """Get an item from the cache."""
-        self._evict_expired()
-        entry = self._cache.get(key)
-        return entry[0] if entry else None
-
-    async def set(self, key: str, value: Any, expires_in: int | None = None) -> None:
-        """Set an item in the cache."""
-        self._evict_expired()
-        ttl = expires_in if expires_in is not None else self._DEFAULT_TTL_SECONDS
-        self._cache[key] = (value, time.time() + ttl)
-
-    async def delete(self, key: str) -> None:
-        """Delete an item from the cache."""
-        self._cache.pop(key, None)
-
-    def get_dict(self) -> dict[str, Any]:
-        """Get a dictionary of all items in the cache."""
-        self._evict_expired()
-        return {k: v for k, (v, _) in self._cache.items()}
-
-
-# TODO(lukasmasuch): Reevaluate whether we can remove _AsyncAuthCache and rely on Authlib's
-# built-in session storage via SessionMiddleware instead. This would simplify
-# the code but would expose OAuth state data in signed cookies rather than
-# keeping it server-side. See: https://docs.authlib.org/en/latest/client/starlette.html
-#
-# Note: For true multi-tenant support (multiple Streamlit apps in one process),
-# this cache would need to be made per-runtime rather than module-level.
-_STARLETTE_AUTH_CACHE: Final = _AsyncAuthCache()
+_AUTH_COOKIE_SAMESITE: Final = "lax"
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -144,6 +82,29 @@ def _looks_like_provider_section(value: dict[str, Any]) -> bool:
         "request_token_url",
     }
     return any(key in value for key in provider_keys)
+
+
+@lru_cache(maxsize=1)
+def _create_streamlit_oauth_class(starlette_client: Any) -> type[Any]:
+    """Create a Starlette OAuth class with Streamlit-specific OIDC behavior."""
+
+    class StreamlitStarletteOAuth2App(starlette_client.StarletteOAuth2App):  # type: ignore[misc]
+        async def load_server_metadata(self) -> dict[str, Any]:
+            """Enforce S256 PKCE if supported by the provider.
+
+            PKCE (Proof Key for Code Exchange) with S256 is a security best practice
+            that protects against authorization code interception attacks.
+            """
+            metadata = cast("dict[str, Any]", await super().load_server_metadata())
+            # Use `or []` to handle providers that return null for this field
+            if "S256" in (metadata.get("code_challenge_methods_supported") or []):
+                self.client_kwargs["code_challenge_method"] = "S256"
+            return metadata
+
+    class StreamlitStarletteOAuth(starlette_client.OAuth):  # type: ignore[misc]
+        oauth2_client_cls = StreamlitStarletteOAuth2App
+
+    return StreamlitStarletteOAuth
 
 
 class _AuthlibConfig(dict[str, Any]):  # noqa: FURB189
@@ -212,17 +173,29 @@ async def _set_auth_cookie(
     def set_single_cookie(cookie_name: str, value: str) -> None:
         _set_single_cookie(response, cookie_name, value)
 
+    cookie_attr_size = _get_auth_cookie_attribute_size()
     set_cookie_with_chunks(
         set_single_cookie,
         _create_signed_value_wrapper,
         USER_COOKIE_NAME,
         user_info,
+        cookie_attr_size=cookie_attr_size,
     )
     set_cookie_with_chunks(
         set_single_cookie,
         _create_signed_value_wrapper,
         TOKENS_COOKIE_NAME,
         tokens,
+        cookie_attr_size=cookie_attr_size,
+    )
+
+
+def _get_auth_cookie_attribute_size() -> int:
+    """Return the auth cookie attribute bytes used for chunk-size estimation."""
+    return len(
+        f"; Path={_get_cookie_path()}; HttpOnly; "
+        f"SameSite={_AUTH_COOKIE_SAMESITE}; "
+        f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}"
     )
 
 
@@ -237,6 +210,8 @@ def _set_single_cookie(
     - secure is NOT set: Deliberately avoided due to Safari cookie bugs;
       the OIDC flow only works in secure contexts anyway (localhost or HTTPS)
     - path: Matches server.baseUrlPath for proper scoping
+    - max_age: 30 days, restoring the persistent-cookie behaviour documented for
+      st.login.
     """
     cookie_secret = get_cookie_secret()
     signed_value = create_signed_value(cookie_secret, cookie_name, serialized_value)
@@ -245,8 +220,9 @@ def _set_single_cookie(
         cookie_name,
         cookie_payload,
         httponly=True,
-        samesite="lax",
+        samesite=_AUTH_COOKIE_SAMESITE,
         path=_get_cookie_path(),
+        max_age=AUTH_COOKIE_MAX_AGE_SECONDS,
     )
 
 
@@ -303,10 +279,7 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     try:
         from authlib.integrations import starlette_client
     except ModuleNotFoundError:  # pragma: no cover - optional dependency
-        raise StreamlitAuthError(
-            "Authentication requires Authlib>=1.3.2. "
-            "Install it via `pip install streamlit[auth]`."
-        )
+        raise StreamlitMissingAuthlibError()
 
     auth_section = get_secrets_auth_section()
     if auth_section:
@@ -330,11 +303,10 @@ def _create_oauth_client(provider: str) -> tuple[Any, str]:
     if "prompt" not in provider_client_kwargs:
         provider_client_kwargs["prompt"] = "select_account"
 
-    oauth = starlette_client.OAuth(
-        config=_AuthlibConfig(config), cache=_STARLETTE_AUTH_CACHE
-    )
+    oauth_class = _create_streamlit_oauth_class(starlette_client)
+    oauth = oauth_class(config=_AuthlibConfig(config))
     oauth.register(provider)
-    return oauth.create_client(provider), redirect_uri  # type: ignore[no-untyped-call]
+    return oauth.create_client(provider), redirect_uri
 
 
 def _parse_provider_token(provider_token: str | None) -> str | None:
@@ -350,15 +322,22 @@ def _parse_provider_token(provider_token: str | None) -> str | None:
     return payload["provider"]
 
 
-def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
-    """Extract the provider from the state code from the URL."""
+def _get_provider_by_state(
+    request: Request, state_code_from_url: str | None
+) -> str | None:
+    """Extract the provider from the session based on the state code.
 
+    Authlib stores OAuth state in the Starlette session using keys in the format
+    "_state_{provider}_{state_code}". This function iterates over session keys
+    to find the provider that matches the given state code.
+    """
     if state_code_from_url is None:
         return None
-    current_cache_keys = list(_STARLETTE_AUTH_CACHE.get_dict().keys())
-    state_provider_mapping = {}
-    for key in current_cache_keys:
-        # Authlib's Starlette integration stores OAuth state in the cache using keys
+
+    session = request.session
+    state_provider_mapping: dict[str, str] = {}
+    for key in list(session.keys()):
+        # Authlib's Starlette integration stores OAuth state in the session using keys
         # in the format: "_state_{provider}_{state_code}".
         # Example: "_state_google_abc123" breaks down as:
         #   - "_state" = fixed prefix used by Authlib
@@ -370,15 +349,20 @@ def _get_provider_by_state(state_code_from_url: str | None) -> str | None:
         # We have some unit tests that will fail in case the formats gets changed in
         # an authlib update.
         #
-        # Note: This split assumes no underscores in provider names or state codes.
-        # This is safe because: (1) provider names with underscores are explicitly
-        # blocked in validate_auth_credentials() in auth_util.py, and (2) Authlib's
-        # generate_token() uses only alphanumeric characters (a-zA-Z0-9) for state
-        # codes. See auth_util.py for the underscore validation.
+        # Filter by the "_state_" prefix first to avoid false positives from other
+        # session data that might happen to have 4 underscore-separated parts.
+        if not key.startswith("_state_"):
+            continue
+        #
+        # Note: Using maxsplit=3 makes the parse greedy on the last segment, which is
+        # safer if the state code ever contains underscores. While Authlib's
+        # generate_token() currently uses only alphanumeric characters (a-zA-Z0-9),
+        # this is defensive against upstream changes. Provider names with underscores
+        # are explicitly blocked in validate_auth_credentials() in auth_util.py.
         try:
-            _, _, recorded_provider, code = key.split("_")
+            _, _, recorded_provider, code = key.split("_", 3)
         except ValueError:
-            # Skip cache keys that don't match the expected 4-part format.
+            # Skip session keys that don't match the expected 4-part format.
             continue
         state_provider_mapping[code] = recorded_provider
 
@@ -400,7 +384,7 @@ def _get_cookie_value_from_request(request: Request, cookie_name: str) -> bytes 
     return get_cookie_with_chunks(get_single_cookie, cookie_name)
 
 
-def _get_provider_logout_url(request: Request) -> str | None:
+async def _get_provider_logout_url(request: Request) -> str | None:
     """Get the OAuth provider's logout URL from OIDC metadata.
 
     Returns the end_session_endpoint URL with proper parameters for OIDC logout,
@@ -423,8 +407,7 @@ def _get_provider_logout_url(request: Request) -> str | None:
         client, _ = _create_oauth_client(provider)
 
         # Load OIDC metadata - Authlib's Starlette client uses async methods
-        # but load_server_metadata is synchronous in both implementations
-        metadata = client.load_server_metadata()
+        metadata = await client.load_server_metadata()
         end_session_endpoint = metadata.get("end_session_endpoint")
 
         if not end_session_endpoint:
@@ -491,7 +474,7 @@ async def _auth_logout(request: Request, base_url: str) -> Response:
     """
     from starlette.responses import RedirectResponse
 
-    provider_logout_url = _get_provider_logout_url(request)
+    provider_logout_url = await _get_provider_logout_url(request)
 
     if provider_logout_url:
         response = RedirectResponse(provider_logout_url, status_code=302)
@@ -506,7 +489,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     """Handle the OAuth callback from the authentication provider."""
 
     state = request.query_params.get("state")
-    provider = _get_provider_by_state(state)
+    provider = _get_provider_by_state(request, state)
     origin = _get_origin_from_secrets()
     if origin is None:
         _LOGGER.error(
@@ -540,7 +523,18 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
         return await _redirect_to_base(base_url)
 
     client, _ = _create_oauth_client(provider)
-    token = await client.authorize_access_token(request)
+    try:
+        token = await client.authorize_access_token(request)
+    except Exception:
+        _LOGGER.warning(
+            "OAuth token exchange failed for provider '%s'. Clearing auth cookies.",
+            provider,
+            exc_info=True,
+        )
+        response = await _redirect_to_base(base_url)
+        _clear_auth_cookie(response, request)
+        return response
+
     user = token.get("userinfo") or {}
 
     response = await _redirect_to_base(base_url)

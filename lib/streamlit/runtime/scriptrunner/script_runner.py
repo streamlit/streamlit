@@ -66,8 +66,13 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        OnScriptErrorHandler,
+    )
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
+    from streamlit.watcher.local_sources_watcher import LocalSourcesWatcher
 
 _LOGGER: Final = get_logger(__name__)
 
@@ -178,6 +183,8 @@ class ScriptRunner:
         user_info: UserInfoType,
         fragment_storage: FragmentStorage,
         pages_manager: PagesManager,
+        on_script_error: OnScriptErrorHandler | None = None,
+        local_sources_watcher: LocalSourcesWatcher | None = None,
     ) -> None:
         """Initialize the ScriptRunner.
 
@@ -216,6 +223,16 @@ class ScriptRunner:
 
         fragment_storage
             The AppSession's FragmentStorage instance.
+
+        on_script_error
+            Callback to invoke when an uncaught exception occurs in user script code.
+            Returns True to suppress the default exception display, or False/None
+            to show the exception normally.
+
+        local_sources_watcher
+            The session's file watcher, if any.  Its ``on_script_run`` hook is
+            called at the start of each script run (on the script thread)
+            before any user code executes.
         """
         self._session_id = session_id
         self._main_script_path = main_script_path
@@ -226,8 +243,10 @@ class ScriptRunner:
         self._script_cache = script_cache
         self._user_info = user_info
         self._fragment_storage = fragment_storage
+        self._on_script_error = on_script_error
 
         self._pages_manager = pages_manager
+        self._local_sources_watcher = local_sources_watcher
         self._requests = ScriptRequests()
         self._requests.request_rerun(initial_rerun_data)
 
@@ -266,6 +285,12 @@ class ScriptRunner:
         # This is initialized in the start() method
         self._script_thread: threading.Thread | None = None
 
+        # Coordinator blocking the script thread in join(); other threads poke
+        # notify_yield_waiters() when rerun/stop is enqueued during that window.
+        # Lock-protected so this is safe under free-threaded Python (PEP 703).
+        self._join_wake_lock = threading.Lock()
+        self._join_wake_coordinator: ParallelFragmentCoordinator | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -277,6 +302,7 @@ class ScriptRunner:
         Safe to call from any thread.
         """
         self._requests.request_stop()
+        self._wake_parallel_join_barrier_if_waiting()
 
     def request_rerun(self, rerun_data: RerunData) -> bool:
         """Request that the ScriptRunner interrupt its currently-running
@@ -290,7 +316,20 @@ class ScriptRunner:
 
         Safe to call from any thread.
         """
-        return self._requests.request_rerun(rerun_data)
+        rv = self._requests.request_rerun(rerun_data)
+        self._wake_parallel_join_barrier_if_waiting()
+        return rv
+
+    def _wake_parallel_join_barrier_if_waiting(self) -> None:
+        """If the script thread is blocked in ParallelFragmentCoordinator.join(), wake it.
+
+        Rerun/stop requests can arrive on other threads; join() sleeps on a
+        Condition bounded by poll_interval unless notified.
+        """
+        with self._join_wake_lock:
+            coord = self._join_wake_coordinator
+        if coord is not None:
+            coord.notify_yield_waiters()
 
     def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
@@ -367,6 +406,7 @@ class ScriptRunner:
             fragment_storage=self._fragment_storage,
             pages_manager=self._pages_manager,
             context_info=None,
+            on_script_error=self._on_script_error,
         )
         add_script_run_ctx(threading.current_thread(), ctx)
 
@@ -426,9 +466,19 @@ class ScriptRunner:
         """
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
-            # script execution thread. However, it's possible for deltas to
-            # be enqueued (and, therefore, for this function to be called)
-            # in separate threads, so we check for that here.
+            # script execution thread. However, this function also runs from
+            # parallel fragment worker threads, since deltas enqueued there
+            # flow through _enqueue_forward_msg. On a worker thread we can't
+            # service script-level rerun/stop requests, but we do check the
+            # coordinator so a cooperatively-cancelled worker raises at its
+            # next yield point.
+            ctx = get_script_run_ctx(suppress_warning=True)
+            if (
+                ctx is not None
+                and ctx.parallel_coordinator is not None
+                and ctx.parallel_coordinator.should_stop()
+            ):
+                raise StopException()
             return
 
         if not self._execing:
@@ -437,6 +487,15 @@ class ScriptRunner:
             # we change our state to STOPPED, and a statechange-listener
             # enqueues a new ForwardEvent
             return
+
+        # Re-raise any worker-stored exception before consulting _requests.
+        # Worker-initiated cancellation takes precedence because it
+        # captured user intent in-band.
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is not None and ctx.parallel_coordinator is not None:
+            worker_exc = ctx.parallel_coordinator.worker_exception
+            if worker_exc is not None:
+                raise worker_exc
 
         request = self._requests.on_scriptrunner_yield()
         if request is None:
@@ -484,6 +543,9 @@ class ScriptRunner:
 
         # An explicit loop instead of recursion to avoid stack overflows
         while True:
+            if self._local_sources_watcher is not None:
+                self._local_sources_watcher.on_script_run()
+
             _LOGGER.debug("Running script")
             start_time: float = timer()
             prep_time: float = 0  # This will be overwritten once preparations are done.
@@ -521,13 +583,15 @@ class ScriptRunner:
                 # interaction). Use the widget ids from the rerun data to
                 # maintain some widget state, as the rerun data should
                 # contain the latest widget ids from the frontend.
-                widget_ids: set[str] = set()
+                widget_ids: frozenset[str] = frozenset()
 
                 if (
                     rerun_data.widget_states is not None
                     and rerun_data.widget_states.widgets is not None
                 ):
-                    widget_ids = {w.id for w in rerun_data.widget_states.widgets}
+                    widget_ids = frozenset(
+                        w.id for w in rerun_data.widget_states.widgets
+                    )
 
                 # For MPA page transitions: filter query params BEFORE cleanup.
                 # This uses existing bindings to remove params from other pages,
@@ -547,9 +611,11 @@ class ScriptRunner:
                 # Now safe to do normal cleanup - filtering already done
                 self._session_state.on_script_finished(widget_ids)
 
-            fragment_ids_this_run: list[str] | None = (
-                rerun_data.fragment_id_queue or None
-            )
+            fragment_ids_this_run: list[str] | None = None
+            if rerun_data.fragment_id_queue:
+                fragment_ids_this_run = self._fragment_storage.order_fragment_ids(
+                    rerun_data.fragment_id_queue
+                )
 
             ctx.reset(
                 query_string=rerun_data.query_string,
@@ -557,7 +623,10 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
+                yield_check=self._maybe_handle_execution_control_request,
             )
+            with self._join_wake_lock:
+                self._join_wake_coordinator = ctx.parallel_coordinator
 
             self.on_event.send(
                 self,
@@ -594,6 +663,8 @@ class ScriptRunner:
                 # We got a compile error. Send an error event and bail immediately.
                 _LOGGER.exception("Script compilation error", exc_info=ex)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+                with self._join_wake_lock:
+                    self._join_wake_coordinator = None
                 self.on_event.send(
                     self,
                     event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
@@ -628,6 +699,7 @@ class ScriptRunner:
                 module: types.ModuleType = module,
                 ctx: ScriptRunContext = ctx,
                 rerun_data: RerunData = rerun_data,
+                fragment_ids_this_run: list[str] | None = fragment_ids_this_run,
             ) -> None:
                 with (
                     modified_sys_path(self._main_script_path),
@@ -641,15 +713,16 @@ class ScriptRunner:
 
                     ctx.on_script_start()
 
-                    if rerun_data.fragment_id_queue:
-                        for fragment_id in rerun_data.fragment_id_queue:
+                    if fragment_ids_this_run:
+                        for fragment_id in fragment_ids_this_run:
+                            registration_sequence_before = (
+                                self._fragment_storage.registration_sequence()
+                            )
                             try:
-                                wrapped_fragment = self._fragment_storage.get(
+                                wrapped_fragment = self._fragment_storage.lookup(
                                     fragment_id
                                 )
-                                wrapped_fragment()
-
-                            except FragmentStorageKeyError:  # noqa: PERF203
+                            except FragmentStorageKeyError:
                                 # This can happen if the fragment_id is removed from the
                                 # storage before the script runner gets to it. In this
                                 # case, the fragment is simply skipped.
@@ -670,6 +743,10 @@ class ScriptRunner:
                                         " required, so its mainly for debugging.",
                                         fragment_id,
                                     )
+                                continue
+
+                            try:
+                                wrapped_fragment()
                             except (RerunException, StopException):
                                 # The wrapped_fragment function is executed
                                 # inside of a exec_func_with_error_handling call, so
@@ -681,14 +758,46 @@ class ScriptRunner:
                                 # error itself is already rendered within the wrapped
                                 # fragment.
                                 pass
+                            finally:
+                                # Cleanup always uses what was actually re-registered
+                                # during this attempt, regardless of how the fragment
+                                # exited (normal return, RerunException, StopException,
+                                # or a swallowed user exception). Children that the
+                                # fragment did not get a chance to re-register will be
+                                # dropped here and re-created on the next rerun.
+                                registered_ids = (
+                                    self._fragment_storage.ids_registered_after(
+                                        registration_sequence_before
+                                    )
+                                )
+                                self._fragment_storage.clear_stale_descendants(
+                                    fragment_id,
+                                    registered_ids,
+                                )
 
                     else:
-                        if PagesManager.uses_pages_directory:
-                            _mpa_v1(self._main_script_path)
-                        else:
-                            exec(code, module.__dict__)  # noqa: S102
+                        # Expect parallel_coordinator to be initialized;
+                        # cast makes this clear to the type checker.
+                        coordinator = cast(
+                            "ParallelFragmentCoordinator",
+                            ctx.parallel_coordinator,
+                        )
+                        try:
+                            if PagesManager.uses_pages_directory:
+                                _mpa_v1(self._main_script_path)
+                            else:
+                                exec(code, module.__dict__)  # noqa: S102
+                            coordinator.join()
+                        except BaseException:
+                            # Always drain so in-flight worker fragments
+                            # don't outlive the script run, regardless of
+                            # whether the escape was a script-control
+                            # exception, an uncaught user error, or an
+                            # interrupt.
+                            coordinator.drain()
+                            raise
                         self._fragment_storage.clear(
-                            new_fragment_ids=ctx.new_fragment_ids
+                            new_fragment_ids=ctx.new_fragment_ids.snapshot()
                         )
 
                     self._session_state.maybe_check_serializable()
@@ -752,9 +861,12 @@ class ScriptRunner:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
+        with self._join_wake_lock:
+            self._join_wake_coordinator = None
+
         # Tell session_state to update itself in response
         if not premature_stop:
-            self._session_state.on_script_finished(ctx.widget_ids_this_run)
+            self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())
 
         # Signal that the script has finished. (We use SCRIPT_STOPPED_WITH_SUCCESS
         # even if we were stopped with an exception.)

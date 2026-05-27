@@ -15,29 +15,51 @@
 from __future__ import annotations
 
 import base64
+import importlib.util
 import json
+import sys
 import unittest
-from typing import Any
+import warnings
+from typing import TYPE_CHECKING, Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from streamlit import auth_util
 from streamlit.auth_util import (
     AuthCache,
     _calculate_signing_overhead,
+    _set_split_cookie,
     clear_cookie_and_chunks,
     generate_default_provider_section,
     get_cookie_with_chunks,
     get_expose_tokens_config,
     get_redirect_uri,
     get_signing_secret,
+    is_authlib_installed,
     set_cookie_with_chunks,
+    validate_auth_credentials,
 )
 from streamlit.errors import StreamlitAuthError
 from streamlit.runtime.secrets import AttrDict
 
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+# ``joserfc`` is a transitive dependency of ``Authlib>=1.7`` but is not yet
+# declared directly by the ``streamlit[auth]`` extra. The affected tests
+# below assert behavior that only holds on the ``joserfc`` decode/encode path
+# (warning suppression and Streamlit's own claim-validation error messages),
+# so we skip them when only the Authlib fallback is available.
+_JOSERFC_AVAILABLE = importlib.util.find_spec("joserfc") is not None
+_REQUIRES_JOSERFC = pytest.mark.skipif(
+    not _JOSERFC_AVAILABLE,
+    reason="requires joserfc; Authlib fallback path uses different error/warning text",
+)
+
 # Simulates realistic cookie signing overhead (~100 bytes for signature, timestamp, etc.)
 MOCK_SIGNING_OVERHEAD = 100
+TEST_COOKIE_ATTR_SIZE = len("; Path=/; HttpOnly")
 
 
 def create_realistic_signed_value(name: str, value: str) -> bytes:
@@ -72,6 +94,14 @@ SECRETS_MOCK = {
         "server_metadata_url": "https://YOUR_DOMAIN/.well-known/openid-configuration",
     },
 }
+
+
+def _create_test_provider_token(claims: dict[str, Any]) -> str:
+    """Create a provider token with the joserfc backend used by guarded tests."""
+    header = {"alg": "HS256"}
+    from joserfc import jwt
+
+    return jwt.encode(header, claims, auth_util._get_joserfc_signing_key())
 
 
 class AuthUtilTest(unittest.TestCase):
@@ -252,6 +282,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "test_cookie",
             small_data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Should only have the main cookie, no chunks
@@ -275,6 +306,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "test_cookie",
             large_data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Main cookie should exist (contains chunk count marker)
@@ -285,6 +317,60 @@ class CookieChunkingTest(unittest.TestCase):
         # Verify all chunks exist (1, 2, ..., chunk_count)
         for i in range(1, chunk_count + 1):
             assert f"test_cookie_{i}" in cookies
+
+    def test_set_cookie_with_chunks_respects_cookie_attr_size(self):
+        """Test that larger cookie attributes trigger chunking sooner."""
+        cookie_name = "test_cookie"
+        larger_cookie_attr_size = TEST_COOKIE_ATTR_SIZE + 32
+        payload_size = 1
+
+        while True:
+            data = {"key": "x" * payload_size}
+            serialized = json.dumps(data)
+            signed_value = create_realistic_signed_value(cookie_name, serialized)
+            default_size = (
+                len(cookie_name) + 1 + len(signed_value) + TEST_COOKIE_ATTR_SIZE
+            )
+            larger_size = (
+                len(cookie_name) + 1 + len(signed_value) + larger_cookie_attr_size
+            )
+
+            if default_size <= auth_util.MAX_COOKIE_BYTES < larger_size:
+                break
+
+            payload_size += 1
+            if payload_size > 5000:  # pragma: no cover - defensive
+                raise AssertionError("Could not find boundary payload size")
+
+        default_cookies: dict[str, str] = {}
+
+        def mock_set_default_cookie(name: str, value: str) -> None:
+            default_cookies[name] = value
+
+        set_cookie_with_chunks(
+            mock_set_default_cookie,
+            create_realistic_signed_value,
+            cookie_name,
+            data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
+        )
+
+        assert not default_cookies[cookie_name].startswith("chunks-")
+
+        larger_cookies: dict[str, str] = {}
+
+        def mock_set_larger_cookie(name: str, value: str) -> None:
+            larger_cookies[name] = value
+
+        set_cookie_with_chunks(
+            mock_set_larger_cookie,
+            create_realistic_signed_value,
+            cookie_name,
+            data,
+            cookie_attr_size=larger_cookie_attr_size,
+        )
+
+        assert larger_cookies[cookie_name].startswith("chunks-")
 
     def test_get_cookie_with_chunks_single_cookie(self):
         """Test retrieving a single (non-chunked) cookie."""
@@ -435,6 +521,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "auth_cookie",
             data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Get the cookie
@@ -461,6 +548,7 @@ class CookieChunkingTest(unittest.TestCase):
             create_realistic_signed_value,
             "auth_cookie",
             data,
+            cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
         )
 
         # Verify chunks were created
@@ -515,217 +603,626 @@ class GenerateDefaultProviderSectionTest(unittest.TestCase):
         assert result == {}
 
 
-class TestGetValidatedRedirectUri:
-    """Tests for get_validated_redirect_uri function."""
-
-    def test_returns_none_when_no_auth_section(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when no auth section exists."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: None,
-        )
-        assert auth_util.get_validated_redirect_uri() is None
-
-    def test_returns_none_when_no_redirect_uri(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri is missing."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict({}),
-        )
-        assert auth_util.get_validated_redirect_uri() is None
-
-    def test_returns_none_when_not_oauth2callback(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri doesn't end with /oauth2callback."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
+@pytest.mark.parametrize(
+    ("get_section", "expected"),
+    [
+        (lambda: None, None),
+        (lambda: AttrDict({}), None),
+        (
             lambda: AttrDict({"redirect_uri": "http://localhost:8501/callback"}),
-        )
-        # get_validated_redirect_uri checks suffix
-        assert auth_util.get_validated_redirect_uri() is None
-
-    def test_returns_uri_with_oauth2callback(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that redirect URI is returned when it ends with /oauth2callback."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
-        )
-        assert (
-            auth_util.get_validated_redirect_uri()
-            == "http://localhost:8501/oauth2callback"
-        )
-
-    @patch(
-        "streamlit.auth_util.config",
-        MagicMock(
-            get_option=MagicMock(return_value=9999),
+            None,
         ),
+        (
+            lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
+            "http://localhost:8501/oauth2callback",
+        ),
+    ],
+    ids=["no_section", "no_redirect_uri", "wrong_suffix", "valid_callback"],
+)
+def test_get_validated_redirect_uri(
+    get_section: Callable[[], AttrDict | None],
+    expected: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Return None unless ``redirect_uri`` ends with ``/oauth2callback``."""
+    monkeypatch.setattr(auth_util, "get_secrets_auth_section", get_section)
+    assert auth_util.get_validated_redirect_uri() == expected
+
+
+@patch(
+    "streamlit.auth_util.config",
+    MagicMock(get_option=MagicMock(return_value=9999)),
+)
+def test_get_validated_redirect_uri_substitutes_port_placeholder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Substitute ``{port}`` in ``redirect_uri`` using the configured server port."""
+    monkeypatch.setattr(
+        auth_util,
+        "get_secrets_auth_section",
+        lambda: AttrDict({"redirect_uri": "http://localhost:{port}/oauth2callback"}),
     )
-    def test_substitutes_port_placeholder(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that {port} placeholder is substituted in redirect_uri (PR #12251)."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict(
-                {"redirect_uri": "http://localhost:{port}/oauth2callback"}
-            ),
-        )
-        assert (
-            auth_util.get_validated_redirect_uri()
-            == "http://localhost:9999/oauth2callback"
-        )
+    assert (
+        auth_util.get_validated_redirect_uri() == "http://localhost:9999/oauth2callback"
+    )
 
 
-class TestGetOriginFromRedirectUri:
-    """Tests for get_origin_from_redirect_uri function."""
-
-    def test_returns_none_when_no_auth_section(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when no auth section exists."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: None,
-        )
-        assert auth_util.get_origin_from_redirect_uri() is None
-
-    def test_returns_none_when_no_redirect_uri(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that None is returned when redirect_uri is missing."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict({}),
-        )
-        assert auth_util.get_origin_from_redirect_uri() is None
-
-    def test_extracts_origin_correctly(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that origin is correctly extracted from redirect_uri."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
+@pytest.mark.parametrize(
+    ("get_section", "expected"),
+    [
+        (lambda: None, None),
+        (lambda: AttrDict({}), None),
+        (
             lambda: AttrDict({"redirect_uri": "https://example.com/oauth2callback"}),
-        )
-        assert auth_util.get_origin_from_redirect_uri() == "https://example.com"
-
-    def test_handles_localhost_with_port(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """Test that localhost URIs with port are handled correctly."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
+            "https://example.com",
+        ),
+        (
             lambda: AttrDict({"redirect_uri": "http://localhost:8501/oauth2callback"}),
-        )
-        assert auth_util.get_origin_from_redirect_uri() == "http://localhost:8501"
+            "http://localhost:8501",
+        ),
+    ],
+    ids=["no_section", "no_redirect_uri", "https_host", "localhost_port"],
+)
+def test_get_origin_from_redirect_uri(
+    get_section: Callable[[], AttrDict | None],
+    expected: str | None,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Parse scheme/host[/port] from ``redirect_uri``, or None if missing."""
+    monkeypatch.setattr(auth_util, "get_secrets_auth_section", get_section)
+    assert auth_util.get_origin_from_redirect_uri() == expected
 
-    @patch(
-        "streamlit.auth_util.config",
-        MagicMock(
-            get_option=MagicMock(return_value=7777),
+
+@patch(
+    "streamlit.auth_util.config",
+    MagicMock(get_option=MagicMock(return_value=7777)),
+)
+def test_get_origin_from_redirect_uri_substitutes_port_placeholder(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Substitute ``{port}`` before parsing the origin."""
+    monkeypatch.setattr(
+        auth_util,
+        "get_secrets_auth_section",
+        lambda: AttrDict({"redirect_uri": "http://localhost:{port}/oauth2callback"}),
+    )
+    assert auth_util.get_origin_from_redirect_uri() == "http://localhost:7777"
+
+
+@pytest.mark.parametrize(
+    ("post_logout_redirect_uri", "id_token", "must_contain", "must_not_contain"),
+    [
+        (
+            "https://myapp.com/oauth2callback",
+            None,
+            [
+                "https://provider.com/logout",
+                "client_id=test-client-id",
+                "post_logout_redirect_uri",
+                "myapp.com",
+            ],
+            ["id_token_hint"],
+        ),
+        (
+            "https://myapp.com/oauth2callback",
+            "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
+            ["id_token_hint=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9"],
+            [],
+        ),
+        (
+            "http://localhost:8501/oauth2callback",
+            None,
+            ["http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"],
+            [],
+        ),
+    ],
+    ids=["basic", "with_id_token", "url_encoding"],
+)
+def test_build_logout_url(
+    post_logout_redirect_uri: str,
+    id_token: str | None,
+    must_contain: list[str],
+    must_not_contain: list[str],
+) -> None:
+    """Build logout URLs with correct query encoding and optional ``id_token_hint``."""
+    kwargs: dict[str, Any] = {
+        "end_session_endpoint": "https://provider.com/logout",
+        "client_id": "test-client-id",
+        "post_logout_redirect_uri": post_logout_redirect_uri,
+    }
+    if id_token is not None:
+        kwargs["id_token"] = id_token
+    result = auth_util.build_logout_url(**kwargs)
+    for fragment in must_contain:
+        assert fragment in result
+    for fragment in must_not_contain:
+        assert fragment not in result
+
+
+def test_build_logout_url_preserves_existing_query() -> None:
+    """Append new parameters with ``&`` when the endpoint already has a query."""
+    result = auth_util.build_logout_url(
+        end_session_endpoint="https://provider.com/logout?existing=value",
+        client_id="test-client-id",
+        post_logout_redirect_uri="https://myapp.com/oauth2callback",
+    )
+    assert "existing=value" in result
+    assert "client_id=test-client-id" in result
+    assert "?existing=value" in result or "existing=value&" in result
+    assert result.count("?") == 1
+
+
+def test_auth_cache_get_dict() -> None:
+    """Verify ``AuthCache.get_dict`` returns the internal cache dictionary."""
+    cache = AuthCache()
+    cache.set("k1", "v1")
+    cache.set("k2", "v2")
+    result = cache.get_dict()
+    assert result == {"k1": "v1", "k2": "v2"}
+    # Verify the returned dict reflects cache contents without relying on identity
+    assert isinstance(result, dict)
+
+
+def test_is_authlib_installed_old_version(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``is_authlib_installed`` returns False when Authlib is older than 1.3.2."""
+    fake_authlib = MagicMock()
+    fake_authlib.__version__ = "1.3.1"
+    monkeypatch.setitem(sys.modules, "authlib", fake_authlib)
+    assert is_authlib_installed() is False
+
+
+@_REQUIRES_JOSERFC
+def test_provider_token_round_trip_suppresses_auth_warnings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Round-trip provider tokens without surfacing Authlib or key-size warnings."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        token = auth_util.encode_provider_token("google")
+        payload = auth_util.decode_provider_token(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+    assert caught == []
+
+
+@_REQUIRES_JOSERFC
+def test_get_joserfc_signing_key_logs_weak_secret_once(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Emit a single Streamlit-level log for sub-112-bit ``cookie_secret``s."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    auth_util._warn_short_signing_secret_once.cache_clear()
+
+    with patch.object(auth_util._LOGGER, "warning") as mock_warning:
+        auth_util._get_joserfc_signing_key()
+        auth_util._get_joserfc_signing_key()
+
+    assert mock_warning.call_count == 1
+    assert "112 bits" in mock_warning.call_args.args[0]
+
+    # A long-enough secret on a fresh flag must not log.
+    auth_util._warn_short_signing_secret_once.cache_clear()
+    monkeypatch.setattr(
+        auth_util, "get_signing_secret", lambda: "this-secret-is-long-enough"
+    )
+    with patch.object(auth_util._LOGGER, "warning") as mock_warning:
+        auth_util._get_joserfc_signing_key()
+    assert mock_warning.call_count == 0
+
+
+@_REQUIRES_JOSERFC
+def test_ensure_joserfc_security_warning_suppressed_is_idempotent() -> None:
+    """``_ensure_joserfc_security_warning_suppressed`` does not duplicate filters."""
+    from joserfc.errors import SecurityWarning
+
+    with warnings.catch_warnings():
+        warnings.resetwarnings()
+        auth_util._ensure_joserfc_security_warning_suppressed()
+        auth_util._ensure_joserfc_security_warning_suppressed()
+        matching = [
+            f for f in warnings.filters if f[0] == "ignore" and f[2] is SecurityWarning
+        ]
+        assert len(matching) == 1
+
+
+def test_decode_provider_token_expired_raises_streamlit_auth_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject provider tokens whose ``exp`` claim is already in the past."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(
+        auth_util, "_get_provider_token_expiration_timestamp", lambda: 1
+    )
+
+    token = auth_util.encode_provider_token("google")
+
+    with pytest.raises(StreamlitAuthError, match="expired"):
+        auth_util.decode_provider_token(token)
+
+
+@_REQUIRES_JOSERFC
+@pytest.mark.parametrize(
+    ("claims", "expected_message"),
+    [
+        pytest.param(
+            {"exp": 9999999999},
+            "provider claim is missing",
+            id="missing_provider",
+        ),
+        pytest.param(
+            {"provider": "", "exp": 9999999999},
+            "provider claim is empty",
+            id="empty_provider",
+        ),
+        pytest.param(
+            {"provider": "google"},
+            "exp claim",
+            id="missing_exp",
+        ),
+        pytest.param(
+            {"provider": "google", "exp": "bad"},
+            "exp claim",
+            id="invalid_exp_type",
+        ),
+    ],
+)
+def test_decode_provider_token_invalid_claims_raise_streamlit_auth_error(
+    claims: dict[str, Any],
+    expected_message: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject provider tokens when required claims are missing or malformed."""
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    token = _create_test_provider_token(claims)
+
+    with pytest.raises(StreamlitAuthError, match=expected_message):
+        auth_util.decode_provider_token(token)
+
+
+def test_authlib_provider_token_round_trip(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Exercise the real Authlib provider-token helpers end to end."""
+    pytest.importorskip("authlib")
+    from authlib.deprecate import AuthlibDeprecationWarning
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", AuthlibDeprecationWarning)
+        token = auth_util._encode_provider_token_with_authlib("google")
+        payload = auth_util._decode_provider_token_with_authlib(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+
+
+def test_encode_provider_token_falls_back_to_authlib(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the Authlib encoder when ``joserfc`` is unavailable."""
+    recorded_providers: list[str] = []
+
+    def mock_encode_with_authlib(provider: str) -> str:
+        recorded_providers.append(provider)
+        return "fallback-token"
+
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_authlib",
+        mock_encode_with_authlib,
+    )
+
+    assert auth_util.encode_provider_token("google") == "fallback-token"
+    assert recorded_providers == ["google"]
+
+
+def test_decode_provider_token_falls_back_to_authlib(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Use the Authlib decoder when ``joserfc`` is unavailable."""
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_authlib",
+        MagicMock(return_value={"provider": "google", "exp": 1}),
+    )
+
+    assert auth_util.decode_provider_token("token") == {
+        "provider": "google",
+        "exp": 1,
+    }
+
+
+def test_provider_token_round_trips_through_real_authlib_when_joserfc_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public encode/decode round-trip works end-to-end on the Authlib fallback path.
+
+    The mocked dispatch tests above prove the public helpers pick the Authlib branch
+    when joserfc raises ``ImportError``, and ``test_authlib_provider_token_round_trip``
+    proves the Authlib helpers work in isolation. This test bridges the two by driving
+    the public API with a real Authlib backend, covering the path a user on
+    ``Authlib<1.7`` (no transitive joserfc) actually exercises in production.
+    """
+    pytest.importorskip("authlib")
+    from authlib.deprecate import AuthlibDeprecationWarning
+
+    monkeypatch.setattr(auth_util, "get_signing_secret", lambda: "short-secret")
+    monkeypatch.setattr(
+        auth_util,
+        "_encode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError("joserfc unavailable")),
+    )
+    monkeypatch.setattr(
+        auth_util,
+        "_decode_provider_token_with_joserfc",
+        MagicMock(side_effect=ImportError("joserfc unavailable")),
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", AuthlibDeprecationWarning)
+        token = auth_util.encode_provider_token("google")
+        payload = auth_util.decode_provider_token(token)
+
+    assert payload["provider"] == "google"
+    assert isinstance(payload["exp"], int)
+
+
+@pytest.mark.parametrize(
+    ("operation", "args"),
+    [
+        pytest.param("encode_provider_token", ("google",), id="encode"),
+        pytest.param("decode_provider_token", ("ignored-token",), id="decode"),
+    ],
+)
+def test_provider_token_raises_install_hint_when_no_jose_backend_available(
+    operation: str,
+    args: tuple[Any, ...],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Surface the ``streamlit[auth]`` install hint when neither JOSE backend is available.
+
+    Anti-regression for the user-facing error path on installs that have neither
+    ``joserfc`` nor ``Authlib`` (e.g. plain ``pip install streamlit`` without the
+    ``auth`` extra). Both private helpers are forced to raise ``ImportError`` to
+    simulate the missing optional dependencies.
+    """
+    for helper in (
+        "_encode_provider_token_with_joserfc",
+        "_encode_provider_token_with_authlib",
+        "_decode_provider_token_with_joserfc",
+        "_decode_provider_token_with_authlib",
+    ):
+        monkeypatch.setattr(
+            auth_util, helper, MagicMock(side_effect=ImportError("missing"))
+        )
+
+    with pytest.raises(StreamlitAuthError, match=r"pip install streamlit\[auth\]"):
+        getattr(auth_util, operation)(*args)
+
+
+def test_set_split_cookie_single_chunk_path() -> None:
+    """Cover ``_set_split_cookie`` when the serialized value fits in one chunk.
+
+    The initial signed payload can exceed ``MAX_COOKIE_BYTES`` while the
+    empirically measured signing overhead (from the minimal probe value ``x``)
+    still leaves enough room for the full serialized string in a single chunk.
+    """
+    set_calls: list[tuple[str, str]] = []
+
+    def mock_set(name: str, val: str) -> None:
+        set_calls.append((name, val))
+
+    large_prefix = b"P" * 4500
+
+    def mock_create_signed(_name: str, value: str) -> bytes:
+        if value == "x":
+            return b"sig:" + base64.b64encode(value.encode())
+        return large_prefix + base64.b64encode(value.encode())
+
+    serialized = json.dumps({"data": "y" * 400})
+    _set_split_cookie(
+        mock_set,
+        mock_create_signed,
+        "c",
+        serialized,
+        cookie_attr_size=TEST_COOKIE_ATTR_SIZE,
+    )
+
+    assert set_calls == [("c", serialized)]
+
+
+@pytest.mark.parametrize(
+    ("secrets_mock", "provider", "expected_substring"),
+    [
+        pytest.param(
+            MagicMock(load_if_toml_exists=MagicMock(return_value=False)),
+            "google",
+            "authentication provider in `.streamlit/secrets.toml`",
+            id="no_secrets_toml",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(return_value=None),
+            ),
+            "google",
+            "authentication provider in `.streamlit/secrets.toml`",
+            id="no_auth_section",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "cookie_secret": "s",
+                        }
+                    )
+                ),
+            ),
+            "google",
+            '"redirect_uri"',
+            id="missing_redirect_uri",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                        }
+                    )
+                ),
+            ),
+            "google",
+            '"cookie_secret"',
+            id="missing_cookie_secret",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                            "cookie_secret": "s",
+                        }
+                    )
+                ),
+            ),
+            "my_provider",
+            "underscore",
+            id="provider_name_with_underscore",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                            "cookie_secret": "s",
+                        }
+                    )
+                ),
+            ),
+            "okta",
+            'the authentication provider "okta"',
+            id="named_provider_missing_section",
+        ),
+    ],
+)
+def test_validate_auth_credentials_errors(
+    secrets_mock: MagicMock,
+    provider: str,
+    expected_substring: str,
+) -> None:
+    """``validate_auth_credentials`` raises ``StreamlitAuthError`` for invalid secrets."""
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials(provider)
+    assert expected_substring in str(exc_info.value)
+
+
+def test_validate_auth_credentials_default_provider_section_none() -> None:
+    """Default provider raises when ``generate_default_provider_section`` yields None."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                }
+            )
         ),
     )
-    def test_substitutes_port_placeholder_in_origin(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that {port} placeholder is substituted when extracting origin (PR #12251)."""
-        from streamlit import auth_util
-
-        monkeypatch.setattr(
-            auth_util,
-            "get_secrets_auth_section",
-            lambda: AttrDict(
-                {"redirect_uri": "http://localhost:{port}/oauth2callback"}
-            ),
-        )
-        assert auth_util.get_origin_from_redirect_uri() == "http://localhost:7777"
+    with (
+        patch("streamlit.auth_util.secrets_singleton", secrets_mock),
+        patch(
+            "streamlit.auth_util.generate_default_provider_section",
+            return_value=None,
+        ),
+    ):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("default")
+    assert "default authentication provider" in str(exc_info.value)
 
 
-class TestBuildLogoutUrl:
-    """Tests for build_logout_url function."""
+def test_validate_auth_credentials_default_missing_keys() -> None:
+    """Default provider mapping is missing required OAuth keys."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                    "default": {},
+                }
+            )
+        ),
+    )
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("default")
+    msg = str(exc_info.value)
+    assert "default authentication provider" in msg
+    assert "client_id" in msg
 
-    def test_builds_basic_logout_url(self) -> None:
-        """Test that basic logout URL is built correctly."""
-        from streamlit import auth_util
 
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout",
-            client_id="test-client-id",
-            post_logout_redirect_uri="https://myapp.com/oauth2callback",
-        )
-        assert "https://provider.com/logout" in result
-        assert "client_id=test-client-id" in result
-        assert "post_logout_redirect_uri" in result
-        assert "myapp.com" in result
-        # id_token_hint should NOT be present when not provided
-        assert "id_token_hint" not in result
+def test_validate_auth_credentials_named_provider_missing_keys() -> None:
+    """Named provider section exists but omits required keys."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                    "google": {"client_id": "only_id"},
+                }
+            )
+        ),
+    )
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("google")
+    msg = str(exc_info.value)
+    assert 'authentication provider "google"' in msg
+    assert "client_secret" in msg
 
-    def test_includes_id_token_hint_when_provided(self) -> None:
-        """Test that id_token_hint is included when provided."""
-        from streamlit import auth_util
 
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout",
-            client_id="test-client-id",
-            post_logout_redirect_uri="https://myapp.com/oauth2callback",
-            id_token="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9",
-        )
-        assert "id_token_hint=eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9" in result
-
-    def test_url_encodes_parameters(self) -> None:
-        """Test that parameters are properly URL encoded."""
-        from streamlit import auth_util
-
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout",
-            client_id="test-client-id",
-            post_logout_redirect_uri="http://localhost:8501/oauth2callback",
-        )
-        # URL-encoded colon and slashes
-        assert "http%3A%2F%2Flocalhost%3A8501%2Foauth2callback" in result
-
-    def test_handles_existing_query_params(self) -> None:
-        """Test that existing query params in endpoint are preserved."""
-        from streamlit import auth_util
-
-        result = auth_util.build_logout_url(
-            end_session_endpoint="https://provider.com/logout?existing=value",
-            client_id="test-client-id",
-            post_logout_redirect_uri="https://myapp.com/oauth2callback",
-        )
-        assert "existing=value" in result
-        assert "client_id=test-client-id" in result
-        # Should use & not ? for additional params
-        assert "?existing=value" in result or "existing=value&" in result
-        assert result.count("?") == 1
+def test_validate_auth_credentials_provider_section_not_mapping() -> None:
+    """Provider entry must be a TOML table (mapping), not a scalar or list."""
+    secrets_mock = MagicMock(
+        load_if_toml_exists=MagicMock(return_value=True),
+        get=MagicMock(
+            return_value=AttrDict(
+                {
+                    "redirect_uri": "http://localhost:8501/oauth2callback",
+                    "cookie_secret": "s",
+                    "google": ["not", "a", "table"],
+                }
+            )
+        ),
+    )
+    with patch("streamlit.auth_util.secrets_singleton", secrets_mock):
+        with pytest.raises(StreamlitAuthError) as exc_info:
+            validate_auth_credentials("google")
+    assert "must be valid TOML" in str(exc_info.value)

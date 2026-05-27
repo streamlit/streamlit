@@ -25,11 +25,16 @@ import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
+from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
     RerunData,
     ScriptRunContext,
     get_script_run_ctx,
+)
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
 )
 
 if TYPE_CHECKING:
@@ -95,7 +100,9 @@ def _new_fragment_id_queue(
             "functions during fragment reruns."
         )
 
-    new_queue = list(dropwhile(lambda x: x != ctx.current_fragment_id, curr_queue))
+    new_queue = list(
+        dropwhile(lambda x: x != ThreadState.get().fragment_id, curr_queue)
+    )
     if not new_queue:  # pragma: no cover - defensive
         raise RuntimeError(
             "Could not find current_fragment_id in fragment_id_queue. This should never happen."
@@ -280,6 +287,7 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 
@@ -320,11 +328,12 @@ def switch_page(  # type: ignore[misc]
     # Reset query params (with exception of embed) and optionally apply overrides.
     with ctx.session_state.query_params() as qp:
         _set_query_params_for_switch(qp, query_params)
-        # Additional safeguard to ensure the query params
-        #  are sent out to the frontend before the new rerun might clear
-        # outstanding messages. This uses the same time that is used as waiting
-        # in our event loop.
-        time.sleep(0.01)
+
+    # Safeguard: sleep longer than the flush interval to ensure at least one
+    # complete flush cycle delivers the query params before the rerun clears
+    # outstanding messages. Sleep is placed after the with block to release
+    # the session state lock first.
+    time.sleep(2 * MESSAGE_FLUSH_INTERVAL_SECS)
 
     ctx.script_requests.request_rerun(
         RerunData(

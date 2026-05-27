@@ -38,12 +38,12 @@ from streamlit.runtime.caching import cache_data_api, cache_resource_api
 from streamlit.runtime.scriptrunner import get_script_run_ctx, magic_funcs
 from streamlit.runtime.scriptrunner_utils.exceptions import RerunException
 from streamlit.testing.v1.util import patch_config_options
-from streamlit.web.server import websocket_headers
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.testutil import create_pep649_function
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Iterator
+    from pathlib import Path
 
 MAC = "mac"
 UUID = "uuid"
@@ -344,7 +344,6 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
                 cache_resource_api.ResourceCache.write_result,
                 "_cache_resource_object",
             ),
-            (websocket_headers._get_websocket_headers, "_get_websocket_headers"),
             (components.html, "_html"),
             (components.iframe, "_iframe"),
             (st.query_params.__setattr__, "query_params.set_attr"),
@@ -387,6 +386,8 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
             "context",
             "login",
             "logout",
+            # st.App is a class for creating ASGI applications, not a tracked command
+            "App",
         }
 
         # Create a list of all public API names in the `st` module (minus
@@ -470,15 +471,20 @@ class PageTelemetryTest(DeltaGeneratorTestCase):
     def test_command_tracking_limits(self):
         """Command tracking limits should be respected.
 
-        Current limits are 25 per unique command and 200 in total.
+        Current limits are _MAX_TRACKED_PER_COMMAND (25) per unique command
+        and _MAX_TRACKED_COMMANDS (400) in total.
         """
         ctx = get_script_run_ctx()
         assert ctx is not None
         ctx.reset()
         ctx.gather_usage_stats = True
 
+        # Create enough unique command names to exceed _MAX_TRACKED_COMMANDS
+        # when each is called _MAX_TRACKED_PER_COMMAND + 1 times.
+        # With 20 commands * 25 per command = 500, which exceeds the 400 limit.
+        num_unique_commands = 20
         funcs = []
-        for i in range(10):
+        for i in range(num_unique_commands):
 
             def test_function() -> str:
                 return "foo"
@@ -512,6 +518,55 @@ def test_get_arg_keywords_includes_positional_only_params() -> None:
     expected = ["a", "b", "c", "d"]
     assert metrics_util._get_arg_keywords(func_with_posonly) == expected
     assert metrics_util._get_arg_keywords(func_without_posonly) == expected
+
+
+def test_get_arg_keywords_caches_results_and_handles_bound_methods() -> None:
+    """Verify caching works and bound methods include 'self' for backwards compatibility."""
+    metrics_util._get_arg_keywords_cached.cache_clear()
+    try:
+
+        def simple_func(a: int, b: str) -> None:
+            pass
+
+        class MyClass:
+            def my_method(self, x: int, y: str) -> None:
+                pass
+
+        # Test regular function caching
+        result1 = metrics_util._get_arg_keywords(simple_func)
+        result2 = metrics_util._get_arg_keywords(simple_func)
+        assert result1 == ["a", "b"]
+        assert result1 == result2
+        cache_info = metrics_util._get_arg_keywords_cached.cache_info()
+        assert cache_info.hits >= 1, "Cache should have hits for repeated calls"
+
+        # Test bound method includes 'self' (backwards compatibility)
+        obj = MyClass()
+        bound_result = metrics_util._get_arg_keywords(obj.my_method)
+        assert bound_result == ["self", "x", "y"], "Bound methods must include 'self'"
+
+        # Test different bound instances share cache via __func__
+        obj2 = MyClass()
+        hits_before = metrics_util._get_arg_keywords_cached.cache_info().hits
+        metrics_util._get_arg_keywords(obj2.my_method)
+        hits_after = metrics_util._get_arg_keywords_cached.cache_info().hits
+        assert hits_after > hits_before, (
+            "Different instances should share cache via __func__"
+        )
+    finally:
+        metrics_util._get_arg_keywords_cached.cache_clear()
+
+
+def test_get_arg_keywords_classmethod_returns_cls() -> None:
+    """Verify classmethod returns actual first parameter name 'cls', not 'self'."""
+
+    class MyClass:
+        @classmethod
+        def class_method(cls, x: int) -> None:
+            pass
+
+    result = metrics_util._get_arg_keywords(MyClass.class_method)
+    assert result == ["cls", "x"]
 
 
 @pytest.mark.skipif(
@@ -722,3 +777,324 @@ def test_create_page_profile_message_sets_uncaught_exception() -> None:
         [], 0, 0, uncaught_exception=exc_text
     )
     assert msg.page_profile.uncaught_exception == exc_text
+
+
+def _make_skill_dir(base: Path, harness_dir: str, skill_name: str) -> Path:
+    """Create a ``<skill_name>/SKILL.md`` marker under ``base/harness_dir``."""
+    skill_dir = base / harness_dir / skill_name
+    skill_dir.mkdir(parents=True)
+    marker = skill_dir / "SKILL.md"
+    marker.write_text(f"---\nname: {skill_name}\n---\n")
+    return marker
+
+
+@pytest.fixture(autouse=True)
+def _clear_skills_cache() -> Iterator[None]:
+    """Reset the skill-detection cache around each test in this module section."""
+    metrics_util._detect_installed_skills_cached.cache_clear()
+    metrics_util._detect_installed_agents_cached.cache_clear()
+    yield
+    metrics_util._detect_installed_skills_cached.cache_clear()
+    metrics_util._detect_installed_agents_cached.cache_clear()
+
+
+@pytest.mark.parametrize("location", ["home", "app", "repo"])
+@pytest.mark.parametrize(
+    ("harness", "project_dir", "home_dir"),
+    [
+        ("agents", ".agents/skills", ".agents/skills"),
+        ("claude", ".claude/skills", ".claude/skills"),
+        ("codex", ".codex/skills", ".codex/skills"),
+        ("copilot", ".github/skills", ".copilot/skills"),
+        ("cortex", ".cortex/skills", ".snowflake/cortex/skills"),
+        ("cursor", ".cursor/skills", ".cursor/skills"),
+        ("gemini", ".gemini/skills", ".gemini/skills"),
+        ("opencode", ".opencode/skills", ".config/opencode/skills"),
+    ],
+)
+@pytest.mark.parametrize(
+    "skill",
+    ["developing-with-streamlit", "developing-with-streamlit-in-snowflake"],
+)
+def test_detect_installed_skills_emits_expected_token(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    location: str,
+    harness: str,
+    project_dir: str,
+    home_dir: str,
+    skill: str,
+) -> None:
+    """Each ``location:harness:skill`` combination is detected and emitted as a token."""
+    home = tmp_path / "home"
+    app = tmp_path / "repo" / "app"
+    repo = tmp_path / "repo"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+
+    roots = {"home": home, "app": app, "repo": repo}
+    harness_dir = home_dir if location == "home" else project_dir
+    _make_skill_dir(roots[location], harness_dir, skill)
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert f"{location}:{harness}:{skill}" in tokens
+
+
+def test_detect_installed_skills_empty_when_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Returns an empty list when no skills markers exist anywhere."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_skills(str(app)) == []
+
+
+def test_detect_installed_skills_ignores_unrelated_skill_names(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Skills with names outside ``_STREAMLIT_SKILL_NAMES`` must not trigger detection."""
+    home = tmp_path / "home"
+    home.mkdir()
+    _make_skill_dir(home, ".claude/skills", "some-other-skill")
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_skills(str(tmp_path / "app-missing")) == []
+
+
+def test_detect_installed_skills_skips_repo_when_same_as_app(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """When the app lives directly at the git root, ``repo`` tokens are deduped against ``app``."""
+    home = tmp_path / "home"
+    app_and_repo = tmp_path / "proj"
+    home.mkdir()
+    app_and_repo.mkdir()
+    (app_and_repo / ".git").mkdir()
+    _make_skill_dir(app_and_repo, ".claude/skills", "developing-with-streamlit")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app_and_repo))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
+
+
+def test_detect_installed_skills_walks_up_to_repo_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Skills planted at the git-root ancestor show up under ``repo:``, not ``app:``."""
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "nested" / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    _make_skill_dir(repo, ".agents/skills", "developing-with-streamlit-in-snowflake")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["repo:agents:developing-with-streamlit-in-snowflake"]
+
+
+def test_detect_installed_skills_returns_sorted_deduped_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multiple hits across locations are returned sorted and without duplicates."""
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    _make_skill_dir(home, ".cursor/skills", "developing-with-streamlit")
+    _make_skill_dir(app, ".agents/skills", "developing-with-streamlit-in-snowflake")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == [
+        "app:agents:developing-with-streamlit-in-snowflake",
+        "home:cursor:developing-with-streamlit",
+        "repo:claude:developing-with-streamlit",
+    ]
+
+
+def test_detect_installed_skills_finds_project_skills_when_home_harness_absent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Project-level skills are detected even when the user has no harness installed at home.
+
+    Guards against an over-broad short-circuit that would skip app/repo
+    harness checks when the corresponding home directory doesn't exist.
+    """
+    home = tmp_path / "home"
+    repo = tmp_path / "proj"
+    app = repo / "app"
+    home.mkdir()
+    app.mkdir(parents=True)
+    (repo / ".git").mkdir()
+    # Note: no ``~/.claude`` directory is created — the user has never run
+    # Claude Code. But the project ships skills under its own .claude dir.
+    _make_skill_dir(app, ".claude/skills", "developing-with-streamlit")
+    _make_skill_dir(repo, ".claude/skills", "developing-with-streamlit-in-snowflake")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == [
+        "app:claude:developing-with-streamlit",
+        "repo:claude:developing-with-streamlit-in-snowflake",
+    ]
+
+
+def test_detect_installed_skills_detects_symlinked_skill_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked skill directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    app = tmp_path / "app"
+    home.mkdir()
+    app.mkdir()
+
+    # Create a real skill directory elsewhere
+    real_skill = tmp_path / "external" / "developing-with-streamlit"
+    real_skill.mkdir(parents=True)
+    (real_skill / "SKILL.md").write_text("---\nname: developing-with-streamlit\n---\n")
+
+    # Symlink it into the .claude/skills directory
+    skills_dir = app / ".claude" / "skills"
+    skills_dir.mkdir(parents=True)
+    try:
+        (skills_dir / "developing-with-streamlit").symlink_to(
+            real_skill, target_is_directory=True
+        )
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    tokens = metrics_util._detect_installed_skills(str(app))
+
+    assert tokens == ["app:claude:developing-with-streamlit"]
+
+
+@pytest.mark.parametrize(
+    "detected",
+    [[], ["home:claude:developing-with-streamlit"]],
+)
+def test_create_page_profile_message_sets_installed_skills(
+    detected: list[str],
+) -> None:
+    """``installed_skills`` is populated from the detection helper."""
+    with patch(
+        "streamlit.runtime.metrics_util._detect_installed_skills",
+        return_value=detected,
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+    assert list(msg.page_profile.installed_skills) == detected
+
+
+@pytest.mark.parametrize(
+    ("harness", "marker_dir"),
+    [
+        ("agents", ".agents"),
+        ("claude", ".claude"),
+        ("codex", ".codex"),
+        ("copilot", ".copilot"),
+        ("cortex", ".snowflake/cortex"),
+        ("cursor", ".cursor"),
+        ("gemini", ".gemini"),
+        ("opencode", ".config/opencode"),
+    ],
+)
+def test_detect_installed_agents_finds_each_harness(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    harness: str,
+    marker_dir: str,
+) -> None:
+    """Each harness is detected when its home-level marker directory exists."""
+    home = tmp_path / "home"
+    (home / marker_dir).mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == [harness]
+
+
+def test_detect_installed_agents_empty_when_no_harnesses(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Returns an empty list when no harness marker directories exist."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == []
+
+
+def test_detect_installed_agents_ignores_plain_snowflake(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``.snowflake`` without a ``cortex`` subdirectory must not count as cortex."""
+    home = tmp_path / "home"
+    (home / ".snowflake").mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == []
+
+
+def test_detect_installed_agents_returns_sorted_deduped_tokens(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Multiple harnesses are returned sorted and without duplicates."""
+    home = tmp_path / "home"
+    (home / ".cursor").mkdir(parents=True)
+    (home / ".claude").mkdir(parents=True)
+    (home / ".config/opencode").mkdir(parents=True)
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude", "cursor", "opencode"]
+
+
+def test_detect_installed_agents_detects_symlinked_harness_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Symlinked harness directories are detected as if they were real directories."""
+    home = tmp_path / "home"
+    home.mkdir()
+
+    # Create a real .claude directory elsewhere
+    real_claude = tmp_path / "external" / ".claude"
+    real_claude.mkdir(parents=True)
+
+    # Symlink it into the home directory
+    try:
+        (home / ".claude").symlink_to(real_claude, target_is_directory=True)
+    except (OSError, NotImplementedError):
+        pytest.skip("Symlinks not supported in this environment")
+
+    monkeypatch.setenv("HOME", str(home))
+    assert metrics_util._detect_installed_agents() == ["claude"]
+
+
+@pytest.mark.parametrize(
+    "detected",
+    [[], ["claude", "codex"]],
+)
+def test_create_page_profile_message_sets_installed_agents(
+    detected: list[str],
+) -> None:
+    """``installed_agents`` is populated from the detection helper."""
+    with patch(
+        "streamlit.runtime.metrics_util._detect_installed_agents",
+        return_value=detected,
+    ):
+        msg = metrics_util.create_page_profile_message([], 0, 0)
+    assert list(msg.page_profile.installed_agents) == detected

@@ -93,6 +93,7 @@ describe("HostCommunicationManager messaging", () => {
       deployedAppMetadataChanged: vi.fn(),
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
+      printApp: vi.fn(),
     })
 
     originalHash = window.location.hash
@@ -319,6 +320,22 @@ describe("HostCommunicationManager messaging", () => {
 
     // @ts-expect-error - props are private
     expect(hostCommunicationMgr.props.clearCache).toHaveBeenCalled()
+  })
+
+  it("can process a received PRINT_APP message", () => {
+    dispatchEvent(
+      "message",
+      new MessageEvent("message", {
+        data: {
+          stCommVersion: HOST_COMM_VERSION,
+          type: "PRINT_APP",
+        },
+        origin: "https://devel.streamlit.test",
+      })
+    )
+
+    // @ts-expect-error - props are private
+    expect(hostCommunicationMgr.props.printApp).toHaveBeenCalled()
   })
 
   it("can process a received REQUEST_PAGE_CHANGE message", () => {
@@ -749,6 +766,7 @@ describe("Test different origins", () => {
       deployedAppMetadataChanged: vi.fn(),
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
+      printApp: vi.fn(),
     })
     ;({ dispatchEvent } = mockEventListeners())
   })
@@ -847,6 +865,7 @@ describe("HostCommunicationManager external auth token handling", () => {
       deployedAppMetadataChanged: vi.fn(),
       restartWebsocketConnection: vi.fn(),
       terminateWebsocketConnection: vi.fn(),
+      printApp: vi.fn(),
     })
   })
 

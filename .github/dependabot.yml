@@ -95,6 +95,25 @@ updates:
           # Due to the coupling between vite plugins and underlying swc
           # versions, it makes sense to keep these grouped together
           - "@swc/*"
+      protobufjs:
+        patterns:
+          - "protobufjs"
+          - "protobufjs-cli"
+      testing-library:
+        patterns:
+          - "@testing-library/*"
+      d3:
+        patterns:
+          - "d3"
+          - "d3-*"
+          - "@types/d3*"
+      plotly:
+        patterns:
+          - "*plotly*"
+      oxc:
+        patterns:
+          - "oxlint"
+          - "oxfmt"
 
   # Keep python dependencies up to date (via uv)
   # Root pyproject.toml contains dev/test dependency groups
@@ -105,8 +124,6 @@ updates:
     # Allow a limited number of update PRs at a time
     # to keep the number of parallel dependency updates manageable.
     open-pull-requests-limit: 3
-    # Only increase version constraints when required for update
-    versioning-strategy: increase-if-necessary
 
     # Use cooldown to avoid updating dependencies too frequently
     # and minimize risk of supply chain attacks.
@@ -119,14 +136,6 @@ updates:
       - "autofix"
       - "never-stale"
 
-    ignore:
-      - dependency-name: "langchain"
-        # Newer langchain version conflict with our test setup
-        # see: https://github.com/streamlit/streamlit/pull/10227
-        versions: [">=0.3.21"]
-      - dependency-name: "langchain-community"
-        versions: [">=0.3.14"]
-
   # Keep streamlit package runtime dependencies up to date
   # lib/pyproject.toml contains the published package's dependencies
   - package-ecosystem: "uv"
@@ -134,8 +143,6 @@ updates:
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3
-    # Only increase version constraints when required for update
-    versioning-strategy: increase-if-necessary
 
     cooldown:
       default-days: 5

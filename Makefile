@@ -19,12 +19,16 @@ SHELL=/bin/bash
 INSTALL_DEV_REQS ?= true
 INSTALL_TEST_REQS ?= true
 INSTALL_PLAYWRIGHT ?= true
+INSTALL_PLAYWRIGHT_DEPS ?= auto
 # Flags:
 #  - INSTALL_DEV_REQS: install dev requirements (default: true)
 #  - INSTALL_TEST_REQS: install test requirements (default: true)
 #  - INSTALL_PLAYWRIGHT: install Playwright browsers during python-init (default: true)
 #    CI uses a dedicated action to install browsers and typically sets this to false.
 #    Local dev can opt out when not needed: `INSTALL_PLAYWRIGHT=false make init`
+#  - INSTALL_PLAYWRIGHT_DEPS: install Playwright OS-level system deps (default: auto)
+#    `auto` runs --with-deps on Debian, Ubuntu, and macOS only. Use `true` to force
+#    it everywhere, or `false` to skip it (browsers still install in either case).
 PYTHON_VERSION := $(shell python --version | cut -d " " -f 2 | cut -d "." -f 1-2)
 MIN_PROTOC_VERSION = 3.20
 
@@ -121,6 +125,10 @@ protobuf:
 		proto/streamlit/proto/*.proto
 
 	@# JS/TS protobuf generation
+	@if [ ! -d "frontend/node_modules" ]; then \
+		echo "frontend/node_modules not found. Running 'make frontend-init' first..."; \
+		$(MAKE) frontend-init; \
+	fi
 	cd frontend/ ; yarn workspace @streamlit/protobuf run generate-protobuf
 
 .PHONY: protobuf-lint
@@ -158,7 +166,15 @@ python-init:
 	fi
 	@# Install playwright if requested
 	@if [ "${INSTALL_TEST_REQS}" = "true" ] && [ "${INSTALL_PLAYWRIGHT}" = "true" ]; then \
-		uv run python -m playwright install --with-deps; \
+		if [ "${INSTALL_PLAYWRIGHT_DEPS}" = "false" ]; then \
+			uv run python -m playwright install; \
+		elif [ "${INSTALL_PLAYWRIGHT_DEPS}" = "true" ] || [ -f /etc/debian_version ] || [ "$$(uname)" = "Darwin" ]; then \
+			uv run python -m playwright install --with-deps; \
+		else \
+			echo "Skipping 'playwright install --with-deps': not officially supported on this OS."; \
+			echo "Browsers will be downloaded. Install browser system libraries through your distro's package manager (see CONTRIBUTING.md)."; \
+			uv run python -m playwright install; \
+		fi; \
 	fi
 
 .PHONY: python-lint
@@ -207,6 +223,15 @@ python-types:
 	uv run ty check
 	# Run mypy type checker (reads config from pyproject.toml):
 	uv run mypy
+	# Template apps under lib/streamlit/.agents/ are skipped by the bare mypy
+	# run above (no __init__.py chain + dot-prefix directory). Run mypy per-
+	# template with MYPYPATH=lib so each file is checked against the real
+	# streamlit package. Per-file (not batched) because templates share the
+	# module name `streamlit_app`.
+	@for tpl in lib/streamlit/.agents/skills/developing-with-streamlit/assets/templates/apps/*/streamlit_app.py; do \
+		echo "# mypy: $$tpl" && \
+		MYPYPATH=lib uv run mypy "$$tpl" || exit 1; \
+	done
 
 .PHONY: frontend-init
 # Install all frontend dependencies.
@@ -603,6 +628,13 @@ bare-execution-tests:
 cli-smoke-tests:
 	uv run python scripts/cli_smoke_tests.py
 
+# Template apps under lib/streamlit/.agents/ need per-template mypy invocation:
+# (a) they all use the module name `streamlit_app`, so batching triggers a
+#     "duplicate module" error;
+# (b) they live under a dot-prefixed directory (`.agents/`), which confuses
+#     mypy's package-root resolution and prevents `import streamlit` from
+#     resolving — `MYPYPATH=lib` points at the real streamlit package.
+# `make python-types` applies the same per-template treatment to the full set.
 .PHONY: check
 # Run all checks (format, lint, types, unit tests) on changed files only. Useful to verify the current state of the codebase before committing.
 check:
@@ -684,8 +716,19 @@ check:
 		echo "" || PY_EXIT=1; \
 		if [ $$PY_EXIT -eq 0 ] && [ "$$FAST_CHECK" != "true" ]; then \
 			echo "=== Python: type check (mypy) ===" && \
-			uv run mypy $$PY_FILES && \
-			echo "" || PY_EXIT=1; \
+			PY_MYPY_NON_TEMPLATE=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep -v '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			PY_MYPY_TEMPLATES=$$(echo "$$PY_FILES" | tr ' ' '\n' | grep '^lib/streamlit/\.agents/' | tr '\n' ' '); \
+			if [ -n "$$(echo "$$PY_MYPY_NON_TEMPLATE" | tr -d ' ')" ]; then \
+				uv run mypy $$PY_MYPY_NON_TEMPLATE && \
+				echo "" || PY_EXIT=1; \
+			fi; \
+			if [ $$PY_EXIT -eq 0 ] && [ -n "$$(echo "$$PY_MYPY_TEMPLATES" | tr -d ' ')" ]; then \
+				echo "# Per-template mypy with MYPYPATH=lib (see 'make check' docstring for why)" && \
+				for tpl in $$PY_MYPY_TEMPLATES; do \
+					MYPYPATH=lib uv run mypy "$$tpl" || PY_EXIT=1; \
+				done; \
+				echo ""; \
+			fi; \
 		fi; \
 	else \
 		echo "No Python files changed."; \

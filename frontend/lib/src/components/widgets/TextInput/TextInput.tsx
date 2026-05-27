@@ -188,7 +188,7 @@ function TextInput({
             <DynamicIcon
               data-testid="stTextInputIcon"
               iconValue={icon}
-              size="lg"
+              size="base"
             />
           )
         }
@@ -240,7 +240,7 @@ function TextInput({
               paddingLeft: 0,
               paddingRight: 0,
               // Keeps emoji icons from being cut off on the right
-              minWidth: theme.iconSizes.lg,
+              minWidth: theme.iconSizes.base,
               // Material icons color changed as inactionable
               color: isMaterialIcon(icon)
                 ? theme.colors.fadedText60

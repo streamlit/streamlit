@@ -97,6 +97,7 @@ from streamlit.elements.widgets.file_uploader import FileUploaderMixin
 from streamlit.elements.widgets.menu_button import MenuButtonMixin
 from streamlit.elements.widgets.multiselect import MultiSelectMixin
 from streamlit.elements.widgets.number_input import NumberInputMixin
+from streamlit.elements.widgets.pagination import PaginationMixin
 from streamlit.elements.widgets.radio import RadioMixin
 from streamlit.elements.widgets.select_slider import SelectSliderMixin
 from streamlit.elements.widgets.selectbox import SelectboxMixin
@@ -111,6 +112,9 @@ from streamlit.proto.RootContainer_pb2 import RootContainer
 from streamlit.runtime import caching
 from streamlit.runtime.scriptrunner import enqueue_message as _enqueue_message
 from streamlit.runtime.scriptrunner import get_script_run_ctx
+from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ThreadState,
+)
 
 if TYPE_CHECKING:
     from types import TracebackType
@@ -118,7 +122,6 @@ if TYPE_CHECKING:
     from google.protobuf.message import Message
 
     from streamlit.cursor import Cursor
-    from streamlit.elements.lib.built_in_chart_utils import AddRowsMetadata
     from streamlit.elements.lib.layout_utils import LayoutConfig
     from streamlit.proto.Element_pb2 import Element as ElementProto
 
@@ -168,7 +171,11 @@ def _maybe_print_use_warning() -> None:
 def _maybe_print_fragment_callback_warning() -> None:
     """Print a warning if elements are being modified during a fragment callback."""
     ctx = get_script_run_ctx()
-    if ctx and getattr(ctx, "in_fragment_callback", False):
+    # Invariant: ThreadState is initialized whenever a ScriptRunContext exists
+    # on this thread, since ScriptRunContext.reset() and add_script_run_ctx()
+    # are the only public entry points for binding ctx, and both seed
+    # ThreadState. ThreadState.get() is therefore safe here without a guard.
+    if ctx and ThreadState.get().in_fragment_callback:
         warning = cli_util.style_for_cli("Warning:", bold=True, fg="yellow")
 
         logger.get_logger("root").warning(
@@ -209,6 +216,7 @@ class DeltaGenerator(
     MenuButtonMixin,
     MultiSelectMixin,
     NumberInputMixin,
+    PaginationMixin,
     PdfMixin,
     PlotlyMixin,
     ProgressMixin,
@@ -466,8 +474,8 @@ class DeltaGenerator(
         self,
         delta_type: str,
         element_proto: Message,
-        add_rows_metadata: AddRowsMetadata | None = None,
         layout_config: LayoutConfig | None = None,
+        has_one_shot_effect: bool = False,
     ) -> DeltaGenerator:
         """Create NewElement delta, fill it, and enqueue it.
 
@@ -477,8 +485,6 @@ class DeltaGenerator(
             The name of the streamlit method being called
         element_proto : proto
             The actual proto in the NewElement type e.g. Alert/Button/Slider
-        add_rows_metadata : AddRowsMetadata or None
-            Metadata for the add_rows method
 
         Returns
         -------
@@ -490,12 +496,34 @@ class DeltaGenerator(
         dg = self._active_dg
 
         ctx = get_script_run_ctx()
-        if ctx and ctx.current_fragment_id and _writes_directly_to_sidebar(dg):
+        if ctx and ThreadState.get().fragment_id and _writes_directly_to_sidebar(dg):
             raise StreamlitAPIException(
                 "Calling `st.sidebar` in a function wrapped with `st.fragment` is not "
                 "supported. To write elements to the sidebar with a fragment, call your "
                 "fragment function inside a `with st.sidebar` context manager."
             )
+
+        if ctx:
+            ts = ThreadState.get()
+            if ts.is_parallel_worker:
+                fragment_path = ts.delta_path
+                cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
+                # Empty fragment_path means the fragment's cursor was None; in that
+                # case _is_inside_fragment_path would always return True anyway, so
+                # skip the check.
+                if fragment_path and not _is_inside_fragment_path(
+                    cursor_path, fragment_path
+                ):
+                    raise StreamlitAPIException(
+                        "Writing to containers outside a parallel fragment is not "
+                        "allowed during the initial page load, because parallel "
+                        "fragments run concurrently on separate threads and "
+                        "external container writes are not thread-safe.\n\n"
+                        "To fix this, move the element inside the fragment body, "
+                        "or gate the write behind a widget interaction "
+                        "(e.g., `if st.button(...):`) so it runs during a "
+                        "sequential fragment rerun instead."
+                    )
 
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
@@ -522,6 +550,9 @@ class DeltaGenerator(
                     get_text_alignment_config(layout_config.text_alignment)
                 )
 
+        if has_one_shot_effect:
+            msg.delta.new_element.has_one_shot_effect = True
+
         # Only enqueue message and fill in metadata if there's a container.
         msg_was_enqueued = False
         if dg._root_container is not None and dg._cursor is not None:
@@ -534,11 +565,7 @@ class DeltaGenerator(
             # Get a DeltaGenerator that is locked to the current element
             # position.
             new_cursor = (
-                dg._cursor.get_locked_cursor(
-                    delta_type=delta_type, add_rows_metadata=add_rows_metadata
-                )
-                if dg._cursor is not None
-                else None
+                dg._cursor.get_locked_cursor() if dg._cursor is not None else None
             )
 
             output_dg = DeltaGenerator(
@@ -615,7 +642,7 @@ class DeltaGenerator(
         block_dg._form_data = FormData(current_form_id(dg))
 
         # Must be called to increment this cursor's index.
-        dg._cursor.get_locked_cursor(add_rows_metadata=None)
+        dg._cursor.get_locked_cursor()
         _enqueue_message(msg)
 
         caching.save_block_message(
@@ -694,3 +721,13 @@ def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(list(dg._ancestor_block_types))
     return in_sidebar and not has_container
+
+
+def _is_inside_fragment_path(
+    cursor_path: tuple[int, ...],
+    fragment_path: tuple[int, ...],
+) -> bool:
+    """Check if cursor_path is within or equal to fragment_path."""
+    if len(cursor_path) < len(fragment_path):
+        return False
+    return cursor_path[: len(fragment_path)] == fragment_path

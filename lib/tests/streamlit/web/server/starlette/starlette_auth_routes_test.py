@@ -14,9 +14,13 @@
 
 from __future__ import annotations
 
+import asyncio
 from http.cookies import SimpleCookie
 from typing import TYPE_CHECKING, Any
+from unittest.mock import MagicMock
+from urllib.parse import parse_qs, urlparse
 
+from authlib.integrations import starlette_client
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import PlainTextResponse, RedirectResponse
@@ -25,7 +29,6 @@ from starlette.testclient import TestClient
 
 from streamlit.web.server.starlette import starlette_app_utils, starlette_auth_routes
 from streamlit.web.server.starlette.starlette_auth_routes import (
-    _STARLETTE_AUTH_CACHE,
     _get_cookie_path,
     _get_origin_from_secrets,
     _get_provider_by_state,
@@ -33,6 +36,7 @@ from streamlit.web.server.starlette.starlette_auth_routes import (
     create_auth_routes,
 )
 from streamlit.web.server.starlette.starlette_server_config import (
+    AUTH_COOKIE_MAX_AGE_SECONDS,
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
 )
@@ -81,7 +85,7 @@ def test_callback_handles_error_query(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         starlette_auth_routes,
         "_get_provider_by_state",
-        lambda state: "default",
+        lambda request, state: "default",
     )
 
     app = Starlette(routes=create_auth_routes(""))
@@ -104,7 +108,7 @@ def test_callback_missing_provider_redirects(monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.setattr(
         starlette_auth_routes,
         "_get_provider_by_state",
-        lambda state: None,
+        lambda request, state: None,
     )
 
     app = Starlette(routes=create_auth_routes(""))
@@ -133,7 +137,7 @@ def test_auth_callback_sets_signed_cookie(monkeypatch: pytest.MonkeyPatch) -> No
     monkeypatch.setattr(
         starlette_auth_routes,
         "_get_provider_by_state",
-        lambda state: "default",
+        lambda request, state: "default",
     )
     monkeypatch.setattr(
         starlette_auth_routes,
@@ -200,7 +204,7 @@ def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(
         starlette_auth_routes,
         "_get_provider_by_state",
-        lambda state: "default",
+        lambda request, state: "default",
     )
 
     app = Starlette(routes=create_auth_routes(""))
@@ -208,6 +212,109 @@ def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> N
         response = client.get("/oauth2callback?state=abc", follow_redirects=False)
         assert response.status_code == 302
         assert response.headers["location"].endswith("/")
+
+
+def test_callback_token_exchange_failure_clears_auth_cookies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that OAuth token exchange failures log users out gracefully."""
+
+    class _DummyClient:
+        async def authorize_access_token(self, request: Any) -> dict[str, Any]:
+            raise RuntimeError("invalid code verifier")
+
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_create_oauth_client",
+        lambda provider: (_DummyClient(), "/redirect"),
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_provider_by_state",
+        lambda request, state: "default",
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_get_origin_from_secrets",
+        lambda: "http://testserver",
+    )
+
+    app = Starlette(routes=create_auth_routes(""))
+    with TestClient(app) as client:
+        client.cookies.set(USER_COOKIE_NAME, "stale-user-cookie")
+        client.cookies.set(TOKENS_COOKIE_NAME, "stale-token-cookie")
+
+        response = client.get("/oauth2callback?state=abc", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert response.headers["location"].endswith("/")
+
+    set_cookie_headers = response.headers.get_list("set-cookie")
+    assert any(
+        header.startswith(f"{USER_COOKIE_NAME}=") and "Max-Age=0" in header
+        for header in set_cookie_headers
+    )
+    assert any(
+        header.startswith(f"{TOKENS_COOKIE_NAME}=") and "Max-Age=0" in header
+        for header in set_cookie_headers
+    )
+
+
+class TestStreamlitStarletteOAuth:
+    """Tests for Streamlit-specific Authlib Starlette behavior."""
+
+    def test_enables_s256_pkce_from_provider_metadata(self) -> None:
+        """Test that S256 provider metadata generates PKCE authorize data."""
+        oauth_class = starlette_auth_routes._create_streamlit_oauth_class(
+            starlette_client
+        )
+        client = oauth_class.oauth2_client_cls(
+            MagicMock(),
+            "default",
+            client_id="client-id",
+            client_kwargs={"scope": "openid email profile"},
+            authorization_endpoint="https://provider.example/authorize",
+            code_challenge_methods_supported=["plain", "S256"],
+        )
+
+        auth_context = asyncio.run(
+            client.create_authorization_url("http://localhost:8501/oauth2callback")
+        )
+
+        parsed_url = urlparse(auth_context["url"])
+        query_params = parse_qs(parsed_url.query)
+
+        assert client.client_kwargs["code_challenge_method"] == "S256"
+        assert "code_verifier" in auth_context
+        assert query_params["code_challenge_method"] == ["S256"]
+        assert "code_challenge" in query_params
+        assert "code_verifier" not in query_params
+
+    def test_does_not_enable_pkce_without_s256_provider_metadata(self) -> None:
+        """Test that PKCE is not forced for providers that do not advertise S256."""
+        oauth_class = starlette_auth_routes._create_streamlit_oauth_class(
+            starlette_client
+        )
+        client = oauth_class.oauth2_client_cls(
+            MagicMock(),
+            "default",
+            client_id="client-id",
+            client_kwargs={"scope": "openid email profile"},
+            authorization_endpoint="https://provider.example/authorize",
+            code_challenge_methods_supported=["plain"],
+        )
+
+        auth_context = asyncio.run(
+            client.create_authorization_url("http://localhost:8501/oauth2callback")
+        )
+
+        parsed_url = urlparse(auth_context["url"])
+        query_params = parse_qs(parsed_url.query)
+
+        assert "code_challenge_method" not in client.client_kwargs
+        assert "code_verifier" not in auth_context
+        assert "code_challenge_method" not in query_params
+        assert "code_challenge" not in query_params
 
 
 class TestCookiePath:
@@ -242,6 +349,46 @@ class TestCookiePath:
 class TestAuthCookieFlags:
     """Tests for auth cookie flags (httponly, samesite, path)."""
 
+    @patch_config_options({"server.baseUrlPath": "myapp"})
+    def test_set_auth_cookie_uses_full_cookie_attribute_size(self) -> None:
+        """Test that auth cookie chunking accounts for all emitted attributes."""
+        captured_calls: list[tuple[str, int]] = []
+
+        def mock_set_cookie_with_chunks(
+            set_single_cookie_fn: Any,
+            create_signed_value_fn: Any,
+            cookie_name: str,
+            value: dict[str, Any],
+            *,
+            cookie_attr_size: int,
+        ) -> None:
+            captured_calls.append((cookie_name, cookie_attr_size))
+
+        response = PlainTextResponse("ok")
+        original_set_cookie_with_chunks = starlette_auth_routes.set_cookie_with_chunks
+        starlette_auth_routes.set_cookie_with_chunks = mock_set_cookie_with_chunks
+        try:
+            asyncio.run(
+                starlette_auth_routes._set_auth_cookie(
+                    response,
+                    {"email": "user@example.com"},
+                    {"access_token": "token"},
+                )
+            )
+        finally:
+            starlette_auth_routes.set_cookie_with_chunks = (
+                original_set_cookie_with_chunks
+            )
+
+        expected_attr_size = len(
+            f"; Path=/myapp; HttpOnly; SameSite=lax; "
+            f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}"
+        )
+        assert captured_calls == [
+            (USER_COOKIE_NAME, expected_attr_size),
+            (TOKENS_COOKIE_NAME, expected_attr_size),
+        ]
+
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": ""}
     )
@@ -265,7 +412,7 @@ class TestAuthCookieFlags:
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_by_state",
-            lambda state: "default",
+            lambda request, state: "default",
         )
         monkeypatch.setattr(
             starlette_auth_routes,
@@ -298,6 +445,25 @@ class TestAuthCookieFlags:
             # Check path flag (should be "/" when no baseUrlPath)
             assert cookie["path"] == "/"
 
+            # Check max-age is present and equals 30 days.
+            assert cookie["max-age"] == str(AUTH_COOKIE_MAX_AGE_SECONDS)
+
+            # Same persistence check on the tokens cookie.
+            tokens_cookie_header = next(
+                (
+                    h
+                    for h in set_cookie_headers
+                    if h.startswith(f"{TOKENS_COOKIE_NAME}=")
+                ),
+                None,
+            )
+            assert tokens_cookie_header is not None, "Tokens cookie not found"
+            tokens_cookies = SimpleCookie()
+            tokens_cookies.load(tokens_cookie_header)
+            assert tokens_cookies[TOKENS_COOKIE_NAME]["max-age"] == str(
+                AUTH_COOKIE_MAX_AGE_SECONDS
+            )
+
     @patch_config_options(
         {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}
     )
@@ -321,7 +487,7 @@ class TestAuthCookieFlags:
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_by_state",
-            lambda state: "default",
+            lambda request, state: "default",
         )
         monkeypatch.setattr(
             starlette_auth_routes,
@@ -403,109 +569,66 @@ class TestGetProviderByState:
     """Tests for _get_provider_by_state function."""
 
     def test_returns_none_for_none_state(self) -> None:
-        """Test that None state returns None."""
-        assert _get_provider_by_state(None) is None
+        """Test that None state returns None (early-return path, no session access)."""
+        assert _get_provider_by_state(MagicMock(), None) is None
 
     def test_returns_none_for_unknown_state(self) -> None:
         """Test that an unknown state code returns None."""
-        # Clear the cache first
-        _STARLETTE_AUTH_CACHE._cache.clear()
-        assert _get_provider_by_state("unknown_state") is None
 
-    def test_extracts_provider_from_cache(self) -> None:
-        """Test that provider is extracted from a matching cache entry."""
-        import time
+        mock_request = MagicMock()
+        mock_request.session = {}
+        assert _get_provider_by_state(mock_request, "unknown_state") is None
 
-        # Clear and populate the cache with a known entry (value, expiration)
-        _STARLETTE_AUTH_CACHE._cache.clear()
-        _STARLETTE_AUTH_CACHE._cache["_state_google_abc123"] = (
-            {"some": "data"},
-            time.time() + 3600,
-        )
+    def test_extracts_provider_from_session(self) -> None:
+        """Test that provider is extracted from a matching session entry."""
+        mock_request = MagicMock()
+        # Session value structure doesn't matter; only the key format is parsed
+        mock_request.session = {"_state_google_abc123": {}}
 
-        assert _get_provider_by_state("abc123") == "google"
+        assert _get_provider_by_state(mock_request, "abc123") == "google"
 
-        # Clean up
-        _STARLETTE_AUTH_CACHE._cache.clear()
-
-    def test_handles_malformed_cache_keys(self) -> None:
-        """Test that malformed cache keys are skipped gracefully."""
-        import time
-
-        _STARLETTE_AUTH_CACHE._cache.clear()
-        future_exp = time.time() + 3600
-        # Add a malformed key (not 4 parts)
-        _STARLETTE_AUTH_CACHE._cache["malformed_key"] = ({"some": "data"}, future_exp)
-        # Add a valid key with state code "validstate123"
-        _STARLETTE_AUTH_CACHE._cache["_state_github_validstate123"] = (
-            {"some": "data"},
-            future_exp,
-        )
+    def test_handles_malformed_session_keys(self) -> None:
+        """Test that malformed session keys are skipped gracefully."""
+        mock_request = MagicMock()
+        mock_request.session = {
+            "malformed_key": {},
+            "_state_github_validstate123": {},
+        }
 
         # Should find the valid key when querying with the state code
-        assert _get_provider_by_state("validstate123") == "github"
-        # Should return None for a state code that doesn't exist in the cache
-        assert _get_provider_by_state("nonexistentstate") is None
+        assert _get_provider_by_state(mock_request, "validstate123") == "github"
+        # Should return None for a state code that doesn't exist in the session
+        assert _get_provider_by_state(mock_request, "nonexistentstate") is None
 
-        # Clean up
-        _STARLETTE_AUTH_CACHE._cache.clear()
+    def test_ignores_keys_without_state_prefix(self) -> None:
+        """Test that session keys without '_state_' prefix are ignored."""
+        mock_request = MagicMock()
+        # These keys split into 4 parts but don't have the _state_ prefix
+        mock_request.session = {
+            "user_id_abcd_1234": {},  # Could be mistaken for state key
+            "other_data_xyz_5678": {},  # Another potential false positive
+            "_state_google_realstate123": {},  # Valid Authlib state key
+        }
 
+        # Only the valid _state_ prefixed key should be recognized
+        assert _get_provider_by_state(mock_request, "realstate123") == "google"
+        # The false positives should not be matched
+        assert _get_provider_by_state(mock_request, "1234") is None
+        assert _get_provider_by_state(mock_request, "5678") is None
 
-class TestAsyncAuthCacheExpiration:
-    """Tests for _AsyncAuthCache expiration behavior."""
+    def test_handles_state_code_with_underscores(self) -> None:
+        """Test that state codes containing underscores are parsed correctly."""
+        mock_request = MagicMock()
+        # State code contains underscores - maxsplit=3 should keep them together
+        mock_request.session = {
+            "_state_github_complex_state_with_underscores": {},
+        }
 
-    def test_expired_items_are_evicted_on_get(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that expired items are removed when accessing the cache."""
-        _STARLETTE_AUTH_CACHE._cache.clear()
-
-        current_time = 1000.0
-        monkeypatch.setattr(starlette_auth_routes.time, "time", lambda: current_time)
-
-        _STARLETTE_AUTH_CACHE._cache["key1"] = ("value1", 1500.0)
-        _STARLETTE_AUTH_CACHE._cache["key2"] = ("value2", 900.0)
-
-        current_time = 1001.0
-        monkeypatch.setattr(starlette_auth_routes.time, "time", lambda: current_time)
-
-        assert _STARLETTE_AUTH_CACHE.get_dict() == {"key1": "value1"}
-
-        _STARLETTE_AUTH_CACHE._cache.clear()
-
-    def test_set_uses_expires_in_parameter(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that set() uses the provided expires_in value."""
-        import asyncio
-
-        _STARLETTE_AUTH_CACHE._cache.clear()
-
-        current_time = 1000.0
-        monkeypatch.setattr(starlette_auth_routes.time, "time", lambda: current_time)
-
-        asyncio.run(_STARLETTE_AUTH_CACHE.set("key1", "value1", expires_in=60))
-
-        assert _STARLETTE_AUTH_CACHE._cache["key1"] == ("value1", 1060.0)
-
-        _STARLETTE_AUTH_CACHE._cache.clear()
-
-    def test_set_uses_default_ttl_when_expires_in_is_none(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        """Test that set() uses default TTL when expires_in is not provided."""
-        import asyncio
-
-        _STARLETTE_AUTH_CACHE._cache.clear()
-
-        current_time = 1000.0
-        monkeypatch.setattr(starlette_auth_routes.time, "time", lambda: current_time)
-
-        asyncio.run(_STARLETTE_AUTH_CACHE.set("key1", "value1"))
-
-        assert _STARLETTE_AUTH_CACHE._cache["key1"] == ("value1", 4600.0)
-
-        _STARLETTE_AUTH_CACHE._cache.clear()
+        # The entire remainder after the 3rd underscore is the state code
+        assert (
+            _get_provider_by_state(mock_request, "complex_state_with_underscores")
+            == "github"
+        )
 
 
 class TestGetOriginFromSecrets:
@@ -550,7 +673,6 @@ class TestGetProviderLogoutUrl:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when no user cookie exists."""
-        from unittest.mock import MagicMock
 
         from streamlit.web.server.starlette.starlette_auth_routes import (
             _get_provider_logout_url,
@@ -559,13 +681,12 @@ class TestGetProviderLogoutUrl:
         mock_request = MagicMock()
         mock_request.cookies = {}
 
-        assert _get_provider_logout_url(mock_request) is None
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
     def test_returns_none_when_no_provider_in_cookie(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when cookie doesn't contain provider."""
-        from unittest.mock import MagicMock
 
         from streamlit.web.server.starlette.starlette_auth_routes import (
             _get_provider_logout_url,
@@ -579,13 +700,12 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        assert _get_provider_logout_url(mock_request) is None
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
     def test_returns_none_when_no_end_session_endpoint(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when provider has no end_session_endpoint."""
-        from unittest.mock import MagicMock
 
         from streamlit.web.server.starlette.starlette_auth_routes import (
             _get_provider_logout_url,
@@ -602,7 +722,7 @@ class TestGetProviderLogoutUrl:
         class MockClient:
             client_id = "test-client-id"
 
-            def load_server_metadata(self) -> dict[str, Any]:
+            async def load_server_metadata(self) -> dict[str, Any]:
                 return {"issuer": "https://example.com"}
 
         monkeypatch.setattr(
@@ -612,14 +732,13 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        assert _get_provider_logout_url(mock_request) is None
+        assert asyncio.run(_get_provider_logout_url(mock_request)) is None
 
     @patch_config_options({"server.cookieSecret": "test-secret"})
     def test_returns_logout_url_with_end_session_endpoint(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that logout URL is returned when provider has end_session_endpoint."""
-        from unittest.mock import MagicMock
 
         from streamlit.web.server.starlette.starlette_auth_routes import (
             _get_provider_logout_url,
@@ -643,7 +762,7 @@ class TestGetProviderLogoutUrl:
         class MockClient:
             client_id = "test-client-id"
 
-            def load_server_metadata(self) -> dict[str, Any]:
+            async def load_server_metadata(self) -> dict[str, Any]:
                 return {
                     "issuer": "https://example.com",
                     "end_session_endpoint": "https://example.com/logout",
@@ -663,7 +782,7 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        result = _get_provider_logout_url(mock_request)
+        result = asyncio.run(_get_provider_logout_url(mock_request))
 
         assert result is not None
         assert "https://example.com/logout" in result
@@ -679,7 +798,6 @@ class TestGetProviderLogoutUrl:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that None is returned when redirect_uri doesn't end with /oauth2callback."""
-        from unittest.mock import MagicMock
 
         from streamlit.web.server.starlette.starlette_auth_routes import (
             _get_provider_logout_url,
@@ -696,7 +814,7 @@ class TestGetProviderLogoutUrl:
         class MockClient:
             client_id = "test-client-id"
 
-            def load_server_metadata(self) -> dict[str, Any]:
+            async def load_server_metadata(self) -> dict[str, Any]:
                 return {
                     "issuer": "https://example.com",
                     "end_session_endpoint": "https://example.com/logout",
@@ -716,7 +834,7 @@ class TestGetProviderLogoutUrl:
         )
 
         mock_request = MagicMock()
-        result = _get_provider_logout_url(mock_request)
+        result = asyncio.run(_get_provider_logout_url(mock_request))
 
         # Should return None when redirect_uri is invalid
         assert result is None
@@ -731,13 +849,14 @@ class TestLogoutWithProviderRedirect:
     ) -> None:
         """Test that logout redirects to provider logout URL when available."""
 
-        # Mock _get_provider_logout_url to return a URL
+        # Mock _get_provider_logout_url to return a URL (as an async function)
+        async def mock_get_provider_logout_url(request: Any) -> str:
+            return "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
+
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_logout_url",
-            lambda request: (
-                "https://provider.com/logout?post_logout_redirect_uri=http%3A%2F%2Flocalhost%3A8501%2Foauth2callback"
-            ),
+            mock_get_provider_logout_url,
         )
 
         app = Starlette(routes=create_auth_routes(""))
@@ -750,11 +869,15 @@ class TestLogoutWithProviderRedirect:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Test that logout redirects to base URL when no end_session_endpoint."""
-        # Mock _get_provider_logout_url to return None
+
+        # Mock _get_provider_logout_url to return None (as an async function)
+        async def mock_get_provider_logout_url(request: Any) -> None:
+            return None
+
         monkeypatch.setattr(
             starlette_auth_routes,
             "_get_provider_logout_url",
-            lambda request: None,
+            mock_get_provider_logout_url,
         )
 
         app = Starlette(routes=create_auth_routes(""))
