@@ -25,6 +25,7 @@ import streamlit as st
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.file_util import get_main_script_directory, normalize_path_join
 from streamlit.navigation.page import StreamlitPage
+from streamlit.runtime.fragment import _check_not_parallel_worker
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.runtime_util import MESSAGE_FLUSH_INTERVAL_SECS
 from streamlit.runtime.scriptrunner import (
@@ -286,6 +287,7 @@ def switch_page(  # type: ignore[misc]
         height: 350px
 
     """
+    _check_not_parallel_worker("st.switch_page")
 
     ctx = get_script_run_ctx()
 

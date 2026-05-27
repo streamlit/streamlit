@@ -658,7 +658,7 @@ class UserInfoProxy(Mapping[str, str | bool | TokensProxy | None]):
 
     def __getattr__(self, key: str) -> str | bool | TokensProxy | None:
         if key == "tokens":
-            return self.tokens
+            return self.tokens  # pragma: no cover - defensive, ``tokens`` property wins via descriptor protocol
         try:
             return cast("str | bool | None", _get_user_info()[key])
         except KeyError:
