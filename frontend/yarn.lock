@@ -12177,9 +12177,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knip@npm:^6.13.1":
-  version: 6.14.1
-  resolution: "knip@npm:6.14.1"
+"knip@npm:^6.14.2":
+  version: 6.14.2
+  resolution: "knip@npm:6.14.2"
   dependencies:
     fdir: "npm:^6.5.0"
     formatly: "npm:^0.3.0"
@@ -12198,7 +12198,7 @@ __metadata:
   bin:
     knip: bin/knip.js
     knip-bun: bin/knip-bun.js
-  checksum: 10c0/d0221aa904b801a38a38503133d4d67ea4036de045691e127972ddedfde2da37fe1be0648d966f72061cb0dcf8b3e35131038c37401e24d15f1c483920bb4989
+  checksum: 10c0/02263901b05a0717efde2ae38ae430da9dce3987714873957bfe33323e57736621d03d85940e0b8cd7e8f542c2f87535a101acccc3c26261b0101c9c3fc565c2
   languageName: node
   linkType: hard
 
@@ -17037,7 +17037,7 @@ __metadata:
     eslint-plugin-testing-library: "npm:^7.16.2"
     globals: "npm:^17.6.0"
     jiti: "npm:^2.7.0"
-    knip: "npm:^6.13.1"
+    knip: "npm:^6.14.2"
     oxfmt: "npm:^0.51.0"
     oxlint: "npm:^1.66.0"
     typescript: "npm:^6.0.3"
