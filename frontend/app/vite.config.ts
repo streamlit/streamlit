@@ -153,6 +153,13 @@ export default defineConfig(({ command }) => ({
       ...profilerAliases,
     ],
   },
+  // Prevent Vite from pre-bundling mermaid. Mermaid bundles its own lodash
+  // internally with __esm wrappers (e.g., init_hasIn). When Vite pre-bundles
+  // mermaid, these internal references can break because the lodash->lodash-es
+  // alias above can interfere with mermaid's bundled lodash code.
+  optimizeDeps: {
+    exclude: ["mermaid"],
+  },
   server: {
     open: true,
     port: DEV_SERVER_PORT,
@@ -200,6 +207,16 @@ export default defineConfig(({ command }) => ({
         // Customize the chunk file naming pattern to match static/js/[name].[hash].js
         chunkFileNames: `static/js/[name]${HASH}.js`,
         entryFileNames: `static/js/[name]${HASH}.js`,
+        // Keep mermaid and its parser in a single chunk to avoid breaking
+        // mermaid's internal __esm lazy loading pattern (e.g., init_hasIn).
+        // When mermaid gets split across chunks, the init_* function definitions
+        // can end up separated from their calls, causing runtime errors.
+        manualChunks(id) {
+          if (id.includes("node_modules/mermaid")) {
+            return "mermaid"
+          }
+          return undefined
+        },
         // Ensure assetFileNames is also configured if you're handling asset files
         assetFileNames: assetInfo => {
           const assetNames = assetInfo.names || []
