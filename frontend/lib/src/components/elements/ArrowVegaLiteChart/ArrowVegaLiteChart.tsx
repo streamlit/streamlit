@@ -320,7 +320,11 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // Only resize if at least one dimension uses container-driven sizing.
   // For fixed-dimension charts, the dimensions are defined in the spec and
   // should not be overridden by container size changes.
-  const shouldResizeWidth = useStretchWidth || isFullScreen
+  // Mirror the useContainerWidth logic from useVegaElementPreprocessor:
+  // nested compositions must not be forced to container width in fullscreen to
+  // avoid "infinite extent" layout errors (issues #13410, #14050).
+  const shouldResizeWidth =
+    isFullScreen && !hasNestedComp ? true : useStretchWidth
   const shouldResizeHeight = useStretchHeight || isFullScreen
   const shouldResize = shouldResizeWidth || shouldResizeHeight
   useEffect(() => {
