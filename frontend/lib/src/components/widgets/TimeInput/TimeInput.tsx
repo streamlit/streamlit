@@ -275,32 +275,33 @@ function TimeInput({
         creatable
         aria-label={element.label}
       />
-      {clearable && !isNullOrUndefined(value) && (
-        // The time picker doesn't have a built-in clearable functionality.
-        // Therefore, we are adding the clear button here.
-        <StyledClearIconContainer
-          onClick={handleClear}
-          data-testid="stTimeInputClearButton"
-        >
-          <StyledClearIcon
-            overrides={{
-              Svg: {
-                style: {
-                  color: theme.colors.grayTextColor,
-                  // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
-                  padding: theme.spacing.threeXS,
-                  height: theme.sizes.clearIconSize,
-                  width: theme.sizes.clearIconSize,
-                  ":hover": {
-                    fill: theme.colors.bodyText,
+      {clearable &&
+        !isNullOrUndefined(value) && (
+          // The time picker doesn't have a built-in clearable functionality.
+          // Therefore, we are adding the clear button here.
+          <StyledClearIconContainer
+            onClick={handleClear}
+            data-testid="stTimeInputClearButton"
+          >
+            <StyledClearIcon
+              overrides={{
+                Svg: {
+                  style: {
+                    color: theme.colors.grayTextColor,
+                    // setting this width and height makes the clear-icon align with dropdown arrows of other input fields
+                    padding: theme.spacing.threeXS,
+                    height: theme.sizes.clearIconSize,
+                    width: theme.sizes.clearIconSize,
+                    ":hover": {
+                      fill: theme.colors.bodyText,
+                    },
                   },
                 },
-              },
-            }}
-            $isFocusVisible={false}
-          />
-        </StyledClearIconContainer>
-      )}
+              }}
+              $isFocusVisible={false}
+            />
+          </StyledClearIconContainer>
+        )}
     </div>
   )
 }

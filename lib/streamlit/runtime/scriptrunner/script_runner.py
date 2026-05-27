@@ -66,6 +66,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
         OnScriptErrorHandler,
@@ -284,6 +285,12 @@ class ScriptRunner:
         # This is initialized in the start() method
         self._script_thread: threading.Thread | None = None
 
+        # Coordinator blocking the script thread in join(); other threads poke
+        # notify_yield_waiters() when rerun/stop is enqueued during that window.
+        # Lock-protected so this is safe under free-threaded Python (PEP 703).
+        self._join_wake_lock = threading.Lock()
+        self._join_wake_coordinator: ParallelFragmentCoordinator | None = None
+
     def __repr__(self) -> str:
         return util.repr_(self)
 
@@ -295,6 +302,7 @@ class ScriptRunner:
         Safe to call from any thread.
         """
         self._requests.request_stop()
+        self._wake_parallel_join_barrier_if_waiting()
 
     def request_rerun(self, rerun_data: RerunData) -> bool:
         """Request that the ScriptRunner interrupt its currently-running
@@ -308,7 +316,20 @@ class ScriptRunner:
 
         Safe to call from any thread.
         """
-        return self._requests.request_rerun(rerun_data)
+        rv = self._requests.request_rerun(rerun_data)
+        self._wake_parallel_join_barrier_if_waiting()
+        return rv
+
+    def _wake_parallel_join_barrier_if_waiting(self) -> None:
+        """If the script thread is blocked in ParallelFragmentCoordinator.join(), wake it.
+
+        Rerun/stop requests can arrive on other threads; join() sleeps on a
+        Condition bounded by poll_interval unless notified.
+        """
+        with self._join_wake_lock:
+            coord = self._join_wake_coordinator
+        if coord is not None:
+            coord.notify_yield_waiters()
 
     def start(self) -> None:
         """Start a new thread to process the ScriptEventQueue.
@@ -445,9 +466,19 @@ class ScriptRunner:
         """
         if not self._is_in_script_thread():
             # We can only handle execution_control_request if we're on the
-            # script execution thread. However, it's possible for deltas to
-            # be enqueued (and, therefore, for this function to be called)
-            # in separate threads, so we check for that here.
+            # script execution thread. However, this function also runs from
+            # parallel fragment worker threads, since deltas enqueued there
+            # flow through _enqueue_forward_msg. On a worker thread we can't
+            # service script-level rerun/stop requests, but we do check the
+            # coordinator so a cooperatively-cancelled worker raises at its
+            # next yield point.
+            ctx = get_script_run_ctx(suppress_warning=True)
+            if (
+                ctx is not None
+                and ctx.parallel_coordinator is not None
+                and ctx.parallel_coordinator.should_stop()
+            ):
+                raise StopException()
             return
 
         if not self._execing:
@@ -456,6 +487,15 @@ class ScriptRunner:
             # we change our state to STOPPED, and a statechange-listener
             # enqueues a new ForwardEvent
             return
+
+        # Re-raise any worker-stored exception before consulting _requests.
+        # Worker-initiated cancellation takes precedence because it
+        # captured user intent in-band.
+        ctx = get_script_run_ctx(suppress_warning=True)
+        if ctx is not None and ctx.parallel_coordinator is not None:
+            worker_exc = ctx.parallel_coordinator.worker_exception
+            if worker_exc is not None:
+                raise worker_exc
 
         request = self._requests.on_scriptrunner_yield()
         if request is None:
@@ -583,7 +623,10 @@ class ScriptRunner:
                 fragment_ids_this_run=fragment_ids_this_run,
                 cached_message_hashes=rerun_data.cached_message_hashes,
                 context_info=rerun_data.context_info,
+                yield_check=self._maybe_handle_execution_control_request,
             )
+            with self._join_wake_lock:
+                self._join_wake_coordinator = ctx.parallel_coordinator
 
             self.on_event.send(
                 self,
@@ -620,6 +663,8 @@ class ScriptRunner:
                 # We got a compile error. Send an error event and bail immediately.
                 _LOGGER.exception("Script compilation error", exc_info=ex)
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = False
+                with self._join_wake_lock:
+                    self._join_wake_coordinator = None
                 self.on_event.send(
                     self,
                     event=ScriptRunnerEvent.SCRIPT_STOPPED_WITH_COMPILE_ERROR,
@@ -731,10 +776,26 @@ class ScriptRunner:
                                 )
 
                     else:
-                        if PagesManager.uses_pages_directory:
-                            _mpa_v1(self._main_script_path)
-                        else:
-                            exec(code, module.__dict__)  # noqa: S102
+                        # Expect parallel_coordinator to be initialized;
+                        # cast makes this clear to the type checker.
+                        coordinator = cast(
+                            "ParallelFragmentCoordinator",
+                            ctx.parallel_coordinator,
+                        )
+                        try:
+                            if PagesManager.uses_pages_directory:
+                                _mpa_v1(self._main_script_path)
+                            else:
+                                exec(code, module.__dict__)  # noqa: S102
+                            coordinator.join()
+                        except BaseException:
+                            # Always drain so in-flight worker fragments
+                            # don't outlive the script run, regardless of
+                            # whether the escape was a script-control
+                            # exception, an uncaught user error, or an
+                            # interrupt.
+                            coordinator.drain()
+                            raise
                         self._fragment_storage.clear(
                             new_fragment_ids=ctx.new_fragment_ids.snapshot()
                         )
@@ -800,6 +861,9 @@ class ScriptRunner:
         """Called when our script finishes executing, even if it finished
         early with an exception. We perform post-run cleanup here.
         """
+        with self._join_wake_lock:
+            self._join_wake_coordinator = None
+
         # Tell session_state to update itself in response
         if not premature_stop:
             self._session_state.on_script_finished(ctx.widget_ids_this_run.snapshot())

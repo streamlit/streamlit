@@ -323,7 +323,7 @@ def to_deckgl_json(
             if c is not None
         ]
     )
-    df = df[used_columns]
+    df = df[used_columns].copy()
 
     converted_color_arg = _convert_color_arg_or_column(df, color_arg, color_col_name)
 
@@ -444,13 +444,10 @@ def _convert_color_arg_or_column(
     if color_col_name is not None:
         # Convert color column to the right format.
         if len(data[color_col_name]) > 0 and is_color_like(data[color_col_name].iat[0]):  # type: ignore[arg-type]
-            # Use .loc[] to avoid a SettingWithCopyWarning in some cases.
             # Convert to object dtype first to support tuple values (pandas 3.x infers
             # string columns as StringDtype which can't hold tuples).
             data[color_col_name] = data[color_col_name].astype(object)
-            data.loc[:, color_col_name] = data.loc[:, color_col_name].map(
-                to_int_color_tuple
-            )
+            data[color_col_name] = data[color_col_name].map(to_int_color_tuple)
         else:
             raise StreamlitAPIException(
                 f'Column "{color_col_name}" does not appear to contain valid colors.'

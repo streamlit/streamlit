@@ -21,6 +21,7 @@ import { Mock } from "vitest"
 import {
   ArrowDataframe,
   ComponentInstance as ComponentInstanceProto,
+  type ISpecialArg,
 } from "@streamlit/protobuf"
 
 import { mockTheme } from "~lib/mocks/mockTheme"
@@ -275,7 +276,7 @@ describe("test componentUtils", () => {
       const specialArgs = [
         {
           key: "some-dataframe",
-          value: "arrowDataFrame",
+          value: "arrowDataframe",
           arrowDataframe: arrowDataframe,
         },
         {
@@ -283,7 +284,7 @@ describe("test componentUtils", () => {
           value: "bytes",
           bytes: someBytes,
         },
-      ]
+      ] satisfies ISpecialArg[]
 
       const [newArgs, dataframeArgs] = parseArgs(
         JSON.stringify(args),
@@ -305,7 +306,7 @@ describe("test componentUtils", () => {
           key: "some-dataframe",
           value: "some-unknown-type",
         },
-      ]
+      ] as unknown as ISpecialArg[]
 
       expect(() => parseArgs(JSON.stringify(args), specialArgs)).toThrowError(
         Error

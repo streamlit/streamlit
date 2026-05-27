@@ -110,6 +110,18 @@ class StreamlitAuthError(StreamlitAPIException):  # pragma: no cover - trivial s
     pass
 
 
+class StreamlitMissingAuthlibError(StreamlitAuthError):
+    """Raised when authentication features are used but Authlib is not installed
+    (or is older than the minimum supported version).
+    """
+
+    def __init__(self) -> None:
+        super().__init__(
+            "Authentication requires Authlib>=1.3.2. "
+            "Install it via `pip install streamlit[auth]`."
+        )
+
+
 class StreamlitDuplicateElementId(
     DuplicateWidgetID
 ):  # pragma: no cover - simple f-string

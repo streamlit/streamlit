@@ -503,6 +503,28 @@ class DeltaGenerator(
                 "fragment function inside a `with st.sidebar` context manager."
             )
 
+        if ctx:
+            ts = ThreadState.get()
+            if ts.is_parallel_worker:
+                fragment_path = ts.delta_path
+                cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
+                # Empty fragment_path means the fragment's cursor was None; in that
+                # case _is_inside_fragment_path would always return True anyway, so
+                # skip the check.
+                if fragment_path and not _is_inside_fragment_path(
+                    cursor_path, fragment_path
+                ):
+                    raise StreamlitAPIException(
+                        "Writing to containers outside a parallel fragment is not "
+                        "allowed during the initial page load, because parallel "
+                        "fragments run concurrently on separate threads and "
+                        "external container writes are not thread-safe.\n\n"
+                        "To fix this, move the element inside the fragment body, "
+                        "or gate the write behind a widget interaction "
+                        "(e.g., `if st.button(...):`) so it runs during a "
+                        "sequential fragment rerun instead."
+                    )
+
         # Warn if an element is being changed but the user isn't running the streamlit server.
         _maybe_print_use_warning()
         # Warn if an element is being changed during a fragment callback.
@@ -699,3 +721,13 @@ def _writes_directly_to_sidebar(dg: DeltaGenerator) -> bool:
     in_sidebar = any(a._root_container == RootContainer.SIDEBAR for a in dg._ancestors)
     has_container = bool(list(dg._ancestor_block_types))
     return in_sidebar and not has_container
+
+
+def _is_inside_fragment_path(
+    cursor_path: tuple[int, ...],
+    fragment_path: tuple[int, ...],
+) -> bool:
+    """Check if cursor_path is within or equal to fragment_path."""
+    if len(cursor_path) < len(fragment_path):
+        return False
+    return cursor_path[: len(fragment_path)] == fragment_path

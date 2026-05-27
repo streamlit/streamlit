@@ -483,6 +483,16 @@ thread's cursor, which advances it past the fragment's slot and creates a child
 immediately. The child cursor starts with
 `_owner_thread = None` — it hasn't been used yet.
 
+The pre-creation step **must** use `st.container()` rather than a raw
+`Block_pb2()` — the frontend's `addBlock` reconciliation resets a
+`BlockNode`'s children when the incoming Block's `oneof type` changes,
+so the main-thread delta and worker-thread delta must carry the same type.
+To avoid a duplicate container delta, dispatch stores the fragment id in
+`FragmentThreadState.pre_allocated_container_fragment_id` and the worker's
+`wrapped_fragment` reads-and-clears it on entry, skipping its own
+`st.container()` call. Nested `@st.fragment` calls see `None` and create
+their containers normally.
+
 **3. Lazy thread ownership.** When the worker thread runs and calls `lock_element()`
 on the container's cursor for the first time, `_check_owner()` claims it — setting
 `_owner_ident` to the worker thread's ID via `threading.get_ident()`. The
@@ -878,6 +888,10 @@ class FragmentThreadState:
     in_fragment_callback: bool = False
     active_script_hash: str = ""
     is_parallel_worker: bool = False
+    # Signals ``wrapped_fragment`` to skip its own ``st.container()`` call
+    # because the container was already pre-allocated on the main thread.
+    # Read-and-cleared on entry so nested fragments are unaffected.
+    pre_allocated_container_fragment_id: str | None = None
 ```
 
 This uses the same `ContextVar` + `copy_context()` mechanism already used for

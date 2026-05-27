@@ -145,6 +145,25 @@ streamlit init
 streamlit hello
 ```
 
+### AI-agent skills
+
+```bash
+# Interactive installer for AI-agent skills
+streamlit skills
+
+# Install globally in the user directory
+streamlit skills --global
+
+# Non-interactive installation (skip prompts)
+streamlit skills --yes
+streamlit skills --global --yes
+```
+
+The `streamlit skills` command installs bundled Streamlit skills that help AI coding assistants (Claude Code, Cursor, etc.) build better Streamlit applications.
+
+- **Project mode (default):** Installs skills via symlinks for the current project.
+- **Global mode (`--global`):** Installs a meta skill that gets applied for all projects.
+
 ## Configuration precedence
 
 Configuration can be set in multiple places. Order of precedence (highest to lowest):
