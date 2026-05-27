@@ -360,8 +360,11 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        if isinstance(obj, (bytes, bytearray)):
+        if isinstance(obj, bytes):
             return obj
+
+        if isinstance(obj, bytearray):
+            return bytes(obj)
 
         if type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
@@ -409,7 +412,9 @@ class _CacheFuncHasher:
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
-            return self.to_bytes(dataclasses.asdict(obj))
+            # mypy 2.x narrows to DataclassInstance | type[DataclassInstance]
+            # which doesn't satisfy asdict's expected DataclassInstance type.
+            return self.to_bytes(dataclasses.asdict(cast("Any", obj)))
 
         if isinstance(obj, Enum):
             return str(obj).encode()
