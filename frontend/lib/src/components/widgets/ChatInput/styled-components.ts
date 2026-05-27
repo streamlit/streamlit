@@ -278,4 +278,9 @@ export const StyledChatInputTextArea = styled.textarea<{
   resize: "none",
   display: "block",
   "&::placeholder": { color: theme.colors.fadedText60 },
+  "&:disabled": {
+    color: theme.colors.fadedText40,
+    WebkitTextFillColor: theme.colors.fadedText40,
+    cursor: "not-allowed",
+  },
 }))

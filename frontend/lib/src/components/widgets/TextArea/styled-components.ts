@@ -60,5 +60,9 @@ export const StyledTextAreaInput = styled.textarea<{
   paddingBottom: theme.spacing.md,
   paddingTop: theme.spacing.md,
   "&::placeholder": { color: theme.colors.fadedText60 },
-  "&:disabled": { cursor: "not-allowed", color: theme.colors.fadedText40 },
+  "&:disabled": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+    WebkitTextFillColor: theme.colors.fadedText40,
+  },
 }))
