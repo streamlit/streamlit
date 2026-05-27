@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useMemo } from "react"
+import {
+  memo,
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+} from "react"
 
 import { Selection } from "react-aria-components"
 
@@ -164,6 +171,19 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
 
   const containerWidth = shouldWidthStretch(widthConfig)
 
+  // React Aria's ToggleButtonGroup does not forward aria-required to the DOM
+  // element. Imperatively set it on the group root so screen readers can
+  // announce that the field is mandatory.
+  const groupRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!groupRef.current) return
+    if (required) {
+      groupRef.current.setAttribute("aria-required", "true")
+    } else {
+      groupRef.current.removeAttribute("aria-required")
+    }
+  }, [required])
+
   const selectionMode =
     clickMode === ButtonGroupProto.ClickMode.MULTI_SELECT
       ? "multiple"
@@ -182,10 +202,12 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
       )
       // Avoid redundant state updates (e.g., when disallowEmptySelection blocks
       // deselection of the last item, React Aria still fires onSelectionChange
-      // with the unchanged selection set).
+      // with the unchanged selection set). Use set-equality so insertion-order
+      // differences in the React Aria Set do not cause spurious updates.
+      const valueSet = new Set(value)
       if (
         newSelection.length === value.length &&
-        newSelection.every((v, i) => v === value[i])
+        newSelection.every(v => valueSet.has(v))
       ) {
         return
       }
@@ -241,6 +263,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         )}
       </WidgetLabel>
       <StyledToggleButtonGroup
+        ref={groupRef}
         selectionMode={selectionMode}
         selectedKeys={selectedKeys}
         onSelectionChange={handleSelectionChange}

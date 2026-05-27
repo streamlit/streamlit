@@ -662,7 +662,7 @@ describe("ButtonGroup required parameter", () => {
     )
   })
 
-  it("renders a radiogroup for single-select mode", () => {
+  it("renders a radiogroup with aria-required when required=true", () => {
     const props = getProps({
       options: simpleOptions,
       default: [0],
@@ -674,5 +674,6 @@ describe("ButtonGroup required parameter", () => {
     // React Aria renders ToggleButtonGroup with selectionMode="single" as role="radiogroup"
     const buttonGroup = screen.getByRole("radiogroup")
     expect(buttonGroup).toBeInTheDocument()
+    expect(buttonGroup).toHaveAttribute("aria-required", "true")
   })
 })

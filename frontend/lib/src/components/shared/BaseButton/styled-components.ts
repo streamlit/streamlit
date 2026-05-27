@@ -671,7 +671,7 @@ export const StyledPillsToggleButton = styled(StyledBaseToggleButton)<{
 }>(({ theme, $containerWidth }) => ({
   borderRadius: theme.radii.full,
   padding: `${theme.spacing.twoXS} ${theme.spacing.md}`,
-  flex: $containerWidth ? "1 1 fit-content" : "",
+  flex: $containerWidth ? "1 1 fit-content" : undefined,
   "&[data-selected]:not([data-disabled])": {
     backgroundColor: transparentize(theme.colors.primary, 0.9),
     borderColor: theme.colors.primary,
@@ -692,13 +692,35 @@ export const StyledPillsToggleButton = styled(StyledBaseToggleButton)<{
 
 // Segmented control border model: neighboring buttons overlap by 1 border width.
 // Active/interactive buttons are "raised" and own shared borders to avoid double seams.
-// Selectors use data-variant to scope rules to segmented-control buttons only,
-// data-selected for active state, and data-hovered/data-focus-visible for interactive state.
-const SC_BTN = "button[data-variant='segmented_control']"
-const SC_ACTIVE_ENABLED = `${SC_BTN}[data-selected]:not([data-disabled])`
-const SC_INACTIVE_ENABLED = `${SC_BTN}:not([data-disabled])`
-const SC_INTERACTIVE_ENABLED = `${SC_BTN}:not([data-disabled]):is([data-hovered],[data-focus-visible])`
-const SC_NEUTRAL_ENABLED = `${SC_BTN}:not([data-disabled]):not([data-hovered]):not([data-focus-visible])`
+//
+// Two sets of selectors are defined:
+//   SC_SIBLING_*  — used on the sibling (right) side of `+` and `:has()` rules, where
+//                   the full `button[data-variant='segmented_control']` type prefix is
+//                   required to scope the rule to segmented-control buttons.
+//   SC_SELF_*     — used on the current-element (&) side of rules. Emotion replaces `&`
+//                   with the generated class, so `&button[...]` would produce an invalid
+//                   compound selector like `.css-abcbutton[...]`. Omit the button-type
+//                   prefix here; the data-variant attribute is on the element itself.
+const SC_SIBLING_BTN = "button[data-variant='segmented_control']"
+const SC_SIBLING_ACTIVE = `${SC_SIBLING_BTN}[data-selected]:not([data-disabled])`
+const SC_SIBLING_INACTIVE = `${SC_SIBLING_BTN}:not([data-disabled])`
+const SC_SIBLING_INTERACTIVE = `${SC_SIBLING_BTN}:not([data-disabled]):is([data-hovered],[data-focus-visible])`
+// SC_SIBLING_NEUTRAL excludes selected buttons so the hover rule never
+// hides the primary border of a selected neighbor (active+hover adjacency).
+const SC_SIBLING_NEUTRAL = `${SC_SIBLING_BTN}:not([data-selected]):not([data-disabled]):not([data-hovered]):not([data-focus-visible])`
+
+const SC_SELF_ACTIVE = "[data-selected]:not([data-disabled])"
+// SC_SELF_INACTIVE and SC_SELF_NEUTRAL are used on the self (&) side of :has()
+// rules, which determine when a button should *defer* its border to an
+// adjacent neighbor. Active/selected buttons own all their own borders, so
+// they must be excluded — otherwise the :has() rule would make a selected
+// button hide its right border when its right neighbor is also selected,
+// causing the inner border between two adjacent selected segments to vanish.
+const SC_SELF_INACTIVE = ":not([data-selected]):not([data-disabled])"
+const SC_SELF_INTERACTIVE =
+  ":not([data-disabled]):is([data-hovered],[data-focus-visible])"
+const SC_SELF_NEUTRAL =
+  ":not([data-selected]):not([data-disabled]):not([data-hovered]):not([data-focus-visible])"
 
 export const StyledSegmentedControlToggleButton = styled(
   StyledBaseToggleButton
@@ -707,7 +729,7 @@ export const StyledSegmentedControlToggleButton = styled(
 }>(({ theme, $containerWidth }) => ({
   padding: `${theme.spacing.twoXS} ${theme.spacing.lg}`,
   borderRadius: "0",
-  flex: $containerWidth ? "1 1 fit-content" : "",
+  flex: $containerWidth ? "1 1 fit-content" : undefined,
   maxWidth: "100%",
   marginRight: `-${theme.sizes.borderWidth}`,
 
@@ -728,19 +750,19 @@ export const StyledSegmentedControlToggleButton = styled(
     },
 
   // Active has strongest precedence: keep its border visible against both neutral and interactive neighbors.
-  [`&${SC_ACTIVE_ENABLED} + ${SC_INACTIVE_ENABLED}`]: {
+  [`&${SC_SELF_ACTIVE} + ${SC_SIBLING_INACTIVE}`]: {
     borderLeftColor: theme.colors.transparent,
   },
-  [`&${SC_BTN}:not([data-disabled]):has(+ ${SC_ACTIVE_ENABLED})`]: {
+  [`&${SC_SELF_INACTIVE}:has(+ ${SC_SIBLING_ACTIVE})`]: {
     borderRightColor: theme.colors.transparent,
   },
 
   // Hover/focus ownership is only applied between neutral neighbors so we
   // never hide the active border in active+hover adjacency.
-  [`&${SC_INTERACTIVE_ENABLED} + ${SC_NEUTRAL_ENABLED}`]: {
+  [`&${SC_SELF_INTERACTIVE} + ${SC_SIBLING_NEUTRAL}`]: {
     borderLeftColor: theme.colors.transparent,
   },
-  [`&${SC_NEUTRAL_ENABLED}:has(+ ${SC_INTERACTIVE_ENABLED})`]: {
+  [`&${SC_SELF_NEUTRAL}:has(+ ${SC_SIBLING_INTERACTIVE})`]: {
     borderRightColor: theme.colors.transparent,
   },
 
