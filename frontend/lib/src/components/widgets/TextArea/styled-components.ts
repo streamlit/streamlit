@@ -47,7 +47,7 @@ export const StyledTextAreaInput = styled.textarea<{
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.inputWidget,
   fontFamily: "inherit",
-  fontSize: "inherit",
+  fontSize: theme.fontSizes.sm,
   color: "inherit",
   backgroundColor: "transparent",
   border: "none",

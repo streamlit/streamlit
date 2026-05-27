@@ -272,7 +272,7 @@ export const StyledChatInputTextArea = styled.textarea<{
   outline: "none",
   backgroundColor: "transparent",
   fontFamily: "inherit",
-  fontSize: "inherit",
+  fontSize: theme.fontSizes.sm,
   color: "inherit",
   boxSizing: "border-box",
   resize: "none",
