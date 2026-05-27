@@ -21,10 +21,15 @@ from abc import abstractmethod
 from collections.abc import Callable, Iterator
 from copy import deepcopy
 from functools import wraps
-from typing import TYPE_CHECKING, Any, NoReturn, Protocol, TypeVar, overload
+from typing import TYPE_CHECKING, Any, Final, NoReturn, Protocol, TypeVar, overload
 
 from streamlit.error_util import handle_user_script_exception
-from streamlit.errors import FragmentHandledException, FragmentStorageKeyError
+from streamlit.errors import (
+    FragmentHandledException,
+    FragmentStorageKeyError,
+    StreamlitAPIException,
+)
+from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.runtime.metrics_util import gather_metrics
 from streamlit.runtime.scriptrunner_utils.exceptions import (
@@ -32,6 +37,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     StopException,
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
+    ScriptRunContext,
     ThreadState,
     get_script_run_ctx,
 )
@@ -41,6 +47,29 @@ from streamlit.util import calc_hash
 
 if TYPE_CHECKING:
     from datetime import timedelta
+
+    from streamlit.delta_generator import DeltaGenerator
+
+_LOGGER: Final = get_logger(__name__)
+
+
+def _check_not_parallel_worker(api_name: str) -> None:
+    """Raise StreamlitAPIException if called from a parallel fragment worker."""
+    try:
+        ts = ThreadState.get()
+    except RuntimeError:
+        return
+
+    if ts.is_parallel_worker:
+        raise StreamlitAPIException(
+            f"`{api_name}` cannot be called from a parallel fragment during "
+            f"the initial page load, because parallel fragments run "
+            f"concurrently on separate threads where `{api_name}` is not "
+            f"safe.\n\n"
+            f"To fix this, gate the call behind a widget interaction "
+            f"(e.g., `if st.button(...):`) so it runs during a sequential "
+            f"fragment rerun instead."
+        )
 
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -304,6 +333,7 @@ def _fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
     additional_hash_info: str = "",
 ) -> Callable[[F], F] | F:
     """Contains the actual fragment logic.
@@ -319,6 +349,7 @@ def _fragment(
             return fragment(
                 func=f,
                 run_every=run_every,
+                parallel=parallel,
             )
 
         return wrapper
@@ -377,10 +408,19 @@ def _fragment(
                 != ThreadState.get().active_script_hash
                 else contextlib.nullcontext()
             )
+
+            ts = ThreadState.get()
+            skip_container = ts.pre_allocated_container_fragment_id == fragment_id
+            if skip_container:
+                ThreadState.update(pre_allocated_container_fragment_id=None)
+
             with ThreadState.scoped(fragment_id=fragment_id):
                 result = None
                 with active_hash_context:
-                    with st.container():
+                    container_ctx = (
+                        contextlib.nullcontext() if skip_container else st.container()
+                    )
+                    with container_ctx:
                         try:
                             # use dg_stack instead of active_dg to have correct copy
                             # during execution (otherwise we can run into concurrency
@@ -427,7 +467,9 @@ def _fragment(
             msg.auto_rerun.fragment_id = fragment_id
             ctx.enqueue(msg)
 
-        # Immediate execute the wrapped fragment since we are in a full app run
+        if parallel and not ctx.fragment_ids_this_run:
+            _dispatch_parallel_fragment(ctx, fragment_id, wrapped_fragment)
+            return None
         return wrapped_fragment()
 
     with contextlib.suppress(AttributeError, NameError):
@@ -446,6 +488,7 @@ def fragment(
     func: F,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> F: ...
 
 
@@ -456,6 +499,7 @@ def fragment(
     func: None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F]: ...
 
 
@@ -464,6 +508,7 @@ def fragment(
     func: F | None = None,
     *,
     run_every: int | float | timedelta | str | None = None,
+    parallel: bool = False,
 ) -> Callable[[F], F] | F:
     """Decorator to turn a function into a fragment which can rerun independently\
     of the full app.
@@ -521,6 +566,31 @@ def fragment(
 
         If ``run_every`` is ``None``, the fragment will only rerun from
         user-triggered events.
+
+    parallel : bool
+        Whether to execute the fragment in parallel during full app reruns.
+        If ``True``, the fragment is dispatched to a thread pool and may execute
+        concurrently with other parallel fragments and the rest of the app script.
+        If ``False`` (default), the fragment executes inline on the main thread.
+
+        Parallel fragments are useful for independent, slow operations that
+        should not block overall app throughput. Full app reruns may overlap
+        several parallel fragments with the main script; reruns confined to a
+        single fragment (such as those triggered after widget interactions)
+        remain sequential so state updates stay deterministic.
+
+        During the initial parallel run, some Streamlit commands are
+        restricted because they are not safe to call from concurrent
+        threads. These include ``st.dialog``, ``st.switch_page``, and
+        writing to containers created outside the fragment. These
+        commands work normally during sequential fragment reruns
+        (e.g., after a widget interaction).
+
+        .. warning::
+
+            Fragments dispatched in parallel can run concurrently. Avoid
+            unsynchronized mutations of shared mutable resources across fragments
+            unless you coordinate access explicitly.
 
     Examples
     --------
@@ -603,4 +673,82 @@ def fragment(
         height: 400px
 
     """
-    return _fragment(func, run_every=run_every)
+    return _fragment(func, run_every=run_every, parallel=parallel)
+
+
+def _dispatch_parallel_fragment(
+    ctx: ScriptRunContext,
+    fragment_id: str,
+    wrapped_fragment: Callable[[], Any],
+) -> None:
+    """Dispatch a parallel fragment to the coordinator's thread pool.
+
+    Pre-allocates the fragment's container on the main thread (so the frontend
+    sees the container delta immediately), then submits the fragment body to
+    run on a worker thread.
+
+    The coordinator's submit() handles context propagation: it captures
+    copy_context() and get_script_run_ctx() at submit time, and the worker
+    runs inside captured.run() with _scoped_ctx_attach().
+    """
+    import streamlit as st
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        _LOGGER.warning(
+            "Parallel coordinator not available for fragment %s, skipping dispatch",
+            fragment_id,
+        )
+        return
+
+    with st.container():
+        dg_stack_with_container = deepcopy(context_dg_stack.get())
+
+    coordinator.submit(
+        _run_parallel_fragment,
+        fragment_id,
+        wrapped_fragment,
+        dg_stack_with_container,
+    )
+
+
+def _run_parallel_fragment(
+    fragment_id: str,
+    wrapped_fragment: Callable[[], Any],
+    dg_stack_snapshot: tuple[DeltaGenerator, ...],
+) -> None:
+    """Worker entry point for parallel fragment execution.
+
+    Runs inside the coordinator's context propagation boundary (copy_context +
+    _scoped_ctx_attach). Sets up the skip signal for container pre-allocation
+    and handles control flow exceptions.
+    """
+    from streamlit.delta_generator_singletons import context_dg_stack
+
+    ctx = get_script_run_ctx(suppress_warning=True)
+    if ctx is None:  # pragma: no cover - defensive
+        return
+
+    context_dg_stack.set(dg_stack_snapshot)
+    ThreadState.update(
+        pre_allocated_container_fragment_id=fragment_id,
+        is_parallel_worker=True,
+    )
+
+    coordinator = ctx.parallel_coordinator
+    if coordinator is None:  # pragma: no cover - defensive
+        return
+
+    try:
+        wrapped_fragment()
+    except RerunException as e:
+        coordinator.request_rerun(e)
+    except StopException:
+        coordinator.request_stop()
+    except FragmentHandledException:
+        # This exception indicates fragment-level handling already occurred.
+        # Intentionally swallow it at the worker boundary.
+        return
+    except Exception:  # pragma: no cover - defensive
+        _LOGGER.exception("Uncaught exception in parallel fragment worker")

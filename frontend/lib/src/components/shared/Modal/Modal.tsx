@@ -16,62 +16,28 @@
 
 import { FunctionComponent, ReactElement, ReactNode } from "react"
 
-import {
-  type ModalProps,
-  SIZE,
-  Modal as UIModal,
-  ModalBody as UIModalBody,
-  ModalFooter as UIModalFooter,
-  ModalHeader as UIModalHeader,
-} from "baseui/modal"
-import { merge } from "lodash-es"
-
 import BaseButton, {
   BaseButtonProps,
 } from "~lib/components/shared/BaseButton/BaseButton"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 
-import { StyledModalButton } from "./styled-components"
+import {
+  StyledDialogClose,
+  StyledDialogInner,
+  StyledDialogOverlay,
+  StyledDialogPanel,
+  StyledModalBody,
+  StyledModalButton,
+  StyledModalFooter,
+  StyledModalHeader,
+} from "./styled-components"
 
 interface ModalHeaderProps {
   children: ReactNode
-  overrides?: React.CSSProperties
 }
 
-function ModalHeader({
-  children,
-  overrides,
-}: Readonly<ModalHeaderProps>): ReactElement {
-  const { genericFonts, fontSizes, spacing, fontWeights, lineHeights } =
-    useEmotionTheme()
-
-  return (
-    <UIModalHeader
-      style={{
-        marginTop: spacing.none,
-        marginLeft: spacing.none,
-        marginRight: spacing.none,
-        marginBottom: spacing.none,
-        paddingTop: spacing.twoXL,
-        paddingRight: spacing.twoXL,
-        paddingBottom: spacing.md,
-        paddingLeft: spacing.twoXL,
-        fontFamily: genericFonts.bodyFont,
-        fontSize: fontSizes.xl,
-        fontWeight: fontWeights.bold,
-        margin: spacing.none,
-        lineHeight: lineHeights.small,
-        textTransform: "none",
-        display: "flex",
-        alignItems: "center",
-        maxHeight: "80vh",
-        flexDirection: "row",
-        ...overrides,
-      }}
-    >
-      {children}
-    </UIModalHeader>
-  )
+function ModalHeader({ children }: Readonly<ModalHeaderProps>): ReactElement {
+  return <StyledModalHeader slot="title">{children}</StyledModalHeader>
 }
 
 interface ModalBodyProps {
@@ -79,26 +45,7 @@ interface ModalBodyProps {
 }
 
 function ModalBody({ children }: Readonly<ModalBodyProps>): ReactElement {
-  const { colors, fontSizes, spacing } = useEmotionTheme()
-
-  return (
-    <UIModalBody
-      style={{
-        marginTop: spacing.none,
-        marginLeft: spacing.none,
-        marginRight: spacing.none,
-        marginBottom: spacing.none,
-        paddingTop: spacing.md,
-        paddingRight: spacing.twoXL,
-        paddingBottom: spacing.twoXL,
-        paddingLeft: spacing.twoXL,
-        color: colors.bodyText,
-        fontSize: fontSizes.md,
-      }}
-    >
-      {children}
-    </UIModalBody>
-  )
+  return <StyledModalBody>{children}</StyledModalBody>
 }
 
 interface ModalFooterProps {
@@ -106,24 +53,7 @@ interface ModalFooterProps {
 }
 
 function ModalFooter({ children }: Readonly<ModalFooterProps>): ReactElement {
-  const { spacing } = useEmotionTheme()
-
-  return (
-    <UIModalFooter
-      style={{
-        marginTop: spacing.none,
-        marginLeft: spacing.none,
-        marginRight: spacing.none,
-        marginBottom: spacing.none,
-        paddingTop: spacing.md,
-        paddingRight: spacing.md,
-        paddingBottom: spacing.md,
-        paddingLeft: spacing.md,
-      }}
-    >
-      <div>{children}</div>
-    </UIModalFooter>
-  )
+  return <StyledModalFooter>{children}</StyledModalFooter>
 }
 
 const ModalButton: FunctionComponent<
@@ -134,90 +64,111 @@ const ModalButton: FunctionComponent<
   </StyledModalButton>
 )
 
-type StreamlitModalProps = Omit<ModalProps, "size"> & {
+interface StreamlitModalProps {
+  isOpen?: boolean
+  onClose?: () => void
+  /** Controls backdrop click, Escape key, and close button visibility. Defaults to true. */
+  closeable?: boolean
   size?: "auto" | "default" | "medium" | "large"
+  /** Explicit CSS width override, takes precedence over size. Used for non-standard widths like "80vw". */
+  width?: string
+  children?: ReactNode
 }
 
 /**
- * Maps our own StreamlitModal size to the Baseweb Modal size or a calculated string.
- * This abstraction allows us later to swap the Baseweb Modal size without touching
- * the other components again.
+ * Maps the StreamlitModal size to a CSS width string.
  *
- * @param size the StreamlitModal size to be mapped
- * @param width the width of the modal if 'medium' size is selected
- * @param padding the padding added to the modal if 'medium' size is selected
- * @param largeWidth the width of the modal if 'large' size is selected
- * @returns the Baseweb Modal compatible size
+ * @param size the modal size variant
+ * @param width the content max width used for the 'medium' size calculation
+ * @param padding extra horizontal padding added for the 'medium' size
+ * @param largeWidth the explicit CSS width for 'large' size
+ * @returns a CSS width string, or undefined for auto (content-sized)
  */
 export function calculateModalSize(
   size: StreamlitModalProps["size"],
   width?: string,
   padding?: string,
   largeWidth?: string
-): ModalProps["size"] {
+): string | undefined {
   if (size === "large" && largeWidth) {
     return largeWidth
   }
   if (size === "medium" && width && padding) {
-    // This is the same width incl. padding as the AppView container is using 704px (736px (= contentMaxWidth) - 32px padding).
-    // The dialog's total left and right padding is 48px. So the dialog needs a total width of 752px (=704px + 48px).
-    // The used calculation here makes the relation to the app content width more comprehendable than hardcoding.
-    // Note that a Modal has max-width:100%, so it looks good on mobile independent of the calculated size here.
-    const paddingDifferenceDialogAndAppView = padding // the dialog has 0.5rem more padding left and right => 1rem
-    return `calc(${width} + ${paddingDifferenceDialogAndAppView})`
-  } else if (size === "auto") {
-    return SIZE.auto
+    // Same width as the AppView container (contentMaxWidth) plus the extra dialog padding.
+    // The dialog has 0.5rem more left/right padding than AppView, adding 1rem total.
+    // Note: max-width:100% keeps this responsive on mobile regardless of the calculated value.
+    return `calc(${width} + ${padding})`
   }
-
-  return SIZE.default
+  if (size === "auto") {
+    return undefined
+  }
+  // Default: 31.25rem (= 500px at 16px base)
+  // rem is used so the dialog scales with the user's browser font-size preference.
+  return "31.25rem"
 }
 
-function Modal(props: StreamlitModalProps): ReactElement {
-  const { spacing, radii, colors, sizes } = useEmotionTheme()
-
-  const defaultOverrides = {
-    Root: {
-      style: {
-        background: colors.darkenedBgMix25,
-      },
-      props: {
-        className: "stDialog",
-        "data-testid": "stDialog",
-      },
-    },
-    DialogContainer: {
-      style: {
-        alignItems: "start",
-        paddingTop: spacing.threeXL,
-      },
-    },
-    Dialog: {
-      style: {
-        borderBottomRightRadius: radii.xxl,
-        borderBottomLeftRadius: radii.xxl,
-        borderTopRightRadius: radii.xxl,
-        borderTopLeftRadius: radii.xxl,
-        // make sure the modal is not too small on mobile
-        minWidth: sizes.minPopupWidth,
-      },
-    },
-    Close: {
-      style: {
-        top: `calc(${spacing.twoXL} + ${spacing.xs})`, // Trying to center the button on the available space.
-        right: spacing.twoXL,
-      },
-    },
-  }
-
-  const modalSize: ModalProps["size"] = calculateModalSize(
-    props.size,
+function Modal({
+  isOpen,
+  onClose,
+  closeable = true,
+  size,
+  width,
+  children,
+}: Readonly<StreamlitModalProps>): ReactElement {
+  const { sizes, spacing } = useEmotionTheme()
+  const dialogWidth = calculateModalSize(
+    size,
     sizes.contentMaxWidth,
     spacing.lg,
     sizes.dialogLargeWidth
   )
-  const mergedOverrides = merge(defaultOverrides, props.overrides)
-  const overridenProps = { ...props, size: modalSize }
-  return <UIModal {...overridenProps} overrides={mergedOverrides} />
+
+  const handleOpenChange = (open: boolean): void => {
+    if (!open) onClose?.()
+  }
+
+  return (
+    <StyledDialogOverlay
+      isOpen={isOpen ?? false}
+      isDismissable={closeable}
+      isKeyboardDismissDisabled={!closeable}
+      onOpenChange={handleOpenChange}
+      className="stDialog"
+      data-testid="stDialog"
+    >
+      <StyledDialogPanel $dialogWidth={width ?? dialogWidth}>
+        <StyledDialogInner>
+          {({ close }) => (
+            <>
+              {closeable && (
+                <StyledDialogClose
+                  aria-label="Close"
+                  type="button"
+                  onClick={close}
+                >
+                  <svg
+                    aria-hidden="true"
+                    height="10"
+                    viewBox="0 0 10 10"
+                    width="10"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M9 1L5 5M1 9L5 5M5 5L1 1M5 5L9 9"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="2"
+                    />
+                  </svg>
+                </StyledDialogClose>
+              )}
+              {children}
+            </>
+          )}
+        </StyledDialogInner>
+      </StyledDialogPanel>
+    </StyledDialogOverlay>
+  )
 }
 
 export default Modal

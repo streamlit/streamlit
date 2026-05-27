@@ -741,14 +741,13 @@ class ResourceCache(Cache[R]):
         if not cache_entries:
             return {}
 
-        # Lazy-load vendored package to prevent import of numpy
-        from streamlit.vendor.pympler.asizeof import asizeof
+        from streamlit.runtime.stats import safe_sizeof
 
         stats = [
             CacheStat(
                 category_name="st_cache_resource",
                 cache_name=self.display_name,
-                byte_length=asizeof(entry),
+                byte_length=safe_sizeof(entry),
             )
             for entry in cache_entries
         ]

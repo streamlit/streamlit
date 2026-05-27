@@ -316,6 +316,19 @@ def test_st_switch_page_raises_no_session_context_when_ctx_has_no_requests(
         switch_page("any_page.py")
 
 
+def test_switch_page_raises_from_parallel_worker() -> None:
+    """st.switch_page raises StreamlitAPIException when called from a parallel worker."""
+    ThreadState.initialize(is_parallel_worker=True)
+    try:
+        with pytest.raises(StreamlitAPIException) as exc_info:
+            switch_page("pages/test.py")
+
+        assert "st.switch_page" in str(exc_info.value)
+        assert "parallel fragment" in str(exc_info.value)
+    finally:
+        ThreadState.initialize(is_parallel_worker=False)
+
+
 def _make_pages_lookup_ctx(resolved_script_path: str) -> MagicMock:
     """Return a mocked ``ScriptRunContext`` with a single registered page."""
     ctx = MagicMock()
