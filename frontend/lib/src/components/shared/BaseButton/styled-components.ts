@@ -647,7 +647,7 @@ const StyledBaseToggleButton = styled(ToggleButton)(({ theme }) => ({
   "&[data-focus-visible]": {
     boxShadow: theme.shadows.focusRing,
   },
-  "&[data-hovered]:not([data-disabled])": {
+  "&:is([data-hovered],[data-focus-visible]):not([data-disabled])": {
     backgroundColor: theme.colors.darkenedBgMix15,
   },
   "&[data-disabled]": {
@@ -677,11 +677,12 @@ export const StyledPillsToggleButton = styled(StyledBaseToggleButton)<{
     borderColor: theme.colors.primary,
     color: theme.colors.primary,
   },
-  "&[data-selected][data-hovered]:not([data-disabled])": {
-    backgroundColor: transparentize(theme.colors.primary, 0.8),
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
-  },
+  "&[data-selected]:is([data-hovered],[data-focus-visible]):not([data-disabled])":
+    {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
   "&[data-selected][data-disabled]": {
     borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.fadedText05,
@@ -753,11 +754,12 @@ export const StyledSegmentedControlToggleButton = styled(
     color: theme.colors.primary,
     zIndex: theme.zIndices.priority,
   },
-  "&[data-selected][data-hovered]:not([data-disabled])": {
-    backgroundColor: transparentize(theme.colors.primary, 0.8),
-    borderColor: theme.colors.primary,
-    color: theme.colors.primary,
-  },
+  "&[data-selected]:is([data-hovered],[data-focus-visible]):not([data-disabled])":
+    {
+      backgroundColor: transparentize(theme.colors.primary, 0.8),
+      borderColor: theme.colors.primary,
+      color: theme.colors.primary,
+    },
   "&[data-selected][data-disabled]": {
     borderColor: theme.colors.borderColor,
     backgroundColor: theme.colors.fadedText05,
