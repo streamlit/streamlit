@@ -257,6 +257,11 @@ class ImageMixin:
                             image_list_proto.link = page_data["url_pathname"]
                             image_list_proto.page_script_hash = page_data["page_script_hash"]
                             break
+                        if link.strip("/") == page_data.get("url_pathname", "").strip("/"):
+                            page_found = True
+                            image_list_proto.link = page_data["url_pathname"]
+                            image_list_proto.page_script_hash = page_data["page_script_hash"]
+                            break
 
                     if page_found:
                         image_list_proto.is_internal = True
