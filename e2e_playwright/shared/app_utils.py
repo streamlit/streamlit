@@ -1459,7 +1459,7 @@ def get_segment_button(locator: Locator, text: str) -> Locator:
     Locator
         The segment button.
     """
-    return locator.get_by_role("button").filter(has_text=text)
+    return locator.locator("button").filter(has_text=text)
 
 
 def goto_app(page: Page, url: str) -> None:
