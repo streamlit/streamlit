@@ -19,6 +19,7 @@ import { fireEvent, screen } from "@testing-library/react"
 import { ImageList as ImageListProto, streamlit } from "@streamlit/protobuf"
 
 import * as UseResizeObserver from "~lib/hooks/useResizeObserver"
+import { NavigationContext } from "~lib/components/core/NavigationContext"
 import { mockEndpoints } from "~lib/mocks/mocks"
 import { render, renderWithContexts } from "~lib/test_util"
 
@@ -134,6 +135,31 @@ describe("ImageList Element", () => {
 
       const caption = screen.getByTestId("stImageCaption")
       expect(caption).toHaveTextContent("Test caption")
+    })
+
+    it("handles internal links correctly by calling onPageChange without opening a new tab", () => {
+      const mockOnPageChange = vi.fn()
+
+      const props = getProps({
+        imgs: [{ caption: "Internal Image", url: "/media/mockImage1.jpeg" }],
+        link: "details",
+        isInternal: true,
+        pageScriptHash: "hash_123",
+      })
+
+      render(
+        <NavigationContext.Provider value={{ onPageChange: mockOnPageChange } as any}>
+          <ImageList {...props} />
+        </NavigationContext.Provider>
+      )
+
+      const link = screen.getByTestId("stImageLink")
+
+      expect(link).toHaveAttribute("target", "")
+
+      fireEvent.click(link)
+
+      expect(mockOnPageChange).toHaveBeenCalledWith("hash_123")
     })
   })
 
