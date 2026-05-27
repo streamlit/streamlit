@@ -14,7 +14,13 @@
  * limitations under the License.
  */
 
+import type { ComponentType } from "react"
+
 import { GridCellKind } from "@glideapps/glide-data-grid"
+import { cleanup, screen } from "@testing-library/react"
+import { userEvent } from "@testing-library/user-event"
+
+import { render } from "~lib/test_util"
 
 import renderer, { MarkdownCell } from "./MarkdownCell"
 
@@ -116,5 +122,180 @@ describe("MarkdownCell renderer", () => {
         (editorConfig as { disablePadding?: boolean }).disablePadding
       ).toBe(true)
     })
+  })
+})
+
+describe("MarkdownCellEditor", () => {
+  let MarkdownCellEditor: ComponentType<Record<string, unknown>>
+
+  beforeAll(() => {
+    const mockCell = {
+      kind: GridCellKind.Custom,
+      data: { kind: "markdown-cell", value: "# Test", displayValue: "Test" },
+      allowOverlay: true,
+      copyData: "# Test",
+      readonly: false,
+    } as MarkdownCell
+
+    const result = renderer.provideEditor?.(mockCell)
+    if (result === undefined || !("editor" in result)) {
+      throw new Error("provideEditor did not return an editor")
+    }
+    MarkdownCellEditor = result.editor as ComponentType<
+      Record<string, unknown>
+    >
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  const createMockCellValue = (
+    value: string | null,
+    readonly = false
+  ): MarkdownCell => ({
+    kind: GridCellKind.Custom,
+    data: {
+      kind: "markdown-cell",
+      value,
+      displayValue: value ?? "",
+    },
+    allowOverlay: true,
+    copyData: value ?? "",
+    readonly,
+  })
+
+  it("hides the Edit button when cell is readonly", () => {
+    const readonlyCell = createMockCellValue("# Readonly content", true)
+
+    render(
+      <MarkdownCellEditor
+        value={readonlyCell}
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Should show viewer, not editor
+    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+    // Edit button should NOT be present
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull()
+  })
+
+  it("shows the Edit button when cell is editable", () => {
+    const editableCell = createMockCellValue("# Editable content", false)
+
+    render(
+      <MarkdownCellEditor
+        value={editableCell}
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Should show viewer with Edit button present (button has opacity: 0 until hover)
+    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+    // Edit button should be present in DOM (even though visually hidden until hover)
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument()
+  })
+
+  it("clicking Edit then Save calls onChange with new value and displayValue", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const originalValue = "# Original"
+    const editableCell = createMockCellValue(originalValue, false)
+
+    render(
+      <MarkdownCellEditor
+        value={editableCell}
+        onChange={onChange}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Click edit button
+    await user.click(screen.getByRole("button", { name: "Edit" }))
+
+    // Should now show editor
+    expect(screen.getByTestId("stMarkdownColumnEditor")).toBeVisible()
+
+    // Type new content
+    const textarea = screen.getByRole("textbox")
+    await user.clear(textarea)
+    await user.type(textarea, "# New Title\nNew line")
+
+    // Click save button
+    await user.click(screen.getByRole("button", { name: /Save/ }))
+
+    // onChange should have been called with the new value
+    expect(onChange).toHaveBeenCalledTimes(1)
+    const callArg = onChange.mock.calls[0][0] as MarkdownCell
+    expect(callArg.data.value).toBe("# New Title\nNew line")
+    // displayValue should have line breaks removed
+    expect(callArg.data.displayValue).toBe("# New Title New line")
+
+    // Should be back in viewer mode
+    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+  })
+
+  it("clicking Edit then pressing Escape does NOT call onChange", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const originalValue = "# Original"
+    const editableCell = createMockCellValue(originalValue, false)
+
+    render(
+      <MarkdownCellEditor
+        value={editableCell}
+        onChange={onChange}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Click edit button
+    await user.click(screen.getByRole("button", { name: "Edit" }))
+
+    // Type some content
+    const textarea = screen.getByRole("textbox")
+    await user.type(textarea, " modified content")
+
+    // Press Escape to cancel
+    await user.keyboard("{Escape}")
+
+    // onChange should NOT have been called
+    expect(onChange).not.toHaveBeenCalled()
+
+    // Should be back in viewer mode
+    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+  })
+
+  it("clicking Edit then Cancel button does NOT call onChange", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const editableCell = createMockCellValue("# Original", false)
+
+    render(
+      <MarkdownCellEditor
+        value={editableCell}
+        onChange={onChange}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Click edit button
+    await user.click(screen.getByRole("button", { name: "Edit" }))
+
+    // Type some content
+    const textarea = screen.getByRole("textbox")
+    await user.type(textarea, " modified content")
+
+    // Click cancel button
+    await user.click(screen.getByRole("button", { name: /Cancel/ }))
+
+    // onChange should NOT have been called
+    expect(onChange).not.toHaveBeenCalled()
+
+    // Should be back in viewer mode
+    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
   })
 })

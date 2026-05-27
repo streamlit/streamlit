@@ -23,7 +23,7 @@ import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 
 import { MarkdownCell } from "./cells/MarkdownCell"
 import MarkdownColumn from "./MarkdownColumn"
-import { isMissingValueCell } from "./utils"
+import { type ErrorCell, isErrorCell, isMissingValueCell } from "./utils"
 
 const MOCK_MARKDOWN_COLUMN_PROPS = {
   id: "1",
@@ -148,4 +148,25 @@ describe("MarkdownColumn", () => {
       expect(mockColumn.validateInput!(input)).toBe(expected)
     }
   )
+
+  it("returns an error cell when getCell is called with validate=true and isRequired=true for null input", () => {
+    const mockColumn = MarkdownColumn({
+      ...MOCK_MARKDOWN_COLUMN_PROPS,
+      isRequired: true,
+    })
+    const errorCell = mockColumn.getCell(null, true)
+    expect(isErrorCell(errorCell)).toBe(true)
+    expect((errorCell as ErrorCell).errorDetails).toBe("Invalid input.")
+  })
+
+  it("returns normal cell when getCell is called with validate=true for valid input", () => {
+    const mockColumn = MarkdownColumn({
+      ...MOCK_MARKDOWN_COLUMN_PROPS,
+      isRequired: true,
+    })
+    const cell = mockColumn.getCell("# Valid content", true) as MarkdownCell
+    expect(isErrorCell(cell)).toBe(false)
+    expect(cell.kind).toBe(GridCellKind.Custom)
+    expect(cell.data.value).toBe("# Valid content")
+  })
 })

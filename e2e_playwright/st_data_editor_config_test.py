@@ -245,6 +245,23 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
     expect(viewer).to_contain_text("Shortcut Header")
     expect(viewer).to_contain_text("Saved via keyboard")
 
+    # Close the overlay by clicking outside and wait for app rerun
+    reset_focus(app)
+    wait_for_app_run(app)
+
+    # Verify the edited value was committed to backend widget state
+    expect_prefixed_markdown(
+        app, "Markdown column return:", "Shortcut Header", exact_match=False
+    )
+    expect_prefixed_markdown(
+        app, "Markdown column return:", "Saved via keyboard", exact_match=False
+    )
+
+    # Re-open the cell to test Escape to cancel
+    click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
+    cell_overlay = get_open_cell_overlay(app)
+    expect(cell_overlay).to_be_visible()
+
     # Test Escape to cancel - click edit, type new content, then cancel
     edit_button = cell_overlay.get_by_label("Edit")
     expect(edit_button).to_be_visible()

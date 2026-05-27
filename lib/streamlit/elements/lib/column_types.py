@@ -3121,6 +3121,11 @@ def MarkdownColumn(
     When used with ``st.data_editor``, editing will be enabled through a text
     editor overlay.
 
+    .. note::
+        For security, raw HTML is disabled in markdown cells even if
+        ``unsafe_allow_html`` is set elsewhere. Links are sanitized to only
+        allow safe URL protocols (http, https, mailto, tel).
+
     Parameters
     ----------
     label : str or None

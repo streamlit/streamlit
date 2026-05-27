@@ -526,7 +526,7 @@ st.write("Multiselect column return:", str(result))
 
 st.header("Markdown column:")
 
-st.data_editor(
+markdown_result = st.data_editor(
     pd.DataFrame(
         {
             "col_0": [
@@ -553,6 +553,8 @@ st.data_editor(
     hide_index=True,
     key="markdown-column",
 )
+
+st.write("Markdown column return:", str(markdown_result.to_dict()))
 
 st.header("Missing placeholder:")
 st.data_editor(

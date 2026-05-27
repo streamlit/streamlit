@@ -30,6 +30,11 @@ import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/Streamli
 import { StyledToolbar } from "~lib/components/shared/Toolbar/styled-components"
 import { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { removeLineBreaks } from "~lib/components/widgets/DataFrame/columns/utils"
+import { isFromMac } from "~lib/util/utils"
+
+/** Monospace font stack used for code blocks and the markdown editor textarea. */
+const MONOSPACE_FONT_STACK =
+  '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace'
 
 interface MarkdownCellProps {
   kind: "markdown-cell"
@@ -133,8 +138,7 @@ const StyledTextarea = styled.textarea(({ theme }) => ({
   resize: "none",
   backgroundColor: "var(--gdg-bg-cell)",
   color: "var(--gdg-text-dark)",
-  fontFamily:
-    '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace',
+  fontFamily: MONOSPACE_FONT_STACK,
   fontSize: "var(--gdg-editor-font-size)",
   lineHeight: 1.5,
 
@@ -180,6 +184,9 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     return cell.data.value ?? ""
   })
 
+  // Platform-aware modifier key label for keyboard shortcuts
+  const modifierLabel = isFromMac() ? "⌘" : "Ctrl"
+
   const handleSave = useCallback(() => {
     onChange({
       ...cell,
@@ -221,7 +228,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
           <StyledToolbarWrapper locked>
             <StyledCellToolbar>
               <ToolbarAction
-                label="Save (Ctrl+Enter)"
+                label={`Save (${modifierLabel}+Enter)`}
                 icon={Check}
                 onClick={handleSave}
               />
