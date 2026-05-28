@@ -8,7 +8,7 @@
 
 ## What is Streamlit?
 
-Streamlit lets you transform Python scripts into interactive web apps in minutes, instead of weeks. Build dashboards, generate reports, or create chat apps. Once you’ve created an app, you can use our [Community Cloud platform](https://streamlit.io/cloud) to deploy, manage, and share your app.
+Streamlit enables developers to turn Python scripts into interactive web applications in minutes. It simplifies the creation of dashboards, reports, data apps, and AI-powered interfaces without requiring frontend development experience.
 
 ### Why choose Streamlit?
 
