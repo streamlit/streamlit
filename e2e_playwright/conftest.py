@@ -1517,7 +1517,11 @@ def assert_snapshot(
             )
 
             total_pixels = img_a.size[0] * img_a.size[1]
-            max_diff_pixels = int(image_threshold * total_pixels)
+            # Use max(1, ...) so that very small images (where the percentage
+            # rounds to 0) still produce a non-zero threshold. Without this,
+            # max_diff_pixels == 0 makes mismatch < 0 the pass condition, which
+            # is never true — causing exact-match snapshots to fail spuriously.
+            max_diff_pixels = max(1, int(image_threshold * total_pixels))
 
             if mismatch < max_diff_pixels:
                 return
