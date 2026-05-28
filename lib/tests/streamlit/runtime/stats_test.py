@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import unittest
 from typing import TYPE_CHECKING
+from unittest.mock import patch
 
 from parameterized import parameterized
 
@@ -38,6 +39,7 @@ from streamlit.runtime.stats import (
     StatsProvider,
     group_cache_stats,
     metric_type_string_to_proto,
+    safe_sizeof,
 )
 
 if TYPE_CHECKING:
@@ -412,3 +414,34 @@ class MetricTypeStringToProtoTest(unittest.TestCase):
         """Test that unknown type strings return the UNKNOWN enum value."""
         assert metric_type_string_to_proto("not_a_real_type") == UNKNOWN
         assert metric_type_string_to_proto("") == UNKNOWN
+
+
+class SafeSizeofTest(unittest.TestCase):
+    @parameterized.expand(
+        [
+            ("list", [1, 2, 3]),
+            ("string", "hello world"),
+            ("dict", {"key": "value"}),
+        ]
+    )
+    def test_returns_positive_size_for_normal_objects(
+        self, _name: str, obj: object
+    ) -> None:
+        """safe_sizeof returns a positive size for normal Python objects."""
+        assert safe_sizeof(obj) > 0
+
+    def test_returns_zero_on_type_error(self) -> None:
+        """safe_sizeof returns 0 when TypeError is raised (e.g., weak reference issue)."""
+        with patch(
+            "streamlit.vendor.pympler.asizeof.asizeof",
+            side_effect=TypeError("cannot create weak reference"),
+        ):
+            assert safe_sizeof(object()) == 0
+
+    def test_returns_zero_on_reference_error(self) -> None:
+        """safe_sizeof returns 0 when ReferenceError is raised (e.g., dead weak ref)."""
+        with patch(
+            "streamlit.vendor.pympler.asizeof.asizeof",
+            side_effect=ReferenceError("weakly-referenced object no longer exists"),
+        ):
+            assert safe_sizeof(object()) == 0
