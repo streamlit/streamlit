@@ -21,6 +21,7 @@ from parameterized import parameterized
 
 import streamlit as st
 from streamlit.elements.plotly_chart import (
+    PlotlyChartSelectionSerde,
     PlotlyMixin,
     _resolve_content_height,
     _resolve_content_width,
@@ -710,7 +711,6 @@ def test_plotly_mixin_dg_returns_self() -> None:
 
 def test_plotly_serde_serialize_returns_json_string() -> None:
     """``PlotlyChartSelectionSerde.serialize`` returns a JSON string for selection state."""
-    from streamlit.elements.plotly_chart import PlotlyChartSelectionSerde
 
     serde = PlotlyChartSelectionSerde()
     payload = serde.serialize({"selection": {"points": [], "box": [], "lasso": []}})

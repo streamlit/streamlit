@@ -32,7 +32,7 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
-from streamlit.elements.write import StreamingOutput
+from streamlit.elements.write import StreamingOutput, WriteMixin
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -866,7 +866,6 @@ def test_write_mixin_dg_property_returns_self() -> None:
 
 def test_write_mixin_dg_returns_self_for_standalone_mixin() -> None:
     """A standalone ``WriteMixin`` instance returns itself from the ``dg`` property."""
-    from streamlit.elements.write import WriteMixin
 
     class _OnlyWrite(WriteMixin):
         pass

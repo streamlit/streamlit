@@ -82,7 +82,7 @@ class StarletteServerUtilsTest(unittest.TestCase):
         # Suffix exceeding total returns full range
         assert starlette_app_utils.parse_range_header("bytes=-500", 100) == (0, 99)
 
-        # Missing start position (only "=-" with no digits after partition)
+        # Missing start position (only "=" with no start/end after partition)
         with pytest.raises(ValueError, match="missing range start"):
             starlette_app_utils.parse_range_header("bytes=", 100)
 
