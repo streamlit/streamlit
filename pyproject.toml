@@ -441,3 +441,4 @@ exclude = [
 unresolved-import = "ignore"
 possibly-unresolved-reference = "error"
 unused-type-ignore-comment = "ignore"
+PLW0717 = "ignore"
