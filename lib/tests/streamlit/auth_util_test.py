@@ -1069,7 +1069,7 @@ def test_set_split_cookie_single_chunk_path() -> None:
                 get=MagicMock(
                     return_value=AttrDict(
                         {
-                            "cookie_secret": "s",
+                            "cookie_secret": "test_cookie_secret",
                         }
                     )
                 ),
@@ -1100,7 +1100,7 @@ def test_set_split_cookie_single_chunk_path() -> None:
                     return_value=AttrDict(
                         {
                             "redirect_uri": "http://localhost:8501/oauth2callback",
-                            "cookie_secret": "s",
+                            "cookie_secret": "test_cookie_secret",
                         }
                     )
                 ),
@@ -1116,7 +1116,7 @@ def test_set_split_cookie_single_chunk_path() -> None:
                     return_value=AttrDict(
                         {
                             "redirect_uri": "http://localhost:8501/oauth2callback",
-                            "cookie_secret": "s",
+                            "cookie_secret": "test_cookie_secret",
                         }
                     )
                 ),
@@ -1124,6 +1124,22 @@ def test_set_split_cookie_single_chunk_path() -> None:
             "okta",
             'the authentication provider "okta"',
             id="named_provider_missing_section",
+        ),
+        pytest.param(
+            MagicMock(
+                load_if_toml_exists=MagicMock(return_value=True),
+                get=MagicMock(
+                    return_value=AttrDict(
+                        {
+                            "redirect_uri": "http://localhost:8501/oauth2callback",
+                            "cookie_secret": "short",
+                        }
+                    )
+                ),
+            ),
+            "google",
+            "too short",
+            id="weak_cookie_secret",
         ),
     ],
 )
@@ -1147,7 +1163,7 @@ def test_validate_auth_credentials_default_provider_section_none() -> None:
             return_value=AttrDict(
                 {
                     "redirect_uri": "http://localhost:8501/oauth2callback",
-                    "cookie_secret": "s",
+                    "cookie_secret": "test_cookie_secret",
                 }
             )
         ),
@@ -1172,7 +1188,7 @@ def test_validate_auth_credentials_default_missing_keys() -> None:
             return_value=AttrDict(
                 {
                     "redirect_uri": "http://localhost:8501/oauth2callback",
-                    "cookie_secret": "s",
+                    "cookie_secret": "test_cookie_secret",
                     "default": {},
                 }
             )
@@ -1194,7 +1210,7 @@ def test_validate_auth_credentials_named_provider_missing_keys() -> None:
             return_value=AttrDict(
                 {
                     "redirect_uri": "http://localhost:8501/oauth2callback",
-                    "cookie_secret": "s",
+                    "cookie_secret": "test_cookie_secret",
                     "google": {"client_id": "only_id"},
                 }
             )
@@ -1216,7 +1232,7 @@ def test_validate_auth_credentials_provider_section_not_mapping() -> None:
             return_value=AttrDict(
                 {
                     "redirect_uri": "http://localhost:8501/oauth2callback",
-                    "cookie_secret": "s",
+                    "cookie_secret": "test_cookie_secret",
                     "google": ["not", "a", "table"],
                 }
             )

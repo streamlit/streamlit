@@ -292,8 +292,6 @@ def _get_joserfc_signing_key() -> Any:
     """Create the signing key used for provider tokens with ``joserfc``."""
     from joserfc.jwk import OctKey
 
-    # TODO(auth): Revisit weak ``cookie_secret`` handling at the Streamlit level
-    # so we can validate / reject (rather than just log) sub-112-bit secrets.
     _ensure_joserfc_security_warning_suppressed()
     secret = get_signing_secret()
     if len(secret) < _JOSERFC_MIN_KEY_BYTES:
@@ -674,6 +672,14 @@ def validate_auth_credentials(provider: str) -> None:
         raise StreamlitAuthError(
             """Authentication credentials in `.streamlit/secrets.toml` are missing the
             "cookie_secret" key. Please check your configuration."""
+        )
+    cookie_secret = auth_section.get("cookie_secret", "")
+    if len(cookie_secret.encode("utf-8")) < _JOSERFC_MIN_KEY_BYTES:
+        raise StreamlitAuthError(
+            f"""Authentication credentials in `.streamlit/secrets.toml` have a
+            "cookie_secret" that is too short ({len(cookie_secret.encode("utf-8"))} bytes).
+            It must be at least {_JOSERFC_MIN_KEY_BYTES} bytes (112 bits) to ensure
+            adequate cryptographic strength."""
         )
 
     provider_section = auth_section.get(provider)
