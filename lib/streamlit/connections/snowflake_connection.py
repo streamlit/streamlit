@@ -660,7 +660,7 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                 )
                 return snowflake.connector.connect()
 
-            return snowflake.connector.connect(connection_name=self._connection_name, **kwargs)
+            return snowflake.connector.connect(**{"connection_name": self._connection_name, **kwargs})
         except SnowflakeError:
             if not len(st_secrets) and not kwargs:
                 raise StreamlitAPIException(
