@@ -860,13 +860,11 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    # Click the hidden <input> directly with force=True. React Aria's Checkbox
-    # and Switch render the true interactive element as a visually-hidden input;
-    # clicking via the <label> instead leaves the label-to-input focus chain
-    # active, which can cause a previously-focused widget (e.g. a multiselect)
-    # to retain a visible focus ring in subsequent snapshots.
-    checkbox_element.locator("input").first.click(force=True)
+    checkbox_element.locator("label").first.click()
     wait_for_app_run(page)
+    # Blur the active element after the app run so that focus rings from this
+    # interaction don't bleed into subsequent snapshot assertions.
+    page.evaluate("document.activeElement?.blur()")
 
 
 def click_toggle(
