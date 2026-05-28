@@ -379,6 +379,11 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
             ("#ffffffff", "theme.primaryColor"),  # 8-digit hex with alpha
             ("rgb(255, 0, 0)", "theme.primaryColor"),
             ("rgba(255, 0, 0, 0.5)", "theme.primaryColor"),
+            ("hsl(120, 100%, 50%)", "theme.primaryColor"),
+            ("lab(50 40 -20)", "theme.primaryColor"),
+            ("oklch(0.21 0.01 260)", "theme.primaryColor"),
+            ("rebeccapurple", "theme.primaryColor"),
+            ("transparent", "theme.primaryColor"),
             ("  #ff0000  ", "theme.primaryColor"),  # Test trimming
         ]
     )
@@ -396,7 +401,7 @@ class ThemeInheritanceUtilTest(unittest.TestCase):
         [
             (["#ff0000", "#00ff00", "#0000ff"], "theme.chartCategoricalColors"),
             (
-                ["rgb(255,0,0)", "rgba(0,255,0,0.5)", "#fff"],
+                ["rgb(255,0,0)", "hsl(120, 100%, 50%)", "oklch(0.21 0.01 260)"],
                 "theme.chartSequentialColors",
             ),
             (["#ffffff"], "theme.chartCategoricalColors"),  # Single item array

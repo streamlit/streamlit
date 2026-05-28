@@ -17,8 +17,8 @@
 import type { Primitives as ThemePrimitives } from "baseui"
 import * as baseuiCjs from "baseui/index.js"
 import type { Theme as BaseTheme } from "baseui/theme"
-import { transparentize } from "color2k"
 
+import { setAlpha } from "./colorUtils"
 import { EmotionTheme } from "./types"
 
 const {
@@ -173,7 +173,7 @@ const createBaseUiThemeOverrides = (
       backgroundSecondary: widgetBackgroundColor,
       backgroundTertiary: colors.bgColor,
       borderOpaque: colors.darkenedBgMix25,
-      accent: transparentize(colors.primary, 0.5),
+      accent: setAlpha(colors.primary, 0.5),
       tagPrimarySolidBackground: colors.primary,
       tagPrimaryFontDisabled: colors.fadedText40,
       tagPrimaryOutlinedDisabled: colors.transparent,

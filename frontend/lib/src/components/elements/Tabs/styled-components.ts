@@ -15,7 +15,8 @@
  */
 
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
+
+import { setAlpha } from "~lib/theme/colorUtils"
 
 interface StyledTabContainerProps {
   isOverflowing: boolean
@@ -55,14 +56,8 @@ export const StyledScrollArrow = styled.button<StyledScrollArrowProps>(
     // Apply gradient background on the side closest to the content
     backgroundImage:
       position === "right"
-        ? `linear-gradient(to right, ${transparentize(
-            theme.colors.bgColor,
-            1
-          )}, ${theme.colors.bgColor} 40%)`
-        : `linear-gradient(to left, ${transparentize(
-            theme.colors.bgColor,
-            1
-          )}, ${theme.colors.bgColor} 40%)`,
+        ? `linear-gradient(to right, ${setAlpha(theme.colors.bgColor, 0)}, ${theme.colors.bgColor} 40%)`
+        : `linear-gradient(to left, ${setAlpha(theme.colors.bgColor, 0)}, ${theme.colors.bgColor} 40%)`,
 
     "&:hover": {
       color: theme.colors.bodyText,

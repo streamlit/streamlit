@@ -1863,21 +1863,22 @@ class BuiltInChartTest(DeltaGeneratorTestCase):
         df = pd.DataFrame([[20, 30]], columns=["a", "b"])
         EXPECTED_DATAFRAME = pd.DataFrame([[20, 30]], columns=["a", "b"])
 
-        chart_command(df, x="a", y="b", color="#f00")
+        for color in ["#f00", "hsl(120, 100%, 50%)", "oklch(0.21 0.01 260)"]:
+            chart_command(df, x="a", y="b", color=color)
 
-        proto = self.get_delta_from_queue().new_element.vega_lite_chart
-        chart_spec = json.loads(proto.spec)
+            proto = self.get_delta_from_queue().new_element.vega_lite_chart
+            chart_spec = json.loads(proto.spec)
 
-        if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
-            # Line charts are layered as default to support better tooltips.
-            # Extract the actual line mark from the layer.
-            chart_spec = chart_spec["layer"][0]
+            if altair_type == "line" and not is_altair_version_less_than("5.0.0"):
+                # Line charts are layered as default to support better tooltips.
+                # Extract the actual line mark from the layer.
+                chart_spec = chart_spec["layer"][0]
 
-        assert chart_spec["encoding"]["color"]["value"] == "#f00"
+            assert chart_spec["encoding"]["color"]["value"] == color
 
-        self.assert_output_df_is_correct_and_input_is_untouched(
-            orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
-        )
+            self.assert_output_df_is_correct_and_input_is_untouched(
+                orig_df=df, expected_df=EXPECTED_DATAFRAME, chart_proto=proto
+            )
 
     @parameterized.expand(ST_CHART_ARGS)
     def test_chart_with_builtin_color_name(

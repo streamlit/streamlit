@@ -14,14 +14,6 @@
  * limitations under the License.
  */
 
-import {
-  darken,
-  getLuminance,
-  lighten,
-  parseToRgba,
-  toHex,
-  transparentize,
-} from "color2k"
 import { cloneDeep, isObject, merge, mergeWith, once } from "lodash-es"
 import { getLogger } from "loglevel"
 
@@ -36,6 +28,15 @@ import {
   notNullOrUndefined,
 } from "~lib/util/utils"
 
+import {
+  darken,
+  getLuminance,
+  lighten,
+  parseToRgba,
+  setAlpha,
+  toHex,
+  UNPREFIXED_HEX_COLOR_RE,
+} from "./colorUtils"
 import { createBaseUiTheme } from "./createBaseUiTheme"
 import { computeDerivedColors, createEmotionColors } from "./getColors"
 import { createShadows } from "./getShadows"
@@ -160,11 +161,8 @@ export const isPresetTheme = (themeConfig: ThemeConfig): boolean => {
 export const bgColorToBaseString = (bgColor?: string): string =>
   bgColor === undefined || getLuminance(bgColor) > 0.5 ? "light" : "dark"
 
-export const isColor = (strColor: string): boolean => {
-  const s = new Option().style
-  s.color = strColor
-  return s.color !== ""
-}
+export const isColor = (strColor: string): boolean =>
+  !UNPREFIXED_HEX_COLOR_RE.test(strColor) && parseToRgba(strColor) !== null
 
 /**
  * Helper function that rounds a font size (in rem) to the nearest eighth of a rem
@@ -259,8 +257,9 @@ const resolveBgColor = (
 ): string => {
   if (configBackgroundColor) return configBackgroundColor
   if (configMainColor) {
-    const transparency = isLightTheme ? 0.9 : 0.8
-    return transparentize(configMainColor, transparency)
+    // Set absolute alpha: 10% for light theme, 20% for dark theme
+    const targetAlpha = isLightTheme ? 0.1 : 0.2
+    return setAlpha(configMainColor, targetAlpha)
   }
   return defaultBackgroundColor
 }
@@ -801,7 +800,8 @@ export const createEmotionTheme = (
   if (notNullOrUndefined(borderColor)) {
     conditionalOverrides.colors.borderColor = borderColor
 
-    const borderColorLight = transparentize(borderColor, 0.55)
+    // Set absolute alpha to 45% for lighter border variant
+    const borderColorLight = setAlpha(borderColor, 0.45)
     // Used for tabs border and expander when stale
     conditionalOverrides.colors.borderColorLight = borderColorLight
     // Set the fallback here for dataframe & table border color
@@ -1347,9 +1347,15 @@ function roundToTwoDecimals(n: number): number {
 
 export function blend(color: string, background: string | undefined): string {
   if (background === undefined) return color
-  const [r, g, b, a] = parseToRgba(color)
+  const parsed = parseToRgba(color)
+  // If color parsing fails, return the original color
+  if (!parsed) return color
+  const [r, g, b, a] = parsed
   if (a === 1) return color
-  const [br, bg, bb, ba] = parseToRgba(background)
+  const bgParsed = parseToRgba(background)
+  // If background parsing fails, return the original color
+  if (!bgParsed) return color
+  const [br, bg, bb, ba] = bgParsed
   const ao = a + ba * (1 - a)
   // (xaA + xaB·(1−aA))/aR
   const ro = Math.round((a * r + ba * br * (1 - a)) / ao)

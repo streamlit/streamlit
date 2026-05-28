@@ -21,7 +21,6 @@ import {
   PickingInfo,
   ViewStateChangeParameters,
 } from "@deck.gl/core"
-import { parseToRgba } from "color2k"
 import JSON5 from "json5"
 import { isEqual } from "lodash-es"
 
@@ -36,6 +35,7 @@ import {
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
 import { useRequiredContext } from "~lib/hooks/useRequiredContext"
 import { useStWidthHeight } from "~lib/hooks/useStWidthHeight"
+import { parseToRgba } from "~lib/theme/colorUtils"
 import type { EmotionTheme } from "~lib/theme/types"
 import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -495,14 +495,20 @@ export const useDeckGl = (props: UseDeckGlProps): UseDeckGlShape => {
           const unselectedOpacity = Math.floor(255 * 0.4)
 
           // Fallback colors in case there are issues while parsing the colors for a given object
-          const selectedColorParsed = parseToRgba(theme.colors.primary)
+          // Default to primary-like and gray colors if parsing fails (should not happen with theme colors)
+          const selectedColorParsed = parseToRgba(theme.colors.primary) ?? [
+            255, 75, 75, 1,
+          ]
           const selectedColor: [number, number, number, number] = [
             selectedColorParsed[0],
             selectedColorParsed[1],
             selectedColorParsed[2],
             selectedOpacity,
           ]
-          const unselectedColorParsed = parseToRgba(theme.colors.gray20)
+          // gray20 is #f0f2f6 = rgb(240, 242, 246) - a light gray
+          const unselectedColorParsed = parseToRgba(theme.colors.gray20) ?? [
+            240, 242, 246, 1,
+          ]
           const unselectedColor: [number, number, number, number] = [
             unselectedColorParsed[0],
             unselectedColorParsed[1],

@@ -687,7 +687,9 @@ class VegaChartsMixin:
             For a line chart with just one line, this can be:
 
             - None, to use the default color.
-            - A hex string like "#ffaa00" or "#ffaa0088".
+            - A CSS color string supported by Streamlit's frontend color
+              parser, such as a named color, HEX, RGB(A), HSL(A), Lab, LCH,
+              OKLab, or OKLCH value.
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
@@ -703,8 +705,8 @@ class VegaChartsMixin:
             - The name of a column in the dataset. Data points will be grouped
               into lines of the same color based on the value of this column.
               In addition, if the values in this column match one of the color
-              formats above (hex string or color tuple), then that color will
-              be used.
+              formats above (CSS color string or color tuple), then that color
+              will be used.
 
               For example: if the dataset has 1000 rows, but this column only
               contains the values "adult", "child", and "baby", then those 1000
@@ -924,7 +926,9 @@ class VegaChartsMixin:
             For an area chart with just 1 series, this can be:
 
             - None, to use the default color.
-            - A hex string like "#ffaa00" or "#ffaa0088".
+            - A CSS color string supported by Streamlit's frontend color
+              parser, such as a named color, HEX, RGB(A), HSL(A), Lab, LCH,
+              OKLab, or OKLCH value.
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
@@ -940,8 +944,8 @@ class VegaChartsMixin:
             - The name of a column in the dataset. Data points will be grouped
               into series of the same color based on the value of this column.
               In addition, if the values in this column match one of the color
-              formats above (hex string or color tuple), then that color will
-              be used.
+              formats above (CSS color string or color tuple), then that color
+              will be used.
 
               For example: if the dataset has 1000 rows, but this column only
               contains the values "adult", "child", and "baby", then those 1000
@@ -1216,7 +1220,9 @@ class VegaChartsMixin:
             For a bar chart with just one series, this can be:
 
             - None, to use the default color.
-            - A hex string like "#ffaa00" or "#ffaa0088".
+            - A CSS color string supported by Streamlit's frontend color
+              parser, such as a named color, HEX, RGB(A), HSL(A), Lab, LCH,
+              OKLab, or OKLCH value.
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
@@ -1232,8 +1238,8 @@ class VegaChartsMixin:
             - The name of a column in the dataset. Data points will be grouped
               into series of the same color based on the value of this column.
               In addition, if the values in this column match one of the color
-              formats above (hex string or color tuple), then that color will
-              be used.
+              formats above (CSS color string or color tuple), then that color
+              will be used.
 
               For example: if the dataset has 1000 rows, but this column only
               contains the values "adult", "child", and "baby", then those 1000
@@ -1545,7 +1551,9 @@ class VegaChartsMixin:
             This can be:
 
             - None, to use the default color.
-            - A hex string like "#ffaa00" or "#ffaa0088".
+            - A CSS color string supported by Streamlit's frontend color
+              parser, such as a named color, HEX, RGB(A), HSL(A), Lab, LCH,
+              OKLab, or OKLCH value.
             - An RGB or RGBA tuple with the red, green, blue, and alpha
               components specified as ints from 0 to 255 or floats from 0.0 to
               1.0.
@@ -1557,7 +1565,8 @@ class VegaChartsMixin:
               datapoint will come from.
 
               If the values in this column are in one of the color formats
-              above (hex string or color tuple), then that color will be used.
+              above (CSS color string or color tuple), then that color will be
+              used.
 
               Otherwise, the color will be automatically picked from the
               default palette.

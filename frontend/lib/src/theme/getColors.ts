@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { darken, getLuminance, lighten, mix, transparentize } from "color2k"
-
+import { darken, getLuminance, lighten, mix, setAlpha } from "./colorUtils"
 import { BACKGROUND_ONLY_COLORS, NAMED_COLOR_CONFIG } from "./namedColors"
 import {
   DerivedColors,
@@ -31,19 +30,20 @@ export const computeDerivedColors = (
 
   const hasLightBg = getLuminance(bgColor) > 0.5
 
-  const fadedText05 = transparentize(bodyText, 0.9) // Mostly used for very faint 1px lines.
-  const fadedText10 = transparentize(bodyText, 0.8) // Mostly used for 1px lines.
-  const fadedText20 = transparentize(bodyText, 0.7) // Used for 1px lines.
-  const fadedText40 = transparentize(bodyText, 0.6) // Backgrounds.
-  const fadedText60 = transparentize(bodyText, 0.4) // Secondary text.
+  // Set absolute alpha values for faded text variants
+  const fadedText05 = setAlpha(bodyText, 0.1) // Mostly used for very faint 1px lines.
+  const fadedText10 = setAlpha(bodyText, 0.2) // Mostly used for 1px lines.
+  const fadedText20 = setAlpha(bodyText, 0.3) // Used for 1px lines.
+  const fadedText40 = setAlpha(bodyText, 0.4) // Backgrounds.
+  const fadedText60 = setAlpha(bodyText, 0.6) // Secondary text.
 
   const bgMix = mix(bgColor, secondaryBg, 0.5)
   const darkenedBgMix100 = hasLightBg
     ? darken(bgMix, 0.3)
     : lighten(bgMix, 0.6) // Icons.
   // TODO(tvst): Rename to darkenedBgMix25 (number = opacity)
-  const darkenedBgMix25 = transparentize(darkenedBgMix100, 0.75)
-  const darkenedBgMix15 = transparentize(darkenedBgMix100, 0.85) // Hovered menu/nav items.
+  const darkenedBgMix25 = setAlpha(darkenedBgMix100, 0.25)
+  const darkenedBgMix15 = setAlpha(darkenedBgMix100, 0.15) // Hovered menu/nav items.
 
   const lightenedBg05 = lighten(bgColor, 0.025) // Button, checkbox, radio background.
 
@@ -163,12 +163,12 @@ export function getThemeBackgroundColors(
     bluebg: colors.blueBackgroundColor,
     greenbg: colors.greenBackgroundColor,
     violetbg: colors.violetBackgroundColor,
-    purplebg: transparentize(
+    purplebg: setAlpha(
       colors[lightTheme ? "purple90" : "purple80"],
-      lightTheme ? 0.9 : 0.7
+      lightTheme ? 0.1 : 0.3
     ),
     graybg: colors.grayBackgroundColor,
-    primarybg: transparentize(colors.primary, lightTheme ? 0.9 : 0.7),
+    primarybg: setAlpha(colors.primary, lightTheme ? 0.1 : 0.3),
   }
 }
 

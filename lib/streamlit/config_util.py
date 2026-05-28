@@ -236,6 +236,18 @@ def _clean_paragraphs(txt: str) -> list[str]:
 # Theme configuration - theme.base support functions
 
 
+_THEME_COLOR_WARNING = (
+    "Expected formats: named CSS colors, hex, rgb(a), hsl(a), lab, lch, "
+    "oklab, and oklch colors"
+)
+_THEME_COLOR_ARRAY_WARNING = (
+    f"Theme option '%s[%s]' may be an invalid color: %s. {_THEME_COLOR_WARNING}"
+)
+_THEME_COLOR_VALUE_WARNING = (
+    f"Theme option '%s' may be an invalid color: %s. {_THEME_COLOR_WARNING}"
+)
+
+
 def _check_color_value(value: Any, option_name: str) -> None:
     """Validate theme color configuration option values.
 
@@ -287,8 +299,7 @@ def _check_color_value(value: Any, option_name: str) -> None:
             # Lightweight color validation with warning
             if not is_css_color_like(color_str):
                 logger.warning(
-                    "Theme option '%s[%s]' may be an invalid color: %s. "
-                    "Expected formats: hex, rgb, and rgba colors",
+                    _THEME_COLOR_ARRAY_WARNING,
                     option_name,
                     i,
                     color_str,
@@ -312,8 +323,7 @@ def _check_color_value(value: Any, option_name: str) -> None:
     # Lightweight color validation with warning
     if not is_css_color_like(value_str):
         logger.warning(
-            "Theme option '%s' may be an invalid color: %s. "
-            "Expected formats: hex, rgb, and rgba colors",
+            _THEME_COLOR_VALUE_WARNING,
             option_name,
             value_str,
         )

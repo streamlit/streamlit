@@ -17,8 +17,8 @@
 /** A mock theme definition for use in unit tests. */
 
 import { lightThemePrimitives } from "baseui"
-import { transparentize } from "color2k"
 
+import { setAlpha } from "~lib/theme/colorUtils"
 import { createBaseUiTheme } from "~lib/theme/createBaseUiTheme"
 import { createEmotionColors } from "~lib/theme/getColors"
 import { createShadows } from "~lib/theme/getShadows"
@@ -57,13 +57,13 @@ const requiredThemeColors = {
   grayColor: colors.gray60,
 
   // Default background theme colors (light theme)
-  redBackgroundColor: transparentize(colors.red80, 0.9),
-  orangeBackgroundColor: transparentize(colors.orange70, 0.9),
-  yellowBackgroundColor: transparentize(colors.yellow65, 0.9),
-  blueBackgroundColor: transparentize(colors.blue65, 0.9),
-  greenBackgroundColor: transparentize(colors.green70, 0.9),
-  violetBackgroundColor: transparentize(colors.purple60, 0.9),
-  grayBackgroundColor: transparentize(colors.gray85, 0.9),
+  redBackgroundColor: setAlpha(colors.red80, 0.1),
+  orangeBackgroundColor: setAlpha(colors.orange70, 0.1),
+  yellowBackgroundColor: setAlpha(colors.yellow65, 0.1),
+  blueBackgroundColor: setAlpha(colors.blue65, 0.1),
+  greenBackgroundColor: setAlpha(colors.green70, 0.1),
+  violetBackgroundColor: setAlpha(colors.purple60, 0.1),
+  grayBackgroundColor: setAlpha(colors.gray85, 0.1),
 
   // Default text theme colors (light theme)
   redTextColor: colors.red90,
@@ -72,7 +72,7 @@ const requiredThemeColors = {
   blueTextColor: colors.blue90,
   greenTextColor: colors.green90,
   violetTextColor: colors.purple90,
-  grayTextColor: transparentize(colors.gray85, 0.4),
+  grayTextColor: setAlpha(colors.gray85, 0.6),
 }
 
 interface OptionalThemeColors {

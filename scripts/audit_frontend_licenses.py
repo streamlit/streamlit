@@ -65,6 +65,7 @@ ACCEPTABLE_LICENSES = {
     "Apache*",
     "(MIT OR GPL-3.0-or-later)",
     "Apache-2.0 AND MIT",
+    "(BSD-3-Clause AND Apache-2.0)",  # Both are acceptable licenses
 }
 
 # Some of our dependencies have licenses that yarn fails to parse, but that
@@ -100,12 +101,6 @@ PACKAGE_EXCEPTIONS: set[PackageInfo] = {
         # MIT license: https://github.com/felixge/node-stack-trace/blob/master/License
         "stack-trace@npm:0.0.9",
         "UNKNOWN",
-    ),
-    (
-        # Licenses has a typo, is meant to be BSD-3-Clause
-        # https://github.com/luizbarboza/splaytree-ts/blob/master/LICENSE
-        "splaytree-ts@npm:1.0.2",
-        "BDS-3-Clause",
     ),
 }
 

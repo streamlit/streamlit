@@ -32,7 +32,6 @@ import {
 } from "react"
 
 import slugify from "@sindresorhus/slugify"
-import { parseToRgba } from "color2k"
 import { type Element, type Root as HastRoot } from "hast"
 import { omit, once } from "lodash-es"
 import type { Root as MdastRoot, Text } from "mdast"
@@ -61,6 +60,7 @@ import ErrorBoundary from "~lib/components/shared/ErrorBoundary/ErrorBoundary"
 import { InlineTooltipIcon } from "~lib/components/shared/TooltipIcon/TooltipIcon"
 import { useCrossOriginAttribute } from "~lib/hooks/useCrossOriginAttribute"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
+import { parseToRgba, UNPREFIXED_HEX_COLOR_RE } from "~lib/theme/colorUtils"
 import {
   getMarkdownTextColors,
   getThemeBackgroundColors,
@@ -677,21 +677,18 @@ function createRemarkHelpIcon() {
 }
 
 /**
- * Validates that a string is a valid CSS color value.
+ * Validates that a string is a supported CSS color value.
  * Accepts hex colors (#RGB, #RRGGBB, #RGBA, #RRGGBBAA), rgb(), rgba(), hsl(), hsla(),
- * and named colors.
+ * named colors, and chroma-js supported modern formats like lab(), lch(),
+ * oklab(), oklch(), and space-separated rgb()/hsl().
  *
  * @param color - The color string to validate
  * @returns true if the color is valid, false otherwise
  */
 export function isValidCssColor(color: string): boolean {
   if (!color) return false
-  try {
-    parseToRgba(color)
-    return true
-  } catch {
-    return false
-  }
+  if (UNPREFIXED_HEX_COLOR_RE.test(color)) return false
+  return parseToRgba(color) !== null
 }
 
 /**

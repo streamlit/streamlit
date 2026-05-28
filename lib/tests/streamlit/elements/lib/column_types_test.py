@@ -631,6 +631,11 @@ class ColumnTypesTest(unittest.TestCase):
         "#ffffffff",
         "rgb(255, 0, 0)",
         "rgba(0, 0, 0, 0.5)",
+        "hsl(0, 100%, 50%)",
+        "lab(50 40 -20)",
+        "oklch(0.21 0.01 260)",
+        "purple",
+        "transparent",
     ],
 )
 def test__validate_chart_color_valid(color: str) -> None:
@@ -641,8 +646,9 @@ def test__validate_chart_color_valid(color: str) -> None:
 @pytest.mark.parametrize(
     "color",
     [
-        "purple",
-        "hsl(0,0%,0%)",
+        "hwb(120 0% 0%)",
+        "color(srgb 1 0 0)",
+        "currentColor",
         "#12",
         "#12345",
         "#1234567",

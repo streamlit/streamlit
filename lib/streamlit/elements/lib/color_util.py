@@ -25,6 +25,177 @@ BUILTIN_COLOR_NAMES: Final[frozenset[str]] = frozenset(
     {"red", "orange", "yellow", "green", "blue", "violet", "gray", "grey", "primary"}
 )
 
+CHROMA_SUPPORTED_COLOR_FUNCTION_PREFIXES: Final[tuple[str, ...]] = (
+    "rgb(",
+    "rgba(",
+    "hsl(",
+    "hsla(",
+    "lab(",
+    "lch(",
+    "oklab(",
+    "oklch(",
+)
+
+CHROMA_SUPPORTED_NAMED_COLORS: Final[frozenset[str]] = frozenset(
+    {
+        "aliceblue",
+        "antiquewhite",
+        "aqua",
+        "aquamarine",
+        "azure",
+        "beige",
+        "bisque",
+        "black",
+        "blanchedalmond",
+        "blue",
+        "blueviolet",
+        "brown",
+        "burlywood",
+        "cadetblue",
+        "chartreuse",
+        "chocolate",
+        "coral",
+        "cornflowerblue",
+        "cornsilk",
+        "crimson",
+        "cyan",
+        "darkblue",
+        "darkcyan",
+        "darkgoldenrod",
+        "darkgray",
+        "darkgreen",
+        "darkgrey",
+        "darkkhaki",
+        "darkmagenta",
+        "darkolivegreen",
+        "darkorange",
+        "darkorchid",
+        "darkred",
+        "darksalmon",
+        "darkseagreen",
+        "darkslateblue",
+        "darkslategray",
+        "darkslategrey",
+        "darkturquoise",
+        "darkviolet",
+        "deeppink",
+        "deepskyblue",
+        "dimgray",
+        "dimgrey",
+        "dodgerblue",
+        "firebrick",
+        "floralwhite",
+        "forestgreen",
+        "fuchsia",
+        "gainsboro",
+        "ghostwhite",
+        "gold",
+        "goldenrod",
+        "gray",
+        "green",
+        "greenyellow",
+        "grey",
+        "honeydew",
+        "hotpink",
+        "indianred",
+        "indigo",
+        "ivory",
+        "khaki",
+        "laserlemon",
+        "lavender",
+        "lavenderblush",
+        "lawngreen",
+        "lemonchiffon",
+        "lightblue",
+        "lightcoral",
+        "lightcyan",
+        "lightgoldenrod",
+        "lightgoldenrodyellow",
+        "lightgray",
+        "lightgreen",
+        "lightgrey",
+        "lightpink",
+        "lightsalmon",
+        "lightseagreen",
+        "lightskyblue",
+        "lightslategray",
+        "lightslategrey",
+        "lightsteelblue",
+        "lightyellow",
+        "lime",
+        "limegreen",
+        "linen",
+        "magenta",
+        "maroon",
+        "maroon2",
+        "maroon3",
+        "mediumaquamarine",
+        "mediumblue",
+        "mediumorchid",
+        "mediumpurple",
+        "mediumseagreen",
+        "mediumslateblue",
+        "mediumspringgreen",
+        "mediumturquoise",
+        "mediumvioletred",
+        "midnightblue",
+        "mintcream",
+        "mistyrose",
+        "moccasin",
+        "navajowhite",
+        "navy",
+        "oldlace",
+        "olive",
+        "olivedrab",
+        "orange",
+        "orangered",
+        "orchid",
+        "palegoldenrod",
+        "palegreen",
+        "paleturquoise",
+        "palevioletred",
+        "papayawhip",
+        "peachpuff",
+        "peru",
+        "pink",
+        "plum",
+        "powderblue",
+        "purple",
+        "purple2",
+        "purple3",
+        "rebeccapurple",
+        "red",
+        "rosybrown",
+        "royalblue",
+        "saddlebrown",
+        "salmon",
+        "sandybrown",
+        "seagreen",
+        "seashell",
+        "sienna",
+        "silver",
+        "skyblue",
+        "slateblue",
+        "slategray",
+        "slategrey",
+        "snow",
+        "springgreen",
+        "steelblue",
+        "tan",
+        "teal",
+        "thistle",
+        "tomato",
+        "transparent",
+        "turquoise",
+        "violet",
+        "wheat",
+        "white",
+        "whitesmoke",
+        "yellow",
+        "yellowgreen",
+    }
+)
+
 # components go from 0.0 to 1.0
 # Supported by Pillow and pretty common.
 FloatRGBColorTuple: TypeAlias = tuple[float, float, float]
@@ -66,8 +237,9 @@ def to_int_color_tuple(color: MaybeColor) -> IntColorTuple:
 def to_css_color(color: MaybeColor) -> Color:
     """Convert input into a CSS-compatible color that Vega can use.
 
-    Inputs must be a hex string, rgb()/rgba() string, or a color tuple. Inputs may not be a CSS
-    color name, other CSS color function (like "hsl(...)"), etc.
+    Inputs must be a chroma-js supported CSS color string or a color tuple.
+    Unsupported CSS functions such as hwb() and color(<colorspace> ...) are
+    not supported.
 
     See tests for more info.
     """
@@ -87,15 +259,24 @@ def to_css_color(color: MaybeColor) -> Color:
 
 
 def is_css_color_like(color: MaybeColor) -> bool:
-    """Check whether the input looks like something Vega can use.
+    """Check whether the input looks like a chroma-js supported CSS color.
 
     This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
     to convert and see if an error is thrown.
 
-    NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
-    validate user input! Instead use is_hex_color_like and is_color_tuple_like.
+    Supported CSS string formats include hex, named colors, rgb(a), hsl(a),
+    lab, lch, oklab, and oklch colors. hwb() and color(<colorspace> ...) are
+    not supported by chroma-js.
     """
-    return is_hex_color_like(color) or _is_cssrgb_color_like(color)
+    if not isinstance(color, str):
+        return False
+
+    normalized_color = color.lower()
+    return (
+        is_hex_color_like(color)
+        or normalized_color in CHROMA_SUPPORTED_NAMED_COLORS
+        or normalized_color.startswith(CHROMA_SUPPORTED_COLOR_FUNCTION_PREFIXES)
+    )
 
 
 def is_hex_color_like(color: MaybeColor) -> bool:
@@ -110,18 +291,6 @@ def is_hex_color_like(color: MaybeColor) -> bool:
         and color[1:].isalnum()  # Alphanumeric
         and len(color) in {4, 5, 7, 9}
     )
-
-
-def _is_cssrgb_color_like(color: MaybeColor) -> bool:
-    """Check whether the input looks like a CSS rgb() or rgba() color string.
-
-    This is meant to be lightweight, and not a definitive answer. The definitive solution is to try
-    to convert and see if an error is thrown.
-
-    NOTE: We only accept hex colors and color tuples as user input. So do not use this function to
-    validate user input! Instead use is_hex_color_like and is_color_tuple_like.
-    """
-    return isinstance(color, str) and color.startswith(("rgb(", "rgba("))
 
 
 def is_color_tuple_like(color: MaybeColor) -> bool:
@@ -151,10 +320,6 @@ def is_color_like(color: MaybeColor) -> bool:
 
     This isn't meant to be a definitive answer. The definitive solution is to
     try to convert and see if an error is thrown.
-
-    NOTE: This does NOT include built-in color names (red, blue, etc.) because
-    those require special handling and cannot be converted via to_css_color().
-    Use is_builtin_color_name() separately when validating color parameter arguments.
     """
     return is_css_color_like(color) or is_color_tuple_like(color)
 

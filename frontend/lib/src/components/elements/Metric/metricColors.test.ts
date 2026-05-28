@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import { transparentize } from "color2k"
-
 import { Metric as MetricProto } from "@streamlit/protobuf"
 
+import { setAlpha } from "~lib/theme/colorUtils"
 import { darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 
 import {
@@ -113,7 +112,7 @@ describe("getMetricBackgroundColor", () => {
         lightTheme.emotion,
         MetricProto.MetricColor.PRIMARY
       )
-    ).toBe(transparentize(lightTheme.emotion.colors.primary, 0.9))
+    ).toBe(setAlpha(lightTheme.emotion.colors.primary, 0.1))
   })
 
   it("returns computed primary background color for dark theme", () => {
@@ -122,7 +121,7 @@ describe("getMetricBackgroundColor", () => {
         darkTheme.emotion,
         MetricProto.MetricColor.PRIMARY
       )
-    ).toBe(transparentize(darkTheme.emotion.colors.primary, 0.7))
+    ).toBe(setAlpha(darkTheme.emotion.colors.primary, 0.3))
   })
 })
 

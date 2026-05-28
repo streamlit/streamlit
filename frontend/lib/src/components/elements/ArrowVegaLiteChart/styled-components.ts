@@ -16,8 +16,8 @@
 
 import { CSSObject } from "@emotion/react"
 import styled from "@emotion/styled"
-import { transparentize } from "color2k"
 
+import { setAlpha } from "~lib/theme/colorUtils"
 import type { EmotionTheme } from "~lib/theme/types"
 
 export const StyledVegaLiteChartTooltips = (
@@ -29,7 +29,7 @@ export const StyledVegaLiteChartTooltips = (
     fontFamily: theme.genericFonts.bodyFont,
     color: theme.colors.bodyText,
     border: `${theme.sizes.borderWidth} solid ${theme.colors.borderColor}`,
-    backgroundColor: transparentize(theme.colors.bgColor, 0.05),
+    backgroundColor: setAlpha(theme.colors.bgColor, 0.95),
     fontSize: theme.fontSizes.twoSm,
     boxShadow: theme.shadows.tooltip,
     maxWidth: theme.sizes.maxChartTooltipWidth,

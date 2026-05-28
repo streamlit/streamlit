@@ -16,8 +16,8 @@
 
 import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
 import { MultiSelectCellType } from "@glideapps/glide-data-grid-cells"
-import { transparentize } from "color2k"
 
+import { setAlpha } from "~lib/theme/colorUtils"
 import {
   hasLightBackgroundColor,
   resolveNamedBackgroundColor,
@@ -73,10 +73,10 @@ export const prepareOptions = (
 
       if (option.color === "auto") {
         // If the color is "auto", we use a color from the configured categorical chart colors
-        resolvedColor = transparentize(
+        resolvedColor = setAlpha(
           categoricalColors[autoColorIndex % categoricalColors.length],
           // Add some transparency to make the colors better as background colors:
-          isLightTheme ? 0.7 : 0.6
+          isLightTheme ? 0.3 : 0.4
         )
 
         autoColorIndex += 1

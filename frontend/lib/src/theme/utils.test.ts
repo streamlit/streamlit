@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { darken, lighten, transparentize } from "color2k"
 import { getLogger } from "loglevel"
 import { MockInstance } from "vitest"
 
 import { CustomThemeConfig, ICustomThemeConfig } from "@streamlit/protobuf"
 
+import { darken, lighten, setAlpha } from "~lib/theme/colorUtils"
 import { baseTheme, darkTheme, lightTheme } from "~lib/theme/themeConfigs"
 import { ThemeConfig } from "~lib/theme/types"
 import {
@@ -506,44 +506,46 @@ describe("createTheme", () => {
     "lch(50 30 270)",
     "rgb(34 139 34)",
     "hsl(145 63% 49%)",
-    "hwb(120 0% 0%)",
   ]
 
-  const acceptedColors = new Set(modernThemeColors)
-
   it.each(modernThemeColors)(
-    "keeps accepted modern theme color syntax '%s'",
+    "keeps chroma-supported modern theme color syntax '%s'",
     color => {
-      class MockOption {
-        style = {
-          storedColor: "",
-          get color(): string {
-            return this.storedColor
-          },
-          set color(value: string) {
-            this.storedColor = acceptedColors.has(value) ? value : ""
-          },
-        }
-      }
+      const customTheme = createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({
+          backgroundColor: color,
+          primaryColor: color,
+        })
+      )
 
-      vi.stubGlobal("Option", MockOption)
+      expect(customTheme.emotion.colors.bgColor).toBe(color)
+      expect(customTheme.emotion.colors.primary).toBe(color)
+      expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
+      expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
+    }
+  )
 
-      try {
-        const customTheme = createTheme(
-          CUSTOM_THEME_NAME,
-          new CustomThemeConfig({
-            backgroundColor: color,
-            primaryColor: color,
-          })
-        )
+  it.each(["hwb(120 0% 0%)", "color(srgb 1 0 0)"])(
+    "rejects unsupported modern theme color syntax '%s'",
+    color => {
+      const logWarningSpy = vi.spyOn(LOG, "warn")
+      const customTheme = createTheme(
+        CUSTOM_THEME_NAME,
+        new CustomThemeConfig({
+          backgroundColor: color,
+          primaryColor: color,
+        })
+      )
 
-        expect(customTheme.emotion.colors.bgColor).toBe(color)
-        expect(customTheme.emotion.colors.primary).toBe(color)
-        expect(customTheme.emotion.colors.lightenedBg05).toBeTruthy()
-        expect(customTheme.emotion.colors.darkenedBgMix25).toBeTruthy()
-      } finally {
-        vi.unstubAllGlobals()
-      }
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for backgroundColor in theme: "${color}"`
+      )
+      expect(logWarningSpy).toHaveBeenCalledWith(
+        `Invalid color passed for primaryColor in theme: "${color}"`
+      )
+      expect(customTheme.emotion.colors.bgColor).not.toBe(color)
+      expect(customTheme.emotion.colors.primary).not.toBe(color)
     }
   )
 })
@@ -773,7 +775,6 @@ describe("isColor", () => {
   it("works with valid colors", () => {
     expect(isColor("#fff")).toBe(true)
     expect(isColor("#ffffff")).toBe(true)
-    expect(isColor("#ffffff0")).toBe(true)
     expect(isColor("#000")).toBe(true)
     expect(isColor("#000000")).toBe(true)
     expect(isColor("#fafafa")).toBe(true)
@@ -784,15 +785,24 @@ describe("isColor", () => {
     expect(isColor("rgb(-1, 0, -255)")).toBe(true)
     expect(isColor("rgba(0,0,0,.5)")).toBe(true)
     expect(isColor("hsl(120,50%,40%)")).toBe(true)
-    expect(isColor("hsl(120,50%,40%, .4)")).toBe(true)
-    expect(isColor("currentColor")).toBe(true)
+    expect(isColor("rgb(34 139 34)")).toBe(true)
+    expect(isColor("hsl(145 63% 49%)")).toBe(true)
+    expect(isColor("lab(50 40 -20)")).toBe(true)
+    expect(isColor("lch(50 30 270)")).toBe(true)
+    expect(isColor("oklab(0.5 0.1 -0.1)")).toBe(true)
+    expect(isColor("oklch(0.21 0.01 260)")).toBe(true)
   })
 
   it("works with invalid colors", () => {
+    expect(isColor("#ffffff0")).toBe(false)
     expect(isColor("fff")).toBe(false)
     expect(isColor("cookies are delicious")).toBe(false)
     expect(isColor("")).toBe(false)
     expect(isColor("hsl(120,50,40)")).toBe(false)
+    expect(isColor("hsl(120,50%,40%, .4)")).toBe(false)
+    expect(isColor("currentColor")).toBe(false)
+    expect(isColor("hwb(120 0% 0%)")).toBe(false)
+    expect(isColor("color(srgb 1 0 0)")).toBe(false)
   })
 })
 
@@ -1124,7 +1134,7 @@ describe("createEmotionTheme", () => {
     const theme = createEmotionTheme(themeInput)
 
     expect(theme.colors.borderColor).toBe("blue")
-    expect(theme.colors.borderColorLight).toBe(transparentize("blue", 0.55))
+    expect(theme.colors.borderColorLight).toBe(setAlpha("blue", 0.45))
     // Sets the dataframeBorderColor based on borderColor if dataframeBorderColor
     // not configured
     expect(theme.colors.dataframeBorderColor).toBe(
@@ -1237,25 +1247,25 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, lightTheme)
     expect(theme.colors.redBackgroundColor).toBe(
-      transparentize(theme.colors.red80, 0.9)
+      setAlpha(theme.colors.red80, 0.1)
     )
     expect(theme.colors.orangeBackgroundColor).toBe(
-      transparentize(theme.colors.orange70, 0.9)
+      setAlpha(theme.colors.orange70, 0.1)
     )
     expect(theme.colors.yellowBackgroundColor).toBe(
-      transparentize(theme.colors.yellow65, 0.9)
+      setAlpha(theme.colors.yellow65, 0.1)
     )
     expect(theme.colors.blueBackgroundColor).toBe(
-      transparentize(theme.colors.blue65, 0.9)
+      setAlpha(theme.colors.blue65, 0.1)
     )
     expect(theme.colors.greenBackgroundColor).toBe(
-      transparentize(theme.colors.green70, 0.9)
+      setAlpha(theme.colors.green70, 0.1)
     )
     expect(theme.colors.violetBackgroundColor).toBe(
-      transparentize(theme.colors.purple60, 0.9)
+      setAlpha(theme.colors.purple60, 0.1)
     )
     expect(theme.colors.grayBackgroundColor).toBe(
-      transparentize(theme.colors.gray85, 0.9)
+      setAlpha(theme.colors.gray85, 0.1)
     )
   })
 
@@ -1265,25 +1275,25 @@ describe("createEmotionTheme", () => {
     }
     const theme = createEmotionTheme(themeInput, darkTheme)
     expect(theme.colors.redBackgroundColor).toBe(
-      transparentize(theme.colors.red60, 0.8)
+      setAlpha(theme.colors.red60, 0.2)
     )
     expect(theme.colors.orangeBackgroundColor).toBe(
-      transparentize(theme.colors.orange80, 0.8)
+      setAlpha(theme.colors.orange80, 0.2)
     )
     expect(theme.colors.yellowBackgroundColor).toBe(
-      transparentize(theme.colors.yellow65, 0.8)
+      setAlpha(theme.colors.yellow65, 0.2)
     )
     expect(theme.colors.blueBackgroundColor).toBe(
-      transparentize(theme.colors.blue60, 0.8)
+      setAlpha(theme.colors.blue60, 0.2)
     )
     expect(theme.colors.greenBackgroundColor).toBe(
-      transparentize(theme.colors.green60, 0.8)
+      setAlpha(theme.colors.green60, 0.2)
     )
     expect(theme.colors.violetBackgroundColor).toBe(
-      transparentize(theme.colors.purple60, 0.8)
+      setAlpha(theme.colors.purple60, 0.2)
     )
     expect(theme.colors.grayBackgroundColor).toBe(
-      transparentize(theme.colors.gray70, 0.8)
+      setAlpha(theme.colors.gray70, 0.2)
     )
   })
 

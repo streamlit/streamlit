@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-import { getLuminance, transparentize } from "color2k"
-
+import { getLuminance, setAlpha } from "./colorUtils"
 import lightElevationShadows, {
   ElevationShadows,
 } from "./emotionBaseTheme/elevationShadows"
@@ -71,12 +70,12 @@ export const createShadows = (
   return {
     ...elevationShadows,
     // Primary focus ring - buttons, checkboxes, sliders, inputs
-    focusRing: `0 0 0 ${width} ${transparentize(colors.primary, 0.5)}`,
+    focusRing: `0 0 0 ${width} ${setAlpha(colors.primary, 0.5)}`,
     // Subtle focus ring - CodeBlock copy button
-    focusRingSubtle: `0 0 0 ${width} ${transparentize(colors.darkenedBgMix25, 0.5)}`,
+    focusRingSubtle: `0 0 0 ${width} ${setAlpha(colors.darkenedBgMix25, 0.5)}`,
     // Solid outline focus ring - FileUploader dropzone
     focusRingOutline: `0 0 0 1px ${colors.primary}`,
     // Muted focus ring - header link buttons
-    focusRingMuted: `0 0 0 ${width} ${transparentize(gray, 0.8)}`,
+    focusRingMuted: `0 0 0 ${width} ${setAlpha(gray, 0.2)}`,
   }
 }

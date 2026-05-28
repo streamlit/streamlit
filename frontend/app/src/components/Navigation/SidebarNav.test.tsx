@@ -602,6 +602,7 @@ describe("SidebarNav", () => {
 
     // isActive prop used to style background color, so check that
     expect(links[0]).toHaveStyle("background-color: rgba(0, 0, 0, 0)")
+    // The active page has a darkenedBgMix25 background (HSL-based color)
     expect(links[1]).toHaveStyle("background-color: rgba(151, 166, 195, 0.25)")
   })
 
