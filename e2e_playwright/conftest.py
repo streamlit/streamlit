@@ -955,8 +955,8 @@ font-src {app_url_for_endpoints}/static/fonts/ {app_url_for_endpoints}/static/me
                 </head>
                 <body style="height: 100%;">
                     <iframe
-                        src={src}
-                        id={_iframe_element_attrs.element_id or ""}
+                        src="{src}"
+                        id="{_iframe_element_attrs.element_id or ""}"
                         title="Iframed Streamlit App"
                         allow="clipboard-read; clipboard-write; microphone; camera;"
                         sandbox="allow-modals allow-popups allow-same-origin allow-scripts allow-downloads"
@@ -974,7 +974,6 @@ font-src {app_url_for_endpoints}/static/fonts/ {app_url_for_endpoints}/static/me
 
         def fulfill_iframe_request(route: Route) -> None:
             """Return as response an iframe that loads the actual Streamlit app."""
-
             browser = page.context.browser
             # webkit requires the iframe's parent to have "blob:" set, for example if we
             # want to download a CSV via the blob: url; Chrome seems to be more lax
@@ -1057,6 +1056,13 @@ def browser_type_launch_args(
             "args": [
                 "--use-fake-device-for-media-stream",
                 "--use-fake-ui-for-media-stream",
+                # Disable Private Network Access / Local Network Access checks that block
+                # WebSocket connections from iframe content to localhost in Chromium 148+.
+                # This is needed because the iframe tests load content from a fake server
+                # (localhost:1345) which then tries to connect via WebSocket to the
+                # Streamlit server on a different localhost port.
+                # https://developer.chrome.com/blog/private-network-access-update
+                "--disable-features=LocalNetworkAccessChecks,PrivateNetworkAccessSendPreflights",
             ],
         }
 
