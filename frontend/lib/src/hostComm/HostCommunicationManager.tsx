@@ -188,7 +188,7 @@ export default class HostCommunicationManager {
     return {
       stCommVersion: HOST_COMM_VERSION,
       ...message,
-    } as VersionedMessage<IGuestToHostMessage>
+    }
   }
 
   /**
