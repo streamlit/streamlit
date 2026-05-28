@@ -184,10 +184,10 @@ def decode_signed_value(
         decoded = serializer.loads(value, max_age=int(max_age_days * 86400))
         if isinstance(decoded, str):
             return decoded.encode("utf-8")
-        if isinstance(decoded, bytes):
+        if isinstance(decoded, bytes):  # pragma: no cover - defensive
             return decoded
         # Unexpected type from deserializer — treat as invalid
-        return None
+        return None  # pragma: no cover - defensive
     except (BadSignature, SignatureExpired, UnicodeDecodeError):
         return None
 
@@ -262,7 +262,9 @@ def decode_xsrf_token_string(
         # TODO(lukasmasuch): This is likely unused in Streamlit since only V2 tokens
         # are used. We might be able to just remove this part.
         token = binascii.a2b_hex(value.encode("ascii"))
-        if not token:
+        if (
+            not token
+        ):  # pragma: no cover - defensive, non-empty hex never decodes to empty
             return None, None
         # V1 tokens don't have an embedded timestamp, so we use current time
         # as a placeholder. This timestamp is informational only and not used

@@ -60,7 +60,7 @@ dev = [
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.38",
   # We fix ruff to a version to be in sync with the pre-commit hook:
-  "ruff==0.15.13",
+  "ruff==0.15.14",
   # We are pinning the upper version to not break our CI on updates,
   # and have dependabot handle the updates instead.
   "mypy>=1.16.1,<1.21",
@@ -246,6 +246,7 @@ ignore = [
   "PLR2004", # Checks for numerical values that could be put into a constant.
   "PLR6301", # Checks for methods that do not use self.
   "PLW0108", # Checks for lambdas that can be replaced by existing functions.
+  "PLW0717", # Checks for try clauses with too many statements (new in ruff 0.15.14).
   "PLW3201", # Checks for bad dunder method names.
   "PT012",   # Checks for pytest.raises context managers with multiple statements.
   "PT019",   # Checks for tests that should use @pytest.mark.usefixtures (incompatible with unittest.patch)
@@ -255,6 +256,7 @@ ignore = [
   "RSE102",  # Checks for unnecessary parentheses on raised exceptions.
   "RUF052",  # Checks for dummy variables that are used.
   "RUF067",  # Checks for non empty __init__ modules.
+  "RUF075",  # Checks for context managers that don't catch exceptions (new preview rule in ruff 0.15.14).
   "SIM105",  # Enforces use of contextlib.suppress.
   "SIM108",  # Enforces ternary operators instead of if-else.
   "SIM115",  # Enforces context manager for opening files.
