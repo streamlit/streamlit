@@ -40,7 +40,10 @@ export const StyledRadioGroup = styled(RARadioGroup, {
   display: "flex",
   flexDirection: $horizontal ? "row" : "column",
   flexWrap: "wrap",
-  alignItems: "start",
+  // Horizontal groups use `center` to match BaseWeb's default, which distributes
+  // the minElementHeight space evenly above and below the items. Vertical groups
+  // use `flex-start` so items stack from the top.
+  alignItems: $horizontal ? "center" : "flex-start",
   // Horizontal groups always use `lg` (16px) between items regardless of
   // captions, matching the effective spacing of the old BaseWeb implementation
   // (which combined a `sm` per-item marginRight with a `sm` group gap = 16px).
@@ -140,11 +143,15 @@ interface StyledRadioInnerProps {
 }
 
 /**
- * Inner circle of the radio button indicator. Fills `theme.colors.bgColor`
- * (adapts to dark mode) and changes size to express checked vs unchecked:
+ * Inner circle of the radio button indicator. Changes both size and colour
+ * to express checked vs unchecked:
  *
- * - Checked: 37.5% of outer diameter (small centre dot)
- * - Unchecked: outer − threeXS spacing (large fill leaving only a thin ring)
+ * - Checked: 37.5% of outer diameter (small centre dot), white so it is
+ *   visible against the primary-coloured outer circle in both light and dark
+ *   mode.
+ * - Unchecked: outer − threeXS spacing (large fill leaving only a thin ring),
+ *   `bgColor` so the fill blends with the page background, making only the
+ *   thin `borderColor` ring visible.
  *
  * Sizes are pixel-rounded to prevent uneven-border artifacts from fractional
  * rem-to-px conversions.
@@ -168,7 +175,7 @@ export const StyledRadioInner = styled.div<StyledRadioInnerProps>(
 
     return {
       borderRadius: "50%",
-      backgroundColor: theme.colors.bgColor,
+      backgroundColor: $isSelected ? theme.colors.white : theme.colors.bgColor,
       width: size,
       height: size,
     }
