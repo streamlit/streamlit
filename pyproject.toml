@@ -117,7 +117,7 @@ test = [
   # Playwright and E2E test dependencies:
   # We pin playwright to a minor version to avoid new browser versions breaking our CI.
   "playwright==1.60.*",
-  "pytest-playwright>=0.3.3",
+  "pytest-playwright>=0.8.0",
   "pixelmatch>=0.3.0",
   "pytest-xdist>=3.6.1",
   # pytest-rerunfailures 16.0 is breaking our CI:
