@@ -160,7 +160,7 @@ export function DeployDialog(
             <ListElement>For personal hobbies and learning</ListElement>
             <ListElement>Deploy unlimited public apps</ListElement>
             <ListElement>
-              Explore and learn from Streamlit's community and popular apps
+              Explore and learn from Streamlit’s community and popular apps
             </ListElement>
           </StyledDeployCardBody>
           <div>
@@ -202,7 +202,7 @@ export function DeployDialog(
               Deploy unlimited private apps with role-based sharing
             </ListElement>
             <ListElement>
-              Integrate with Snowflake's full data stack
+              Integrate with Snowflake’s full data stack
             </ListElement>
           </StyledDeployCardBody>
           <div>
