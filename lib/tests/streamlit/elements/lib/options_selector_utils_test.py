@@ -508,12 +508,12 @@ class TestCreateMappings:
 
     def test_create_mappings_raises_on_duplicate_string_options(self):
         """Duplicate string options should raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match="Duplicate options are not allowed"):
+        with pytest.raises(StreamlitAPIException, match="Duplicate option labels are not allowed"):
             create_mappings(["apple", "banana", "apple"])
 
     def test_create_mappings_raises_on_duplicate_labels_from_format_func(self):
         """Different values that format to the same label should raise StreamlitAPIException."""
-        with pytest.raises(StreamlitAPIException, match="Duplicate options are not allowed"):
+        with pytest.raises(StreamlitAPIException, match="Duplicate option labels are not allowed"):
             create_mappings([1, 2, 3], format_func=lambda _: "same")
 
 
