@@ -320,9 +320,11 @@ def create_mappings(
         formatted_option = format_func(option)
         if formatted_option in formatted_option_to_option_mapping:
             raise StreamlitAPIException(
-                f"Duplicate option labels are not allowed. "
-                f"The label '{formatted_option}' is used more than once. "
-                "Please make sure all options produce unique labels."
+                "Duplicate option labels are not allowed. "
+                f"The label '{formatted_option}' appears more than once. "
+                "Please ensure all options produce unique labels. "
+                "If you are using a custom format_func, ensure it returns a "
+                "unique string for every option."
             )
         formatted_options.append(formatted_option)
         formatted_option_to_option_mapping[formatted_option] = index
