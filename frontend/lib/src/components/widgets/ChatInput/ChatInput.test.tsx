@@ -924,7 +924,7 @@ describe("ChatInput widget", () => {
 
       // Verify the textarea is inside the chat input container.
       const rootElement = textarea.closest('[data-testid="stChatInput"]')
-      expect(rootElement).toBeInTheDocument()
+      expect(rootElement).toBeVisible()
     })
   })
 })
