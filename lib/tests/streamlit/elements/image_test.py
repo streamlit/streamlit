@@ -645,16 +645,17 @@ class ImageProtoTest(DeltaGeneratorTestCase):
 
         img = Image.new("RGB", (64, 64), color="red")
 
-        with pytest.raises(StreamlitAPIException) as exc_info:
-            st.image(img, link="pages/invalid.py")
+        st.image(img, link="pages/invalid.py")
 
-        assert "Could not find internal page" in str(exc_info.value)
+        el = self.get_delta_from_queue().new_element
+        assert el.imgs.link == "pages/invalid.py"
+        assert el.imgs.is_internal is False
 
     @mock.patch("streamlit.elements.image.get_script_run_ctx")
     @mock.patch("streamlit.elements.image.get_main_script_directory")
     @mock.patch("os.path.realpath")
     def test_st_image_with_valid_internal_link(self, mock_realpath, mock_get_main_script_dir, mock_get_script_run_ctx):
-        """Testa se st.image configura as propriedades corretas para um link interno válido (Happy Path)."""
+        """Tests if st.image sets the correct properties for a valid internal link (Happy Path)."""
         mock_ctx = mock.MagicMock()
         mock_ctx.main_script_path = "/root/main.py"
         mock_ctx.pages_manager.get_pages.return_value = {

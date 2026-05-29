@@ -249,27 +249,35 @@ class ImageMixin:
                     main_script_dir = get_main_script_directory(ctx.main_script_path)
                     requested_page = os.path.realpath(normalize_path_join(main_script_dir, link))
 
-                    page_found = False
+                    matched_page = None
+                    # Exact correspondence by script_path
                     for page_data in all_app_pages.values():
-                        if requested_page == page_data["script_path"]:
-                            page_found = True
-                            # Overwrite the link with the internal routing path
-                            image_list_proto.link = page_data["url_pathname"]
-                            image_list_proto.page_script_hash = page_data["page_script_hash"]
-                            break
-                        if link.strip("/") == page_data.get("url_pathname", "").strip("/"):
-                            page_found = True
-                            image_list_proto.link = page_data["url_pathname"]
-                            image_list_proto.page_script_hash = page_data["page_script_hash"]
+                        if requested_page == os.path.realpath(page_data.get("script_path", "")):
+                            matched_page = page_data
                             break
 
-                    if page_found:
+                    # Fallback to matching by url_pathname
+                    if matched_page is None:
+                        normalized_link = link.strip("/")
+                        for page_data in all_app_pages.values():
+                            page_url = page_data.get("url_pathname", "").strip("/")
+                            if normalized_link == page_url:
+                                matched_page = page_data
+                                break
+
+                    if matched_page is not None:
+                        url_pathname = matched_page["url_pathname"] or "/"
+                        image_list_proto.link = url_pathname
+                        image_list_proto.page_script_hash = matched_page["page_script_hash"]
                         image_list_proto.is_internal = True
                     else:
-                        raise StreamlitAPIException(
-                            f"Could not find internal page: '{link}'. "
-                            "Please provide a valid internal page path or an external URL."
-                        )
+                        # If page is not found, treat it as a standard relative link
+                        image_list_proto.link = link
+                        image_list_proto.is_internal = False
+                else:
+                    # If there is no script run context
+                    image_list_proto.link = link
+                    image_list_proto.is_internal = False
 
         return self.dg._enqueue("imgs", image_list_proto, layout_config=layout_config)
 

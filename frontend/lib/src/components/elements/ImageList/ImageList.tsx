@@ -101,11 +101,12 @@ const Image = ({
   isInternal?: boolean
   pageScriptHash?: string
 }): ReactElement => {
-  const { onPageChange } = useContext(NavigationContext)
+  const navContext = useContext(NavigationContext)
+  const onPageChange = navContext?.onPageChange
   const crossOrigin = useCrossOriginAttribute(image.url)
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>): void => {
-    if (isInternal && pageScriptHash) {
+    if (isInternal && pageScriptHash && onPageChange) {
       e.preventDefault()
       onPageChange(pageScriptHash)
     }

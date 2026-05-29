@@ -28,7 +28,7 @@ message Image {
 message ImageList {
   repeated Image imgs = 1;
 
-  // External URL to open when the image is clicked.
+  // URL to open when the image is clicked. Can be an external URL or an internal application path.
   // Only supported when there is exactly one image in the list.
   string link = 3;
 
