@@ -273,7 +273,11 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
   }, [updateScrollState])
 
   useEffect(() => {
-    updateScrollState()
+    // React Aria's Collection-based rendering may add tab DOM nodes in a
+    // subsequent microtask/frame, so scrollWidth can still equal clientWidth
+    // on the synchronous effect run. Schedule via rAF so layout is finalised
+    // before we measure overflow.
+    const rafId = requestAnimationFrame(updateScrollState)
 
     // If tab # changes, match the selected tab label, otherwise default to first tab.
     // When isPassivelyKeyed, prefer the stored label over the tracked ref value.
@@ -282,7 +286,7 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       if (persisted) {
         setActiveTabKey(persisted.index)
         activeTabNameRef.current = persisted.label
-        return
+        return () => cancelAnimationFrame(rafId)
       }
     }
 
@@ -299,7 +303,8 @@ function Tabs(props: Readonly<TabProps>): ReactElement {
       }
     }
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- TODO: Update to match React best practices
+    return () => cancelAnimationFrame(rafId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: only re-run when tab count changes; other deps are stable across renders
   }, [node.children.length, updateScrollState])
 
   const handleSelectionChange = useCallback(

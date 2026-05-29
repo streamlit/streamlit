@@ -95,7 +95,13 @@ export const StyledTabsRoot = styled(RATabs)({
 /** Tab list strip with bottom border separator. overflow-y: clip (the official RAC
  * recommendation) prevents a Y-scroll container from being created while still
  * allowing the absolutely-positioned SelectionIndicator inside each Tab to be visible,
- * because the indicator is within the tab's own height — not overflowing the tablist. */
+ * because the indicator is within the tab's own height — not overflowing the tablist.
+ *
+ * The gray base line is rendered as an ::after pseudo-element (position:absolute,
+ * z-index:-1) so that the SelectionIndicator inside each Tab paints on top of it,
+ * creating a single integrated line (colored under the active tab, gray elsewhere).
+ * Using position:relative + z-index:0 on the tablist creates an explicit stacking
+ * context so z-index:-1 on ::after is scoped here, not to the document root. */
 export const StyledTabList = styled(RATabList, {
   shouldForwardProp: prop => prop !== "$isStale",
 })<{ $isStale: boolean }>(({ theme, $isStale }) => ({
@@ -105,7 +111,20 @@ export const StyledTabList = styled(RATabList, {
   overflowY: "clip",
   scrollbarWidth: "none",
   "&::-webkit-scrollbar": { display: "none" },
-  borderBottom: `${theme.spacing.threeXS} solid ${theme.colors.borderColorLight}`,
+  position: "relative",
+  zIndex: 0,
+  "::after": {
+    content: '""',
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: theme.spacing.threeXS,
+    backgroundColor: theme.colors.borderColorLight,
+    borderRadius: theme.spacing.threeXS,
+    zIndex: -1,
+    pointerEvents: "none",
+  },
   ...($isStale ? STALE_STYLES : {}),
 }))
 
@@ -133,6 +152,7 @@ export const StyledTab = styled(RATab, {
     width: "100%",
     height: theme.spacing.threeXS,
     backgroundColor: "transparent",
+    borderRadius: theme.spacing.threeXS,
     transition: "translate 200ms, background-color 200ms",
     "@media (prefers-reduced-motion: reduce)": {
       transition: "none",
