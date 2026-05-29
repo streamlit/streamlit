@@ -35,6 +35,12 @@ cd "$CLAUDE_PROJECT_DIR" 2>/dev/null || cd "$CURSOR_PROJECT_DIR" 2>/dev/null || 
     echo "Error: Cannot find project directory" >&2
     exit 1
 }
+
+# Skip if make is not available (e.g. Windows without make installed)
+if ! command -v make &>/dev/null; then
+    exit 0
+fi
+
 OUTPUT=$(FAST_CHECK=true make check 2>&1)
 EXIT_CODE=$?
 
