@@ -26,11 +26,10 @@ export const StyledTextInput = styled.div`
 interface StyledInputRootProps {
   $isFocused: boolean
   $hasIcon: boolean
-  $isDisabled: boolean
 }
 
 export const StyledInputRoot = styled.div<StyledInputRootProps>(
-  ({ theme, $isFocused, $hasIcon, $isDisabled }) => {
+  ({ theme, $isFocused, $hasIcon }) => {
     const borderColor = getBorderColor(theme.colors, $isFocused)
     return {
       display: "flex",
@@ -43,7 +42,6 @@ export const StyledInputRoot = styled.div<StyledInputRootProps>(
       backgroundColor: theme.colors.secondaryBg,
       paddingLeft: $hasIcon ? theme.spacing.sm : 0,
       overflow: "hidden",
-      opacity: $isDisabled ? 0.4 : 1,
     }
   }
 )
@@ -55,7 +53,7 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   background: "transparent",
   outline: "none",
   color: theme.colors.bodyText,
-  fontFamily: theme.fonts.sansSerif,
+  fontFamily: theme.genericFonts.bodyFont,
   fontSize: theme.fontSizes.sm,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.inputWidget,
@@ -64,7 +62,14 @@ export const StyledInputElement = styled(RAInput)(({ theme }) => ({
   paddingLeft: theme.spacing.md,
   paddingRight: theme.spacing.sm,
   "::placeholder": { color: theme.colors.fadedText60 },
-  "&[disabled]": { cursor: "not-allowed" },
+  "&[disabled]": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+    // Override browser's -webkit-text-fill-color which takes precedence over color
+    WebkitTextFillColor: theme.colors.fadedText40,
+    // Prevent browsers from applying a gray background to disabled inputs
+    backgroundColor: "transparent",
+  },
 }))
 
 interface StyledStartEnhancerProps {
@@ -90,7 +95,7 @@ export const StyledPasswordToggle = styled.button(({ theme }) => ({
   border: "none",
   cursor: "pointer",
   padding: `0 ${theme.spacing.sm}`,
-  color: theme.colors.fadedText60,
+  color: theme.colors.bodyText,
   flexShrink: 0,
-  "&:hover": { color: theme.colors.bodyText },
+  "&:hover": { opacity: 0.7 },
 }))

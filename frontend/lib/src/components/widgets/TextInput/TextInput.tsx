@@ -190,7 +190,6 @@ function TextInput({
           data-testid="stTextInputRootElement"
           $isFocused={focused}
           $hasIcon={!!icon}
-          $isDisabled={disabled}
         >
           {icon && (
             <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
