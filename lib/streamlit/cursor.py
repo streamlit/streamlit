@@ -346,8 +346,12 @@ class LockedCursor(Cursor):
         return self
 
     def open_block(self) -> RunningCursor:
-        """LockedCursors cannot open blocks — they represent a fixed position."""
-        raise RuntimeError(
-            "Cannot open a block on a LockedCursor. "
-            "Use a RunningCursor to create child blocks."
+        """Create a child cursor for a new block from this locked position.
+
+        Returns a new RunningCursor whose parent_path includes this cursor's
+        index. The LockedCursor itself is not modified since it's immutable.
+        """
+        return RunningCursor(
+            root_container=self._root_container,
+            parent_path=(*self._parent_path, self._index),
         )

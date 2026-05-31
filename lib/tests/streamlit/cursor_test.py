@@ -270,11 +270,14 @@ class TestLockedCursor:
         assert locked == cursor
         assert cursor.index == 5  # Index doesn't change
 
-    def test_open_block_raises(self) -> None:
-        """Test open_block from LockedCursor raises RuntimeError."""
-        cursor = LockedCursor(RootContainer.MAIN, index=5)
-        with pytest.raises(RuntimeError, match="Cannot open a block"):
-            cursor.open_block()
+    def test_open_block(self) -> None:
+        """Test open_block from LockedCursor creates a child RunningCursor."""
+        cursor = LockedCursor(RootContainer.MAIN, parent_path=(1, 2), index=5)
+        child = cursor.open_block()
+        assert isinstance(child, RunningCursor)
+        assert child.root_container == RootContainer.MAIN
+        assert child.parent_path == (1, 2, 5)
+        assert child.index == 0
 
 
 class TestRunningCursorDeepcopy:
