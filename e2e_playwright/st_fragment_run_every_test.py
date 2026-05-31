@@ -18,6 +18,14 @@ from e2e_playwright.shared.app_utils import click_checkbox, get_element_by_key
 
 
 def test_fragment_runs_at_interval(app: Page):
+    """Verify run_every fragments update at regular intervals without exceptions.
+
+    Also serves as regression test for issue #15374: TypeError in
+    _run_with_thread_state when using @st.fragment(run_every=...).
+    """
+    # No exceptions should occur on initial load or during fragment runs.
+    expect(app.get_by_test_id("stException")).to_have_count(0)
+
     fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
 
     assert fragment_text is not None
@@ -27,6 +35,8 @@ def test_fragment_runs_at_interval(app: Page):
         expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(fragment_text)
         fragment_text = app.get_by_test_id("stMarkdown").first.text_content()
         assert fragment_text is not None
+        # Regression check: no exceptions should occur during fragment reruns.
+        expect(app.get_by_test_id("stException")).to_have_count(0)
 
 
 def test_nested_fragment_run_every_can_hide_without_crash(app: Page):
