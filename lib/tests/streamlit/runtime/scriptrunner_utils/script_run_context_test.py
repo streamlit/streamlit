@@ -462,4 +462,3 @@ class ScriptRunContextTest(unittest.TestCase):
         t.run("test_arg")
 
         assert received_args == ["test_arg"]
-
