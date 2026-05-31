@@ -434,3 +434,76 @@ class ScriptRunContextTest(unittest.TestCase):
         assert parent_ts.fragment_id == "parent_fragment"
         assert parent_ts.delta_path == (1, 2, 3)
         assert parent_ts.active_script_hash == "parent_hash"
+
+    def test_run_with_thread_state_wrapper_accepts_positional_args(self):
+        """The _run_with_thread_state wrapper correctly handles positional
+        arguments that may be passed by Python's threading machinery.
+
+        Regression test for GitHub issue #15374 where @st.fragment(run_every=...)
+        would fail with: TypeError: _run_with_thread_state() takes 0 positional
+        arguments but 1 was given.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(fragment_id="parent_fragment")
+
+        captured: dict[str, object] = {}
+
+        class ThreadWithArgsInRun(threading.Thread):
+            """Custom Thread subclass with a run() that accepts extra args."""
+
+            def __init__(self):
+                super().__init__()
+                self._original_run_called_with_args: tuple[object, ...] = ()
+
+            def run(self, *args: object, **kwargs: object) -> None:
+                self._original_run_called_with_args = args
+                captured["thread_state_initialized"] = True
+                try:
+                    captured["fragment_id"] = ThreadState.get().fragment_id
+                except RuntimeError:
+                    captured["fragment_id"] = "NOT_INITIALIZED"
+
+        t = ThreadWithArgsInRun()
+        add_script_run_ctx(t, ctx)
+        t.start()
+        t.join()
+
+        assert captured.get("thread_state_initialized") is True
+        assert captured.get("fragment_id") == "parent_fragment"
+
+    def test_run_with_thread_state_wrapper_no_typeerror_on_start(self):
+        """Starting a thread attached via add_script_run_ctx must not raise
+        TypeError regardless of how Python's threading internals invoke run().
+
+        This is a focused regression test for GitHub issue #15374.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(fragment_id="test_fragment")
+
+        errors: list[Exception] = []
+        executed: list[bool] = []
+
+        def target() -> None:
+            try:
+                executed.append(True)
+                ThreadState.get()
+            except Exception as e:
+                errors.append(e)
+
+        t = threading.Thread(target=target)
+        add_script_run_ctx(t, ctx)
+
+        try:
+            t.start()
+            t.join()
+        except TypeError as e:
+            errors.append(e)
+
+        assert len(errors) == 0, f"Thread raised error: {errors}"
+        assert len(executed) == 1, "Thread target was not executed"
