@@ -435,3 +435,35 @@ class ScriptRunContextTest(unittest.TestCase):
         assert parent_ts.delta_path == (1, 2, 3)
         assert parent_ts.active_script_hash == "parent_hash"
 
+    def test_run_wrapper_accepts_positional_args(self):
+        """The _run_with_thread_state wrapper must accept positional arguments.
+
+        Regression test for GitHub issue #15374: some threading patterns call
+        thread.run() with positional arguments. The wrapper installed by
+        add_script_run_ctx must handle this gracefully to avoid TypeError.
+        """
+        pages_manager = PagesManager("/main/script/path")
+        pages_manager.set_pages({})
+        ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
+
+        ThreadState.initialize(fragment_id="test_fragment")
+
+        received_args: list[object] = []
+
+        class ThreadWithRunArgs(threading.Thread):
+            """Thread subclass whose run() accepts extra arguments."""
+
+            def run(self, *args: object) -> None:
+                received_args.extend(args)
+
+        t = ThreadWithRunArgs()
+        add_script_run_ctx(t, ctx)
+
+        # Directly invoke the wrapped run() with a positional arg.
+        # This simulates threading patterns that pass arguments to run().
+        # Before the fix, this raised: TypeError: _run_with_thread_state()
+        # takes 0 positional arguments but 1 was given
+        t.run("test_arg")
+
+        assert received_args == ["test_arg"]
+
