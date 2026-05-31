@@ -417,7 +417,7 @@ def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> L
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
