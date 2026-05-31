@@ -283,13 +283,13 @@ class RunningCursor(Cursor):
         self._advance()
         return child
 
-    def __getstate__(self) -> dict:
+    def __getstate__(self) -> dict[str, object]:
         """Return state for pickling, excluding the unpicklable lock."""
         state = self.__dict__.copy()
         del state["_owner_lock"]
         return state
 
-    def __setstate__(self, state: dict) -> None:
+    def __setstate__(self, state: dict[str, object]) -> None:
         """Restore state after unpickling, recreating lock and resetting owner."""
         self.__dict__.update(state)
         self._owner_lock = threading.Lock()
