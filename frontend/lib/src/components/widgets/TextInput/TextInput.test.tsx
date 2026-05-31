@@ -571,6 +571,267 @@ describe("TextInput widget", () => {
   })
 })
 
+describe("TextInput validation (email/url types)", () => {
+  beforeEach(() => {
+    vi.spyOn(UseResizeObserver, "useResizeObserver").mockReturnValue({
+      elementRef: { current: null },
+      values: [190],
+    })
+  })
+
+  it("shows error immediately for pre-filled invalid email default", () => {
+    const props = getProps({
+      type: TextInputProto.Type.EMAIL,
+      default: "not-an-email",
+    })
+    // Pre-populate widget manager to simulate a server-sent initial value
+    props.widgetMgr.setStringValue(
+      props.element,
+      "not-an-email",
+      { fromUi: false },
+      undefined
+    )
+    render(<TextInput {...props} />)
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+  })
+
+  it("shows error tooltip and blocks commit for invalid email", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "notanemail")
+    await user.tab()
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).not.toHaveBeenCalledWith(
+      props.element,
+      "notanemail",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("commits valid email and shows no error", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "user@example.com")
+    await user.tab()
+
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "user@example.com",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("shows error for email without a dot in the domain (e.g. user@localhost)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "user@localhost")
+    await user.tab()
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+  })
+
+  it("shows error tooltip for invalid URL on commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.URL })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, ":::bad")
+    await user.tab()
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+  })
+
+  it("shows error for bare value with no dot and no scheme (e.g. 'something')", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.URL })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "something")
+    await user.tab()
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+  })
+
+  it("accepts non-http scheme URL as-is (e.g. 'ftp://files.example.com')", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.URL })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "ftp://files.example.com")
+    await user.tab()
+
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "ftp://files.example.com",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("accepts URL with explicit scheme even without a dot (e.g. 'http://localhost')", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.URL })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "http://localhost")
+    await user.tab()
+
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "http://localhost",
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("normalizes bare domain URL to https:// and commits", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.URL })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "google.com")
+    await user.tab()
+
+    expect(textInput).toHaveValue("https://google.com")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "https://google.com",
+      { fromUi: true },
+      undefined
+    )
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("does not show error for empty value committed from email input", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    // Pre-fill with invalid email so we can clear it to empty
+    props.widgetMgr.setStringValue(
+      props.element,
+      "notanemail",
+      { fromUi: false },
+      undefined
+    )
+    render(<TextInput {...props} />)
+
+    // Initially has error
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+
+    // Clear the field → empty string is always valid
+    const textInput = screen.getByRole("textbox")
+    await user.clear(textInput)
+    await user.tab()
+
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("clears error when user starts typing after invalid commit", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "notanemail")
+    await user.tab()
+
+    expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()
+
+    // Focus and type a character — error clears immediately
+    await user.click(textInput)
+    await user.keyboard("a")
+
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+  })
+
+  it("hides InputInstructions when there is a validation error", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "notanemail")
+    await user.tab()
+
+    // Re-focus: instructions would normally appear, but error suppresses them
+    await user.click(textInput)
+
+    expect(screen.queryByTestId("InputInstructions")).not.toBeInTheDocument()
+  })
+
+  it("sets aria-invalid on input when there is a validation error", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.EMAIL })
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    expect(textInput).not.toHaveAttribute("aria-invalid", "true")
+
+    await user.type(textInput, "notanemail")
+    await user.tab()
+
+    expect(textInput).toHaveAttribute("aria-invalid", "true")
+  })
+
+  it("does not validate tel type — any value is committed", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.TEL })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const textInput = screen.getByRole("textbox")
+    await user.type(textInput, "not-a-real-phone-abc")
+    await user.tab()
+
+    expect(
+      screen.queryByTestId("stTooltipErrorHoverTarget")
+    ).not.toBeInTheDocument()
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledWith(
+      props.element,
+      "not-a-real-phone-abc",
+      { fromUi: true },
+      undefined
+    )
+  })
+})
+
 describe("TextInput query param binding", () => {
   it("registers query param binding on mount when queryParamKey is set", () => {
     const props = getProps({ queryParamKey: "my_text" })
