@@ -459,10 +459,6 @@ class ScriptRunContextTest(unittest.TestCase):
         t = ThreadWithRunArgs()
         add_script_run_ctx(t, ctx)
 
-        # Directly invoke the wrapped run() with a positional arg.
-        # This simulates threading patterns that pass arguments to run().
-        # Before the fix, this raised: TypeError: _run_with_thread_state()
-        # takes 0 positional arguments but 1 was given
         t.run("test_arg")
 
         assert received_args == ["test_arg"]
