@@ -175,12 +175,13 @@ export function areDataFramePinnedColumnsTooWide(
   for (let columnIndex = 0; columnIndex < freezeColumns; columnIndex++) {
     const columnBounds = dataEditor.getBounds(columnIndex, -1)
     if (!columnBounds) {
-      return false
+      return true
     }
     pinnedColumnsWidth += columnBounds.width
   }
 
-  return pinnedColumnsWidth > containerWidth * 0.6
+  const MAX_PINNED_WIDTH_RATIO = 0.6
+  return pinnedColumnsWidth > containerWidth * MAX_PINNED_WIDTH_RATIO
 }
 
 /**

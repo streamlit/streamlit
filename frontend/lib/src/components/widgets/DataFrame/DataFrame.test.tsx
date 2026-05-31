@@ -284,6 +284,21 @@ describe("DataFrame widget", () => {
     ).toBe(true)
   })
 
+  it("returns true when getBounds returns undefined for a pinned column", () => {
+    const container = document.createElement("div")
+    Object.defineProperty(container, "clientWidth", { value: 600 })
+
+    expect(
+      areDataFramePinnedColumnsTooWide(
+        {
+          getBounds: vi.fn(() => undefined),
+        },
+        container,
+        1
+      )
+    ).toBe(true)
+  })
+
   it("keeps rendered pinned columns active when they fit", () => {
     const container = document.createElement("div")
     Object.defineProperty(container, "clientWidth", { value: 600 })
