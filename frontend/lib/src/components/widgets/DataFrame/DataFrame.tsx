@@ -698,7 +698,7 @@ function DataFrame({
   )
   const { onColumnMoved } = useColumnReordering(
     columns,
-    effectiveFreezeColumns,
+    freezeColumns,
     pinColumn,
     unpinColumn,
     setColumnOrder
