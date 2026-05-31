@@ -277,6 +277,46 @@ class TestLockedCursor:
             cursor.open_block()
 
 
+class TestRunningCursorDeepcopy:
+    def test_deepcopy_creates_independent_cursor(self) -> None:
+        """Test that deepcopy creates an independent cursor."""
+        from copy import deepcopy
+
+        cursor = RunningCursor(RootContainer.MAIN, parent_path=(1,))
+        cursor.lock_element()  # Claim ownership and advance
+
+        copied = deepcopy(cursor)
+        assert copied.root_container == cursor.root_container
+        assert copied.parent_path == cursor.parent_path
+        assert copied.index == cursor.index
+        # Ownership should be reset for the copy
+        assert copied._owner_ident is None
+
+    def test_deepcopy_resets_ownership(self) -> None:
+        """Test that deepcopy resets ownership so another thread can claim it."""
+        from copy import deepcopy
+
+        cursor = RunningCursor(RootContainer.MAIN)
+        cursor.lock_element()  # Claim from main thread
+
+        copied = deepcopy(cursor)
+        assert cursor._owner_ident == threading.get_ident()
+        assert copied._owner_ident is None  # Reset
+
+        # The copy can be claimed by a new thread
+        result: list[int | None] = []
+
+        def claim_copy() -> None:
+            copied.lock_element()
+            result.append(copied._owner_ident)
+
+        t = threading.Thread(target=claim_copy)
+        t.start()
+        t.join()
+
+        assert result[0] == t.ident
+
+
 class TestRunningCursorThreadOwnership:
     def test_check_owner_claims_on_first_use(self) -> None:
         """First call to _check_owner claims ownership for the calling thread."""
