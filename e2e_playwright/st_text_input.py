@@ -193,4 +193,8 @@ st.text_input(
 )
 st.write(f"Text input counter: {st.session_state.setvalue_counter}")
 
+st.text_input("text input 25 (type=email)", type="email")
+st.text_input("text input 26 (type=url)", type="url")
+st.text_input("text input 27 (type=tel)", type="tel")
+
 st.button("Trigger text input rerun")

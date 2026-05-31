@@ -124,6 +124,43 @@ describe("TextInput widget", () => {
     expect(showButton).toBeInTheDocument()
   })
 
+  it("toggles password visibility when show/hide button is clicked", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.PASSWORD })
+    render(<TextInput {...props} />)
+
+    const passwordInput = screen.getByPlaceholderText("Placeholder")
+    expect(passwordInput).toHaveAttribute("type", "password")
+
+    const showButton = screen.getByRole("button", { name: "Show password" })
+    await user.click(showButton)
+
+    expect(passwordInput).toHaveAttribute("type", "text")
+    expect(
+      screen.getByRole("button", { name: "Hide password" })
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Hide password" }))
+    expect(passwordInput).toHaveAttribute("type", "password")
+  })
+
+  it.each([
+    [TextInputProto.Type.EMAIL, "email"],
+    [TextInputProto.Type.URL, "url"],
+    [TextInputProto.Type.TEL, "tel"],
+  ])(
+    "sets correct HTML type attribute for specialized type %i → %s",
+    (protoType, expectedHtmlType) => {
+      const props = getProps({ type: protoType })
+      render(<TextInput {...props} />)
+      const input = screen.getByRole("textbox")
+      expect(input).toHaveAttribute("type", expectedHtmlType)
+      // No show/hide button for non-password types
+      const root = screen.getByTestId("stTextInputRootElement")
+      expect(within(root).queryByRole("button")).not.toBeInTheDocument()
+    }
+  )
+
   it("handles TextInputProto.autocomplete", () => {
     let props = getProps()
     const { unmount } = render(<TextInput {...props} />)

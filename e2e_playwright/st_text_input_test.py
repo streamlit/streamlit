@@ -15,6 +15,7 @@
 
 import re
 
+import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -36,7 +37,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 24
+TEXT_INPUT_ELEMENTS = 27
 
 
 def test_text_input_widget_rendering(
@@ -484,3 +485,19 @@ def test_text_input_setvalue_preserved_on_rerun(app: Page):
         wait_for_app_run(app)
         expect_markdown(app, f"Text input counter: {expected_counter}")
         expect(text_input_field).to_have_value("fixed_value")
+
+
+@pytest.mark.parametrize(
+    ("label", "expected_type"),
+    [
+        ("text input 25 (type=email)", "email"),
+        ("text input 26 (type=url)", "url"),
+        ("text input 27 (type=tel)", "tel"),
+    ],
+)
+def test_text_input_specialized_types(
+    app: Page, label: str, expected_type: str
+) -> None:
+    """Test that specialized input types set the correct HTML type attribute."""
+    input_field = get_text_input(app, label).locator("input").first
+    expect(input_field).to_have_attribute("type", expected_type)
