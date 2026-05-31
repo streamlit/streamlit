@@ -44,7 +44,11 @@ vi.mock("@glideapps/glide-data-grid", async () => ({
 // distribution. But the file picker most likely wouldn't work anyways in jest-dom.
 vi.mock("native-file-system-adapter", () => ({}))
 
-import DataFrame, { DataFrameProps } from "./DataFrame"
+import DataFrame, {
+  areDataFramePinnedColumnsTooWide,
+  DataFrameProps,
+  getDataFrameScrollbarState,
+} from "./DataFrame"
 
 const getProps = (
   data: Uint8Array,
@@ -215,5 +219,88 @@ describe("DataFrame widget", () => {
       }),
       {}
     )
+  })
+
+  it("detects scrollbars from the native Glide scroller", () => {
+    const container = document.createElement("div")
+    const scroller = document.createElement("div")
+    scroller.className = "dvn-scroller"
+    container.appendChild(scroller)
+
+    Object.defineProperty(scroller, "scrollWidth", { value: 500 })
+    Object.defineProperty(scroller, "clientWidth", { value: 250 })
+    Object.defineProperty(scroller, "scrollHeight", { value: 100 })
+    Object.defineProperty(scroller, "clientHeight", { value: 100 })
+
+    expect(getDataFrameScrollbarState(container)).toEqual({
+      hasHorizontalScroll: true,
+      hasVerticalScroll: false,
+    })
+  })
+
+  it("falls back to stack bounds when the native Glide scroller is missing", () => {
+    const container = document.createElement("div")
+    const stack = document.createElement("div")
+    stack.className = "dvn-stack"
+    stack.getBoundingClientRect = vi.fn(() => ({
+      width: 500,
+      height: 100,
+      x: 0,
+      y: 0,
+      top: 0,
+      right: 500,
+      bottom: 100,
+      left: 0,
+      toJSON: vi.fn(),
+    }))
+    container.appendChild(stack)
+
+    Object.defineProperty(container, "clientWidth", { value: 250 })
+    Object.defineProperty(container, "clientHeight", { value: 100 })
+
+    expect(getDataFrameScrollbarState(container)).toEqual({
+      hasHorizontalScroll: true,
+      hasVerticalScroll: false,
+    })
+  })
+
+  it("detects when rendered pinned columns take too much space", () => {
+    const container = document.createElement("div")
+    Object.defineProperty(container, "clientWidth", { value: 600 })
+
+    expect(
+      areDataFramePinnedColumnsTooWide(
+        {
+          getBounds: vi.fn(() => ({
+            width: 400,
+            height: 35,
+            x: 0,
+            y: 0,
+          })),
+        },
+        container,
+        1
+      )
+    ).toBe(true)
+  })
+
+  it("keeps rendered pinned columns active when they fit", () => {
+    const container = document.createElement("div")
+    Object.defineProperty(container, "clientWidth", { value: 600 })
+
+    expect(
+      areDataFramePinnedColumnsTooWide(
+        {
+          getBounds: vi.fn(() => ({
+            width: 300,
+            height: 35,
+            x: 0,
+            y: 0,
+          })),
+        },
+        container,
+        1
+      )
+    ).toBe(false)
   })
 })

@@ -121,6 +121,68 @@ export interface DataFrameProps {
   heightConfig?: streamlit.IHeightConfig | null
 }
 
+export function getDataFrameScrollbarState(container: HTMLElement): {
+  hasVerticalScroll: boolean
+  hasHorizontalScroll: boolean
+} {
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Existing usage */
+  const scroller = container.querySelector<HTMLElement>(".dvn-scroller")
+  if (scroller) {
+    const scrollbarState = {
+      hasVerticalScroll: scroller.scrollHeight > scroller.clientHeight,
+      hasHorizontalScroll: scroller.scrollWidth > scroller.clientWidth,
+    }
+    /* eslint-enable streamlit-custom/no-force-reflow-access */
+    return scrollbarState
+  }
+
+  // Fallback for older Glide markup where the scroller may not be available.
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Existing usage */
+  const scrollAreaBounds = container
+    .querySelector(".dvn-stack")
+    ?.getBoundingClientRect()
+
+  const scrollbarState = {
+    hasVerticalScroll: scrollAreaBounds
+      ? scrollAreaBounds.height > container.clientHeight
+      : false,
+    hasHorizontalScroll: scrollAreaBounds
+      ? scrollAreaBounds.width > container.clientWidth
+      : false,
+  }
+  /* eslint-enable streamlit-custom/no-force-reflow-access */
+  return scrollbarState
+}
+
+export function areDataFramePinnedColumnsTooWide(
+  dataEditor: Pick<DataEditorRef, "getBounds">,
+  container: HTMLElement,
+  freezeColumns: number
+): boolean {
+  if (freezeColumns === 0) {
+    return false
+  }
+
+  /* eslint-disable streamlit-custom/no-force-reflow-access -- Existing usage */
+  const containerWidth = container.clientWidth
+  /* eslint-enable streamlit-custom/no-force-reflow-access */
+
+  if (containerWidth <= 0) {
+    return false
+  }
+
+  let pinnedColumnsWidth = 0
+  for (let columnIndex = 0; columnIndex < freezeColumns; columnIndex++) {
+    const columnBounds = dataEditor.getBounds(columnIndex, -1)
+    if (!columnBounds) {
+      return false
+    }
+    pinnedColumnsWidth += columnBounds.width
+  }
+
+  return pinnedColumnsWidth > containerWidth * 0.6
+}
+
 /**
  * The main component used by dataframe & data_editor to render an editable table.
  *
@@ -178,6 +240,7 @@ function DataFrame({
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const {
+    width: measuredContainerWidth,
     height: measuredContainerHeight,
     elementRef: resizableContainerRef,
   } = useCalculatedDimensions()
@@ -619,11 +682,14 @@ function DataFrame({
   const { pinColumn, unpinColumn, freezeColumns } = useColumnPinning(
     columns,
     isEmptyTable,
-    containerWidth || 0,
+    measuredContainerWidth > 0 ? measuredContainerWidth : containerWidth || 0,
     gridTheme.minColumnWidth,
     clearSelection,
     setColumnConfigMapping
   )
+  const [hasOversizedPinnedColumns, setHasOversizedPinnedColumns] =
+    useState(false)
+  const effectiveFreezeColumns = hasOversizedPinnedColumns ? 0 : freezeColumns
   const { changeColumnFormat } = useColumnFormatting(setColumnConfigMapping)
   const { hideColumn, showColumn } = useColumnVisibility(
     clearSelection,
@@ -631,7 +697,7 @@ function DataFrame({
   )
   const { onColumnMoved } = useColumnReordering(
     columns,
-    freezeColumns,
+    effectiveFreezeColumns,
     pinColumn,
     unpinColumn,
     setColumnOrder
@@ -639,31 +705,20 @@ function DataFrame({
 
   const measureTableScrollbars = useCallback(() => {
     if (resizableContainerRef.current && dataEditorRef.current) {
-      // Get the bounds of the glide-data-grid scroll area (dvn-stack):
-      // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-      const scrollAreaBounds = resizableContainerRef.current
-        ?.querySelector(".dvn-stack")
-        ?.getBoundingClientRect()
+      const { hasVerticalScroll, hasHorizontalScroll } =
+        getDataFrameScrollbarState(resizableContainerRef.current)
 
-      // We might also be able to use the following as an alternative,
-      // but it seems to cause "Maximum update depth exceeded" when scrollbars
-      // are activated or deactivated.
-      // const scrollAreaBounds = dataEditorRef.current?.getBounds()
-      // Also see: https://github.com/glideapps/glide-data-grid/issues/784
-      if (scrollAreaBounds) {
-        setHasVerticalScroll(
-          scrollAreaBounds.height >
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-            resizableContainerRef.current.clientHeight
+      setHasVerticalScroll(hasVerticalScroll)
+      setHasHorizontalScroll(hasHorizontalScroll)
+      setHasOversizedPinnedColumns(
+        areDataFramePinnedColumnsTooWide(
+          dataEditorRef.current,
+          resizableContainerRef.current,
+          freezeColumns
         )
-        setHasHorizontalScroll(
-          scrollAreaBounds.width >
-            // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
-            resizableContainerRef.current.clientWidth
-        )
-      }
+      )
     }
-  }, [dataEditorRef, resizableContainerRef])
+  }, [dataEditorRef, freezeColumns, resizableContainerRef])
 
   const {
     clear: clearMeasureTableScrollbarsTimeout,
@@ -704,6 +759,7 @@ function DataFrame({
   }, [
     clearMeasureTableScrollbarsTimeout,
     glideColumns,
+    measuredContainerWidth,
     numRows,
     resizableContainerRef,
     resizableSize,
@@ -940,7 +996,7 @@ function DataFrame({
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
           // Freeze all index columns:
-          freezeColumns={freezeColumns}
+          freezeColumns={effectiveFreezeColumns}
           smoothScrollX={true}
           smoothScrollY={true}
           // Show borders between cells:
