@@ -297,7 +297,7 @@ class TestRunningCursorDeepcopy:
         from copy import deepcopy
 
         cursor = RunningCursor(RootContainer.MAIN)
-        cursor.lock_element()  # Claim from main thread
+        cursor._check_owner()  # Claim from main thread
 
         copied = deepcopy(cursor)
         assert cursor._owner_ident == threading.get_ident()
@@ -307,7 +307,7 @@ class TestRunningCursorDeepcopy:
         result: list[int | None] = []
 
         def claim_copy() -> None:
-            copied.lock_element()
+            copied._check_owner()
             result.append(copied._owner_ident)
 
         t = threading.Thread(target=claim_copy)
@@ -351,60 +351,3 @@ class TestRunningCursorThreadOwnership:
 
         assert error is not None
         assert "doesn't own it" in str(error)
-
-    def test_lock_element_enforces_ownership(self) -> None:
-        """lock_element raises RuntimeError from a non-owner thread."""
-        cursor = RunningCursor(RootContainer.MAIN)
-        cursor.lock_element()  # Claim from main thread
-
-        error: RuntimeError | None = None
-
-        def access_from_other_thread() -> None:
-            nonlocal error
-            try:
-                cursor.lock_element()
-            except RuntimeError as e:
-                error = e
-
-        t = threading.Thread(target=access_from_other_thread)
-        t.start()
-        t.join()
-
-        assert error is not None
-        assert "doesn't own it" in str(error)
-
-    def test_open_block_enforces_ownership(self) -> None:
-        """open_block raises RuntimeError from a non-owner thread."""
-        cursor = RunningCursor(RootContainer.MAIN)
-        cursor.open_block()  # Claim from main thread
-
-        error: RuntimeError | None = None
-
-        def access_from_other_thread() -> None:
-            nonlocal error
-            try:
-                cursor.open_block()
-            except RuntimeError as e:
-                error = e
-
-        t = threading.Thread(target=access_from_other_thread)
-        t.start()
-        t.join()
-
-        assert error is not None
-
-    def test_unclaimed_cursor_can_be_claimed_by_any_thread(self) -> None:
-        """A fresh cursor can be claimed by a worker thread."""
-        cursor = RunningCursor(RootContainer.MAIN)
-
-        result: list[int | None] = []
-
-        def claim_from_worker() -> None:
-            cursor.lock_element()
-            result.append(cursor._owner_ident)
-
-        t = threading.Thread(target=claim_from_worker)
-        t.start()
-        t.join()
-
-        assert result[0] == t.ident

@@ -260,7 +260,6 @@ class RunningCursor(Cursor):
         Returns a LockedCursor pointing at the current index. The
         RunningCursor advances to the next position.
         """
-        self._check_owner()
         locked = LockedCursor(
             root_container=self._root_container,
             parent_path=self._parent_path,
@@ -275,7 +274,6 @@ class RunningCursor(Cursor):
         Returns a new RunningCursor whose parent_path includes the current
         index. The parent RunningCursor advances to the next position.
         """
-        self._check_owner()
         child = RunningCursor(
             root_container=self._root_container,
             parent_path=(*self._parent_path, self._index),
