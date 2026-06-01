@@ -287,6 +287,21 @@ export const useVegaElementPreprocessor = (
   // We also include useContainerWidth/useContainerHeight booleans in the key because
   // transitioning to/from container-driven sizing (e.g., entering fullscreen) requires
   // a full view recreation to properly apply the new dimensions.
+  // Concat compositions (vconcat/hconcat/concat) bake per-child dimensions at
+  // view-creation time, which Vega's native resize API cannot update. For these
+  // charts we include the container dimensions in the key so a container-driven
+  // dimension change triggers a full view recreation (preserving correct
+  // resizing), instead of the native-resize fast path used for single-view charts.
+  const isConcatComposition =
+    "vconcat" in baseSpec || "hconcat" in baseSpec || "concat" in baseSpec
+  // Only concat compositions need container dimensions baked into the key. For
+  // single-view charts these stay `undefined`, so the memo below does not
+  // recompute on every resize (the native resize fast-path handles those).
+  const concatWidth =
+    isConcatComposition && useContainerWidth ? containerWidth : undefined
+  const concatHeight =
+    isConcatComposition && useContainerHeight ? containerHeight : undefined
+
   const baseSpecKey = useMemo(() => {
     // Only strip dimensions that are container-driven.
     // Fixed dimensions from the spec should be included in the key.
@@ -297,32 +312,21 @@ export const useVegaElementPreprocessor = (
     if (useContainerHeight) {
       delete specForKey.height
     }
-    // Concat compositions (vconcat/hconcat/concat) bake per-child dimensions at
-    // view-creation time, which Vega's native resize API cannot update. For these
-    // charts we include the container dimensions in the key so a container-driven
-    // dimension change triggers a full view recreation (preserving correct
-    // resizing), instead of the native-resize fast path used for single-view charts.
-    const isConcatComposition =
-      "vconcat" in baseSpec || "hconcat" in baseSpec || "concat" in baseSpec
     // Include the sizing mode flags so that transitioning to/from
     // container-driven sizing triggers a view recreation.
     return JSON.stringify({
       spec: specForKey,
       useContainerWidth,
       useContainerHeight,
-      concatWidth:
-        isConcatComposition && useContainerWidth ? containerWidth : undefined,
-      concatHeight:
-        isConcatComposition && useContainerHeight
-          ? containerHeight
-          : undefined,
+      concatWidth,
+      concatHeight,
     })
   }, [
     baseSpec,
     useContainerWidth,
     useContainerHeight,
-    containerWidth,
-    containerHeight,
+    concatWidth,
+    concatHeight,
   ])
 
   const spec = useMemo(
