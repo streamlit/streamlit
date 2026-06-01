@@ -19,16 +19,15 @@ from __future__ import annotations
 import ast
 import hashlib
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+import pytest
 
 from streamlit import util
 from streamlit.runtime.caching.cache_type import CacheType
 from streamlit.runtime.caching.cache_utils import _make_function_key, _make_value_key
 from streamlit.runtime.memory_media_file_storage import _calculate_file_id
 from streamlit.watcher.util import calc_hash_with_blocking_retries
-
-if TYPE_CHECKING:
-    import pytest
 
 _STREAMLIT_PACKAGE_ROOT = Path(__file__).parents[2] / "streamlit"
 _FIPS_SENSITIVE_HASHLIB_ALGORITHMS = {"md5", "sha1", "blake2b", "blake2s"}
@@ -60,7 +59,14 @@ class _HashlibCallVisitor(ast.NodeVisitor):
 
         for alias in node.names:
             local_name = alias.asname or alias.name
-            if alias.name == "new":
+            if alias.name == "*":
+                # A wildcard import pulls every public hashlib name into scope,
+                # including `new` and the FIPS-sensitive constructors, so track
+                # them all to keep the guard from being bypassed silently.
+                self.hashlib_new_aliases.add("new")
+                for algorithm in _FIPS_SENSITIVE_HASHLIB_ALGORITHMS:
+                    self.hash_constructor_aliases[algorithm] = algorithm
+            elif alias.name == "new":
                 self.hashlib_new_aliases.add(local_name)
             elif alias.name in _FIPS_SENSITIVE_HASHLIB_ALGORITHMS:
                 self.hash_constructor_aliases[local_name] = alias.name
@@ -134,7 +140,12 @@ class _HashlibCallVisitor(ast.NodeVisitor):
 
 
 def test_fips_sensitive_hashlib_calls_disable_security_use() -> None:
-    """Require explicit non-security use for FIPS-sensitive hashlib algorithms."""
+    """Require explicit non-security use for FIPS-sensitive hashlib algorithms.
+
+    The scan inspects static algorithm names only. Calls that build the
+    algorithm name dynamically (e.g. ``hashlib.new(algo_var)``) cannot be
+    resolved at parse time and are therefore not covered by this guard.
+    """
     violations: list[str] = []
 
     for path in _STREAMLIT_PACKAGE_ROOT.rglob("*.py"):
@@ -148,6 +159,35 @@ def test_fips_sensitive_hashlib_calls_disable_security_use() -> None:
         violations.extend(visitor.violations)
 
     assert violations == []
+
+
+@pytest.mark.parametrize(
+    ("source", "expect_violation"),
+    [
+        # Attribute access on the hashlib module.
+        ("import hashlib\nhashlib.md5(b'x')\n", True),
+        ("import hashlib\nhashlib.md5(b'x', usedforsecurity=False)\n", False),
+        # Aliased module and `hashlib.new` (positional and keyword).
+        ("import hashlib as h\nh.new('sha1', b'x')\n", True),
+        ("import hashlib\nhashlib.new(name='blake2b')\n", True),
+        # Names imported directly from hashlib.
+        ("from hashlib import blake2b\nblake2b(b'x')\n", True),
+        # Wildcard imports bring the constructors into scope too.
+        ("from hashlib import *\nblake2b(b'x')\n", True),
+        ("from hashlib import *\nblake2b(b'x', usedforsecurity=False)\n", False),
+        # Non-sensitive algorithms and dynamic names are not flagged.
+        ("import hashlib\nhashlib.sha256(b'x')\n", False),
+        ("import hashlib\nalgo = 'md5'\nhashlib.new(algo)\n", False),
+    ],
+)
+def test_hashlib_visitor_flags_fips_sensitive_calls(
+    source: str, expect_violation: bool
+) -> None:
+    """Detect FIPS-sensitive hashlib calls, including via wildcard imports."""
+    visitor = _HashlibCallVisitor(Path("snippet.py"))
+    visitor.visit(ast.parse(source))
+
+    assert bool(visitor.violations) is expect_violation
 
 
 def test_internal_hashing_works_when_fips_rejects_security_blake2b(
