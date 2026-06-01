@@ -51,7 +51,7 @@
   "packageManager": "yarn@4.13.0",
   "devDependencies": {
     "@bufbuild/buf": "^1.68.1",
-    "@eslint-react/eslint-plugin": "^5.8.3",
+    "@eslint-react/eslint-plugin": "^5.8.4",
     "@eslint/compat": "^2.1.0",
     "@eslint/eslintrc": "^3.3.5",
     "@eslint/js": "^10.0.1",
@@ -60,7 +60,7 @@
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
     "@vitest/coverage-v8": "^4.1.7",
-    "@vitest/eslint-plugin": "^1.6.17",
+    "@vitest/eslint-plugin": "^1.6.18",
     "concurrently": "^9.2.1",
     "eslint": "^10.4.0",
     "eslint-import-resolver-typescript": "^4.4.4",

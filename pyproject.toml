@@ -61,9 +61,9 @@ dev = [
   "ty==0.0.38",
   # We fix ruff to a version to be in sync with the pre-commit hook:
   "ruff==0.15.14",
-  # We are pinning the upper version to not break our CI on updates,
+  # We fix mypy to a version to avoid breaking our CI on updates,
   # and have dependabot handle the updates instead.
-  "mypy>=1.16.1,<1.21",
+  "mypy==2.1.0",
   "mypy-protobuf>=3.2",
   "semver>=3",
   "setuptools>=65.5.1",
