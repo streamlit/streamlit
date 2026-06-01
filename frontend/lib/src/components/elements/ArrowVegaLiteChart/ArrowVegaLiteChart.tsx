@@ -261,13 +261,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   })
   latestDimensionsRef.current = { width: currentWidth, height: currentHeight }
 
-  // Track if we've created the view with valid dimensions.
+  // Determine if we have valid dimensions for container-driven sizing.
   // For container-driven sizing, we need to wait for valid dimensions before
   // creating the view, because Vega's resize API doesn't properly recalculate
   // the data-to-pixel mapping after the initial view creation.
-  const hasValidDimensionsRef = useRef(false)
-
-  // Determine if we have valid dimensions for container-driven sizing.
   // For fixed-dimension charts, dimensions are in the spec, so we don't need
   // to wait for container measurements.
   const needsContainerWidth = useStretchWidth || isFullScreen
@@ -293,17 +290,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
         width: latestDimensionsRef.current.width,
         height: latestDimensionsRef.current.height,
       }
-      hasValidDimensionsRef.current = true
       // eslint-disable-next-line @typescript-eslint/no-floating-promises -- TODO: Fix this
       createView(containerRef, latestSpecRef.current)
     }
 
-    // Only finalize if we actually created a view
+    // Finalize unconditionally: `finalizeView` is a no-op when no view exists,
+    // and calling it here also tears down a view created by an async `createView`
+    // that resolved after a valid->invalid dimension transition, preventing an
+    // orphaned Vega view from leaking on unmount.
     return () => {
-      if (hasValidDimensionsRef.current) {
-        finalizeView()
-        hasValidDimensionsRef.current = false
-      }
+      finalizeView()
     }
   }, [
     createView,
