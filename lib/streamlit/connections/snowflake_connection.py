@@ -660,6 +660,16 @@ class SnowflakeConnection(BaseSnowflakeConnection):
                 )
                 return snowflake.connector.connect()
 
+            # Use a named connection defined in the Snowflake connections.toml file.
+            if self._connection_name and not kwargs:
+                _LOGGER.info(
+                    "Connecting to Snowflake using connection_name=%s.",
+                    self._connection_name,
+                )
+                return snowflake.connector.connect(
+                    connection_name=self._connection_name
+                )
+
             return snowflake.connector.connect(**kwargs)
         except SnowflakeError:
             if not len(st_secrets) and not kwargs:
