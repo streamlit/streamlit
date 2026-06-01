@@ -584,13 +584,6 @@ describe("TextInput validation (email/url types)", () => {
       type: TextInputProto.Type.EMAIL,
       default: "not-an-email",
     })
-    // Pre-populate widget manager to simulate a server-sent initial value
-    props.widgetMgr.setStringValue(
-      props.element,
-      "not-an-email",
-      { fromUi: false },
-      undefined
-    )
     render(<TextInput {...props} />)
 
     expect(screen.getByTestId("stTooltipErrorHoverTarget")).toBeInTheDocument()

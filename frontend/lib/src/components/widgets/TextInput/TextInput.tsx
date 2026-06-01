@@ -90,7 +90,10 @@ function TextInput({
   const [showPassword, setShowPassword] = useState(false)
 
   const [error, setError] = useState<string | null>(() => {
-    const initialValue = getStateFromWidgetMgr(widgetMgr, element) ?? ""
+    // On first render widgetMgr has no stored state yet, so fall back to the
+    // element's default — mirroring what useBasicWidgetState does internally.
+    const initialValue =
+      getStateFromWidgetMgr(widgetMgr, element) ?? element.default ?? ""
     if (!initialValue) return null
 
     if (element.type === TextInputProto.Type.EMAIL) {

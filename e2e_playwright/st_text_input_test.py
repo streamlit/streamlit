@@ -513,7 +513,7 @@ def test_text_input_email_invalid_shows_error_snapshot(
     input_field.fill("notanemail")
     input_field.blur()
 
-    expect(app.get_by_test_id("stTooltipErrorHoverTarget").first).to_be_visible()
+    expect(email_input.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
     assert_snapshot(email_input, name="st_text_input-email_error_state")
 
 
@@ -525,7 +525,7 @@ def test_text_input_email_invalid_does_not_commit(app: Page) -> None:
     input_field.fill("notanemail")
     input_field.blur()
 
-    expect(app.get_by_test_id("stTooltipErrorHoverTarget").first).to_be_visible()
+    expect(email_input.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
     # Session state should still show empty (value not committed)
     expect_prefixed_markdown(app, "value 25:", "")
 
@@ -539,7 +539,8 @@ def test_text_input_email_valid_commits(app: Page) -> None:
     input_field.press("Enter")
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+    # Scope to this widget only — other inputs on the page may have their own errors
+    expect(email_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
     expect_prefixed_markdown(app, "value 25:", "user@example.com")
 
 
@@ -556,7 +557,8 @@ def test_text_input_url_bare_domain_normalized(app: Page) -> None:
     expect(input_field).to_have_value("https://google.com")
     # Python received the normalized value
     expect_prefixed_markdown(app, "value 26:", "https://google.com")
-    expect(app.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+    # Scope to this widget only — other inputs on the page may have their own errors
+    expect(url_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
 
 
 def test_text_input_email_prefilled_invalid_shows_error_on_render(
@@ -580,7 +582,7 @@ def test_text_input_email_error_hides_input_instructions(app: Page) -> None:
 
     # Re-focus — InputInstructions would normally appear but should be hidden
     input_field.focus()
-    expect(app.get_by_test_id("InputInstructions")).to_have_count(0)
+    expect(email_input.get_by_test_id("InputInstructions")).to_have_count(0)
 
 
 def test_text_input_tel_accepts_any_value(app: Page) -> None:
@@ -592,5 +594,6 @@ def test_text_input_tel_accepts_any_value(app: Page) -> None:
     input_field.press("Enter")
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
+    # Scope to this widget only — other inputs on the page may have their own errors
+    expect(tel_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
     expect_prefixed_markdown(app, "value 27:", "not-a-phone-abc")
