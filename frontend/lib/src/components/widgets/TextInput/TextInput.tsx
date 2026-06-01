@@ -14,14 +14,7 @@
  * limitations under the License.
  */
 
-import {
-  memo,
-  ReactElement,
-  useCallback,
-  useId,
-  useRef,
-  useState,
-} from "react"
+import { memo, ReactElement, useCallback, useId, useState } from "react"
 
 import { TextField } from "react-aria-components"
 
@@ -32,8 +25,6 @@ import {
   isMaterialIcon,
 } from "~lib/components/shared/Icon/DynamicIcon"
 import InputInstructions from "~lib/components/shared/InputInstructions/InputInstructions"
-import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
-import Tooltip, { Placement } from "~lib/components/shared/Tooltip/Tooltip"
 import { WidgetLabel } from "~lib/components/widgets/BaseWidget/WidgetLabel"
 import { WidgetLabelHelpIcon } from "~lib/components/widgets/BaseWidget/WidgetLabelHelpIcon"
 import {
@@ -55,7 +46,6 @@ import {
   StyledPasswordToggle,
   StyledStartEnhancer,
   StyledTextInput,
-  StyledValidationIcon,
 } from "./styled-components"
 
 export interface Props {
@@ -88,33 +78,6 @@ function TextInput({
 
   /** Controls visibility of the password plain-text toggle. */
   const [showPassword, setShowPassword] = useState(false)
-
-  const [error, setError] = useState<string | null>(() => {
-    // On first render widgetMgr has no stored state yet, so fall back to the
-    // element's default — mirroring what useBasicWidgetState does internally.
-    const initialValue =
-      getStateFromWidgetMgr(widgetMgr, element) ?? element.default ?? ""
-    if (!initialValue) return null
-
-    if (element.type === TextInputProto.Type.EMAIL) {
-      return isValidEmail(initialValue)
-        ? null
-        : "Please enter a valid email address."
-    }
-
-    if (element.type === TextInputProto.Type.URL) {
-      try {
-        new URL(normalizeUrl(initialValue))
-        return null
-      } catch {
-        return "Please enter a valid URL."
-      }
-    }
-
-    return null
-  })
-
-  const inputRef = useRef<HTMLInputElement>(null)
 
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
@@ -159,64 +122,18 @@ function TextInput({
 
   const isPassword = element.type === TextInputProto.Type.PASSWORD
 
-  const getValidatedValue = useCallback((): {
-    valid: boolean
-    value: string
-  } => {
-    const rawValue = uiValue ?? ""
-    if (!rawValue) return { valid: true, value: rawValue }
-
-    if (element.type === TextInputProto.Type.EMAIL) {
-      return { valid: isValidEmail(rawValue), value: rawValue }
-    }
-
-    if (element.type === TextInputProto.Type.URL) {
-      const normalized = normalizeUrl(rawValue)
-      try {
-        new URL(normalized)
-        return { valid: true, value: normalized }
-      } catch {
-        return { valid: false, value: normalized }
-      }
-    }
-
-    return { valid: true, value: rawValue }
-  }, [element.type, uiValue])
-
   const commitWidgetValue = useCallback((): void => {
-    const { valid, value } = getValidatedValue()
-    if (!valid) {
-      setError(
-        element.type === TextInputProto.Type.EMAIL
-          ? "Please enter a valid email address."
-          : "Please enter a valid URL."
-      )
-      return
-    }
-    setError(null)
     setDirty(false)
-    if (value !== uiValue) {
-      setUiValue(value)
-    }
-    setValueWithSource({ value, fromUi: true })
-  }, [
-    getValidatedValue,
-    element.type,
-    uiValue,
-    setUiValue,
-    setValueWithSource,
-  ])
+    setValueWithSource({ value: uiValue, fromUi: true })
+  }, [uiValue, setValueWithSource])
 
   // Show "Please enter" instructions if in a form & allowed, or not in form and state is dirty.
   const allowEnterToSubmit = isInForm({ formId })
     ? widgetMgr.allowFormEnterToSubmit(formId)
     : dirty
 
-  // Hide input instructions when there's a validation error or for small widget sizes.
   const shouldShowInstructions =
-    !error &&
-    focused &&
-    width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
+    focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
   const handleFocus = useCallback((): void => {
     setFocused(true)
@@ -239,7 +156,6 @@ function TextInput({
     setDirty,
     setUiValue,
     setValueWithSource,
-    additionalAction: () => setError(null),
   })
 
   const onKeyDown = useSubmitFormViaEnterKey(
@@ -268,16 +184,11 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <TextField
-        isDisabled={disabled}
-        isInvalid={!!error}
-        aria-label={element.label}
-      >
+      <TextField isDisabled={disabled} aria-label={element.label}>
         <StyledInputRoot
           data-testid="stTextInputRootElement"
           $isFocused={focused}
           $hasIcon={!!icon}
-          $isError={!!error}
         >
           {icon && (
             <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
@@ -289,7 +200,6 @@ function TextInput({
             </StyledStartEnhancer>
           )}
           <StyledInputElement
-            ref={inputRef}
             id={id}
             value={uiValue ?? ""}
             placeholder={placeholder}
@@ -315,17 +225,6 @@ function TextInput({
                 size="base"
               />
             </StyledPasswordToggle>
-          )}
-          {error && (
-            <Tooltip
-              content={<StreamlitMarkdown source={error} allowHTML={false} />}
-              placement={Placement.TOP_RIGHT}
-              error
-            >
-              <StyledValidationIcon>
-                <DynamicIcon iconValue=":material/error:" size="base" />
-              </StyledValidationIcon>
-            </Tooltip>
           )}
         </StyledInputRoot>
       </TextField>
@@ -371,50 +270,8 @@ function updateWidgetMgrState(
   )
 }
 
-/**
- * Validates an email address using HTML5 syntax rules plus a dot-in-domain
- * requirement. The HTML5 spec accepts `user@localhost` as valid; we add the
- * extra dot check so behaviour matches industry-standard validators (Zod, Yup,
- * Django) and avoids accepting clearly incomplete addresses like `user@test`.
- */
-function isValidEmail(value: string): boolean {
-  const tempInput = document.createElement("input")
-  tempInput.type = "email"
-  tempInput.value = value
-  if (!tempInput.checkValidity()) return false
-  const domain = value.split("@").pop() ?? ""
-  return domain.includes(".")
-}
-
-/**
- * Normalizes a URL value before validation/commit:
- * - Already has a scheme (http:// / https://)  → return as-is (trust the user)
- * - Bare value with a dot (e.g. "google.com")   → prepend "https://"
- * - Bare value with no dot (e.g. "something")   → return as-is so the URL
- *   constructor rejects it; we don't guess a scheme for dotless hostnames
- */
-function normalizeUrl(value: string): string {
-  // Any explicit scheme (https://, http://, ftp://, etc.) → trust the user
-  if (value.includes("://")) return value
-  // Bare domain with a dot (e.g. "google.com") → assume https
-  if (value.includes(".")) return `https://${value}`
-  // No scheme, no dot (e.g. "something") → leave as-is so URL() rejects it
-  return value
-}
-
 function getTypeString(element: TextInputProto): string {
-  switch (element.type) {
-    case TextInputProto.Type.PASSWORD:
-      return "password"
-    case TextInputProto.Type.EMAIL:
-      return "email"
-    case TextInputProto.Type.URL:
-      return "url"
-    case TextInputProto.Type.TEL:
-      return "tel"
-    default:
-      return "text"
-  }
+  return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
 }
 
 export default memo(TextInput)

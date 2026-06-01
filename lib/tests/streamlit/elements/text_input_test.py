@@ -82,14 +82,8 @@ class TextInputTest(DeltaGeneratorTestCase):
 
     def test_input_types(self):
         # Test valid input types.
-        type_strings = ["default", "password", "email", "url", "tel"]
-        type_values = [
-            TextInput.DEFAULT,
-            TextInput.PASSWORD,
-            TextInput.EMAIL,
-            TextInput.URL,
-            TextInput.TEL,
-        ]
+        type_strings = ["default", "password"]
+        type_values = [TextInput.DEFAULT, TextInput.PASSWORD]
         for type_string, type_value in zip(type_strings, type_values, strict=False):
             st.text_input("label", type=type_string)
 
@@ -100,11 +94,10 @@ class TextInputTest(DeltaGeneratorTestCase):
         with pytest.raises(StreamlitAPIException) as exc:
             st.text_input("label", type="bad_type")
 
-        expected = (
-            "'bad_type' is not a valid text_input type. "
-            "Valid types are 'default', 'password', 'email', 'url', and 'tel'."
+        assert (
+            str(exc.value)
+            == "'bad_type' is not a valid text_input type. Valid types are 'default' and 'password'."
         )
-        assert str(exc.value) == expected
 
     def test_placeholder(self):
         """Test that it can be called with placeholder"""
@@ -178,23 +171,6 @@ class TextInputTest(DeltaGeneratorTestCase):
         st.text_input("password", type="password")
         proto = self.get_delta_from_queue().new_element.text_input
         assert proto.autocomplete == "new-password"
-
-        # email/url/tel also default to empty autocomplete string
-        for type_str in ("email", "url", "tel"):
-            st.text_input("label", type=type_str)
-            proto = self.get_delta_from_queue().new_element.text_input
-            assert proto.autocomplete == "", (
-                f"Expected empty autocomplete for type={type_str}"
-            )
-
-    def test_specialized_input_types_allowed_with_query_params(self):
-        """email, url, and tel types may be bound to query params (they do not expose secrets)."""
-        for type_str in ("email", "url", "tel"):
-            st.text_input(
-                "label", key=f"k_{type_str}", type=type_str, bind="query-params"
-            )
-            proto = self.get_delta_from_queue().new_element.text_input
-            assert proto.query_param_key == f"k_{type_str}"
 
     def test_autcomplete(self):
         """Autocomplete should be marshalled if specified."""

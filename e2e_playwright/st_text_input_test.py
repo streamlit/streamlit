@@ -15,7 +15,6 @@
 
 import re
 
-import pytest
 from playwright.sync_api import Page, expect
 
 from e2e_playwright.conftest import (
@@ -37,7 +36,7 @@ from e2e_playwright.shared.input_utils import (
     type_common_characters_into_input,
 )
 
-TEXT_INPUT_ELEMENTS = 28
+TEXT_INPUT_ELEMENTS = 24
 
 
 def test_text_input_widget_rendering(
@@ -485,115 +484,3 @@ def test_text_input_setvalue_preserved_on_rerun(app: Page):
         wait_for_app_run(app)
         expect_markdown(app, f"Text input counter: {expected_counter}")
         expect(text_input_field).to_have_value("fixed_value")
-
-
-@pytest.mark.parametrize(
-    ("label", "expected_type"),
-    [
-        ("text input 25 (type=email)", "email"),
-        ("text input 26 (type=url)", "url"),
-        ("text input 27 (type=tel)", "tel"),
-    ],
-)
-def test_text_input_specialized_types(
-    app: Page, label: str, expected_type: str
-) -> None:
-    """Test that specialized input types set the correct HTML type attribute."""
-    input_field = get_text_input(app, label).locator("input").first
-    expect(input_field).to_have_attribute("type", expected_type)
-
-
-def test_text_input_email_invalid_shows_error_snapshot(
-    app: Page, assert_snapshot: ImageCompareFunction
-) -> None:
-    """Test that an invalid email shows the error state with red border, background, and icon."""
-    email_input = get_text_input(app, "text input 25 (type=email)")
-    input_field = email_input.locator("input").first
-
-    input_field.fill("notanemail")
-    input_field.blur()
-
-    expect(email_input.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
-    assert_snapshot(email_input, name="st_text_input-email_error_state")
-
-
-def test_text_input_email_invalid_does_not_commit(app: Page) -> None:
-    """Test that an invalid email value is not committed to Python."""
-    email_input = get_text_input(app, "text input 25 (type=email)")
-    input_field = email_input.locator("input").first
-
-    input_field.fill("notanemail")
-    input_field.blur()
-
-    expect(email_input.get_by_test_id("stTooltipErrorHoverTarget")).to_be_visible()
-    # Session state should still show empty (value not committed)
-    expect_prefixed_markdown(app, "value 25:", "")
-
-
-def test_text_input_email_valid_commits(app: Page) -> None:
-    """Test that a valid email value is committed to Python and no error is shown."""
-    email_input = get_text_input(app, "text input 25 (type=email)")
-    input_field = email_input.locator("input").first
-
-    input_field.fill("user@example.com")
-    input_field.press("Enter")
-    wait_for_app_run(app)
-
-    # Scope to this widget only — other inputs on the page may have their own errors
-    expect(email_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
-    expect_prefixed_markdown(app, "value 25:", "user@example.com")
-
-
-def test_text_input_url_bare_domain_normalized(app: Page) -> None:
-    """Test that a bare domain URL is auto-prefixed with https:// before commit."""
-    url_input = get_text_input(app, "text input 26 (type=url)")
-    input_field = url_input.locator("input").first
-
-    input_field.fill("google.com")
-    input_field.blur()
-    wait_for_app_run(app)
-
-    # Input displays the normalized value
-    expect(input_field).to_have_value("https://google.com")
-    # Python received the normalized value
-    expect_prefixed_markdown(app, "value 26:", "https://google.com")
-    # Scope to this widget only — other inputs on the page may have their own errors
-    expect(url_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
-
-
-def test_text_input_email_prefilled_invalid_shows_error_on_render(
-    app: Page,
-) -> None:
-    """Test that a pre-filled invalid email default shows the error immediately on render."""
-    # text input 28 has value="not-an-email" set in the fixture
-    invalid_email_input = get_text_input(app, "text input 28 (invalid email default)")
-    # Error icon should be visible without any user interaction
-    error_target = invalid_email_input.get_by_test_id("stTooltipErrorHoverTarget")
-    expect(error_target).to_be_visible()
-
-
-def test_text_input_email_error_hides_input_instructions(app: Page) -> None:
-    """Test that InputInstructions are hidden when a validation error is present."""
-    email_input = get_text_input(app, "text input 25 (type=email)")
-    input_field = email_input.locator("input").first
-
-    input_field.fill("notanemail")
-    input_field.blur()
-
-    # Re-focus — InputInstructions would normally appear but should be hidden
-    input_field.focus()
-    expect(email_input.get_by_test_id("InputInstructions")).to_have_count(0)
-
-
-def test_text_input_tel_accepts_any_value(app: Page) -> None:
-    """Test that type=tel has no validation — any string is committed."""
-    tel_input = get_text_input(app, "text input 27 (type=tel)")
-    input_field = tel_input.locator("input").first
-
-    input_field.fill("not-a-phone-abc")
-    input_field.press("Enter")
-    wait_for_app_run(app)
-
-    # Scope to this widget only — other inputs on the page may have their own errors
-    expect(tel_input.get_by_test_id("stTooltipErrorHoverTarget")).to_have_count(0)
-    expect_prefixed_markdown(app, "value 27:", "not-a-phone-abc")

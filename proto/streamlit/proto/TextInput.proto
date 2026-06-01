@@ -25,17 +25,6 @@ message TextInput {
 
     // A password text input. Typed values are obscured by default.
     PASSWORD = 1;
-
-    // An email text input. Browsers validate email format and show an
-    // optimized keyboard on mobile.
-    EMAIL = 2;
-
-    // A URL text input. Browsers validate URL format.
-    URL = 3;
-
-    // A telephone number input. No format validation, but browsers show
-    // a numeric/phone keyboard on mobile.
-    TEL = 4;
   }
 
   string id = 1;

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from textwrap import dedent
-from typing import TYPE_CHECKING, Final, Literal, cast, overload
+from typing import TYPE_CHECKING, Literal, cast, overload
 
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
@@ -54,14 +54,6 @@ from streamlit.type_util import SupportsStr
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.type_util import SupportsStr
-
-_TEXT_INPUT_TYPE_MAP: Final[dict[str, TextInputProto.Type.ValueType]] = {
-    "default": TextInputProto.DEFAULT,
-    "password": TextInputProto.PASSWORD,
-    "email": TextInputProto.EMAIL,
-    "url": TextInputProto.URL,
-    "tel": TextInputProto.TEL,
-}
 
 
 @dataclass
@@ -102,7 +94,7 @@ class TextWidgetsMixin:
         value: str = "",
         max_chars: int | None = None,
         key: Key | None = None,
-        type: Literal["default", "password", "email", "url", "tel"] = "default",
+        type: Literal["default", "password"] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -125,7 +117,7 @@ class TextWidgetsMixin:
         value: SupportsStr | None = None,
         max_chars: int | None = None,
         key: Key | None = None,
-        type: Literal["default", "password", "email", "url", "tel"] = "default",
+        type: Literal["default", "password"] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -148,7 +140,7 @@ class TextWidgetsMixin:
         value: str | SupportsStr | None = "",
         max_chars: int | None = None,
         key: Key | None = None,
-        type: Literal["default", "password", "email", "url", "tel"] = "default",
+        type: Literal["default", "password"] = "default",
         help: str | None = None,
         autocomplete: str | None = None,
         on_change: WidgetCallback | None = None,
@@ -215,19 +207,10 @@ class TextWidgetsMixin:
             Additionally, if ``key`` is provided, it will be used as a
             CSS class name prefixed with ``st-key-``.
 
-        type : "default", "password", "email", "url", or "tel"
-            The type of the text input. Defaults to ``"default"``.
-
-            - ``"default"`` — A regular single-line text input.
-            - ``"password"`` — A text input that masks the user's typed
-              value. The value is never shown in the URL when using
-              ``bind="query-params"``.
-            - ``"email"`` — An email address input. Browsers validate the
-              email format and show an optimized keyboard on mobile devices.
-            - ``"url"`` — A URL input. Browsers validate the URL format.
-            - ``"tel"`` — A telephone number input. No format validation is
-              applied, but browsers show a numeric/phone keyboard on mobile
-              devices.
+        type : "default" or "password"
+            The type of the text input. This can be either "default" (for
+            a regular text input), or "password" (for a text input that
+            masks the user's typed value). Defaults to "default".
 
         help : str or None
             A tooltip that gets displayed next to the widget label. Streamlit
@@ -433,12 +416,14 @@ class TextWidgetsMixin:
         if icon is not None:
             text_input_proto.icon = validate_icon_or_emoji(icon)
 
-        if type not in _TEXT_INPUT_TYPE_MAP:
+        if type == "default":
+            text_input_proto.type = TextInputProto.DEFAULT
+        elif type == "password":
+            text_input_proto.type = TextInputProto.PASSWORD
+        else:
             raise StreamlitAPIException(
-                f"'{type}' is not a valid text_input type. "
-                "Valid types are 'default', 'password', 'email', 'url', and 'tel'."
+                f"'{type}' is not a valid text_input type. Valid types are 'default' and 'password'."
             )
-        text_input_proto.type = _TEXT_INPUT_TYPE_MAP[type]
 
         # Marshall the autocomplete param. If unspecified, this will be
         # set to "new-password" for password inputs.

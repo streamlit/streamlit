@@ -56,9 +56,6 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", type="default"), str)
     assert_type(text_input("Enter text", type="password"), str)
     assert_type(text_input("Enter password", value=None, type="password"), str | None)
-    assert_type(text_input("Email", type="email"), str)
-    assert_type(text_input("Website", type="url"), str)
-    assert_type(text_input("Phone", type="tel"), str)
 
     # =====================================================================
     # Test max_chars parameter
