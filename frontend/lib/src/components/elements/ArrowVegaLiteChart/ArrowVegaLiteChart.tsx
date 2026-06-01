@@ -335,21 +335,31 @@ const ArrowVegaLiteChart: FC<Props> = ({
     const widthChanged = forceStretchWidth && lastDims?.width !== currentWidth
     const heightChanged =
       forceStretchHeight && lastDims?.height !== currentHeight
-    if (widthChanged || heightChanged) {
-      // Use an async IIFE to await resizeView and only update cache on success
-      // Pass 0 for dimensions that shouldn't be resized (e.g., height='content')
-      void (async () => {
-        const success = await resizeView(
-          forceStretchWidth ? currentWidth : 0,
-          forceStretchHeight ? currentHeight : 0
-        )
-        if (success) {
-          lastDimensionsRef.current = {
-            width: currentWidth,
-            height: currentHeight,
-          }
+    if (!widthChanged && !heightChanged) {
+      return
+    }
+
+    // Guard against stale resize callbacks: if this effect is superseded by a
+    // re-render with new dimensions while resizeView is still in-flight, skip
+    // the cache update so the latest effect run wins (the cleanup sets `ignore`).
+    let ignore = false
+    // Use an async IIFE to await resizeView and only update cache on success.
+    // Pass 0 for dimensions that shouldn't be resized (e.g., height='content').
+    void (async () => {
+      const success = await resizeView(
+        forceStretchWidth ? currentWidth : 0,
+        forceStretchHeight ? currentHeight : 0
+      )
+      if (success && !ignore) {
+        lastDimensionsRef.current = {
+          width: currentWidth,
+          height: currentHeight,
         }
-      })()
+      }
+    })()
+
+    return () => {
+      ignore = true
     }
   }, [
     isViewReady,

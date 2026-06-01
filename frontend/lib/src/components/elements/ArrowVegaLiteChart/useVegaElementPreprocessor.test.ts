@@ -600,7 +600,12 @@ describe("useVegaElementPreprocessor", () => {
       element: VegaLiteChartElement,
       useWidth: boolean,
       useHeight: boolean
-    ) =>
+    ): ReturnType<
+      typeof renderHook<
+        { containerWidth: number; containerHeight: number },
+        ReturnType<typeof useVegaElementPreprocessor>
+      >
+    > =>
       renderHook(
         ({
           containerWidth,
