@@ -298,7 +298,8 @@ class ColumnConfig(TypedDict, total=False):
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     default : str, bool, int, float, or None
         Specifies the default value in this column when a new row is added by
@@ -422,7 +423,8 @@ def Column(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -545,7 +547,8 @@ def NumberColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -723,7 +726,8 @@ def TextColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -863,7 +867,8 @@ def LinkColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -1035,7 +1040,8 @@ def CheckboxColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -1161,7 +1167,8 @@ def SelectboxColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     default : str, int, float, bool, or None
         Specifies the default value in this column when a new row is added by
@@ -1294,7 +1301,8 @@ def BarChartColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
@@ -1417,7 +1425,8 @@ def LineChartColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
@@ -1539,7 +1548,8 @@ def AreaChartColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     y_min : int, float, or None
         The minimum value on the y-axis for all cells in the column. If this is
@@ -1676,7 +1686,8 @@ def ImageColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -1784,7 +1795,8 @@ def AudioColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -1904,7 +1916,8 @@ def VideoColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -2010,7 +2023,8 @@ def ListColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     disabled : bool or None
         Whether editing should be disabled for this column. If this is ``None``
@@ -2150,7 +2164,8 @@ def MultiselectColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     default : Iterable of str or None
         Specifies the default value in this column when a new row is added by the user.
@@ -2394,7 +2409,8 @@ def DatetimeColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -2569,7 +2585,8 @@ def TimeColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -2735,7 +2752,8 @@ def DateColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
@@ -2914,7 +2932,8 @@ def ProgressColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     min_value : int, float, or None
         The minimum value of the progress bar. If this is ``None`` (default),
@@ -3042,7 +3061,8 @@ def JsonColumn(
         Whether the column is pinned. A pinned column will stay visible on the
         left side no matter where the user scrolls. If this is ``None``
         (default), Streamlit will decide: index columns are pinned, and data
-        columns are not pinned.
+        columns are not pinned. If pinned columns would take up too much
+        horizontal space, Streamlit may unpin them to keep the table usable.
 
     alignment : "left", "center", "right", or None
         The horizontal alignment of cell content. If this is ``None``
