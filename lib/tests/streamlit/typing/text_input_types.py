@@ -50,7 +50,7 @@ if TYPE_CHECKING:
     assert_type(text_input("Enter text", value=None, key="my_input"), str | None)
 
     # =====================================================================
-    # Test type parameter
+    # Test type parameter ("default" or "password")
     # =====================================================================
 
     assert_type(text_input("Enter text", type="default"), str)
