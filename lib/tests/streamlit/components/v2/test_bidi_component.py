@@ -1446,6 +1446,41 @@ class BidiComponentIdentityTest(DeltaGeneratorTestCase):
             mock_digest.assert_called_once()
 
 
+def test_canonicalize_json_returns_payload_when_empty() -> None:
+    """An empty payload is returned without parsing."""
+    mixin = BidiComponentMixin()
+    assert mixin._canonicalize_json_for_identity("") == ""
+
+
+def test_canonicalize_json_returns_payload_when_invalid_json() -> None:
+    """Invalid JSON payloads are returned as-is."""
+    mixin = BidiComponentMixin()
+    payload = "not-a-valid-json{"
+    assert mixin._canonicalize_json_for_identity(payload) == payload
+
+
+def test_canonicalize_json_returns_payload_when_unserializable() -> None:
+    """Payloads that parse but can't be re-serialized fall back to the original."""
+    mixin = BidiComponentMixin()
+    payload = '{"a": 1}'
+
+    with patch(
+        "streamlit.components.v2.bidi_component.main.json.dumps",
+        side_effect=TypeError("not serializable"),
+    ):
+        assert mixin._canonicalize_json_for_identity(payload) == payload
+
+
+def test_bidi_component_mixin_dg_returns_self() -> None:
+    """`BidiComponentMixin.dg` returns the mixin instance."""
+
+    class _OnlyBidi(BidiComponentMixin):
+        pass
+
+    bidi_mixin = _OnlyBidi()
+    assert bidi_mixin.dg is bidi_mixin
+
+
 class BidiComponentStateCallbackTest(DeltaGeneratorTestCase):
     """Verify that per-state callbacks fire exclusively for their key."""
 
