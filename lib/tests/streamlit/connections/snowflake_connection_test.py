@@ -91,8 +91,7 @@ class TestSnowflakeConnectionConfiguration:
         """Test that connect() is called with the configuration implied by name and kwargs."""
         with self._patched_snowflake() as connector:
             SnowflakeConnection(connection_name, **kwargs)
-
-        connector.connect.assert_called_once_with(**expected_connect_kwargs)
+            connector.connect.assert_called_once_with(**expected_connect_kwargs)
 
     def test_failing_named_connection_raises_friendly_error(self) -> None:
         """Test that a failing named connection without config raises a friendly error."""
