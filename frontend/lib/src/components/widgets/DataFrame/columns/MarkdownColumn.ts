@@ -59,16 +59,15 @@ function MarkdownColumn(props: BaseColumnProps): BaseColumn {
       }
 
       const cellData = notNullOrUndefined(data) ? toSafeString(data) : null
-      const displayData = cellData ? removeLineBreaks(cellData) : ""
 
       return {
         ...cellTemplate,
         copyData: cellData ?? "",
         isMissingValue: isNullOrUndefined(cellData),
         data: {
-          kind: "markdown-cell",
+          ...cellTemplate.data,
           value: cellData,
-          displayValue: displayData,
+          displayValue: cellData ? removeLineBreaks(cellData) : "",
         },
       } as MarkdownCell
     },

@@ -199,17 +199,17 @@ describe("MarkdownCellEditor", () => {
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument()
   })
 
-  it("clicking Edit then Save calls onChange with new value and displayValue", async () => {
+  it("clicking Edit then Save commits the new value and finishes editing", async () => {
     const user = userEvent.setup()
-    const onChange = vi.fn()
+    const onFinishedEditing = vi.fn()
     const originalValue = "# Original"
     const editableCell = createMockCellValue(originalValue, false)
 
     render(
       <MarkdownCellEditor
         value={editableCell}
-        onChange={onChange}
-        onFinishedEditing={vi.fn()}
+        onChange={vi.fn()}
+        onFinishedEditing={onFinishedEditing}
       />
     )
 
@@ -227,28 +227,25 @@ describe("MarkdownCellEditor", () => {
     // Click save button
     await user.click(screen.getByRole("button", { name: /Save/ }))
 
-    // onChange should have been called with the new value
-    expect(onChange).toHaveBeenCalledTimes(1)
-    const callArg = onChange.mock.calls[0][0] as MarkdownCell
-    expect(callArg.data.value).toBe("# New Title\nNew line")
+    // Saving commits the value and finishes editing (closing the overlay).
+    expect(onFinishedEditing).toHaveBeenCalledTimes(1)
+    const committedCell = onFinishedEditing.mock.calls[0][0] as MarkdownCell
+    expect(committedCell.data.value).toBe("# New Title\nNew line")
     // displayValue should have line breaks removed
-    expect(callArg.data.displayValue).toBe("# New Title New line")
-
-    // Should be back in viewer mode
-    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+    expect(committedCell.data.displayValue).toBe("# New Title New line")
   })
 
-  it("clicking Edit then pressing Escape does NOT call onChange", async () => {
+  it("pressing Escape cancels editing without committing a value", async () => {
     const user = userEvent.setup()
-    const onChange = vi.fn()
+    const onFinishedEditing = vi.fn()
     const originalValue = "# Original"
     const editableCell = createMockCellValue(originalValue, false)
 
     render(
       <MarkdownCellEditor
         value={editableCell}
-        onChange={onChange}
-        onFinishedEditing={vi.fn()}
+        onChange={vi.fn()}
+        onFinishedEditing={onFinishedEditing}
       />
     )
 
@@ -262,23 +259,21 @@ describe("MarkdownCellEditor", () => {
     // Press Escape to cancel
     await user.keyboard("{Escape}")
 
-    // onChange should NOT have been called
-    expect(onChange).not.toHaveBeenCalled()
-
-    // Should be back in viewer mode
-    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+    // Editing finishes with no committed value (undefined = discard changes).
+    expect(onFinishedEditing).toHaveBeenCalledTimes(1)
+    expect(onFinishedEditing.mock.calls[0][0]).toBeUndefined()
   })
 
-  it("clicking Edit then Cancel button does NOT call onChange", async () => {
+  it("clicking Cancel finishes editing without committing a value", async () => {
     const user = userEvent.setup()
-    const onChange = vi.fn()
+    const onFinishedEditing = vi.fn()
     const editableCell = createMockCellValue("# Original", false)
 
     render(
       <MarkdownCellEditor
         value={editableCell}
-        onChange={onChange}
-        onFinishedEditing={vi.fn()}
+        onChange={vi.fn()}
+        onFinishedEditing={onFinishedEditing}
       />
     )
 
@@ -292,10 +287,46 @@ describe("MarkdownCellEditor", () => {
     // Click cancel button
     await user.click(screen.getByRole("button", { name: /Cancel/ }))
 
-    // onChange should NOT have been called
-    expect(onChange).not.toHaveBeenCalled()
+    // Editing finishes with no committed value (undefined = discard changes).
+    expect(onFinishedEditing).toHaveBeenCalledTimes(1)
+    expect(onFinishedEditing.mock.calls[0][0]).toBeUndefined()
+  })
 
-    // Should be back in viewer mode
-    expect(screen.getByTestId("stMarkdownColumnViewer")).toBeVisible()
+  it("does not render raw HTML in the markdown viewer", () => {
+    const maliciousCell = createMockCellValue(
+      '<img src=x onerror="window.__xss=true"><script>window.__xss=true</script>',
+      true
+    )
+
+    const { container } = render(
+      <MarkdownCellEditor
+        value={maliciousCell}
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Raw HTML must not be parsed into live DOM nodes (rendered as text instead).
+    expect(container.querySelector("img")).toBeNull()
+    expect(container.querySelector("script")).toBeNull()
+  })
+
+  it("sanitizes javascript: links in the markdown viewer", () => {
+    const maliciousCell = createMockCellValue(
+      "[click me](javascript:window.__xss=true)",
+      true
+    )
+
+    render(
+      <MarkdownCellEditor
+        value={maliciousCell}
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // The link text still renders, but the dangerous href is stripped.
+    const link = screen.getByText("click me")
+    expect(link.getAttribute("href")).not.toMatch(/^javascript:/i)
   })
 })

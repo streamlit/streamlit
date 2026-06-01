@@ -3122,9 +3122,9 @@ def MarkdownColumn(
     editor overlay.
 
     .. note::
-        For security, raw HTML is disabled in markdown cells even if
-        ``unsafe_allow_html`` is set elsewhere. Links are sanitized to only
-        allow safe URL protocols (http, https, mailto, tel).
+        For security, raw HTML is not rendered in markdown cells. Links that
+        use potentially dangerous URL schemes (such as ``javascript:`` and
+        ``vbscript:``) are sanitized and not rendered as clickable links.
 
     Parameters
     ----------

@@ -74,10 +74,9 @@ interface StyledToolbarWrapperProps {
 
 const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
   ({ theme, locked }) => ({
+    // Hide visually via opacity (not `visibility`/`display`) so the button
+    // stays in the tab order and remains reachable via keyboard.
     opacity: locked ? 1 : 0,
-    // Keep in tab order when hidden (visibility: hidden removes from tab order)
-    // Use opacity for visual hide, which allows keyboard navigation to the button
-    // pointerEvents remains "auto" so the button can be tabbed to even when visually hidden
     padding: `${theme.spacing.sm} ${theme.spacing.sm} 0 0`,
     top: 0,
     right: 0,
@@ -86,7 +85,6 @@ const StyledToolbarWrapper = styled.div<StyledToolbarWrapperProps>(
     pointerEvents: "auto",
     transition: locked ? TOOLBAR_SHOW_TRANSITION : TOOLBAR_HIDE_TRANSITION,
 
-    // Make button visible when focused via keyboard
     "&:focus-within": {
       opacity: 1,
     },
@@ -167,45 +165,62 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   value: cell,
   initialValue,
   onChange,
-  // Note: onFinishedEditing is provided by glide-data-grid but not used here.
-  // The markdown cell has internal view/edit modes, and glide handles overlay
-  // closure on outside clicks. We don't need to signal finish for internal toggles.
+  onFinishedEditing,
 }) => {
-  const [isEditing, setIsEditing] = useState(() => {
-    // If initialValue is provided (keyboard-started edit), start in edit mode
-    return initialValue !== undefined && initialValue !== ""
-  })
-  const [editValue, setEditValue] = useState(() => {
-    // If initialValue is provided (keyboard-started edit), use it as the starting value
-    // following glide-data-grid's convention: typed character replaces the cell value
-    if (initialValue !== undefined && initialValue !== "") {
-      return initialValue
-    }
-    return cell.data.value ?? ""
-  })
+  // A non-empty `initialValue` means the edit was started by typing a
+  // character, so we open directly in edit mode seeded with that value
+  // (following glide-data-grid's convention).
+  const startInEditMode = initialValue !== undefined && initialValue !== ""
+  const [isEditing, setIsEditing] = useState(startInEditMode)
+  const [editValue, setEditValue] = useState(
+    initialValue !== undefined && initialValue !== ""
+      ? initialValue
+      : (cell.data.value ?? "")
+  )
 
-  // Platform-aware modifier key label for keyboard shortcuts
   const modifierLabel = isFromMac() ? "⌘" : "Ctrl"
 
+  const handleTextChange = useCallback(
+    (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      const newValue = e.target.value
+      setEditValue(newValue)
+      // Propagate the draft to glide-data-grid so that dismissing the overlay
+      // by clicking outside commits the latest text.
+      onChange({
+        ...cell,
+        copyData: newValue,
+        data: {
+          ...cell.data,
+          value: newValue,
+          displayValue: removeLineBreaks(newValue),
+        },
+      })
+    },
+    [cell, onChange]
+  )
+
   const handleSave = useCallback(() => {
-    onChange({
-      ...cell,
-      copyData: editValue,
-      data: {
-        ...cell.data,
-        value: editValue,
-        displayValue: removeLineBreaks(editValue),
+    // Commit the new value and signal glide-data-grid that editing finished,
+    // which closes the overlay. Closing (rather than staying open) keeps
+    // glide's selection state consistent so the cell can be re-opened later.
+    onFinishedEditing(
+      {
+        ...cell,
+        copyData: editValue,
+        data: {
+          ...cell.data,
+          value: editValue,
+          displayValue: removeLineBreaks(editValue),
+        },
       },
-    })
-    // Return to viewer mode (don't call onFinishedEditing - that closes the overlay)
-    setIsEditing(false)
-  }, [cell, editValue, onChange])
+      [0, 0]
+    )
+  }, [cell, editValue, onFinishedEditing])
 
   const handleCancel = useCallback(() => {
-    setEditValue(cell.data.value ?? "")
-    // Return to viewer mode (don't call onFinishedEditing - that closes the overlay)
-    setIsEditing(false)
-  }, [cell.data.value])
+    // Close the overlay without committing changes.
+    onFinishedEditing(undefined, [0, 0])
+  }, [onFinishedEditing])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -241,7 +256,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
           </StyledToolbarWrapper>
           <StyledTextarea
             value={editValue}
-            onChange={e => setEditValue(e.target.value)}
+            onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             autoFocus
             placeholder="Enter markdown text..."
@@ -252,7 +267,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     )
   }
 
-  const hasContent = (cell.data.value?.length ?? 0) > 0
+  const hasContent = Boolean(cell.data.value)
 
   return (
     <StyledContainer data-testid="stMarkdownColumnViewer">
@@ -310,13 +325,11 @@ const renderer: CustomRenderer<MarkdownCell> = {
     },
   }),
 
-  onPaste: (val: string, cell: MarkdownCellProps) => {
-    return {
-      ...cell,
-      value: val,
-      displayValue: removeLineBreaks(val),
-    }
-  },
+  onPaste: (val: string, cell: MarkdownCellProps) => ({
+    ...cell,
+    value: val,
+    displayValue: removeLineBreaks(val),
+  }),
 }
 
 export default renderer

@@ -204,11 +204,18 @@ def test_markdown_cell_editing(themed_app: Page, assert_snapshot: ImageCompareFu
     # Clear and type new markdown content
     textarea.fill("## New Header\n\nThis is **updated** content.")
 
-    # Save using keyboard shortcut (Ctrl/Cmd+Enter) - this reliably commits the change
+    # Save using keyboard shortcut (Ctrl/Cmd+Enter) - this commits the change
+    # and closes the overlay.
     textarea.press(f"{COMMAND_KEY}+Enter")
+    wait_for_app_run(themed_app)
+    expect(cell_overlay).not_to_be_visible()
 
-    # After saving, should be back in viewer mode with updated content
-    viewer = cell_overlay.get_by_test_id("stMarkdownColumnViewer")
+    # Re-open the cell to confirm the saved content renders in the viewer.
+    markdown_column_df = _get_editor(themed_app, "markdown-column")
+    expect_canvas_to_be_visible(markdown_column_df)
+    click_on_cell(markdown_column_df, 1, 0, double_click=True, column_width="medium")
+    reopened_overlay = get_open_cell_overlay(themed_app)
+    viewer = reopened_overlay.get_by_test_id("stMarkdownColumnViewer")
     expect(viewer).to_be_visible()
     expect(viewer).to_contain_text("New Header")
     expect(viewer).to_contain_text("updated")
@@ -234,20 +241,12 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
     textarea = cell_overlay.locator("textarea")
     expect(textarea).to_be_visible()
 
-    # Test Ctrl/Cmd+Enter to save
+    # Test Ctrl/Cmd+Enter to save (commits the value and closes the overlay).
     shortcut_content = "## Shortcut Header\n\nSaved via keyboard."
     textarea.fill(shortcut_content)
     textarea.press(f"{COMMAND_KEY}+Enter")
-
-    # After saving via shortcut, should be back in viewer mode with saved content
-    viewer = cell_overlay.get_by_test_id("stMarkdownColumnViewer")
-    expect(viewer).to_be_visible()
-    expect(viewer).to_contain_text("Shortcut Header")
-    expect(viewer).to_contain_text("Saved via keyboard")
-
-    # Close the overlay by clicking outside and wait for app rerun
-    reset_focus(app)
     wait_for_app_run(app)
+    expect(cell_overlay).not_to_be_visible()
 
     # Verify the edited value was committed to backend widget state
     expect_prefixed_markdown(
@@ -257,14 +256,16 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
         app, "Markdown column return:", "Saved via keyboard", exact_match=False
     )
 
-    # Re-fetch the dataframe locator since the page has been rerendered
+    # Re-fetch the dataframe locator since the page has been rerendered, then
+    # re-open the same cell to confirm it can be re-opened after saving.
     markdown_column_df = _get_editor(app, "markdown-column")
     expect_canvas_to_be_visible(markdown_column_df)
-
-    # Re-open the cell to test Escape to cancel
     click_on_cell(markdown_column_df, 2, 0, double_click=True, column_width="medium")
     cell_overlay = get_open_cell_overlay(app)
     expect(cell_overlay).to_be_visible()
+    expect(cell_overlay.get_by_test_id("stMarkdownColumnViewer")).to_contain_text(
+        "Shortcut Header"
+    )
 
     # Test Escape to cancel - click edit, type new content, then cancel
     edit_button = cell_overlay.get_by_label("Edit")
@@ -273,20 +274,26 @@ def test_markdown_cell_keyboard_shortcuts(app: Page):
 
     textarea = cell_overlay.locator("textarea")
     expect(textarea).to_be_visible()
+    # The textarea is seeded with the previously saved content.
+    expect(textarea).to_have_value(shortcut_content)
 
     cancelled_content = shortcut_content + " Cancelled"
     textarea.fill(cancelled_content)
     textarea.press("Escape")
 
-    # Should be back in viewer mode without saving
-    viewer = cell_overlay.get_by_test_id("stMarkdownColumnViewer")
-    expect(viewer).to_be_visible()
+    # Escape closes the overlay without saving.
+    expect(cell_overlay).not_to_be_visible()
 
-    # Re-enter edit mode and verify cancelled content was not saved
-    cell_overlay.get_by_label("Edit").click()
-    textarea = cell_overlay.locator("textarea")
-    expect(textarea).to_have_value(shortcut_content)
-    expect(textarea).not_to_have_value(cancelled_content)
+    # The cancelled content must not be committed to backend widget state - the
+    # value should remain the previously saved content.
+    expect_prefixed_markdown(
+        app, "Markdown column return:", "Shortcut Header", exact_match=False
+    )
+    expect(
+        app.get_by_test_id("stMarkdownContainer").filter(
+            has_text="Markdown column return:"
+        )
+    ).not_to_contain_text("Cancelled")
 
 
 def test_check_top_level_class(app: Page):
