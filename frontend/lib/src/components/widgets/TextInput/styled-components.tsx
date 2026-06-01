@@ -26,21 +26,29 @@ export const StyledTextInput = styled.div`
 interface StyledInputRootProps {
   $isFocused: boolean
   $hasIcon: boolean
+  $isError: boolean
 }
 
 export const StyledInputRoot = styled.div<StyledInputRootProps>(
-  ({ theme, $isFocused, $hasIcon }) => ({
-    display: "flex",
-    alignItems: "center",
-    height: theme.sizes.minElementHeight,
-    borderWidth: theme.sizes.borderWidth,
-    borderStyle: "solid",
-    borderColor: getBorderColor(theme.colors, $isFocused),
-    borderRadius: theme.radii.default,
-    backgroundColor: theme.colors.secondaryBg,
-    paddingLeft: $hasIcon ? theme.spacing.sm : 0,
-    overflow: "hidden",
-  })
+  ({ theme, $isFocused, $hasIcon, $isError }) => {
+    const borderColor = $isError
+      ? theme.colors.redTextColor
+      : getBorderColor(theme.colors, $isFocused)
+    return {
+      display: "flex",
+      alignItems: "center",
+      height: theme.sizes.minElementHeight,
+      borderWidth: theme.sizes.borderWidth,
+      borderStyle: "solid",
+      borderColor,
+      borderRadius: theme.radii.default,
+      backgroundColor: $isError
+        ? theme.colors.redBackgroundColor
+        : theme.colors.secondaryBg,
+      paddingLeft: $hasIcon ? theme.spacing.sm : 0,
+      overflow: "hidden",
+    }
+  }
 )
 
 export const StyledInputElement = styled(RAInput)(({ theme }) => ({
@@ -84,6 +92,14 @@ export const StyledStartEnhancer = styled.div<StyledStartEnhancerProps>(
     flexShrink: 0,
   })
 )
+
+export const StyledValidationIcon = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  padding: `0 ${theme.spacing.sm}`,
+  color: theme.colors.redTextColor,
+  flexShrink: 0,
+}))
 
 export const StyledPasswordToggle = styled.button(({ theme }) => ({
   display: "flex",

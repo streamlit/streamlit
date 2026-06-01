@@ -193,4 +193,19 @@ st.text_input(
 )
 st.write(f"Text input counter: {st.session_state.setvalue_counter}")
 
+v25 = st.text_input("text input 25 (type=email)", type="email")
+st.write("value 25:", v25)
+
+v26 = st.text_input("text input 26 (type=url)", type="url")
+st.write("value 26:", v26)
+
+v27 = st.text_input("text input 27 (type=tel)", type="tel")
+st.write("value 27:", v27)
+
+st.text_input(
+    "text input 28 (invalid email default)",
+    value="not-an-email",
+    type="email",
+)
+
 st.button("Trigger text input rerun")
