@@ -202,6 +202,27 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // This prevents the infinite loop caused by container-driven facet sizing.
   const useStretchWidth = isFacet && !isFullScreen ? false : baseStretchWidth
 
+  // The dimensions to apply to the chart. Facet charts in fullscreen use
+  // fullScreenWidth; outside fullscreen they use natural sizing (0). Non-facet
+  // charts always use the measured container width. Height follows fullscreen
+  // vs. container measurement.
+  const currentWidth = isFacet
+    ? isFullScreen
+      ? (fullScreenWidth ?? 0)
+      : 0
+    : chartContainerWidth
+  const currentHeight =
+    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
+
+  // Whether each dimension is container-driven (stretch / fullscreen) rather than
+  // a fixed size from the spec. These flags drive both spec generation and which
+  // dimensions we update via Vega's native resize API. Nested compositions must
+  // not be forced to container width in fullscreen to avoid "infinite extent"
+  // layout errors (issues #13410, #14050).
+  const forceStretchWidth =
+    isFullScreen && !hasNestedComp ? true : useStretchWidth
+  const forceStretchHeight = isFullScreen ? true : useStretchHeight
+
   // We preprocess the input vega element to do a two things:
   // 1. Update the spec to handle Streamlit specific configurations such as
   //    theming, container width, and full screen mode
@@ -210,17 +231,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
   //    Note: We do not stabilize data/datasets as that is managed by the embed.
   const element = useVegaElementPreprocessor(
     inputElement,
-    // Facet charts in fullscreen use fullScreenWidth; otherwise they use natural sizing (0).
-    // Non-facet charts always use chartContainerWidth.
-    isFacet
-      ? isFullScreen
-        ? (fullScreenWidth ?? 0)
-        : 0
-      : chartContainerWidth,
-    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0,
-    // Don't force stretch width for nested compositions - they need natural sizing
-    isFullScreen && !hasNestedComp ? true : useStretchWidth,
-    isFullScreen ? true : useStretchHeight
+    currentWidth,
+    currentHeight,
+    forceStretchWidth,
+    forceStretchHeight
   )
 
   // This hook provides lifecycle functions for creating and removing the view.
@@ -239,16 +253,6 @@ const ArrowVegaLiteChart: FC<Props> = ({
   // when only dimensions change).
   const latestSpecRef = useRef(spec)
   latestSpecRef.current = spec
-
-  // For facet charts, only use fullScreenWidth when in fullscreen mode;
-  // otherwise, they use natural sizing (dimensions from the spec).
-  const currentWidth = isFacet
-    ? isFullScreen
-      ? (fullScreenWidth ?? 0)
-      : 0
-    : chartContainerWidth
-  const currentHeight =
-    (isFullScreen ? fullScreenHeight : chartContainerHeight) ?? 0
 
   // Keep refs to dimensions updated so we can access them in the effect below
   const latestDimensionsRef = useRef({
@@ -317,16 +321,10 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
   // Handle dimension-only changes using Vega's native resize API.
   // This is much faster than recreating the entire view (~3.6x speedup).
-  // Only resize if at least one dimension uses container-driven sizing.
-  // For fixed-dimension charts, the dimensions are defined in the spec and
-  // should not be overridden by container size changes.
-  // Mirror the useContainerWidth logic from useVegaElementPreprocessor:
-  // nested compositions must not be forced to container width in fullscreen to
-  // avoid "infinite extent" layout errors (issues #13410, #14050).
-  const shouldResizeWidth =
-    isFullScreen && !hasNestedComp ? true : useStretchWidth
-  const shouldResizeHeight = useStretchHeight || isFullScreen
-  const shouldResize = shouldResizeWidth || shouldResizeHeight
+  // We only resize dimensions that are container-driven (forceStretch*); fixed
+  // dimensions come from the spec and must not be overridden by container size
+  // changes.
+  const shouldResize = forceStretchWidth || forceStretchHeight
   useEffect(() => {
     if (!isViewReady || !shouldResize) {
       return
@@ -334,16 +332,16 @@ const ArrowVegaLiteChart: FC<Props> = ({
 
     const lastDims = lastDimensionsRef.current
     // Only track changes for dimensions we're actually resizing
-    const widthChanged = shouldResizeWidth && lastDims?.width !== currentWidth
+    const widthChanged = forceStretchWidth && lastDims?.width !== currentWidth
     const heightChanged =
-      shouldResizeHeight && lastDims?.height !== currentHeight
+      forceStretchHeight && lastDims?.height !== currentHeight
     if (widthChanged || heightChanged) {
       // Use an async IIFE to await resizeView and only update cache on success
       // Pass 0 for dimensions that shouldn't be resized (e.g., height='content')
       void (async () => {
         const success = await resizeView(
-          shouldResizeWidth ? currentWidth : 0,
-          shouldResizeHeight ? currentHeight : 0
+          forceStretchWidth ? currentWidth : 0,
+          forceStretchHeight ? currentHeight : 0
         )
         if (success) {
           lastDimensionsRef.current = {
@@ -356,8 +354,8 @@ const ArrowVegaLiteChart: FC<Props> = ({
   }, [
     isViewReady,
     shouldResize,
-    shouldResizeWidth,
-    shouldResizeHeight,
+    forceStretchWidth,
+    forceStretchHeight,
     resizeView,
     currentWidth,
     currentHeight,

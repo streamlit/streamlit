@@ -294,6 +294,11 @@ export function useVegaEmbed(
     [isCreatingView]
   )
 
+  // Whether the view exists and is not mid-creation, so it's safe to resize.
+  // This is derived from a ref (`vegaViewRef`) rather than state, so it only
+  // reflects the latest value on re-render. That's sufficient here because
+  // `setIsCreatingView` toggles around view creation and forces the re-render
+  // that recomputes this flag once the view becomes ready.
   const isViewReady = vegaViewRef.current !== null && !isCreatingView
 
   return { createView, updateView, finalizeView, resizeView, isViewReady }

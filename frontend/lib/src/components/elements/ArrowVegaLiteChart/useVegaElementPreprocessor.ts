@@ -253,6 +253,31 @@ export const useVegaElementPreprocessor = (
     // eslint-disable-next-line react-hooks/exhaustive-deps -- deep comparison via serialized key
   }, [selectionModeKey])
 
+  // The structural spec generated with neutral (0) container dimensions. This is
+  // only recomputed when non-dimension inputs change, keeping it stable across
+  // container resizes.
+  const baseSpec = useMemo(
+    () =>
+      generateSpec(
+        inputSpec,
+        useContainerWidth,
+        useContainerHeight,
+        vegaLiteTheme,
+        selectionMode,
+        theme,
+        0, // Use 0 for container dimensions
+        0
+      ),
+    [
+      inputSpec,
+      useContainerWidth,
+      useContainerHeight,
+      vegaLiteTheme,
+      selectionMode,
+      theme,
+    ]
+  )
+
   // Stable key that changes only when non-dimension parts of the spec change,
   // OR when fixed (non-container-driven) dimensions change.
   // Container-driven dimensions are excluded because they change frequently during
@@ -263,16 +288,6 @@ export const useVegaElementPreprocessor = (
   // transitioning to/from container-driven sizing (e.g., entering fullscreen) requires
   // a full view recreation to properly apply the new dimensions.
   const baseSpecKey = useMemo(() => {
-    const baseSpec = generateSpec(
-      inputSpec,
-      useContainerWidth,
-      useContainerHeight,
-      vegaLiteTheme,
-      selectionMode,
-      theme,
-      0, // Use 0 for container dimensions
-      0
-    )
     // Only strip dimensions that are container-driven.
     // Fixed dimensions from the spec should be included in the key.
     const specForKey = { ...baseSpec }
@@ -282,20 +297,32 @@ export const useVegaElementPreprocessor = (
     if (useContainerHeight) {
       delete specForKey.height
     }
+    // Concat compositions (vconcat/hconcat/concat) bake per-child dimensions at
+    // view-creation time, which Vega's native resize API cannot update. For these
+    // charts we include the container dimensions in the key so a container-driven
+    // dimension change triggers a full view recreation (preserving correct
+    // resizing), instead of the native-resize fast path used for single-view charts.
+    const isConcatComposition =
+      "vconcat" in baseSpec || "hconcat" in baseSpec || "concat" in baseSpec
     // Include the sizing mode flags so that transitioning to/from
     // container-driven sizing triggers a view recreation.
     return JSON.stringify({
       spec: specForKey,
       useContainerWidth,
       useContainerHeight,
+      concatWidth:
+        isConcatComposition && useContainerWidth ? containerWidth : undefined,
+      concatHeight:
+        isConcatComposition && useContainerHeight
+          ? containerHeight
+          : undefined,
     })
   }, [
-    inputSpec,
+    baseSpec,
     useContainerWidth,
     useContainerHeight,
-    vegaLiteTheme,
-    selectionMode,
-    theme,
+    containerWidth,
+    containerHeight,
   ])
 
   const spec = useMemo(
