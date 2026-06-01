@@ -158,7 +158,10 @@ df = conn.query("SELECT * FROM my_table")
 The `type="snowflake"` argument is required here because the connection name is not the
 built-in `"snowflake"` shorthand. Streamlit secrets still take precedence: if a
 `[connections.my_connection]` section exists in `secrets.toml`, those values are used
-instead of the `connections.toml` entry.
+instead of the `connections.toml` entry. Likewise, passing connection keyword arguments
+(e.g. `st.connection("my_connection", type="snowflake", warehouse="wh")`) bypasses the
+named entry entirely—those kwargs are forwarded to the connector as-is, so the
+`connections.toml` entry is not used in that case.
 
 ## Chat with Cortex (Snowflake Cortex required)
 
