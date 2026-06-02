@@ -287,25 +287,22 @@ function DataFrame({
     editingState
   )
 
-  const {
-    columns,
-    sortColumn,
-    getOriginalIndex,
-    getCellContent: getSortedCellContent,
-  } = useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+  const { columns, sortColumn, getOriginalIndex, getCellContent } =
+    useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
   const {
-    getCellContent,
     buttonActionMenu,
     clearButtonActionMenu,
     handleMenuSelectAction,
+    onCellClicked,
   } = useButtonColumnInteractions({
     element,
     widgetMgr,
     fragmentId,
     columns,
-    getCellContent: getSortedCellContent,
+    getCellContent,
     getOriginalIndex,
+    theme: gridTheme.glideTheme,
   })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
@@ -937,6 +934,7 @@ function DataFrame({
           rowHeight={rowHeight}
           headerHeight={gridTheme.defaultHeaderHeight}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
+          onCellClicked={isEmptyTable ? undefined : onCellClicked}
           onColumnResize={canResizeColumns ? onColumnResize : undefined}
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}

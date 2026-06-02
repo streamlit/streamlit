@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-import { GridCell, GridCellKind } from "@glideapps/glide-data-grid"
+import {
+  type CellClickedEventArgs,
+  type Theme as GlideTheme,
+  type GridCell,
+  GridCellKind,
+} from "@glideapps/glide-data-grid"
 import { act, renderHook } from "@testing-library/react"
 import { Field, Utf8 } from "apache-arrow"
 
@@ -22,7 +27,6 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import ButtonColumn from "~lib/components/widgets/DataFrame/columns/ButtonColumn"
-import { ButtonCell } from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -50,6 +54,10 @@ const MOCK_BUTTON_COLUMN_PROPS = {
       metadata: null,
     },
   },
+}
+
+const MOCK_THEME: Pick<GlideTheme, "cellHorizontalPadding"> = {
+  cellHorizontalPadding: 8,
 }
 
 function createButtonColumn(
@@ -83,6 +91,18 @@ function createWidgetMgr(): {
   }
 }
 
+function createCellClickedEvent(
+  overrides: Partial<CellClickedEventArgs> = {}
+): CellClickedEventArgs {
+  return {
+    bounds: { x: 0, y: 0, width: 100, height: 32 },
+    localEventX: 50,
+    localEventY: 16,
+    preventDefault: vi.fn(),
+    ...overrides,
+  } as unknown as CellClickedEventArgs
+}
+
 describe("useButtonColumnInteractions", () => {
   beforeEach(() => {
     vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => {
@@ -96,7 +116,7 @@ describe("useButtonColumnInteractions", () => {
     vi.restoreAllMocks()
   })
 
-  it("injects click handlers into button cells and triggers the matching widget", () => {
+  it("triggers the matching widget for button cell clicks", () => {
     const column = createButtonColumn()
     const buttonCell = column.getCell("Open")
     const getCellContent = vi.fn(() => buttonCell)
@@ -111,18 +131,13 @@ describe("useButtonColumnInteractions", () => {
         columns: [column],
         getCellContent,
         getOriginalIndex,
+        theme: MOCK_THEME,
       })
     )
 
-    const wrappedCell = result.current.getCellContent([0, 2]) as ButtonCell
+    const event = createCellClickedEvent()
 
-    expect(wrappedCell.data.rowIndex).toBe(102)
-    expect(wrappedCell.data.onClick).toBeDefined()
-    expect(wrappedCell.data.onOpenMenu).toBeDefined()
-
-    act(() => {
-      wrappedCell.data.onClick?.(102, "Open")
-    })
+    act(() => result.current.onCellClicked([0, 2], event))
 
     expect(setStringTriggerValue).toHaveBeenCalledWith(
       { id: "widget-id", formId: "form-id" },
@@ -130,6 +145,7 @@ describe("useButtonColumnInteractions", () => {
       { fromUi: true },
       "fragment-id"
     )
+    expect(event.preventDefault).toHaveBeenCalledTimes(1)
   })
 
   it("falls back to positional button widget keys", () => {
@@ -148,14 +164,11 @@ describe("useButtonColumnInteractions", () => {
         columns: [column],
         getCellContent,
         getOriginalIndex: row => row,
+        theme: MOCK_THEME,
       })
     )
 
-    const wrappedCell = result.current.getCellContent([0, 1]) as ButtonCell
-
-    act(() => {
-      wrappedCell.data.onClick?.(1, "Open")
-    })
+    act(() => result.current.onCellClicked([0, 1], createCellClickedEvent()))
 
     expect(setStringTriggerValue).toHaveBeenCalledWith(
       { id: "positional-widget-id", formId: "form-id" },
@@ -177,21 +190,17 @@ describe("useButtonColumnInteractions", () => {
         columns: [column],
         getCellContent,
         getOriginalIndex: row => row + 10,
+        theme: MOCK_THEME,
       })
     )
 
-    const wrappedCell = result.current.getCellContent([0, 4]) as ButtonCell
-
-    act(() => {
-      wrappedCell.data.onOpenMenu?.(14, ["View", "Delete"], {
-        x: 100,
-        y: 200,
-        width: 40,
-        height: 24,
-        clickX: 110,
-        clickY: 210,
-      })
+    const event = createCellClickedEvent({
+      bounds: { x: 100, y: 200, width: 40, height: 24 },
+      localEventX: 10,
+      localEventY: 10,
     })
+
+    act(() => result.current.onCellClicked([0, 4], event))
 
     expect(result.current.buttonActionMenu).toEqual({
       columnName: "button_column",
@@ -214,7 +223,7 @@ describe("useButtonColumnInteractions", () => {
     expect(result.current.buttonActionMenu).toBeUndefined()
   })
 
-  it("returns cells unchanged when they are not interactive button cells", () => {
+  it("ignores non-button cells", () => {
     const column = createButtonColumn()
     const nonButtonCell = {
       kind: GridCellKind.Text,
@@ -230,9 +239,14 @@ describe("useButtonColumnInteractions", () => {
         columns: [column],
         getCellContent: () => nonButtonCell,
         getOriginalIndex: row => row,
+        theme: MOCK_THEME,
       })
     )
 
-    expect(result.current.getCellContent([0, 0])).toBe(nonButtonCell)
+    const event = createCellClickedEvent()
+
+    act(() => result.current.onCellClicked([0, 0], event))
+
+    expect(event.preventDefault).not.toHaveBeenCalled()
   })
 })

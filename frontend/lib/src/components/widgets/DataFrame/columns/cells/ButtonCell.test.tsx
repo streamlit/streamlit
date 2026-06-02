@@ -16,7 +16,10 @@
 
 import { type CustomCell, GridCellKind } from "@glideapps/glide-data-grid"
 
-import renderer, { ButtonCell } from "./ButtonCell"
+import renderer, {
+  type ButtonCell,
+  getButtonCellClickTarget,
+} from "./ButtonCell"
 
 describe("ButtonCell renderer", () => {
   const mockTheme = {
@@ -159,177 +162,134 @@ describe("ButtonCell renderer", () => {
     )
   })
 
-  describe("onClick", () => {
-    it("calls onClick callback for single button", () => {
-      const onClick = vi.fn()
+  describe("getButtonCellClickTarget", () => {
+    it("returns a button click target for a single button", () => {
       const cell = {
         kind: GridCellKind.Custom,
         data: {
           kind: "button-cell",
           data: "Click me",
           buttonType: "primary",
-          rowIndex: 0,
-          onClick,
         },
         allowOverlay: false,
         copyData: "Click me",
         readonly: true,
       } as unknown as ButtonCell
 
-      const args = {
-        cell,
+      const clickTarget = getButtonCellClickTarget(cell, {
         bounds: { x: 0, y: 0, width: 100, height: 32 },
         posX: 50,
         posY: 16,
         theme: mockTheme,
-      }
+      })
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      renderer.onClick!(
-        args as Parameters<NonNullable<typeof renderer.onClick>>[0]
-      )
-
-      expect(onClick).toHaveBeenCalledWith(0, "Click me")
+      expect(clickTarget).toEqual({
+        kind: "button",
+        label: "Click me",
+      })
     })
 
-    it("calls onOpenMenu callback for multi-action button", () => {
-      const onOpenMenu = vi.fn()
+    it("returns a menu click target for a multi-action button", () => {
       const cell = {
         kind: GridCellKind.Custom,
         data: {
           kind: "button-cell",
           data: ["Action 1", "Action 2"],
           buttonType: "secondary",
-          rowIndex: 1,
-          onOpenMenu,
         },
         allowOverlay: false,
         copyData: "Action 1, Action 2",
         readonly: true,
       } as unknown as ButtonCell
 
-      const args = {
-        cell,
+      const clickTarget = getButtonCellClickTarget(cell, {
         bounds: { x: 10, y: 20, width: 100, height: 32 },
         posX: 50,
         posY: 16,
         theme: mockTheme,
-      }
+      })
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      renderer.onClick!(
-        args as Parameters<NonNullable<typeof renderer.onClick>>[0]
-      )
-
-      expect(onOpenMenu).toHaveBeenCalledWith(
-        1,
-        ["Action 1", "Action 2"],
-        expect.objectContaining({
+      expect(clickTarget).toEqual({
+        kind: "menu",
+        actions: ["Action 1", "Action 2"],
+        bounds: expect.objectContaining({
           x: 10,
           y: 20,
           width: 100,
           height: 32,
-        })
-      )
+          clickX: 60,
+          clickY: 36,
+        }),
+      })
     })
 
-    it("does nothing when rowIndex is undefined", () => {
-      const onClick = vi.fn()
-      const cell = {
-        kind: GridCellKind.Custom,
-        data: {
-          kind: "button-cell",
-          data: "Click me",
-          buttonType: "primary",
-          // rowIndex not set
-          onClick,
-        },
-        allowOverlay: false,
-        copyData: "Click me",
-        readonly: true,
-      } as unknown as ButtonCell
-
-      const args = {
-        cell,
-        bounds: { x: 0, y: 0, width: 100, height: 32 },
-        posX: 50,
-        posY: 16,
-        theme: mockTheme,
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      renderer.onClick!(
-        args as Parameters<NonNullable<typeof renderer.onClick>>[0]
-      )
-
-      expect(onClick).not.toHaveBeenCalled()
-    })
-
-    it("does nothing when data is null", () => {
-      const onClick = vi.fn()
+    it("returns undefined when data is null", () => {
       const cell = {
         kind: GridCellKind.Custom,
         data: {
           kind: "button-cell",
           data: null,
           buttonType: "primary",
-          rowIndex: 0,
-          onClick,
         },
         allowOverlay: false,
         copyData: "",
         readonly: true,
       } as unknown as ButtonCell
 
-      const args = {
-        cell,
+      const clickTarget = getButtonCellClickTarget(cell, {
         bounds: { x: 0, y: 0, width: 100, height: 32 },
         posX: 50,
         posY: 16,
         theme: mockTheme,
-      }
+      })
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      renderer.onClick!(
-        args as Parameters<NonNullable<typeof renderer.onClick>>[0]
-      )
-
-      expect(onClick).not.toHaveBeenCalled()
+      expect(clickTarget).toBeUndefined()
     })
 
-    it("does nothing for a single empty-string label", () => {
-      const onClick = vi.fn()
-      const onOpenMenu = vi.fn()
+    it("returns undefined for a single empty-string label", () => {
       const cell = {
         kind: GridCellKind.Custom,
         data: {
           kind: "button-cell",
           data: [""],
           buttonType: "primary",
-          rowIndex: 0,
-          onClick,
-          onOpenMenu,
         },
         allowOverlay: false,
         copyData: "",
         readonly: true,
       } as unknown as ButtonCell
 
-      const args = {
-        cell,
+      const clickTarget = getButtonCellClickTarget(cell, {
         bounds: { x: 0, y: 0, width: 100, height: 32 },
         posX: 50,
         posY: 16,
         theme: mockTheme,
-      }
+      })
 
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      renderer.onClick!(
-        args as Parameters<NonNullable<typeof renderer.onClick>>[0]
-      )
+      expect(clickTarget).toBeUndefined()
+    })
 
-      expect(onClick).not.toHaveBeenCalled()
-      expect(onOpenMenu).not.toHaveBeenCalled()
+    it("returns undefined when clicking outside the button bounds", () => {
+      const cell = {
+        kind: GridCellKind.Custom,
+        data: {
+          kind: "button-cell",
+          data: "Click me",
+          buttonType: "primary",
+        },
+        allowOverlay: false,
+        copyData: "Click me",
+        readonly: true,
+      } as unknown as ButtonCell
+
+      const clickTarget = getButtonCellClickTarget(cell, {
+        bounds: { x: 0, y: 0, width: 100, height: 32 },
+        posX: 0,
+        posY: 16,
+        theme: mockTheme,
+      })
+
+      expect(clickTarget).toBeUndefined()
     })
   })
 })

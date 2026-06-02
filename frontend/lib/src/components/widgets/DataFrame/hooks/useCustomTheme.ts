@@ -23,7 +23,7 @@ import { convertRemToPx } from "~lib/theme/utils"
 
 export type CustomGridTheme = {
   // The theme configuration for the glide-data-grid
-  glideTheme: Partial<GlideTheme>
+  glideTheme: Partial<GlideTheme> & Pick<GlideTheme, "cellHorizontalPadding">
   // The table border radius in pixels
   tableBorderRadius: string
   // The table border size in pixels

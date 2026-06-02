@@ -18,7 +18,10 @@ import {
   type CustomCell,
   type CustomRenderer,
   getMiddleCenterBias,
+  type Theme as GlideTheme,
+  type GridCell,
   GridCellKind,
+  type Rectangle,
   roundedRect,
 } from "@glideapps/glide-data-grid"
 import { darken } from "color2k"
@@ -32,6 +35,24 @@ import { genericFonts } from "~lib/theme/primitives/typography"
 
 export type ButtonCellData = string | string[] | null
 
+export type ButtonMenuBounds = Rectangle & {
+  /** Click X position (screen coordinates). */
+  readonly clickX: number
+  /** Click Y position (screen coordinates). */
+  readonly clickY: number
+}
+
+type ButtonCellClickTarget =
+  | {
+      readonly kind: "button"
+      readonly label: string
+    }
+  | {
+      readonly kind: "menu"
+      readonly actions: string[]
+      readonly bounds: ButtonMenuBounds
+    }
+
 /** Approximate width for the "more_vert" menu icon */
 const MULTI_ACTION_ICON_WIDTH = 20
 
@@ -44,18 +65,6 @@ const ICON_WIDTH_ESTIMATE = 20
 /** Minimum gap between icon and text in button labels. */
 const MIN_ICON_TEXT_GAP = 4
 
-/** Bounds rectangle for menu positioning. */
-interface MenuBounds {
-  readonly x: number
-  readonly y: number
-  readonly width: number
-  readonly height: number
-  /** Click X position (screen coordinates). */
-  readonly clickX: number
-  /** Click Y position (screen coordinates). */
-  readonly clickY: number
-}
-
 interface ButtonCellProps {
   readonly kind: "button-cell"
   /** The button label(s). String for single button, array for dropdown menu. */
@@ -64,16 +73,6 @@ interface ButtonCellProps {
   readonly buttonType: "primary" | "secondary" | "tertiary"
   /** Horizontal alignment of the button in the cell. Defaults to center. */
   readonly alignment?: "left" | "center" | "right"
-  /** The row index (original data row, before sorting). Set by DataFrame when rendering. */
-  readonly rowIndex?: number
-  /** Callback when a single button is clicked (set by DataFrame component). */
-  readonly onClick?: (rowIndex: number, label: string) => void
-  /** Callback to open menu for multi-action buttons (set by DataFrame component). */
-  readonly onOpenMenu?: (
-    rowIndex: number,
-    actions: string[],
-    bounds: MenuBounds
-  ) => void
 }
 
 export type ButtonCell = CustomCell<ButtonCellProps>
@@ -228,6 +227,98 @@ function isWithinButton(
   )
 }
 
+export function isButtonCell(cell: GridCell): cell is ButtonCell {
+  return (
+    cell.kind === GridCellKind.Custom &&
+    (cell.data as Record<string, unknown>)?.kind === "button-cell"
+  )
+}
+
+export function getButtonCellClickTarget(
+  cell: ButtonCell,
+  {
+    bounds,
+    posX,
+    posY,
+    theme,
+  }: {
+    bounds: Rectangle
+    posX: number | undefined
+    posY: number | undefined
+    theme: Pick<GlideTheme, "cellHorizontalPadding">
+  }
+): ButtonCellClickTarget | undefined {
+  const { data, alignment } = cell.data
+  if (!data) return undefined
+
+  const label = getSingleButtonLabel(data)
+  const isMultiAction = Array.isArray(data) && data.length > 1
+
+  // No interactive button is rendered when there is no content to show
+  // (e.g. an empty-string label), so clicks are ignored to match draw().
+  if (!isMultiAction && !label) return undefined
+
+  // Estimate content width without canvas context.
+  // Note: This uses a Latin-tuned character width estimate (CHAR_WIDTH_ESTIMATE).
+  // For non-Latin scripts (CJK, emoji, ligatures), actual widths can vary, causing
+  // click detection to be slightly off. We use theme.cellHorizontalPadding as
+  // a tolerance margin to accommodate estimation errors. A future enhancement
+  // could cache measured bounds from draw() for pixel-perfect click detection.
+  let estimatedContentWidth: number
+
+  if (isMultiAction) {
+    estimatedContentWidth = MULTI_ACTION_ICON_WIDTH
+  } else {
+    const hasIcon = label?.startsWith(":material/") ?? false
+    const textPart = hasIcon
+      ? label?.replace(/^:material\/[^:]+:/, "").trim()
+      : label
+    estimatedContentWidth =
+      (textPart?.length ?? 0) * CHAR_WIDTH_ESTIMATE +
+      (hasIcon ? ICON_WIDTH_ESTIMATE : 0)
+  }
+
+  const buttonBounds = getButtonBounds(
+    bounds.width,
+    bounds.height,
+    theme.cellHorizontalPadding,
+    estimatedContentWidth,
+    alignment
+  )
+
+  if (
+    !isWithinButton(
+      buttonBounds,
+      posX,
+      posY,
+      getClickTolerance(theme.cellHorizontalPadding)
+    )
+  ) {
+    return undefined
+  }
+
+  if (label) {
+    return {
+      kind: "button",
+      label,
+    }
+  }
+
+  if (isMultiAction) {
+    return {
+      kind: "menu",
+      actions: data,
+      bounds: {
+        ...bounds,
+        clickX: bounds.x + (posX ?? bounds.width / 2),
+        clickY: bounds.y + (posY ?? bounds.height / 2),
+      },
+    }
+  }
+
+  return undefined
+}
+
 /**
  * Custom cell renderer for button columns.
  *
@@ -241,73 +332,10 @@ function isWithinButton(
  */
 const renderer: CustomRenderer<ButtonCell> = {
   kind: GridCellKind.Custom,
-  isMatch: (c): c is ButtonCell =>
-    (c.data as Record<string, unknown>).kind === "button-cell",
+  isMatch: isButtonCell,
   needsHover: true,
   needsHoverPosition: true,
   onSelect: a => a.preventDefault(),
-  onClick: args => {
-    const { cell, bounds, posX, posY, theme } = args
-    const { data, onClick, onOpenMenu, rowIndex, alignment } = cell.data
-    if (!data || rowIndex === undefined) return undefined
-
-    const label = getSingleButtonLabel(data)
-    const isMultiAction = Array.isArray(data) && data.length > 1
-
-    // No interactive button is rendered when there is no content to show
-    // (e.g. an empty-string label), so clicks are ignored to match draw().
-    if (!isMultiAction && !label) return undefined
-
-    // Estimate content width without canvas context.
-    // Note: This uses a Latin-tuned character width estimate (CHAR_WIDTH_ESTIMATE).
-    // For non-Latin scripts (CJK, emoji, ligatures), actual widths can vary, causing
-    // click detection to be slightly off. We use theme.cellHorizontalPadding as
-    // a tolerance margin to accommodate estimation errors. A future enhancement
-    // could cache measured bounds from draw() for pixel-perfect click detection.
-    let estimatedContentWidth: number
-
-    if (isMultiAction) {
-      estimatedContentWidth = MULTI_ACTION_ICON_WIDTH
-    } else {
-      const hasIcon = label?.startsWith(":material/") ?? false
-      const textPart = hasIcon
-        ? label?.replace(/^:material\/[^:]+:/, "").trim()
-        : label
-      estimatedContentWidth =
-        (textPart?.length ?? 0) * CHAR_WIDTH_ESTIMATE +
-        (hasIcon ? ICON_WIDTH_ESTIMATE : 0)
-    }
-
-    const buttonBounds = getButtonBounds(
-      bounds.width,
-      bounds.height,
-      theme.cellHorizontalPadding,
-      estimatedContentWidth,
-      alignment
-    )
-
-    if (
-      !isWithinButton(
-        buttonBounds,
-        posX,
-        posY,
-        getClickTolerance(theme.cellHorizontalPadding)
-      )
-    ) {
-      return undefined
-    }
-
-    if (label) {
-      onClick?.(rowIndex, label)
-    } else if (isMultiAction) {
-      // Open menu at click position (bounds is in viewport coordinates)
-      const clickX = bounds.x + (posX ?? bounds.width / 2)
-      const clickY = bounds.y + (posY ?? bounds.height / 2)
-      onOpenMenu?.(rowIndex, data, { ...bounds, clickX, clickY })
-    }
-
-    return undefined
-  },
   drawPrep: args => {
     const { ctx } = args
     ctx.textAlign = "center"

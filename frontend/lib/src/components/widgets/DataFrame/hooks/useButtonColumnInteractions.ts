@@ -17,20 +17,22 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 
 import {
+  type CellClickedEventArgs,
   type DataEditorProps,
-  type GridCell,
-  GridCellKind,
-  type Rectangle,
+  type Theme as GlideTheme,
+  type Item,
 } from "@glideapps/glide-data-grid"
 
 import type { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
-import type { ButtonCell } from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
+import {
+  type ButtonMenuBounds,
+  getButtonCellClickTarget,
+  isButtonCell,
+} from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
 import { COLUMN_POSITION_PREFIX } from "~lib/components/widgets/DataFrame/hooks/useColumnLoader"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
-
-type ButtonMenuBounds = Rectangle & { clickX: number; clickY: number }
 
 interface ButtonActionMenuState {
   /** The column name or positional key of the button column. */
@@ -51,20 +53,29 @@ interface UseButtonColumnInteractionsParams {
   columns: BaseColumn[]
   getCellContent: DataEditorProps["getCellContent"]
   getOriginalIndex: (index: number) => number
+  theme: Pick<GlideTheme, "cellHorizontalPadding">
 }
 
 interface UseButtonColumnInteractionsReturn {
-  getCellContent: DataEditorProps["getCellContent"]
   buttonActionMenu: ButtonActionMenuState | undefined
   clearButtonActionMenu: () => void
   handleMenuSelectAction: (label: string) => void
+  onCellClicked: NonNullable<DataEditorProps["onCellClicked"]>
 }
 
-function isButtonCell(cell: GridCell): cell is ButtonCell {
-  return (
-    cell.kind === GridCellKind.Custom &&
-    (cell.data as Record<string, unknown>)?.kind === "button-cell"
-  )
+function getButtonWidgetKey(
+  column: BaseColumn,
+  buttonClickWidgets: DataframeProto["buttonClickWidgets"]
+): string | undefined {
+  const positionalKey = `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
+  const matchedKey =
+    buttonClickWidgets[column.name] !== undefined ? column.name : positionalKey
+
+  if (!buttonClickWidgets[matchedKey]) {
+    return undefined
+  }
+
+  return matchedKey
 }
 
 /**
@@ -79,8 +90,9 @@ function useButtonColumnInteractions({
   widgetMgr,
   fragmentId,
   columns,
-  getCellContent: getBaseCellContent,
+  getCellContent,
   getOriginalIndex,
+  theme,
 }: UseButtonColumnInteractionsParams): UseButtonColumnInteractionsReturn {
   const [buttonActionMenu, setButtonActionMenu] =
     useState<ButtonActionMenuState>()
@@ -173,67 +185,66 @@ function useButtonColumnInteractions({
     [cancelPendingMenuOpen]
   )
 
-  // ButtonColumn creates static cells from Arrow values, but clickable cells
-  // need runtime-only dataframe context: sorted display rows must map back to
-  // original data rows, widget IDs are stored on the dataframe proto, and the
-  // menu callbacks live in React state. Wrap the base getter here so all other
-  // dataframe features can keep using one Glide-compatible getCellContent.
-  const getCellContent = useCallback(
-    ([col, row]: readonly [number, number]): GridCell => {
-      const cell = getBaseCellContent([col, row])
-
-      if (!isButtonCell(cell)) {
-        return cell
-      }
-
+  const onCellClicked = useCallback(
+    ([col, row]: Item, event: CellClickedEventArgs): void => {
       const column = columns[col]
-      // Look up widget ID by column name or positional key (_pos:<index>).
-      const positionalKey = `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
-      const matchedKey =
-        element.buttonClickWidgets[column.name] !== undefined
-          ? column.name
-          : positionalKey
-      const widgetId = element.buttonClickWidgets[matchedKey]
-
-      if (!widgetId) {
-        return cell
+      if (column === undefined) {
+        return
       }
+
+      const cell = getCellContent([col, row])
+      if (!isButtonCell(cell)) {
+        return
+      }
+
+      const matchedKey = getButtonWidgetKey(column, element.buttonClickWidgets)
+
+      if (matchedKey === undefined) {
+        return
+      }
+
+      const clickTarget = getButtonCellClickTarget(cell, {
+        bounds: event.bounds,
+        posX: event.localEventX,
+        posY: event.localEventY,
+        theme,
+      })
+
+      if (clickTarget === undefined) {
+        return
+      }
+
+      event.preventDefault()
 
       const originalRowIndex = getOriginalIndex(row)
 
-      return {
-        ...cell,
-        data: {
-          ...cell.data,
-          rowIndex: originalRowIndex,
-          onClick: (rowIdx: number, label: string) => {
-            handleButtonClick(matchedKey, rowIdx, label)
-          },
-          onOpenMenu: (
-            rowIdx: number,
-            actions: string[],
-            bounds: ButtonMenuBounds
-          ) => {
-            handleOpenButtonMenu(matchedKey, rowIdx, actions, bounds)
-          },
-        },
+      if (clickTarget.kind === "button") {
+        handleButtonClick(matchedKey, originalRowIndex, clickTarget.label)
+      } else {
+        handleOpenButtonMenu(
+          matchedKey,
+          originalRowIndex,
+          clickTarget.actions,
+          clickTarget.bounds
+        )
       }
     },
     [
-      getBaseCellContent,
       columns,
       element.buttonClickWidgets,
+      getCellContent,
       getOriginalIndex,
       handleButtonClick,
       handleOpenButtonMenu,
+      theme,
     ]
   )
 
   return {
-    getCellContent,
     buttonActionMenu,
     clearButtonActionMenu,
     handleMenuSelectAction,
+    onCellClicked,
   }
 }
 
