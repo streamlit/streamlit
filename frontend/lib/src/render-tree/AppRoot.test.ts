@@ -569,6 +569,71 @@ describe("AppRoot", () => {
       ).toBe("tab2")
     })
 
+    it("removes children when replacing a transient-wrapped block during the same script run", () => {
+      const blockProto = makeProto(DeltaProto, {
+        addBlock: { allowEmpty: true },
+      })
+      const clearTransientDelta = makeProto(DeltaProto, {
+        newTransient: { elements: [] },
+      })
+
+      const rootWithBlock = ROOT.applyDelta(
+        "script_run_id",
+        blockProto,
+        forwardMsgMetadata([0, 1, 1])
+      )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "First" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "Stale second" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 1])
+        )
+
+      const rootWithTransientWrapper = rootWithBlock.applyDelta(
+        "script_run_id",
+        clearTransientDelta,
+        forwardMsgMetadata([0, 1, 1])
+      )
+
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(
+          rootWithTransientWrapper.main,
+          [1, 1]
+        )
+      ).toBeInstanceOf(TransientNode)
+
+      const rewrittenRoot = rootWithTransientWrapper
+        .applyDelta("script_run_id", blockProto, forwardMsgMetadata([0, 1, 1]))
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "Updated first" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+
+      const rewrittenBlock = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rewrittenRoot.main,
+        [1, 1]
+      ) as BlockNode
+
+      expect(rewrittenBlock.children.length).toBe(1)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(rewrittenRoot.main, [1, 1, 0])
+      ).toBeTextNode("Updated first")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(rewrittenRoot.main, [1, 1, 1])
+      ).toBeUndefined()
+    })
+
     it("removes a dialog block's children when replacing with a different dialog identity", () => {
       // Create a dialog with some children. The id field represents the dialog's
       // identity computed from its attributes.
