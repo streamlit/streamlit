@@ -31,12 +31,6 @@ import { genericFonts } from "~lib/theme/primitives/typography"
 
 export type ButtonCellData = string | string[] | null
 
-/** Internal button padding (horizontal). */
-const BUTTON_PADDING = 8
-
-/** Gap between icon and text in button labels. */
-const ICON_TEXT_GAP = 4
-
 /** Approximate width for the "more_vert" menu icon */
 const MULTI_ACTION_ICON_WIDTH = 20
 
@@ -46,8 +40,8 @@ const CHAR_WIDTH_ESTIMATE = 7
 /** Approximate width for a Material icon */
 const ICON_WIDTH_ESTIMATE = 20
 
-/** Tolerance margin for click detection to account for estimation errors. */
-const CLICK_TOLERANCE = 8
+/** Minimum gap between icon and text in button labels. */
+const MIN_ICON_TEXT_GAP = 4
 
 /** Bounds rectangle for menu positioning. */
 interface MenuBounds {
@@ -88,6 +82,18 @@ interface ParsedLabel {
   text: string
 }
 
+function getButtonPadding(cellHorizontalPadding: number): number {
+  return cellHorizontalPadding
+}
+
+function getIconTextGap(cellHorizontalPadding: number): number {
+  return Math.max(MIN_ICON_TEXT_GAP, cellHorizontalPadding / 2)
+}
+
+function getClickTolerance(cellHorizontalPadding: number): number {
+  return cellHorizontalPadding
+}
+
 /**
  * Parse a button label to extract leading Material icon.
  * Supports `:material/icon_name:` syntax.
@@ -112,9 +118,14 @@ function parseButtonLabel(label: string): ParsedLabel {
 function getContentWidth(
   ctx: CanvasRenderingContext2D,
   label: string | null,
-  theme: { baseFontStyle: string; baseFontFull: string }
+  theme: {
+    baseFontStyle: string
+    baseFontFull: string
+    cellHorizontalPadding: number
+  }
 ): number {
   const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
+  const iconTextGap = getIconTextGap(theme.cellHorizontalPadding)
 
   if (!label) {
     // Multi-action button uses "more_vert" icon
@@ -128,7 +139,7 @@ function getContentWidth(
   if (icon) {
     ctx.font = iconFont
     width += ctx.measureText(icon).width
-    if (text) width += ICON_TEXT_GAP
+    if (text) width += iconTextGap
   }
   if (text) {
     ctx.font = theme.baseFontFull
@@ -178,7 +189,8 @@ function getButtonBounds(
   contentWidth: number,
   alignment: "left" | "center" | "right" = "center"
 ): ButtonBounds {
-  const buttonWidth = contentWidth + BUTTON_PADDING * 2
+  const buttonPadding = getButtonPadding(cellPadding)
+  const buttonWidth = contentWidth + buttonPadding * 2
   const verticalPadding = Math.floor(cellPadding * 0.5)
   const buttonHeight = Math.ceil(cellHeight - verticalPadding * 2)
 
@@ -236,9 +248,9 @@ const renderer: CustomRenderer<ButtonCell> = {
     // Estimate content width without canvas context.
     // Note: This uses a Latin-tuned character width estimate (CHAR_WIDTH_ESTIMATE).
     // For non-Latin scripts (CJK, emoji, ligatures), actual widths can vary, causing
-    // click detection to be slightly off. CLICK_TOLERANCE provides a margin to
-    // accommodate estimation errors. A future enhancement could cache measured bounds
-    // from draw() for pixel-perfect click detection.
+    // click detection to be slightly off. We use theme.cellHorizontalPadding as
+    // a tolerance margin to accommodate estimation errors. A future enhancement
+    // could cache measured bounds from draw() for pixel-perfect click detection.
     const label = getSingleButtonLabel(data)
     const isMultiAction = Array.isArray(data) && data.length > 1
     let estimatedContentWidth: number
@@ -263,7 +275,14 @@ const renderer: CustomRenderer<ButtonCell> = {
       alignment
     )
 
-    if (!isWithinButton(buttonBounds, posX, posY, CLICK_TOLERANCE)) {
+    if (
+      !isWithinButton(
+        buttonBounds,
+        posX,
+        posY,
+        getClickTolerance(theme.cellHorizontalPadding)
+      )
+    ) {
       return undefined
     }
 
@@ -390,6 +409,7 @@ const renderer: CustomRenderer<ButtonCell> = {
     const centerY = rect.y + rect.height / 2
     const middleCenterBias = getMiddleCenterBias(ctx, theme.baseFontFull)
     const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
+    const iconTextGap = getIconTextGap(theme.cellHorizontalPadding)
 
     if (isMultiAction) {
       // Draw three-dot menu icon for multi-action
@@ -407,7 +427,7 @@ const renderer: CustomRenderer<ButtonCell> = {
         const textWidth = ctx.measureText(text).width
         ctx.font = iconFont
         const iconWidth = ctx.measureText(icon).width
-        const totalWidth = iconWidth + ICON_TEXT_GAP + textWidth
+        const totalWidth = iconWidth + iconTextGap + textWidth
         const startX = centerX - totalWidth / 2
 
         ctx.fillText(icon, startX + iconWidth / 2, centerY + middleCenterBias)
@@ -415,7 +435,7 @@ const renderer: CustomRenderer<ButtonCell> = {
         ctx.font = theme.baseFontFull
         ctx.fillText(
           text,
-          startX + iconWidth + ICON_TEXT_GAP + textWidth / 2,
+          startX + iconWidth + iconTextGap + textWidth / 2,
           centerY + middleCenterBias
         )
       } else if (icon) {
@@ -443,23 +463,32 @@ const renderer: CustomRenderer<ButtonCell> = {
     if (!label) {
       ctx.font = iconFont
       const iconWidth = ctx.measureText("more_vert").width
-      return iconWidth + theme.cellHorizontalPadding * 2 + BUTTON_PADDING * 2
+      return (
+        iconWidth +
+        theme.cellHorizontalPadding * 2 +
+        getButtonPadding(theme.cellHorizontalPadding) * 2
+      )
     }
 
     const { icon, text } = parseButtonLabel(label)
+    const iconTextGap = getIconTextGap(theme.cellHorizontalPadding)
 
     let width = 0
     if (icon) {
       ctx.font = iconFont
       width += ctx.measureText(icon).width
-      if (text) width += ICON_TEXT_GAP
+      if (text) width += iconTextGap
     }
     if (text) {
       ctx.font = theme.baseFontFull
       width += ctx.measureText(text).width
     }
 
-    return width + theme.cellHorizontalPadding * 2 + BUTTON_PADDING * 2
+    return (
+      width +
+      theme.cellHorizontalPadding * 2 +
+      getButtonPadding(theme.cellHorizontalPadding) * 2
+    )
   },
   provideEditor: undefined,
 }
