@@ -31,8 +31,10 @@ def test_widget_in_outside_container_no_duplication(app: Page):
     expect(outside_btn).to_have_count(1)
 
     # Get initial UUIDs
-    fragment_uuid = app.get_by_text("Basic fragment UUID:").text_content()
-    app_uuid = app.get_by_text("App UUID:").text_content()
+    fragment_uuid_text = app.get_by_text("Basic fragment UUID:").text_content()
+    app_uuid_text = app.get_by_text("App UUID:").text_content()
+    assert fragment_uuid_text is not None
+    assert app_uuid_text is not None
 
     # Click the button to trigger fragment rerun
     outside_btn.click()
@@ -42,8 +44,8 @@ def test_widget_in_outside_container_no_duplication(app: Page):
     expect(app.get_by_role("button", name="Outside Button")).to_have_count(1)
 
     # Fragment UUID should have changed, app UUID should remain the same
-    expect(app.get_by_text("Basic fragment UUID:")).not_to_have_text(fragment_uuid)
-    expect(app.get_by_text("App UUID:")).to_have_text(app_uuid)
+    expect(app.get_by_text("Basic fragment UUID:")).not_to_have_text(fragment_uuid_text)
+    expect(app.get_by_text("App UUID:")).to_have_text(app_uuid_text)
 
     # Click again to verify no accumulation
     app.get_by_role("button", name="Outside Button").click()
@@ -81,7 +83,8 @@ def test_multiple_widgets_in_outside_container(app: Page):
     expect(app.get_by_label("Color")).to_have_count(1)
 
     # Get initial UUID
-    multi_uuid = app.get_by_text("Multi-element fragment UUID:").text_content()
+    multi_uuid_text = app.get_by_text("Multi-element fragment UUID:").text_content()
+    assert multi_uuid_text is not None
 
     # Interact with text input to trigger fragment rerun
     text_input = app.get_by_label("Name")
@@ -94,7 +97,7 @@ def test_multiple_widgets_in_outside_container(app: Page):
     expect(app.get_by_label("Color")).to_have_count(1)
 
     # UUID should have changed
-    expect(app.get_by_text("Multi-element fragment UUID:")).not_to_have_text(multi_uuid)
+    expect(app.get_by_text("Multi-element fragment UUID:")).not_to_have_text(multi_uuid_text)
 
 
 def test_nested_container_widget(app: Page):
@@ -104,7 +107,8 @@ def test_nested_container_widget(app: Page):
     expect(nested_btn).to_have_count(1)
 
     # Get initial UUID
-    nested_uuid = app.get_by_text("Nested fragment UUID:").text_content()
+    nested_uuid_text = app.get_by_text("Nested fragment UUID:").text_content()
+    assert nested_uuid_text is not None
 
     # Click to trigger fragment rerun
     nested_btn.click()
@@ -114,21 +118,23 @@ def test_nested_container_widget(app: Page):
     expect(app.get_by_role("button", name="Nested Button")).to_have_count(1)
 
     # UUID should have changed
-    expect(app.get_by_text("Nested fragment UUID:")).not_to_have_text(nested_uuid)
+    expect(app.get_by_text("Nested fragment UUID:")).not_to_have_text(nested_uuid_text)
 
 
 def test_full_rerun_clears_fragment_elements(app: Page):
     """Verify full rerun properly handles fragment elements in outside containers."""
     # Get initial UUIDs
-    fragment_uuid = app.get_by_text("Basic fragment UUID:").text_content()
-    app_uuid = app.get_by_text("App UUID:").text_content()
+    fragment_uuid_text = app.get_by_text("Basic fragment UUID:").text_content()
+    app_uuid_text = app.get_by_text("App UUID:").text_content()
+    assert fragment_uuid_text is not None
+    assert app_uuid_text is not None
 
     # Trigger full rerun
     click_button(app, "Full Rerun")
 
     # Both UUIDs should change
-    expect(app.get_by_text("Basic fragment UUID:")).not_to_have_text(fragment_uuid)
-    expect(app.get_by_text("App UUID:")).not_to_have_text(app_uuid)
+    expect(app.get_by_text("Basic fragment UUID:")).not_to_have_text(fragment_uuid_text)
+    expect(app.get_by_text("App UUID:")).not_to_have_text(app_uuid_text)
 
     # No element duplication
     expect(app.get_by_role("button", name="Outside Button")).to_have_count(1)

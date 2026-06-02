@@ -1123,7 +1123,10 @@ describe("AppRoot", () => {
           }),
           forwardMsgMetadata([0, 0, 1])
         )
-        // Old element related to my_fragment_id but in an unrelated block. Should be preserved.
+        // Old element related to my_fragment_id but in an unrelated block.
+        // Should be CLEARED because the element's fragmentId matches a running
+        // fragment and has a stale scriptRunId. This supports external container
+        // writes where fragments write widgets to containers outside their scope.
         .applyDelta(
           "old_session_id",
           makeProto(DeltaProto, {
@@ -1181,6 +1184,9 @@ describe("AppRoot", () => {
       expect(
         GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0])
       ).toBeInstanceOf(BlockNode)
+      // oldElement4! is cleared because it has fragmentId="my_fragment_id"
+      // which matches the running fragment, so stale elements are removed
+      // (external container writes behavior)
       expect(
         (
           GetNodeByDeltaPathVisitor.getNodeAtPath(
@@ -1188,16 +1194,13 @@ describe("AppRoot", () => {
             [0]
           ) as BlockNode
         ).children
-      ).toHaveLength(3)
+      ).toHaveLength(2)
       expect(
         GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 0])
       ).toBeTextNode("oldElement!")
       expect(
         GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 1])
       ).toBeTextNode("oldElement2!")
-      expect(
-        GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [0, 2])
-      ).toBeTextNode("oldElement4!")
 
       expect(
         GetNodeByDeltaPathVisitor.getNodeAtPath(pruned.main, [1])
