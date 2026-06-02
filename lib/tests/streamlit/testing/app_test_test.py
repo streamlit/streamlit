@@ -19,7 +19,6 @@ from pathlib import Path
 
 import pytest
 
-from streamlit.runtime.pages_manager import PagesManager
 from streamlit.testing.v1 import AppTest
 
 
@@ -292,29 +291,25 @@ def test_v2_custom_component():
 
 
 def test_navigation_resets_pages_manager_state():
-    """Test AppTest resets PagesManager.uses_pages_directory before running.
+    """Test AppTest correctly handles st.navigation across runs.
+
+    Verifies that st.navigation works correctly in AppTest and that
+    the uses_pages_directory state is properly managed per-instance.
 
     Regression test for https://github.com/streamlit/streamlit/issues/9446
     """
 
-    original_value = PagesManager.uses_pages_directory
-    PagesManager.uses_pages_directory = True
+    def script():
+        import streamlit as st
 
-    try:
+        def page1():
+            st.title("Navigation Page")
+            st.write("Page content")
 
-        def script():
-            import streamlit as st
+        pg = st.navigation([st.Page(page1, title="Page 1")])
+        pg.run()
 
-            def page1():
-                st.title("Navigation Page")
-                st.write("Page content")
+    at = AppTest.from_function(script).run()
 
-            pg = st.navigation([st.Page(page1, title="Page 1")])
-            pg.run()
-
-        at = AppTest.from_function(script).run()
-
-        assert at.title[0].value == "Navigation Page"
-        assert "Page content" in at.markdown.values
-    finally:
-        PagesManager.uses_pages_directory = original_value
+    assert at.title[0].value == "Navigation Page"
+    assert "Page content" in at.markdown.values

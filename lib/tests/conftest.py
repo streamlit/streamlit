@@ -96,11 +96,6 @@ def pytest_configure(config: pytest.Config):
 
 
 def pytest_runtest_setup(item: pytest.Item):
-    from streamlit.runtime.pages_manager import PagesManager
-
-    # Ensure the pages directory feature is not set prior to the test
-    PagesManager.uses_pages_directory = None
-
     is_require_integration = item.config.getoption(
         "--require-integration", default=False
     )
