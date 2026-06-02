@@ -230,7 +230,9 @@ def test_full_app_rerun(app: Page):
     wait_for_app_run(app)
 
     expect(app.get_by_text("inside fragment:")).not_to_have_text(old_text_in_fragment)
-    expect(app.get_by_text("outside: fragment")).not_to_have_text(old_text_outside_fragment)
+    expect(app.get_by_text("outside: fragment")).not_to_have_text(
+        old_text_outside_fragment
+    )
 
 
 def test_widget_in_outside_container_no_duplication(app: Page):
