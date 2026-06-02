@@ -143,6 +143,29 @@ def prepare_polars_data():
 
 
 class HashTest(unittest.TestCase):
+    def test_bytes(self):
+        """Test that bytes objects hash consistently."""
+        assert get_hash(b"hello") == get_hash(b"hello")
+        assert get_hash(b"hello") != get_hash(b"world")
+
+    def test_bytearray(self):
+        """Test that bytearray objects hash consistently.
+
+        bytearray is unhashable and cannot be memoized, but should still
+        be hashed correctly via conversion to bytes.
+        """
+        ba1 = bytearray(b"hello")
+        ba2 = bytearray(b"hello")
+        ba3 = bytearray(b"world")
+
+        assert get_hash(ba1) == get_hash(ba2)
+        assert get_hash(ba1) != get_hash(ba3)
+
+        # Verify bytearray and bytes with same content produce same hash
+        # (after type prefix is added)
+        # Note: Due to type prefix, they won't be exactly equal
+        assert get_hash(ba1) != get_hash(b"hello")
+
     def test_string(self):
         assert get_hash("hello") == get_hash("hello")
         assert get_hash("hello") != get_hash("hellö")

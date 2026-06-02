@@ -100,11 +100,21 @@ export default class HostCommunicationManager {
     }
     this.isHostCommOpen = true
     window.addEventListener("message", this.receiveHostMessage)
-    this.sendMessageToHost({
+    const guestReadyMessage: IGuestToHostMessage = {
       type: "GUEST_READY",
       streamlitExecutionStartedAt: this.props.streamlitExecutionStartedAt,
       guestReadyAt: Date.now(),
-    })
+    }
+    this.sendMessageToHost(guestReadyMessage)
+    // Also dispatch on own window so in-iframe embed code can detect readiness
+    // without monkey-patching or retry loops. Only when actually embedded
+    // (window !== window.parent) to avoid duplicate delivery at top level.
+    if (window !== window.parent) {
+      window.postMessage(
+        this.buildVersionedMessage(guestReadyMessage),
+        window.location.origin
+      )
+    }
   }
 
   /**
@@ -160,10 +170,7 @@ export default class HostCommunicationManager {
     message: IGuestToHostMessage
   ): void => {
     window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      },
+      this.buildVersionedMessage(message),
       window.location.origin
     )
   }
@@ -172,13 +179,16 @@ export default class HostCommunicationManager {
    * Register a function to deliver a message to the Host
    */
   public sendMessageToHost = (message: IGuestToHostMessage): void => {
-    window.parent.postMessage(
-      {
-        stCommVersion: HOST_COMM_VERSION,
-        ...message,
-      },
-      "*"
-    )
+    window.parent.postMessage(this.buildVersionedMessage(message), "*")
+  }
+
+  private buildVersionedMessage(
+    message: IGuestToHostMessage
+  ): VersionedMessage<IGuestToHostMessage> {
+    return {
+      stCommVersion: HOST_COMM_VERSION,
+      ...message,
+    }
   }
 
   /**

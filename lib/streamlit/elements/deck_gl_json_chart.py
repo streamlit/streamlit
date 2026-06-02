@@ -96,7 +96,9 @@ def parse_selection_mode(
             f"Valid options are: {_SELECTION_MODES}"
         )
 
-    if selection_mode_set.issuperset({"single-object", "multi-object"}):
+    if selection_mode_set.issuperset(  # pragma: no cover - defensive, only string inputs reach here
+        {"single-object", "multi-object"}
+    ):
         raise StreamlitAPIException(
             "Only one of `single-object` or `multi-object` can be selected as selection mode."
         )

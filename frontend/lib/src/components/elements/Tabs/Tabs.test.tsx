@@ -25,6 +25,14 @@ import { userEvent } from "@testing-library/user-event"
 
 import { Block as BlockProto } from "@streamlit/protobuf"
 
+// SelectionIndicator uses SharedElementTransition which calls getAnimations() in an
+// async callback after component unmount, causing spurious uncaught exceptions in JSDOM.
+// Mocking it here prevents the animation machinery from running in unit tests.
+vi.mock("react-aria-components", async importOriginal => {
+  const actual = await importOriginal<typeof import("react-aria-components")>()
+  return { ...actual, SelectionIndicator: () => null }
+})
+
 import { BlockNode } from "~lib/AppNode"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
@@ -154,13 +162,22 @@ describe("st.tabs", () => {
     render(<Tabs {...getProps({ widgetsDisabled: true })} />)
     const tabs = screen.getAllByRole("tab")
 
-    tabs.forEach((_, index) => {
-      // the selected tab does not have the disabled prop as true in baseweb
-      if (index === 0) {
-        return
-      }
-      expect(tabs[index]).not.toBeDisabled()
+    tabs.forEach(tab => {
+      expect(tab).not.toBeDisabled()
     })
+  })
+
+  it("renders all tab panels in the DOM but only shows the active one", () => {
+    const { container } = render(<Tabs {...getProps()} />)
+
+    // The active tab panel is accessible with full ARIA attributes
+    const activePanel = screen.getByRole("tabpanel")
+    expect(activePanel).not.toHaveAttribute("inert")
+
+    // RAC force-mounts inactive panels with `inert` to keep them in the DOM
+    // (preserves scroll state) while blocking interaction and AT access
+    const inertPanels = container.querySelectorAll("[inert]")
+    expect(inertPanels).toHaveLength(4)
   })
 
   it("does not show scroll arrows when tabs don't overflow", () => {

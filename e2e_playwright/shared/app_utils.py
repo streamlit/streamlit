@@ -417,7 +417,7 @@ def get_radio_option(locator: Locator | Page, label: str | re.Pattern[str]) -> L
     Locator
         The element.
     """
-    element = locator.locator('[data-baseweb="radio"]').filter(has_text=label)
+    element = locator.get_by_test_id("stRadioOption").filter(has_text=label)
     expect(element).to_be_visible()
     return element
 
@@ -860,9 +860,11 @@ def click_checkbox(
         The label of the button to click.
     """
     checkbox_element = get_checkbox(page, label)
-    # Click the checkbox label to be more reliable:
-    checkbox_element.locator('label[data-baseweb="checkbox"]').first.click()
+    checkbox_element.locator("label").first.click()
     wait_for_app_run(page)
+    # Blur the active element after the app run so that focus rings from this
+    # interaction don't bleed into subsequent snapshot assertions.
+    page.evaluate("document.activeElement?.blur()")
 
 
 def click_toggle(

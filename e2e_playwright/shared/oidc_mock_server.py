@@ -47,7 +47,7 @@ e = (
 )
 
 
-NONCE_REGISTRY = {}
+NONCE_REGISTRY: dict[str, str] = {}
 
 
 def generate_token(payload: dict[str, Any]) -> str:
