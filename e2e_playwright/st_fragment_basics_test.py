@@ -41,12 +41,8 @@ def get_uuids(app: Page) -> tuple[str, str]:
 def expect_only_fragment_uuid_changed(
     app: Page, old_text_in_fragment: str, old_text_outside_fragment: str
 ):
-    expect(app.get_by_text("inside fragment:")).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(app.get_by_text("outside: fragment")).to_have_text(
-        old_text_outside_fragment
-    )
+    expect(app.get_by_text("inside fragment:")).not_to_have_text(old_text_in_fragment)
+    expect(app.get_by_text("outside: fragment")).to_have_text(old_text_outside_fragment)
 
 
 def test_button_in_fragment(app: Page):
@@ -233,12 +229,8 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    expect(app.get_by_text("inside fragment:")).not_to_have_text(
-        old_text_in_fragment
-    )
-    expect(app.get_by_text("outside: fragment")).not_to_have_text(
-        old_text_outside_fragment
-    )
+    expect(app.get_by_text("inside fragment:")).not_to_have_text(old_text_in_fragment)
+    expect(app.get_by_text("outside: fragment")).not_to_have_text(old_text_outside_fragment)
 
 
 def test_widget_in_outside_container_no_duplication(app: Page):
