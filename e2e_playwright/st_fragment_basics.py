@@ -69,8 +69,8 @@ multi_container = st.container()
 
 @st.fragment
 def multi_outside_widget_fragment():
-    multi_container.text_input("Name", key="name_input")
-    multi_container.selectbox("Color", ["Red", "Green", "Blue"], key="color_select")
+    multi_container.button("Outside Alpha", key="outside_alpha")
+    multi_container.button("Outside Beta", key="outside_beta")
     st.write(f"multi outside fragment: {uuid4()}")
 
 
