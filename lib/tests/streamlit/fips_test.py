@@ -18,8 +18,14 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import os
+import subprocess
+import sys
+import time
 from pathlib import Path
 from typing import Any
+from urllib.error import URLError
+from urllib.request import urlopen
 
 import pytest
 
@@ -35,6 +41,43 @@ _FIPS_SENSITIVE_HASHLIB_ALGORITHMS = {"md5", "sha1", "blake2b", "blake2s"}
 # runtime hashing and therefore should not be held to the FIPS rule: vendored
 # third-party code and shipped example-app templates.
 _EXCLUDED_DIRECTORY_NAMES = {"vendor", ".agents"}
+_STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS = 30
+_FIPS_HASHLIB_SITE_CUSTOMIZE = """
+from __future__ import annotations
+
+import functools
+import hashlib
+
+FIPS_SENSITIVE_ALGORITHMS = {"md5", "sha1", "blake2b", "blake2s"}
+
+
+def guard_algorithm(name, original):
+    @functools.wraps(original)
+    def guarded(*args, **kwargs):
+        if kwargs.get("usedforsecurity", True) is not False:
+            raise ValueError(f"FIPS mode blocks {name} for security use")
+
+        return original(*args, **kwargs)
+
+    return guarded
+
+
+for algorithm in FIPS_SENSITIVE_ALGORITHMS:
+    if hasattr(hashlib, algorithm):
+        setattr(hashlib, algorithm, guard_algorithm(algorithm, getattr(hashlib, algorithm)))
+
+original_new = hashlib.new
+
+
+def guarded_new(name, *args, **kwargs):
+    if name.lower() in FIPS_SENSITIVE_ALGORITHMS and kwargs.get("usedforsecurity", True) is not False:
+        raise ValueError(f"FIPS mode blocks {name} for security use")
+
+    return original_new(name, *args, **kwargs)
+
+
+hashlib.new = guarded_new
+"""
 
 
 class _HashlibCallVisitor(ast.NodeVisitor):
@@ -223,3 +266,88 @@ def test_internal_hashing_works_when_fips_rejects_security_blake2b(
     watched_file.write_text("print('changed')", encoding="utf-8")
 
     assert calc_hash_with_blocking_retries(str(watched_file))
+
+
+def test_streamlit_run_serves_app_when_fips_rejects_security_hashes(
+    tmp_path: Path, free_tcp_port: int
+) -> None:
+    """Start Streamlit under FIPS-like hash restrictions and check health."""
+    (tmp_path / "sitecustomize.py").write_text(
+        _FIPS_HASHLIB_SITE_CUSTOMIZE, encoding="utf-8"
+    )
+
+    app_path = tmp_path / "fips_smoke_app.py"
+    app_path.write_text(
+        """
+import streamlit as st
+
+st.write("FIPS compatibility smoke test")
+""",
+        encoding="utf-8",
+    )
+
+    env = os.environ.copy()
+    python_path = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        f"{tmp_path}{os.pathsep}{python_path}" if python_path else str(tmp_path)
+    )
+
+    process = subprocess.Popen(
+        [
+            sys.executable,
+            "-m",
+            "streamlit",
+            "run",
+            str(app_path),
+            "--server.headless=true",
+            f"--server.port={free_tcp_port}",
+            "--browser.gatherUsageStats=false",
+            "--global.developmentMode=false",
+        ],
+        env=env,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+
+    try:
+        _wait_for_streamlit_health(process, free_tcp_port)
+    finally:
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=5)
+
+
+def _wait_for_streamlit_health(process: subprocess.Popen[str], port: int) -> None:
+    deadline = time.monotonic() + _STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS
+    health_url = f"http://127.0.0.1:{port}/_stcore/health"
+    last_error: BaseException | None = None
+
+    while time.monotonic() < deadline:
+        if process.poll() is not None:
+            output = process.stdout.read() if process.stdout is not None else ""
+            pytest.fail(
+                "Streamlit exited before serving the FIPS smoke app.\n"
+                f"Exit code: {process.returncode}\n"
+                f"Output:\n{output}"
+            )
+
+        try:
+            with urlopen(health_url, timeout=1) as response:
+                if response.read().decode("utf-8") == "ok":
+                    return
+        except URLError as ex:
+            last_error = ex
+
+        time.sleep(0.2)
+
+    output = process.stdout.read() if process.stdout is not None else ""
+    pytest.fail(
+        f"Streamlit did not serve {health_url} within "
+        f"{_STREAMLIT_SERVER_STARTUP_TIMEOUT_SECS} seconds.\n"
+        f"Last error: {last_error!r}\n"
+        f"Output:\n{output}"
+    )
