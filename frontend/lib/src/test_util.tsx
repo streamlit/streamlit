@@ -172,10 +172,14 @@ export function mockWindowLocation(hostname: string): void {
   // @ts-expect-error
   delete window.location
 
+  const hasScheme = /^https?:\/\//.test(hostname)
+  const origin = hasScheme ? new URL(hostname).origin : `https://${hostname}`
+
   // @ts-expect-error
   window.location = {
     assign: vi.fn(),
-    hostname: hostname,
+    hostname: hasScheme ? new URL(hostname).hostname : hostname,
+    origin,
   }
 }
 
