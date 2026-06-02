@@ -14,7 +14,14 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useId, useState } from "react"
+import {
+  memo,
+  MouseEvent,
+  ReactElement,
+  useCallback,
+  useId,
+  useState,
+} from "react"
 
 import { TextField } from "react-aria-components"
 
@@ -214,7 +221,7 @@ function TextInput({
           {isPassword && (
             <StyledPasswordToggle
               type="button"
-              onMouseDown={e => e.preventDefault()}
+              onMouseDown={preventFocusLoss}
               onClick={handleToggleShowPassword}
               aria-label={showPassword ? "Hide password" : "Show password"}
               aria-pressed={showPassword}
@@ -276,6 +283,13 @@ function updateWidgetMgrState(
 
 function getTypeString(element: TextInputProto): string {
   return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
+}
+
+// Prevents the toggle button from stealing focus from the input on mousedown,
+// avoiding a premature dirty-value commit via handleBlur. Extracted at module
+// level so the reference is stable across renders.
+function preventFocusLoss(e: MouseEvent): void {
+  e.preventDefault()
 }
 
 export default memo(TextInput)

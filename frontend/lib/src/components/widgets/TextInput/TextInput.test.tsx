@@ -144,6 +144,27 @@ describe("TextInput widget", () => {
     expect(passwordInput).toHaveAttribute("type", "password")
   })
 
+  it("activates password toggle via keyboard (Tab + Space)", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.PASSWORD })
+    render(<TextInput {...props} />)
+
+    const passwordInput = screen.getByPlaceholderText("Placeholder")
+    expect(passwordInput).toHaveAttribute("type", "password")
+
+    // Focus the input then Tab to the toggle button
+    await user.click(passwordInput)
+    await user.tab()
+
+    const toggleButton = screen.getByRole("button", { name: "Show password" })
+    expect(toggleButton).toHaveFocus()
+
+    // Activate via Space (standard for toggle buttons)
+    await user.keyboard(" ")
+    expect(passwordInput).toHaveAttribute("type", "text")
+    expect(screen.getByRole("button", { name: "Hide password" })).toHaveFocus()
+  })
+
   it("password toggle is disabled when the widget is disabled", () => {
     const props = getProps(
       { type: TextInputProto.Type.PASSWORD },
