@@ -34,7 +34,6 @@ from streamlit.runtime.metrics_util import (
     create_page_profile_message,
     to_microseconds,
 )
-from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner.exec_code import (
     exec_func_with_error_handling,
     modified_sys_path,
@@ -66,6 +65,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable, Generator
 
     from streamlit.runtime.fragment import FragmentStorage
+    from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner.script_cache import ScriptCache
     from streamlit.runtime.scriptrunner_utils.script_run_context import (
@@ -783,7 +783,7 @@ class ScriptRunner:
                             ctx.parallel_coordinator,
                         )
                         try:
-                            if PagesManager.uses_pages_directory:
+                            if ctx.pages_manager.uses_pages_directory:
                                 _mpa_v1(self._main_script_path)
                             else:
                                 exec(code, module.__dict__)  # noqa: S102

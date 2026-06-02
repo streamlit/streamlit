@@ -344,8 +344,6 @@ class AppTest:
         mock_runtime.bidi_component_registry = BidiComponentManager()
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
-        # Reset to ensure st.navigation works correctly regardless of prior test state.
-        PagesManager.uses_pages_directory = None
         pages_manager = PagesManager(
             self._script_path, script_cache, setup_watcher=False
         )

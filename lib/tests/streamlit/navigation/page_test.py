@@ -158,7 +158,7 @@ class StPagesTest(DeltaGeneratorTestCase):
         """Test that a page can be run if ordained."""
 
         # Indicates we are in V2
-        self.script_run_ctx.pages_manager.set_pages({})
+        self.script_run_ctx.pages_manager._set_pages({})
 
         page = st.Page(lambda: True)
         page._can_be_called = True

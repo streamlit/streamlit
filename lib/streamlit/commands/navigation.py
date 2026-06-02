@@ -24,7 +24,6 @@ from streamlit.navigation.page import StreamlitPage
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
 from streamlit.proto.Navigation_pb2 import Navigation as NavigationProto
 from streamlit.runtime.metrics_util import gather_metrics
-from streamlit.runtime.pages_manager import PagesManager
 from streamlit.runtime.scriptrunner_utils.script_run_context import (
     ScriptRunContext,
     get_script_run_ctx,
@@ -323,8 +322,10 @@ def navigation(
             'The position parameter must be one of "sidebar", "hidden", or "top".'
         )
 
-    # Disable the use of the pages feature (ie disregard v1 behavior of Multipage Apps)
-    PagesManager.uses_pages_directory = False
+    ctx = get_script_run_ctx()
+    if ctx:
+        # Disable the use of the pages feature (ie disregard v1 behavior of Multipage Apps)
+        ctx.pages_manager.uses_pages_directory = False
 
     return _navigation(pages, position=position, expanded=expanded)
 
@@ -459,10 +460,10 @@ def _navigation(
             p.is_hidden = page._visibility == "hidden"
             _set_external_url(p, page)
 
-    # Inform our page manager about the set of pages we have
-    ctx.pages_manager.set_pages(pagehash_to_pageinfo)
-    found_page = ctx.pages_manager.get_page_script(
-        fallback_page_hash=default_page._script_hash
+    # Inform our page manager about the set of pages we have and resolve the page
+    found_page = ctx.pages_manager.set_pages_and_resolve(
+        pagehash_to_pageinfo,
+        fallback_page_hash=default_page._script_hash,
     )
 
     page_to_return = None

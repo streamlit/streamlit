@@ -712,7 +712,7 @@ class FragmentTest(unittest.TestCase):
         ctx.run_with_active_hash = patched_run_with_active_hash
         ctx.fragment_storage = MemoryFragmentStorage()
         ctx.pages_manager = PagesManager("")
-        ctx.pages_manager.set_pages({})  # Migrate to MPAv2
+        ctx.pages_manager._set_pages({})  # Migrate to MPAv2
         ThreadState.update(active_script_hash="some_hash")
         # Use a plain dict (not the auto-generated MagicMock) so that deepcopy(ctx.cursors)
         # does not traverse back to the real fragment_storage above, whose threading.Lock

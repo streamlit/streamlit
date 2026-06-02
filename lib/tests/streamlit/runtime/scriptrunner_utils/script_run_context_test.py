@@ -222,7 +222,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
         assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
 
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx.set_mpa_v2_page("new_hash")
         assert ThreadState.get().active_script_hash == pages_manager.main_script_hash
 
@@ -239,7 +239,7 @@ class ScriptRunContextTest(unittest.TestCase):
         this mode and must remain at their defaults.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})  # populate main_script_hash
+        pages_manager._set_pages({})  # populate main_script_hash
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         result: dict[str, object] = {}
@@ -274,7 +274,7 @@ class ScriptRunContextTest(unittest.TestCase):
         the worker) do NOT inherit the parent's ``fragment_id``.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
         ThreadState.update(fragment_id="parent_fragment")
 
@@ -302,7 +302,7 @@ class ScriptRunContextTest(unittest.TestCase):
         sees the main hash.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         captured: dict[str, object] = {}
@@ -326,7 +326,7 @@ class ScriptRunContextTest(unittest.TestCase):
         are last-wins for the parent ``FragmentThreadState`` snapshot.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         captured: dict[str, object] = {}
@@ -372,7 +372,7 @@ class ScriptRunContextTest(unittest.TestCase):
         runs would let a previous run's stop event / worker exception leak
         into the next run."""
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         ctx.reset(page_script_hash=pages_manager.main_script_hash)
@@ -401,7 +401,7 @@ class ScriptRunContextTest(unittest.TestCase):
         ContextVar.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         ThreadState.initialize(
@@ -443,7 +443,7 @@ class ScriptRunContextTest(unittest.TestCase):
         add_script_run_ctx must handle this gracefully to avoid TypeError.
         """
         pages_manager = PagesManager("/main/script/path")
-        pages_manager.set_pages({})
+        pages_manager._set_pages({})
         ctx = _create_script_run_context(lambda _msg: None, pages_manager=pages_manager)
 
         ThreadState.initialize(fragment_id="test_fragment")
