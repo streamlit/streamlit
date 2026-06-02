@@ -97,7 +97,9 @@ def test_multiple_widgets_in_outside_container(app: Page):
     expect(app.get_by_label("Color")).to_have_count(1)
 
     # UUID should have changed
-    expect(app.get_by_text("Multi-element fragment UUID:")).not_to_have_text(multi_uuid_text)
+    expect(app.get_by_text("Multi-element fragment UUID:")).not_to_have_text(
+        multi_uuid_text
+    )
 
 
 def test_nested_container_widget(app: Page):
