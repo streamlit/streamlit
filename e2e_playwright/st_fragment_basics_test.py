@@ -24,10 +24,13 @@ from e2e_playwright.shared.app_utils import (
 
 
 def get_uuids(app: Page) -> tuple[str, str]:
-    expect(app.get_by_test_id("stMarkdown")).to_have_count(2)
+    inside = app.get_by_text("inside fragment:")
+    outside = app.get_by_text("outside: fragment")
+    expect(inside).to_have_count(1)
+    expect(outside).to_have_count(1)
 
-    text_in_fragment = app.get_by_test_id("stMarkdown").first.text_content()
-    text_outside_fragment = app.get_by_test_id("stMarkdown").last.text_content()
+    text_in_fragment = inside.text_content()
+    text_outside_fragment = outside.text_content()
 
     assert text_in_fragment is not None
     assert text_outside_fragment is not None
@@ -38,10 +41,10 @@ def get_uuids(app: Page) -> tuple[str, str]:
 def expect_only_fragment_uuid_changed(
     app: Page, old_text_in_fragment: str, old_text_outside_fragment: str
 ):
-    expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
+    expect(app.get_by_text("inside fragment:")).not_to_have_text(
         old_text_in_fragment
     )
-    expect(app.get_by_test_id("stMarkdown").last).to_have_text(
+    expect(app.get_by_text("outside: fragment")).to_have_text(
         old_text_outside_fragment
     )
 
@@ -230,10 +233,10 @@ def test_full_app_rerun(app: Page):
     app.keyboard.press("r")
     wait_for_app_run(app)
 
-    expect(app.get_by_test_id("stMarkdown").first).not_to_have_text(
+    expect(app.get_by_text("inside fragment:")).not_to_have_text(
         old_text_in_fragment
     )
-    expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(
+    expect(app.get_by_text("outside: fragment")).not_to_have_text(
         old_text_outside_fragment
     )
 
