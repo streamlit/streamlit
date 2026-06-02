@@ -184,7 +184,7 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <TextField isDisabled={disabled} aria-label={element.label}>
+      <TextField isDisabled={disabled}>
         <StyledInputRoot
           data-testid="stTextInputRootElement"
           $isFocused={focused}
@@ -201,6 +201,7 @@ function TextInput({
           )}
           <StyledInputElement
             id={id}
+            aria-label={element.label}
             value={uiValue ?? ""}
             placeholder={placeholder}
             type={showPassword ? "text" : getTypeString(element)}
@@ -213,8 +214,11 @@ function TextInput({
           {isPassword && (
             <StyledPasswordToggle
               type="button"
+              onMouseDown={e => e.preventDefault()}
               onClick={handleToggleShowPassword}
               aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              disabled={disabled}
             >
               <DynamicIcon
                 iconValue={

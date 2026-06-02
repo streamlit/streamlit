@@ -40,6 +40,14 @@ export const StyledInputRoot = styled.div<StyledInputRootProps>(
     backgroundColor: theme.colors.secondaryBg,
     paddingLeft: $hasIcon ? theme.spacing.sm : 0,
     overflow: "hidden",
+    transitionDuration: "200ms",
+    transitionProperty: "border",
+    transitionTimingFunction: "cubic-bezier(0.2, 0.8, 0.4, 1)",
+    // Show the focused border whenever any descendant (input or password toggle)
+    // has keyboard focus — handles the case where Tab moves focus to the toggle.
+    "&:focus-within": {
+      borderColor: getBorderColor(theme.colors, true),
+    },
   })
 )
 
@@ -94,5 +102,16 @@ export const StyledPasswordToggle = styled.button(({ theme }) => ({
   padding: `0 ${theme.spacing.sm}`,
   color: theme.colors.bodyText,
   flexShrink: 0,
-  "&:hover": { opacity: 0.7 },
+  "&:hover:not(:disabled)": { opacity: 0.7 },
+  "&:disabled": {
+    cursor: "not-allowed",
+    color: theme.colors.fadedText40,
+  },
+  // Inset shadow stays inside the button's own bounds and is not clipped by
+  // the parent StyledInputRoot's overflow:hidden.
+  "&:focus-visible": {
+    outline: "none",
+    borderRadius: theme.radii.default,
+    boxShadow: `inset 0 0 0 2px ${theme.colors.primary}`,
+  },
 }))

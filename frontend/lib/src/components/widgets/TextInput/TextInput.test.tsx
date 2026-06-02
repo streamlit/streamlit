@@ -144,6 +144,17 @@ describe("TextInput widget", () => {
     expect(passwordInput).toHaveAttribute("type", "password")
   })
 
+  it("password toggle is disabled when the widget is disabled", () => {
+    const props = getProps(
+      { type: TextInputProto.Type.PASSWORD },
+      { disabled: true }
+    )
+    render(<TextInput {...props} />)
+
+    const toggleButton = screen.getByRole("button", { name: "Show password" })
+    expect(toggleButton).toBeDisabled()
+  })
+
   it("handles TextInputProto.autocomplete", () => {
     let props = getProps()
     const { unmount } = render(<TextInput {...props} />)
@@ -230,8 +241,8 @@ describe("TextInput widget", () => {
     render(<TextInput {...props} />)
     const textInput = screen.getByRole("textbox")
 
-    // userEvent necessary to trigger onKeyPress
-    // fireEvent only dispatches DOM events vs. simulating full interactions
+    // userEvent is necessary to simulate the full interaction chain
+    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
@@ -254,8 +265,8 @@ describe("TextInput widget", () => {
 
     expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
 
-    // userEvent necessary to trigger onKeyPress
-    // fireEvent only dispatches DOM events vs. simulating full interactions
+    // userEvent is necessary to simulate the full interaction chain
+    // (focus → keydown → keyup); fireEvent only dispatches raw DOM events
     await user.click(textInput)
     await user.keyboard("testing{Enter}")
 
