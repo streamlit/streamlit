@@ -173,6 +173,11 @@ function useButtonColumnInteractions({
     [cancelPendingMenuOpen]
   )
 
+  // ButtonColumn creates static cells from Arrow values, but clickable cells
+  // need runtime-only dataframe context: sorted display rows must map back to
+  // original data rows, widget IDs are stored on the dataframe proto, and the
+  // menu callbacks live in React state. Wrap the base getter here so all other
+  // dataframe features can keep using one Glide-compatible getCellContent.
   const getCellContent = useCallback(
     ([col, row]: readonly [number, number]): GridCell => {
       const cell = getBaseCellContent([col, row])
