@@ -1049,8 +1049,7 @@ def test_polars_large_series_seed_head_change_differs() -> None:
     import polars as pl
 
     series_a = pl.Series("val", list(range(_PANDAS_ROWS_LARGE)))
-    series_b = series_a.clone()
-    series_b[:64] = pl.Series("val", [999] * 64)
+    series_b = pl.concat([pl.Series("val", [999] * 64), series_a.slice(64)])
 
     assert get_hash(series_a) != get_hash(series_b)
 
