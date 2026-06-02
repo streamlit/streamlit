@@ -89,7 +89,7 @@ Subagents run autonomously in a fresh context, which optimizes for context size 
 
 ## Style Guide
 
-Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://github.com/nicolo-ribaudo/oxfmt), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
+Check out [Streamlit's style guide](./wiki/code-style-guide.md). We use [oxfmt](https://oxc.rs/docs/guide/usage/formatter), [oxlint](https://oxc.rs/docs/guide/usage/linter), [ESLint](https://eslint.org/), and [Ruff](https://github.com/astral-sh/ruff) to format and lint code, but some things go beyond what auto-formatters and linters can do. So please take a look!
 
 ## How to build Streamlit
 
