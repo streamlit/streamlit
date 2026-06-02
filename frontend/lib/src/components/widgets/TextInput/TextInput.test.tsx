@@ -165,6 +165,27 @@ describe("TextInput widget", () => {
     expect(screen.getByRole("button", { name: "Hide password" })).toHaveFocus()
   })
 
+  it("tabbing from input to password toggle does not commit a dirty value", async () => {
+    const user = userEvent.setup()
+    const props = getProps({ type: TextInputProto.Type.PASSWORD })
+    vi.spyOn(props.widgetMgr, "setStringValue")
+    render(<TextInput {...props} />)
+
+    const passwordInput = screen.getByPlaceholderText("Placeholder")
+
+    // Type to make the value dirty
+    await user.type(passwordInput, "secret")
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1) // mount only
+
+    // Tab to the toggle — focus leaves the input but stays within the widget
+    await user.tab()
+    const toggleButton = screen.getByRole("button", { name: "Show password" })
+    expect(toggleButton).toHaveFocus()
+
+    // No commit should have happened — dirty value is still pending
+    expect(props.widgetMgr.setStringValue).toHaveBeenCalledTimes(1)
+  })
+
   it("password toggle is disabled when the widget is disabled", () => {
     const props = getProps(
       { type: TextInputProto.Type.PASSWORD },

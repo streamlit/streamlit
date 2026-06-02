@@ -15,6 +15,7 @@
  */
 
 import {
+  FocusEvent,
   memo,
   MouseEvent,
   ReactElement,
@@ -146,12 +147,21 @@ function TextInput({
     setFocused(true)
   }, [])
 
-  const handleBlur = useCallback((): void => {
-    if (dirty) {
-      commitWidgetValue()
-    }
-    setFocused(false)
-  }, [dirty, commitWidgetValue])
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>): void => {
+      // When keyboard Tab moves focus to the password toggle, focus stays
+      // within the widget — don't commit yet, the user is still composing.
+      if (elementRef.current?.contains(e.relatedTarget)) {
+        setFocused(false)
+        return
+      }
+      if (dirty) {
+        commitWidgetValue()
+      }
+      setFocused(false)
+    },
+    [dirty, commitWidgetValue, elementRef]
+  )
 
   const handleToggleShowPassword = useCallback((): void => {
     setShowPassword(prev => !prev)

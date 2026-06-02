@@ -112,6 +112,6 @@ export const StyledPasswordToggle = styled.button(({ theme }) => ({
   "&:focus-visible": {
     outline: "none",
     borderRadius: theme.radii.default,
-    boxShadow: `inset 0 0 0 2px ${theme.colors.primary}`,
+    boxShadow: `inset ${theme.shadows.focusRing}`,
   },
 }))
