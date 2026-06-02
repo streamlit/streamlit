@@ -261,7 +261,18 @@ elif test_mode == "widget_interaction":
     slow_fragment()
 
 
-# Test 10: Error renders in correct container
+# Test 10: Writing to outside container blocked during parallel execution
+elif test_mode == "outside_container_block":
+    outside_container = st.container()
+
+    @st.fragment(parallel=True)
+    def parallel_fragment_outside_write():
+        outside_container.write("This should fail")
+
+    parallel_fragment_outside_write()
+
+
+# Test 11: Error renders in correct container
 elif test_mode == "error_container":
 
     @st.fragment(parallel=True)

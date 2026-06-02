@@ -49,3 +49,32 @@ def my_big_fragment():
 my_big_fragment()
 
 st.write(f"outside: fragment {uuid4()}")
+
+# --- Outside container tests ---
+# Fragments can write widgets to containers declared outside their scope.
+
+outside_container = st.container()
+
+
+@st.fragment
+def fragment_with_outside_widget():
+    outside_container.button("Outside Button", key="outside_btn")
+    st.write(f"outside container fragment: {uuid4()}")
+
+
+fragment_with_outside_widget()
+
+if "counter" not in st.session_state:
+    st.session_state.counter = 0
+
+counter_container = st.container()
+
+
+@st.fragment
+def counter_fragment():
+    if counter_container.button("Increment Counter", key="increment_btn"):
+        st.session_state.counter += 1
+    counter_container.write(f"Counter value: {st.session_state.counter}")
+
+
+counter_fragment()

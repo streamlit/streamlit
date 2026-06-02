@@ -236,3 +236,34 @@ def test_full_app_rerun(app: Page):
     expect(app.get_by_test_id("stMarkdown").last).not_to_have_text(
         old_text_outside_fragment
     )
+
+
+def test_widget_in_outside_container_no_duplication(app: Page):
+    """Widget written to an outside container doesn't duplicate on fragment rerun."""
+    outside_btn = app.get_by_role("button", name="Outside Button")
+    expect(outside_btn).to_have_count(1)
+
+    fragment_uuid = app.get_by_text("outside container fragment:")
+    old_uuid = fragment_uuid.text_content()
+    assert old_uuid is not None
+
+    outside_btn.click()
+    wait_for_app_run(app)
+
+    expect(app.get_by_role("button", name="Outside Button")).to_have_count(1)
+    expect(fragment_uuid).not_to_have_text(old_uuid)
+
+
+def test_counter_in_outside_container(app: Page):
+    """Counter widget in an outside container works correctly across fragment reruns."""
+    expect(app.get_by_text("Counter value: 0", exact=True)).to_be_visible()
+
+    click_button(app, "Increment Counter")
+
+    expect(app.get_by_text("Counter value: 1", exact=True)).to_be_visible()
+    expect(app.get_by_role("button", name="Increment Counter")).to_have_count(1)
+
+    click_button(app, "Increment Counter")
+
+    expect(app.get_by_text("Counter value: 2", exact=True)).to_be_visible()
+    expect(app.get_by_role("button", name="Increment Counter")).to_have_count(1)

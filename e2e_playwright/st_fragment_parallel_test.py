@@ -192,6 +192,20 @@ def test_nested_parallel_fragments_both_restricted(
     )
 
 
+def test_parallel_fragment_blocks_outside_container_writes(
+    page: Page, app_base_url: str
+) -> None:
+    """Parallel fragment writing to an outside container shows error."""
+    page.goto(build_app_url(app_base_url, query="test=outside_container_block"))
+    wait_for_app_run(page)
+
+    exception_message = page.get_by_test_id("stExceptionMessage")
+    expect(exception_message).to_be_visible()
+    expect(exception_message).to_contain_text(
+        "Writing to containers outside a parallel fragment is not allowed"
+    )
+
+
 def test_nested_parallel_fragment_allows_dialog_on_rerun(
     page: Page, app_base_url: str
 ) -> None:
