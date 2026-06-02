@@ -32,7 +32,7 @@ from PIL import Image
 
 import streamlit as st
 from streamlit import type_util
-from streamlit.elements.write import StreamingOutput
+from streamlit.elements.write import StreamingOutput, WriteMixin
 from streamlit.error_util import handle_uncaught_app_exception
 from streamlit.errors import NoSessionContext, StreamlitAPIException
 from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -841,10 +841,37 @@ def test_write_bokeh_figure_routes_to_bokeh_chart() -> None:
             p.assert_called_once()
 
 
+def test_write_pydeck_routes_to_pydeck_chart() -> None:
+    """Route pydeck Deck objects to ``DeltaGenerator.pydeck_chart``."""
+    import pydeck as pdk
+
+    with patch("streamlit.delta_generator.DeltaGenerator.pydeck_chart") as p:
+        st.write(pdk.Deck())
+        p.assert_called_once()
+
+
+def test_write_graphviz_chart_routes_to_graphviz_chart() -> None:
+    """Route graphviz objects to ``DeltaGenerator.graphviz_chart``."""
+    with patch("streamlit.type_util.is_graphviz_chart", return_value=True):
+        with patch("streamlit.delta_generator.DeltaGenerator.graphviz_chart") as p:
+            st.write(object())
+            p.assert_called_once()
+
+
 def test_write_mixin_dg_property_returns_self() -> None:
     """``WriteMixin.dg`` returns the host ``DeltaGenerator`` instance."""
     dg = st.container()
     assert dg.dg is dg
+
+
+def test_write_mixin_dg_returns_self_for_standalone_mixin() -> None:
+    """A standalone ``WriteMixin`` instance returns itself from the ``dg`` property."""
+
+    class _OnlyWrite(WriteMixin):
+        pass
+
+    write_mixin = _OnlyWrite()
+    assert write_mixin.dg is write_mixin
 
 
 @pytest.mark.require_integration

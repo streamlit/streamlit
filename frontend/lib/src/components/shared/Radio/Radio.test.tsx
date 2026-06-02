@@ -26,7 +26,7 @@ const getProps = (props: Partial<Props> = {}): Props => ({
   disabled: false,
   horizontal: false,
   value: 0,
-  onChange: () => {},
+  onChange: vi.fn(),
   options: ["a", "b", "c"],
   captions: [],
   label: "Label",
@@ -37,24 +37,18 @@ describe("Radio widget", () => {
   it("renders without crashing", () => {
     const props = getProps()
     render(<Radio {...props} />)
-    const radioGroup = screen.getByRole("radiogroup")
-    const radioOptions = screen.getAllByRole("radio")
-
-    expect(radioGroup).toBeInTheDocument()
-    expect(radioOptions).toHaveLength(3)
+    expect(screen.getByRole("radiogroup")).toBeVisible()
+    expect(screen.getAllByRole("radio")).toHaveLength(3)
   })
 
   it("renders without crashing if no label is provided", () => {
     const props = getProps({ label: undefined })
     render(<Radio {...props} />)
-    const widgetLabel = screen.queryByText("Label")
-    const radioOptions = screen.getByRole("radiogroup")
-
-    expect(widgetLabel).toBeNull()
-    expect(radioOptions).toBeInTheDocument()
+    expect(screen.queryByText("Label")).toBeNull()
+    expect(screen.getByRole("radiogroup")).toBeVisible()
   })
 
-  it("pass labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
+  it("passes labelVisibility prop to StyledWidgetLabel correctly when hidden", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Hidden,
     })
@@ -65,29 +59,24 @@ describe("Radio widget", () => {
     expect(widgetLabel).not.toBeVisible()
   })
 
-  it("pass labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
+  it("passes labelVisibility prop to StyledWidgetLabel correctly when collapsed", () => {
     const props = getProps({
       labelVisibility: LabelVisibilityOptions.Collapsed,
     })
     render(<Radio {...props} />)
-    const widgetLabel = screen.getByText("Label")
-    expect(widgetLabel).not.toBeVisible()
+    expect(screen.getByText("Label")).not.toBeVisible()
   })
 
   it("has correct className", () => {
     const props = getProps()
     render(<Radio {...props} />)
-    const radioElement = screen.getByTestId("stRadio")
-
-    expect(radioElement).toHaveClass("stRadio")
+    expect(screen.getByTestId("stRadio")).toHaveClass("stRadio")
   })
 
   it("renders a label", () => {
     const props = getProps()
     render(<Radio {...props} />)
-    const widgetLabel = screen.queryByText(`${props.label}`)
-
-    expect(widgetLabel).toBeInTheDocument()
+    expect(screen.queryByText(`${props.label}`)).toBeInTheDocument()
   })
 
   it("has a default value", () => {
@@ -99,6 +88,9 @@ describe("Radio widget", () => {
     // @ts-expect-error
     const checked = radioOptions[props.value]
     expect(checked).toBeChecked()
+    // Remaining options must not be checked
+    expect(radioOptions[1]).not.toBeChecked()
+    expect(radioOptions[2]).not.toBeChecked()
   })
 
   it("can be disabled", () => {
@@ -148,14 +140,14 @@ describe("Radio widget", () => {
     })
   })
 
-  it("shows a message when there are no options to be shown", () => {
+  it("shows a message and disables all options when there are no options", () => {
     const props = getProps({ options: [] })
     render(<Radio {...props} />)
     const radioOptions = screen.getAllByRole("radio")
-    const noOptionLabel = screen.getByText("No options to select.")
-
     expect(radioOptions).toHaveLength(1)
-    expect(noOptionLabel).toBeInTheDocument()
+    expect(screen.getByText("No options to select.")).toBeInTheDocument()
+    // Auto-disabled when options list is empty
+    expect(radioOptions[0]).toBeDisabled()
   })
 
   it("handles value changes", async () => {
@@ -169,5 +161,149 @@ describe("Radio widget", () => {
     await user.click(secondOption)
 
     expect(secondOption).toBeChecked()
+    expect(radioOptions[0]).not.toBeChecked()
+  })
+
+  it("calls onChange with the correct index when an option is selected", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0 })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    await user.click(radioOptions[2])
+
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith(2)
+  })
+
+  it("does not call onChange when the group is disabled", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, disabled: true })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    await user.click(radioOptions[1])
+
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
+  it("renders no checked radio when value is null (empty selection)", () => {
+    const props = getProps({ value: null })
+    render(<Radio {...props} />)
+    const radioOptions = screen.getAllByRole("radio")
+
+    radioOptions.forEach(option => {
+      expect(option).not.toBeChecked()
+    })
+  })
+
+  it("renders each option with data-testid stRadioOption", () => {
+    const props = getProps()
+    render(<Radio {...props} />)
+
+    const optionItems = screen.getAllByTestId("stRadioOption")
+    expect(optionItems).toHaveLength(3)
+  })
+
+  it("forwards data-testid to the radio group element", () => {
+    const props = getProps()
+    render(<Radio {...props} />)
+
+    const radioGroup = screen.getByTestId("stRadioGroup")
+    expect(radioGroup).toBeVisible()
+    expect(radioGroup).toHaveAttribute("role", "radiogroup")
+  })
+
+  it("sets aria-label on the radiogroup matching the widget label", () => {
+    const props = getProps({ label: "My Radio" })
+    render(<Radio {...props} />)
+
+    expect(screen.getByRole("radiogroup", { name: "My Radio" })).toBeVisible()
+  })
+
+  it("radiogroup has no aria-label when label is not provided", () => {
+    const props = getProps({ label: undefined })
+    render(<Radio {...props} />)
+
+    const group = screen.getByRole("radiogroup")
+    expect(group).not.toHaveAttribute("aria-label")
+  })
+
+  it("sets data-orientation=vertical for vertical layout", () => {
+    const props = getProps({ horizontal: false })
+    render(<Radio {...props} />)
+
+    expect(screen.getByRole("radiogroup")).toHaveAttribute(
+      "data-orientation",
+      "vertical"
+    )
+  })
+
+  it("sets data-orientation=horizontal for horizontal layout", () => {
+    const props = getProps({ horizontal: true })
+    render(<Radio {...props} />)
+
+    expect(screen.getByRole("radiogroup")).toHaveAttribute(
+      "data-orientation",
+      "horizontal"
+    )
+  })
+
+  it("ArrowDown moves selection to next option in vertical group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0, horizontal: false })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(first)
+    await user.keyboard("{ArrowDown}")
+
+    expect(second).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(1)
+  })
+
+  it("ArrowRight moves selection to next option in horizontal group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 0, horizontal: true })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(first)
+    await user.keyboard("{ArrowRight}")
+
+    expect(second).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(1)
+  })
+
+  it("ArrowLeft moves selection to previous option in horizontal group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 1, horizontal: true })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(second)
+    await user.keyboard("{ArrowLeft}")
+
+    expect(first).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(0)
+  })
+
+  it("ArrowUp moves selection to previous option in vertical group", async () => {
+    const user = userEvent.setup()
+    const onChange = vi.fn()
+    const props = getProps({ onChange, value: 1, horizontal: false })
+    render(<Radio {...props} />)
+
+    const [first, second] = screen.getAllByRole("radio")
+    await user.click(second)
+    await user.keyboard("{ArrowUp}")
+
+    expect(first).toBeChecked()
+    expect(onChange).toHaveBeenCalledWith(0)
   })
 })
