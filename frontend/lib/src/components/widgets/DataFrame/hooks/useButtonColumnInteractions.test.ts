@@ -16,7 +16,6 @@
 
 import {
   type CellClickedEventArgs,
-  type Theme as GlideTheme,
   type GridCell,
   GridCellKind,
 } from "@glideapps/glide-data-grid"
@@ -27,6 +26,7 @@ import { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import ButtonColumn from "~lib/components/widgets/DataFrame/columns/ButtonColumn"
+import type { ButtonInteractionTheme } from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
 import { DataFrameCellType } from "~lib/dataframes/arrowTypeUtils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -56,8 +56,10 @@ const MOCK_BUTTON_COLUMN_PROPS = {
   },
 }
 
-const MOCK_THEME: Pick<GlideTheme, "cellHorizontalPadding"> = {
+const MOCK_THEME: ButtonInteractionTheme = {
+  baseFontStyle: "13px",
   cellHorizontalPadding: 8,
+  fontFamily: "sans-serif",
 }
 
 function createButtonColumn(
@@ -196,7 +198,7 @@ describe("useButtonColumnInteractions", () => {
 
     const event = createCellClickedEvent({
       bounds: { x: 100, y: 200, width: 40, height: 24 },
-      localEventX: 10,
+      localEventX: 20,
       localEventY: 10,
     })
 
@@ -207,7 +209,7 @@ describe("useButtonColumnInteractions", () => {
       rowIndex: 14,
       actions: ["View", "Delete"],
       screenTop: 210,
-      screenLeft: 110,
+      screenLeft: 120,
     })
 
     act(() => {

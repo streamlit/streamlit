@@ -25,13 +25,19 @@ describe("ButtonCell renderer", () => {
   const mockTheme = {
     cellHorizontalPadding: 8,
     baseFontStyle: "13px",
-    baseFontFull: "13px sans-serif",
+    fontFamily: "sans-serif",
     textDark: "#000",
     accentColor: "#ff4b4b",
     bgHeaderHovered: "#f0f0f0",
     borderColor: "#ccc",
     roundingRadius: 4,
   }
+
+  const createMockCtx = (): CanvasRenderingContext2D =>
+    ({
+      measureText: (text: string) => ({ width: text.length * 10 }),
+      font: "",
+    }) as unknown as CanvasRenderingContext2D
 
   it("correctly identifies button cells", () => {
     const buttonCell = {
@@ -75,12 +81,6 @@ describe("ButtonCell renderer", () => {
   )
 
   describe("measure", () => {
-    const createMockCtx = (): CanvasRenderingContext2D =>
-      ({
-        measureText: (text: string) => ({ width: text.length * 10 }),
-        font: "",
-      }) as unknown as CanvasRenderingContext2D
-
     it("measures single button label width", () => {
       const ctx = createMockCtx()
       const cell = {
@@ -181,6 +181,7 @@ describe("ButtonCell renderer", () => {
         posX: 50,
         posY: 16,
         theme: mockTheme,
+        measureContext: createMockCtx(),
       })
 
       expect(clickTarget).toEqual({
@@ -207,6 +208,7 @@ describe("ButtonCell renderer", () => {
         posX: 50,
         posY: 16,
         theme: mockTheme,
+        measureContext: createMockCtx(),
       })
 
       expect(clickTarget).toEqual({
@@ -241,6 +243,7 @@ describe("ButtonCell renderer", () => {
         posX: 50,
         posY: 16,
         theme: mockTheme,
+        measureContext: createMockCtx(),
       })
 
       expect(clickTarget).toBeUndefined()
@@ -264,6 +267,7 @@ describe("ButtonCell renderer", () => {
         posX: 50,
         posY: 16,
         theme: mockTheme,
+        measureContext: createMockCtx(),
       })
 
       expect(clickTarget).toBeUndefined()
@@ -287,6 +291,31 @@ describe("ButtonCell renderer", () => {
         posX: 0,
         posY: 16,
         theme: mockTheme,
+        measureContext: createMockCtx(),
+      })
+
+      expect(clickTarget).toBeUndefined()
+    })
+
+    it("does not expand clicks beyond the measured button bounds", () => {
+      const cell = {
+        kind: GridCellKind.Custom,
+        data: {
+          kind: "button-cell",
+          data: "A",
+          buttonType: "primary",
+        },
+        allowOverlay: false,
+        copyData: "A",
+        readonly: true,
+      } as unknown as ButtonCell
+
+      const clickTarget = getButtonCellClickTarget(cell, {
+        bounds: { x: 0, y: 0, width: 100, height: 32 },
+        posX: 30,
+        posY: 16,
+        theme: mockTheme,
+        measureContext: createMockCtx(),
       })
 
       expect(clickTarget).toBeUndefined()

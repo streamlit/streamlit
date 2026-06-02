@@ -19,7 +19,6 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import {
   type CellClickedEventArgs,
   type DataEditorProps,
-  type Theme as GlideTheme,
   type Item,
 } from "@glideapps/glide-data-grid"
 
@@ -27,6 +26,7 @@ import type { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
 import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
 import {
+  type ButtonInteractionTheme,
   type ButtonMenuBounds,
   getButtonCellClickTarget,
   isButtonCell,
@@ -53,7 +53,7 @@ interface UseButtonColumnInteractionsParams {
   columns: BaseColumn[]
   getCellContent: DataEditorProps["getCellContent"]
   getOriginalIndex: (index: number) => number
-  theme: Pick<GlideTheme, "cellHorizontalPadding">
+  theme: ButtonInteractionTheme
 }
 
 interface UseButtonColumnInteractionsReturn {

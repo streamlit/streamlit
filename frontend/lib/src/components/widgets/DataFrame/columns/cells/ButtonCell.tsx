@@ -35,6 +35,11 @@ import { genericFonts } from "~lib/theme/primitives/typography"
 
 export type ButtonCellData = string | string[] | null
 
+export type ButtonInteractionTheme = Pick<
+  GlideTheme,
+  "baseFontStyle" | "cellHorizontalPadding" | "fontFamily"
+>
+
 export type ButtonMenuBounds = Rectangle & {
   /** Click X position (screen coordinates). */
   readonly clickX: number
@@ -53,13 +58,13 @@ type ButtonCellClickTarget =
       readonly bounds: ButtonMenuBounds
     }
 
-/** Approximate width for the "more_vert" menu icon */
+/** Fallback width for the "more_vert" menu icon when canvas is unavailable. */
 const MULTI_ACTION_ICON_WIDTH = 20
 
-/** Approximate width per character for content estimation */
+/** Fallback width per character when canvas is unavailable. */
 const CHAR_WIDTH_ESTIMATE = 7
 
-/** Approximate width for a Material icon */
+/** Fallback width for a Material icon when canvas is unavailable. */
 const ICON_WIDTH_ESTIMATE = 20
 
 /** Minimum gap between icon and text in button labels. */
@@ -90,8 +95,8 @@ function getIconTextGap(cellHorizontalPadding: number): number {
   return Math.max(MIN_ICON_TEXT_GAP, cellHorizontalPadding / 2)
 }
 
-function getClickTolerance(cellHorizontalPadding: number): number {
-  return cellHorizontalPadding
+function getBaseFontFull(theme: ButtonInteractionTheme): string {
+  return `${theme.baseFontStyle} ${theme.fontFamily}`
 }
 
 /**
@@ -123,11 +128,7 @@ function parseButtonLabel(label: string): ParsedLabel {
 function getContentWidth(
   ctx: CanvasRenderingContext2D,
   label: string | null,
-  theme: {
-    baseFontStyle: string
-    baseFontFull: string
-    cellHorizontalPadding: number
-  }
+  theme: ButtonInteractionTheme
 ): number {
   const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
   const iconTextGap = getIconTextGap(theme.cellHorizontalPadding)
@@ -147,11 +148,66 @@ function getContentWidth(
     if (text) width += iconTextGap
   }
   if (text) {
-    ctx.font = theme.baseFontFull
+    ctx.font = getBaseFontFull(theme)
     width += ctx.measureText(text).width
   }
 
   return width
+}
+
+let cachedMeasurementContext: CanvasRenderingContext2D | null | undefined
+
+function getMeasurementContext(
+  measureContext?: CanvasRenderingContext2D
+): CanvasRenderingContext2D | undefined {
+  if (measureContext !== undefined) {
+    return measureContext
+  }
+
+  if (cachedMeasurementContext === undefined) {
+    cachedMeasurementContext =
+      typeof document === "undefined"
+        ? null
+        : document.createElement("canvas").getContext("2d")
+  }
+
+  return cachedMeasurementContext ?? undefined
+}
+
+function getEstimatedContentWidth(
+  label: string | null,
+  isMultiAction: boolean,
+  theme: ButtonInteractionTheme
+): number {
+  if (isMultiAction) {
+    return MULTI_ACTION_ICON_WIDTH
+  }
+
+  if (!label) {
+    return 0
+  }
+
+  const { icon, text } = parseButtonLabel(label)
+
+  return (
+    text.length * CHAR_WIDTH_ESTIMATE +
+    (icon ? ICON_WIDTH_ESTIMATE : 0) +
+    (icon && text ? getIconTextGap(theme.cellHorizontalPadding) : 0)
+  )
+}
+
+function getClickContentWidth(
+  label: string | null,
+  isMultiAction: boolean,
+  theme: ButtonInteractionTheme,
+  measureContext?: CanvasRenderingContext2D
+): number {
+  const ctx = getMeasurementContext(measureContext)
+  if (ctx) {
+    return getContentWidth(ctx, label, theme)
+  }
+
+  return getEstimatedContentWidth(label, isMultiAction, theme)
 }
 
 /**
@@ -209,21 +265,19 @@ function getButtonBounds(
 
 /**
  * Check if position is within button bounds.
- * Optionally adds tolerance margin to account for estimation errors in click detection.
  */
 function isWithinButton(
   bounds: ButtonBounds,
   posX: number | undefined,
-  posY: number | undefined,
-  tolerance = 0
+  posY: number | undefined
 ): boolean {
   if (posX === undefined || posY === undefined) return false
 
   return (
-    posX >= bounds.x - tolerance &&
-    posX <= bounds.x + bounds.width + tolerance &&
-    posY >= bounds.y - tolerance &&
-    posY <= bounds.y + bounds.height + tolerance
+    posX >= bounds.x &&
+    posX <= bounds.x + bounds.width &&
+    posY >= bounds.y &&
+    posY <= bounds.y + bounds.height
   )
 }
 
@@ -241,11 +295,13 @@ export function getButtonCellClickTarget(
     posX,
     posY,
     theme,
+    measureContext,
   }: {
     bounds: Rectangle
     posX: number | undefined
     posY: number | undefined
-    theme: Pick<GlideTheme, "cellHorizontalPadding">
+    theme: ButtonInteractionTheme
+    measureContext?: CanvasRenderingContext2D
   }
 ): ButtonCellClickTarget | undefined {
   const { data, alignment } = cell.data
@@ -258,42 +314,22 @@ export function getButtonCellClickTarget(
   // (e.g. an empty-string label), so clicks are ignored to match draw().
   if (!isMultiAction && !label) return undefined
 
-  // Estimate content width without canvas context.
-  // Note: This uses a Latin-tuned character width estimate (CHAR_WIDTH_ESTIMATE).
-  // For non-Latin scripts (CJK, emoji, ligatures), actual widths can vary, causing
-  // click detection to be slightly off. We use theme.cellHorizontalPadding as
-  // a tolerance margin to accommodate estimation errors. A future enhancement
-  // could cache measured bounds from draw() for pixel-perfect click detection.
-  let estimatedContentWidth: number
-
-  if (isMultiAction) {
-    estimatedContentWidth = MULTI_ACTION_ICON_WIDTH
-  } else {
-    const hasIcon = label?.startsWith(":material/") ?? false
-    const textPart = hasIcon
-      ? label?.replace(/^:material\/[^:]+:/, "").trim()
-      : label
-    estimatedContentWidth =
-      (textPart?.length ?? 0) * CHAR_WIDTH_ESTIMATE +
-      (hasIcon ? ICON_WIDTH_ESTIMATE : 0)
-  }
+  const contentWidth = getClickContentWidth(
+    label,
+    isMultiAction,
+    theme,
+    measureContext
+  )
 
   const buttonBounds = getButtonBounds(
     bounds.width,
     bounds.height,
     theme.cellHorizontalPadding,
-    estimatedContentWidth,
+    contentWidth,
     alignment
   )
 
-  if (
-    !isWithinButton(
-      buttonBounds,
-      posX,
-      posY,
-      getClickTolerance(theme.cellHorizontalPadding)
-    )
-  ) {
+  if (!isWithinButton(buttonBounds, posX, posY)) {
     return undefined
   }
 
