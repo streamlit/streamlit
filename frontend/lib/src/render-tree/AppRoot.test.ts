@@ -428,6 +428,72 @@ describe("AppRoot", () => {
       expect(replacedBlock.children.length).toBe(1)
     })
 
+    it("removes a block's children when replacing it during the same script run", () => {
+      const rootWithThreeChildren = ROOT.applyDelta(
+        "script_run_id",
+        makeProto(DeltaProto, { addBlock: {} }),
+        forwardMsgMetadata([0, 1, 1])
+      )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "First" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "Second" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 1])
+        )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "Stale third" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 2])
+        )
+
+      const rewrittenRoot = rootWithThreeChildren
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, { addBlock: {} }),
+          forwardMsgMetadata([0, 1, 1])
+        )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "Updated first" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 0])
+        )
+        .applyDelta(
+          "script_run_id",
+          makeProto(DeltaProto, {
+            newElement: { text: { body: "Updated second" } },
+          }),
+          forwardMsgMetadata([0, 1, 1, 1])
+        )
+
+      const rewrittenBlock = GetNodeByDeltaPathVisitor.getNodeAtPath(
+        rewrittenRoot.main,
+        [1, 1]
+      ) as BlockNode
+
+      expect(rewrittenBlock.children.length).toBe(2)
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(rewrittenRoot.main, [1, 1, 0])
+      ).toBeTextNode("Updated first")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(rewrittenRoot.main, [1, 1, 1])
+      ).toBeTextNode("Updated second")
+      expect(
+        GetNodeByDeltaPathVisitor.getNodeAtPath(rewrittenRoot.main, [1, 1, 2])
+      ).toBeUndefined()
+    })
+
     it("inherits children when replacing a block wrapped in a transient node", () => {
       const tabContainerProto = makeProto(DeltaProto, {
         addBlock: { tabContainer: {}, allowEmpty: false },

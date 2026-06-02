@@ -459,14 +459,19 @@ export class AppRoot {
         ? (existingNodeAtPath.anchor ?? existingNodeAtPath)
         : existingNodeAtPath
 
-    // If we're replacing an existing Block of the same type, this new Block
-    // inherits the existing Block's children. This preserves two things:
+    // If we're replacing an existing Block of the same type from a prior script
+    // run, this new Block inherits the existing Block's children. This
+    // preserves two things:
     //  1. Widget State
     //  2. React state of all elements
+    // Blocks created earlier in the same script run should not inherit children,
+    // since this indicates that the script is rewriting the same container and
+    // stale children from the previous write should be removed.
     let children: AppNode[] = []
     if (
       existingNode instanceof BlockNode &&
-      existingNode.deltaBlock.type === block.type
+      existingNode.deltaBlock.type === block.type &&
+      existingNode.scriptRunId !== scriptRunId
     ) {
       // For dialog blocks, don't inherit children if the dialog identity is different.
       // The identity is computed from the dialog's attributes.
