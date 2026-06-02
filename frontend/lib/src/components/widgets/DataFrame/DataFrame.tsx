@@ -501,9 +501,6 @@ function DataFrame({
     getOriginalIndex,
   ])
 
-  // Button columns are skipped inside useDataExporter (not exportable). The
-  // export still iterates the full columns array so the loop index stays aligned
-  // with the positions getCellContent expects.
   const { exportToCsv } = useDataExporter(
     getCellContent,
     columns,

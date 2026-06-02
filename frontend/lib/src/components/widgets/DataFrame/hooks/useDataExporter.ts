@@ -110,9 +110,9 @@ async function writeCsv(
 
   for (let row = 0; row < numRows; row++) {
     const rowData: unknown[] = []
-    // Iterate over full columns array using loop index for getCellContent,
-    // since it expects position in the displayed columns array.
-    // Skip button columns as they are not exportable.
+    // Button columns are skipped because they are not exportable, but we still
+    // iterate the full columns array so the loop index stays aligned with the
+    // positions getCellContent expects.
     columns.forEach((column: BaseColumn, col: number) => {
       if (column.kind === "button") return
       rowData.push(column.getCellValue(getCellContent([col, row])))
