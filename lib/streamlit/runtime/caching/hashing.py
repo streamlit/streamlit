@@ -118,7 +118,7 @@ def _polars_sample_seed(obj: Any) -> int:
         else:
             hashed = head.hash(seed=0)
         digest = hashlib.md5(
-            hashed.to_arrow().to_string().encode(), usedforsecurity=False
+            hashed.to_numpy().tobytes(), usedforsecurity=False
         ).digest()
         return int.from_bytes(digest[:4], "little") & 0xFFFF_FFFF
     except (TypeError, ValueError, BufferError):

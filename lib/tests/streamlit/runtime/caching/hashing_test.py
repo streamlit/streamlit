@@ -1036,3 +1036,44 @@ def test_pandas_large_dataframe_unhashable_payload_uses_pickle_fallback() -> Non
 
     # Both should hash to the same value via pickle fallback
     assert get_hash(df_a) == get_hash(df_b)
+
+
+@pytest.mark.require_integration
+def test_polars_large_series_seed_head_change_differs() -> None:
+    """Large Polars Series with different heads produce different hashes.
+
+    Regression test for GitHub issue #14622: the large-data sampling path for Polars
+    used a hardcoded seed=0. An attacker could pre-compute which indices would be
+    sampled and craft a collision.
+    """
+    import polars as pl
+
+    series_a = pl.Series("val", list(range(_PANDAS_ROWS_LARGE)))
+    series_b = series_a.clone()
+    series_b[:64] = pl.Series("val", [999] * 64)
+
+    assert get_hash(series_a) != get_hash(series_b)
+
+
+@pytest.mark.require_integration
+def test_polars_large_dataframe_seed_head_change_differs() -> None:
+    """Large Polars DataFrames with different heads produce different hashes.
+
+    Regression test for GitHub issue #14622: the large-data sampling path for Polars
+    used a hardcoded seed=0. An attacker could pre-compute which indices would be
+    sampled and craft a collision.
+    """
+    import polars as pl
+
+    df_a = pl.DataFrame(
+        {"a": list(range(_PANDAS_ROWS_LARGE)), "b": list(range(_PANDAS_ROWS_LARGE))}
+    )
+    df_b = df_a.clone()
+    df_b = df_b.with_columns(
+        pl.when(pl.int_range(pl.len()) < 64)
+        .then(pl.lit(999))
+        .otherwise(pl.col("a"))
+        .alias("a")
+    )
+
+    assert get_hash(df_a) != get_hash(df_b)
