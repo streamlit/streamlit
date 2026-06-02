@@ -58,8 +58,6 @@ describe("ClearStaleNodeVisitor", () => {
       })
 
       it("clears stale element with fragment ID even when fragmentIdOfBlock is not set (outside container)", () => {
-        // This is the core behavior for outside container writes: elements with
-        // fragmentId get cleared even when not inside a fragment block context
         const currentRunId = "current_run"
         const element = new ElementNode(
           makeProto(Element, { text: { body: "with_fragment" } }),
@@ -117,8 +115,7 @@ describe("ClearStaleNodeVisitor", () => {
         expect(result).toBeUndefined()
       })
 
-      it("preserves current element with fragment ID when not in fragment block context", () => {
-        // Current elements are always preserved regardless of block context
+      it("preserves element written to outside container if it was re-emitted in the current run", () => {
         const currentRunId = "current_run"
         const currentElement = new ElementNode(
           makeProto(Element, { text: { body: "current_outside" } }),

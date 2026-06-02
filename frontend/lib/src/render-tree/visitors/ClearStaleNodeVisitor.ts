@@ -128,10 +128,11 @@ export class ClearStaleNodeVisitor implements AppNodeVisitor<
       // running fragment(s) but were not updated in this script run. An element
       // is considered stale when all three conditions hold:
       //   1. It has a fragmentId (non-fragment elements are never cleared here).
-      //   2. Its fragmentId matches one of the fragments running in this batch,
-      //      OR it lives inside a block that was modified by one of them.
-      //   3. Its scriptRunId differs from the current run (i.e. it wasn't
-      //      re-emitted).
+      //   2. The element's fragmentId matches one of the fragments running in
+      //      this batch (i.e. the fragment that queued this element is re-running),
+      //      OR fragmentIdOfBlock is set (meaning we're inside a fragment-modified
+      //      block, so any fragment-owned child not re-emitted is stale).
+      //   3. Its scriptRunId differs from the current run (it wasn't re-emitted).
       // This covers both elements inside the fragment's own block and elements
       // the fragment wrote to containers outside its scope.
       if (
