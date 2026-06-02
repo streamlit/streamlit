@@ -966,3 +966,73 @@ def test_pydantic_model_unhashable_when_model_dump_json_fails() -> None:
         with pytest.raises(UnhashableTypeError) as exc_info:
             get_hash(instance)
     assert "unhashable members" in str(exc_info.value).lower()
+
+
+def test_PIL_pmode_palette_collision_prevention() -> None:
+    """P-mode PIL images with different palettes produce different hashes.
+
+    Regression test for GitHub issue #14622: tobytes() on palette-indexed (P-mode)
+    PIL images returns only palette indices, not the color table. Two images with
+    identical index arrays but different palettes would collide without this fix.
+    """
+    # Create two P-mode images with identical pixel indices but different palettes
+    im1 = Image.new("P", (10, 10), 0)
+    im2 = Image.new("P", (10, 10), 0)
+
+    # Set different palettes (768 values for 256 RGB colors)
+    palette1 = [i % 256 for i in range(768)]
+    palette2 = [(i + 128) % 256 for i in range(768)]
+
+    im1.putpalette(palette1)
+    im2.putpalette(palette2)
+
+    # Confirm the vulnerability trigger: tobytes() is equal for both images
+    assert im1.tobytes() == im2.tobytes()
+
+    # But the hashes should differ because we now include the palette
+    assert get_hash(im1) != get_hash(im2)
+
+
+def test_numpy_large_array_seed_prefix_change_differs() -> None:
+    """Large numpy arrays with different prefixes produce different hashes.
+
+    Regression test for GitHub issue #14622: the large-data sampling path for numpy
+    used a hardcoded seed=0. Since the seed was constant and public, an attacker
+    could pre-compute which indices would be sampled and craft a collision.
+    """
+    arr_a = np.arange(_NP_SIZE_LARGE, dtype=np.float64)
+    arr_b = arr_a.copy()
+    arr_b[:64] = 999.0
+
+    # Mutating the prefix changes the derived seed, leading to different samples
+    # and a different hash. Using arange ensures varied values throughout the array.
+    assert get_hash(arr_a) != get_hash(arr_b)
+
+
+def test_pandas_large_dataframe_seed_row_change_differs() -> None:
+    """Large pandas DataFrames with different first rows produce different hashes.
+
+    Regression test for GitHub issue #14622: the large-data sampling path for pandas
+    used a hardcoded random_state=0. An attacker could pre-compute which indices would
+    be sampled and craft a collision.
+    """
+    df_a = pd.DataFrame(np.ones((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
+    df_b = df_a.copy()
+    df_b.iloc[0, 0] = 255.0
+
+    # Mutating the first row should change the derived seed, leading to different samples
+    assert get_hash(df_a) != get_hash(df_b)
+
+
+def test_pandas_large_dataframe_unhashable_payload_uses_pickle_fallback() -> None:
+    """Large DataFrames with unhashable cells fall back to pickle consistently.
+
+    Ensures that the seed derivation helper properly falls back to seed=0 for
+    unhashable payloads (like list-valued cells), preserving the pickle fallback path.
+    """
+    # Create a large DataFrame with list-valued cells (unhashable by hash_pandas_object)
+    df_a = pd.DataFrame({"col": [[1, 2]] * _PANDAS_ROWS_LARGE})
+    df_b = pd.DataFrame({"col": [[1, 2]] * _PANDAS_ROWS_LARGE})
+
+    # Both should hash to the same value via pickle fallback
+    assert get_hash(df_a) == get_hash(df_b)
