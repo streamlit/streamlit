@@ -34,6 +34,7 @@ from streamlit import config
 from streamlit.runtime import Runtime
 from streamlit.web.server.server import Server
 from streamlit.web.server.starlette.starlette_server import (
+    _UVICORN_STARTUP_FAILURE_EXIT_CODE,
     RetriesExceededError,
     UvicornRunner,
     _bind_server_socket,
@@ -1276,7 +1277,7 @@ class TestUvicornRunner:
             runner = UvicornRunner("myapp:app")
             runner.run()
 
-        assert exc_info.value.code == 3
+        assert exc_info.value.code == _UVICORN_STARTUP_FAILURE_EXIT_CODE
         mock_socket.close.assert_called_once()
 
     def test_run_exits_when_port_manually_set_and_unavailable(self) -> None:
