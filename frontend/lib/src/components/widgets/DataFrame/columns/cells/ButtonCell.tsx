@@ -24,6 +24,7 @@ import {
 import { darken } from "color2k"
 
 import {
+  extractLeadingMaterialIcon,
   isMaterialIcon,
   parseIconPackEntry,
 } from "~lib/components/shared/Icon/DynamicIcon"
@@ -97,14 +98,19 @@ function getClickTolerance(cellHorizontalPadding: number): number {
 /**
  * Parse a button label to extract leading Material icon.
  * Supports `:material/icon_name:` syntax.
+ *
+ * Icon extraction is delegated to the shared `extractLeadingMaterialIcon`
+ * helper so the canvas-drawn button and the `ButtonActionMenu` dropdown stay
+ * consistent. The extracted icon token is then resolved to the icon glyph name
+ * used for canvas rendering.
  */
 function parseButtonLabel(label: string): ParsedLabel {
-  const iconMatch = label.match(/^:material\/([^:]+):(.*)$/)
+  const { icon: iconToken, text } = extractLeadingMaterialIcon(label)
 
-  if (iconMatch && isMaterialIcon(`:material/${iconMatch[1]}:`)) {
+  if (iconToken && isMaterialIcon(iconToken)) {
     return {
-      icon: parseIconPackEntry(`:material/${iconMatch[1]}:`).icon,
-      text: iconMatch[2].trim(),
+      icon: parseIconPackEntry(iconToken).icon,
+      text: text.trim(),
     }
   }
 
@@ -245,14 +251,19 @@ const renderer: CustomRenderer<ButtonCell> = {
     const { data, onClick, onOpenMenu, rowIndex, alignment } = cell.data
     if (!data || rowIndex === undefined) return undefined
 
+    const label = getSingleButtonLabel(data)
+    const isMultiAction = Array.isArray(data) && data.length > 1
+
+    // No interactive button is rendered when there is no content to show
+    // (e.g. an empty-string label), so clicks are ignored to match draw().
+    if (!isMultiAction && !label) return undefined
+
     // Estimate content width without canvas context.
     // Note: This uses a Latin-tuned character width estimate (CHAR_WIDTH_ESTIMATE).
     // For non-Latin scripts (CJK, emoji, ligatures), actual widths can vary, causing
     // click detection to be slightly off. We use theme.cellHorizontalPadding as
     // a tolerance margin to accommodate estimation errors. A future enhancement
     // could cache measured bounds from draw() for pixel-perfect click detection.
-    const label = getSingleButtonLabel(data)
-    const isMultiAction = Array.isArray(data) && data.length > 1
     let estimatedContentWidth: number
 
     if (isMultiAction) {
@@ -313,11 +324,13 @@ const renderer: CustomRenderer<ButtonCell> = {
     const { data, buttonType, alignment } = cell.data
     const padding = theme.cellHorizontalPadding
 
-    // Skip rendering for null, undefined, or empty array data
-    if (!data || (Array.isArray(data) && data.length === 0)) return true
-
     const label = getSingleButtonLabel(data)
     const isMultiAction = Array.isArray(data) && data.length > 1
+
+    // Skip rendering when there is no content to show: null/undefined data, an
+    // empty array, or a single empty-string label. Multi-action buttons render
+    // the "more_vert" icon even though their single-label value is null.
+    if (!isMultiAction && !label) return true
 
     // Calculate button bounds using shared helper
     const contentWidth = getContentWidth(ctx, label, theme)
@@ -451,41 +464,22 @@ const renderer: CustomRenderer<ButtonCell> = {
   },
   measure: (ctx, cell, theme) => {
     const { data } = cell.data
-    // Return minimal width for null, undefined, or empty array data
-    if (!data || (Array.isArray(data) && data.length === 0)) {
+    const label = getSingleButtonLabel(data)
+    const isMultiAction = Array.isArray(data) && data.length > 1
+
+    // Return minimal width when there is no content to render: null/undefined
+    // data, an empty array, or a single empty-string label.
+    if (!isMultiAction && !label) {
       return theme.cellHorizontalPadding * 2
     }
 
-    const label = getSingleButtonLabel(data)
-    const iconFont = `${theme.baseFontStyle} '${genericFonts.iconFont}'`
-
-    // For multi-action buttons (label is null), measure "more_vert" with icon font
-    if (!label) {
-      ctx.font = iconFont
-      const iconWidth = ctx.measureText("more_vert").width
-      return (
-        iconWidth +
-        theme.cellHorizontalPadding * 2 +
-        getButtonPadding(theme.cellHorizontalPadding) * 2
-      )
-    }
-
-    const { icon, text } = parseButtonLabel(label)
-    const iconTextGap = getIconTextGap(theme.cellHorizontalPadding)
-
-    let width = 0
-    if (icon) {
-      ctx.font = iconFont
-      width += ctx.measureText(icon).width
-      if (text) width += iconTextGap
-    }
-    if (text) {
-      ctx.font = theme.baseFontFull
-      width += ctx.measureText(text).width
-    }
+    // Reuse the same measurement logic as draw() so column auto-sizing stays in
+    // sync. getContentWidth measures the "more_vert" icon for multi-action
+    // buttons (label is null) and the icon/text otherwise.
+    const contentWidth = getContentWidth(ctx, label, theme)
 
     return (
-      width +
+      contentWidth +
       theme.cellHorizontalPadding * 2 +
       getButtonPadding(theme.cellHorizontalPadding) * 2
     )

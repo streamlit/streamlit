@@ -135,6 +135,28 @@ describe("ButtonCell renderer", () => {
       // Should return just the horizontal padding * 2
       expect(width).toBe(mockTheme.cellHorizontalPadding * 2)
     })
+
+    it.each([[[]], [[""]]] as const)(
+      "returns minimal width for empty content %j",
+      data => {
+        const ctx = createMockCtx()
+        const cell = {
+          data: {
+            kind: "button-cell",
+            data,
+            buttonType: "secondary",
+          },
+        } as unknown as ButtonCell
+
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        const width = renderer.measure!(
+          ctx,
+          cell,
+          mockTheme as Parameters<NonNullable<typeof renderer.measure>>[2]
+        )
+        expect(width).toBe(mockTheme.cellHorizontalPadding * 2)
+      }
+    )
   })
 
   describe("onClick", () => {
@@ -273,6 +295,41 @@ describe("ButtonCell renderer", () => {
       )
 
       expect(onClick).not.toHaveBeenCalled()
+    })
+
+    it("does nothing for a single empty-string label", () => {
+      const onClick = vi.fn()
+      const onOpenMenu = vi.fn()
+      const cell = {
+        kind: GridCellKind.Custom,
+        data: {
+          kind: "button-cell",
+          data: [""],
+          buttonType: "primary",
+          rowIndex: 0,
+          onClick,
+          onOpenMenu,
+        },
+        allowOverlay: false,
+        copyData: "",
+        readonly: true,
+      } as unknown as ButtonCell
+
+      const args = {
+        cell,
+        bounds: { x: 0, y: 0, width: 100, height: 32 },
+        posX: 50,
+        posY: 16,
+        theme: mockTheme,
+      }
+
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      renderer.onClick!(
+        args as Parameters<NonNullable<typeof renderer.onClick>>[0]
+      )
+
+      expect(onClick).not.toHaveBeenCalled()
+      expect(onOpenMenu).not.toHaveBeenCalled()
     })
   })
 })
