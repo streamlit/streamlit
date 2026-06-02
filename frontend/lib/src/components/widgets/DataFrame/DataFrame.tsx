@@ -38,7 +38,6 @@ import {
   DataEditorRef,
   DataEditor as GlideDataEditor,
   GridCell,
-  GridCellKind,
   GridColumn,
   GridMouseEventArgs,
   GridSelection,
@@ -67,11 +66,9 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
-import { ButtonCell } from "./columns/cells/ButtonCell"
+import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
-import useColumnLoader, {
-  COLUMN_POSITION_PREFIX,
-} from "./hooks/useColumnLoader"
+import useColumnLoader from "./hooks/useColumnLoader"
 import useColumnPinning from "./hooks/useColumnPinning"
 import useColumnReordering from "./hooks/useColumnReordering"
 import useColumnSizer from "./hooks/useColumnSizer"
@@ -206,18 +203,6 @@ function DataFrame({
   }>()
   const [showColumnVisibilityMenu, setShowColumnVisibilityMenu] =
     useState(false)
-  // State for button action menu (multi-action button dropdown)
-  const [buttonActionMenu, setButtonActionMenu] = useState<{
-    // The column name of the button column:
-    columnName: string
-    // The row index (original data row index):
-    rowIndex: number
-    // The list of actions for the dropdown:
-    actions: string[]
-    // Screen position for the menu (viewport coordinates):
-    screenTop: number
-    screenLeft: number
-  }>()
 
   const handleToggleColumnVisibilityMenu = useCallback(
     (): void => setShowColumnVisibilityMenu(show => !show),
@@ -228,17 +213,6 @@ function DataFrame({
     () => setShowColumnVisibilityMenu(false),
     []
   )
-
-  /** Close the button action menu. */
-  const handleCloseButtonMenu = useCallback(
-    () => setButtonActionMenu(undefined),
-    []
-  )
-
-  // Ref to access current menu state in stable callbacks without
-  // re-creating them when menu state changes.
-  const buttonActionMenuRef = useRef(buttonActionMenu)
-  buttonActionMenuRef.current = buttonActionMenu
 
   // This is done to keep some backwards compatibility
   // so that old arrow proto messages from the st.dataframe
@@ -320,144 +294,19 @@ function DataFrame({
     getCellContent: getSortedCellContent,
   } = useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
 
-  /** Handle button clicks in button columns. */
-  const handleButtonClick = useCallback(
-    (columnName: string, rowIndex: number, label: string): void => {
-      setButtonActionMenu(undefined)
-
-      if (!widgetMgr) return
-
-      const widgetId = element.buttonClickWidgets[columnName]
-      if (!widgetId) return
-
-      const clickState = JSON.stringify({ row: rowIndex, label })
-      widgetMgr.setStringTriggerValue(
-        { id: widgetId, formId: element.formId },
-        clickState,
-        { fromUi: true },
-        fragmentId
-      )
-    },
-    [widgetMgr, element.buttonClickWidgets, element.formId, fragmentId]
-  )
-
-  /**
-   * Handle action selection from the button action menu dropdown.
-   * Uses ref to avoid recreating callback when menu state changes.
-   */
-  const handleMenuSelectAction = useCallback(
-    (label: string): void => {
-      const menu = buttonActionMenuRef.current
-      if (menu) {
-        handleButtonClick(menu.columnName, menu.rowIndex, label)
-      }
-    },
-    [handleButtonClick]
-  )
-
-  // Store the rAF handle so we can cancel any pending frame when a new menu
-  // is requested (prevents flicker from stale callbacks on rapid clicks).
-  const menuRafRef = useRef<number | null>(null)
-
-  // Cleanup rAF on unmount
-  useEffect(() => {
-    return () => {
-      if (menuRafRef.current !== null) {
-        cancelAnimationFrame(menuRafRef.current)
-      }
-    }
-  }, [])
-
-  /** Handle opening the button action menu for multi-action buttons. */
-  const handleOpenButtonMenu = useCallback(
-    (
-      columnName: string,
-      rowIndex: number,
-      actions: string[],
-      bounds: Rectangle & { clickX: number; clickY: number }
-    ): void => {
-      // Cancel any pending rAF from a prior call to prevent stale callbacks
-      if (menuRafRef.current !== null) {
-        cancelAnimationFrame(menuRafRef.current)
-        menuRafRef.current = null
-      }
-
-      // When clicking between menu items or buttons, we need a clean transition.
-      // The pattern below clears the menu state first, then sets the new state
-      // after a frame. Without rAF, React 18's batching would collapse the
-      // undefined → new-menu updates into a single render, keeping the popover
-      // mounted with stale position. The frame boundary forces BaseUI's Popover
-      // to remount cleanly at the new click coordinates.
-      setButtonActionMenu(undefined)
-      menuRafRef.current = requestAnimationFrame(() => {
-        menuRafRef.current = null
-        setButtonActionMenu({
-          columnName,
-          rowIndex,
-          actions,
-          screenTop: bounds.clickY,
-          screenLeft: bounds.clickX,
-        })
-      })
-    },
-    []
-  )
-
-  /**
-   * Wrap getCellContent to inject button click handlers into button cells.
-   * Only injects handlers when a widget ID exists (ButtonColumn has a key).
-   */
-  const getCellContent = useCallback(
-    ([col, row]: readonly [number, number]): GridCell => {
-      const cell = getSortedCellContent([col, row])
-
-      if (
-        cell.kind === GridCellKind.Custom &&
-        (cell.data as Record<string, unknown>)?.kind === "button-cell"
-      ) {
-        const column = columns[col]
-        // Look up widget ID by column name or positional key (_pos:<index>)
-        const positionalKey = `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
-        const matchedKey =
-          element.buttonClickWidgets[column.name] !== undefined
-            ? column.name
-            : positionalKey
-        const widgetId = element.buttonClickWidgets[matchedKey]
-
-        if (widgetId) {
-          const originalRowIndex = getOriginalIndex(row)
-
-          return {
-            ...cell,
-            data: {
-              ...(cell as ButtonCell).data,
-              rowIndex: originalRowIndex,
-              onClick: (rowIdx: number, label: string) => {
-                handleButtonClick(matchedKey, rowIdx, label)
-              },
-              onOpenMenu: (
-                rowIdx: number,
-                actions: string[],
-                bounds: Rectangle & { clickX: number; clickY: number }
-              ) => {
-                handleOpenButtonMenu(matchedKey, rowIdx, actions, bounds)
-              },
-            },
-          }
-        }
-      }
-
-      return cell
-    },
-    [
-      getSortedCellContent,
-      columns,
-      element.buttonClickWidgets,
-      getOriginalIndex,
-      handleButtonClick,
-      handleOpenButtonMenu,
-    ]
-  )
+  const {
+    getCellContent,
+    buttonActionMenu,
+    clearButtonActionMenu,
+    handleMenuSelectAction,
+  } = useButtonColumnInteractions({
+    element,
+    widgetMgr,
+    fragmentId,
+    columns,
+    getCellContent: getSortedCellContent,
+    getOriginalIndex,
+  })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
@@ -1208,7 +1057,7 @@ function DataFrame({
               // Close menus:
               setShowMenu(undefined)
               setShowColumnVisibilityMenu(false)
-              setButtonActionMenu(undefined)
+              clearButtonActionMenu()
             }
           }}
           theme={gridTheme.glideTheme}
@@ -1451,7 +1300,7 @@ function DataFrame({
             left={buttonActionMenu.screenLeft}
             actions={buttonActionMenu.actions}
             onSelectAction={handleMenuSelectAction}
-            onCloseMenu={handleCloseButtonMenu}
+            onCloseMenu={clearButtonActionMenu}
           />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
