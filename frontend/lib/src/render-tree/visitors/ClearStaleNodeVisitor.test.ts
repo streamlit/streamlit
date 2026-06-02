@@ -57,7 +57,9 @@ describe("ClearStaleNodeVisitor", () => {
         expect(result).toBe(element)
       })
 
-      it("returns element if fragmentIdOfBlock is not set", () => {
+      it("clears stale element with fragment ID even when fragmentIdOfBlock is not set (outside container)", () => {
+        // This is the core behavior for outside container writes: elements with
+        // fragmentId get cleared even when not inside a fragment block context
         const currentRunId = "current_run"
         const element = new ElementNode(
           makeProto(Element, { text: { body: "with_fragment" } }),
@@ -70,7 +72,9 @@ describe("ClearStaleNodeVisitor", () => {
 
         const result = visitor.visitElementNode(element)
 
-        expect(result).toBe(element)
+        // Element should be cleared because its fragmentId is in fragmentIdsThisRun
+        // and its scriptRunId doesn't match current run
+        expect(result).toBeUndefined()
       })
 
       it("returns element if it matches current script run ID", () => {
@@ -111,6 +115,82 @@ describe("ClearStaleNodeVisitor", () => {
         const result = visitor.visitElementNode(staleElement)
 
         expect(result).toBeUndefined()
+      })
+
+      it("preserves current element with fragment ID when not in fragment block context", () => {
+        // Current elements are always preserved regardless of block context
+        const currentRunId = "current_run"
+        const currentElement = new ElementNode(
+          makeProto(Element, { text: { body: "current_outside" } }),
+          ForwardMsgMetadata.create(),
+          currentRunId,
+          "script_hash",
+          "fragment1"
+        )
+        const visitor = new ClearStaleNodeVisitor(currentRunId, ["fragment1"])
+
+        const result = visitor.visitElementNode(currentElement)
+
+        expect(result).toBe(currentElement)
+      })
+
+      it("preserves element belonging to different fragment", () => {
+        // Elements from fragments not running should not be cleared
+        const currentRunId = "current_run"
+        const element = new ElementNode(
+          makeProto(Element, { text: { body: "other_fragment" } }),
+          ForwardMsgMetadata.create(),
+          "old_run",
+          "script_hash",
+          "other_fragment_id"
+        )
+        const visitor = new ClearStaleNodeVisitor(currentRunId, ["fragment1"])
+
+        const result = visitor.visitElementNode(element)
+
+        expect(result).toBe(element)
+      })
+
+      it("handles multiple fragments running simultaneously", () => {
+        const currentRunId = "current_run"
+
+        // Fragment 1's stale element should be cleared
+        const fragment1Stale = new ElementNode(
+          makeProto(Element, { text: { body: "frag1_stale" } }),
+          ForwardMsgMetadata.create(),
+          "old_run",
+          "script_hash",
+          "fragment1"
+        )
+
+        // Fragment 2's stale element should also be cleared
+        const fragment2Stale = new ElementNode(
+          makeProto(Element, { text: { body: "frag2_stale" } }),
+          ForwardMsgMetadata.create(),
+          "old_run",
+          "script_hash",
+          "fragment2"
+        )
+
+        // Fragment 3's element (not running) should be preserved
+        const fragment3Element = new ElementNode(
+          makeProto(Element, { text: { body: "frag3" } }),
+          ForwardMsgMetadata.create(),
+          "old_run",
+          "script_hash",
+          "fragment3"
+        )
+
+        const visitor = new ClearStaleNodeVisitor(currentRunId, [
+          "fragment1",
+          "fragment2",
+        ])
+
+        expect(visitor.visitElementNode(fragment1Stale)).toBeUndefined()
+        expect(visitor.visitElementNode(fragment2Stale)).toBeUndefined()
+        expect(visitor.visitElementNode(fragment3Element)).toBe(
+          fragment3Element
+        )
       })
     })
   })

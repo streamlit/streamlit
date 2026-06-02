@@ -178,7 +178,11 @@ def check_widget_policies(
     enable_check_callback_rules: bool = True,
 ) -> None:
     """Check all widget policies for the given DeltaGenerator."""
-    check_fragment_path_policy(dg)
+    # Note: check_fragment_path_policy() was removed to allow fragments to write
+    # widgets to containers declared outside the fragment's scope. The frontend
+    # now handles clearing these elements via element-level fragment clearing in
+    # ClearStaleNodeVisitor. Parallel fragment workers are still protected by
+    # the is_parallel_worker guard in delta_generator.py.
     check_cache_replay_rules()
     if enable_check_callback_rules:
         check_callback_rules(dg, on_change)
