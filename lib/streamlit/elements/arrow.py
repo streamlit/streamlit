@@ -34,14 +34,14 @@ from streamlit.deprecation_util import (
 )
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
-    NUMERICAL_POSITION_PREFIX,
     ColumnConfigMappingInput,
     apply_data_specific_configs,
+    extract_button_column_configs,
     marshall_column_config,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
-from streamlit.elements.lib.column_types import ButtonColumnResult
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -68,7 +68,6 @@ if TYPE_CHECKING:
     from streamlit.dataframe_util import Data
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.proto.ArrowData_pb2 import ArrowData as ArrowDataProto
-    from streamlit.proto.Common_pb2 import StringTriggerValue
 
 
 SelectionMode: TypeAlias = Literal[
@@ -291,56 +290,6 @@ class DataframeSelectionSerde:
 
     def serialize(self, state: DataframeState) -> str:
         return json.dumps(state)
-
-
-class ButtonClickState(TypedDict):
-    """The schema for button click state in ButtonColumn.
-
-    Both fields are always present when a button click occurs.
-    """
-
-    row: int
-    label: str
-
-
-@dataclass
-class ButtonClickSerde:
-    """Serializer/deserializer for ButtonColumn click values.
-
-    Uses string trigger value pattern (value resets after each run).
-    The frontend sends the click state as a JSON string.
-    """
-
-    def serialize(self, v: ButtonClickState | None) -> StringTriggerValue:
-        from streamlit.proto.Common_pb2 import StringTriggerValue
-
-        if v is None:
-            return StringTriggerValue()
-        return StringTriggerValue(data=json.dumps(v))
-
-    def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
-        if not ui_value:
-            return None
-
-        parsed = json.loads(ui_value)
-        # Validate shape: must be a dict with "row" (int >= 0) and "label" (str)
-        if (
-            not isinstance(parsed, dict)
-            or not isinstance(parsed.get("row"), int)
-            or not isinstance(parsed.get("label"), str)
-        ):
-            raise StreamlitAPIException(
-                "Invalid button click state: expected {row: int, label: str}."
-            )
-
-        # Validate row is non-negative (bounds check - row < num_rows is
-        # checked downstream when accessing the data)
-        if parsed["row"] < 0:
-            raise StreamlitAPIException(
-                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
-            )
-
-        return cast("ButtonClickState", parsed)
 
 
 def parse_selection_mode(
@@ -971,25 +920,9 @@ class ArrowMixin:
             additional_allowed=["auto"],
         )
 
-        # Process ButtonColumnResult objects and extract callback references
-        # Use the same key transformation as _convert_column_config_to_json:
-        # integer keys (positional) get prefixed with _pos:
-        button_columns: dict[str, ButtonColumnResult] = {}
-        processed_column_config: dict[str, Any] | None = None
-        if column_config is not None:
-            processed_column_config = {}
-            for col_name, config in column_config.items():
-                if isinstance(config, ButtonColumnResult):
-                    # Transform key the same way column config does for consistency
-                    column_widget_key = (
-                        f"{NUMERICAL_POSITION_PREFIX}{col_name}"
-                        if isinstance(col_name, int)
-                        else str(col_name)
-                    )
-                    button_columns[column_widget_key] = config
-                    processed_column_config[col_name] = config.config
-                else:
-                    processed_column_config[col_name] = config
+        processed_column_config, button_columns = extract_button_column_configs(
+            column_config
+        )
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
@@ -1065,34 +998,13 @@ class ArrowMixin:
 
         marshall_column_config(proto, column_config_mapping)
 
-        # Register widgets for button columns with keys
         ctx = get_script_run_ctx()
-        button_serde = ButtonClickSerde()
-        for col_name, button_col in button_columns.items():
-            check_widget_policies(
-                self.dg,
-                button_col.key,
-                on_change=button_col.on_click,
-                default_value=None,
-                writes_allowed=False,
-            )
-            widget_id = compute_and_register_element_id(
-                "dataframe_button",
-                user_key=button_col.key,
-                key_as_main_identity=True,
-                dg=self.dg,
-            )
-            register_widget(
-                widget_id,
-                on_change_handler=button_col.on_click,
-                args=button_col.args,
-                kwargs=button_col.kwargs,
-                deserializer=button_serde.deserialize,
-                serializer=button_serde.serialize,
-                ctx=ctx,
-                value_type="string_trigger_value",
-            )
-            proto.button_click_widgets[col_name] = widget_id
+        register_button_column_widgets(
+            dg=self.dg,
+            proto=proto,
+            button_columns=button_columns,
+            ctx=ctx,
+        )
 
         # Set form_id if button columns are present or selection is activated
         # This ensures button clicks respect form submission behavior

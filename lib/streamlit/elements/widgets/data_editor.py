@@ -38,22 +38,21 @@ from streamlit.deprecation_util import (
     make_deprecated_name_warning,
     show_deprecation_warning,
 )
-from streamlit.elements.arrow import ButtonClickSerde
 from streamlit.elements.lib.column_config_utils import (
     INDEX_IDENTIFIER,
-    NUMERICAL_POSITION_PREFIX,
     ColumnConfigMapping,
     ColumnConfigMappingInput,
     ColumnDataKind,
     DataframeSchema,
     apply_data_specific_configs,
     determine_dataframe_schema,
+    extract_button_column_configs,
     is_type_compatible,
     marshall_column_config,
     process_config_mapping,
+    register_button_column_widgets,
     update_column_config,
 )
-from streamlit.elements.lib.column_types import ButtonColumnResult, ColumnConfig
 from streamlit.elements.lib.form_utils import current_form_id
 from streamlit.elements.lib.layout_utils import (
     Height,
@@ -1036,25 +1035,9 @@ class DataEditorMixin:
         # Check if the column names are valid and unique.
         _check_column_names(data_df)
 
-        # Process ButtonColumnResult objects and extract callback references
-        # Button columns are read-only in data_editor but can still trigger clicks
-        button_columns: dict[str, ButtonColumnResult] = {}
-        # Use a concrete mutable dict type since we mutate it below
-        processed_column_config: dict[Any, ColumnConfig | str | None] | None = None
-        if column_config is not None:
-            processed_column_config = {}
-            for col_name, config in column_config.items():
-                if isinstance(config, ButtonColumnResult):
-                    # Transform key the same way column config does for consistency
-                    column_widget_key = (
-                        f"{NUMERICAL_POSITION_PREFIX}{col_name}"
-                        if isinstance(col_name, int)
-                        else str(col_name)
-                    )
-                    button_columns[column_widget_key] = config
-                    processed_column_config[col_name] = config.config
-                else:
-                    processed_column_config[col_name] = config
+        processed_column_config, button_columns = extract_button_column_configs(
+            column_config
+        )
 
         # Convert the user provided column config into the frontend compatible format:
         column_config_mapping = process_config_mapping(processed_column_config)
@@ -1190,37 +1173,15 @@ class DataEditorMixin:
 
         marshall_column_config(proto, column_config_mapping)
 
-        # Register widgets for button columns with keys
-        # Button columns are read-only in data_editor but clicks still trigger callbacks
         # Skip registration when the entire data_editor is disabled (disabled=True)
-        # since clicks should not fire in that case
+        # since button-column clicks should not fire in that case.
         if disabled is not True:
-            button_serde = ButtonClickSerde()
-            for col_name, button_col in button_columns.items():
-                check_widget_policies(
-                    self.dg,
-                    button_col.key,
-                    on_change=button_col.on_click,
-                    default_value=None,
-                    writes_allowed=False,
-                )
-                widget_id = compute_and_register_element_id(
-                    "dataframe_button",
-                    user_key=button_col.key,
-                    key_as_main_identity=True,
-                    dg=self.dg,
-                )
-                register_widget(
-                    widget_id,
-                    on_change_handler=button_col.on_click,
-                    args=button_col.args,
-                    kwargs=button_col.kwargs,
-                    deserializer=button_serde.deserialize,
-                    serializer=button_serde.serialize,
-                    ctx=ctx,
-                    value_type="string_trigger_value",
-                )
-                proto.button_click_widgets[col_name] = widget_id
+            register_button_column_widgets(
+                dg=self.dg,
+                proto=proto,
+                button_columns=button_columns,
+                ctx=ctx,
+            )
 
         # Create layout configuration
         # For height, only include it in LayoutConfig if it's not "auto"

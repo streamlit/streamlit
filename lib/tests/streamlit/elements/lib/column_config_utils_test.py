@@ -38,10 +38,12 @@ from streamlit.elements.lib.column_config_utils import (
     _determine_data_kind_via_pandas_dtype,
     apply_data_specific_configs,
     determine_dataframe_schema,
+    extract_button_column_configs,
     is_type_compatible,
     process_config_mapping,
     update_column_config,
 )
+from streamlit.elements.lib.column_types import ButtonColumn
 from streamlit.errors import StreamlitAPIException
 
 if TYPE_CHECKING:
@@ -414,6 +416,22 @@ class ColumnConfigUtilsTest(unittest.TestCase):
 
         with pytest.raises(StreamlitAPIException):
             process_config_mapping({"col1": ["a", "b"]})  # type: ignore
+
+    def test_extract_button_column_configs(self):
+        """Test extraction of interactive ButtonColumn wrapper configs."""
+        button_column = ButtonColumn("Actions", key="action_click")
+        processed_config, button_columns = extract_button_column_configs(
+            {
+                "name": "Name",
+                2: button_column,
+            }
+        )
+
+        assert processed_config == {
+            "name": "Name",
+            2: button_column.config,
+        }
+        assert button_columns == {"_pos:2": button_column}
 
     def test_update_column_config(self):
         """Test that the update_column_config function correctly updates a column's configuration."""

@@ -31,12 +31,14 @@ from streamlit.dataframe_util import (
     is_pandas_version_less_than,
 )
 from streamlit.elements.arrow import (
-    ButtonClickSerde,
     DataframeSelectionSerde,
     _validate_selection_state,
     parse_selection_mode,
 )
-from streamlit.elements.lib.column_config_utils import INDEX_IDENTIFIER
+from streamlit.elements.lib.column_config_utils import (
+    INDEX_IDENTIFIER,
+    ButtonClickSerde,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
 from streamlit.testing.v1 import AppTest

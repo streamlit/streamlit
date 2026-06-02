@@ -17,8 +17,9 @@ from __future__ import annotations
 import copy
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias
+from typing import TYPE_CHECKING, Any, Final, Literal, TypeAlias, TypedDict, cast
 
 from streamlit.dataframe_util import DataFormat
 from streamlit.elements.lib.column_types import (
@@ -27,13 +28,19 @@ from streamlit.elements.lib.column_types import (
     ColumnType,
 )
 from streamlit.elements.lib.dicttools import remove_none_values
+from streamlit.elements.lib.policies import check_widget_policies
+from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
+from streamlit.runtime.state import register_widget
 
 if TYPE_CHECKING:
     import pyarrow as pa
     from pandas import DataFrame, Index, Series
 
+    from streamlit.delta_generator import DeltaGenerator
+    from streamlit.proto.Common_pb2 import StringTriggerValue
     from streamlit.proto.Dataframe_pb2 import Dataframe as DataframeProto
+    from streamlit.runtime.scriptrunner_utils.script_run_context import ScriptRunContext
 
 
 # The index identifier can be used to apply configuration options
@@ -420,6 +427,120 @@ ColumnConfigMappingInput: TypeAlias = Mapping[
     IndexIdentifierType | str,
     ColumnConfig | ButtonColumnResult | str | None,
 ]
+
+
+ButtonColumnMapping: TypeAlias = dict[str, ButtonColumnResult]
+
+
+class ButtonClickState(TypedDict):
+    """The schema for button click state in ButtonColumn.
+
+    Both fields are always present when a button click occurs.
+    """
+
+    row: int
+    label: str
+
+
+@dataclass
+class ButtonClickSerde:
+    """Serializer/deserializer for ButtonColumn click values.
+
+    Uses string trigger value pattern (value resets after each run).
+    The frontend sends the click state as a JSON string.
+    """
+
+    def serialize(self, v: ButtonClickState | None) -> StringTriggerValue:
+        from streamlit.proto.Common_pb2 import StringTriggerValue
+
+        if v is None:
+            return StringTriggerValue()
+        return StringTriggerValue(data=json.dumps(v))
+
+    def deserialize(self, ui_value: str | None) -> ButtonClickState | None:
+        if not ui_value:
+            return None
+
+        parsed = json.loads(ui_value)
+        # Validate shape: must be a dict with "row" (int >= 0) and "label" (str)
+        if (
+            not isinstance(parsed, dict)
+            or not isinstance(parsed.get("row"), int)
+            or not isinstance(parsed.get("label"), str)
+        ):
+            raise StreamlitAPIException(
+                "Invalid button click state: expected {row: int, label: str}."
+            )
+
+        # Validate row is non-negative (bounds check - row < num_rows is
+        # checked downstream when accessing the data)
+        if parsed["row"] < 0:
+            raise StreamlitAPIException(
+                f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
+            )
+
+        return cast("ButtonClickState", parsed)
+
+
+def extract_button_column_configs(
+    column_config: ColumnConfigMappingInput | None,
+) -> tuple[dict[Any, ColumnConfig | str | None] | None, ButtonColumnMapping]:
+    """Extract interactive button-column configs from a column config mapping."""
+    button_columns: ButtonColumnMapping = {}
+    processed_column_config: dict[Any, ColumnConfig | str | None] | None = None
+
+    if column_config is not None:
+        processed_column_config = {}
+        for col_name, config in column_config.items():
+            if isinstance(config, ButtonColumnResult):
+                # Transform key the same way column config does for consistency.
+                column_widget_key = (
+                    f"{NUMERICAL_POSITION_PREFIX}{col_name}"
+                    if isinstance(col_name, int)
+                    else str(col_name)
+                )
+                button_columns[column_widget_key] = config
+                processed_column_config[col_name] = config.config
+            else:
+                processed_column_config[col_name] = config
+
+    return processed_column_config, button_columns
+
+
+def register_button_column_widgets(
+    *,
+    dg: DeltaGenerator,
+    proto: DataframeProto,
+    button_columns: ButtonColumnMapping,
+    ctx: ScriptRunContext | None,
+) -> None:
+    """Register widgets for interactive button columns and attach them to a dataframe proto."""
+    button_serde = ButtonClickSerde()
+    for col_name, button_col in button_columns.items():
+        check_widget_policies(
+            dg,
+            button_col.key,
+            on_change=button_col.on_click,
+            default_value=None,
+            writes_allowed=False,
+        )
+        widget_id = compute_and_register_element_id(
+            "dataframe_button",
+            user_key=button_col.key,
+            key_as_main_identity=True,
+            dg=dg,
+        )
+        register_widget(
+            widget_id,
+            on_change_handler=button_col.on_click,
+            args=button_col.args,
+            kwargs=button_col.kwargs,
+            deserializer=button_serde.deserialize,
+            serializer=button_serde.serialize,
+            ctx=ctx,
+            value_type="string_trigger_value",
+        )
+        proto.button_click_widgets[col_name] = widget_id
 
 
 def process_config_mapping(
