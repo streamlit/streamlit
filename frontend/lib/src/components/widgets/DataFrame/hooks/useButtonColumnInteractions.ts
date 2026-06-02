@@ -25,12 +25,10 @@ import {
 
 import type { Dataframe as DataframeProto } from "@streamlit/protobuf"
 
+import type { BaseColumn } from "~lib/components/widgets/DataFrame/columns"
+import type { ButtonCell } from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
+import { COLUMN_POSITION_PREFIX } from "~lib/components/widgets/DataFrame/hooks/useColumnLoader"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
-
-import type { BaseColumn } from "../columns"
-import type { ButtonCell } from "../columns/cells/ButtonCell"
-
-import { COLUMN_POSITION_PREFIX } from "./useColumnLoader"
 
 type ButtonMenuBounds = Rectangle & { clickX: number; clickY: number }
 
