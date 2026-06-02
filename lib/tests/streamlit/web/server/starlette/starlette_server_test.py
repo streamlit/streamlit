@@ -163,9 +163,12 @@ class TestBindServerSocket:
                 mock_socket,
             ],
         ) as bind_socket:
-            result = _bind_server_socket("0.0.0.0", "::", 8501, 100)
+            result, actual_bind_address = _bind_server_socket(
+                "0.0.0.0", "::", 8501, 100
+            )
 
         assert result == mock_socket
+        assert actual_bind_address == "0.0.0.0"
         assert bind_socket.call_args_list[0][0] == ("::", 8501, 100)
         assert bind_socket.call_args_list[1][0] == ("0.0.0.0", 8501, 100)
 
@@ -187,7 +190,10 @@ class TestBindServerSocket:
         self,
     ) -> None:
         """Test that the implicit default bind accepts both localhost families."""
-        server_socket = _bind_server_socket("0.0.0.0", "::", 0, 100)
+        server_socket, actual_bind_address = _bind_server_socket(
+            "0.0.0.0", "::", 0, 100
+        )
+        assert actual_bind_address == "::"
 
         if server_socket.family != socket.AF_INET6:
             server_socket.close()
@@ -702,6 +708,37 @@ class TestStartStarletteServer:
         call_args = bind_socket.call_args[0]
         assert call_args[0] == "::"
 
+    def test_updates_uvicorn_host_after_default_bind_fallback(self) -> None:
+        """Test that uvicorn logs/config reflect the fallback address."""
+
+        server = self._create_server()
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch("socket.has_ipv6", True),
+            patch("streamlit.config.is_manually_set", return_value=False),
+            patch_config_options({"server.address": None}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=[
+                    OSError(errno.EAFNOSUPPORT, "Address family not supported"),
+                    mock_socket,
+                ],
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_instance.startup = AsyncMock()
+            uvicorn_instance.main_loop = AsyncMock()
+            uvicorn_instance.shutdown = AsyncMock()
+            uvicorn_instance.should_exit = False
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            self._run_async(server.start())
+
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.host == "0.0.0.0"
+
     def test_uses_configured_address(self) -> None:
         """Test that configured address is used."""
 
@@ -1148,6 +1185,38 @@ class TestUvicornRunner:
         assert bind_socket.call_args[0][0] == "0.0.0.0"
         uvicorn_config = uvicorn_server_cls.call_args[0][0]
         assert uvicorn_config.host == "0.0.0.0"
+
+    def test_run_updates_uvicorn_host_after_default_bind_fallback(self) -> None:
+        """Test that uvicorn runner config reflects the fallback address."""
+        mock_socket = mock.MagicMock(spec=socket.socket)
+
+        with (
+            patch("socket.has_ipv6", True),
+            patch("streamlit.config.is_manually_set", return_value=False),
+            patch_config_options({"server.address": None, "server.port": 8502}),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._get_uvicorn_config_kwargs",
+                return_value={},
+            ),
+            patch(
+                "streamlit.web.server.starlette.starlette_server._bind_socket",
+                side_effect=[
+                    OSError(errno.EAFNOSUPPORT, "Address family not supported"),
+                    mock_socket,
+                ],
+            ),
+            patch("uvicorn.Server") as uvicorn_server_cls,
+        ):
+            uvicorn_instance = mock.MagicMock()
+            uvicorn_server_cls.return_value = uvicorn_instance
+
+            runner = UvicornRunner("myapp:app")
+            runner.run()
+
+        uvicorn_config = uvicorn_server_cls.call_args[0][0]
+        assert uvicorn_config.host == "0.0.0.0"
+        uvicorn_instance.run.assert_called_once_with(sockets=[mock_socket])
+        mock_socket.close.assert_called_once()
 
     def test_run_retries_on_port_in_use(self) -> None:
         """Test that run() retries on EADDRINUSE."""

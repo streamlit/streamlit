@@ -131,12 +131,12 @@ _IPV6_UNAVAILABLE_ERRNOS: Final[set[int]] = {
 }
 # Distinct exit code used when uvicorn returns without ever starting, so this
 # failure mode is distinguishable from the generic sys.exit(1) used elsewhere.
-UVICORN_STARTUP_FAILURE_EXIT_CODE: Final = 3
+_UVICORN_STARTUP_FAILURE_EXIT_CODE: Final = 3
 
 
 def _bind_server_socket(
     server_address: str, bind_address: str, port: int, backlog: int
-) -> socket.socket:
+) -> tuple[socket.socket, str]:
     """Bind ``bind_address``, falling back to ``server_address`` on IPv6 errors.
 
     ``bind_address`` may be the IPv6 dual-stack wildcard chosen by
@@ -144,17 +144,17 @@ def _bind_server_socket(
     with the original ``server_address``.
     """
     try:
-        return _bind_socket(bind_address, port, backlog)
+        return _bind_socket(bind_address, port, backlog), bind_address
     except OSError as exc:
         if bind_address != server_address and exc.errno in _IPV6_UNAVAILABLE_ERRNOS:
-            _LOGGER.debug(
+            _LOGGER.warning(
                 "Could not bind IPv6 wildcard address %s:%s; falling back to %s:%s.",
                 bind_address,
                 port,
                 server_address,
                 port,
             )
-            return _bind_socket(server_address, port, backlog)
+            return _bind_socket(server_address, port, backlog), server_address
         raise
 
 
@@ -361,12 +361,15 @@ class UvicornServer:
             )
 
             try:
-                self._socket = _bind_server_socket(
+                self._socket, actual_bind_address = _bind_server_socket(
                     configured_address,
                     bind_address,
                     port,
                     uvicorn_config.backlog,
                 )
+                if actual_bind_address != bind_address:
+                    bind_address = actual_bind_address
+                    uvicorn_config.host = actual_bind_address
             except OSError as exc:
                 last_exception = exc
                 # EADDRINUSE: port in use by another process
@@ -563,27 +566,31 @@ class UvicornRunner:
                     **uvicorn_kwargs,
                 )
 
-                server_socket = _bind_server_socket(
+                server_socket, actual_bind_address = _bind_server_socket(
                     configured_address,
                     bind_address,
                     port,
                     uvicorn_config.backlog,
                 )
-                if port == 0:
-                    port = server_socket.getsockname()[1]
-                    uvicorn_config.port = port
-                    config.set_option(
-                        "server.port", port, ConfigOption.STREAMLIT_DEFINITION
-                    )
-
-                server = uvicorn.Server(uvicorn_config)
                 try:
+                    if actual_bind_address != bind_address:
+                        bind_address = actual_bind_address
+                        uvicorn_config.host = actual_bind_address
+
+                    if port == 0:
+                        port = server_socket.getsockname()[1]
+                        uvicorn_config.port = port
+                        config.set_option(
+                            "server.port", port, ConfigOption.STREAMLIT_DEFINITION
+                        )
+
+                    server = uvicorn.Server(uvicorn_config)
                     server.run(sockets=[server_socket])
                 finally:
                     server_socket.close()
 
                 if not server.started:
-                    sys.exit(UVICORN_STARTUP_FAILURE_EXIT_CODE)
+                    sys.exit(_UVICORN_STARTUP_FAILURE_EXIT_CODE)
                 return  # Server exited normally
             except OSError as exc:
                 # EADDRINUSE: port in use by another process
