@@ -251,16 +251,20 @@ def test_widget_in_outside_container_no_duplication(app: Page):
     expect(fragment_uuid).not_to_have_text(old_uuid)
 
 
-def test_counter_in_outside_container(app: Page):
-    """Counter widget in an outside container works correctly across fragment reruns."""
-    expect(app.get_by_text("Counter value: 0", exact=True)).to_be_visible()
+def test_multiple_widgets_in_outside_container(app: Page):
+    """Multiple widgets in an outside container don't duplicate on fragment rerun."""
+    expect(app.get_by_label("Name")).to_have_count(1)
+    expect(app.get_by_label("Color")).to_have_count(1)
 
-    click_button(app, "Increment Counter")
+    multi_uuid = app.get_by_text("multi outside fragment:")
+    old_uuid = multi_uuid.text_content()
+    assert old_uuid is not None
 
-    expect(app.get_by_text("Counter value: 1", exact=True)).to_be_visible()
-    expect(app.get_by_role("button", name="Increment Counter")).to_have_count(1)
+    text_input = app.get_by_label("Name")
+    text_input.fill("Test Name")
+    text_input.press("Enter")
+    wait_for_app_run(app)
 
-    click_button(app, "Increment Counter")
-
-    expect(app.get_by_text("Counter value: 2", exact=True)).to_be_visible()
-    expect(app.get_by_role("button", name="Increment Counter")).to_have_count(1)
+    expect(app.get_by_label("Name")).to_have_count(1)
+    expect(app.get_by_label("Color")).to_have_count(1)
+    expect(multi_uuid).not_to_have_text(old_uuid)

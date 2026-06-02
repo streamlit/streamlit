@@ -64,17 +64,14 @@ def fragment_with_outside_widget():
 
 fragment_with_outside_widget()
 
-if "counter" not in st.session_state:
-    st.session_state.counter = 0
-
-counter_container = st.container()
+multi_container = st.container()
 
 
 @st.fragment
-def counter_fragment():
-    if counter_container.button("Increment Counter", key="increment_btn"):
-        st.session_state.counter += 1
-    counter_container.write(f"Counter value: {st.session_state.counter}")
+def multi_outside_widget_fragment():
+    multi_container.text_input("Name", key="name_input")
+    multi_container.selectbox("Color", ["Red", "Green", "Blue"], key="color_select")
+    st.write(f"multi outside fragment: {uuid4()}")
 
 
-counter_fragment()
+multi_outside_widget_fragment()
