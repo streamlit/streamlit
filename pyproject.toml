@@ -122,7 +122,7 @@ test = [
   "pytest-xdist>=3.6.1",
   # pytest-rerunfailures 16.0 is breaking our CI:
   # https://github.com/pytest-dev/pytest-rerunfailures/issues/302
-  "pytest-rerunfailures>=15.0,!=16.0",
+  "pytest-rerunfailures!=16.0,>=16.3",
   # pytest-github-actions-annotate-failures 0.4 has compatibility issues:
   "pytest-github-actions-annotate-failures>=0.3.0,<0.4.0",
   "pytest-benchmark>=5.1.0",
