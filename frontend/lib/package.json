@@ -73,7 +73,7 @@
     "date-fns": "^4.3.0",
     "decamelize": "^6.0.1",
     "deck.gl": "^9.3.2",
-    "dompurify": "^3.4.3",
+    "dompurify": "^3.4.7",
     "hoist-non-react-statics": "^3.3.2",
     "immer": "^11.1.7",
     "json5": "^2.2.3",
