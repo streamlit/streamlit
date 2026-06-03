@@ -332,26 +332,24 @@ const NumberInput: React.FC<Props> = ({
             handleClear()
           }
           break
+        case "Enter":
+          if (dirty) {
+            // When committing, if currentNumericValue is null (empty input),
+            // commitValue will fall back to elementDefault
+            commitValue({ value: currentNumericValue, fromUi: true })
+          }
+          if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
+            widgetMgr.submitForm(elementFormId, fragmentId)
+          }
+          break
         default:
       }
     },
-    [increment, decrement, clearable, handleClear]
-  )
-
-  const handleKeyPress = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>): void => {
-      if (e.key === "Enter") {
-        if (dirty) {
-          // When committing, if currentNumericValue is null (empty input),
-          // commitValue will fall back to elementDefault
-          commitValue({ value: currentNumericValue, fromUi: true })
-        }
-        if (widgetMgr.allowFormEnterToSubmit(elementFormId)) {
-          widgetMgr.submitForm(elementFormId, fragmentId)
-        }
-      }
-    },
     [
+      increment,
+      decrement,
+      clearable,
+      handleClear,
       dirty,
       currentNumericValue,
       commitValue,
@@ -433,7 +431,6 @@ const NumberInput: React.FC<Props> = ({
             onBlur={handleBlur}
             onChange={handleChange}
             onKeyDown={handleKeyDown}
-            onKeyPress={handleKeyPress}
           />
           {clearable && notNullOrUndefined(formattedValue) && (
             <StyledClearButton
