@@ -2,7 +2,9 @@
 
 ## Executive Summary
 
-The crash occurs when a fragment writes multiple elements (button + text) to an outside container. **The root cause is a backend bug**: the `RunningCursor` for the outside container is not being reset during fragment reruns. This causes the cursor index to accumulate (0→2→4→...) instead of resetting to 0, resulting in deltas with invalid paths being sent to the frontend.
+The crash occurs when a fragment writes multiple elements to an outside container. **The root cause is a backend bug**: the `RunningCursor` for the outside container is not being reset during fragment reruns. This causes the cursor index to accumulate (0→2→4→...) instead of resetting, resulting in deltas with invalid paths being sent to the frontend.
+
+The underlying design issue is that the current snapshot/restore mechanism cannot handle outside containers because we don't know which containers a fragment will write to until it executes. A more robust solution requires the cursor itself to track fragment-specific state, or wrapping fragment writes in an implicit container.
 
 ## Root Cause Confirmation (Logging Evidence)
 
@@ -55,232 +57,216 @@ Bad delta path index 4 (should be between [0, 2])
 Cannot send rerun backMessage when disconnected from server.
 ```
 
-## Variation Test Results
-
-| Variation | Description | Result |
-|-----------|-------------|--------|
-| Working | Button only outside, text inside fragment | PASS |
-| Working | Button only outside WITH conditional | PASS |
-| **Failing** | **Button + text outside WITH conditional** | **CRASH** |
-| To test | Text only outside (no button) | Likely PASS |
-| To test | Button + text outside NO conditional | Likely PASS |
-| To test | Text before button outside | Unknown |
-| To test | No-op conditional | Unknown |
-
-The key difference between working and failing patterns is:
-- **Working**: Fragment writes a single element (button only) to outside container
-- **Failing**: Fragment writes MULTIPLE elements (button AND text) to outside container
-
 ## Root Cause Analysis
 
-### The Problem (Backend Cursor Not Reset)
+### How Cursors Work
 
-The crash is caused by a **backend bug in cursor management** for outside containers during fragment reruns.
+A `RunningCursor` tracks the next index to write at within a container. Each write advances the index:
 
-When a fragment is defined, the following are snapshotted (`lib/streamlit/runtime/fragment.py:368-369`):
 ```python
-cursors_snapshot = deepcopy(ctx.cursors)
-dg_stack_snapshot = deepcopy(context_dg_stack.get())
+container = st.container()  # cursor.index = 0
+container.write("A")        # writes at index 0, cursor.index → 1
+container.write("B")        # writes at index 1, cursor.index → 2
 ```
 
-On fragment rerun, these snapshots are restored (`fragment.py:393-394`):
+### What Gets Snapshotted for Fragments
+
+When a fragment is defined (`fragment.py:368-369`):
 ```python
-ctx.cursors = deepcopy(cursors_snapshot)
-context_dg_stack.set(deepcopy(dg_stack_snapshot))
+cursors_snapshot = deepcopy(ctx.cursors)           # Root container cursors only
+dg_stack_snapshot = deepcopy(context_dg_stack.get())  # Active DG stack
 ```
 
-**The bug**: An `st.container()` created outside the fragment has its own `RunningCursor` stored in `counter_container._cursor`. This cursor is:
-- **NOT** part of `ctx.cursors` (which only contains root containers like main/sidebar)
-- **NOT** on the `dg_stack` (since it's not used in a `with` block at definition time)
+**`ctx.cursors`** only contains cursors for root containers (MAIN, SIDEBAR).
 
-Therefore, when the fragment reruns, `counter_container._cursor` **retains its state from the previous run**, causing its index to accumulate instead of reset.
+**`dg_stack`** only contains DeltaGenerators you're currently inside via `with` blocks.
 
-### Detailed Flow
+### Why Outside Containers Aren't Reset
 
-**Initial full run:**
-1. `counter_container = st.container()` creates a container with cursor at index 0
-2. Fragment runs, writes button at index 0, cursor advances to 1
-3. Fragment writes text at index 1, cursor advances to 2
-4. Run completes, cursor.index = 2
+An `st.container()` created outside the fragment has its own `_cursor` attribute, but:
+- It's **NOT** in `ctx.cursors` (only root containers are there)
+- It's **NOT** in `dg_stack` (not inside a `with` block at definition time)
 
-**Fragment rerun (after button click):**
-1. `ctx.cursors` and `dg_stack` are restored from snapshots
-2. **BUT** `counter_container._cursor` is NOT restored (not in snapshots)
-3. `counter_container._cursor.index` is still 2 from previous run!
-4. Fragment writes button at index 2 (wrong - should be 0)
-5. Fragment writes text at index 3 (wrong - should be 1)
-6. Frontend receives deltas with paths `[..., 2]` and `[..., 3]`
-7. But frontend only has 2 children (from previous run's indices 0 and 1)
-8. **Error:** `Bad delta path index 4 (should be between [0, 2])`
+So when the fragment reruns and restores snapshots, `counter_container._cursor` is untouched - it still has the accumulated index from previous runs.
 
-### Why This Affects Outside Containers Specifically
+### Why We Can't Simply Snapshot Outside Containers
 
-For elements INSIDE the fragment's own block, the fragment block itself is re-created on each run via `with st.container()` at `fragment.py:421`, so path indices are always relative to a fresh block. But for OUTSIDE containers:
-- The `DeltaGenerator` object persists in Python (captured by fragment closure)
-- Its cursor is NOT part of the snapshots that get restored
-- The cursor index accumulates across fragment reruns
+The snapshot is taken at fragment **definition** time, but we don't know which containers the fragment will write to until it **executes**. The fragment body hasn't run yet when the snapshot is taken.
 
-### Why Single Element Sometimes Works
+### The Interleaving Problem
 
-When only a button is written to the outside container:
-- First run: button at index 0, cursor advances to 1
-- Second run: button at index 1 (wrong, but still valid since children.length=1, and index 1 is allowed for insertion)
-- Third run: button at index 2, which may fail depending on timing
+A more complex scenario arises when multiple sources write to the same container:
 
-The crash happens faster with multiple elements because the cursor advances more per run.
+```python
+outside_container = st.container()
+outside_container.write("Header")      # Main script, index 0
 
-## Code Locations
+@st.fragment
+def fragment_a():
+    outside_container.write("From A")  # index 1
 
-### Frontend (where error is thrown)
+@st.fragment
+def fragment_b():
+    if condition:
+        outside_container.write("From B")  # index 2 (conditional)
 
-`frontend/lib/src/render-tree/visitors/SetNodeByDeltaPathVisitor.ts:106-109`:
-```typescript
-if (currentIndex < 0 || currentIndex > node.children.length) {
-  throw new Error(
-    `Bad delta path index ${currentIndex} (should be between [0, ${node.children.length}])`
-  )
-}
+fragment_a()
+fragment_b()
+outside_container.write("Footer")      # Main script, index 3
 ```
 
-### Frontend (where stale nodes are cleared)
+If Fragment A reruns and writes **two** elements instead of one, it would overwrite Fragment B's slot. If Fragment B writes nothing, should Footer shift up? Positional indices become unstable with interleaved writes from multiple sources that can change element count.
 
-`frontend/lib/src/render-tree/visitors/ClearStaleNodeVisitor.ts:125-151`:
-```typescript
-visitElementNode(node: ElementNode): AppNode | undefined {
-  if (this.isFragmentRun) {
-    // During a fragment run, we clear stale elements that belong to the
-    // running fragment(s) but were not updated in this script run.
-    if (
-      node.fragmentId &&
-      node.scriptRunId !== this.currentScriptRunId &&
-      (this.fragmentIdOfBlock ||
-        this.fragmentIdsThisRun.includes(node.fragmentId))
-    ) {
-      return undefined  // <-- Element is cleared here
-    }
-    return node
-  }
-  // ...
-}
+## Proposed Fix Options
+
+### Option 1: Implicit Container Wrapper (Recommended)
+
+Wrap each fragment's writes to an outside container in an implicit `st.container()`, similar to how fragments wrap their own internal content.
+
+**Current behavior (direct children):**
+```
+outside_container
+  ├── button (from fragment)
+  └── text (from fragment)
 ```
 
-### Backend (fragment delta handling)
+**Proposed behavior (wrapped):**
+```
+outside_container
+  └── [implicit fragment wrapper]
+        ├── button (from fragment)
+        └── text (from fragment)
+```
 
-`lib/streamlit/runtime/fragment.py`:
-- Fragment execution preserves delta path context via `dg_stack_snapshot`
-- Delta paths are computed at fragment definition time, not rerun time
+**Advantages:**
+1. **Consistent with fragment internals**: Fragments already wrap their own content in `st.container()` (`fragment.py:420-423`)
+2. **Multiple fragments work cleanly**: Each fragment gets its own wrapper, no interleaving issues
+3. **Cursor management is simple**: The wrapper has its own cursor that starts fresh each time
+4. **Order is stable**: Wrapper created on first write, reused on reruns
 
-## Proposed Fix
+**Example with multiple fragments:**
+```
+outside_container
+  ├── "Header" (direct from main)
+  ├── [fragment_a wrapper]
+  │     └── content from A
+  ├── [fragment_b wrapper]
+  │     └── content from B
+  └── "Footer" (direct from main)
+```
 
-### Option 1: Reset Outside Container Cursors on Fragment Rerun (Recommended)
+**Potential concerns:**
 
-The fix is to track DeltaGenerators used for outside container writes and reset their cursors on fragment rerun.
+1. **Extra DOM element**: Adds a wrapper div. Could use `display: contents` CSS to make it layout-transparent, though this has edge cases (pseudo-elements don't render, can't apply transforms/positioning to the wrapper itself).
+
+2. **Styling differences**: The wrapper becomes a single flex/grid item if the parent uses flexbox/grid. Users can nest their own layout containers inside if needed.
+
+3. **Mental model**: User writes `outside_container.button()`, might expect direct child. However, this is consistent with how fragment content is already wrapped.
+
+**Since outside container writes is a new feature, we're defining the behavior, not breaking existing apps.**
+
+### Option 2: Cursor Tracks Fragment Start Indices
+
+Have the cursor itself track where each fragment started writing, and reset to that position on fragment rerun.
+
+```python
+class RunningCursor:
+    def __init__(self):
+        self._index = 0
+        self._fragment_start_indices = {}  # {fragment_id: start_index}
+    
+    def get_index_for_fragment(self, fragment_id: str | None) -> int:
+        if fragment_id is None:
+            return self._index  # Main run
+        
+        if fragment_id not in self._fragment_start_indices:
+            # First time this fragment writes here
+            self._fragment_start_indices[fragment_id] = self._index
+        else:
+            # Fragment rerun - reset to start position
+            self._index = self._fragment_start_indices[fragment_id]
+        
+        return self._index
+```
+
+**Advantages:**
+- No extra DOM elements
+- Cursor is source of truth
+
+**Disadvantages:**
+- Doesn't solve the interleaving problem (Fragment A expanding would still overwrite Fragment B's slots)
+- More complex state management
+- Need to handle cleanup when fragments are removed/redefined
+
+### Option 3: Disallow Interleaving
+
+Error if a fragment writes to the same outside container as another fragment or the main script writes between fragment writes.
+
+**Advantages:**
+- Simple to implement
+- Forces clean patterns
+
+**Disadvantages:**
+- Restrictive for users
+- May not match user expectations
+
+### Option 4: Slot-Based Placement
+
+Instead of positional indices, use named slots or keys to identify element positions.
+
+**Advantages:**
+- Positions are stable regardless of element count changes
+- Very flexible
+
+**Disadvantages:**
+- Major architectural change
+- Changes the delta protocol
+
+## Recommended Fix: Option 1 (Implicit Container Wrapper)
+
+The implicit container wrapper is recommended because:
+
+1. **Solves interleaving cleanly**: Each fragment's writes are grouped, no overlap
+2. **Consistent pattern**: Matches how fragments already wrap their internal content  
+3. **Simple implementation**: Create a container on first outside write, reuse on reruns
+4. **No breaking changes**: This is a new feature, so we define the behavior
+5. **Users can manage layout**: If users need specific layout, they can nest containers inside the fragment's writes
 
 **Implementation approach:**
 
-In `lib/streamlit/runtime/fragment.py`, when the fragment is defined, we need to also capture references to any containers that might be written to from outside. Then, on fragment rerun, reset those containers' cursors as well.
-
-**Possible approaches:**
-
-**A. Track and reset at fragment definition/rerun:**
-```python
-# At fragment definition, capture outside containers' cursors
-outside_dg_cursors = {}  # Will be populated during first run
-
-# On fragment rerun, reset all tracked outside container cursors
-for dg_id, cursor_snapshot in outside_dg_cursors.items():
-    dg = get_dg_by_id(dg_id)
-    if dg and dg._cursor:
-        dg._cursor.index = cursor_snapshot.index
-```
-
-**B. Reset cursor on first write to outside container:**
-```python
-# In DeltaGenerator._enqueue, detect outside container writes during fragment runs
-# and reset the cursor if this is the first write this fragment run
-if ctx.fragment_ids_this_run and is_outside_container(dg):
-    if not dg._cursor_reset_this_run:
-        dg._cursor.index = 0  # Or restore from snapshot
-        dg._cursor_reset_this_run = True
-```
-
-**C. Include outside container cursors in the snapshot:**
-```python
-# Extend the snapshot mechanism to include cursors for any container
-# that will be written to by the fragment
-# This is more complex as it requires knowing which containers will be used
-```
+1. When a fragment first writes to an outside container, create an implicit wrapper container inside it
+2. Store a mapping of `{(fragment_id, outside_container_id): wrapper_container}`
+3. On fragment rerun, look up and reuse the existing wrapper
+4. All fragment writes to that outside container go through the wrapper
+5. The wrapper has its own cursor that's managed normally (fresh on creation, advances on writes)
 
 **Files to modify:**
-- `lib/streamlit/runtime/fragment.py` - Track and reset outside container cursors
-- `lib/streamlit/delta_generator.py` - Possibly add tracking for outside container first write
+- `lib/streamlit/runtime/fragment.py` - Track wrapper containers per fragment
+- `lib/streamlit/delta_generator.py` - Redirect outside container writes through wrapper
 
-### Option 2: Wrap Outside Container Writes in a Virtual Block
+## Historical Context
 
-Instead of writing directly to the outside container, have the fragment create a virtual block within it that gets replaced on each fragment rerun.
+### Why This Bug Exists
 
-**Pros:** Clean separation, no cursor management needed
-**Cons:** Changes the tree structure, may affect existing apps
+The outside container writes feature was enabled in commit `295149c196`. The frontend stale clearing logic was updated to handle fragment elements in outside containers, but the backend cursor management was not updated.
 
-### Option 3: Frontend-Side Fix (Not Recommended)
-
-Have the frontend handle the mismatch by replacing at the correct index based on element key/ID rather than delta path.
-
-**Pros:** Defensive, handles all cases
-**Cons:** Masks backend bugs, complex frontend changes
-
-## Recommended Fix: Option 1A or 1B
-
-The cleanest fix is to **reset the outside container's cursor on fragment rerun**. 
-
-**Option 1B (reset on first write)** is likely simplest because:
-1. It doesn't require knowing all containers at definition time
-2. It handles dynamic container usage (containers selected at runtime)
-3. It's localized to the `_enqueue` method
-
-**Key changes:**
-1. Add a per-fragment-run flag to track which outside containers have been reset
-2. On first write to an outside container during a fragment run, reset its cursor to 0
-3. Clear the tracking flag when the fragment run completes
-
-This ensures:
-- Outside container cursors start fresh on each fragment rerun
-- Delta paths are always valid relative to the current state
-- No complex snapshot management needed for arbitrary containers
-
-## Historical Context: Why This Bug Exists
-
-### Git History Analysis
-
-The outside container writes feature was enabled in commit `295149c196` (June 2026). The frontend stale clearing logic was updated to handle fragment elements in outside containers.
-
-However, the **backend cursor management** was not updated to account for this case. The existing snapshot/restore mechanism in `fragment.py` only handles:
+The existing snapshot/restore mechanism only handles:
 - `ctx.cursors` - Root container cursors (main, sidebar)
 - `dg_stack` - The stack of active DeltaGenerators (for `with` blocks)
 
-It does NOT handle cursors for arbitrary `DeltaGenerator` objects that are:
-- Created outside the fragment
-- Captured by the fragment closure
-- Written to during fragment execution
-
-This is an oversight in the original implementation of outside container writes.
+It does not handle cursors for arbitrary containers created outside the fragment.
 
 ### Why The Bug Wasn't Caught Earlier
 
-1. **Single-element writes appeared to work**: With only one element (e.g., just a button), the cursor starts at 0, writes at 0, advances to 1. On rerun, it writes at 1 instead of 0, but this is often still valid (insert at end). It takes multiple reruns to accumulate an invalid index.
+1. **Single-element writes appeared to work**: With one element, cursor goes 0→1→2. Index 1 and 2 are valid for insertion (append), so it takes multiple reruns to hit an invalid index.
 
-2. **Counter test was removed**: A test with the failing pattern existed but was removed because it "timed out in CI" - this was actually the bug manifesting!
-
-3. **No cursor state verification**: Tests didn't verify that delta paths were correct across fragment reruns.
-
-### Related Patterns in Codebase
-
-The fragment.py already implements cursor snapshotting for `ctx.cursors` and `dg_stack`. The fix should extend this pattern to also snapshot and restore cursors for outside containers that the fragment writes to.
+2. **Counter test was removed**: A test with the failing pattern existed but was removed due to "CI timeouts" - this was actually the bug manifesting.
 
 ## Test Cases to Add
 
-1. Button + text to outside container, rapid clicking
-2. Multiple widgets (button, text_input, selectbox) to outside container
-3. Nested outside containers with fragments
-4. Concurrent fragment reruns affecting same outside container
-5. **NEW**: Overlapping fragment reruns (trigger second click before first scriptFinished)
+1. Button + text to outside container, multiple clicks
+2. Multiple fragments writing to same outside container
+3. Fragment writes interleaved with main script writes
+4. Fragment that conditionally writes different numbers of elements
+5. Nested outside containers with fragments
+6. `with outside_container:` syntax from within a fragment
