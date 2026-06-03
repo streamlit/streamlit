@@ -260,6 +260,23 @@ def _delete_cookie_at_current_and_legacy_paths(
         response.delete_cookie(cookie_name, path="/")
 
 
+def _delete_orphaned_chunk_cookies(
+    response: Response, request: Request, cookie_name: str
+) -> None:
+    """Delete chunk cookies (``{cookie_name}_1``, ``{cookie_name}_2``, ...) by name.
+
+    ``clear_cookie_and_chunks`` only discovers chunk cookies by decoding the main
+    cookie to read its chunk count. When the main cookie is present but invalid
+    (for example signed with a rotated secret), it cannot be decoded, so its
+    chunk siblings would otherwise be orphaned in the browser. This scans the raw
+    request cookies and deletes anything matching the chunk-name pattern.
+    """
+    chunk_prefix = f"{cookie_name}_"
+    for name in request.cookies:
+        if name.startswith(chunk_prefix) and name[len(chunk_prefix) :].isdigit():
+            _delete_cookie_at_current_and_legacy_paths(response, name)
+
+
 def _delete_legacy_root_auth_cookies(response: Response) -> None:
     """Delete legacy root-path auth cookies when auth is scoped to a base path."""
     if _get_cookie_path() == "/":
@@ -288,6 +305,13 @@ def _clear_single_auth_cookie_and_chunks(
         cookie_name,
     )
 
+    # clear_cookie_and_chunks discovers chunk cookies by reading the chunk count
+    # from the decoded main cookie. When the main cookie is present but invalid
+    # (e.g. signed with a rotated secret), it cannot be decoded, so clear any
+    # chunk siblings by name to avoid orphaning them in the browser.
+    if _is_auth_cookie_present_but_invalid(request, cookie_name):
+        _delete_orphaned_chunk_cookies(response, request, cookie_name)
+
 
 def _clear_auth_cookie(response: Response, request: Request) -> None:
     """Clear the auth cookies, including any split cookie chunks.
@@ -312,10 +336,12 @@ def _clear_invalid_auth_cookies(response: Response, request: Request) -> None:
     """Clear auth cookies that are present but fail signature validation."""
     if _is_auth_cookie_present_but_invalid(request, USER_COOKIE_NAME):
         # If the identity cookie is invalid, the token cookie is unusable too.
+        _LOGGER.debug("Clearing invalid auth cookies (identity cookie undecodable).")
         _clear_auth_cookie(response, request)
         return
 
     if _is_auth_cookie_present_but_invalid(request, TOKENS_COOKIE_NAME):
+        _LOGGER.debug("Clearing invalid tokens cookie (tokens cookie undecodable).")
         _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
 
 

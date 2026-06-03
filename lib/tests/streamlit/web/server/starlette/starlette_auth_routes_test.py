@@ -321,6 +321,59 @@ def test_login_clears_only_invalid_tokens_cookie(
     assert not _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
 
 
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_login_clears_orphaned_chunk_cookies_for_invalid_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that login clears orphaned chunk cookies when the main cookie is invalid.
+
+    When a chunked auth cookie was signed with a rotated secret, the main cookie
+    can no longer be decoded to read its chunk count, so the chunk siblings must
+    be cleared by name to avoid leaving them orphaned in the browser.
+    """
+    _patch_login_with_dummy_client(monkeypatch)
+
+    with TestClient(_build_app()) as client:
+        client.cookies.set(USER_COOKIE_NAME, TORNADO_SIGNED_USER_COOKIE)
+        client.cookies.set(f"{USER_COOKIE_NAME}_1", "stale-chunk-1")
+        client.cookies.set(f"{USER_COOKIE_NAME}_2", "stale-chunk-2")
+
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
+    assert _has_auth_cookie_deletion(response, f"{USER_COOKIE_NAME}_1")
+    assert _has_auth_cookie_deletion(response, f"{USER_COOKIE_NAME}_2")
+
+
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_login_preserves_chunk_cookies_for_valid_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that a valid main cookie does not trigger chunk-sibling deletion.
+
+    The orphaned-chunk cleanup only applies when the main cookie is invalid; a
+    valid main cookie must not have its chunk siblings deleted by the scan.
+    """
+    _patch_login_with_dummy_client(monkeypatch)
+
+    valid_user_cookie = starlette_app_utils.create_signed_value(
+        "test-secret",
+        USER_COOKIE_NAME,
+        '{"origin": "http://testserver", "is_logged_in": true}',
+    ).decode("utf-8")
+
+    with TestClient(_build_app()) as client:
+        client.cookies.set(USER_COOKIE_NAME, valid_user_cookie)
+        client.cookies.set(f"{USER_COOKIE_NAME}_1", "some-chunk")
+
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert not _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
+    assert not _has_auth_cookie_deletion(response, f"{USER_COOKIE_NAME}_1")
+
+
 @patch_config_options(
     {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}
 )
