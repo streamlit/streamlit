@@ -139,7 +139,7 @@ integration = [
   "streamlit",
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
-  "snowflake-connector-python>=3.3.0",
+  "snowflake-connector-python>=4.6.0",
   # Additional dataframe formats for testing:
   "polars",
   "xarray",
