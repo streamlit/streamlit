@@ -186,12 +186,62 @@ if np_obj.size >= _NP_SIZE_LARGE:
 - The security improvement outweighs the minor cache-miss cost
 - Alternatively, use `secrets.token_bytes()` + HMAC for a key-dependent sample selection
 
-#### 3. Document the limitation
+#### 3. Allow a user-provided secret seed via environment variable
+
+**Rationale:**
+- Security-conscious deployments (multi-tenant, public-facing) can provide their own secret that makes sampling positions completely unpredictable to attackers
+- The secret is never committed to source code, never visible to end-users of the app, and never transmitted over the wire
+- It's opt-in: users who don't set it get the per-process random seed (still better than the current hardcoded `0`)
+- It also addresses the `persist="disk"` tradeoff — a stable secret means cache keys remain consistent across restarts while still being unpredictable to attackers
+
+**Implementation:**
+```python
+import os
+import struct
+
+def _get_sampling_seed() -> int:
+    """Return a seed for sampling large arrays during hashing.
+
+    Priority:
+    1. STREAMLIT_CACHE_HASH_SEED env var (user-provided secret, stable across restarts)
+    2. Per-process random seed (unpredictable, but changes on restart)
+    """
+    user_seed = os.environ.get("STREAMLIT_CACHE_HASH_SEED")
+    if user_seed:
+        # Derive a numeric seed from the user's secret string via hashing,
+        # so any string works regardless of length/format
+        import hashlib
+        seed_bytes = hashlib.sha256(user_seed.encode()).digest()[:4]
+        return struct.unpack("I", seed_bytes)[0]
+    # Fallback: random per-process seed
+    return struct.unpack("I", os.urandom(4))[0]
+
+_SAMPLING_SEED: Final[int] = _get_sampling_seed()
+```
+
+**User-facing documentation / usage:**
+```bash
+# Set in deployment environment (e.g., Docker, .env, cloud secrets manager)
+export STREAMLIT_CACHE_HASH_SEED="my-deployment-secret-xyz"
+```
+
+**Design considerations:**
+- The env var approach keeps the secret out of app source code (which may be public or shared)
+- Using SHA-256 to derive the numeric seed means any string works — users don't need to pick a valid integer
+- The seed is read once at import time, so there's no per-hash overhead
+- A `config.toml` option (e.g., `[runner] cacheHashSeed = "..."`) could also work but is more likely to be committed to a repo; environment variables are the standard pattern for deployment secrets
+
+**Why not a parameter on `@st.cache_data`?**
+- It would be per-function, requiring users to pass the secret to every cached function
+- It would appear in source code, defeating the purpose of keeping it secret
+- Environment variables provide global coverage with zero code changes
+
+#### 4. Document the limitation
 
 Regardless of implementation changes, add documentation noting:
 - Cache key computation uses sampling for very large numpy arrays (50M+ elements)
 - This is a performance optimization that trades strict collision resistance for speed
-- For security-sensitive deployments, users should validate cached results independently or use `validate` parameter
+- For security-sensitive deployments, set `STREAMLIT_CACHE_HASH_SEED` to a secret value, or validate cached results independently using the `validate` parameter
 
 ### Why not full removal of sampling (Option A)?
 
@@ -209,13 +259,14 @@ While the threat is largely theoretical, the fix for pandas/polars is essentiall
 | pandas Series | Sample 10k of 50k+ rows | Hash full object | +1.8x at 5M rows (122 ms absolute) |
 | polars DataFrame | Sample 10k of 50k+ rows | Hash full object | +21x at 5M rows (19 ms absolute) |
 | polars Series | Sample 10k of 50k+ rows | Hash full object | +7.7x at 5M rows (5.5 ms absolute) |
-| numpy ndarray | Sample 100k of 500k+ elements (seed=0) | Sample with per-process random seed | ~0% (same sampling, different seed) |
+| numpy ndarray | Sample 100k of 500k+ elements (seed=0) | Sample with secret or per-process seed | ~0% (same sampling, different seed) |
+| All types (opt-in) | N/A | `STREAMLIT_CACHE_HASH_SEED` env var | None — seed lookup is one-time at import |
 
 ### Risk assessment of recommendation
 
 - **Breaking change risk:** Low. Cache keys will change for pandas/polars objects ≥50k rows, invalidating existing caches. This is a one-time cost and caches regenerate automatically.
 - **Performance regression risk:** Moderate for pandas at 5M+ rows. These users already accept multi-second operations for data processing; an extra 150 ms for hash computation is unlikely to be noticed.
-- **Security improvement:** Eliminates the known-position sampling attack for pandas/polars entirely. Makes the numpy attack non-deterministic (attacker cannot pre-compute sampled indices).
+- **Security improvement:** Eliminates the known-position sampling attack for pandas/polars entirely. Makes the numpy attack non-deterministic (attacker cannot pre-compute sampled indices). Users who set `STREAMLIT_CACHE_HASH_SEED` get deterministic-but-secret sampling that is stable across restarts and fully resistant to pre-computation attacks.
 
 ---
 
