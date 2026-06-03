@@ -676,7 +676,7 @@ def fragment(
     return _fragment(func, run_every=run_every, parallel=parallel)
 
 
-def prepare_dg_stack_for_worker(
+def _prepare_dg_stack_for_worker(
     dg_stack: tuple[DeltaGenerator, ...],
 ) -> tuple[DeltaGenerator, ...]:
     """Deep-copy the DG stack for dispatch to a parallel worker thread.
@@ -715,7 +715,7 @@ def _dispatch_parallel_fragment(
         return
 
     with st.container():
-        dg_stack_with_container = prepare_dg_stack_for_worker(context_dg_stack.get())
+        dg_stack_with_container = _prepare_dg_stack_for_worker(context_dg_stack.get())
 
     coordinator.submit(
         _run_parallel_fragment,
