@@ -394,21 +394,11 @@ const NumberInput: React.FC<Props> = ({
         )}
       </WidgetLabel>
       {/*
-       * We use React Aria's generic TextField rather than NumberField here.
-       *
-       * NumberField was evaluated and rejected because it manages display
-       * formatting exclusively through Intl.NumberFormat (formatOptions), which
-       * is incompatible with the printf-style format strings supported by
-       * st.number_input's `format` parameter (e.g. "%0.2f", "%e", "%g").
-       * Switching would silently break display for users who pass non-trivial
-       * format strings such as "%e" or "%g".
-       *
-       * TextField gives us isDisabled context propagation (the main benefit we
-       * need from React Aria) while leaving all formatting, step arithmetic, and
-       * value state management completely unchanged in utils.ts.
-       *
-       * NumberField can be revisited if the `format` parameter is ever redesigned
-       * to align with Intl.NumberFormat.
+       * We use React Aria's generic TextField rather than NumberField as
+       * NumberField manages display formatting exclusively through
+       * Intl.NumberFormat (formatOptions), which is incompatible with the
+       * printf-style format strings supported by st.number_input's `format`
+       * parameter (e.g. "%0.2f", "%e", "%g").
        */}
       <TextField isDisabled={disabled} aria-label={element.label}>
         <StyledInputContainer
