@@ -218,7 +218,7 @@ describe("NumberInput widget", () => {
     render(<NumberInput {...props} />)
 
     const numberInput = screen.getByTestId("stNumberInputField")
-    expect(numberInput).not.toHaveAttribute("inputmode", "text")
+    expect(numberInput).not.toHaveAttribute("inputmode")
   })
 
   it("sets input type to number", () => {

@@ -469,6 +469,7 @@ const NumberInput: React.FC<Props> = ({
           {width > numberInputControlBreakpoint && (
             <StyledInputControls>
               <StyledInputControl
+                type="button"
                 data-testid="stNumberInputStepDown"
                 aria-label="Decrement"
                 onClick={decrement}
@@ -482,6 +483,7 @@ const NumberInput: React.FC<Props> = ({
                 />
               </StyledInputControl>
               <StyledInputControl
+                type="button"
                 data-testid="stNumberInputStepUp"
                 aria-label="Increment"
                 onClick={increment}
