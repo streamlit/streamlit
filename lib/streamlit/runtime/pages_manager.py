@@ -187,6 +187,10 @@ class PagesManager:
             # the page name can identify the page script to run.
             return next(
                 filter(
+                    # There seems to be this weird bug with mypy where it
+                    # thinks that p can be None (which is impossible given the
+                    # types of pages), so we add `p and` at the beginning of
+                    # the predicate to circumvent this.
                     lambda p: p and (p["url_pathname"] == self.intended_page_name),
                     self._pages.values(),
                 ),
