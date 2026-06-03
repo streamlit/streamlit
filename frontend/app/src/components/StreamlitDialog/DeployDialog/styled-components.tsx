@@ -16,6 +16,40 @@
 
 import styled from "@emotion/styled"
 
+export const StyledDeployCard = styled.div(({ theme }) => ({
+  borderTopWidth: theme.sizes.borderWidth,
+  borderRightWidth: theme.sizes.borderWidth,
+  borderBottomWidth: theme.sizes.borderWidth,
+  borderLeftWidth: theme.sizes.borderWidth,
+  borderTopStyle: "solid",
+  borderRightStyle: "solid",
+  borderBottomStyle: "none",
+  borderLeftStyle: "none",
+  borderTopColor: theme.colors.borderColor,
+  borderRightColor: theme.colors.borderColor,
+  borderBottomColor: theme.colors.borderColor,
+  borderLeftColor: theme.colors.borderColor,
+  padding: theme.spacing.twoXL,
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  "&:last-child": {
+    borderRightStyle: "none",
+    borderBottomRightRadius: theme.radii.xl,
+  },
+  "&:first-child": { borderBottomLeftRadius: theme.radii.xl },
+  [`@media (max-width: ${theme.breakpoints.md})`]: {
+    padding: theme.spacing.xl,
+    "&:last-child": { borderBottomLeftRadius: theme.radii.xl },
+  },
+}))
+
+export const StyledDeployCardBody = styled("div", {
+  shouldForwardProp: prop => prop !== "$flexGrow",
+})<{ $flexGrow?: number }>(({ $flexGrow = 1 }) => ({
+  flexGrow: $flexGrow,
+}))
+
 export const StyledHeader = styled.div(({ theme }) => ({
   // We do not want to change the font for this based on theme.
   fontFamily: theme.fonts.sansSerif,

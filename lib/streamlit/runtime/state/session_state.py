@@ -118,14 +118,14 @@ def _sanitize_url_array(
     return result if result != parsed else None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Serialized:
     """A widget value that's serialized to a protobuf. Immutable."""
 
     value: WidgetStateProto
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class Value:
     """A widget value that's not serialized. Immutable."""
 
@@ -135,7 +135,7 @@ class Value:
 WState: TypeAlias = Value | Serialized
 
 
-@dataclass
+@dataclass(slots=True)
 class WStates(MutableMapping[str, Any]):
     """A mapping of widget IDs to values. Widget values can be stored in
     serialized or deserialized form, but when values are retrieved from the
@@ -350,7 +350,7 @@ def _missing_key_error_message(key: str) -> str:
     )
 
 
-@dataclass
+@dataclass(slots=True)
 class KeyIdMapper:
     """A mapping of user-provided keys to element IDs.
     It also maps element IDs to user-provided keys so that this reverse mapping
@@ -400,7 +400,7 @@ class KeyIdMapper:
         del self._id_key_mapping[widget_id]
 
 
-@dataclass
+@dataclass(slots=True)
 class SessionState:
     """SessionState allows users to store values that persist between app
     reruns.
@@ -1281,10 +1281,9 @@ class SessionState:
     def get_stats(
         self, _family_names: Sequence[str] | None = None
     ) -> dict[str, list[CacheStat]]:
-        # Lazy-load vendored package to prevent import of numpy
-        from streamlit.vendor.pympler.asizeof import asizeof
+        from streamlit.runtime.stats import safe_sizeof
 
-        stat = CacheStat("st_session_state", "", asizeof(self))
+        stat = CacheStat("st_session_state", "", safe_sizeof(self))
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.

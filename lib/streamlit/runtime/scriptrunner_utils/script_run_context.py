@@ -409,11 +409,11 @@ def add_script_run_ctx(
         ):
             original_run = thread.run
 
-            def _run_with_thread_state() -> None:
+            def _run_with_thread_state(*args: object, **kwargs: object) -> None:
                 fields = getattr(thread, _FRAGMENT_THREAD_STATE_FIELDS_ATTR, None)
                 if fields is not None:
                     ThreadState.initialize(**fields)
-                original_run()
+                original_run(*args, **kwargs)
 
             thread.run = _run_with_thread_state  # type: ignore[method-assign]  # ty: ignore[invalid-assignment]
             setattr(thread, _FRAGMENT_THREAD_STATE_WRAP_INSTALLED_ATTR, True)
