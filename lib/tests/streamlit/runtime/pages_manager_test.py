@@ -111,7 +111,19 @@ class PagesManagerTest(unittest.TestCase):
         assert "hash2" not in snapshot
 
     def test_set_pages_and_resolve_atomicity(self) -> None:
-        """Ensure set_pages_and_resolve() is atomic under concurrent access."""
+        """Verify result consistency when set_pages_and_resolve() returns a match.
+
+        This test validates that when a thread successfully resolves a page, the
+        returned hash is consistent with that thread's pages dict. It does NOT
+        prove that the lock is necessary under GIL Python — it verifies behavioral
+        correctness of the atomic operation.
+
+        Note: There is a TOCTOU gap between set_script_intent() and
+        set_pages_and_resolve() — another thread can overwrite the intent. When
+        this happens, resolution may return None (no match). The `if result is
+        not None` filter is critical: it excludes these expected race outcomes
+        so we only assert on successful resolutions.
+        """
         results: list[tuple[str, str | None]] = []
 
         pages_a = {"hash_a": {"page_script_hash": "hash_a", "url_pathname": "page_a"}}
@@ -121,6 +133,8 @@ class PagesManagerTest(unittest.TestCase):
             for _ in range(100):
                 self.pages_manager.set_script_intent("", "page_a")
                 result = self.pages_manager.set_pages_and_resolve(pages_a)
+                # Filter None: occurs when another thread overwrote intent
+                # between set_script_intent and set_pages_and_resolve.
                 if result is not None:
                     results.append(("a", result.get("page_script_hash")))
 
@@ -128,6 +142,8 @@ class PagesManagerTest(unittest.TestCase):
             for _ in range(100):
                 self.pages_manager.set_script_intent("", "page_b")
                 result = self.pages_manager.set_pages_and_resolve(pages_b)
+                # Filter None: occurs when another thread overwrote intent
+                # between set_script_intent and set_pages_and_resolve.
                 if result is not None:
                     results.append(("b", result.get("page_script_hash")))
 

@@ -98,6 +98,9 @@ class PagesManager:
     def set_script_intent(
         self, page_script_hash: PageHash, page_name: PageName
     ) -> None:
+        # Not lock-protected: attribute assignment is atomic in both GIL and
+        # free-threaded CPython, and intent is always set before script
+        # execution begins (not concurrently with set_pages_and_resolve).
         self._intended_page_script_hash = page_script_hash
         self._intended_page_name = page_name
 
@@ -185,6 +188,10 @@ class PagesManager:
         if self.intended_page_name:
             # If a user navigates directly to a non-main page of an app,
             # the page name can identify the page script to run.
+            # Note: The lambda captures self.intended_page_name at execution
+            # time. This is safe because attribute reads are atomic in both
+            # GIL and free-threaded CPython, and set_script_intent is always
+            # called before script execution begins.
             return next(
                 filter(
                     # There seems to be this weird bug with mypy where it
