@@ -200,6 +200,7 @@ class TestRunningCursor:
 
         child2 = cursor.open_block()
         assert child2.parent_path == (1, 1)
+        assert child2.index == 0
         assert cursor.index == 2
 
 
