@@ -1006,8 +1006,10 @@ class ArrowMixin:
             ctx=ctx,
         )
 
-        # Set form_id if button columns are present or selection is activated
-        # This ensures button clicks respect form submission behavior
+        # Preserve the enclosing form ID for dataframe selection state and
+        # button-column widgets. Button-column clicks use string triggers, not
+        # form-submit semantics, so this only records form association for the
+        # frontend.
         if button_columns or is_selection_activated:
             proto.form_id = current_form_id(self.dg)
 
