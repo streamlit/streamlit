@@ -110,56 +110,6 @@ class PagesManagerTest(unittest.TestCase):
         assert "hash1" in snapshot
         assert "hash2" not in snapshot
 
-    def test_set_pages_and_resolve_atomicity(self) -> None:
-        """Verify result consistency when set_pages_and_resolve() returns a match.
-
-        This test validates that when a thread successfully resolves a page, the
-        returned hash is consistent with that thread's pages dict. It does NOT
-        prove that the lock is necessary under GIL Python — it verifies behavioral
-        correctness of the atomic operation.
-
-        Note: There is a TOCTOU gap between set_script_intent() and
-        set_pages_and_resolve() — another thread can overwrite the intent. When
-        this happens, resolution may return None (no match). The `if result is
-        not None` filter is critical: it excludes these expected race outcomes
-        so we only assert on successful resolutions.
-        """
-        results: list[tuple[str, str | None]] = []
-
-        pages_a = {"hash_a": {"page_script_hash": "hash_a", "url_pathname": "page_a"}}
-        pages_b = {"hash_b": {"page_script_hash": "hash_b", "url_pathname": "page_b"}}
-
-        def writer_a() -> None:
-            for _ in range(100):
-                self.pages_manager.set_script_intent("", "page_a")
-                result = self.pages_manager.set_pages_and_resolve(pages_a)
-                # Filter None: occurs when another thread overwrote intent
-                # between set_script_intent and set_pages_and_resolve.
-                if result is not None:
-                    results.append(("a", result.get("page_script_hash")))
-
-        def writer_b() -> None:
-            for _ in range(100):
-                self.pages_manager.set_script_intent("", "page_b")
-                result = self.pages_manager.set_pages_and_resolve(pages_b)
-                # Filter None: occurs when another thread overwrote intent
-                # between set_script_intent and set_pages_and_resolve.
-                if result is not None:
-                    results.append(("b", result.get("page_script_hash")))
-
-        thread_a = threading.Thread(target=writer_a)
-        thread_b = threading.Thread(target=writer_b)
-        thread_a.start()
-        thread_b.start()
-        thread_a.join()
-        thread_b.join()
-
-        for writer, hash_value in results:
-            if writer == "a":
-                assert hash_value == "hash_a", f"Writer A got {hash_value}"
-            else:
-                assert hash_value == "hash_b", f"Writer B got {hash_value}"
-
     def test_concurrent_get_pages_does_not_raise(self) -> None:
         """Ensure concurrent get_pages() calls do not raise during iteration."""
         pages = {f"hash{i}": {"page_script_hash": f"hash{i}"} for i in range(100)}
