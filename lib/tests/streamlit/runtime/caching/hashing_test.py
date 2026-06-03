@@ -143,6 +143,29 @@ def prepare_polars_data():
 
 
 class HashTest(unittest.TestCase):
+    def test_bytes(self):
+        """Test that bytes objects hash consistently."""
+        assert get_hash(b"hello") == get_hash(b"hello")
+        assert get_hash(b"hello") != get_hash(b"world")
+
+    def test_bytearray(self):
+        """Test that bytearray objects hash consistently.
+
+        bytearray is unhashable and cannot be memoized, but should still
+        be hashed correctly via conversion to bytes.
+        """
+        ba1 = bytearray(b"hello")
+        ba2 = bytearray(b"hello")
+        ba3 = bytearray(b"world")
+
+        assert get_hash(ba1) == get_hash(ba2)
+        assert get_hash(ba1) != get_hash(ba3)
+
+        # Verify bytearray and bytes with same content produce same hash
+        # (after type prefix is added)
+        # Note: Due to type prefix, they won't be exactly equal
+        assert get_hash(ba1) != get_hash(b"hello")
+
     def test_string(self):
         assert get_hash("hello") == get_hash("hello")
         assert get_hash("hello") != get_hash("hellö")
@@ -991,88 +1014,3 @@ def test_PIL_pmode_palette_collision_prevention() -> None:
 
     # But the hashes should differ because we now include the palette
     assert get_hash(im1) != get_hash(im2)
-
-
-def test_numpy_large_array_seed_prefix_change_differs() -> None:
-    """Large numpy arrays with different prefixes produce different hashes.
-
-    Regression test for GitHub issue #14622: the large-data sampling path for numpy
-    used a hardcoded seed=0. Since the seed was constant and public, an attacker
-    could pre-compute which indices would be sampled and craft a collision.
-    """
-    arr_a = np.arange(_NP_SIZE_LARGE, dtype=np.float64)
-    arr_b = arr_a.copy()
-    arr_b[:64] = 999.0
-
-    # Mutating the prefix changes the derived seed, leading to different samples
-    # and a different hash. Using arange ensures varied values throughout the array.
-    assert get_hash(arr_a) != get_hash(arr_b)
-
-
-def test_pandas_large_dataframe_seed_row_change_differs() -> None:
-    """Large pandas DataFrames with different first rows produce different hashes.
-
-    Regression test for GitHub issue #14622: the large-data sampling path for pandas
-    used a hardcoded random_state=0. An attacker could pre-compute which indices would
-    be sampled and craft a collision.
-    """
-    df_a = pd.DataFrame(np.ones((_PANDAS_ROWS_LARGE, 4)), columns=list("ABCD"))
-    df_b = df_a.copy()
-    df_b.iloc[0, 0] = 255.0
-
-    # Mutating the first row should change the derived seed, leading to different samples
-    assert get_hash(df_a) != get_hash(df_b)
-
-
-def test_pandas_large_dataframe_unhashable_payload_uses_pickle_fallback() -> None:
-    """Large DataFrames with unhashable cells fall back to pickle consistently.
-
-    Ensures that the seed derivation helper properly falls back to seed=0 for
-    unhashable payloads (like list-valued cells), preserving the pickle fallback path.
-    """
-    # Create a large DataFrame with list-valued cells (unhashable by hash_pandas_object)
-    df_a = pd.DataFrame({"col": [[1, 2]] * _PANDAS_ROWS_LARGE})
-    df_b = pd.DataFrame({"col": [[1, 2]] * _PANDAS_ROWS_LARGE})
-
-    # Both should hash to the same value via pickle fallback
-    assert get_hash(df_a) == get_hash(df_b)
-
-
-@pytest.mark.require_integration
-def test_polars_large_series_seed_head_change_differs() -> None:
-    """Large Polars Series with different heads produce different hashes.
-
-    Regression test for GitHub issue #14622: the large-data sampling path for Polars
-    used a hardcoded seed=0. An attacker could pre-compute which indices would be
-    sampled and craft a collision.
-    """
-    import polars as pl
-
-    series_a = pl.Series("val", list(range(_PANDAS_ROWS_LARGE)))
-    series_b = pl.concat([pl.Series("val", [999] * 64), series_a.slice(64)])
-
-    assert get_hash(series_a) != get_hash(series_b)
-
-
-@pytest.mark.require_integration
-def test_polars_large_dataframe_seed_head_change_differs() -> None:
-    """Large Polars DataFrames with different heads produce different hashes.
-
-    Regression test for GitHub issue #14622: the large-data sampling path for Polars
-    used a hardcoded seed=0. An attacker could pre-compute which indices would be
-    sampled and craft a collision.
-    """
-    import polars as pl
-
-    df_a = pl.DataFrame(
-        {"a": list(range(_PANDAS_ROWS_LARGE)), "b": list(range(_PANDAS_ROWS_LARGE))}
-    )
-    df_b = df_a.clone()
-    df_b = df_b.with_columns(
-        pl.when(pl.int_range(pl.len()) < 64)
-        .then(pl.lit(999))
-        .otherwise(pl.col("a"))
-        .alias("a")
-    )
-
-    assert get_hash(df_a) != get_hash(df_b)

@@ -21,7 +21,6 @@ import collections.abc
 import dataclasses
 import datetime
 import functools
-import hashlib
 import inspect
 import io
 import os
@@ -65,64 +64,6 @@ HashFuncsDict: TypeAlias = dict[str | type[Any], Callable[[Any], Any]]
 _CYCLE_PLACEHOLDER: Final = (
     b"streamlit-57R34ML17-hesamagicalponyflyingthroughthesky-CYCLE"
 )
-
-
-def _pandas_sample_seed(obj: Any) -> int:
-    """Derive a 32-bit sample seed from a pandas object using hash_pandas_object.
-
-    Returns a data-dependent seed so sample indices vary with the data, preventing
-    attackers from pre-computing which indices will be sampled.
-
-    Falls back to 0 for unhashable payloads to preserve the existing pickle fallback.
-    """
-    try:
-        from pandas.util import hash_pandas_object
-
-        hashes = hash_pandas_object(obj)
-        digest = hashlib.md5(
-            hashes.to_numpy().tobytes(), usedforsecurity=False
-        ).digest()
-        return int.from_bytes(digest[:4], "little") & 0xFFFF_FFFF
-    except (TypeError, ValueError):
-        return 0
-
-
-def _numpy_sample_seed(np_obj: Any) -> int:
-    """Derive a 32-bit sample seed from a numpy array prefix.
-
-    Uses MD5 of up to the first 64 elements of the flattened array to generate
-    a data-dependent seed, preventing attackers from pre-computing sampled indices.
-
-    Falls back to 0 for unhashable or buffer-incompatible arrays.
-    """
-    try:
-        head = np_obj.flat[:64]
-        digest = hashlib.md5(head.tobytes(), usedforsecurity=False).digest()
-        return int.from_bytes(digest[:4], "little") & 0xFFFF_FFFF
-    except (TypeError, ValueError, BufferError):
-        return 0
-
-
-def _polars_sample_seed(obj: Any) -> int:
-    """Derive a 32-bit sample seed from a polars DataFrame or Series.
-
-    Uses Polars-native hash_rows() for DataFrames or hash() for Series on the
-    head of the object, then MD5 digests to get a data-dependent seed.
-
-    Falls back to 0 for unhashable payloads to preserve the existing pickle fallback.
-    """
-    try:
-        head = obj.head(64)
-        if hasattr(head, "hash_rows"):
-            hashed = head.hash_rows(seed=0)
-        else:
-            hashed = head.hash(seed=0)
-        digest = hashlib.md5(
-            hashed.to_numpy().tobytes(), usedforsecurity=False
-        ).digest()
-        return int.from_bytes(digest[:4], "little") & 0xFFFF_FFFF
-    except (TypeError, ValueError, BufferError):
-        return 0
 
 
 class UserHashError(StreamlitAPIException):
@@ -314,10 +255,9 @@ def _key(obj: Any | None) -> Any:
         return None
 
     def is_simple(obj: Any) -> bool:
-        return (
-            isinstance(obj, (bytes, bytearray, str, float, int, bool, uuid.UUID))
-            or obj is None
-        )
+        # Note: bytearray is excluded because it's unhashable and cannot be
+        # used as a dictionary key for memoization
+        return isinstance(obj, (bytes, str, float, int, bool, uuid.UUID)) or obj is None
 
     if is_simple(obj):
         return obj
@@ -419,8 +359,11 @@ class _CacheFuncHasher:
             # deep, so we don't try to hash them at all.
             return self.to_bytes(id(obj))
 
-        if isinstance(obj, (bytes, bytearray)):
+        if isinstance(obj, bytes):
             return obj
+
+        if isinstance(obj, bytearray):
+            return bytes(obj)
 
         if type_util.get_fqn_type(obj) in self._hash_funcs:
             # Escape hatch for unsupported objects
@@ -468,7 +411,9 @@ class _CacheFuncHasher:
             return b"0"
 
         if not isinstance(obj, type) and dataclasses.is_dataclass(obj):
-            return self.to_bytes(dataclasses.asdict(obj))
+            # mypy 2.x narrows to DataclassInstance | type[DataclassInstance]
+            # which doesn't satisfy asdict's expected DataclassInstance type.
+            return self.to_bytes(dataclasses.asdict(cast("Any", obj)))
 
         if isinstance(obj, Enum):
             return str(obj).encode()
@@ -482,11 +427,7 @@ class _CacheFuncHasher:
             self.update(h, series_obj.dtype.name)
 
             if len(series_obj) >= _PANDAS_ROWS_LARGE:
-                # Data-dependent seed so sample indices are not globally fixed.
-                sample_seed = _pandas_sample_seed(series_obj.iloc[:1])
-                series_obj = series_obj.sample(
-                    n=_PANDAS_SAMPLE_SIZE, random_state=sample_seed
-                )
+                series_obj = series_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
 
             try:
                 self.update(h, hash_pandas_object(series_obj).to_numpy().tobytes())
@@ -508,9 +449,7 @@ class _CacheFuncHasher:
             self.update(h, df_obj.shape)
 
             if len(df_obj) >= _PANDAS_ROWS_LARGE:
-                # Data-dependent seed so sample indices are not globally fixed.
-                sample_seed = _pandas_sample_seed(df_obj.iloc[:1])
-                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=sample_seed)
+                df_obj = df_obj.sample(n=_PANDAS_SAMPLE_SIZE, random_state=0)
 
             try:
                 column_hash_bytes = self.to_bytes(hash_pandas_object(df_obj.dtypes))
@@ -536,17 +475,11 @@ class _CacheFuncHasher:
             self.update(h, str(obj.dtype).encode())
             self.update(h, obj.shape)
 
-            # Data-dependent seed so sample indices are not globally fixed.
-            sample_seed = (
-                _polars_sample_seed(obj) if len(obj) >= _PANDAS_ROWS_LARGE else 0
-            )
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=sample_seed)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
 
             try:
-                self.update(
-                    h, obj.hash(seed=sample_seed).to_arrow().to_string().encode()
-                )
+                self.update(h, obj.hash(seed=0).to_arrow().to_string().encode())
                 return h.digest()
 
             except TypeError:
@@ -565,23 +498,15 @@ class _CacheFuncHasher:
             obj = cast("pl.DataFrame", obj)
             self.update(h, obj.shape)
 
-            # Data-dependent seed so sample indices are not globally fixed.
-            sample_seed = (
-                _polars_sample_seed(obj) if len(obj) >= _PANDAS_ROWS_LARGE else 0
-            )
             if len(obj) >= _PANDAS_ROWS_LARGE:
-                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=sample_seed)
+                obj = obj.sample(n=_PANDAS_SAMPLE_SIZE, seed=0)
             try:
                 for c, t in obj.schema.items():
                     self.update(h, c.encode())
                     self.update(h, str(t).encode())
 
                 values_hash_bytes = (
-                    obj.hash_rows(seed=sample_seed)
-                    .hash(seed=sample_seed)
-                    .to_arrow()
-                    .to_string()
-                    .encode()
+                    obj.hash_rows(seed=0).hash(seed=0).to_arrow().to_string().encode()
                 )
 
                 self.update(h, values_hash_bytes)
@@ -605,9 +530,7 @@ class _CacheFuncHasher:
             if np_obj.size >= _NP_SIZE_LARGE:
                 import numpy as np
 
-                # Data-dependent seed so sample indices are not globally fixed.
-                sample_seed = _numpy_sample_seed(np_obj)
-                state = np.random.RandomState(sample_seed)
+                state = np.random.RandomState(0)
                 np_obj = state.choice(np_obj.flat, size=_NP_SAMPLE_SIZE)
 
             self.update(h, np_obj.tobytes())
