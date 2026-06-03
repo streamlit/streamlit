@@ -2,7 +2,27 @@
 
 ## Executive Summary
 
-The crash occurs when a fragment writes multiple elements (button + text) to an outside container and uses the button's return value conditionally. On fragment rerun, the frontend clears stale elements from the outside container before receiving the new delta messages, causing delta path indices to become invalid.
+The crash occurs when a fragment writes multiple elements (button + text) to an outside container. **The root cause is a backend bug**: the `RunningCursor` for the outside container is not being reset during fragment reruns. This causes the cursor index to accumulate (0→2→4→...) instead of resetting to 0, resulting in deltas with invalid paths being sent to the frontend.
+
+## Root Cause Confirmation (Logging Evidence)
+
+Debug logging in `delta_generator.py` confirms the cursor accumulation:
+
+```
+# Initial full run - cursor starts at 0:
+CURSOR_DEBUG: delta_type=button, delta_path=[0, 2, 0], cursor.index=0
+CURSOR_DEBUG: delta_type=markdown, delta_path=[0, 2, 1], cursor.index=1
+
+# First fragment rerun - cursor NOT reset, continues from 2:
+CURSOR_DEBUG: delta_type=button, delta_path=[0, 2, 2], cursor.index=2   <-- SHOULD BE 0!
+CURSOR_DEBUG: delta_type=markdown, delta_path=[0, 2, 3], cursor.index=3 <-- SHOULD BE 1!
+
+# Second fragment rerun - cursor still not reset, continues from 4:
+CURSOR_DEBUG: delta_type=button, delta_path=[0, 2, 4], cursor.index=4   <-- SHOULD BE 0!
+CURSOR_DEBUG: delta_type=markdown, delta_path=[0, 2, 5], cursor.index=5 <-- SHOULD BE 1!
+```
+
+The frontend only has 2 children at `[0, 2]`, so when the backend tries to write at index 4, it throws: `Bad delta path index 4 (should be between [0, 2])`.
 
 ## Reproduction Steps
 
@@ -53,70 +73,61 @@ The key difference between working and failing patterns is:
 
 ## Root Cause Analysis
 
-### The Problem
+### The Problem (Backend Cursor Not Reset)
 
-The crash is caused by a **race condition** in the `handleScriptFinished` handler when multiple fragment reruns overlap:
+The crash is caused by a **backend bug in cursor management** for outside containers during fragment reruns.
 
-1. **ScriptRunId State Race**: When `handleScriptFinished` is called, it reads `scriptRunId` and `fragmentIdsThisRun` from React state. However, if a NEW fragment run has started before the previous run's `scriptFinished` is processed, the state has already been updated to the NEW run's IDs.
-
-2. **Incorrect Stale Clearing**: This causes `clearStaleNodes` to use the wrong `scriptRunId`, clearing elements from the CURRENT (just-completed) run as if they were stale.
-
-### Detailed Flow (Rapid Click Scenario)
-
-**Initial state (after first successful run):**
-```
-Outside Container:
-  - Index 0: Button (fragmentId: "abc", scriptRunId: "run1")
-  - Index 1: Text "Counter: 0" (fragmentId: "abc", scriptRunId: "run1")
+When a fragment is defined, the following are snapshotted (`lib/streamlit/runtime/fragment.py:368-369`):
+```python
+cursors_snapshot = deepcopy(ctx.cursors)
+dg_stack_snapshot = deepcopy(context_dg_stack.get())
 ```
 
-**On rapid double-click:**
+On fragment rerun, these snapshots are restored (`fragment.py:393-394`):
+```python
+ctx.cursors = deepcopy(cursors_snapshot)
+context_dg_stack.set(deepcopy(dg_stack_snapshot))
+```
 
-1. **Click 1** - triggers fragment rerun "run2":
-   - State: `{scriptRunId: "run2", fragmentIdsThisRun: ["abc"]}`
-   - Backend starts processing, sends deltas with scriptRunId "run2"
-   
-2. **Click 2** (before run2 completes) - triggers fragment rerun "run3":
-   - NewSession message arrives with scriptRunId "run3"
-   - State updated to: `{scriptRunId: "run3", fragmentIdsThisRun: ["abc"]}`
-   
-3. **Run2's scriptFinished** arrives:
-   - `handleScriptFinished` is called
-   - It reads from CURRENT state: `scriptRunId: "run3"` (WRONG!)
-   - Calls `clearStaleNodes("run3", ["abc"])`
+**The bug**: An `st.container()` created outside the fragment has its own `RunningCursor` stored in `counter_container._cursor`. This cursor is:
+- **NOT** part of `ctx.cursors` (which only contains root containers like main/sidebar)
+- **NOT** on the `dg_stack` (since it's not used in a `with` block at definition time)
 
-4. **Stale clearing with wrong ID**:
-   - Elements from run2 have `scriptRunId: "run2"`
-   - `ClearStaleNodeVisitor` checks: `element.scriptRunId !== "run3"` → TRUE
-   - **Elements are incorrectly cleared as "stale"**
+Therefore, when the fragment reruns, `counter_container._cursor` **retains its state from the previous run**, causing its index to accumulate instead of reset.
 
-5. **Run3's deltas arrive**:
-   - Backend computed paths assuming run2's elements exist
-   - But the container is now empty or has fewer children
-   - `SetNodeByDeltaPathVisitor` throws: `Bad delta path index 4 (should be between [0, 2])`
+### Detailed Flow
+
+**Initial full run:**
+1. `counter_container = st.container()` creates a container with cursor at index 0
+2. Fragment runs, writes button at index 0, cursor advances to 1
+3. Fragment writes text at index 1, cursor advances to 2
+4. Run completes, cursor.index = 2
+
+**Fragment rerun (after button click):**
+1. `ctx.cursors` and `dg_stack` are restored from snapshots
+2. **BUT** `counter_container._cursor` is NOT restored (not in snapshots)
+3. `counter_container._cursor.index` is still 2 from previous run!
+4. Fragment writes button at index 2 (wrong - should be 0)
+5. Fragment writes text at index 3 (wrong - should be 1)
+6. Frontend receives deltas with paths `[..., 2]` and `[..., 3]`
+7. But frontend only has 2 children (from previous run's indices 0 and 1)
+8. **Error:** `Bad delta path index 4 (should be between [0, 2])`
 
 ### Why This Affects Outside Containers Specifically
 
-For elements INSIDE the fragment's own block, the fragment block itself is re-created on each run, so path indices are always relative to a fresh block. But for OUTSIDE containers:
-- The container persists across runs
-- Elements accumulate if not properly cleared
-- Delta paths are computed relative to the existing container state
-- Race conditions cause mismatches between expected and actual state
+For elements INSIDE the fragment's own block, the fragment block itself is re-created on each run via `with st.container()` at `fragment.py:421`, so path indices are always relative to a fresh block. But for OUTSIDE containers:
+- The `DeltaGenerator` object persists in Python (captured by fragment closure)
+- Its cursor is NOT part of the snapshots that get restored
+- The cursor index accumulates across fragment reruns
 
 ### Why Single Element Sometimes Works
 
 When only a button is written to the outside container:
-- Index 0 is always valid (can insert at empty container)
-- Even with race condition, the single element can be applied
-- However, this may still fail under different timing conditions
+- First run: button at index 0, cursor advances to 1
+- Second run: button at index 1 (wrong, but still valid since children.length=1, and index 1 is allowed for insertion)
+- Third run: button at index 2, which may fail depending on timing
 
-### Why Multiple Elements Fails
-
-When button AND text are written:
-- If race condition clears elements, container becomes empty
-- Button delta at index 0 may succeed
-- Text delta at index 1+ fails if container was cleared
-- The specific index in the error depends on timing and tree structure
+The crash happens faster with multiple elements because the cursor advances more per run.
 
 ## Code Locations
 
@@ -161,103 +172,110 @@ visitElementNode(node: ElementNode): AppNode | undefined {
 
 ## Proposed Fix
 
-### Option 1: Capture scriptRunId at scriptFinished Receipt (Recommended)
+### Option 1: Reset Outside Container Cursors on Fragment Rerun (Recommended)
 
-The issue is that `handleScriptFinished` reads `scriptRunId` from state, but state may have been updated by a newer run. The fix is to capture the scriptRunId when `scriptFinished` is received, before calling setState.
+The fix is to track DeltaGenerators used for outside container writes and reset their cursors on fragment rerun.
 
-**Implementation:**
-```typescript
-// In handleScriptFinished, capture the scriptRunId from the message or 
-// track it per-run rather than reading from state
-handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
-  // Use a scriptRunId that was captured when this run started,
-  // not the current state's scriptRunId
-  const finishedRunId = this.currentlyProcessingRunId; // tracked separately
-  
-  this.setState(
-    ({ fragmentIdsThisRun, elements }) => ({
-      elements: elements.clearStaleNodes(finishedRunId, fragmentIdsThisRun),
-    }),
-    // ...
-  );
-}
+**Implementation approach:**
+
+In `lib/streamlit/runtime/fragment.py`, when the fragment is defined, we need to also capture references to any containers that might be written to from outside. Then, on fragment rerun, reset those containers' cursors as well.
+
+**Possible approaches:**
+
+**A. Track and reset at fragment definition/rerun:**
+```python
+# At fragment definition, capture outside containers' cursors
+outside_dg_cursors = {}  # Will be populated during first run
+
+# On fragment rerun, reset all tracked outside container cursors
+for dg_id, cursor_snapshot in outside_dg_cursors.items():
+    dg = get_dg_by_id(dg_id)
+    if dg and dg._cursor:
+        dg._cursor.index = cursor_snapshot.index
+```
+
+**B. Reset cursor on first write to outside container:**
+```python
+# In DeltaGenerator._enqueue, detect outside container writes during fragment runs
+# and reset the cursor if this is the first write this fragment run
+if ctx.fragment_ids_this_run and is_outside_container(dg):
+    if not dg._cursor_reset_this_run:
+        dg._cursor.index = 0  # Or restore from snapshot
+        dg._cursor_reset_this_run = True
+```
+
+**C. Include outside container cursors in the snapshot:**
+```python
+# Extend the snapshot mechanism to include cursors for any container
+# that will be written to by the fragment
+# This is more complex as it requires knowing which containers will be used
 ```
 
 **Files to modify:**
-- `frontend/app/src/App.tsx` - Track the scriptRunId per-run, use it in handleScriptFinished
+- `lib/streamlit/runtime/fragment.py` - Track and reset outside container cursors
+- `lib/streamlit/delta_generator.py` - Possibly add tracking for outside container first write
 
-### Option 2: Include scriptRunId in scriptFinished Message
+### Option 2: Wrap Outside Container Writes in a Virtual Block
 
-Have the backend include the scriptRunId in the `scriptFinished` ForwardMsg, so the frontend knows exactly which run completed.
+Instead of writing directly to the outside container, have the fragment create a virtual block within it that gets replaced on each fragment rerun.
 
-**Pros:** Explicit, no state tracking needed
-**Cons:** Requires protobuf changes
+**Pros:** Clean separation, no cursor management needed
+**Cons:** Changes the tree structure, may affect existing apps
 
-### Option 3: Ignore scriptFinished for Stale Runs
+### Option 3: Frontend-Side Fix (Not Recommended)
 
-If a newer run has started, ignore `scriptFinished` from older runs entirely (for stale clearing purposes). The newer run's `scriptFinished` will clean up correctly.
+Have the frontend handle the mismatch by replacing at the correct index based on element key/ID rather than delta path.
 
-**Pros:** Simple logic
-**Cons:** May leave stale elements longer than necessary
+**Pros:** Defensive, handles all cases
+**Cons:** Masks backend bugs, complex frontend changes
 
-### Option 4: Graceful Path Recovery in SetNodeByDeltaPathVisitor
+## Recommended Fix: Option 1A or 1B
 
-Instead of throwing on invalid index, attempt to recover by expanding the children array or replacing at the highest valid index.
+The cleanest fix is to **reset the outside container's cursor on fragment rerun**. 
 
-**Pros:** Simple, defensive
-**Cons:** May mask other bugs, could cause incorrect tree structure
-
-## Recommended Fix: Option 1
-
-The cleanest fix is to **track the scriptRunId per-run** and use that tracked ID in `handleScriptFinished` rather than reading from current state. This ensures each run's `scriptFinished` clears stale nodes using the correct scriptRunId.
+**Option 1B (reset on first write)** is likely simplest because:
+1. It doesn't require knowing all containers at definition time
+2. It handles dynamic container usage (containers selected at runtime)
+3. It's localized to the `_enqueue` method
 
 **Key changes:**
-1. In `handleNewSession`, track the scriptRunId that's starting
-2. In `handleScriptFinished`, use the tracked ID (not `this.state.scriptRunId`)
-3. Clear the tracked ID after processing
+1. Add a per-fragment-run flag to track which outside containers have been reset
+2. On first write to an outside container during a fragment run, reset its cursor to 0
+3. Clear the tracking flag when the fragment run completes
 
 This ensures:
-- Each scriptFinished uses the correct scriptRunId
-- Race conditions between overlapping runs are handled correctly
-- Stale elements are cleared at the right time with the right ID
+- Outside container cursors start fresh on each fragment rerun
+- Delta paths are always valid relative to the current state
+- No complex snapshot management needed for arbitrary containers
 
-## Historical Context: Why Stale Clearing Works This Way
+## Historical Context: Why This Bug Exists
 
 ### Git History Analysis
 
-The current stale node clearing mechanism evolved through several commits:
+The outside container writes feature was enabled in commit `295149c196` (June 2026). The frontend stale clearing logic was updated to handle fragment elements in outside containers.
 
-1. **Convert clearStaleNodes to ClearStaleNodesVisitor (#12819)** - Nov 2025
-   - Original implementation as a visitor pattern
-   - Basic scriptRunId-based staleness detection
+However, the **backend cursor management** was not updated to account for this case. The existing snapshot/restore mechanism in `fragment.py` only handles:
+- `ctx.cursors` - Root container cursors (main, sidebar)
+- `dg_stack` - The stack of active DeltaGenerators (for `with` blocks)
 
-2. **Fix spinner clear_transient race condition during rapid reruns (#13849)** - Feb 2026
-   - Fixed a similar timing issue with transient nodes (spinners)
-   - Added logic to restore anchor when transient is cleared in current run
-   - Shows awareness of race conditions but focused on transient nodes
+It does NOT handle cursors for arbitrary `DeltaGenerator` objects that are:
+- Created outside the fragment
+- Captured by the fragment closure
+- Written to during fragment execution
 
-3. **Allow fragments to write widgets to outside containers (commit 295149c196)** - Jun 2026
-   - Changed `visitElementNode` to clear stale elements based on fragmentId
-   - Enabled fragments to write to containers outside their scope
-   - Introduced the `fragmentIdsThisRun.includes(node.fragmentId)` check
-
-4. **Restore fragmentIdOfBlock check (commit 4953598643)** - Jun 2026
-   - Added back `fragmentIdOfBlock` check for nested fragment handling
-   - Combined with external container writes logic
+This is an oversight in the original implementation of outside container writes.
 
 ### Why The Bug Wasn't Caught Earlier
 
-1. **Single-element writes worked**: The original E2E test only wrote a button (not button + text) to the outside container, which happens to succeed even with race conditions.
+1. **Single-element writes appeared to work**: With only one element (e.g., just a button), the cursor starts at 0, writes at 0, advances to 1. On rerun, it writes at 1 instead of 0, but this is often still valid (insert at end). It takes multiple reruns to accumulate an invalid index.
 
 2. **Counter test was removed**: A test with the failing pattern existed but was removed because it "timed out in CI" - this was actually the bug manifesting!
 
-3. **No explicit scriptRunId tracking**: The code assumed `this.state.scriptRunId` would be stable during `handleScriptFinished`, but React's batched updates mean state can be stale.
-
-4. **Race conditions are timing-dependent**: The bug only manifests under rapid clicking, which is hard to catch in typical manual testing.
+3. **No cursor state verification**: Tests didn't verify that delta paths were correct across fragment reruns.
 
 ### Related Patterns in Codebase
 
-The structural sharing feature (`9f33e36cd9`) introduced `isNodeTouchedInRun` tracking to handle similar structural issues, but this was in a different branch/feature line and didn't address the scriptFinished race condition.
+The fragment.py already implements cursor snapshotting for `ctx.cursors` and `dg_stack`. The fix should extend this pattern to also snapshot and restore cursors for outside containers that the fragment writes to.
 
 ## Test Cases to Add
 
