@@ -166,17 +166,6 @@ class PagesManagerTest(unittest.TestCase):
             t.join()
         assert len(errors) == 0, f"Errors during concurrent access: {errors}"
 
-    def test_uses_pages_directory_is_instance_attribute(self) -> None:
-        """Ensure uses_pages_directory is an instance attribute, not class-level."""
-        assert hasattr(self.pages_manager, "_uses_pages_directory")
-        _ = self.pages_manager.uses_pages_directory
-
-    def test_uses_pages_directory_setter(self) -> None:
-        """Ensure uses_pages_directory can be set on the instance."""
-        original_value = self.pages_manager.uses_pages_directory
-        self.pages_manager.uses_pages_directory = not original_value
-        assert self.pages_manager.uses_pages_directory == (not original_value)
-
     def test_set_pages_and_resolve_with_fallback(self) -> None:
         """Ensure fallback_page_hash is used when no intent is set."""
         self.pages_manager.set_script_intent("", "")

@@ -33,6 +33,8 @@ class PagesManager:
     to set the set of pages that make up the app.
     """
 
+    uses_pages_directory: bool | None = None
+
     def __init__(
         self,
         main_script_path: ScriptPath,
@@ -47,19 +49,18 @@ class PagesManager:
         self._intended_page_name: PageName | None = None
         self._current_page_script_hash: PageHash = ""
         self._pages: dict[PageHash, PageInfo] | None = None
-        self._uses_pages_directory: bool = Path(
-            self.main_script_parent / "pages"
-        ).exists()
-
-    @property
-    def uses_pages_directory(self) -> bool:
-        """Return whether the app uses a pages directory (MPA v1 pattern)."""
-        return self._uses_pages_directory
-
-    @uses_pages_directory.setter
-    def uses_pages_directory(self, value: bool) -> None:
-        """Set whether the app uses a pages directory."""
-        self._uses_pages_directory = value
+        # A relic of v1 of Multipage apps, we performed special handling
+        # for apps with a pages directory. We will keep this flag around
+        # for now to maintain the behavior for apps that were created with
+        # the pages directory feature.
+        #
+        # NOTE: we will update the feature if the flag has not been set
+        #       this means that if users use v2 behavior, the flag will
+        #       always be set to False
+        if PagesManager.uses_pages_directory is None:
+            PagesManager.uses_pages_directory = Path(
+                self.main_script_parent / "pages"
+            ).exists()
 
     @property
     def main_script_path(self) -> ScriptPath:
