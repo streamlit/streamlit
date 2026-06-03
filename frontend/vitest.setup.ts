@@ -117,6 +117,28 @@ console.error = (...args) => {
       // Suppress act() warnings from BaseUI Popover's async Popper.js updates
       return
     }
+    const isFromReactAriaFocus =
+      stack.includes("react-aria/dist/private/focus") ||
+      stack.includes("react-aria/dist/private/interactions/useFocus") ||
+      stack.includes("react-aria/dist/private/interactions/useFocusWithin")
+    if (isFromReactAriaFocus) {
+      // Suppress act() warnings from React Aria's async focus/focusWithin state
+      // updates (useFocusRing, useFocusWithin). These fire via DOM event listeners
+      // outside of the test's act() boundary — same pattern as BaseUI Popper.js.
+      return
+    }
+    const isFromReactAriaEcosystem =
+      stack.includes("react-stately/dist/") ||
+      stack.includes("react-aria-components/dist/")
+    if (isFromReactAriaEcosystem) {
+      // Suppress act() warnings from the broader React Aria / React Stately
+      // ecosystem. These libraries schedule async state updates (menu open/close,
+      // overlay trigger, focus-within detection, etc.) via post-render effects and
+      // DOM event listeners that fire outside the test's act() boundary. This is
+      // the same pattern as BaseUI Popper.js — well-tested third-party behaviour
+      // that is intentional and does not indicate bugs in our code.
+      return
+    }
     // Fail tests for act() warnings in our own code
     throw new Error(
       `act() warning detected - wrap state updates in act():\n${message}`
