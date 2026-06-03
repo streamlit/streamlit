@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from textwrap import dedent
 from typing import (
     TYPE_CHECKING,
@@ -68,7 +67,6 @@ from streamlit.type_util import (
 if TYPE_CHECKING:
     from collections.abc import Callable, Sequence
 
-    from streamlit.dataframe_util import OptionSequence
     from streamlit.delta_generator import DeltaGenerator
     from streamlit.runtime.state import (
         WidgetArgs,

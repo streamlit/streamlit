@@ -53,7 +53,6 @@ from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator
-    from streamlit.type_util import SupportsStr
 
 
 @dataclass
