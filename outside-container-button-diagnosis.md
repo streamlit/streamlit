@@ -55,59 +55,68 @@ The key difference between working and failing patterns is:
 
 ### The Problem
 
-The crash is caused by a **race condition** between two operations during fragment rerun:
+The crash is caused by a **race condition** in the `handleScriptFinished` handler when multiple fragment reruns overlap:
 
-1. **Stale node clearing**: When fragment rerun starts, `ClearStaleNodeVisitor` removes elements that belong to the running fragment from the render tree (including those in outside containers)
-2. **Delta application**: The backend sends new delta messages with paths referencing the OLD tree structure
+1. **ScriptRunId State Race**: When `handleScriptFinished` is called, it reads `scriptRunId` and `fragmentIdsThisRun` from React state. However, if a NEW fragment run has started before the previous run's `scriptFinished` is processed, the state has already been updated to the NEW run's IDs.
 
-### Detailed Flow
+2. **Incorrect Stale Clearing**: This causes `clearStaleNodes` to use the wrong `scriptRunId`, clearing elements from the CURRENT (just-completed) run as if they were stale.
 
-**Initial state (before button click):**
+### Detailed Flow (Rapid Click Scenario)
+
+**Initial state (after first successful run):**
 ```
 Outside Container:
-  - Index 0: Button (fragmentId: "abc")
-  - Index 1: Text "Counter: 0" (fragmentId: "abc")
+  - Index 0: Button (fragmentId: "abc", scriptRunId: "run1")
+  - Index 1: Text "Counter: 0" (fragmentId: "abc", scriptRunId: "run1")
 ```
 
-**On button click (fragment rerun):**
+**On rapid double-click:**
 
-1. Frontend receives `ScriptRunning` message with `fragmentIdsThisRun: ["abc"]`
-2. Frontend calls `clearStaleNodes("new-script-run-id", ["abc"])`
-3. `ClearStaleNodeVisitor.visitElementNode()` checks:
-   - Element has fragmentId "abc" ✓
-   - fragmentId is in fragmentIdsThisRun ✓
-   - scriptRunId differs from current run ✓
-   - → **Element is cleared as stale**
-4. Both button and text are removed from outside container
+1. **Click 1** - triggers fragment rerun "run2":
+   - State: `{scriptRunId: "run2", fragmentIdsThisRun: ["abc"]}`
+   - Backend starts processing, sends deltas with scriptRunId "run2"
+   
+2. **Click 2** (before run2 completes) - triggers fragment rerun "run3":
+   - NewSession message arrives with scriptRunId "run3"
+   - State updated to: `{scriptRunId: "run3", fragmentIdsThisRun: ["abc"]}`
+   
+3. **Run2's scriptFinished** arrives:
+   - `handleScriptFinished` is called
+   - It reads from CURRENT state: `scriptRunId: "run3"` (WRONG!)
+   - Calls `clearStaleNodes("run3", ["abc"])`
 
-**Tree after clearing:**
-```
-Outside Container:
-  - (empty, or only non-fragment elements)
-```
+4. **Stale clearing with wrong ID**:
+   - Elements from run2 have `scriptRunId: "run2"`
+   - `ClearStaleNodeVisitor` checks: `element.scriptRunId !== "run3"` → TRUE
+   - **Elements are incorrectly cleared as "stale"**
 
-5. Backend sends delta messages with paths like:
-   - `[0, 0, 3, 0]` for button
-   - `[0, 0, 3, 1]` for text (index 1)
+5. **Run3's deltas arrive**:
+   - Backend computed paths assuming run2's elements exist
+   - But the container is now empty or has fewer children
+   - `SetNodeByDeltaPathVisitor` throws: `Bad delta path index 4 (should be between [0, 2])`
 
-6. `SetNodeByDeltaPathVisitor` tries to set node at index 1, but:
-   - The container only has ~0-2 children now
-   - Index 4 (or similar) is out of bounds
-   - **Throws: `Bad delta path index 4 (should be between [0, 2])`**
+### Why This Affects Outside Containers Specifically
 
-### Why Single Element Works
+For elements INSIDE the fragment's own block, the fragment block itself is re-created on each run, so path indices are always relative to a fresh block. But for OUTSIDE containers:
+- The container persists across runs
+- Elements accumulate if not properly cleared
+- Delta paths are computed relative to the existing container state
+- Race conditions cause mismatches between expected and actual state
+
+### Why Single Element Sometimes Works
 
 When only a button is written to the outside container:
-- The button delta arrives first with path index 0
-- Even if cleared, index 0 can be re-created
-- No index mismatch occurs
+- Index 0 is always valid (can insert at empty container)
+- Even with race condition, the single element can be applied
+- However, this may still fail under different timing conditions
 
-### Why Button + Text Fails
+### Why Multiple Elements Fails
 
 When button AND text are written:
-- Text has a higher index (e.g., index 4)
-- After clearing, the container has fewer children
-- The text delta tries to insert at an invalid index
+- If race condition clears elements, container becomes empty
+- Button delta at index 0 may succeed
+- Text delta at index 1+ fails if container was cleared
+- The specific index in the error depends on timing and tree structure
 
 ## Code Locations
 
@@ -152,48 +161,103 @@ visitElementNode(node: ElementNode): AppNode | undefined {
 
 ## Proposed Fix
 
-### Option 1: Defer Stale Node Clearing (Recommended)
+### Option 1: Capture scriptRunId at scriptFinished Receipt (Recommended)
 
-Don't clear stale fragment elements from outside containers until AFTER all deltas for the current script run have been received and applied.
+The issue is that `handleScriptFinished` reads `scriptRunId` from state, but state may have been updated by a newer run. The fix is to capture the scriptRunId when `scriptFinished` is received, before calling setState.
 
 **Implementation:**
-1. Track which elements are "potentially stale" during fragment rerun
-2. Apply all incoming deltas first
-3. After `scriptFinished` is received, clear elements that weren't re-emitted
+```typescript
+// In handleScriptFinished, capture the scriptRunId from the message or 
+// track it per-run rather than reading from state
+handleScriptFinished(status: ForwardMsg.ScriptFinishedStatus): void {
+  // Use a scriptRunId that was captured when this run started,
+  // not the current state's scriptRunId
+  const finishedRunId = this.currentlyProcessingRunId; // tracked separately
+  
+  this.setState(
+    ({ fragmentIdsThisRun, elements }) => ({
+      elements: elements.clearStaleNodes(finishedRunId, fragmentIdsThisRun),
+    }),
+    // ...
+  );
+}
+```
 
 **Files to modify:**
-- `frontend/app/src/App.tsx` - Change timing of `clearStaleNodes()` call
-- `frontend/lib/src/render-tree/AppRoot.ts` - May need new method for deferred clearing
+- `frontend/app/src/App.tsx` - Track the scriptRunId per-run, use it in handleScriptFinished
 
-### Option 2: Backend Path Recalculation
+### Option 2: Include scriptRunId in scriptFinished Message
 
-Have the backend compute delta paths based on what the frontend tree WILL look like after clearing, not what it looked like before.
+Have the backend include the scriptRunId in the `scriptFinished` ForwardMsg, so the frontend knows exactly which run completed.
 
-**Pros:** More accurate paths
-**Cons:** Requires backend to track frontend state, complex
+**Pros:** Explicit, no state tracking needed
+**Cons:** Requires protobuf changes
 
-### Option 3: Graceful Path Recovery in SetNodeByDeltaPathVisitor
+### Option 3: Ignore scriptFinished for Stale Runs
 
-Instead of throwing on invalid index, attempt to recover:
-- If index is out of bounds, expand the children array
-- Or skip the delta if the target doesn't exist
+If a newer run has started, ignore `scriptFinished` from older runs entirely (for stale clearing purposes). The newer run's `scriptFinished` will clean up correctly.
 
-**Pros:** Simple fix
+**Pros:** Simple logic
+**Cons:** May leave stale elements longer than necessary
+
+### Option 4: Graceful Path Recovery in SetNodeByDeltaPathVisitor
+
+Instead of throwing on invalid index, attempt to recover by expanding the children array or replacing at the highest valid index.
+
+**Pros:** Simple, defensive
 **Cons:** May mask other bugs, could cause incorrect tree structure
 
 ## Recommended Fix: Option 1
 
-The cleanest fix is to **defer stale node clearing** until all deltas have been applied. This maintains the existing delta path calculation logic while ensuring the tree structure matches what the backend expects.
+The cleanest fix is to **track the scriptRunId per-run** and use that tracked ID in `handleScriptFinished` rather than reading from current state. This ensures each run's `scriptFinished` clears stale nodes using the correct scriptRunId.
 
 **Key changes:**
-1. In `App.tsx`, when receiving `ScriptRunning` for a fragment run, DON'T immediately call `clearStaleNodes()`
-2. Instead, save `fragmentIdsThisRun` for later use
-3. When receiving `scriptFinished`, THEN call `clearStaleNodes()` with the saved fragment IDs
+1. In `handleNewSession`, track the scriptRunId that's starting
+2. In `handleScriptFinished`, use the tracked ID (not `this.state.scriptRunId`)
+3. Clear the tracked ID after processing
 
 This ensures:
-- Delta paths remain valid when deltas are applied
-- Stale elements are still cleaned up after the run completes
-- The final tree state is correct
+- Each scriptFinished uses the correct scriptRunId
+- Race conditions between overlapping runs are handled correctly
+- Stale elements are cleared at the right time with the right ID
+
+## Historical Context: Why Stale Clearing Works This Way
+
+### Git History Analysis
+
+The current stale node clearing mechanism evolved through several commits:
+
+1. **Convert clearStaleNodes to ClearStaleNodesVisitor (#12819)** - Nov 2025
+   - Original implementation as a visitor pattern
+   - Basic scriptRunId-based staleness detection
+
+2. **Fix spinner clear_transient race condition during rapid reruns (#13849)** - Feb 2026
+   - Fixed a similar timing issue with transient nodes (spinners)
+   - Added logic to restore anchor when transient is cleared in current run
+   - Shows awareness of race conditions but focused on transient nodes
+
+3. **Allow fragments to write widgets to outside containers (commit 295149c196)** - Jun 2026
+   - Changed `visitElementNode` to clear stale elements based on fragmentId
+   - Enabled fragments to write to containers outside their scope
+   - Introduced the `fragmentIdsThisRun.includes(node.fragmentId)` check
+
+4. **Restore fragmentIdOfBlock check (commit 4953598643)** - Jun 2026
+   - Added back `fragmentIdOfBlock` check for nested fragment handling
+   - Combined with external container writes logic
+
+### Why The Bug Wasn't Caught Earlier
+
+1. **Single-element writes worked**: The original E2E test only wrote a button (not button + text) to the outside container, which happens to succeed even with race conditions.
+
+2. **Counter test was removed**: A test with the failing pattern existed but was removed because it "timed out in CI" - this was actually the bug manifesting!
+
+3. **No explicit scriptRunId tracking**: The code assumed `this.state.scriptRunId` would be stable during `handleScriptFinished`, but React's batched updates mean state can be stale.
+
+4. **Race conditions are timing-dependent**: The bug only manifests under rapid clicking, which is hard to catch in typical manual testing.
+
+### Related Patterns in Codebase
+
+The structural sharing feature (`9f33e36cd9`) introduced `isNodeTouchedInRun` tracking to handle similar structural issues, but this was in a different branch/feature line and didn't address the scriptFinished race condition.
 
 ## Test Cases to Add
 
@@ -201,3 +265,4 @@ This ensures:
 2. Multiple widgets (button, text_input, selectbox) to outside container
 3. Nested outside containers with fragments
 4. Concurrent fragment reruns affecting same outside container
+5. **NEW**: Overlapping fragment reruns (trigger second click before first scriptFinished)
