@@ -115,6 +115,10 @@ class PagesManager:
         Lock-protected for free-threaded Python (PEP 703) where
         iterating a dict during concurrent mutation is unsafe.
         Returns a shallow copy so callers can safely iterate.
+
+        If pages are not set, returns a default page info where the main
+        script path is the executing script and the page script hash/name
+        reflects the intended page requested.
         """
         with self._lock:
             if self._pages is not None:
@@ -140,9 +144,9 @@ class PagesManager:
     ) -> PageInfo | None:
         """Atomically set the page registry and resolve the current page.
 
-        This replaces the separate set_pages() + get_page_script() calls,
-        ensuring the page resolution sees the pages that were just set,
-        even under concurrent access.
+        Both operations are performed under a single lock, ensuring the page
+        resolution sees the pages that were just set even under concurrent
+        access.
 
         Parameters
         ----------
@@ -172,11 +176,15 @@ class PagesManager:
             return None
 
         if self.intended_page_script_hash:
+            # If a page hash is specified, we assume a page should exist.
+            # Return the matching page or fall back to the default page hash.
             return self._pages.get(
                 self.intended_page_script_hash,
                 self._pages.get(fallback_page_hash, None),
             )
         if self.intended_page_name:
+            # If a user navigates directly to a non-main page of an app,
+            # the page name can identify the page script to run.
             return next(
                 filter(
                     lambda p: p and (p["url_pathname"] == self.intended_page_name),

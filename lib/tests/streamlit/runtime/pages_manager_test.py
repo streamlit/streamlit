@@ -94,7 +94,12 @@ class PagesManagerTest(unittest.TestCase):
         assert "hash2" not in self.pages_manager.get_pages()
 
     def test_get_pages_snapshot_isolation(self) -> None:
-        """Ensure get_pages() snapshot is not affected by concurrent mutations."""
+        """Ensure get_pages() returns an isolated copy unaffected by later updates.
+
+        This tests copy semantics: a snapshot taken before set_pages_and_resolve()
+        should not reflect changes made after. For actual threading concurrency
+        tests, see test_concurrent_get_pages_does_not_raise.
+        """
         self.pages_manager.set_pages_and_resolve(
             {"hash1": {"page_script_hash": "hash1", "script_path": "/path1"}},
         )
