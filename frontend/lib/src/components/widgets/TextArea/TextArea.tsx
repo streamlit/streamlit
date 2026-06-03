@@ -278,6 +278,7 @@ const TextArea: FC<Props> = ({
           $height={isAutoHeight ? autoExpandHeight : inputHeight}
           $maxHeight={isAutoHeight ? autoExpandMaxHeight : ""}
           $resize={isStretchHeight ? "none" : "vertical"}
+          $isAutoHeight={isAutoHeight}
         />
       </StyledTextAreaRoot>
 

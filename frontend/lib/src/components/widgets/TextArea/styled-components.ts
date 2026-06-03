@@ -23,8 +23,7 @@ export const StyledTextAreaContainer = styled.div({
 })
 
 export const StyledTextAreaRoot = styled.div(({ theme }) => ({
-  borderWidth: theme.sizes.borderWidth,
-  borderStyle: "solid",
+  border: `${theme.sizes.borderWidth} solid`,
   borderColor: theme.colors.widgetBorderColor ?? theme.colors.secondaryBg,
   borderRadius: theme.radii.default,
   backgroundColor: theme.colors.secondaryBg,
@@ -38,11 +37,14 @@ export const StyledTextAreaInput = styled.textarea<{
   $height: string
   $maxHeight: string
   $resize: "vertical" | "none"
-}>(({ theme, $height, $maxHeight, $resize }) => ({
+  $isAutoHeight: boolean
+}>(({ theme, $height, $maxHeight, $resize, $isAutoHeight }) => ({
   width: "100%",
   height: $height,
   maxHeight: $maxHeight,
-  minHeight: theme.sizes.largestElementHeight,
+  minHeight: $isAutoHeight
+    ? theme.sizes.minTextAreaAutoHeight
+    : theme.sizes.largestElementHeight,
   resize: $resize,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.inputWidget,
@@ -55,10 +57,7 @@ export const StyledTextAreaInput = styled.textarea<{
   boxSizing: "border-box",
   display: "block",
   overflowY: "auto",
-  paddingRight: theme.spacing.md,
-  paddingLeft: theme.spacing.md,
-  paddingBottom: theme.spacing.md,
-  paddingTop: theme.spacing.md,
+  padding: theme.spacing.md,
   "&::placeholder": { color: theme.colors.fadedText60 },
   "&:disabled": {
     cursor: "not-allowed",
