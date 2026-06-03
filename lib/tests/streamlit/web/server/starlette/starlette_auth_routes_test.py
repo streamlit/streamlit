@@ -45,6 +45,16 @@ from tests.testutil import patch_config_options
 if TYPE_CHECKING:
     import pytest
 
+TORNADO_SIGNED_USER_COOKIE = (
+    "2|1:0|10:1780515959|15:_streamlit_user|68:"
+    "eyJvcmlnaW4iOiJodHRwOi8vdGVzdHNlcnZlciIsImlzX2xvZ2dlZF9pbiI6dHJ1ZX0=|"
+    "7ff7ecbfa76dacaef4fdf8514aacf239aade7cbd9100178292dd1e9664e5060d"
+)
+TORNADO_SIGNED_TOKENS_COOKIE = (
+    "2|1:0|10:1780515959|22:_streamlit_user_tokens|4:e30=|"
+    "59d5f7a7cc7a4d00c6d2e55a37124b1ef32a22d2deffe49f5ffaa1de24a70ed1"
+)
+
 
 def _build_app() -> Starlette:
     async def root(_: Any) -> PlainTextResponse:
@@ -53,6 +63,56 @@ def _build_app() -> Starlette:
     app = Starlette(routes=[*create_auth_routes(""), Route("/", root, methods=["GET"])])
     app.add_middleware(SessionMiddleware, secret_key="test-secret")
     return app
+
+
+def _auth_cookie_headers(response: Any, cookie_name: str) -> list[str]:
+    return [
+        header
+        for header in response.headers.get_list("set-cookie")
+        if header.startswith(f"{cookie_name}=")
+    ]
+
+
+def _has_auth_cookie_deletion(
+    response: Any, cookie_name: str, *, path: str | None = None
+) -> bool:
+    return any(
+        "Max-Age=0" in header and (path is None or f"Path={path}" in header)
+        for header in _auth_cookie_headers(response, cookie_name)
+    )
+
+
+def _get_auth_cookie_set_header(
+    response: Any, cookie_name: str, *, path: str | None = None
+) -> str | None:
+    return next(
+        (
+            header
+            for header in _auth_cookie_headers(response, cookie_name)
+            if f"Max-Age={AUTH_COOKIE_MAX_AGE_SECONDS}" in header
+            and (path is None or f"Path={path}" in header)
+        ),
+        None,
+    )
+
+
+def _patch_login_with_dummy_client(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Patch the login flow to use a no-op OAuth client that just redirects."""
+
+    class _DummyClient:
+        async def authorize_redirect(
+            self, request: Any, redirect_uri: str
+        ) -> RedirectResponse:
+            return RedirectResponse(redirect_uri)
+
+    monkeypatch.setattr(
+        starlette_auth_routes, "_parse_provider_token", lambda token: "default"
+    )
+    monkeypatch.setattr(
+        starlette_auth_routes,
+        "_create_oauth_client",
+        lambda provider: (_DummyClient(), "/redirect"),
+    )
 
 
 def test_redirect_without_provider(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -192,6 +252,98 @@ def test_login_initializes_session(monkeypatch: pytest.MonkeyPatch) -> None:
         assert response.headers["location"] == "/redirect"
 
     assert captured_session is not None
+
+
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_login_clears_invalid_auth_cookies(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that login clears auth cookies that fail signature validation."""
+    _patch_login_with_dummy_client(monkeypatch)
+
+    with TestClient(_build_app()) as client:
+        client.cookies.set(USER_COOKIE_NAME, TORNADO_SIGNED_USER_COOKIE)
+        client.cookies.set(TOKENS_COOKIE_NAME, TORNADO_SIGNED_TOKENS_COOKIE)
+
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/")
+    assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/")
+
+
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_login_preserves_valid_auth_cookies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Test that login does not clear auth cookies with valid signatures."""
+    _patch_login_with_dummy_client(monkeypatch)
+
+    valid_user_cookie = starlette_app_utils.create_signed_value(
+        "test-secret",
+        USER_COOKIE_NAME,
+        '{"origin": "http://testserver", "is_logged_in": true}',
+    ).decode("utf-8")
+    valid_tokens_cookie = starlette_app_utils.create_signed_value(
+        "test-secret", TOKENS_COOKIE_NAME, "{}"
+    ).decode("utf-8")
+
+    with TestClient(_build_app()) as client:
+        client.cookies.set(USER_COOKIE_NAME, valid_user_cookie)
+        client.cookies.set(TOKENS_COOKIE_NAME, valid_tokens_cookie)
+
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert not _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
+    assert not _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME)
+
+
+@patch_config_options({"server.cookieSecret": "test-secret"})
+def test_login_clears_only_invalid_tokens_cookie(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that login clears the tokens cookie alone when the user cookie is valid."""
+    _patch_login_with_dummy_client(monkeypatch)
+
+    valid_user_cookie = starlette_app_utils.create_signed_value(
+        "test-secret",
+        USER_COOKIE_NAME,
+        '{"origin": "http://testserver", "is_logged_in": true}',
+    ).decode("utf-8")
+
+    with TestClient(_build_app()) as client:
+        client.cookies.set(USER_COOKIE_NAME, valid_user_cookie)
+        client.cookies.set(TOKENS_COOKIE_NAME, TORNADO_SIGNED_TOKENS_COOKIE)
+
+        response = client.get("/auth/login?provider=dummy", follow_redirects=False)
+
+    assert response.status_code == 307
+    assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/")
+    assert not _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
+
+
+@patch_config_options(
+    {"server.cookieSecret": "test-secret", "server.baseUrlPath": "myapp"}
+)
+def test_login_clears_invalid_auth_cookies_at_base_and_root_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test that login clears invalid auth cookies at both the base and root paths."""
+    _patch_login_with_dummy_client(monkeypatch)
+
+    app = Starlette(routes=create_auth_routes("/myapp"))
+    with TestClient(app) as client:
+        client.cookies.set(USER_COOKIE_NAME, TORNADO_SIGNED_USER_COOKIE)
+        client.cookies.set(TOKENS_COOKIE_NAME, TORNADO_SIGNED_TOKENS_COOKIE)
+
+        response = client.get(
+            "/myapp/auth/login?provider=dummy", follow_redirects=False
+        )
+
+    assert response.status_code == 307
+    assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/myapp")
+    assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/")
+    assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/myapp")
+    assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/")
 
 
 def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -502,10 +654,8 @@ class TestAuthCookieFlags:
             )
             assert response.status_code == 302
 
-            set_cookie_headers = response.headers.get_list("set-cookie")
-            user_cookie_header = next(
-                (h for h in set_cookie_headers if h.startswith("_streamlit_user=")),
-                None,
+            user_cookie_header = _get_auth_cookie_set_header(
+                response, USER_COOKIE_NAME, path="/myapp"
             )
             assert user_cookie_header is not None, "User cookie not found"
 
@@ -515,6 +665,8 @@ class TestAuthCookieFlags:
 
             # Check path matches baseUrlPath
             assert cookie["path"] == "/myapp"
+            assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/")
+            assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/")
 
     @patch_config_options({"server.baseUrlPath": "myapp"})
     def test_logout_clears_cookie_with_correct_path(self) -> None:
@@ -535,9 +687,8 @@ class TestAuthCookieFlags:
             response = client.get("/myapp/auth/logout", follow_redirects=False)
             assert response.status_code == 302
 
-            # The Set-Cookie header should include the path
-            set_cookie_header = response.headers.get("set-cookie", "")
-            assert "Path=/myapp" in set_cookie_header
+            assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/myapp")
+            assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/")
 
 
 class TestParseProviderToken:
