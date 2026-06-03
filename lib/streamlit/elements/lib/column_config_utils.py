@@ -32,6 +32,7 @@ from streamlit.elements.lib.policies import check_widget_policies
 from streamlit.elements.lib.utils import compute_and_register_element_id
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.state import register_widget
+from streamlit.util import ReadOnlyAttributeDictionary
 
 if TYPE_CHECKING:
     import pyarrow as pa
@@ -479,7 +480,10 @@ class ButtonClickSerde:
                 f"Invalid button click row index: {parsed['row']}. Row must be >= 0."
             )
 
-        return cast("ButtonClickState", parsed)
+        # Wrap in ReadOnlyAttributeDictionary so the click value supports both
+        # key and attribute notation (e.g. click["row"] and click.row),
+        # matching dataframe selection state.
+        return cast("ButtonClickState", ReadOnlyAttributeDictionary(parsed))
 
 
 def extract_button_column_configs(

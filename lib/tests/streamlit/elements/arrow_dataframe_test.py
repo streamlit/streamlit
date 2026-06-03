@@ -1245,6 +1245,21 @@ class TestButtonClickSerde:
         deserialized = serde.deserialize(serialized.data)
         assert deserialized == original
 
+    def test_deserialize_returns_read_only_attribute_dictionary(self) -> None:
+        """Test that the click value supports attribute access and is read-only."""
+        serde = ButtonClickSerde()
+        result = serde.deserialize('{"row": 2, "label": "Delete"}')
+
+        # Attribute access must work in addition to key access.
+        assert result is not None
+        assert result.row == 2  # type: ignore[attr-defined]
+        assert result.label == "Delete"  # type: ignore[attr-defined]
+        assert result["row"] == 2
+
+        # The dict is read-only; mutating it must raise.
+        with pytest.raises(TypeError):
+            result["row"] = 99  # type: ignore[index]
+
 
 _EMPTY_SELECTION = {"rows": [], "columns": [], "cells": []}
 
