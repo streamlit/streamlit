@@ -87,10 +87,6 @@ interface ParsedLabel {
   text: string
 }
 
-function getButtonPadding(cellHorizontalPadding: number): number {
-  return cellHorizontalPadding
-}
-
 function getIconTextGap(cellHorizontalPadding: number): number {
   return Math.max(MIN_ICON_TEXT_GAP, cellHorizontalPadding / 2)
 }
@@ -250,8 +246,7 @@ function getButtonBounds(
   contentWidth: number,
   alignment: "left" | "center" | "right" = "center"
 ): ButtonBounds {
-  const buttonPadding = getButtonPadding(cellPadding)
-  const buttonWidth = contentWidth + buttonPadding * 2
+  const buttonWidth = contentWidth + cellPadding * 2
   const verticalPadding = Math.floor(cellPadding * 0.5)
   const buttonHeight = Math.ceil(cellHeight - verticalPadding * 2)
 
@@ -542,11 +537,10 @@ const renderer: CustomRenderer<ButtonCell> = {
     // buttons (label is null) and the icon/text otherwise.
     const contentWidth = getContentWidth(ctx, label, theme)
 
-    return (
-      contentWidth +
-      theme.cellHorizontalPadding * 2 +
-      getButtonPadding(theme.cellHorizontalPadding) * 2
-    )
+    // Account for the button's internal horizontal padding on both sides plus
+    // the cell's own horizontal padding around the button (matching the bounds
+    // computed in getButtonBounds).
+    return contentWidth + theme.cellHorizontalPadding * 4
   },
   provideEditor: undefined,
 }
