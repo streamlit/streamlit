@@ -621,6 +621,9 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
     user = token.get("userinfo") or {}
 
+    # Clear any invalid/stale auth cookies (e.g. orphaned chunks from an old
+    # cookie format) before writing the fresh cookies below, so leftover state
+    # cannot interfere with the new login.
     response = await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
