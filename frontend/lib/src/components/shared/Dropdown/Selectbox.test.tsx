@@ -174,8 +174,13 @@ describe("Selectbox widget", () => {
     await openDropdown(user)
     await user.clear(selectbox)
     await user.type(selectbox, "1")
-    // None of ["a","b","c"] match "1" by label — options filtered to zero
-    expect(screen.queryAllByRole("option")).toHaveLength(0)
+    // None of ["a","b","c"] match "1" by label — no data options visible.
+    // The empty-state wrapper has role="option" so we check that none of the
+    // actual data options are present, and that the "No results" message shows.
+    expect(screen.queryByRole("option", { name: "a" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "b" })).not.toBeInTheDocument()
+    expect(screen.queryByRole("option", { name: "c" })).not.toBeInTheDocument()
+    expect(screen.getByText("No results")).toBeInTheDocument()
   })
 
   it("filters options based on label with case insensitive", async () => {

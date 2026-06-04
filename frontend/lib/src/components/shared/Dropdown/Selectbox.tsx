@@ -19,13 +19,19 @@ import {
   memo,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react"
 
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
-import { ComboBox, I18nProvider, type Key } from "react-aria-components"
+import {
+  ComboBox,
+  ComboBoxStateContext,
+  I18nProvider,
+  type Key,
+} from "react-aria-components"
 
 import { streamlit } from "@streamlit/protobuf"
 
@@ -80,6 +86,23 @@ type ComboOption = {
 
 const CREATABLE_ID = "__creatable__"
 
+/**
+ * Null-render component that wires RAC's internal ComboBox close method into
+ * a ref. Must be rendered inside a `<ComboBox>` so it can read
+ * `ComboBoxStateContext`. Call `closeRef.current?.()` from event handlers to
+ * close the dropdown without blurring the input.
+ */
+const DropdownCloser: FC<{
+  closeRef: React.MutableRefObject<(() => void) | null>
+}> = ({ closeRef }) => {
+  const state = useContext(ComboBoxStateContext)
+  // Keep closeRef current on every render; state.close is stable.
+  useEffect(() => {
+    if (state) closeRef.current = () => state.close()
+  }, [state, closeRef])
+  return null
+}
+
 const Selectbox: FC<Props> = ({
   disabled,
   value: propValue,
@@ -119,6 +142,15 @@ const Selectbox: FC<Props> = ({
   const [filterActive, setFilterActive] = useState(false)
 
   /**
+   * Ref wired to RAC's internal ComboBox close method by `DropdownCloser`
+   * (rendered inside the `<ComboBox>` tree). Our custom Enter-commit path
+   * uses this to close the dropdown explicitly, since we commit by updating
+   * React state rather than via RAC's own selection mechanism (which is what
+   * normally triggers the close).
+   */
+  const closeDropdownRef = useRef<(() => void) | null>(null)
+
+  /**
    * Always-current ref for `filterActive`. Updated every render so that stale
    * event-handler closures (e.g. a `handleSelectionChange` captured by RAC)
    * read the correct filter state and don't revert user input during typing.
@@ -135,14 +167,6 @@ const Selectbox: FC<Props> = ({
   valueRef.current = value
 
   /**
-   * Always-current ref for `setInputValue`. Updated every render so stale
-   * closures call the same underlying setter regardless of which render they
-   * were created in.
-   */
-  const setInputValueRef = useRef(setInputValue)
-  setInputValueRef.current = setInputValue
-
-  /**
    * Always-current ref for `inputValue`. Used by `handleBlur` to check the
    * CURRENT display text without capturing a stale closure value. This
    * prevents React from queuing a `setInputValue` update when `handleBlur`
@@ -153,22 +177,13 @@ const Selectbox: FC<Props> = ({
   inputValueRef.current = inputValue
 
   /**
-   * Guards against double-committing the creatable item when BOTH our
-   * `handleInputKeyDown` Enter handler AND RAC's `onSelectionChange` fire
-   * for the same keystroke (arrow-navigate + Enter path).
-   * RAC's `onSelectionChange` runs first (via mergeProps chain ordering),
-   * so if it fires for `CREATABLE_ID`, we set this flag. Then our keydown
-   * handler (which fires second) sees the flag and skips.
+   * Guards against double-committing when RAC's `onSelectionChange` and our
+   * `onKeyDown` both fire for the same Enter keypress (arrow-nav + Enter path).
+   * RAC's `onSelectionChange` runs first and sets this flag when it commits a
+   * genuinely new selection. Our `onKeyDown` checks and clears it to skip.
+   * Covers both regular items and the creatable "Add:" item.
    */
-  const creatableSelectedByRACRef = useRef(false)
-
-  /**
-   * Set to true by `handleSelectionChange` when RAC commits a NEW selection
-   * (key different from the currently committed key) — meaning the user used
-   * keyboard arrow navigation to choose an item. Our `handleInputKeyDown`
-   * checks this flag to avoid double-committing on arrow-nav + Enter.
-   */
-  const racSelectionMadeRef = useRef(false)
+  const racHandledEnterRef = useRef(false)
 
   /**
    * Tracks whether the ComboBox dropdown is currently open. RAC fires
@@ -283,18 +298,14 @@ const Selectbox: FC<Props> = ({
       // all spurious post-close callbacks.
       if (!isOpenRef.current) return
 
-      if (key !== null && String(key) === CREATABLE_ID) {
-        creatableSelectedByRACRef.current = true
-      }
-
-      // Detect a NEW keyboard-nav selection (key differs from current committed key).
-      // This flag tells `handleInputKeyDown` that RAC already handled the Enter
-      // (user arrow-nav'd to an item and pressed Enter), so it should not auto-select.
+      // Set the flag when RAC commits a genuinely NEW selection (covers both
+      // regular items and the creatable "Add:" item) so that our bubble-phase
+      // onKeyDown can skip the auto-select to avoid double-committing.
       if (key !== null) {
         const currentCommittedKey =
           selectOptions.find(o => o.value === valueRef.current)?.id ?? null
         if (String(key) !== String(currentCommittedKey ?? "")) {
-          racSelectionMadeRef.current = true
+          racHandledEnterRef.current = true
         }
       }
 
@@ -304,7 +315,7 @@ const Selectbox: FC<Props> = ({
         // when the user is NOT actively typing — blur already restores the
         // display when typing ends without a selection.
         if (!filterActiveRef.current) {
-          setInputValueRef.current(valueRef.current ?? "")
+          setInputValue(valueRef.current ?? "")
           setFilterActive(false)
         }
         return
@@ -321,7 +332,7 @@ const Selectbox: FC<Props> = ({
           : (found?.value ?? null)
 
       setValue(selected)
-      setInputValueRef.current(selected ?? "")
+      setInputValue(selected ?? "")
       setFilterActive(false)
       // Only notify the parent when the value actually changed.
       if (selected !== valueRef.current) {
@@ -361,7 +372,7 @@ const Selectbox: FC<Props> = ({
     // prevents any state update from being queued when unnecessary.
     const target = valueRef.current ?? ""
     if (inputValueRef.current !== target) {
-      setInputValueRef.current(target)
+      setInputValue(target)
     }
     setFilterActive(false)
   }, [])
@@ -411,45 +422,48 @@ const Selectbox: FC<Props> = ({
    *
    * RAC fires `onSelectionChange` BEFORE our `onKeyDown` fires (via
    * mergeProps chain ordering). When the user arrow-nav'd to an item and
-   * pressed Enter, `racSelectionMadeRef` is set by `handleSelectionChange`
+   * pressed Enter, `racHandledEnterRef` is set by `handleSelectionChange`
    * before we reach this handler. When no item was keyboard-focused, RAC
-   * either fires `onSelectionChange(currentKey)` (re-commits same value)
-   * or fires nothing — leaving `racSelectionMadeRef` false.
+   * either fires `onSelectionChange(currentKey)` (re-commits same value,
+   * which doesn't set the flag) or fires nothing — so we handle it here.
    *
-   * We use `wasOpenBeforeEnterRef` (set in the capture phase) instead of
-   * `isOpenRef.current` because RAC's handler may have already closed the
-   * dropdown (setting `isOpenRef.current = false`) before this fires.
+   * Handler order (Enter with focused listbox item):
+   *   1. `handleSelectionChange` → sets racHandledEnterRef, closes dropdown
+   *   2. `handleInputKeyDown` → sees racHandledEnterRef → returns early
+   *
+   * Handler order (Enter without focused listbox item):
+   *   1. `handleSelectionChange` → re-commits same key (flag stays false)
+   *   2. `handleInputKeyDown` → handles auto-select or creatable commit
    */
   const handleInputKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (e.key !== "Enter") return
 
+      // RAC already committed a new selection for this Enter (arrow-nav path).
+      if (racHandledEnterRef.current) {
+        racHandledEnterRef.current = false
+        return
+      }
+
       if (creatableItem) {
-        // RAC's own selection (arrow-nav + Enter) already ran and set the
-        // flag; our handler fires second so we just clear the flag and bail.
-        if (creatableSelectedByRACRef.current) {
-          creatableSelectedByRACRef.current = false
-          return
-        }
+        // User typed a value and pressed Enter — always commit (the creatable
+        // option is by definition visible because the user typed it). This path
+        // does NOT require wasOpenBeforeEnterRef: if filterActive is true and
+        // creatableItem exists, the intent to create is unambiguous.
         const selected = inputValue
         setValue(selected)
         setInputValue(selected)
         setFilterActive(false)
+        closeDropdownRef.current?.()
         if (selected !== valueRef.current) {
           onChange(selected)
         }
         return
       }
 
-      // If the dropdown was not open when Enter was pressed, do nothing.
+      // For the auto-select path, only act when the dropdown was open. This
+      // prevents accidentally selecting on Enter when the dropdown is closed.
       if (!wasOpenBeforeEnterRef.current) return
-
-      // If RAC already committed a new selection via keyboard navigation,
-      // skip — don't double-commit.
-      if (racSelectionMadeRef.current) {
-        racSelectionMadeRef.current = false
-        return
-      }
 
       // Dropdown was open but no item was keyboard-focused (or RAC only
       // re-committed the current selection). Auto-select: prefer an exact
@@ -463,8 +477,9 @@ const Selectbox: FC<Props> = ({
           (!displayOptions[0].isCreatable ? displayOptions[0] : null)
         if (target) {
           setValue(target.value)
-          setInputValueRef.current(target.value)
+          setInputValue(target.value)
           setFilterActive(false)
+          closeDropdownRef.current?.()
           if (target.value !== valueRef.current) {
             onChange(target.value)
           }
@@ -479,6 +494,7 @@ const Selectbox: FC<Props> = ({
     setValue(null)
     setInputValue("")
     setFilterActive(false)
+    closeDropdownRef.current?.()
     onChange(null)
   }, [onChange])
 
@@ -500,10 +516,12 @@ const Selectbox: FC<Props> = ({
           onOpenChange={handleOpenChange}
           isDisabled={selectDisabled}
           allowsCustomValue={acceptNewOptions}
+          allowsEmptyCollection
           onBlur={handleBlur}
           menuTrigger="focus"
           aria-label={label ?? undefined}
         >
+          <DropdownCloser closeRef={closeDropdownRef} />
           <StyledGroup>
             <StyledInput
               placeholder={resolvedPlaceholder}
@@ -535,31 +553,30 @@ const Selectbox: FC<Props> = ({
             </StyledOpenButton>
           </StyledGroup>
           <StyledPopover
+            data-testid="stSelectboxVirtualDropdown"
             placement="bottom left"
             isNonModal
             shouldFlip={!isInSidebar}
             $isInSidebar={isInSidebar}
             offset={0}
           >
-            <div data-testid="stSelectboxVirtualDropdown">
-              <StyledListBox
-                aria-label={label ?? ""}
-                renderEmptyState={() => <span>No results</span>}
-              >
-                {displayOptions.map(opt => (
-                  <StyledListBoxItem
-                    key={opt.id}
-                    id={opt.id}
-                    textValue={opt.label}
-                    $isCreatable={opt.isCreatable}
-                  >
-                    <StyledItemHighlight data-item-hl="">
-                      {opt.label}
-                    </StyledItemHighlight>
-                  </StyledListBoxItem>
-                ))}
-              </StyledListBox>
-            </div>
+            <StyledListBox
+              aria-label={label ?? ""}
+              renderEmptyState={() => <span>No results</span>}
+            >
+              {displayOptions.map(opt => (
+                <StyledListBoxItem
+                  key={opt.id}
+                  id={opt.id}
+                  textValue={opt.label}
+                  $isCreatable={opt.isCreatable}
+                >
+                  <StyledItemHighlight data-item-hl="">
+                    {opt.label}
+                  </StyledItemHighlight>
+                </StyledListBoxItem>
+              ))}
+            </StyledListBox>
           </StyledPopover>
         </ComboBox>
       </I18nProvider>

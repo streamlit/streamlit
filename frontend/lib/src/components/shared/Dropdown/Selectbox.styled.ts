@@ -50,7 +50,11 @@ export const StyledGroup = styled(Group)(({ theme }) => ({
   flexDirection: "row",
   alignItems: "stretch",
   width: "100%",
-  minHeight: theme.sizes.minElementHeight,
+  // Use a fixed height (matching the old BaseWeb ControlContainer) so that
+  // subpixel line-height rounding in WebKit/Chromium cannot push the element
+  // 1px over the minimum. overflow:hidden prevents any content from leaking.
+  height: theme.sizes.minElementHeight,
+  overflow: "hidden",
   borderLeftWidth: theme.sizes.borderWidth,
   borderRightWidth: theme.sizes.borderWidth,
   borderTopWidth: theme.sizes.borderWidth,
