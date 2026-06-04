@@ -15,8 +15,6 @@
  */
 
 import {
-  createRef,
-  forwardRef,
   memo,
   ReactElement,
   useCallback,
@@ -26,12 +24,6 @@ import {
   useState,
 } from "react"
 
-import {
-  type StyleProps,
-  Slider as UISlider,
-  StyledInnerTrack as UIStyledInnerTrack,
-} from "baseui/slider"
-import { pick } from "lodash-es"
 import moment from "moment"
 
 import { Slider as SliderProto } from "@streamlit/protobuf"
@@ -44,7 +36,6 @@ import {
   useBasicWidgetState,
   ValueWithSource,
 } from "~lib/hooks/useBasicWidgetState"
-import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import {
   arrayComparator,
   useExecuteWhenChanged,
@@ -55,12 +46,13 @@ import { labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import {
-  StyledInnerTrackWrapper,
+  StyledRASlider,
   StyledSlider,
   StyledSliderTickBar,
+  StyledSliderTrack,
+  StyledSliderTrackLine,
   StyledThumb,
   StyledThumbValue,
-  StyledThumbWrapper,
 } from "./styled-components"
 
 interface SliderTickBarProps {
@@ -191,20 +183,9 @@ function Slider({
   const handleMouseLeave = useCallback(() => setIsHovered(false), [])
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
-  const [thumbRefs] = useState<
-    React.MutableRefObject<HTMLDivElement | null>[]
-  >([])
-  const [thumbValueRefs] = useState<
-    React.MutableRefObject<HTMLDivElement | null>[]
-  >([])
-
-  const theme = useEmotionTheme()
-
-  // Keep a ref to the latest element so stable callbacks (`renderThumb`) can
-  // always read the current format/options without depending on `element` in
-  // their dependency arrays (which would hurt referential stability).
-  const elementRef = useRef(element)
-  elementRef.current = element
+  // Single refs holding arrays — RA thumbs are direct children of SliderTrack
+  const thumbsRef = useRef<(HTMLElement | null)[]>([])
+  const thumbValuesRef = useRef<(HTMLDivElement | null)[]>([])
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
   const formattedMinValue = formatValue(element.min, element)
@@ -238,158 +219,52 @@ function Slider({
     (prev, curr) => arrayComparator(prev[0], curr[0])
   )
 
+  // RA passes the new value directly (not wrapped in an object like BaseUI did).
+  // RA types onChange/onChangeEnd as (value: number | number[]) to support both
+  // single-value and range sliders; we always use an array internally.
+  // Note: on keyboard interactions, RA fires onChange and onChangeEnd synchronously
+  // in the same event, so isDragging may be true→false within the same React batch.
   const handleFinalChange = useCallback(
-    ({ value: valueArg }: { value: number[] }): void => {
-      setValueWithSource({ value: valueArg, fromUi: true })
+    (newValue: number | number[]): void => {
+      const arr = Array.isArray(newValue) ? newValue : [newValue]
+      setValueWithSource({ value: arr, fromUi: true })
       setIsDragging(false)
     },
     [setValueWithSource]
   )
 
-  const handleChange = useCallback(
-    ({ value: valueArg }: { value: number[] }): void => {
-      setUiValue(valueArg)
-      setIsDragging(true)
-    },
-    []
-  )
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- forwardRef passed to useCallback for BaseUI render prop
-  const renderThumb = useCallback(
-    // eslint-disable-next-line react-hooks/use-memo -- forwardRef passed to useCallback for BaseUI render prop
-    forwardRef<HTMLDivElement, StyleProps>(
-      function renderThumb(props, ref): ReactElement {
-        const { $thumbIndex, $value } = props
-        const thumbIndex = $thumbIndex || 0
-        // eslint-disable-next-line react-hooks/immutability -- mutable ref array for BaseUI render prop pattern
-        thumbRefs[thumbIndex] = ref as React.MutableRefObject<HTMLDivElement>
-        // eslint-disable-next-line @eslint-react/no-create-ref
-        thumbValueRefs[thumbIndex] ||= createRef<HTMLDivElement>()
-
-        // TODO: I forget why we don't just pass *all* props through.
-        // It seems to work fine, when I try it. But perhaps we need to do
-        // more extensive testing before simplifying...
-        const passThrough = pick(props, [
-          "role",
-          "style",
-          "aria-valuemax",
-          "aria-valuemin",
-          "aria-valuenow",
-          "tabIndex",
-          "onKeyUp",
-          "onKeyDown",
-          "onMouseEnter",
-          "onMouseLeave",
-          "draggable",
-        ])
-
-        const currentElement = elementRef.current
-
-        // We intentionally re-compute the formatted value here from the latest
-        // thumb value and the latest element (via `elementRef`) instead of
-        // reading from `formattedValueArr` in the outer closure. This keeps
-        // `renderThumb` referentially stable across user interactions while
-        // still reflecting changes to formatting-related props like
-        // `element.format`.
-        const thumbValues = $value ?? [currentElement.min]
-        const thumbValue = thumbValues[thumbIndex] ?? currentElement.min
-        const formattedValue = formatValue(thumbValue, currentElement)
-
-        return (
-          <StyledThumb
-            {...passThrough}
-            disabled={props.$disabled === true}
-            isDragged={props.$isDragged === true}
-            ref={thumbRefs[thumbIndex]}
-            aria-valuetext={formattedValue}
-            aria-label={currentElement.label}
-          >
-            <StyledThumbValue
-              data-testid="stSliderThumbValue"
-              disabled={props.$disabled === true}
-              ref={thumbValueRefs[thumbIndex]}
-            >
-              <StreamlitMarkdown
-                source={formattedValue}
-                allowHTML={false}
-                inheritFont
-                isLabel
-              />
-            </StyledThumbValue>
-          </StyledThumb>
-        )
-      }
-    ),
-    // Only run this on first render, to avoid losing the focus state.
-    // Then, when the value written about the thumb needs to change, that
-    // happens with the function below instead.
-    []
-  )
+  const handleChange = useCallback((newValue: number | number[]): void => {
+    const arr = Array.isArray(newValue) ? newValue : [newValue]
+    setUiValue(arr)
+    setIsDragging(true)
+  }, [])
 
   useLayoutEffect(() => {
-    // Keep aria-valuetext in sync with the formatted values for accessibility.
-    thumbRefs.forEach((ref, i) => {
-      if (ref.current) {
-        ref.current.setAttribute("aria-valuetext", formattedValueArr[i])
+    // React Aria's getThumbValueLabel always uses the Intl NumberFormatter, which
+    // cannot produce arbitrary strings (e.g. option names for select_slider or
+    // datetime labels). We update aria-valuetext on the hidden <input type="range">
+    // inside each thumb via DOM mutation after render, matching the original BaseUI approach.
+    thumbsRef.current.forEach((thumbEl, i) => {
+      if (!thumbEl) return
+      const input = thumbEl.querySelector<HTMLInputElement>(
+        'input[type="range"]'
+      )
+      if (input && formattedValueArr[i] !== undefined) {
+        input.setAttribute("aria-valuetext", formattedValueArr[i])
       }
     })
 
     // If, after rendering, the thumb value is outside the container (too
     // far left or too far right), bring it inside. Or if there are two
     // thumbs and their values overlap, fix that.
-    const sliderDiv = sliderRef.current ?? null
-    const thumb1Div = thumbRefs[0].current
-    const thumb2Div = thumbRefs[1]?.current
-    const thumb1ValueDiv = thumbValueRefs[0].current
-    const thumb2ValueDiv = thumbValueRefs[1]?.current
-
     fixLabelPositions(
-      sliderDiv,
-      thumb1Div,
-      thumb2Div,
-      thumb1ValueDiv,
-      thumb2ValueDiv
+      sliderRef.current ?? null,
+      (thumbsRef.current[0] as HTMLDivElement | null) ?? null,
+      (thumbsRef.current[1] as HTMLDivElement | null) ?? null,
+      thumbValuesRef.current[0] ?? null,
+      thumbValuesRef.current[1] ?? null
     )
   })
-
-  // Style that will be applied to BaseWeb's <InnerTrack>.
-  const innerTrackStyle = useCallback(
-    ({ $disabled }: StyleProps) => ({
-      height: theme.spacing.twoXS,
-      ...($disabled ? { background: theme.colors.darkenedBgMix25 } : {}),
-    }),
-    [theme.colors.darkenedBgMix25, theme.spacing.twoXS]
-  )
-
-  // Make thumbs not overshoot the slider's track boundaries.
-  // We do this by placing the thumbs in the DOM beneath the track.
-  // Then we can adjust the padding around the thumbs separately
-  // from the dimensions of the track.
-  //
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- forwardRef passed to useCallback for BaseUI render prop
-  const renderInnerTrack = useCallback(
-    // eslint-disable-next-line react-hooks/use-memo -- forwardRef passed to useCallback for BaseUI render prop
-    forwardRef<HTMLDivElement, StylePropsWithChildren>(
-      function renderInnerTrack(props, ref): ReactElement {
-        const { children: thumbs, ...newProps } = props
-
-        return (
-          <StyledInnerTrackWrapper>
-            {/* Place thumbs inside container with a bit of horiz padding. */}
-            <StyledThumbWrapper ref={ref}>{thumbs}</StyledThumbWrapper>
-            {/* Place track under thumb container, with no padding. */}
-            <UIStyledInnerTrack
-              {...newProps}
-              style={innerTrackStyle({ $disabled: props.$disabled })}
-            />
-          </StyledInnerTrackWrapper>
-        )
-      }
-    ),
-
-    // Only run this on first render.
-    []
-  )
 
   return (
     <StyledSlider
@@ -410,40 +285,70 @@ function Slider({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UISlider
-        min={element.min}
-        max={element.max}
+
+      <StyledRASlider
+        minValue={element.min}
+        maxValue={element.max}
         step={element.step}
         value={getValueAsArray(uiValue, element)}
         onChange={handleChange}
-        onFinalChange={handleFinalChange}
-        disabled={disabled}
-        overrides={{
-          Thumb: renderThumb,
-          Track: {
-            style: {
-              backgroundColor: "none !important",
-              paddingLeft: theme.spacing.none,
-              paddingRight: theme.spacing.none,
-              // Set padding so total height equals minElementHeight (40px)
-              // Total height = paddingTop + innerTrack height + paddingBottom
-              paddingTop: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
-              paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
-            },
-          },
-          InnerTrack: renderInnerTrack,
-          // Show min/max labels when hovering the slider or dragging it
-          TickBar: {
-            component: SliderTickBar,
-            props: {
-              minLabel: formattedMinValue,
-              maxLabel: formattedMaxValue,
-              isHovered: isHovered || isDragging,
-              isDisabled: disabled,
-            },
-          },
-        }}
-      />
+        onChangeEnd={handleFinalChange}
+        isDisabled={disabled}
+        aria-label={element.label}
+      >
+        <StyledSliderTrack>
+          {({ state }) => {
+            const isRange = state.values.length > 1
+            const fillStart = isRange ? state.getThumbPercent(0) * 100 : 0
+            const fillEnd = state.getThumbPercent(isRange ? 1 : 0) * 100
+
+            return (
+              <>
+                {/* Track line FIRST — lower z-index (earlier in DOM) so thumbs render on top */}
+                <StyledSliderTrackLine
+                  isDisabled={disabled}
+                  fillStart={fillStart}
+                  fillEnd={fillEnd}
+                />
+                {/* Thumbs AFTER track line — higher z-index (later in DOM) */}
+                {state.values.map((_, index) => (
+                  <StyledThumb
+                    key={index}
+                    index={index}
+                    ref={el => {
+                      thumbsRef.current[index] = el
+                    }}
+                    aria-label={element.label}
+                  >
+                    <StyledThumbValue
+                      data-testid="stSliderThumbValue"
+                      disabled={disabled}
+                      ref={el => {
+                        thumbValuesRef.current[index] = el
+                      }}
+                    >
+                      <StreamlitMarkdown
+                        source={formattedValueArr[index] ?? ""}
+                        allowHTML={false}
+                        inheritFont
+                        isLabel
+                      />
+                    </StyledThumbValue>
+                  </StyledThumb>
+                ))}
+              </>
+            )
+          }}
+        </StyledSliderTrack>
+
+        {/* Positioned absolutely inside StyledRASlider (position:relative); top:100% places it below the track */}
+        <SliderTickBar
+          minLabel={formattedMinValue}
+          maxLabel={formattedMaxValue}
+          isHovered={isHovered || isDragging}
+          isDisabled={disabled}
+        />
+      </StyledRASlider>
     </StyledSlider>
   )
 }
@@ -776,10 +681,6 @@ function fixLabelOverlap(
       thumb2MidPoint - thumb2ValueOverhang - labelGap - thumb1MidPoint
     )}px`
   }
-}
-
-interface StylePropsWithChildren extends StyleProps {
-  children: React.ReactNode
 }
 
 // Note: we shouldn't need `withCalculatedWidth` here, but there is some custom
