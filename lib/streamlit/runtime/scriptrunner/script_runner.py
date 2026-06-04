@@ -39,7 +39,6 @@ from streamlit.runtime.scriptrunner.exec_code import (
     exec_func_with_error_handling,
     modified_sys_path,
 )
-from streamlit.runtime.scriptrunner.script_cache import ScriptCache
 from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,

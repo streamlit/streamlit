@@ -49,7 +49,6 @@ from streamlit.runtime.state import (
     register_widget,
 )
 from streamlit.string_util import validate_icon_or_emoji
-from streamlit.type_util import SupportsStr
 
 if TYPE_CHECKING:
     from streamlit.delta_generator import DeltaGenerator

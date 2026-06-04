@@ -61,7 +61,7 @@
     "@types/node": ">=24 <25",
     "@vitest/coverage-v8": "^4.1.7",
     "@vitest/eslint-plugin": "^1.6.18",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.0",
     "eslint": "^10.4.0",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.2",

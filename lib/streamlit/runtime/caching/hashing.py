@@ -541,9 +541,18 @@ class _CacheFuncHasher:
 
             pil_obj: Image = cast("Image", obj)
 
-            # we don't just hash the results of obj.tobytes() because we want to use
-            # the sampling logic for numpy data
-            np_array = np.frombuffer(pil_obj.tobytes(), dtype="uint8")
+            # We don't just hash the results of obj.tobytes() because we want to use
+            # the sampling logic for numpy data.
+            pixel_bytes = pil_obj.tobytes()
+
+            # P-mode (palette-indexed) images need the palette included in the hash,
+            # since tobytes() only returns palette indices, not the color table.
+            if pil_obj.mode == "P":
+                palette_data = pil_obj.getpalette()
+                if palette_data is not None:
+                    pixel_bytes = bytes(palette_data) + pixel_bytes
+
+            np_array = np.frombuffer(pixel_bytes, dtype="uint8")
             return self.to_bytes(np_array)
 
         elif inspect.isbuiltin(obj):

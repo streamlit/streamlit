@@ -50,6 +50,7 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
 )
 from streamlit.runtime.scriptrunner_utils.script_run_context import ThreadState
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
+from tests.conftest import enable_mpa_v2_mode
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
 from tests.streamlit.element_mocks import (
     ELEMENT_PRODUCER,
@@ -712,7 +713,7 @@ class FragmentTest(unittest.TestCase):
         ctx.run_with_active_hash = patched_run_with_active_hash
         ctx.fragment_storage = MemoryFragmentStorage()
         ctx.pages_manager = PagesManager("")
-        ctx.pages_manager.set_pages({})  # Migrate to MPAv2
+        enable_mpa_v2_mode(ctx.pages_manager)
         ThreadState.update(active_script_hash="some_hash")
         # Use a plain dict (not the auto-generated MagicMock) so that deepcopy(ctx.cursors)
         # does not traverse back to the real fragment_storage above, whose threading.Lock
