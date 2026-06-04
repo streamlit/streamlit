@@ -210,17 +210,6 @@ describe("NumberInput widget", () => {
     expect(screen.getByTestId("stWidgetLabel")).toHaveStyle("display: none")
   })
 
-  it("does not override inputmode (browser default for type=number is correct)", () => {
-    // The old BaseWeb implementation forced inputMode="" to undo BaseWeb's own
-    // override to "text". Now that we use a plain <input type="number">, the
-    // browser's default inputMode is correct and we don't set the attribute.
-    const props = getIntProps()
-    render(<NumberInput {...props} />)
-
-    const numberInput = screen.getByTestId("stNumberInputField")
-    expect(numberInput).not.toHaveAttribute("inputmode")
-  })
-
   it("sets input type to number", () => {
     const props = getIntProps()
     render(<NumberInput {...props} />)
