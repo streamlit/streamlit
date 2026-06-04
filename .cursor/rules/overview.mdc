@@ -90,6 +90,7 @@ Selection of `make` commands for development (run in the repo root):
 ### Development Tips
 
 - **Follow existing patterns**: Check neighboring files for conventions.
+- **Comments and docstrings serve future readers, not the PR**: Never write comments or docstrings that narrate the changes being made — e.g., "Separated from X to avoid circular imports", "Extracted from Y for better modularity", "Moved here from Z". These are useless to future readers. If someone wants to understand why code was changed, they can look at git history. Instead, describe what the code does and why it exists.
 - You can use the `work-tmp` directory to store temporary files, specs, and scripts.
 - Use `agent-wiki/` (gitignored, cloned on first use) to share intermediate files (specs, plans, learnings) relevant for the current PR. This is a local checkout of [streamlit.wiki](https://github.com/streamlit/streamlit.wiki.git). Files are stored in `pull-requests/<pr-number>/` and accessible at `https://issues.streamlit.app/agent_wiki_explorer?file=<relative-path>`. See `sharing-pr-agent-artifacts` skill.
 - If you fail to run a `make` command, remember to run it from the root / top-level directory.
