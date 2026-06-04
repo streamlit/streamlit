@@ -23,7 +23,8 @@ from urllib.parse import parse_qs, urlparse
 from authlib.integrations import starlette_client
 from starlette.applications import Starlette
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import PlainTextResponse, RedirectResponse
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse, RedirectResponse, Response
 from starlette.routing import Route
 from starlette.testclient import TestClient
 
@@ -133,6 +134,25 @@ def test_logout_clears_cookie() -> None:
         assert response.headers.get("set-cookie")
         follow_up = client.get(response.headers["location"])  # follow redirect manually
         assert follow_up.status_code == 200
+
+
+def test_logout_clears_chunk_cookies() -> None:
+    """Test that logout clears chunk siblings of the auth cookie.
+
+    Logout clears cookies unconditionally, so any ``{cookie_name}_<n>`` chunk
+    siblings present in the request must be deleted alongside the main cookie.
+    """
+    with TestClient(_build_app()) as client:
+        client.cookies.set(USER_COOKIE_NAME, "value")
+        client.cookies.set(f"{USER_COOKIE_NAME}_1", "chunk-1")
+        client.cookies.set(f"{USER_COOKIE_NAME}_2", "chunk-2")
+
+        response = client.get("/auth/logout", follow_redirects=False)
+
+    assert response.status_code == 302
+    assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME)
+    assert _has_auth_cookie_deletion(response, f"{USER_COOKIE_NAME}_1")
+    assert _has_auth_cookie_deletion(response, f"{USER_COOKIE_NAME}_2")
 
 
 def test_callback_handles_error_query(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -352,8 +372,9 @@ def test_login_preserves_chunk_cookies_for_valid_cookie(
 ) -> None:
     """Test that a valid main cookie does not trigger chunk-sibling deletion.
 
-    The orphaned-chunk cleanup only applies when the main cookie is invalid; a
-    valid main cookie must not have its chunk siblings deleted by the scan.
+    During login, cookie clearing is gated by ``_clear_invalid_auth_cookies``,
+    which only fires for cookies that fail signature validation. A valid main
+    cookie therefore must not have its chunk siblings deleted.
     """
     _patch_login_with_dummy_client(monkeypatch)
 
@@ -397,6 +418,40 @@ def test_login_clears_invalid_auth_cookies_at_base_and_root_path(
     assert _has_auth_cookie_deletion(response, USER_COOKIE_NAME, path="/")
     assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/myapp")
     assert _has_auth_cookie_deletion(response, TOKENS_COOKIE_NAME, path="/")
+
+
+def test_clearing_user_cookie_preserves_tokens_cookie() -> None:
+    """Test that clearing the user cookie never touches the tokens cookie.
+
+    ``_streamlit_user`` is a literal prefix of ``_streamlit_user_tokens``, so the
+    chunk scan must rely on the numeric-suffix check to avoid deleting the tokens
+    cookie (or its chunks) when clearing the user cookie.
+    """
+    cookie_header = (
+        f"{USER_COOKIE_NAME}=u; {USER_COOKIE_NAME}_1=c1; "
+        f"{TOKENS_COOKIE_NAME}=t; {TOKENS_COOKIE_NAME}_1=t1"
+    )
+    request = Request(
+        {"type": "http", "headers": [(b"cookie", cookie_header.encode("latin-1"))]}
+    )
+    response = Response()
+
+    starlette_auth_routes._clear_single_auth_cookie_and_chunks(
+        response, request, USER_COOKIE_NAME
+    )
+
+    set_cookie_headers = response.headers.getlist("set-cookie")
+
+    def _is_deleted(cookie_name: str) -> bool:
+        return any(
+            header.startswith(f"{cookie_name}=") and "Max-Age=0" in header
+            for header in set_cookie_headers
+        )
+
+    assert _is_deleted(USER_COOKIE_NAME)
+    assert _is_deleted(f"{USER_COOKIE_NAME}_1")
+    assert not _is_deleted(TOKENS_COOKIE_NAME)
+    assert not _is_deleted(f"{TOKENS_COOKIE_NAME}_1")
 
 
 def test_callback_missing_origin_redirects(monkeypatch: pytest.MonkeyPatch) -> None:

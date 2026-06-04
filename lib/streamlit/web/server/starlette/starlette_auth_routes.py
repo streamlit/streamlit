@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
     build_logout_url,
-    clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
     get_cookie_with_chunks,
@@ -260,23 +259,6 @@ def _delete_cookie_at_current_and_legacy_paths(
         response.delete_cookie(cookie_name, path="/")
 
 
-def _delete_orphaned_chunk_cookies(
-    response: Response, request: Request, cookie_name: str
-) -> None:
-    """Delete chunk cookies (``{cookie_name}_1``, ``{cookie_name}_2``, ...) by name.
-
-    ``clear_cookie_and_chunks`` only discovers chunk cookies by decoding the main
-    cookie to read its chunk count. When the main cookie is present but invalid
-    (for example signed with a rotated secret), it cannot be decoded, so its
-    chunk siblings would otherwise be orphaned in the browser. This scans the raw
-    request cookies and deletes anything matching the chunk-name pattern.
-    """
-    chunk_prefix = f"{cookie_name}_"
-    for name in request.cookies:
-        if name.startswith(chunk_prefix) and name[len(chunk_prefix) :].isdigit():
-            _delete_cookie_at_current_and_legacy_paths(response, name)
-
-
 def _delete_legacy_root_auth_cookies(response: Response) -> None:
     """Delete legacy root-path auth cookies when auth is scoped to a base path."""
     if _get_cookie_path() == "/":
@@ -291,26 +273,24 @@ def _delete_legacy_root_auth_cookies(response: Response) -> None:
 def _clear_single_auth_cookie_and_chunks(
     response: Response, request: Request, cookie_name: str
 ) -> None:
-    """Clear an auth cookie, including any split cookie chunks."""
+    """Clear an auth cookie, including any split cookie chunks.
 
-    def get_single_cookie(cookie_name: str) -> bytes | None:
-        return _get_signed_cookie_from_request(request, cookie_name)
+    A large cookie is split into a main cookie plus ``{cookie_name}_1``,
+    ``{cookie_name}_2``, ... siblings. We discover the chunk siblings from the
+    request cookies rather than by decoding the main cookie, so they are cleared
+    even when the main cookie is invalid (e.g. signed with a rotated secret) and
+    can no longer be decoded to read its chunk count.
+    """
+    _delete_cookie_at_current_and_legacy_paths(response, cookie_name)
 
-    def clear_single_cookie(cookie_name: str) -> None:
-        _delete_cookie_at_current_and_legacy_paths(response, cookie_name)
-
-    clear_cookie_and_chunks(
-        get_single_cookie,
-        clear_single_cookie,
-        cookie_name,
-    )
-
-    # clear_cookie_and_chunks discovers chunk cookies by reading the chunk count
-    # from the decoded main cookie. When the main cookie is present but invalid
-    # (e.g. signed with a rotated secret), it cannot be decoded, so clear any
-    # chunk siblings by name to avoid orphaning them in the browser.
-    if _is_auth_cookie_present_but_invalid(request, cookie_name):
-        _delete_orphaned_chunk_cookies(response, request, cookie_name)
+    # The `.isdigit()` check matches only numeric chunk siblings, so clearing
+    # `_streamlit_user` does not accidentally delete the separate
+    # `_streamlit_user_tokens` cookie (or its `_streamlit_user_tokens_<n>`
+    # chunks), even though the latter shares the `_streamlit_user_` prefix.
+    chunk_prefix = f"{cookie_name}_"
+    for name in request.cookies:
+        if name.startswith(chunk_prefix) and name[len(chunk_prefix) :].isdigit():
+            _delete_cookie_at_current_and_legacy_paths(response, name)
 
 
 def _clear_auth_cookie(response: Response, request: Request) -> None:
