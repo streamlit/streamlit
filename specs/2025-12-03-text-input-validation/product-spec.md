@@ -289,7 +289,10 @@ This validation pattern can be extended to other input widgets:
 - `st.number_input`: Callable validation for custom numeric constraints
 - `st.date_input`: Callable validation for date range/availability checks
 - `st.selectbox`: Callable validation for conditional options
-- `st.chat_input`: Regex validation for chat message format
+- `st.chat_input`: Regex validation for chat message format. Note that `st.chat_input` is a
+  trigger widget (its value only exists during the rerun triggered by submission), so the
+  validation interaction model would differ from the stateful widgets above and needs separate
+  design consideration.
 
 ## Checklist
 
