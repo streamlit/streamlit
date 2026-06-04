@@ -173,11 +173,17 @@ def are_skills_installed() -> bool:
     try:
         project_root = _find_project_root()
         candidate_dirs.extend(_get_project_target_dirs(project_root))
-        candidate_dirs.extend(_get_global_target_dirs())
     except (OSError, RuntimeError):
         # RuntimeError can be raised by Path.home() when the home directory
         # cannot be determined. This is a best-effort check, so bail out.
         return False
+
+    try:
+        candidate_dirs.extend(_get_global_target_dirs())
+    except (OSError, RuntimeError):
+        # Keep any project dirs already collected above instead of discarding
+        # them; still a best-effort check, so just skip the global dirs.
+        pass
 
     for target_dir in candidate_dirs:
         skill_path = target_dir / _GLOBAL_SKILL_NAME

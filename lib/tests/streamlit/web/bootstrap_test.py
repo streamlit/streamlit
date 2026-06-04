@@ -369,6 +369,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning")
     def test_maybe_print_static_folder_warning_called_once_on_server_start(
         self, mock_maybe_print_static_folder_warning
@@ -491,6 +492,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_load_secrets(self, mock_load_secrets):
         """We should load secrets.toml on startup."""
@@ -499,6 +501,7 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
 
     @patch("streamlit.web.bootstrap.asyncio.get_running_loop", Mock())
     @patch("streamlit.web.bootstrap._maybe_print_static_folder_warning", Mock())
+    @patch("streamlit.web.bootstrap._maybe_print_skills_recommendation", Mock())
     @patch("streamlit.web.bootstrap._LOGGER.exception")
     @patch("streamlit.web.bootstrap.secrets.load_if_toml_exists")
     def test_log_secret_load_error(self, mock_load_secrets, mock_log_exception):

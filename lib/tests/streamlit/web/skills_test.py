@@ -427,6 +427,29 @@ class TestAreSkillsInstalled:
         with patch.object(skills, "_find_project_root", side_effect=error):
             assert skills.are_skills_installed() is False
 
+    def test_still_checks_project_dirs_when_global_resolution_errors(
+        self, tmp_path: Path
+    ) -> None:
+        """Uses already-collected project dirs even if global lookup fails.
+
+        Resolving the global target dirs can raise (e.g. ``Path.home()`` on an
+        unusual filesystem). The already-collected project dirs must still be
+        checked so an installed skill is detected.
+        """
+        project_dir = tmp_path / "project" / ".agents" / "skills"
+        (project_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills, "_get_project_target_dirs", return_value=[project_dir]
+            ),
+            patch.object(
+                skills, "_get_global_target_dirs", side_effect=OSError("no home")
+            ),
+        ):
+            assert skills.are_skills_installed() is True
+
 
 class TestInstallSkillSymlink:
     """Tests for _install_skill_symlink."""
