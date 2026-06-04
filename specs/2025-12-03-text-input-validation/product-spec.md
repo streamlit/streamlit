@@ -153,6 +153,10 @@ def validator(value: str) -> bool | str:
 
 1. User types in the input field (no validation yet; clears existing error state)
 2. User submits (Enter key or blur):
+   - The widget's normal blur/Enter commit is **deferred**: today `st.text_input` immediately
+     pushes the new widget value to the backend and schedules a rerun on blur/Enter, but with a
+     server-side validator this commit (and the rerun it would trigger) is held back until
+     validation succeeds.
    - Frontend sends a validation request to backend (no full rerun triggered)
    - Backend executes the callable with the current value
    - Backend returns validation result to frontend
@@ -271,8 +275,11 @@ password = st.text_input(
 ### Edge cases
 
 - **None value**: If the text input is initialized with `value=None`, resetting to `None` (empty state) is allowed and bypasses validation.
-- **Invalid regex**: If the regex pattern is invalid, a warning is logged and validation is skipped.
-  The input behaves as if no validation was specified.
+- **Invalid regex**: If the regex pattern is invalid, a visible error is surfaced in the input
+  (consistent with `st.column_config.TextColumn`, which displays an "Invalid validate regex"
+  error) and a warning is logged on the backend. Validation is not silently skipped, so
+  developers are notified of the broken pattern instead of unintentionally accepting
+  unvalidated input.
 - **Callable exception**: If the callable raises an exception, the error message is displayed to the
   user and the value is rejected. Exception is logged on the backend.
 - **Slow callable**: Loading state is shown while waiting for server response. A X-second timeout
