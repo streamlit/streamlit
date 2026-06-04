@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-import { memo, ReactElement, useCallback, useId, useState } from "react"
+import {
+  FocusEvent,
+  memo,
+  MouseEvent,
+  ReactElement,
+  useCallback,
+  useId,
+  useState,
+} from "react"
 
-import { Input as UIInput } from "baseui/input"
+import { TextField } from "react-aria-components"
 
 import { TextInput as TextInputProto } from "@streamlit/protobuf"
 
-import { getBorderColor } from "~lib/components/shared/Base/styled-components"
 import {
   DynamicIcon,
   isMaterialIcon,
@@ -41,7 +48,13 @@ import { convertRemToPx } from "~lib/theme/utils"
 import { isInForm, labelVisibilityProtoValueToEnum } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import { StyledTextInput } from "./styled-components"
+import {
+  StyledInputElement,
+  StyledInputRoot,
+  StyledPasswordToggle,
+  StyledStartEnhancer,
+  StyledTextInput,
+} from "./styled-components"
 
 export interface Props {
   disabled: boolean
@@ -70,6 +83,9 @@ function TextInput({
    * True if the user-specified state.value has not yet been synced to the WidgetStateManager.
    */
   const [dirty, setDirty] = useState(false)
+
+  /** Controls visibility of the password plain-text toggle. */
+  const [showPassword, setShowPassword] = useState(false)
 
   const onFormCleared = useCallback(() => {
     setUiValue(element.default ?? null)
@@ -112,6 +128,8 @@ function TextInput({
   const id = useId()
   const { placeholder, formId, icon, maxChars } = element
 
+  const isPassword = element.type === TextInputProto.Type.PASSWORD
+
   const commitWidgetValue = useCallback((): void => {
     setDirty(false)
     setValueWithSource({ value: uiValue, fromUi: true })
@@ -122,19 +140,31 @@ function TextInput({
     ? widgetMgr.allowFormEnterToSubmit(formId)
     : dirty
 
-  // Hide input instructions for small widget sizes.
   const shouldShowInstructions =
     focused && width > convertRemToPx(theme.breakpoints.hideWidgetDetails)
 
-  const onBlur = useCallback((): void => {
-    if (dirty) {
-      commitWidgetValue()
-    }
-    setFocused(false)
-  }, [dirty, commitWidgetValue])
-
-  const onFocus = useCallback((): void => {
+  const handleFocus = useCallback((): void => {
     setFocused(true)
+  }, [])
+
+  const handleBlur = useCallback(
+    (e: FocusEvent<HTMLInputElement>): void => {
+      // When keyboard Tab moves focus to the password toggle, focus stays
+      // within the widget — don't commit yet, the user is still composing.
+      if (elementRef.current?.contains(e.relatedTarget)) {
+        setFocused(false)
+        return
+      }
+      if (dirty) {
+        commitWidgetValue()
+      }
+      setFocused(false)
+    },
+    [dirty, commitWidgetValue, elementRef]
+  )
+
+  const handleToggleShowPassword = useCallback((): void => {
+    setShowPassword(prev => !prev)
   }, [])
 
   const onChange = useOnInputChange({
@@ -145,7 +175,7 @@ function TextInput({
     setValueWithSource,
   })
 
-  const onKeyPress = useSubmitFormViaEnterKey(
+  const onKeyDown = useSubmitFormViaEnterKey(
     formId,
     commitWidgetValue,
     dirty,
@@ -171,84 +201,54 @@ function TextInput({
           <WidgetLabelHelpIcon content={element.help} label={element.label} />
         )}
       </WidgetLabel>
-      <UIInput
-        value={uiValue ?? ""}
-        placeholder={placeholder}
-        onBlur={onBlur}
-        onFocus={onFocus}
-        onChange={onChange}
-        onKeyPress={onKeyPress}
-        aria-label={element.label}
-        disabled={disabled}
-        id={id}
-        type={getTypeString(element)}
-        autoComplete={element.autocomplete}
-        startEnhancer={
-          icon && (
-            <DynamicIcon
-              data-testid="stTextInputIcon"
-              iconValue={icon}
-              size="base"
-            />
-          )
-        }
-        overrides={{
-          Input: {
-            style: {
-              fontWeight: theme.fontWeights.normal,
-              // Issue: https://github.com/streamlit/streamlit/issues/2495
-              // The input won't shrink in Firefox,
-              // unless the line below is provided.
-              // See https://stackoverflow.com/a/33811151
-              minWidth: 0,
-              lineHeight: theme.lineHeights.inputWidget,
-              // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-              paddingRight: theme.spacing.sm,
-              paddingLeft: theme.spacing.md,
-              paddingBottom: theme.spacing.sm,
-              paddingTop: theme.spacing.sm,
-              "::placeholder": {
-                color: theme.colors.fadedText60,
-              },
-            },
-          },
-          Root: {
-            props: {
-              "data-testid": "stTextInputRootElement",
-            },
-            style: ({ $isFocused }: { $isFocused: boolean }) => {
-              const borderColor = getBorderColor(theme.colors, $isFocused)
-              return {
-                height: theme.sizes.minElementHeight,
-                // Baseweb requires long-hand props, short-hand leads to weird bugs & warnings.
-                borderLeftWidth: theme.sizes.borderWidth,
-                borderRightWidth: theme.sizes.borderWidth,
-                borderTopWidth: theme.sizes.borderWidth,
-                borderBottomWidth: theme.sizes.borderWidth,
-
-                borderTopColor: borderColor,
-                borderRightColor: borderColor,
-                borderBottomColor: borderColor,
-                borderLeftColor: borderColor,
-
-                paddingLeft: icon ? theme.spacing.sm : 0,
-              }
-            },
-          },
-          StartEnhancer: {
-            style: {
-              paddingLeft: 0,
-              paddingRight: 0,
-              // Keeps emoji icons from being cut off on the right
-              minWidth: theme.iconSizes.base,
-              // Material icons color changed as inactionable
-              color: isMaterialIcon(icon)
-                ? theme.colors.fadedText60
-                : "inherit",
-            },
-          },
-        }}
-      />
+      <TextField isDisabled={disabled}>
+        <StyledInputRoot
+          data-testid="stTextInputRootElement"
+          $isFocused={focused}
+          $hasIcon={!!icon}
+        >
+          {icon && (
+            <StyledStartEnhancer $isMaterialIcon={isMaterialIcon(icon)}>
+              <DynamicIcon
+                data-testid="stTextInputIcon"
+                iconValue={icon}
+                size="base"
+              />
+            </StyledStartEnhancer>
+          )}
+          <StyledInputElement
+            id={id}
+            aria-label={element.label}
+            value={uiValue ?? ""}
+            placeholder={placeholder}
+            type={showPassword ? "text" : getTypeString(element)}
+            autoComplete={element.autocomplete}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+          />
+          {isPassword && (
+            <StyledPasswordToggle
+              type="button"
+              onMouseDown={preventFocusLoss}
+              onClick={handleToggleShowPassword}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              aria-pressed={showPassword}
+              disabled={disabled}
+            >
+              <DynamicIcon
+                iconValue={
+                  showPassword
+                    ? ":material/visibility_off:"
+                    : ":material/visibility:"
+                }
+                size="base"
+              />
+            </StyledPasswordToggle>
+          )}
+        </StyledInputRoot>
+      </TextField>
       {shouldShowInstructions && (
         <InputInstructions
           dirty={dirty}
@@ -293,6 +293,13 @@ function updateWidgetMgrState(
 
 function getTypeString(element: TextInputProto): string {
   return element.type === TextInputProto.Type.PASSWORD ? "password" : "text"
+}
+
+// Prevents the toggle button from stealing focus from the input on mousedown,
+// avoiding a premature dirty-value commit via handleBlur. Extracted at module
+// level so the reference is stable across renders.
+function preventFocusLoss(e: MouseEvent): void {
+  e.preventDefault()
 }
 
 export default memo(TextInput)
