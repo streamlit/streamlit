@@ -707,6 +707,7 @@ def _dispatch_parallel_fragment(
 
     coordinator.submit(
         _run_parallel_fragment,
+        ctx,
         fragment_id,
         wrapped_fragment,
         dg_stack_with_container,

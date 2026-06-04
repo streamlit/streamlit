@@ -30,6 +30,7 @@ from typing import (
 
 from typing_extensions import Unpack
 
+from streamlit import config
 from streamlit.errors import (
     NoSessionContext,
 )
@@ -50,7 +51,6 @@ if TYPE_CHECKING:
     from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
-    from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
     from streamlit.runtime.scriptrunner_utils.script_requests import ScriptRequests
     from streamlit.runtime.state import SafeSessionState
     from streamlit.runtime.uploaded_file_manager import UploadedFileManager
@@ -274,11 +274,6 @@ class ScriptRunContext:
         ThreadState.initialize(
             active_script_hash=self.pages_manager.main_script_hash,
         )
-        # Deferred to avoid circular import: parallel_coordinator imports
-        # ScriptRunContext and get_script_run_ctx from this module.
-        from streamlit import config
-        from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
-
         self.parallel_coordinator = ParallelFragmentCoordinator(
             yield_check=yield_check,
             max_workers=config.get_option("runner.parallelMaxWorkers"),
@@ -477,3 +472,8 @@ def enqueue_message(msg: ForwardMsg) -> None:
         msg.delta.fragment_id = ts.fragment_id
 
     ctx.enqueue(msg)
+
+
+from streamlit.runtime.parallel_coordinator import (  # noqa: E402
+    ParallelFragmentCoordinator,
+)
