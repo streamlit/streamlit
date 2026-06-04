@@ -366,6 +366,68 @@ class TestGetGlobalTargetDirs:
         assert (home / ".claude" / "skills" in result) == expected_in_result
 
 
+class TestAreSkillsInstalled:
+    """Tests for are_skills_installed."""
+
+    def test_returns_false_when_not_installed(self, tmp_path: Path) -> None:
+        """Returns False when no skill is found in any target directory."""
+        project_dir = tmp_path / "project" / ".agents" / "skills"
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills, "_get_project_target_dirs", return_value=[project_dir]
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+        ):
+            assert skills.are_skills_installed() is False
+
+    def test_returns_true_when_installed_in_project(self, tmp_path: Path) -> None:
+        """Returns True when the bundled skill exists in a project target dir."""
+        project_dir = tmp_path / "project" / ".agents" / "skills"
+        (project_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills, "_get_project_target_dirs", return_value=[project_dir]
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+        ):
+            assert skills.are_skills_installed() is True
+
+    def test_returns_true_when_installed_as_symlink(self, tmp_path: Path) -> None:
+        """Returns True when the bundled skill is a symlink (project install)."""
+        _skip_if_symlinks_not_supported(tmp_path)
+
+        source = tmp_path / "source-skill"
+        source.mkdir()
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+        global_dir.mkdir(parents=True)
+        (global_dir / skills._GLOBAL_SKILL_NAME).symlink_to(source)
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(skills, "_get_project_target_dirs", return_value=[]),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+        ):
+            assert skills.are_skills_installed() is True
+
+    @pytest.mark.parametrize("error", [OSError("boom"), RuntimeError("no home")])
+    def test_returns_false_when_target_resolution_errors(
+        self, error: Exception
+    ) -> None:
+        """Returns False if target directories cannot be determined.
+
+        ``RuntimeError`` is included because ``Path.home()`` raises it when the
+        home directory cannot be resolved.
+        """
+        with patch.object(skills, "_find_project_root", side_effect=error):
+            assert skills.are_skills_installed() is False
+
+
 class TestInstallSkillSymlink:
     """Tests for _install_skill_symlink."""
 

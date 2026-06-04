@@ -415,6 +415,53 @@ class BootstrapPrintTest(IsolatedAsyncioTestCase):
             )
             mock_set_option.assert_called_once_with("server.enableStaticServing", False)
 
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=False))
+    def test_skills_recommendation_shown_when_not_installed(self):
+        """Recommend installing skills when they are not yet installed."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        out = sys.stdout.getvalue()
+        assert "Help agents write better Streamlit apps?" in out
+        assert "streamlit skills" in out
+        assert "Install the official Streamlit skills" in out
+
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=True))
+    def test_skills_recommendation_hidden_when_installed(self):
+        """Don't recommend installing skills when they are already installed."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+
+    @patch("streamlit.web.skills.are_skills_installed", Mock(return_value=False))
+    def test_skills_recommendation_hidden_in_headless_mode(self):
+        """Don't recommend installing skills in headless mode."""
+        with patch_config_options(
+            {"server.headless": True, "logger.hideWelcomeMessage": False}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+
+    @patch("streamlit.web.skills.are_skills_installed")
+    def test_skills_recommendation_hidden_when_welcome_message_hidden(
+        self, mock_are_skills_installed
+    ):
+        """Don't recommend skills when the welcome message is hidden."""
+        with patch_config_options(
+            {"server.headless": False, "logger.hideWelcomeMessage": True}
+        ):
+            bootstrap._maybe_print_skills_recommendation()
+
+        assert sys.stdout.getvalue() == ""
+        # Should short-circuit before checking installation status.
+        mock_are_skills_installed.assert_not_called()
+
     @patch("streamlit.config.get_config_options")
     def test_load_config_options(self, patched_get_config_options):
         """Test that bootstrap.load_config_options parses the keys properly and
