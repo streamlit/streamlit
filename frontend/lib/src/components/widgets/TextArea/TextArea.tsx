@@ -275,10 +275,10 @@ const TextArea: FC<Props> = ({
           aria-label={element.label}
           disabled={disabled}
           id={id}
+          rows={3}
           $height={isAutoHeight ? autoExpandHeight : inputHeight}
           $maxHeight={isAutoHeight ? autoExpandMaxHeight : ""}
           $resize={isStretchHeight ? "none" : "vertical"}
-          $isAutoHeight={isAutoHeight}
         />
       </StyledTextAreaRoot>
 

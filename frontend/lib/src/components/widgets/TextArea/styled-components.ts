@@ -37,14 +37,11 @@ export const StyledTextAreaInput = styled.textarea<{
   $height: string
   $maxHeight: string
   $resize: "vertical" | "none"
-  $isAutoHeight: boolean
-}>(({ theme, $height, $maxHeight, $resize, $isAutoHeight }) => ({
+}>(({ theme, $height, $maxHeight, $resize }) => ({
   width: "100%",
   height: $height,
   maxHeight: $maxHeight,
-  minHeight: $isAutoHeight
-    ? theme.sizes.minTextAreaAutoHeight
-    : theme.sizes.largestElementHeight,
+  minHeight: theme.sizes.largestElementHeight,
   resize: $resize,
   fontWeight: theme.fontWeights.normal,
   lineHeight: theme.lineHeights.inputWidget,

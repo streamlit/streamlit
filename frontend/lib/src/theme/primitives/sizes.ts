@@ -44,9 +44,6 @@ export const sizes = {
   tagMarginInsideBorder: `calc(${spacing.xs} - ${borderWidth})`,
   // min height for larger input widgets like text area and audio input
   largestElementHeight: "4.25rem",
-  // min height for text area in height="content" (auto-expand) mode:
-  // ~3 lines × fontSizes.sm × lineHeights.inputWidget + 2 × spacing.md ≈ 84px
-  minTextAreaAutoHeight: "5.25rem",
   smallLogoHeight: "1.25rem",
   defaultLogoHeight: "1.5rem",
   largeLogoHeight: "2rem",
