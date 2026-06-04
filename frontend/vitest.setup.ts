@@ -139,6 +139,30 @@ Element.prototype.animate = vi
   .fn()
   .mockImplementation(() => ({ addEventListener: vi.fn(), cancel: vi.fn() }))
 
+// JSDOM does not implement the Web Animations API. RAC's SelectionIndicator uses
+// SharedElementTransition which calls getAnimations() in an async cleanup callback.
+// Returning [] prevents TypeError crashes in tests; the SelectionIndicator itself is
+// also mocked as a no-op in Tabs.test.tsx to avoid async act() warnings.
+Element.prototype.getAnimations = vi.fn().mockReturnValue([])
+
+// scrollIntoView is not implemented in JSDOM
+Element.prototype.scrollIntoView = vi.fn()
+
+// matchMedia is not implemented in JSDOM
+Object.defineProperty(window, "matchMedia", {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
 class ResizeObserverMock {
   public callback: (
     entries: ResizeObserverEntry[],

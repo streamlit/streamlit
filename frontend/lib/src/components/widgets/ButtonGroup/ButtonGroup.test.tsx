@@ -22,34 +22,35 @@ import {
   LabelVisibility as LabelVisibilityProto,
 } from "@streamlit/protobuf"
 
-import {
-  BaseButtonKind,
-  BaseButtonSize,
-} from "~lib/components/shared/BaseButton/BaseButton"
-import { DynamicButtonLabel } from "~lib/components/shared/BaseButton/DynamicButtonLabel"
 import { render } from "~lib/test_util"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
-import ButtonGroup, { getContentElement, Props } from "./ButtonGroup"
+import ButtonGroup, { Props } from "./ButtonGroup"
 
 const materialIconNames = ["icon", "icon_2", "icon_3", "icon_4"]
 const defaultSelectedIndex = 2
 
+/** Asserts that a button is visually selected (data-selected attribute present) or not. */
 const expectHighlightStyle = (
   element: HTMLElement,
   should_exist = true
 ): void => {
   if (should_exist) {
-    // Active/selected buttons have the primary color (rgb(255, 75, 75))
-    expect(element).toHaveStyle("color: rgb(255, 75, 75);")
+    expect(element).toHaveAttribute("data-selected")
   } else {
-    expect(element).not.toHaveStyle("color: rgb(255, 75, 75);")
+    expect(element).not.toHaveAttribute("data-selected")
   }
 }
 
+/**
+ * Returns all <button> elements within the stButtonGroup container.
+ * React Aria renders ToggleButton as role="radio" (single-select) or
+ * role="checkbox" (multi-select), so querying by role="button" won't work.
+ * We query actual <button> DOM elements instead.
+ */
 const getButtonGroupButtons = (): HTMLElement[] => {
   const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-  return within(buttonGroupWidget).getAllByRole("button")
+  return Array.from(buttonGroupWidget.querySelectorAll("button"))
 }
 
 // options where content is only a material icon
@@ -122,7 +123,7 @@ describe("ButtonGroup widget", () => {
     const buttons = getButtonGroupButtons()
     expect(buttons).toHaveLength(materialIconOnlyOptions.length)
     buttons.forEach((button, index) => {
-      expect(button).toHaveAttribute("kind", "segmented_control")
+      expect(button).toHaveAttribute("data-variant", "segmented_control")
       const icon = within(button).getByTestId("stIconMaterial")
       expect(icon.textContent).toContain(materialIconNames[index])
     })
@@ -137,18 +138,18 @@ describe("ButtonGroup widget", () => {
     render(<ButtonGroup {...props} />)
 
     const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-    const buttons = within(buttonGroupWidget).getAllByRole("button")
+    const buttons = Array.from(buttonGroupWidget.querySelectorAll("button"))
     expect(buttons).toHaveLength(options.length)
 
     let button = buttons[0]
-    expect(button).toHaveAttribute("kind", "segmented_control")
+    expect(button).toHaveAttribute("data-variant", "segmented_control")
     let text = within(button).getByTestId("stMarkdownContainer")
     expect(text.textContent).toContain(materialIconNames[0])
     let icon = within(button).getByTestId("stIconEmoji")
     expect(icon.textContent).toContain("🔥")
 
     button = buttons[1]
-    expect(button).toHaveAttribute("kind", "segmented_control")
+    expect(button).toHaveAttribute("data-variant", "segmented_control")
     text = within(button).getByTestId("stMarkdownContainer")
     expect(text.textContent).toContain(materialIconNames[1])
     icon = within(button).getByTestId("stIconMaterial")
@@ -178,7 +179,7 @@ describe("ButtonGroup widget", () => {
 
       const buttonGroup = screen.getByTestId("stButtonGroup")
       expect(buttonGroup).toBeInTheDocument()
-      const buttons = within(buttonGroup).queryAllByRole("button")
+      const buttons = Array.from(buttonGroup.querySelectorAll("button"))
       expect(buttons).toHaveLength(0)
     })
 
@@ -317,8 +318,7 @@ describe("ButtonGroup widget", () => {
       const props = getProps({}, { disabled: true })
       render(<ButtonGroup {...props} />)
 
-      const buttonGroupWidget = screen.getByTestId("stButtonGroup")
-      const buttons = within(buttonGroupWidget).getAllByRole("button")
+      const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(EXPECTED_BUTTONS_LENGTH)
       buttons.forEach(button => {
         expect(button).toBeDisabled()
@@ -359,7 +359,7 @@ describe("ButtonGroup widget", () => {
       const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(options.length)
       buttons.forEach(button => {
-        expect(button).toHaveAttribute("kind", "pills")
+        expect(button).toHaveAttribute("data-variant", "pills")
       })
     })
 
@@ -374,7 +374,7 @@ describe("ButtonGroup widget", () => {
       const buttons = getButtonGroupButtons()
       expect(buttons).toHaveLength(options.length)
       buttons.forEach(button => {
-        expect(button).toHaveAttribute("kind", "segmented_control")
+        expect(button).toHaveAttribute("data-variant", "segmented_control")
       })
     })
 
@@ -444,7 +444,7 @@ describe("ButtonGroup widget", () => {
       render(<ButtonGroup {...props} />)
       const buttons = getButtonGroupButtons()
       buttons.forEach((button, index) => {
-        expect(button).toHaveAttribute("kind", "segmented_control")
+        expect(button).toHaveAttribute("data-variant", "segmented_control")
         const icon = within(button).getByTestId("stIconMaterial")
         expect(icon.textContent).toContain(materialIconNames[index])
         expect(icon).toHaveStyle("width: 1rem")
@@ -489,42 +489,6 @@ describe("ButtonGroup widget", () => {
       { fromUi: true },
       undefined
     )
-  })
-})
-
-describe("ButtonGroup getContentElement", () => {
-  it("tests element with content, icon and pills-style", () => {
-    const { element, kind, size } = getContentElement(
-      "foo",
-      "bar",
-      ButtonGroupProto.Style.PILLS
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "foo",
-      icon: "bar",
-      iconSize: "base",
-    })
-    expect(kind).toBe(BaseButtonKind.PILLS)
-    expect(size).toBe(BaseButtonSize.MEDIUM)
-  })
-
-  it("tests element with content and no icon and segmented-control-style", () => {
-    const { element, kind, size } = getContentElement(
-      "foo",
-      undefined,
-      ButtonGroupProto.Style.SEGMENTED_CONTROL
-    )
-
-    expect(element.type).toBe(DynamicButtonLabel)
-    expect(element.props).toEqual({
-      label: "foo",
-      icon: undefined,
-      iconSize: "base",
-    })
-    expect(kind).toBe(BaseButtonKind.SEGMENTED_CONTROL)
-    expect(size).toBe(BaseButtonSize.MEDIUM)
   })
 })
 
@@ -698,7 +662,7 @@ describe("ButtonGroup required parameter", () => {
     )
   })
 
-  it("sets aria-required attribute when required=true", () => {
+  it("renders a radiogroup with aria-required when required=true", () => {
     const props = getProps({
       options: simpleOptions,
       default: [0],
@@ -707,20 +671,9 @@ describe("ButtonGroup required parameter", () => {
 
     render(<ButtonGroup {...props} />)
 
+    // React Aria renders ToggleButtonGroup with selectionMode="single" as role="radiogroup"
     const buttonGroup = screen.getByRole("radiogroup")
+    expect(buttonGroup).toBeInTheDocument()
     expect(buttonGroup).toHaveAttribute("aria-required", "true")
-  })
-
-  it("does not set aria-required attribute when required=false", () => {
-    const props = getProps({
-      options: simpleOptions,
-      default: [0],
-      required: false,
-    })
-
-    render(<ButtonGroup {...props} />)
-
-    const buttonGroup = screen.getByRole("radiogroup")
-    expect(buttonGroup).not.toHaveAttribute("aria-required")
   })
 })

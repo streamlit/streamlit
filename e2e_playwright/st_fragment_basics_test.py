@@ -147,7 +147,7 @@ def test_number_input_in_fragment(app: Page):
 def test_radio_in_fragment(app: Page):
     old_text_in_fragment, old_text_outside_fragment = get_uuids(app)
 
-    radio = app.get_by_test_id("stRadio").locator('label[data-baseweb="radio"]').nth(1)
+    radio = app.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1)
     radio.scroll_into_view_if_needed()
     radio.click(force=True)
     wait_for_app_run(app)
