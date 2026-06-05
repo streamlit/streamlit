@@ -204,7 +204,7 @@ class ScriptRunContext:
     on_script_error: OnScriptErrorHandler | None = None
 
     # Hashes of messages that are cached in the client browser:
-    cached_message_hashes: set[str] = field(default_factory=set)
+    cached_message_hashes: frozenset[str] = field(default_factory=frozenset)
     context_info: ContextInfo | None = None
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
@@ -251,7 +251,7 @@ class ScriptRunContext:
         query_string: str = "",
         page_script_hash: str = "",
         fragment_ids_this_run: list[str] | None = None,
-        cached_message_hashes: set[str] | None = None,
+        cached_message_hashes: frozenset[str] | None = None,
         context_info: ContextInfo | None = None,
         # Checked by fragment workers to cease execution.
         yield_check: Callable[[], None] = lambda: None,
@@ -290,7 +290,7 @@ class ScriptRunContext:
         self.fragment_ids_this_run = fragment_ids_this_run
         self.new_fragment_ids.clear()
         self.has_dialog_opened = False
-        self.cached_message_hashes = cached_message_hashes or set()
+        self.cached_message_hashes = frozenset(cached_message_hashes or ())
 
         in_cached_function.set(False)
 

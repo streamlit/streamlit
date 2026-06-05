@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 def _create_script_run_context(
     fake_enqueue: Callable[[ForwardMsg], None],
     pages_manager: PagesManager | None = None,
-    cached_message_hashes: set[str] | None = None,
+    cached_message_hashes: frozenset[str] | None = None,
 ):
     return ScriptRunContext(
         session_id="TestSessionID",
@@ -58,7 +58,7 @@ def _create_script_run_context(
         user_info={"email": "test@example.com"},
         fragment_storage=MemoryFragmentStorage(),
         pages_manager=pages_manager or PagesManager(""),
-        cached_message_hashes=cached_message_hashes or set(),
+        cached_message_hashes=cached_message_hashes or frozenset(),
     )
 
 
@@ -186,7 +186,7 @@ class ScriptRunContextTest(unittest.TestCase):
             populate_hash_if_needed(cacheable_msg)
             assert bool(cacheable_msg.hash)
             ctx = _create_script_run_context(
-                fake_enqueue, cached_message_hashes={cacheable_msg.hash}
+                fake_enqueue, cached_message_hashes=frozenset({cacheable_msg.hash})
             )
             add_script_run_ctx(ctx=ctx)
             enqueue_message(cacheable_msg)
