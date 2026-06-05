@@ -120,6 +120,17 @@ This feature can expose PII (e.g. email) on an HTTP endpoint, so:
 - Collection is **best-effort**: a failure while recording per-user metrics must never
   break app execution or deny app access.
 
+**Endpoint access control is a prerequisite, not provided by this feature.** The existing
+`/_stcore/metrics` endpoint has no built-in authentication, authorization, or IP allow-list
+at the Streamlit layer — anything reachable on the server port can scrape it. Today that
+exposes only anonymous aggregate counters; once `metricsUserAttributes` is set, the same
+unauthenticated endpoint also serves the configured PII. Enabling this option is therefore
+**only safe when the host restricts access to the metrics endpoint at the network layer**
+(the model SiS already uses: the port is internal and scraped by the platform, never exposed
+to end users). This must be called out explicitly in the docs as a hard prerequisite.
+Adding authentication to the metrics route itself is a broader change tracked separately and
+is out of scope here (see Out of Scope).
+
 ### Examples
 
 **SiS host config (set by the platform, not the app author):**
@@ -148,6 +159,9 @@ curl "http://localhost:8501/_stcore/metrics?families=user_session_events"
 - **Per-widget / per-chart telemetry** — explicitly not part of this MVP.
 - **Anonymization / hashing of identity in Streamlit** — the host decides what to expose;
   hashing can be done upstream of `trustedUserHeaders` if desired.
+- **Authentication on the `/_stcore/metrics` endpoint** — the endpoint is currently
+  unauthenticated and this spec does not change that. Hosts must restrict access at the
+  network layer (see Privacy). Adding endpoint-level auth is a broader, separate effort.
 
 ## Checklist
 

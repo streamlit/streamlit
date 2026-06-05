@@ -77,6 +77,14 @@ Notes:
 - `default_val=[]` with `multiple=True` follows the existing list-option pattern (e.g.
   `server.folderWatchList`). The empty default makes the option both the on/off switch and
   the privacy allow-list.
+- Because `multiple=True` uses Click's standard multi-value handling, the env var follows
+  Click's `multiple` semantics (like `server.folderWatchList`) — not a JSON list. It is
+  **not** custom-parsed like `server.trustedUserHeaders` (which is `type_=str` + JSON).
+- Reserved label names are rejected at config-load time: `type` is used as the
+  event-type discriminator on the `user_session_events` family, so configuring it as a
+  user attribute raises a clear error (mirroring the validation `server.trustedUserHeaders`
+  does for duplicate user keys). This prevents a user attribute from silently shadowing the
+  discriminator.
 - Hidden visibility matches `server.trustedUserHeaders`, which is also experimental.
 
 ### New metric family
@@ -101,12 +109,19 @@ correctly.
 ```python
 # Per-user session event counters: {(label_tuple): {event_type: count}}.
 # label_tuple is a tuple of (attr_name, attr_value) pairs in stable order.
-self._user_event_counts: dict[tuple[tuple[str, str], ...], dict[str, int]] = (
-    defaultdict(lambda: defaultdict(int))
-)
+# Annotate as defaultdict so the auto-creation used at the lifecycle points
+# below type-checks.
+self._user_event_counts: defaultdict[
+    tuple[tuple[str, str], ...], defaultdict[str, int]
+] = defaultdict(lambda: defaultdict(int))
 # Cache identity by session id so disconnect/close attribute to the right user.
 self._session_user_labels: dict[str, tuple[tuple[str, str], ...]] = {}
 ```
+
+Both maps grow with the number of distinct users (and live sessions) seen by the process
+and are never pruned, so they are unbounded over the process lifetime. This is acceptable
+for the targeted hosting environments (see the product spec's cardinality note); a soft
+cap / eviction is a sensible near-term follow-up if OSS adoption widens.
 
 **Helper — resolve labels from `user_info` (fail-open):**
 
@@ -116,8 +131,12 @@ def _user_labels(self, user_info: UserInfoType) -> tuple[tuple[str, str], ...] |
     attrs = config.get_option("server.metricsUserAttributes")
     if not attrs:
         return None
+    # Treat only a missing/None attribute as empty. Coercing with `or ""` would
+    # turn a legitimate falsy value (e.g. False) into "", making it
+    # indistinguishable from "attribute absent".
     return tuple(
-        (name, str(user_info.get(name) or "")) for name in attrs
+        (name, "" if (value := user_info.get(name)) is None else str(value))
+        for name in attrs
     )
 ```
 
@@ -148,15 +167,30 @@ All recording is wrapped so a telemetry error cannot break the connection lifecy
 blocks with a `try/except` that logs at debug level, since `config.get_option` and dict
 operations are the only failure surfaces.
 
+`_user_labels` reads `config.get_option("server.metricsUserAttributes")` on every
+connect/reconnect/disconnect (and `get_stats` reads it per scrape). Config reads are a
+cheap dict lookup, so reading live is fine for the expected throughput and keeps the
+option toggleable at runtime (and trivially toggleable in tests). If profiling later flags
+this as hot, the resolved attribute list can be cached on the instance and invalidated when
+config reloads — deferred until there's evidence it matters.
+
 **Exposing the family** — extend `stats_families` and `get_stats`:
 
 ```python
 @property
 def stats_families(self) -> Sequence[str]:
-    families = [SESSION_EVENTS_FAMILY, SESSION_DURATION_FAMILY, ACTIVE_SESSIONS_FAMILY]
-    if config.get_option("server.metricsUserAttributes"):
-        families.append(USER_SESSION_EVENTS_FAMILY)
-    return tuple(families)
+    # Advertise the family unconditionally (do NOT gate on the config option).
+    # StatsManager.register_provider snapshots stats_families once at
+    # registration; gating here would drop the family from the snapshot when
+    # the option is empty at startup, and it would then never be routed to this
+    # provider even after the option is enabled. Emission is gated in get_stats
+    # instead.
+    return (
+        SESSION_EVENTS_FAMILY,
+        SESSION_DURATION_FAMILY,
+        ACTIVE_SESSIONS_FAMILY,
+        USER_SESSION_EVENTS_FAMILY,
+    )
 
 # In get_stats, when USER_SESSION_EVENTS_FAMILY is requested:
 if config.get_option("server.metricsUserAttributes") and (
@@ -171,7 +205,12 @@ if config.get_option("server.metricsUserAttributes") and (
         CounterStat(
             family_name=USER_SESSION_EVENTS_FAMILY,
             value=count,
-            labels={"type": event_type, **dict(labels)},
+            # `type` is the event-type discriminator and must win over any
+            # user attribute. Unpack user labels first, then set `type`, so a
+            # configured attribute literally named "type" can't clobber it.
+            # Reserved label names are also rejected at config-load time (see
+            # the config option notes), so this is belt-and-suspenders.
+            labels={**dict(labels), "type": event_type},
             help="Total count of session events by type and user.",
         )
         for labels, events in snapshot.items()
@@ -179,10 +218,16 @@ if config.get_option("server.metricsUserAttributes") and (
     ]
 ```
 
-`stats_families` advertising the family conditionally means `StatsManager.register_provider`
-must run after config is loaded. It already does — registration happens in `Runtime.__init__`
-(`lib/streamlit/runtime/runtime.py`), well after config parsing. Reading the option live in
-`stats_families`/`get_stats` also lets tests toggle it without re-registering.
+`StatsManager.register_provider` snapshots `stats_families` once at registration and maps
+each advertised family to this provider; it never re-reads the property afterwards. That is
+exactly why the family is advertised **unconditionally** above: gating it on the config
+option would omit `user_session_events` from the snapshot whenever the option is empty at
+startup, and `?families=user_session_events` / full scrapes would then never reach this
+provider even after the option is later enabled. Emission is instead gated inside
+`get_stats`: when the option is empty, the family is simply absent from the returned mapping
+(or an empty list), and `_stats_to_text` / `_stats_to_proto` skip empty families — so the
+endpoint output stays byte-for-byte unchanged while disabled, with no dependency on config
+load ordering relative to registration.
 
 ### Endpoint
 
@@ -210,7 +255,9 @@ enabled, so adoption is observable. This is a one-time/coarse signal, not per-ev
   `to_metric_str`).
 - **Server (`starlette_app_test.py`)**: end-to-end GET of `/_stcore/metrics` with the
   option set returns the new family in both text and protobuf.
-- **Config test**: option parses from TOML, env var (JSON list), and CLI.
+- **Config test**: option parses from TOML, from the env var via Click's `multiple`
+  semantics (whitespace-separated, matching `server.folderWatchList` — not a JSON list),
+  and from repeated CLI flags. A reserved attribute name (`type`) raises at config load.
 
 ## Alternatives Considered
 
