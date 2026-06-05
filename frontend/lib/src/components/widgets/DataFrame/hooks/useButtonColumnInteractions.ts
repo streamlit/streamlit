@@ -31,7 +31,10 @@ import {
   getButtonCellClickTarget,
   isButtonCell,
 } from "~lib/components/widgets/DataFrame/columns/cells/ButtonCell"
-import { COLUMN_POSITION_PREFIX } from "~lib/components/widgets/DataFrame/hooks/useColumnLoader"
+import {
+  COLUMN_POSITION_PREFIX,
+  INDEX_IDENTIFIER,
+} from "~lib/components/widgets/DataFrame/hooks/useColumnLoader"
 import type { WidgetStateManager } from "~lib/WidgetStateManager"
 
 interface ButtonActionMenuState {
@@ -54,6 +57,8 @@ interface UseButtonColumnInteractionsParams {
   getCellContent: DataEditorProps["getCellContent"]
   getOriginalIndex: (index: number) => number
   theme: ButtonInteractionTheme
+  /** Whether the dataframe is disabled. Disables button clicks and menus. */
+  disabled: boolean
 }
 
 interface UseButtonColumnInteractionsReturn {
@@ -67,15 +72,16 @@ function getButtonWidgetKey(
   column: BaseColumn,
   buttonClickWidgets: DataframeProto["buttonClickWidgets"]
 ): string | undefined {
-  const positionalKey = `${COLUMN_POSITION_PREFIX}${column.indexNumber}`
-  const matchedKey =
-    buttonClickWidgets[column.name] !== undefined ? column.name : positionalKey
+  // Resolve the widget key the same way the backend registers button-column
+  // widgets: index columns are stored under the `_index` identifier, while data
+  // columns use their name or positional key (`_pos:{index}`).
+  const candidateKeys = [
+    ...(column.isIndex ? [INDEX_IDENTIFIER] : []),
+    column.name,
+    `${COLUMN_POSITION_PREFIX}${column.indexNumber}`,
+  ]
 
-  if (!buttonClickWidgets[matchedKey]) {
-    return undefined
-  }
-
-  return matchedKey
+  return candidateKeys.find(key => Boolean(buttonClickWidgets[key]))
 }
 
 /**
@@ -93,6 +99,7 @@ function useButtonColumnInteractions({
   getCellContent,
   getOriginalIndex,
   theme,
+  disabled,
 }: UseButtonColumnInteractionsParams): UseButtonColumnInteractionsReturn {
   const [buttonActionMenu, setButtonActionMenu] =
     useState<ButtonActionMenuState>()
@@ -126,7 +133,7 @@ function useButtonColumnInteractions({
     (columnName: string, rowIndex: number, label: string): void => {
       clearButtonActionMenu()
 
-      if (!widgetMgr) return
+      if (disabled || !widgetMgr) return
 
       const widgetId = element.buttonClickWidgets[columnName]
       if (!widgetId) return
@@ -141,6 +148,7 @@ function useButtonColumnInteractions({
     },
     [
       clearButtonActionMenu,
+      disabled,
       widgetMgr,
       element.buttonClickWidgets,
       element.formId,
@@ -198,6 +206,11 @@ function useButtonColumnInteractions({
 
   const onCellClicked = useCallback(
     ([col, row]: Item, event: CellClickedEventArgs): void => {
+      if (disabled) {
+        clearButtonActionMenuForIgnoredClick()
+        return
+      }
+
       const column = columns[col]
       if (column === undefined) {
         clearButtonActionMenuForIgnoredClick()
@@ -247,6 +260,7 @@ function useButtonColumnInteractions({
     [
       clearButtonActionMenuForIgnoredClick,
       columns,
+      disabled,
       element.buttonClickWidgets,
       getCellContent,
       getOriginalIndex,

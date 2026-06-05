@@ -134,6 +134,7 @@ describe("useButtonColumnInteractions", () => {
         getCellContent,
         getOriginalIndex,
         theme: MOCK_THEME,
+        disabled: false,
       })
     )
 
@@ -167,6 +168,7 @@ describe("useButtonColumnInteractions", () => {
         getCellContent,
         getOriginalIndex: row => row,
         theme: MOCK_THEME,
+        disabled: false,
       })
     )
 
@@ -193,6 +195,7 @@ describe("useButtonColumnInteractions", () => {
         getCellContent,
         getOriginalIndex: row => row + 10,
         theme: MOCK_THEME,
+        disabled: false,
       })
     )
 
@@ -248,6 +251,7 @@ describe("useButtonColumnInteractions", () => {
         getCellContent,
         getOriginalIndex: row => row,
         theme: MOCK_THEME,
+        disabled: false,
       })
     )
 
@@ -283,6 +287,7 @@ describe("useButtonColumnInteractions", () => {
         getCellContent,
         getOriginalIndex: row => row,
         theme: MOCK_THEME,
+        disabled: false,
       })
     )
 
@@ -319,6 +324,7 @@ describe("useButtonColumnInteractions", () => {
         getCellContent: () => nonButtonCell,
         getOriginalIndex: row => row,
         theme: MOCK_THEME,
+        disabled: false,
       })
     )
 
@@ -327,5 +333,95 @@ describe("useButtonColumnInteractions", () => {
     act(() => result.current.onCellClicked([0, 0], event))
 
     expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it("resolves index button widget keys via the _index identifier", () => {
+    // Index button columns are registered under the `_index` key on the
+    // backend, even though the index column itself uses its display name.
+    const column = createButtonColumn({
+      id: "_index-0",
+      name: "",
+      isIndex: true,
+    })
+    const getCellContent = vi.fn(() => column.getCell("Open"))
+    const { setStringTriggerValue, widgetMgr } = createWidgetMgr()
+
+    const { result } = renderHook(() =>
+      useButtonColumnInteractions({
+        element: createElement({ _index: "index-widget-id" }),
+        widgetMgr,
+        columns: [column],
+        getCellContent,
+        getOriginalIndex: row => row,
+        theme: MOCK_THEME,
+        disabled: false,
+      })
+    )
+
+    act(() => result.current.onCellClicked([0, 5], createCellClickedEvent()))
+
+    expect(setStringTriggerValue).toHaveBeenCalledWith(
+      { id: "index-widget-id", formId: "form-id" },
+      JSON.stringify({ row: 5, label: "Open" }),
+      { fromUi: true },
+      undefined
+    )
+  })
+
+  it("does not trigger button clicks when disabled", () => {
+    const column = createButtonColumn()
+    const getCellContent = vi.fn(() => column.getCell("Open"))
+    const { setStringTriggerValue, widgetMgr } = createWidgetMgr()
+
+    const { result } = renderHook(() =>
+      useButtonColumnInteractions({
+        element: createElement({ button_column: "widget-id" }),
+        widgetMgr,
+        columns: [column],
+        getCellContent,
+        getOriginalIndex: row => row,
+        theme: MOCK_THEME,
+        disabled: true,
+      })
+    )
+
+    const event = createCellClickedEvent()
+
+    act(() => result.current.onCellClicked([0, 0], event))
+
+    expect(setStringTriggerValue).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it("does not open the action menu when disabled", () => {
+    const column = createButtonColumn()
+    const getCellContent = vi.fn(() => column.getCell(["View", "Delete"]))
+    const { setStringTriggerValue, widgetMgr } = createWidgetMgr()
+
+    const { result } = renderHook(() =>
+      useButtonColumnInteractions({
+        element: createElement({ button_column: "widget-id" }),
+        widgetMgr,
+        columns: [column],
+        getCellContent,
+        getOriginalIndex: row => row,
+        theme: MOCK_THEME,
+        disabled: true,
+      })
+    )
+
+    act(() =>
+      result.current.onCellClicked(
+        [0, 0],
+        createCellClickedEvent({
+          bounds: { x: 100, y: 200, width: 40, height: 24 },
+          localEventX: 20,
+          localEventY: 10,
+        })
+      )
+    )
+
+    expect(result.current.buttonActionMenu).toBeUndefined()
+    expect(setStringTriggerValue).not.toHaveBeenCalled()
   })
 })

@@ -1214,6 +1214,7 @@ class TestButtonClickSerde:
             "not json",  # Invalid JSON syntax
             '"just a string"',  # Valid JSON but wrong shape (string not dict)
             '{"row": "0", "label": "x"}',  # row is string instead of int
+            '{"row": true, "label": "x"}',  # row is bool (bool is subclass of int)
             '{"row": 0}',  # Missing label
             '{"label": "x"}',  # Missing row
             "[]",  # Array instead of dict
@@ -1222,6 +1223,7 @@ class TestButtonClickSerde:
             "invalid_json",
             "json_string_not_dict",
             "row_string_not_int",
+            "row_bool_not_int",
             "missing_label",
             "missing_row",
             "array_not_dict",

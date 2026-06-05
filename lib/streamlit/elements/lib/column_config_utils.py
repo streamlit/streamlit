@@ -463,10 +463,12 @@ class ButtonClickSerde:
             return None
 
         parsed = json.loads(ui_value)
-        # Validate shape: must be a dict with "row" (int >= 0) and "label" (str)
+        # Validate shape: must be a dict with "row" (int >= 0) and "label" (str).
+        # bool is a subclass of int, so booleans are explicitly rejected for "row".
         if (
             not isinstance(parsed, dict)
             or not isinstance(parsed.get("row"), int)
+            or isinstance(parsed.get("row"), bool)
             or not isinstance(parsed.get("label"), str)
         ):
             raise StreamlitAPIException(

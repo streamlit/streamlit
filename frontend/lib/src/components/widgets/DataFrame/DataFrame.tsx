@@ -303,6 +303,7 @@ function DataFrame({
     getCellContent,
     getOriginalIndex,
     theme: gridTheme.glideTheme,
+    disabled,
   })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
