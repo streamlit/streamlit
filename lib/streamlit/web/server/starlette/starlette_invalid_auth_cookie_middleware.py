@@ -49,7 +49,6 @@ lifespan scopes are passed through without modification.
 
 from __future__ import annotations
 
-import re
 from typing import TYPE_CHECKING
 
 from streamlit.logger import get_logger
@@ -64,10 +63,6 @@ if TYPE_CHECKING:
     from starlette.types import ASGIApp, Receive, Scope, Send
 
 _LOGGER = get_logger(__name__)
-
-# Pattern used to detect chunked cookies: the base cookie value starts with
-# "chunks-<N>" when the payload was split across multiple cookies.
-_CHUNKS_RE = re.compile(r"^chunks-(\d+)$")
 
 # Auth cookies that should be verified and, if invalid, cleared.
 _AUTH_COOKIE_NAMES: tuple[str, ...] = (USER_COOKIE_NAME, TOKENS_COOKIE_NAME)
@@ -118,24 +113,8 @@ def _cookie_names_to_clear(cookies: dict[str, str]) -> list[str]:
         )
         names_to_delete.append(base_name)
 
-        # Also clear any chunk cookies that may accompany this base cookie.
-        # The base cookie value encodes the chunk count as "chunks-<N>" when
-        # the payload was split.  Even though we couldn't verify the signed
-        # value, we can still check the raw (unsigned) string for this prefix
-        # as a best-effort cleanup — worst case, we attempt to delete cookies
-        # that don't exist, which is harmless.
-        chunk_match = _CHUNKS_RE.match(raw_value)
-        if chunk_match:
-            try:
-                chunk_count = int(chunk_match.group(1))
-                for i in range(1, chunk_count + 1):
-                    names_to_delete.append(f"{base_name}_{i}")
-            except ValueError:
-                pass  # Malformed chunk count; ignore.
-
-        # Regardless of the chunk check above, also clean up any stray chunk
-        # cookies that might be present in the request (e.g. leftover from a
-        # previous split that now has fewer chunks).
+        # Clean up any chunk cookies present in the request
+        # (e.g. _streamlit_user_1, _streamlit_user_2, etc.)
         for key in cookies:
             if key.startswith(f"{base_name}_") and key not in names_to_delete:
                 names_to_delete.append(key)

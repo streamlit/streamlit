@@ -23,8 +23,6 @@ the middleware, the app is stuck on the loading screen until the cookies expire.
 
 from __future__ import annotations
 
-from http.cookies import SimpleCookie
-from typing import TYPE_CHECKING
 from unittest.mock import patch
 
 import pytest
@@ -42,9 +40,6 @@ from streamlit.web.server.starlette.starlette_server_config import (
     TOKENS_COOKIE_NAME,
     USER_COOKIE_NAME,
 )
-
-if TYPE_CHECKING:
-    pass
 
 _COOKIE_SECRET = "test-cookie-secret"
 _TORNADO_LIKE_VALUE = "2|fake|tornado|signed|cookie|value"  # Unverifiable by Starlette
