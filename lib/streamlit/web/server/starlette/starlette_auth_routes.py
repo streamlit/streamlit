@@ -556,14 +556,35 @@ def create_auth_routes(base_url: str) -> list[Route]:
 
     from starlette.routing import Route
 
+    def _clean_stale_cookies(request: Request, response: Response) -> None:
+        cookie_secret = get_cookie_secret()
+        for cookie_name in (USER_COOKIE_NAME, TOKENS_COOKIE_NAME):
+            cookie_value = request.cookies.get(cookie_name)
+            if cookie_value is not None:
+                signed_value = cookie_value.encode("latin-1")
+                if decode_signed_value(cookie_secret, cookie_name, signed_value) is None:
+                    has_set_cookie = any(
+                        cookie_name.encode() in v
+                        for k, v in response.raw_headers
+                        if k.lower() == b"set-cookie"
+                    )
+                    if not has_set_cookie:
+                        response.delete_cookie(cookie_name, path=_get_cookie_path())
+
     async def login(request: Request) -> Response:
-        return await _auth_login(request, base_url)
+        response = await _auth_login(request, base_url)
+        _clean_stale_cookies(request, response)
+        return response
 
     async def logout(request: Request) -> Response:
-        return await _auth_logout(request, base_url)
+        response = await _auth_logout(request, base_url)
+        _clean_stale_cookies(request, response)
+        return response
 
     async def callback(request: Request) -> Response:
-        return await _auth_callback(request, base_url)
+        response = await _auth_callback(request, base_url)
+        _clean_stale_cookies(request, response)
+        return response
 
     return [
         Route(make_url_path(base_url, _ROUTE_AUTH_LOGIN), login, methods=["GET"]),
