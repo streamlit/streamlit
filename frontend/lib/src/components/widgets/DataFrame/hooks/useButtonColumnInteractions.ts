@@ -185,21 +185,35 @@ function useButtonColumnInteractions({
     [cancelPendingMenuOpen]
   )
 
+  // Some grid-internal clicks are handled by Glide and do not reliably reach
+  // ButtonActionMenu's document-level outside-click listener.
+  const clearButtonActionMenuForIgnoredClick = useCallback((): void => {
+    if (
+      buttonActionMenuRef.current !== undefined ||
+      menuRafRef.current !== null
+    ) {
+      clearButtonActionMenu()
+    }
+  }, [clearButtonActionMenu])
+
   const onCellClicked = useCallback(
     ([col, row]: Item, event: CellClickedEventArgs): void => {
       const column = columns[col]
       if (column === undefined) {
+        clearButtonActionMenuForIgnoredClick()
         return
       }
 
       const cell = getCellContent([col, row])
       if (!isButtonCell(cell)) {
+        clearButtonActionMenuForIgnoredClick()
         return
       }
 
       const matchedKey = getButtonWidgetKey(column, element.buttonClickWidgets)
 
       if (matchedKey === undefined) {
+        clearButtonActionMenuForIgnoredClick()
         return
       }
 
@@ -211,6 +225,7 @@ function useButtonColumnInteractions({
       })
 
       if (clickTarget === undefined) {
+        clearButtonActionMenuForIgnoredClick()
         return
       }
 
@@ -230,6 +245,7 @@ function useButtonColumnInteractions({
       }
     },
     [
+      clearButtonActionMenuForIgnoredClick,
       columns,
       element.buttonClickWidgets,
       getCellContent,

@@ -225,6 +225,83 @@ describe("useButtonColumnInteractions", () => {
     expect(result.current.buttonActionMenu).toBeUndefined()
   })
 
+  it("closes an open action menu when clicking a non-button dataframe cell", () => {
+    const column = createButtonColumn()
+    const buttonCell = column.getCell(["View", "Delete"])
+    const nonButtonCell = {
+      kind: GridCellKind.Text,
+      data: "Not a button",
+      displayData: "Not a button",
+      allowOverlay: true,
+    } as GridCell
+    const getCellContent = vi
+      .fn()
+      .mockReturnValueOnce(buttonCell)
+      .mockReturnValueOnce(nonButtonCell)
+    const { setStringTriggerValue, widgetMgr } = createWidgetMgr()
+
+    const { result } = renderHook(() =>
+      useButtonColumnInteractions({
+        element: createElement({ button_column: "widget-id" }),
+        widgetMgr,
+        columns: [column],
+        getCellContent,
+        getOriginalIndex: row => row,
+        theme: MOCK_THEME,
+      })
+    )
+
+    act(() => result.current.onCellClicked([0, 0], createCellClickedEvent()))
+
+    expect(result.current.buttonActionMenu).toEqual({
+      columnName: "button_column",
+      rowIndex: 0,
+      actions: ["View", "Delete"],
+      screenTop: 16,
+      screenLeft: 50,
+    })
+
+    const event = createCellClickedEvent()
+
+    act(() => result.current.onCellClicked([0, 1], event))
+
+    expect(result.current.buttonActionMenu).toBeUndefined()
+    expect(setStringTriggerValue).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
+  it("closes an open action menu when clicking outside a button affordance", () => {
+    const column = createButtonColumn()
+    const getCellContent = vi.fn(() => column.getCell(["View", "Delete"]))
+    const { setStringTriggerValue, widgetMgr } = createWidgetMgr()
+
+    const { result } = renderHook(() =>
+      useButtonColumnInteractions({
+        element: createElement({ button_column: "widget-id" }),
+        widgetMgr,
+        columns: [column],
+        getCellContent,
+        getOriginalIndex: row => row,
+        theme: MOCK_THEME,
+      })
+    )
+
+    act(() => result.current.onCellClicked([0, 0], createCellClickedEvent()))
+
+    expect(result.current.buttonActionMenu).toBeDefined()
+
+    const event = createCellClickedEvent({
+      localEventX: 2,
+      localEventY: 16,
+    })
+
+    act(() => result.current.onCellClicked([0, 1], event))
+
+    expect(result.current.buttonActionMenu).toBeUndefined()
+    expect(setStringTriggerValue).not.toHaveBeenCalled()
+    expect(event.preventDefault).not.toHaveBeenCalled()
+  })
+
   it("ignores non-button cells", () => {
     const column = createButtonColumn()
     const nonButtonCell = {
