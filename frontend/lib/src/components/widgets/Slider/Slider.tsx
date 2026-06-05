@@ -131,6 +131,10 @@ function indicesToStringValues(
   return indices.map(i => options[i] ?? "")
 }
 
+/** Normalize RA's onChange/onChangeEnd value (number | number[]) to number[]. */
+const toArray = (v: number | number[]): number[] =>
+  Array.isArray(v) ? v : [v]
+
 function Slider({
   disabled,
   element,
@@ -184,7 +188,7 @@ function Slider({
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
   // Single refs holding arrays — RA thumbs are direct children of SliderTrack
-  const thumbsRef = useRef<(HTMLElement | null)[]>([])
+  const thumbsRef = useRef<(HTMLDivElement | null)[]>([])
   const thumbValuesRef = useRef<(HTMLDivElement | null)[]>([])
 
   const formattedValueArr = uiValue.map(v => formatValue(v, element))
@@ -226,16 +230,14 @@ function Slider({
   // in the same event, so isDragging may be true→false within the same React batch.
   const handleFinalChange = useCallback(
     (newValue: number | number[]): void => {
-      const arr = Array.isArray(newValue) ? newValue : [newValue]
-      setValueWithSource({ value: arr, fromUi: true })
+      setValueWithSource({ value: toArray(newValue), fromUi: true })
       setIsDragging(false)
     },
     [setValueWithSource]
   )
 
   const handleChange = useCallback((newValue: number | number[]): void => {
-    const arr = Array.isArray(newValue) ? newValue : [newValue]
-    setUiValue(arr)
+    setUiValue(toArray(newValue))
     setIsDragging(true)
   }, [])
 
@@ -259,8 +261,8 @@ function Slider({
     // thumbs and their values overlap, fix that.
     fixLabelPositions(
       sliderRef.current ?? null,
-      (thumbsRef.current[0] as HTMLDivElement | null) ?? null,
-      (thumbsRef.current[1] as HTMLDivElement | null) ?? null,
+      thumbsRef.current[0] ?? null,
+      thumbsRef.current[1] ?? null,
       thumbValuesRef.current[0] ?? null,
       thumbValuesRef.current[1] ?? null
     )
@@ -466,24 +468,13 @@ function formatValue(value: number, element: SliderProto): string {
  */
 function getValueAsArray(value: number[], element: SliderProto): number[] {
   const { min, max } = element
-  let start = value[0]
-  let end = value.length > 1 ? value[1] : value[0]
-  // Adjust the value if it's out of bounds.
-  if (start > end) {
-    start = end
-  }
-  if (start < min) {
-    start = min
-  }
-  if (start > max) {
-    start = max
-  }
-  if (end < min) {
-    end = min
-  }
-  if (end > max) {
-    end = max
-  }
+  // Clamp start within [min, max], then clamp end within [start, max] to
+  // also enforce the start <= end invariant.
+  const start = Math.min(Math.max(value[0], min), max)
+  const end = Math.min(
+    Math.max(value.length > 1 ? value[1] : value[0], start),
+    max
+  )
   return value.length > 1 ? [start, end] : [start]
 }
 
@@ -529,28 +520,22 @@ function fixLabelOverflow(
   const thumbRadius = thumbRect.width / 2
   const thumbMidpoint = thumbRect.left + thumbRadius
 
-  // The track is inset from the outer slider div by thumbRadius on each side
-  // (StyledRASlider paddingLeft/Right = thumbRadius). Use the track's effective
-  // boundaries so pinned labels align with the track edge, not the outer widget edge.
-  const effectiveLeft = sliderRect.left + thumbRadius
-  const effectiveRight = sliderRect.right - thumbRadius
-
   const thumbValueOverflowsLeft =
-    thumbMidpoint - thumbValueRect.width / 2 < effectiveLeft
+    thumbMidpoint - thumbValueRect.width / 2 < sliderRect.left
   const thumbValueOverflowsRight =
-    thumbMidpoint + thumbValueRect.width / 2 > effectiveRight
+    thumbMidpoint + thumbValueRect.width / 2 > sliderRect.right
 
   // React Aria applies `transform: translate(-50%, -50%)` to the thumb div as
   // an inline style. Any `left`/`right` we set on the label (a child of that
   // thumb) is in the thumb's pre-transform local coordinate space, so we must
   // add thumbRadius to compensate for the horizontal shift when pinning the
-  // label to the track boundary.
+  // label to the widget boundary.
   if (thumbValueOverflowsLeft) {
-    thumbValue.style.left = `${effectiveLeft - thumbMidpoint + thumbRadius}px`
+    thumbValue.style.left = `${sliderRect.left - thumbMidpoint + thumbRadius}px`
     thumbValue.style.right = ""
   } else if (thumbValueOverflowsRight) {
     thumbValue.style.left = ""
-    thumbValue.style.right = `${thumbMidpoint + thumbRadius - effectiveRight}px`
+    thumbValue.style.right = `${thumbMidpoint + thumbRadius - sliderRect.right}px`
   } else {
     thumbValue.style.left = ""
     thumbValue.style.right = ""
@@ -587,24 +572,17 @@ function fixLabelOverlap(
   const thumb1MidPoint = thumb1Rect.left + thumb1Rect.width / 2
   const thumb2MidPoint = thumb2Rect.left + thumb2Rect.width / 2
 
-  // The track is inset from the outer slider div by thumbRadius on each side
-  // (StyledRASlider paddingLeft/Right = thumbRadius). Use effective track
-  // boundaries so label collision detection aligns with the track edge.
-  const thumbRadius = thumb1Rect.width / 2
-  const effectiveLeft = sliderRect.left + thumbRadius
-  const effectiveRight = sliderRect.right - thumbRadius
-
   const centeredThumb1ValueFitsLeft =
-    thumb1MidPoint - thumb1ValueRect.width / 2 >= effectiveLeft
+    thumb1MidPoint - thumb1ValueRect.width / 2 >= sliderRect.left
 
   const centeredThumb2ValueFitsRight =
-    thumb2MidPoint + thumb2ValueRect.width / 2 <= effectiveRight
+    thumb2MidPoint + thumb2ValueRect.width / 2 <= sliderRect.right
 
   const leftAlignedThumb1ValueFitsLeft =
-    thumb1Rect.left - thumb1ValueRect.width >= effectiveLeft
+    thumb1Rect.left - thumb1ValueRect.width >= sliderRect.left
 
   const rightAlignedThumb2ValueFitsRight =
-    thumb2Rect.right + thumb2ValueRect.width <= effectiveRight
+    thumb2Rect.right + thumb2ValueRect.width <= sliderRect.right
 
   const thumb1ValueOverhang = centeredThumb1ValueFitsLeft
     ? thumb1ValueRect.width / 2
@@ -623,7 +601,7 @@ function fixLabelOverlap(
   //
   // 1. Center values on their thumbs, like this:
   //
-  //        [thumb1Value]       [thumb1Value]
+  //        [thumb1Value]       [thumb2Value]
   // |--------[thumb1]-------------[thumb2]-------------------|
   //
   //
@@ -712,13 +690,15 @@ function fixLabelOverlap(
 
     // Make thumb1Value appear to the left of thumb2Value.
     // The `right` property is in thumb1's pre-transform coordinate space, so
-    // subtract thumb1Width/2 (i.e. add it to the negated formula) to compensate.
+    // add thumb1Width/2 to compensate for React Aria's translate(-50%,-50%).
     thumb1ValueDiv.style.left = ""
-    thumb1ValueDiv.style.right = `${
-      -Math.round(
-        thumb2MidPoint - thumb2ValueOverhang - labelGap - thumb1MidPoint
-      ) + Math.round(thumb1Rect.width / 2)
-    }px`
+    thumb1ValueDiv.style.right = `${Math.round(
+      thumb1MidPoint -
+        thumb2MidPoint +
+        thumb2ValueOverhang +
+        labelGap +
+        thumb1Rect.width / 2
+    )}px`
   }
 }
 

@@ -305,7 +305,7 @@ def test_st_pdf_widget_interactions(app: Page):
 
     slider_thumb = height_slider.get_by_role("slider")
     expect(slider_thumb).to_be_attached()
-    expect(slider_thumb).to_have_attribute("aria-valuenow", re.compile(r".*"))
+    expect(slider_thumb).to_have_attribute("value", re.compile(r".*"))
 
     # Verify that the PDF renders with the current slider value
     _expect_pdf_container_attached(app)
