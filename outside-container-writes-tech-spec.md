@@ -10,8 +10,12 @@ created: 2026-06-03
 When an `@st.fragment` function writes multiple elements to a container declared outside
 its scope, the `RunningCursor` for that container accumulates across fragment reruns
 instead of resetting. This produces invalid delta paths that crash the frontend. This spec
-designs a solution using implicit wrapper containers that isolate each fragment's writes
-into a stable, independently-resettable block.
+designs a solution that interposes an implicit wrapper between the outside container and the
+fragment's elements. The wrapper isolates each fragment's writes into a stable,
+independently-resettable block — but it is a new **transparent block type** that exists only
+in the AppNode/BlockNode tree and emits **no DOM box** on the frontend. The fragment's
+elements therefore render as inline children of the outside container, one fewer nesting
+level than a styled container.
 
 ## Problem
 
@@ -27,7 +31,7 @@ Bad delta path index 4 (should be between [0, 2])
 ### Root Cause
 
 `RunningCursor` instances track the next child index inside a container. The fragment
-rerun mechanism (`lib/streamlit/runtime/fragment.py:388-394`) snapshots and restores only:
+rerun mechanism (`lib/streamlit/runtime/fragment.py:389-394`) snapshots and restores only:
 
 - `ctx.cursors` — root container cursors (MAIN, SIDEBAR)
 - `context_dg_stack` — the stack of active DeltaGenerators (for `with` blocks)
@@ -64,58 +68,175 @@ We cannot simply track and reset all cursors that a fragment touches because:
    interfere with each other's index space.
 3. **No regression**: Elements written inside the fragment's own scope must continue to
    work exactly as before.
-4. **Minimal complexity**: The solution must not require per-fragment snapshots of
+4. **No layout impact**: The fix must not introduce a visible box or an extra flex item
+   in the outside container. Outside-write content should sit in the container exactly as
+   if the fragment had written to it directly (see issue #13024 for the layout problems an
+   extra styled container introduces).
+5. **Minimal complexity**: The solution must not require per-fragment snapshots of
    arbitrary cursor trees or complex bookkeeping that's fragile to maintain.
-5. **`parallel=True` compatible**: The approach must work safely when multiple fragments
-   execute concurrently on different threads (future feature).
-6. **Frontend transparency**: Minimal or zero changes to the frontend render tree logic.
+6. **`parallel=True` compatible**: The approach must work safely when multiple fragments
+   execute concurrently on different threads.
+7. **Frontend transparency**: Minimal changes to the frontend render tree logic — ideally
+   only a single new branch in the block renderer, with the tree-walking visitors
+   untouched.
 
-## Proposal: Implicit Wrapper Containers
+## Two Trees: Why a Logical Block Without a DOM Box Works
+
+Streamlit maintains two related trees:
+
+1. The **AppNode/BlockNode tree** on both backend and frontend. It is addressed by delta
+   paths (`SetNodeByDeltaPathVisitor` resolves each path component by **index**) and
+   garbage-collected by `scriptRunId`/`fragmentId` (`ClearStaleNodeVisitor`,
+   `isElementStale`).
+2. The **React VDOM** produced from tree (1) by `RenderNodeVisitor` +
+   `BlockNodeRenderer`.
+
+The cursor-isolation job needs a node in tree (1): a real `BlockNode` with its own
+`RunningCursor`, a stable `id`, and a `fragmentId`. It does **not** need a DOM box in tree
+(2). So the wrapper can be a logical block that renders nothing.
+
+This is supported by several existing facts about the codebase:
+
+- **Stale clearing already works element-level.** `isElementStale`
+  (`frontend/lib/src/components/core/Block/utils.ts:43-70`) keys on each node's own
+  `fragmentId` + `scriptRunId`. A transparent wrapper carries the fragment's `fragmentId`
+  and is re-emitted (so its `scriptRunId` advances) on each fragment rerun, so cleanup of
+  its subtree is unchanged.
+- **React keying is unchanged.** `RenderNodeVisitor.visitBlockNode`
+  (`frontend/lib/src/components/core/Block/RenderNodeVisitor.tsx:86-91`) keys block nodes
+  by `node.deltaBlock?.id`, so the transparent block still reconciles in place across
+  fragment reruns (no remount of its subtree).
+- **Delta paths resolve by index.** `SetNodeByDeltaPathVisitor` walks children by index
+  and is block-type-agnostic; the transparent block occupies one index slot like any
+  other block, so it is unaffected.
+- **Precedent exists.** `BlockNodeRenderer` already returns `<></>` for empty
+  non-`allow_empty` blocks (`Block.tsx:267-269`), proving a block can render zero DOM.
+
+## Proposal: Transparent Wrapper Block
 
 ### Core Idea
 
 When a fragment writes to an outside container, automatically interpose an implicit
-`BlockNode` (container) between the outside container and the fragment's elements. Each
-(fragment_id, outside_container) pair gets exactly one wrapper. The wrapper has its own
-`RunningCursor` that starts at 0 on each fragment rerun (because the wrapper is created
-fresh each time or its cursor is trivially resettable).
+wrapper `BlockNode` between the outside container and the fragment's elements. Each
+`(fragment_id, outside_container)` pair gets exactly one wrapper. The wrapper has its own
+`RunningCursor` that resets to 0 on each fragment rerun, so the fragment's writes always
+land at indices [0..N-1] inside it.
+
+The wrapper is a **transparent block**: it occupies one slot in the AppNode tree (giving
+us cursor isolation) but the frontend renders its children directly inside a React
+Fragment, with **no** `ContainerContentsWrapper` / `FlexBoxContainer`
+(`StyledFlexContainerBlock`) / `StyledLayoutWrapper`. The result is that the fragment's
+elements appear as inline children of the outside container in the DOM — one fewer nesting
+level than a styled container, and with no flex item of its own.
 
 ### Tree Structure
 
+The `[implicit_wrapper]` node stays in the AppNode/BlockNode tree, but emits no DOM box.
+
 **Before (current broken behavior):**
+
 ```
 outside_container [cursor: 0 → 2 → 4 → ...]
   ├── button (fragment, index 0)
   └── text   (fragment, index 1)
 ```
 
-**After (with implicit wrapper):**
+**After — AppNode/BlockNode tree (backend + frontend):**
+
 ```
 outside_container [cursor: managed by main script, advances once per fragment]
-  └── [implicit_wrapper] [cursor: 0 → always resets to 0 on fragment rerun]
+  └── [implicit_wrapper · transparent] [cursor: always resets to 0 on fragment rerun]
         ├── button (fragment, index 0)
         └── text   (fragment, index 1)
 ```
 
-**With multiple fragments:**
+**After — DOM (React VDOM):** the transparent wrapper emits no box, so the fragment's
+elements become inline children of the outside container's box:
+
+```
+<outside_container box>
+  <button />   <!-- from fragment -->
+  <text />     <!-- from fragment -->
+</outside_container box>
+```
+
+i.e. the DOM looks exactly as if the fragment had written to the outside container
+directly — there is no `data-testid="stLayoutWrapper"` and no extra `stVerticalBlock`
+around the fragment's outside-write content.
+
+**With multiple fragments (AppNode tree):**
+
 ```
 outside_container
   ├── "Header" (main script, index 0)
-  ├── [fragment_a_wrapper] (index 1, locked)
+  ├── [fragment_a_wrapper · transparent] (index 1, locked)
   │     ├── element_from_a_0
   │     └── element_from_a_1
-  ├── [fragment_b_wrapper] (index 2, locked)
+  ├── [fragment_b_wrapper · transparent] (index 2, locked)
   │     └── element_from_b_0
   └── "Footer" (main script, index 3)
 ```
 
 Each wrapper occupies exactly one slot in the parent container. The slot is allocated
 during the initial full app run and never moves. On fragment rerun, only the wrapper's
-internal cursor resets.
+internal cursor resets. Because each wrapper is transparent, the DOM shows `Header`,
+`a_0`, `a_1`, `b_0`, `Footer` as direct children of the outside container.
 
-### Detailed Design
+## Detailed Design
 
-#### 1. Wrapper Registry
+### 1. New block type
+
+We need a way to mark a `Block` as transparent so the frontend can skip its DOM box.
+
+**Option A — `bool transparent` flag** ✅ PREFERRED
+
+```proto
+// proto/streamlit/proto/Block.proto
+message Block {
+  oneof type { ... }
+
+  bool allow_empty = 8;
+  optional string id = 12;
+  ...
+  optional bool autoscroll = 16;
+  // When true, this block contributes a node to the element tree (for cursor
+  // isolation and stale clearing) but renders no DOM box on the frontend.
+  bool transparent = 17;   // Next ID: 18
+}
+```
+
+- Pros: Smallest possible change — one scalar field, no new message, no change to the
+  `type` oneof. A transparent block still carries `id`, `allow_empty`, and (if ever
+  needed) the existing layout fields, so it composes with everything that already keys off
+  `Block`. The frontend branch is a single `if (node.deltaBlock.transparent)`.
+- Cons: The flag is orthogonal to the `type` oneof, so a transparent block technically
+  has no `type`. That is fine for our use (the wrapper has no layout semantics), and the
+  block renderer already tolerates type-less blocks.
+
+**Option B — dedicated `Block.Structural` message in the `type` oneof**
+
+```proto
+message Block {
+  oneof type {
+    ...
+    FlexContainer flex_container = 13;
+    Structural structural = 17;
+  }
+  message Structural {}
+}
+```
+
+- Pros: Models "this is a structural-only block" as a first-class type; `node.deltaBlock.type === "structural"` reads cleanly.
+- Cons: Larger change — a new (empty) message and a new oneof case to thread through the
+  proto, the TS `BlockNode` type checks, and every place that switches on block type.
+  More surface for little benefit, since the behavior is a single boolean ("don't render a
+  box").
+
+**Decision: Option A (`bool transparent = 17;`).** It is the smaller change and the
+behavior we need is binary. Adding the field requires recompiling protobufs (`make
+protobuf`); it is purely additive and backward-compatible (defaults to `false`).
+
+### 2. Wrapper Registry
 
 Add a mapping to `ScriptRunContext` that tracks wrapper DeltaGenerators:
 
@@ -136,10 +257,10 @@ The value is the wrapper `DeltaGenerator` whose cursor manages the fragment's wr
 This registry persists across fragment reruns within a session (it lives on `ctx`, not on
 the snapshot). It is cleared on full app reruns (when `ctx.on_script_start()` is called).
 
-#### 2. Detection of Outside Container Writes
+### 3. Detection of Outside Container Writes
 
-In `DeltaGenerator._enqueue` and `DeltaGenerator._block`, after resolving `dg = self._active_dg`,
-detect whether this is a fragment writing to an outside container:
+In `DeltaGenerator._enqueue` and `DeltaGenerator._block`, after resolving `dg =
+self._active_dg`, detect whether this is a fragment writing to an outside container:
 
 ```python
 # In lib/streamlit/delta_generator.py, inside _enqueue and _block
@@ -150,11 +271,11 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     fragment_id = ts.fragment_id
     if not fragment_id:
         return False
-    
+
     fragment_path = ts.delta_path
     if not fragment_path:
         return False
-    
+
     cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
     return not _is_inside_fragment_path(cursor_path, fragment_path)
 ```
@@ -162,237 +283,143 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
 This reuses the existing `_is_inside_fragment_path` helper already present in the
 codebase.
 
-#### 3. Wrapper Creation / Retrieval
+### 4. Wrapper Creation / Retrieval
 
-When an outside container write is detected, redirect through the wrapper:
+When an outside container write is detected, redirect through the wrapper. The wrapper is
+created as a transparent block and we **snapshot its initial cursor** at creation time so
+we can restore it on fragment rerun (mirroring how `fragment.py` snapshots `ctx.cursors` /
+`dg_stack`):
 
 ```python
 # In lib/streamlit/delta_generator.py
+from copy import deepcopy
 
 def _get_or_create_outside_wrapper(
     dg: DeltaGenerator,
     fragment_id: str,
 ) -> DeltaGenerator:
-    """Get or create an implicit wrapper container for this fragment's writes
+    """Get or create an implicit transparent wrapper for this fragment's writes
     to the given outside container."""
     ctx = get_script_run_ctx()
-    if ctx is None:
-        return dg  # Defensive fallback
-    
+    if ctx is None:  # pragma: no cover - defensive
+        return dg
+
     wrapper_key = (fragment_id, dg._id)
-    
+
     if wrapper_key in ctx._fragment_outside_wrappers:
-        wrapper = ctx._fragment_outside_wrappers[wrapper_key]
-        return wrapper
-    
-    # Create a new implicit wrapper block inside the outside container.
+        return ctx._fragment_outside_wrappers[wrapper_key]
+
+    # Create a new transparent wrapper block inside the outside container.
     # This advances dg's cursor by one slot (the wrapper occupies one slot).
     block_proto = Block_pb2.Block()
-    # Mark as a fragment wrapper for frontend identification
+    block_proto.transparent = True
     block_proto.allow_empty = True
-    
+
     wrapper = dg._block(block_proto)
+    # Snapshot the wrapper's freshly-initialized cursor (index 0) and the delta
+    # path used to emit its add_block, so we can restore + re-emit on rerun
+    # without hand-mutating private cursor fields.
+    wrapper._outside_wrapper_cursor_snapshot = deepcopy(wrapper._cursor)
+    wrapper._outside_wrapper_delta_path = list(dg._cursor.delta_path)
     ctx._fragment_outside_wrappers[wrapper_key] = wrapper
-    
+
     return wrapper
 ```
 
-#### 4. Cursor Reset on Fragment Rerun
+### 5. Cursor Restore + Re-emission on Fragment Rerun
 
-When a fragment reruns, the wrapper's cursor must reset to 0. This happens in
-`wrapped_fragment()` inside `fragment.py`, after the snapshot restore:
+When a fragment reruns, each of its wrappers must (a) reset its internal cursor to 0 and
+(b) be re-emitted as a block delta so the frontend stamps the wrapper with the current
+`scriptRunId` (otherwise `ClearStaleNodeVisitor` would treat the wrapper itself as stale).
+
+We **restore the snapshot** rather than poking `_index` / `_transient_index` /
+`_transient_elements`, mirroring `fragment.py`'s `ctx.cursors = deepcopy(cursors_snapshot)`:
 
 ```python
 # In lib/streamlit/runtime/fragment.py, inside wrapped_fragment()
+if ctx.fragment_ids_this_run:
+    ctx.cursors = deepcopy(cursors_snapshot)
+    context_dg_stack.set(deepcopy(dg_stack_snapshot))
+    _reset_outside_wrappers(ctx, fragment_id)   # NEW
 
-def wrapped_fragment() -> Any:
-    ctx = get_script_run_ctx()
-    ...
-    
-    if ctx.fragment_ids_this_run:
-        # Existing snapshot restore
-        ctx.cursors = deepcopy(cursors_snapshot)
-        context_dg_stack.set(deepcopy(dg_stack_snapshot))
-        
-        # Reset outside container wrappers for this fragment
-        _reset_outside_wrappers(ctx, fragment_id)
-    
-    ...
-```
-
-The reset function:
-
-```python
-# In lib/streamlit/runtime/fragment.py
 
 def _reset_outside_wrappers(ctx: ScriptRunContext, fragment_id: str) -> None:
-    """Reset the cursors of all implicit wrappers belonging to this fragment."""
+    """Restore cursors and re-emit transparent wrapper blocks for this
+    fragment's outside-container wrappers."""
     for key, wrapper in ctx._fragment_outside_wrappers.items():
-        if key[0] == fragment_id and wrapper._cursor is not None:
-            wrapper._cursor._index = 0
-            wrapper._cursor._transient_index = None
-            wrapper._cursor._transient_elements = SparseList()
+        if key[0] != fragment_id:
+            continue
+
+        # Restore the snapshotted cursor (back to index 0), instead of mutating
+        # private cursor fields.
+        wrapper._cursor = deepcopy(wrapper._outside_wrapper_cursor_snapshot)
+
+        # Re-emit the wrapper's add_block so the frontend updates its scriptRunId
+        # and keeps the (transparent) wrapper alive across the rerun.
+        msg = ForwardMsg()
+        msg.metadata.delta_path[:] = wrapper._outside_wrapper_delta_path
+        msg.delta.add_block.CopyFrom(
+            Block_pb2.Block(transparent=True, allow_empty=True)
+        )
+        _enqueue_message(msg)
 ```
 
-#### 5. Integration into `_enqueue` and `_block`
+### 6. Integration into `_enqueue` and `_block`
 
 Modify `_enqueue` and `_block` to redirect outside writes through the wrapper:
 
 ```python
-# In _enqueue, after `dg = self._active_dg`:
-
-if ctx:
-    ts = ThreadState.get()
-    if ts.fragment_id and _is_outside_container_write(dg):
-        dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
-
-# In _block, same pattern after `dg = self._active_dg`:
-
+# In _enqueue and _block, after `dg = self._active_dg`:
 if ctx:
     ts = ThreadState.get()
     if ts.fragment_id and _is_outside_container_write(dg):
         dg = _get_or_create_outside_wrapper(dg, ts.fragment_id)
 ```
 
-#### 6. Fragment ID Stamping on Wrapper Block
+### 7. Fragment ID Stamping on Wrapper Block
 
-The wrapper block's `add_block` delta message must carry the fragment's `fragment_id` so
-the frontend can correctly attribute it for stale clearing. This is already handled by
-the existing `_enqueue_message` logic in `script_run_context.py:475-477` which stamps
-`msg.delta.fragment_id = ts.fragment_id` for any delta sent while `ts.fragment_id` is set.
+The wrapper block's `add_block` delta must carry the fragment's `fragment_id` so the
+frontend can attribute it for stale clearing. This is already handled by the existing
+`_enqueue_message` logic in `script_run_context.py` which stamps `msg.delta.fragment_id =
+ts.fragment_id` for any delta sent while `ts.fragment_id` is set.
 
-#### 7. Frontend Changes
+### 8. Frontend Changes
 
-**No changes required to `ClearStaleNodeVisitor.ts`.**
+**`BlockNodeRenderer` (`frontend/lib/src/components/core/Block/Block.tsx`)** — add one
+early branch for the transparent type. It returns the block's children directly inside a
+React Fragment, skipping `ContainerContentsWrapper` / `FlexBoxContainer`
+(`StyledFlexContainerBlock`) and `StyledLayoutWrapper`:
 
-The existing logic already handles this correctly:
-
-- The wrapper `BlockNode` receives the fragment's `fragment_id` and the current
-  `scriptRunId` when created/re-emitted.
-- On fragment rerun, the wrapper block is re-emitted (via the `_block` call that
-  `_get_or_create_outside_wrapper` makes), so its `scriptRunId` is updated.
-- `ClearStaleNodeVisitor` sees the wrapper's `fragmentId` matches a running fragment,
-  its `scriptRunId` matches current run, so it propagates `fragmentIdOfBlock` to children.
-- Children inside the wrapper that weren't re-emitted (stale) are cleared.
-- Children outside the wrapper (other fragments, main script elements) are untouched.
-
-**No changes required to `SetNodeByDeltaPathVisitor.ts`.**
-
-Delta paths are valid because the wrapper has its own index space starting at 0.
-
-### Handling the Wrapper Re-emission on Rerun
-
-On fragment rerun, the wrapper must be **re-emitted** as a block delta so the frontend
-knows it belongs to the current script run. The `_get_or_create_outside_wrapper` function
-returns the cached wrapper DG, but its block was only emitted during the initial run.
-
-To handle this, on fragment rerun we must re-emit the wrapper's `add_block` delta:
-
-```python
-def _reset_outside_wrappers(ctx: ScriptRunContext, fragment_id: str) -> None:
-    """Reset cursors and re-emit wrapper blocks for this fragment's outside
-    container wrappers."""
-    for key, wrapper in ctx._fragment_outside_wrappers.items():
-        if key[0] != fragment_id:
-            continue
-        if wrapper._cursor is None:
-            continue
-        
-        # Reset the wrapper's internal cursor
-        wrapper._cursor._index = 0
-        wrapper._cursor._transient_index = None
-        wrapper._cursor._transient_elements = SparseList()
-        
-        # Re-emit the wrapper's add_block message so the frontend updates
-        # its scriptRunId (prevents stale clearing of the wrapper itself)
-        msg = ForwardMsg()
-        parent_dg_cursor = wrapper._parent._cursor if wrapper._parent else None
-        if parent_dg_cursor:
-            # The wrapper's delta path in the parent is its locked cursor position
-            msg.metadata.delta_path[:] = wrapper._cursor.delta_path[:-1]
-            # Actually we need the path that was used when the block was created.
-            # Store it on the wrapper at creation time.
-            msg.metadata.delta_path[:] = wrapper._creation_delta_path
-            msg.delta.add_block.CopyFrom(Block_pb2.Block(allow_empty=True))
-            _enqueue_message(msg)
+```tsx
+// Near the top of BlockNodeRenderer, alongside the existing empty-block early return
+// (Block.tsx:267-269).
+if (node.deltaBlock.transparent) {
+  // Transparent block: contribute no DOM box; render children inline.
+  return <ChildRenderer {...props} node={node} />
+}
 ```
 
-A cleaner approach: store the creation delta path on the wrapper DG at creation time:
+`ChildRenderer` already returns `<>{elements}</>` (a React Fragment of the collected
+child elements), so the transparent block adds no DOM node, no flex item, and no box
+styling — the children render as if they were direct children of the outside container.
 
-```python
-def _get_or_create_outside_wrapper(dg, fragment_id):
-    ...
-    wrapper = dg._block(block_proto)
-    # Store the delta path used to create this wrapper for re-emission
-    wrapper._creation_delta_path = list(
-        make_delta_path(dg._root_container, dg._cursor.parent_path, dg._cursor.index - 1)
-    )
-    # Note: index - 1 because _block already incremented the parent cursor
-    ...
-```
+**No changes required to `RenderNodeVisitor.tsx`.** It is block-type-agnostic and keys
+block nodes by `node.deltaBlock?.id` (line ~89), so the transparent wrapper reconciles in
+place across reruns and its subtree is not remounted.
 
-Wait — actually, the wrapper's `LockedCursor` already knows its position. Let me
-reconsider.
+**No changes required to `ClearStaleNodeVisitor.ts`.** Stale clearing is element-level via
+`isElementStale` (`utils.ts:43-70`), keyed on each node's own `fragmentId` + `scriptRunId`.
+The wrapper carries the fragment's `fragmentId` and is re-emitted each fragment rerun (so
+its `scriptRunId` is current), and its stale children are cleared exactly as before.
 
-When `_block` is called, it:
-1. Records `msg.metadata.delta_path[:] = dg._cursor.delta_path` (the parent's current
-   cursor position)
-2. Creates a `RunningCursor` for the new block
-3. Calls `dg._cursor.get_locked_cursor()` to advance the parent
-
-The delta path used for the `add_block` message is `[root_container, *parent_path, index]`
-where index is the slot the wrapper occupies in the outside container. This is effectively
-the wrapper's address minus the last component.
-
-For re-emission, we need to send a new `add_block` at the same delta path. The wrapper
-DG's cursor has `root_container` and `parent_path` which together give us the wrapper's
-delta path: `[root_container, *parent_path[:-1], parent_path[-1]]`. Actually, the wrapper's
-`parent_path` IS `(*outside_container.parent_path, outside_container.index)`, and the
-wrapper itself is at a specific index in that parent. We need the *parent* delta path.
-
-Simpler approach: store the raw delta path bytes at wrapper creation time.
-
-```python
-# At creation:
-wrapper._wrapper_delta_path = list(msg.metadata.delta_path)  # before _block returns
-```
-
-Actually, the cleanest solution is:
-
-```python
-def _get_or_create_outside_wrapper(dg, fragment_id):
-    ...
-    # Capture the delta path that will be used for the add_block message
-    creation_delta_path = list(dg._cursor.delta_path)
-    
-    wrapper = dg._block(block_proto)
-    wrapper._wrapper_delta_path = creation_delta_path
-    ctx._fragment_outside_wrappers[wrapper_key] = wrapper
-    return wrapper
-```
-
-Then on rerun:
-
-```python
-def _reset_outside_wrappers(ctx, fragment_id):
-    for key, wrapper in ctx._fragment_outside_wrappers.items():
-        if key[0] != fragment_id:
-            continue
-        if wrapper._cursor is None:
-            continue
-        
-        wrapper._cursor._index = 0
-        wrapper._cursor._transient_index = None
-        wrapper._cursor._transient_elements = SparseList()
-        
-        # Re-emit the add_block at the original delta path
-        msg = ForwardMsg()
-        msg.metadata.delta_path[:] = wrapper._wrapper_delta_path
-        msg.delta.add_block.CopyFrom(Block_pb2.Block(allow_empty=True))
-        _enqueue_message(msg)
-```
+**`SetNodeByDeltaPathVisitor.ts` is unaffected.** It resolves each delta-path component by
+**index** and does not inspect block type; the transparent block occupies one index slot
+like any other block.
 
 ## Edge Cases
+
+Each case is re-validated under the transparent block. The shorthand "wrapper" below means
+a transparent wrapper block.
 
 ### Multiple fragments writing to the same outside container
 
@@ -411,18 +438,20 @@ def frag_b():
     outside.write("B1")  # → wrapper_b[0]
 ```
 
-Tree:
+AppNode tree:
+
 ```
-outside (3 children during initial run: 2 wrappers if no direct writes, or mixed)
-  ├── [wrapper for frag_a] (index 0)
+outside
+  ├── [wrapper for frag_a · transparent] (index 0)
   │     ├── A1
   │     └── A2
-  └── [wrapper for frag_b] (index 1)
+  └── [wrapper for frag_b · transparent] (index 1)
         └── B1
 ```
 
 Wrappers are created in execution order during the initial full app run. Each fragment
-only resets its own wrapper's cursor. No interleaving possible.
+only restores its own wrapper's cursor. No interleaving possible. In the DOM the user sees
+`A1`, `A2`, `B1` as direct children of `outside` (no wrapper boxes).
 
 ### Nested containers (outside container contains another container)
 
@@ -431,14 +460,15 @@ outer = st.container()
 
 @st.fragment
 def my_frag():
-    inner = outer.container()  # Creates a container inside the wrapper
+    inner = outer.container()  # Creates a real container inside the wrapper
     inner.write("nested")
 ```
 
-This works naturally. The `outer.container()` call triggers `_block` on `outer`. The
-outside-container detection sees this is outside the fragment path, so it redirects to
-the wrapper. The `inner` container is created *inside* the wrapper, and its cursor is
-local to it. No special handling needed.
+This works naturally. The `outer.container()` call triggers `_block` on `outer`; the
+outside-container detection redirects it into the transparent wrapper, so `inner` is
+created *inside* the wrapper. `inner` is a normal (styled) container and renders its own
+box; only the transparent wrapper between `outer` and `inner` is box-less. No special
+handling needed.
 
 ### Fragment writing to containers at different nesting levels
 
@@ -452,75 +482,65 @@ def my_frag():
     level_1.write("at level 1")  # → wrapper in level_1
 ```
 
-Each (fragment_id, container_id) pair gets its own wrapper. The fragment has two
-wrappers: one in `level_0` and one in `level_1`. Both are reset independently on
-fragment rerun.
+Each `(fragment_id, container_id)` pair gets its own wrapper. The fragment has two
+wrappers (one in `level_0`, one in `level_1`), each restored independently on rerun.
 
 ### `st.empty()` used as an outside container
 
-`st.empty()` returns a DeltaGenerator with a `LockedCursor` (not a `RunningCursor`).
-Writes to an empty replace its content rather than appending.
+`st.empty()` returns a DeltaGenerator with a `LockedCursor` (replace, don't append). A
+single transparent wrapper is created in the empty's slot; the fragment's writes go inside
+it and replace/append within the wrapper's own index space.
 
 ```python
 placeholder = st.empty()
 
 @st.fragment
 def my_frag():
-    placeholder.write("hello")  # Replaces content
+    placeholder.write("hello")  # Replaces content inside the wrapper
 ```
 
-For `st.empty()`, the cursor is a `LockedCursor` that always points to the same position.
-The `_is_outside_container_write` check will detect it's outside the fragment scope.
-However, `st.empty()` semantics are "replace, don't append" — only one element can exist
-there. The wrapper approach still works: a wrapper is created inside the empty's slot,
-and writes go into it. Since `empty()` only supports a single child, the wrapper
-effectively contains one element that gets replaced each time.
+Because the wrapper is transparent, the user sees the written content directly in the
+empty's position with no extra box. If the user calls `placeholder.empty()` to clear it,
+that replaces the wrapper itself; on the next fragment rerun the cached wrapper's slot may
+no longer be valid, so the implementation must fall back to creating a fresh wrapper
+(detect that the cached wrapper's parent slot no longer resolves and recreate). This is the
+one place where the registry entry can become stale; treat a missing/invalid slot as
+"create a new wrapper".
 
-**Important**: If the user calls `placeholder.empty()` to clear it, that's a replace
-operation on the `LockedCursor` — it replaces the wrapper. On next fragment rerun, the
-wrapper is gone. The implementation must handle this by checking if the cached wrapper is
-still valid (its parent cursor position still exists). If not, create a new wrapper.
-
-Practically, since `empty()` replaces content, the wrapper is a single child slot
-regardless. The cursor inside the wrapper advances from 0 to 1, which is fine because
-the frontend sees it as a new block each time (via the re-emission mechanism).
-
-### Interaction with `st.rerun()` (full app scope)
+### Full app rerun (`st.rerun()` full scope)
 
 A full app rerun clears `ctx._fragment_outside_wrappers` entirely (as part of
-`ctx.on_script_start()`). All wrappers are recreated fresh. This is correct because a
-full rerun re-executes the main script which recreates outside containers with fresh
-cursors.
+`ctx.on_script_start()`). All wrappers are recreated fresh, including their cursor
+snapshots. This is correct because a full rerun re-executes the main script and recreates
+the outside containers with fresh cursors.
 
-### Interaction with `st.rerun()` (fragment scope)
+### Fragment rerun (`st.rerun()` fragment scope)
 
-A fragment-scoped rerun only re-executes that fragment. The wrapper for that fragment is
-already in `ctx._fragment_outside_wrappers`. The cursor is reset to 0, the wrapper's
-`add_block` is re-emitted, and the fragment's elements are written at indices 0..N-1
-inside the wrapper. This is correct.
+A fragment-scoped rerun re-executes only that fragment. Its wrappers are already in
+`ctx._fragment_outside_wrappers`; each cursor is restored from its snapshot (back to index
+0), the wrapper's `add_block` is re-emitted (transparent + `allow_empty`), and the
+fragment's elements are written at indices [0..N-1] inside the wrapper. Correct.
 
-### Interaction with `parallel=True` fragments
+### `parallel=True` fragments
 
-With `parallel=True`, fragments execute concurrently on separate threads. Currently,
-outside container writes are **blocked** for parallel fragments during initial page load
-(see `_enqueue` check at `delta_generator.py:508-526`). They are only allowed during
-sequential fragment reruns.
+With `parallel=True`, fragments execute concurrently on separate threads. The wrapper
+approach is safe:
 
-The wrapper approach is safe for `parallel=True` because:
+1. **Initial run**: Wrappers are created where outside writes are allowed; each fragment
+   keys its wrapper by `(fragment_id, container_id)`.
+2. **Fragment rerun**: Fragment reruns are sequential, so the restore + re-emit + writes
+   happen on a single thread per fragment.
+3. **Distinct keys**: Even under future concurrent reruns, each fragment owns a distinct
+   wrapper key, so no two threads mutate the same wrapper.
 
-1. **Initial run**: Wrappers are created during the sequential initial run (where
-   `parallel=True` fragments still execute sequentially for outside writes, or the
-   outside write is blocked).
-2. **Fragment rerun**: Only one fragment reruns at a time (fragment reruns are sequential).
-   The wrapper reset + re-emission + writes all happen on a single thread.
-3. **Future multi-fragment parallel rerun**: If we ever support multiple fragments
-   rerunning in parallel, each fragment has its own wrapper (distinct keys in the
-   registry). No two threads write to the same wrapper simultaneously, so no race
-   condition exists.
-
-The registry (`ctx._fragment_outside_wrappers`) may need a lock if parallel fragments
-are allowed to create wrappers concurrently. For now, since outside writes are blocked
-during parallel initial runs, this is not needed.
+**Pre-allocated parallel container.** `fragment.py` already pre-allocates the fragment's
+own implicit `st.container()` for parallel workers via
+`pre_allocated_container_fragment_id` (`fragment.py:413-415`, set at `:735`). When an
+outside-write wrapper is pre-allocated on the parallel path, it must be allocated as a
+**transparent** block too (same `transparent=True` proto), so the pre-allocated slot
+matches what the worker later re-emits. The registry (`ctx._fragment_outside_wrappers`)
+may need a lock only if parallel fragments are ever allowed to create wrappers
+concurrently; not needed today.
 
 ### Dynamic container selection (container chosen at runtime)
 
@@ -533,171 +553,236 @@ def my_frag():
     containers[idx].write("dynamic")
 ```
 
-This works because wrappers are keyed by `(fragment_id, container_dg_id)`. Each container
-has a stable `_id`. If the fragment writes to `containers[0]` on one run and
-`containers[1]` on another:
+Wrappers are keyed by `(fragment_id, container_dg_id)`, and each container has a stable
+`_id`. If the fragment writes to `containers[0]` on one run and `containers[1]` on the
+next:
 
-- Run 1: wrapper created in `containers[0]`, nothing in `containers[1]`
-- Run 2 (rerun): wrapper in `containers[0]` is reset (cursor → 0) and re-emitted, but
-  no elements are written inside it → stale clearing removes old children. A new wrapper
-  is created in `containers[1]`.
+- Run 1: wrapper created in `containers[0]`.
+- Run 2 (rerun): the `containers[0]` wrapper is restored + re-emitted but no children are
+  written inside it → its stale children are cleared element-level. A new wrapper is
+  created in `containers[1]`.
 
-The stale wrapper in `containers[0]` becomes empty (its children are cleared as stale
-since they weren't re-emitted). The `allow_empty=True` on the block proto means the
-empty wrapper div persists but is invisible. This is acceptable behavior.
+The emptied wrapper in `containers[0]` is transparent and `allow_empty=True`, so it
+persists as a zero-DOM node (no empty box appears). Acceptable.
 
-**Optimization (optional)**: If a wrapper has no writes during a fragment rerun, don't
-re-emit it. Then the frontend clears the entire wrapper as stale. This requires tracking
-"was this wrapper used this run" which adds complexity. For MVP, always re-emit all
-wrappers belonging to the fragment and let stale clearing handle unused children.
+### Re-emission of the wrapper block on rerun
+
+Covered by §5: on every fragment rerun we re-emit each of the fragment's wrapper blocks
+(`add_block` with `transparent=True`) at the snapshotted delta path, advancing the
+wrapper's `scriptRunId` so it is not cleared as stale. The transparent flag is part of the
+re-emitted proto so the frontend keeps treating it as box-less.
+
+## Accessibility
+
+A React Fragment (`<>…</>`) adds **no DOM node** and therefore no accessibility node. For
+this anonymous, role-less, unkeyed, unstyled wrapper there is **no accessibility impact**:
+the fragment's elements appear in the same place in the accessibility tree and the same
+tab/focus order as if written directly to the outside container.
+
+**Constraint:** the transparent block must never carry `role`, `aria-*`, `tabindex`,
+focus, or CSS-key box styling. It has no box, so there is nothing to attach these to, and
+attaching them would require a real DOM element — defeating the purpose.
+
+For a *future* variant that needs to be keyed or carry attributes (out of scope here),
+`display: contents` on a real element is the alternative: it lets a wrapping element exist
+in the DOM/a11y tree while removing its own box. Note that `display: contents` does **not**
+establish a flex formatting context — children participate in the *parent's* flex layout,
+which is exactly why it is unsuitable if the wrapper ever needs to define its own flex
+context, and why we prefer the zero-DOM React Fragment for the cursor-isolation wrapper.
 
 ## Alternatives Considered
 
-### Option 2: Cursor Tracks Fragment Start Indices
+### Wrapper rendering approaches (rejected)
 
-Have `RunningCursor` maintain a `_fragment_start_indices: dict[str, int]` mapping. On
-fragment rerun, reset cursor to the stored start index.
+These are alternative ways to render the wrapper. All were rejected in favor of the
+transparent (zero-DOM) block.
 
-**Rejected because:**
-- Does not solve interleaving (Fragment A expanding overwrites Fragment B's slots)
-- Requires Fragment A to know exactly how many slots it will use in advance
-- Complex lifecycle management (what happens when fragments are removed/added?)
-- Incompatible with `parallel=True` (shared mutable cursor state)
+**Styled wrapper container** (the previous draft of this spec). Render the wrapper as a
+normal container — a real DOM box via `StyledLayoutWrapper` + `StyledFlexContainerBlock`.
 
-### Option 3: Disallow Interleaving
+- Rejected: it adds a real DOM box and an extra nesting level/flex item inside the outside
+  container, which is precisely the `st.fragment`-inside-container layout problem reported
+  in issue #13024. Outside-write content would be visually boxed and offset differently
+  from content written directly to the container.
 
-Error if multiple sources write to the same outside container.
+**Content-width wrapper.** Render a real box but set it to content width
+(`width="content"`) so it "hugs" its children instead of stretching.
 
-**Rejected because:**
-- Overly restrictive for valid use cases (header + fragment + footer pattern)
-- Users would need complex workarounds for simple patterns
+- Rejected: it regresses the common case. `width="stretch"` children (charts, images,
+  dataframes, metrics) would shrink to their minimum width inside a content-width wrapper.
+  This is the same class of regression as the shipped 16px-width bug (PR #12807), and is
+  exactly the caveat called out in PR #12848's content-width work. Most fragment content is
+  full-width today, so this would be a broad, visible regression.
 
-### Option 4: Slot-Based / Key-Based Placement
+**Mirror the parent's flex props onto the wrapper.** Render a real box but copy the outside
+container's flex properties (direction, gap, align, justify, width behavior) onto the
+wrapper so it "blends in".
 
-Use named keys instead of positional indices to identify element positions.
+- Rejected: complex and leaky. The extra flex item still consumes space and participates
+  in the parent's layout (see the maintainer's screenshot in #13024), so it cannot be made
+  perfectly invisible. It is also a maintenance treadmill — every new layout prop added to
+  containers must be re-mirrored onto the wrapper to keep parity.
 
-**Rejected because:**
-- Major architectural overhaul of the delta protocol
-- Changes fundamental frontend tree structure
-- Disproportionate scope for this bug fix
+### Cursor management approaches (rejected)
 
-### Option 5: Reset Cursor on First Write (Lazy Reset)
+These concern *how* to keep delta paths valid, independent of how the wrapper renders.
 
-Track which containers a fragment wrote to previously. On fragment rerun, reset those
-cursors to their starting position on first write.
+**Cursor tracks fragment start indices.** Have `RunningCursor` maintain a
+`_fragment_start_indices: dict[str, int]` and reset to the stored start index on rerun.
 
-**Rejected because:**
-- Still doesn't solve interleaving (same fundamental issue as Option 2)
-- Requires tracking "what index did the fragment start at" per container
-- Fragile if the main script changes between reruns (indices shift)
+- Rejected: doesn't solve interleaving (Fragment A expanding overwrites Fragment B's
+  slots), requires A to know its slot count in advance, has fragile lifecycle management
+  (fragments added/removed), and is incompatible with `parallel=True` (shared mutable
+  cursor state).
+
+**Disallow interleaving.** Error if multiple sources write to the same outside container.
+
+- Rejected: overly restrictive for valid patterns (header + fragment + footer).
+
+**Slot-based / key-based placement.** Identify positions by named keys instead of
+positional indices.
+
+- Rejected: major architectural overhaul of the delta protocol and the frontend tree;
+  disproportionate for this bug.
+
+**Lazy reset on first write.** Track which containers a fragment wrote to and reset those
+cursors on first write during rerun.
+
+- Rejected: still doesn't solve interleaving and is fragile when the main script changes
+  element counts between reruns.
 
 ## Test Plan
 
-### E2E Tests (Playwright)
-
-Located at `e2e_playwright/st_fragment_outside_container_test.py`:
-
-1. **Basic: Button + text to outside container, multiple clicks**
-   - Fragment writes `button` + `markdown` to an outside container
-   - Click button 3 times, verify no crash and correct content after each click
-   - Assert element count in the container stays constant (2 elements inside wrapper)
-
-2. **Multiple fragments writing to same outside container**
-   - Two fragments each write elements to the same container
-   - Click buttons in each fragment, verify independence
-   - Assert neither fragment's rerun affects the other's elements
-
-3. **Interleaved: Main script + fragment writes to same container**
-   - Main script writes header/footer, fragment writes in between
-   - Fragment reruns, verify header/footer unchanged and fragment content updates
-
-4. **Conditional writes: Fragment changes element count**
-   - Fragment conditionally writes 1 or 3 elements based on state
-   - Toggle state, verify elements appear/disappear correctly without crashes
-
-5. **Nested containers from fragment**
-   - Fragment creates a nested container inside an outside container
-   - Writes to the nested container, reruns, verify correct behavior
-
-6. **`with outside_container:` syntax from within a fragment**
-   - Use context manager syntax for outside writes
-   - Verify equivalent behavior to method-call syntax
-
-### Unit Tests (pytest)
-
-Located at `lib/tests/streamlit/runtime/fragment_outside_writes_test.py`:
-
-1. **`_is_outside_container_write` correctly identifies outside vs inside writes**
-   - Fragment path set, cursor inside → returns False
-   - Fragment path set, cursor outside → returns True
-   - No fragment → returns False
-
-2. **`_get_or_create_outside_wrapper` creates wrapper on first call, reuses on second**
-   - First call creates block and returns new DG
-   - Second call with same key returns cached DG
-   - Different fragment_id creates separate wrapper
-
-3. **`_reset_outside_wrappers` resets cursor and re-emits block**
-   - After reset, wrapper cursor index is 0
-   - ForwardMsg with add_block is enqueued at correct delta path
-
-4. **Wrapper registry cleared on full app run**
-   - Verify `on_script_start` clears `_fragment_outside_wrappers`
-
-5. **Multiple wrappers for one fragment writing to multiple containers**
-   - One fragment, two outside containers → two wrappers with distinct keys
-
 ### Frontend Unit Tests (Vitest)
 
-The existing `ClearStaleNodeVisitor.test.ts` should already cover the fragment stale
-clearing behavior since the wrapper is just a standard `BlockNode` with a `fragmentId`.
-Add a specific test case:
+`frontend/lib/src/components/core/Block/Block.test.tsx` (or a co-located test):
 
-1. **Wrapper block with fragmentId clears stale children on fragment rerun**
-   - Block has fragmentId matching running fragment
-   - Children from previous run (different scriptRunId) are cleared
-   - New children are preserved
+1. **Transparent block renders children but no wrapper DOM.**
+   - Render a `BlockNode` whose `deltaBlock.transparent === true` with a couple of child
+     elements.
+   - Assert the children are present/visible.
+   - Assert **absence** of the wrapper DOM around them: no
+     `data-testid="stLayoutWrapper"` and no `stVerticalBlock` box introduced by this
+     block (anti-regression: the same children rendered under a normal container *do*
+     produce that box).
+
+`ClearStaleNodeVisitor.test.ts` (already covers fragment stale clearing; add a case):
+
+2. **Transparent wrapper block with fragmentId clears stale children on fragment rerun.**
+   - Wrapper has `fragmentId` matching a running fragment; children from a previous
+     `scriptRunId` are cleared; re-emitted children are preserved.
+
+### Python Unit Tests (pytest)
+
+`lib/tests/streamlit/runtime/fragment_outside_writes_test.py`:
+
+1. `_is_outside_container_write` correctly identifies inside vs outside writes (no fragment
+   → False; cursor inside fragment path → False; cursor outside → True).
+2. `_get_or_create_outside_wrapper` creates a transparent wrapper on first call (proto has
+   `transparent=True`), reuses it on the second call, and creates separate wrappers per
+   fragment_id and per container_id.
+3. `_reset_outside_wrappers` restores the snapshotted cursor (index back to 0) and enqueues
+   a re-emission `add_block` (with `transparent=True`) at the snapshotted delta path.
+4. Wrapper registry is cleared on full app run (`on_script_start`).
+
+### E2E Tests (Playwright)
+
+`e2e_playwright/st_fragment_outside_container.py` + `_test.py` (the dedicated
+outside-write app/test for this feature; extend it):
+
+1. **Inline rendering, no extra box.** Fragment writes a button + markdown to an outside
+   container. Assert the content appears **inline** in the outside container with no extra
+   full-width container around it (assert no added `stLayoutWrapper` / `stVerticalBlock`
+   wrapping the outside-write content; assert the elements are direct descendants of the
+   outside container's box).
+2. **Reruns don't duplicate or crash.** Click the button several times; assert no crash
+   ("Bad delta path index …" does not appear) and the element count inside the container
+   stays constant.
+3. **Multiple fragments → same container** render independently and inline.
+4. **Interleaved main-script + fragment writes** keep header/footer fixed while the
+   fragment content updates.
+
+### Snapshot baselines
+
+Removing the wrapper's nesting level changes the DOM for any fragment snapshot baseline
+that previously included a styled wrapper around outside-write content. **Any affected
+fragment snapshot baselines must be re-generated** as part of implementation.
 
 ## Migration / Breaking Changes
 
-**No breaking changes.** This fix applies to a new feature (outside container writes from
-fragments) that is currently broken. The implicit wrapper is an implementation detail:
+**No breaking changes.** This fix targets a currently-broken feature (outside container
+writes from fragments). The transparent wrapper is an implementation detail:
 
-- Users write `outside_container.button("Click")` — the API is unchanged
-- The wrapper adds one extra DOM div in the tree. It uses `allow_empty=True` and has no
-  visual styling, so it's layout-transparent in standard container contexts
-- Existing apps that don't use outside container writes from fragments are completely
-  unaffected (the detection gate `_is_outside_container_write` returns False immediately)
+- Users write `outside_container.button("Click")` — the API is unchanged.
+- The wrapper adds **no** DOM box and **no** extra flex item, so it is layout-transparent
+  (improvement over a styled wrapper, which would add a box/nesting level).
+- Apps that don't do outside-container writes from fragments are unaffected; the detection
+  gate `_is_outside_container_write` returns `False` immediately.
 
-## Out of Scope
+## Out of Scope / Follow-up
 
-- **Wrapper styling/CSS**: The wrapper div is intentionally unstyled. If users need
-  specific layout (e.g., `st.columns` inside an outside container), they can create
-  explicit containers inside the fragment's writes.
-- **Garbage collection of unused wrappers**: If a fragment stops writing to a container,
-  the wrapper persists (empty) until full app rerun. This is acceptable for MVP.
-- **`st.empty()` advanced interactions**: The `placeholder.empty()` + re-creation pattern
-  works but the stale wrapper persists until cleared. Edge case to revisit if user reports
-  arise.
+- **Applying the transparent block to `st.fragment`'s own implicit container (the #13024
+  redesign) is a follow-up, not part of this spec.** Today every fragment wraps its body in
+  an implicit `st.container()` (`fragment.py:420-423`). Switching that container to the new
+  transparent block would address #13024 (fragment-inside-container layout), but it is
+  deliberately deferred because:
+  - **Backward-compat.** Most fragments render full width today and rely on it (top-level
+    live widgets, fragment-per-column / fragment-per-tab dashboards). A blanket change
+    risks layout shifts and breaks CSS that targets the fragment's `stVerticalBlock`. The
+    visible shift would mainly affect the relatively rare apps that put content-width or
+    aligned containers around fragments.
+  - **Parallel pre-allocation interaction.** It interacts with the
+    `pre_allocated_container_fragment_id` path; that path would need to pre-allocate a
+    transparent block, with its own validation.
+  - **Low demand.** #13024 has ≈4 👍.
+
+  This spec only introduces the transparent block type and uses it for the
+  **outside-write wrapper**. Reusing it for the fragment's own container can come later.
+- **Wrapper styling/CSS.** The transparent wrapper is intentionally box-less. Users who
+  want layout inside an outside-write should create an explicit container in the fragment.
+- **Garbage collection of unused wrappers.** A wrapper for a container a fragment stops
+  writing to persists (empty, zero-DOM) until full app rerun. Acceptable.
+- **`st.empty()` advanced interactions.** The `placeholder.empty()` + re-creation pattern
+  works via the "recreate on invalid slot" fallback; revisit if user reports arise.
 
 ## Implementation Checklist
 
 Files to modify:
 
-1. `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`
-   - Add `_fragment_outside_wrappers` dict to `ScriptRunContext`
-   - Clear it in `on_script_start()`
+1. `proto/streamlit/proto/Block.proto`
+   - Add `bool transparent = 17;` to `Block` (bump `Next ID` to 18).
+   - Run `make protobuf` to regenerate Python + TS protobufs.
 
-2. `lib/streamlit/delta_generator.py`
-   - Add `_is_outside_container_write()` helper function
-   - Add `_get_or_create_outside_wrapper()` function
-   - Modify `_enqueue()` to redirect outside writes through wrapper
-   - Modify `_block()` to redirect outside writes through wrapper
+2. `lib/streamlit/runtime/scriptrunner_utils/script_run_context.py`
+   - Add `_fragment_outside_wrappers` dict to `ScriptRunContext`.
+   - Clear it in `on_script_start()`.
 
-3. `lib/streamlit/runtime/fragment.py`
-   - Add `_reset_outside_wrappers()` function
-   - Call it in `wrapped_fragment()` during fragment rerun (after snapshot restore)
+3. `lib/streamlit/delta_generator.py`
+   - Add `_is_outside_container_write()` and `_get_or_create_outside_wrapper()` (creates a
+     `transparent=True` block; snapshots its initial cursor + delta path).
+   - Redirect outside writes through the wrapper in `_enqueue()` and `_block()`.
 
-4. `e2e_playwright/st_fragment_outside_container_test.py` — new E2E test file
-5. `e2e_playwright/st_fragment_outside_container.py` — new E2E app file
-6. `lib/tests/streamlit/runtime/fragment_outside_writes_test.py` — new unit test file
+4. `lib/streamlit/runtime/fragment.py`
+   - Add `_reset_outside_wrappers()` (restore cursor from snapshot + re-emit transparent
+     `add_block`); call it in `wrapped_fragment()` after the snapshot restore.
+   - Ensure the parallel `pre_allocated_container_fragment_id` path allocates a transparent
+     block for any pre-allocated outside-write wrapper.
+
+5. `frontend/lib/src/components/core/Block/Block.tsx`
+   - Add an early branch in `BlockNodeRenderer`: when `node.deltaBlock.transparent`, return
+     `<ChildRenderer />` inside a React Fragment (skip `ContainerContentsWrapper` /
+     `FlexBoxContainer` / `StyledLayoutWrapper`).
+
+6. **No changes needed** to `RenderNodeVisitor.tsx`, `ClearStaleNodeVisitor.ts`, or
+   `SetNodeByDeltaPathVisitor.ts` beyond the new type existing in the proto: they are
+   block-type-agnostic (key by `deltaBlock.id`, clear stale element-level by
+   `fragmentId`/`scriptRunId`, and resolve delta paths by index, respectively).
+
+7. Tests:
+   - `frontend/lib/src/components/core/Block/Block.test.tsx` — transparent block renders
+     children with no wrapper DOM.
+   - `lib/tests/streamlit/runtime/fragment_outside_writes_test.py` — detection, wrapper
+     creation/reuse (transparent proto), cursor restore + re-emission, registry clearing.
+   - `e2e_playwright/st_fragment_outside_container.py` / `_test.py` — inline rendering, no
+     extra box, reruns don't duplicate/crash.
+   - Re-generate any fragment snapshot baselines affected by the removed nesting level.
