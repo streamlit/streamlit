@@ -337,18 +337,18 @@ function Slider({
                     </StyledThumbValue>
                   </StyledThumb>
                 ))}
+                {/* Tick bar inside StyledSliderTrack so its left:0/right:0 aligns with
+                    the inset track bounds (matching StyledRASlider's padding inset) */}
+                <SliderTickBar
+                  minLabel={formattedMinValue}
+                  maxLabel={formattedMaxValue}
+                  isHovered={isHovered || isDragging}
+                  isDisabled={disabled}
+                />
               </>
             )
           }}
         </StyledSliderTrack>
-
-        {/* Positioned absolutely inside StyledRASlider (position:relative); top:100% places it below the track */}
-        <SliderTickBar
-          minLabel={formattedMinValue}
-          maxLabel={formattedMaxValue}
-          isHovered={isHovered || isDragging}
-          isDisabled={disabled}
-        />
       </StyledRASlider>
     </StyledSlider>
   )
@@ -526,14 +526,35 @@ function fixLabelOverflow(
   // eslint-disable-next-line streamlit-custom/no-force-reflow-access -- Existing usage
   const thumbValueRect = thumbValue.getBoundingClientRect()
 
-  const thumbMidpoint = thumbRect.left + thumbRect.width / 2
-  const thumbValueOverflowsLeft =
-    thumbMidpoint - thumbValueRect.width / 2 < sliderRect.left
-  const thumbValueOverflowsRight =
-    thumbMidpoint + thumbValueRect.width / 2 > sliderRect.right
+  const thumbRadius = thumbRect.width / 2
+  const thumbMidpoint = thumbRect.left + thumbRadius
 
-  thumbValue.style.left = thumbValueOverflowsLeft ? "0" : ""
-  thumbValue.style.right = thumbValueOverflowsRight ? "0" : ""
+  // The track is inset from the outer slider div by thumbRadius on each side
+  // (StyledRASlider paddingLeft/Right = thumbRadius). Use the track's effective
+  // boundaries so pinned labels align with the track edge, not the outer widget edge.
+  const effectiveLeft = sliderRect.left + thumbRadius
+  const effectiveRight = sliderRect.right - thumbRadius
+
+  const thumbValueOverflowsLeft =
+    thumbMidpoint - thumbValueRect.width / 2 < effectiveLeft
+  const thumbValueOverflowsRight =
+    thumbMidpoint + thumbValueRect.width / 2 > effectiveRight
+
+  // React Aria applies `transform: translate(-50%, -50%)` to the thumb div as
+  // an inline style. Any `left`/`right` we set on the label (a child of that
+  // thumb) is in the thumb's pre-transform local coordinate space, so we must
+  // add thumbRadius to compensate for the horizontal shift when pinning the
+  // label to the track boundary.
+  if (thumbValueOverflowsLeft) {
+    thumbValue.style.left = `${effectiveLeft - thumbMidpoint + thumbRadius}px`
+    thumbValue.style.right = ""
+  } else if (thumbValueOverflowsRight) {
+    thumbValue.style.left = ""
+    thumbValue.style.right = `${thumbMidpoint + thumbRadius - effectiveRight}px`
+  } else {
+    thumbValue.style.left = ""
+    thumbValue.style.right = ""
+  }
 }
 
 /**
@@ -566,17 +587,24 @@ function fixLabelOverlap(
   const thumb1MidPoint = thumb1Rect.left + thumb1Rect.width / 2
   const thumb2MidPoint = thumb2Rect.left + thumb2Rect.width / 2
 
+  // The track is inset from the outer slider div by thumbRadius on each side
+  // (StyledRASlider paddingLeft/Right = thumbRadius). Use effective track
+  // boundaries so label collision detection aligns with the track edge.
+  const thumbRadius = thumb1Rect.width / 2
+  const effectiveLeft = sliderRect.left + thumbRadius
+  const effectiveRight = sliderRect.right - thumbRadius
+
   const centeredThumb1ValueFitsLeft =
-    thumb1MidPoint - thumb1ValueRect.width / 2 >= sliderRect.left
+    thumb1MidPoint - thumb1ValueRect.width / 2 >= effectiveLeft
 
   const centeredThumb2ValueFitsRight =
-    thumb2MidPoint + thumb2ValueRect.width / 2 <= sliderRect.right
+    thumb2MidPoint + thumb2ValueRect.width / 2 <= effectiveRight
 
   const leftAlignedThumb1ValueFitsLeft =
-    thumb1Rect.left - thumb1ValueRect.width >= sliderRect.left
+    thumb1Rect.left - thumb1ValueRect.width >= effectiveLeft
 
   const rightAlignedThumb2ValueFitsRight =
-    thumb2Rect.right + thumb2ValueRect.width <= sliderRect.right
+    thumb2Rect.right + thumb2ValueRect.width <= effectiveRight
 
   const thumb1ValueOverhang = centeredThumb1ValueFitsLeft
     ? thumb1ValueRect.width / 2
@@ -669,18 +697,28 @@ function fixLabelOverlap(
     fixLabelOverflow(sliderDiv, thumb1Div, thumb1ValueDiv)
 
     // Make thumb2Value appear to the right of thumb1Value.
+    // The `left` property is in thumb2's pre-transform coordinate space, so
+    // add thumb2Width/2 to compensate for React Aria's translate(-50%,-50%).
     thumb2ValueDiv.style.left = `${Math.round(
-      thumb1MidPoint + thumb1ValueOverhang + labelGap - thumb2MidPoint
+      thumb1MidPoint +
+        thumb1ValueOverhang +
+        labelGap -
+        thumb2MidPoint +
+        thumb2Rect.width / 2
     )}px`
     thumb2ValueDiv.style.right = ""
   } else {
     fixLabelOverflow(sliderDiv, thumb2Div, thumb2ValueDiv)
 
     // Make thumb1Value appear to the left of thumb2Value.
+    // The `right` property is in thumb1's pre-transform coordinate space, so
+    // subtract thumb1Width/2 (i.e. add it to the negated formula) to compensate.
     thumb1ValueDiv.style.left = ""
-    thumb1ValueDiv.style.right = `${-Math.round(
-      thumb2MidPoint - thumb2ValueOverhang - labelGap - thumb1MidPoint
-    )}px`
+    thumb1ValueDiv.style.right = `${
+      -Math.round(
+        thumb2MidPoint - thumb2ValueOverhang - labelGap - thumb1MidPoint
+      ) + Math.round(thumb1Rect.width / 2)
+    }px`
   }
 }
 

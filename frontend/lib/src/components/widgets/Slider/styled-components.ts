@@ -28,19 +28,25 @@ export const StyledSlider = styled.div({
   },
 })
 
-/** Wraps RASlider with position:relative so SliderTickBar (position:absolute; top:100%)
- * is positioned relative to the track area, not the entire widget (which includes the label). */
-export const StyledRASlider = styled(RASlider)({
+/** Wraps RASlider with position:relative and insets it by half the thumb radius on
+ * each side. This mirrors BaseUI's StyledThumbWrapper (left/right: thumbSize/2) so
+ * thumbs at min/max do not overflow the widget boundary. The SliderTickBar lives
+ * inside StyledSliderTrack so it aligns with these inset bounds. */
+export const StyledRASlider = styled(RASlider)(({ theme }) => ({
   position: "relative",
   width: "100%",
-})
+  paddingLeft: `calc(${theme.sizes.sliderThumb} / 2)`,
+  paddingRight: `calc(${theme.sizes.sliderThumb} / 2)`,
+}))
 
 /** Wraps SliderTrack with the 40px touch-target height and position:relative,
- * making it the containing block for thumb left:X% positioning. */
+ * making it the containing block for thumb left:X% positioning.
+ * All children (track line, thumbs) are position:absolute so they contribute
+ * no in-flow height. The full minElementHeight comes entirely from padding. */
 export const StyledSliderTrack = styled(SliderTrack)(({ theme }) => ({
   position: "relative",
-  paddingTop: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
-  paddingBottom: `calc((${theme.sizes.minElementHeight} - ${theme.spacing.twoXS}) / 2)`,
+  paddingTop: `calc(${theme.sizes.minElementHeight} / 2)`,
+  paddingBottom: `calc(${theme.sizes.minElementHeight} / 2)`,
 }))
 
 /** Styled SliderThumb. RA applies inline styles: position:absolute; left:X%;
