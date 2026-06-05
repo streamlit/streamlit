@@ -31,13 +31,16 @@ from streamlit.runtime.scriptrunner_utils.exceptions import (
     RerunException,
     StopException,
 )
-from streamlit.runtime.scriptrunner_utils.script_run_context import (
+from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
     SCRIPT_RUN_CONTEXT_ATTR_NAME,
-    ScriptRunContext,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Iterator
+
+    from streamlit.runtime.scriptrunner_utils.script_run_context import (
+        ScriptRunContext,
+    )
 
 
 @contextlib.contextmanager

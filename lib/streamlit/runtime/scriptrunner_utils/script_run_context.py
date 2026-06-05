@@ -39,6 +39,10 @@ from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
 )
+from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
+from streamlit.runtime.scriptrunner_utils.script_run_context_attr import (
+    SCRIPT_RUN_CONTEXT_ATTR_NAME,
+)
 from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
 
 if TYPE_CHECKING:
@@ -325,7 +329,6 @@ class ScriptRunContext:
         self._enqueue(msg_to_send)
 
 
-SCRIPT_RUN_CONTEXT_ATTR_NAME: Final = "streamlit_script_run_ctx"
 # Thread-attached storage used by add_script_run_ctx:
 # - Fields slot: parent FragmentThreadState snapshot, applied at run() time.
 # - Install slot: sentinel that prevents thread.run from being wrapped
@@ -472,8 +475,3 @@ def enqueue_message(msg: ForwardMsg) -> None:
         msg.delta.fragment_id = ts.fragment_id
 
     ctx.enqueue(msg)
-
-
-from streamlit.runtime.parallel_coordinator import (  # noqa: E402
-    ParallelFragmentCoordinator,
-)
