@@ -551,39 +551,48 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
     return response
 
 
+def _clean_stale_cookies(
+    request: Request, response: Response, cookie_secret: str
+) -> None:
+    for cookie_name in (USER_COOKIE_NAME, TOKENS_COOKIE_NAME):
+        cookie_value = request.cookies.get(cookie_name)
+        if cookie_value is not None:
+            try:
+                signed_value = cookie_value.encode("latin-1")
+                if decode_signed_value(cookie_secret, cookie_name, signed_value) is not None:
+                    continue
+            except UnicodeEncodeError:
+                pass
+
+            has_set_cookie = any(
+                v.startswith(cookie_name.encode() + b"=")
+                for k, v in response.raw_headers
+                if k.lower() == b"set-cookie"
+            )
+            if not has_set_cookie:
+                response.delete_cookie(cookie_name, path=_get_cookie_path())
+
+
 def create_auth_routes(base_url: str) -> list[Route]:
     """Create all authentication related routes for the Starlette app."""
 
     from starlette.routing import Route
 
-    def _clean_stale_cookies(request: Request, response: Response) -> None:
-        cookie_secret = get_cookie_secret()
-        for cookie_name in (USER_COOKIE_NAME, TOKENS_COOKIE_NAME):
-            cookie_value = request.cookies.get(cookie_name)
-            if cookie_value is not None:
-                signed_value = cookie_value.encode("latin-1")
-                if decode_signed_value(cookie_secret, cookie_name, signed_value) is None:
-                    has_set_cookie = any(
-                        cookie_name.encode() in v
-                        for k, v in response.raw_headers
-                        if k.lower() == b"set-cookie"
-                    )
-                    if not has_set_cookie:
-                        response.delete_cookie(cookie_name, path=_get_cookie_path())
+    cookie_secret = get_cookie_secret()
 
     async def login(request: Request) -> Response:
         response = await _auth_login(request, base_url)
-        _clean_stale_cookies(request, response)
+        _clean_stale_cookies(request, response, cookie_secret)
         return response
 
     async def logout(request: Request) -> Response:
         response = await _auth_logout(request, base_url)
-        _clean_stale_cookies(request, response)
+        _clean_stale_cookies(request, response, cookie_secret)
         return response
 
     async def callback(request: Request) -> Response:
         response = await _auth_callback(request, base_url)
-        _clean_stale_cookies(request, response)
+        _clean_stale_cookies(request, response, cookie_secret)
         return response
 
     return [
