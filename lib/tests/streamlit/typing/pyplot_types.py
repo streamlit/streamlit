@@ -67,3 +67,16 @@ if TYPE_CHECKING:
         ),
         DeltaGenerator,
     )
+
+    # =====================================================================
+    # Invalid usages - should NOT type check
+    # =====================================================================
+
+    # Invalid width value (not "content", "stretch", or int)
+    pyplot(fig, width="invalid")  # type: ignore[arg-type]
+
+    # Invalid clear_figure value (not bool or None)
+    pyplot(fig, clear_figure="yes")  # type: ignore[arg-type]
+
+    # Passing width as positional argument (should be keyword-only)
+    pyplot(fig, None, "stretch")  # type: ignore[misc]
