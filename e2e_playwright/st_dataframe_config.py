@@ -1101,3 +1101,5 @@ st.dataframe(
 if st.session_state.button_click:
     click = st.session_state.button_click
     st.write(f"Clicked row {click['row']}, label: {click['label']}")
+
+st.write(st.session_state)
