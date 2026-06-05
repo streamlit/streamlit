@@ -232,6 +232,50 @@ def _get_signed_cookie_with_chunks(
     return get_cookie_with_chunks(get_single_cookie, cookie_name)
 
 
+def _has_unverifiable_auth_cookie(cookies: dict[str, str]) -> bool:
+    """Return True if any auth cookie is present but fails signature verification.
+
+    This detects the Tornado→Starlette upgrade regression (GitHub #15407): a
+    browser that was logged-in under the old Tornado backend (≤1.56) carries
+    cookies signed with Tornado's HMAC scheme, which ``decode_signed_value``
+    (itsdangerous) cannot verify.  The cookie value is non-empty, but decoding
+    returns ``None``.
+
+    Distinguishing "present but unverifiable" from "absent" is important:
+
+    * **Absent** — the user is simply not logged in; proceed normally.
+    * **Present but unverifiable** — the cookie is stale/incompatible; the
+      browser should drop it and reload so the HTTP middleware
+      (``InvalidAuthCookieMiddleware``) can clear it and let the login flow
+      restart cleanly.
+
+    Parameters
+    ----------
+    cookies
+        The WebSocket request cookies as a ``{name: value}`` mapping.
+
+    Returns
+    -------
+    bool
+        ``True`` if at least one auth cookie exists but cannot be verified.
+    """
+    secret = get_cookie_secret()
+    if not secret:
+        return False
+
+    for cookie_name in (USER_COOKIE_NAME, TOKENS_COOKIE_NAME):
+        raw_value = cookies.get(cookie_name)
+        if raw_value is None:
+            continue
+        signed_bytes = raw_value.encode("latin-1")
+        decoded = starlette_app_utils.decode_signed_value(secret, cookie_name, signed_bytes)
+        if decoded is None:
+            # Cookie is present but unverifiable — stale signature scheme.
+            return True
+
+    return False
+
+
 class StarletteClientContext(ClientContext):
     """Starlette-specific implementation of ClientContext.
 
@@ -393,6 +437,34 @@ def create_websocket_handler(runtime: Runtime) -> Any:
                 "Rejecting WebSocket connection from disallowed origin: %s", origin
             )
             await websocket.close(code=1008)  # 1008 = Policy Violation
+            return
+
+        # Detect stale auth cookies from the old Tornado backend (≤1.56) before
+        # accepting the connection.  If a cookie is present but cannot be verified
+        # with the current itsdangerous scheme, the browser still holds a cookie
+        # that was signed by Tornado's incompatible HMAC format (regression #15407).
+        #
+        # Closing before accept() lets the frontend enter its PINGING_SERVER
+        # retry loop, which issues HTTP health-check requests.  Those HTTP
+        # requests pass through InvalidAuthCookieMiddleware, which injects
+        # Set-Cookie delete headers that clear the stale cookies.  The subsequent
+        # WebSocket reconnect then arrives with no auth cookies at all, allowing
+        # the login flow to restart cleanly.
+        #
+        # We use close code 1012 (Service Restart) rather than 1008 (Policy
+        # Violation) because this is a transient, self-healing condition — not a
+        # permanent access denial.  The frontend treats both codes identically
+        # (both trigger PINGING_SERVER), but 1012 is semantically more accurate
+        # and less alarming in browser developer tools.
+        if _has_unverifiable_auth_cookie(dict(websocket.cookies)):
+            _LOGGER.warning(
+                "WebSocket connection rejected: auth cookie(s) are present but "
+                "cannot be verified — they were likely signed by the old Tornado "
+                "backend (Streamlit ≤1.56). The browser will reload and the "
+                "InvalidAuthCookieMiddleware will clear the stale cookies on the "
+                "next HTTP request so the login flow can restart. (Issue #15407)"
+            )
+            await websocket.close(code=1012)  # 1012 = Service Restart (transient)
             return
 
         subprotocol, xsrf_token, existing_session_id = _parse_subprotocols(

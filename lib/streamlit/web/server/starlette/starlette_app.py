@@ -31,6 +31,9 @@ from streamlit.web.server.starlette.starlette_auth_routes import create_auth_rou
 from streamlit.web.server.starlette.starlette_gzip_middleware import (
     SelectiveGZipMiddleware,
 )
+from streamlit.web.server.starlette.starlette_invalid_auth_cookie_middleware import (
+    InvalidAuthCookieMiddleware,
+)
 from streamlit.web.server.starlette.starlette_path_security_middleware import (
     PathSecurityMiddleware,
 )
@@ -179,6 +182,13 @@ def create_streamlit_middleware() -> list[Middleware]:
 
     # FIRST: Path security middleware to block dangerous paths before any other processing.
     middleware.append(Middleware(PathSecurityMiddleware))
+
+    # Clear auth cookies that were signed by the old Tornado backend (<=1.56) and
+    # cannot be verified by the current Starlette backend.  Without this, browsers
+    # that were logged-in before the upgrade keep sending unverifiable cookies
+    # on every request, leaving the app stuck on the loading screen for up to 30
+    # days (the original cookie max-age).  See GitHub issue #15407.
+    middleware.append(Middleware(InvalidAuthCookieMiddleware))
 
     # Add session middleware
     middleware.append(

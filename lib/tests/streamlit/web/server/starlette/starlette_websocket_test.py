@@ -694,3 +694,237 @@ class TestStarletteSessionClientClientContext:
 
         # Cleanup
         await client.aclose()
+
+
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# Tests for _has_unverifiable_auth_cookie and WebSocket stale-cookie
+# early-exit (GitHub issue #15407)
+# ---------------------------------------------------------------------------
+
+from streamlit.web.server.starlette.starlette_websocket import (
+    _has_unverifiable_auth_cookie,
+)
+from streamlit.web.server.starlette.starlette_server_config import (
+    TOKENS_COOKIE_NAME,
+    USER_COOKIE_NAME,
+)
+
+
+class TestHasUnverifiableAuthCookie:
+    """Tests for _has_unverifiable_auth_cookie (regression #15407).
+
+    Verifies that the helper correctly distinguishes between:
+    - No auth cookies present (user is logged out) → False
+    - Valid Starlette-signed cookies present → False
+    - Cookies present but signed by the old Tornado backend → True
+    """
+
+    def test_returns_false_when_no_auth_cookies(self) -> None:
+        """No auth cookies → not a stale-cookie situation."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            assert _has_unverifiable_auth_cookie({}) is False
+            assert _has_unverifiable_auth_cookie({"unrelated_cookie": "value"}) is False
+
+    def test_returns_false_for_valid_user_cookie(self) -> None:
+        """A properly signed user cookie must NOT trigger the stale-cookie path."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            signed = starlette_app_utils.create_signed_value(
+                "test-secret", USER_COOKIE_NAME, '{"is_logged_in": true}'
+            )
+            cookies = {USER_COOKIE_NAME: signed.decode("utf-8")}
+            assert _has_unverifiable_auth_cookie(cookies) is False
+
+    def test_returns_false_for_valid_tokens_cookie(self) -> None:
+        """A properly signed tokens cookie must NOT trigger the stale-cookie path."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            signed = starlette_app_utils.create_signed_value(
+                "test-secret", TOKENS_COOKIE_NAME, '{"access_token": "tok"}'
+            )
+            cookies = {TOKENS_COOKIE_NAME: signed.decode("utf-8")}
+            assert _has_unverifiable_auth_cookie(cookies) is False
+
+    def test_returns_true_for_tornado_style_user_cookie(self) -> None:
+        """A Tornado-signed (unverifiable) user cookie returns True."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            tornado_cookie = "2|deadbeef|badc0ffee|1700000000"
+            cookies = {USER_COOKIE_NAME: tornado_cookie}
+            assert _has_unverifiable_auth_cookie(cookies) is True
+
+    def test_returns_true_for_tornado_style_tokens_cookie(self) -> None:
+        """A Tornado-signed (unverifiable) tokens cookie returns True."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            tornado_cookie = "2|deadbeef|badc0ffee|1700000000"
+            cookies = {TOKENS_COOKIE_NAME: tornado_cookie}
+            assert _has_unverifiable_auth_cookie(cookies) is True
+
+    def test_returns_true_when_any_cookie_is_invalid(self) -> None:
+        """Returns True as soon as the first unverifiable cookie is found."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            valid_signed = starlette_app_utils.create_signed_value(
+                "test-secret", USER_COOKIE_NAME, '{"is_logged_in": true}'
+            )
+            cookies = {
+                USER_COOKIE_NAME: valid_signed.decode("utf-8"),
+                TOKENS_COOKIE_NAME: "2|bad|tornado|cookie",
+            }
+            assert _has_unverifiable_auth_cookie(cookies) is True
+
+    def test_returns_false_when_no_secret_configured(self) -> None:
+        """When no cookie secret is set, the check is skipped entirely."""
+        with patch_config_options({"server.cookieSecret": ""}):
+            cookies = {USER_COOKIE_NAME: "any-value"}
+            assert _has_unverifiable_auth_cookie(cookies) is False
+
+
+class TestWebSocketStaleAuthCookieRejection:
+    """Integration tests for the stale-cookie early-exit in the WebSocket handler.
+
+    Verifies that when a WebSocket arrives carrying unverifiable auth cookies
+    (regression #15407), the server closes the connection before starting a
+    session, allowing the reconnect loop's HTTP health-check requests to trigger
+    InvalidAuthCookieMiddleware and clear the stale cookies.
+    """
+
+    @pytest.mark.anyio
+    async def test_websocket_closed_with_1012_for_stale_cookies(self) -> None:
+        """WebSocket with unverifiable auth cookies is closed with code 1012."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            mock_runtime = MagicMock()
+            handler = create_websocket_handler(mock_runtime)
+
+            mock_websocket = MagicMock()
+            mock_websocket.cookies = {USER_COOKIE_NAME: "2|bad|tornado|cookie"}
+            mock_websocket.headers.get.return_value = "http://localhost"
+            mock_websocket.close = AsyncMock()
+
+            with patch(
+                "streamlit.web.server.starlette.starlette_websocket._is_origin_allowed",
+                return_value=True,
+            ):
+                await handler(mock_websocket)
+
+        # Must be closed with 1012 (Service Restart) — NOT accepted
+        mock_websocket.close.assert_called_once_with(code=1012)
+        mock_websocket.accept.assert_not_called()
+        # No session should be created
+        mock_runtime.connect_session.assert_not_called()
+
+    @pytest.mark.anyio
+    async def test_websocket_not_closed_when_no_auth_cookies(self) -> None:
+        """WebSocket with no auth cookies proceeds normally (no stale-cookie close)."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            mock_runtime = MagicMock()
+            mock_runtime.connect_session.return_value = "session-123"
+            handler = create_websocket_handler(mock_runtime)
+
+            mock_websocket = MagicMock()
+            mock_websocket.cookies = {}
+            mock_websocket.headers.get.side_effect = lambda key, default=None: {
+                "Origin": "http://localhost",
+                "Sec-WebSocket-Protocol": "streamlit",
+            }.get(key, default)
+            mock_websocket.headers.__iter__ = MagicMock(return_value=iter([]))
+            mock_websocket.accept = AsyncMock()
+            mock_websocket.receive_bytes = AsyncMock(
+                side_effect=Exception("stop the loop")
+            )
+            mock_websocket.close = AsyncMock()
+
+            with patch(
+                "streamlit.web.server.starlette.starlette_websocket._is_origin_allowed",
+                return_value=True,
+            ):
+                with patch(
+                    "streamlit.web.server.starlette.starlette_websocket.is_xsrf_enabled",
+                    return_value=False,
+                ):
+                    try:
+                        await handler(mock_websocket)
+                    except Exception:
+                        pass  # Expected: receive_bytes raises to stop the loop
+
+        # The connection must have been accepted (not closed early)
+        mock_websocket.accept.assert_called_once()
+
+    @pytest.mark.anyio
+    async def test_websocket_not_closed_for_valid_cookies(self) -> None:
+        """WebSocket with valid Starlette-signed cookies proceeds normally."""
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            mock_runtime = MagicMock()
+            mock_runtime.connect_session.return_value = "session-456"
+            handler = create_websocket_handler(mock_runtime)
+
+            valid_signed = starlette_app_utils.create_signed_value(
+                "test-secret", USER_COOKIE_NAME, '{"is_logged_in": true}'
+            ).decode("utf-8")
+
+            mock_websocket = MagicMock()
+            mock_websocket.cookies = {USER_COOKIE_NAME: valid_signed}
+            mock_websocket.headers.get.side_effect = lambda key, default=None: {
+                "Origin": "http://localhost",
+                "Sec-WebSocket-Protocol": "streamlit",
+            }.get(key, default)
+            mock_websocket.headers.__iter__ = MagicMock(return_value=iter([]))
+            mock_websocket.accept = AsyncMock()
+            mock_websocket.receive_bytes = AsyncMock(
+                side_effect=Exception("stop the loop")
+            )
+            mock_websocket.close = AsyncMock()
+
+            with patch(
+                "streamlit.web.server.starlette.starlette_websocket._is_origin_allowed",
+                return_value=True,
+            ):
+                with patch(
+                    "streamlit.web.server.starlette.starlette_websocket.is_xsrf_enabled",
+                    return_value=False,
+                ):
+                    try:
+                        await handler(mock_websocket)
+                    except Exception:
+                        pass  # Expected stop
+
+        # Valid cookies → connection accepted, no premature close with 1012
+        mock_websocket.accept.assert_called_once()
+        for call in mock_websocket.close.call_args_list:
+            assert call.kwargs.get("code") != 1012, (
+                "Valid cookies should not trigger a 1012 close"
+            )
+
+    @pytest.mark.anyio
+    async def test_regression_15407_websocket_stale_tornado_cookies(self) -> None:
+        """Regression test for GitHub #15407 — WebSocket path.
+
+        When upgrading from Tornado (<=1.56) to Starlette (>=1.57), browsers
+        carry auth cookies signed by Tornado's incompatible scheme.  The WebSocket
+        handler must detect these stale cookies and close the connection before
+        starting a session, so the reconnect loop's HTTP health-check requests
+        can trigger InvalidAuthCookieMiddleware to clear them.
+        """
+        with patch_config_options({"server.cookieSecret": "test-secret"}):
+            mock_runtime = MagicMock()
+            handler = create_websocket_handler(mock_runtime)
+
+            # Simulate cookies from a Tornado-signed session (unverifiable format)
+            mock_websocket = MagicMock()
+            mock_websocket.cookies = {
+                USER_COOKIE_NAME: "2|deadbeef|badc0ffee|1700000000",
+                TOKENS_COOKIE_NAME: "2|cafebabe|feedface|1700000001",
+            }
+            mock_websocket.headers.get.return_value = "http://localhost"
+            mock_websocket.close = AsyncMock()
+            mock_websocket.accept = AsyncMock()
+
+            with patch(
+                "streamlit.web.server.starlette.starlette_websocket._is_origin_allowed",
+                return_value=True,
+            ):
+                await handler(mock_websocket)
+
+        # Connection must be rejected before session creation
+        mock_websocket.accept.assert_not_called()
+        mock_runtime.connect_session.assert_not_called()
+        mock_websocket.close.assert_called_once_with(code=1012)
