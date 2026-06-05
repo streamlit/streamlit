@@ -18,6 +18,7 @@ import type { ReactElement } from "react"
 
 import { screen, waitFor } from "@testing-library/react"
 import { userEvent } from "@testing-library/user-event"
+import { BaseProvider, LightTheme } from "baseui"
 
 import { render } from "~lib/test_util"
 
@@ -37,7 +38,9 @@ interface ButtonActionMenuProps {
 async function renderAndWaitForPopover(
   ui: ReactElement
 ): Promise<ReturnType<typeof render>> {
-  const result = render(ui)
+  // Wrap in BaseProvider so BaseWeb's LayersManager is present, which is
+  // required for the popover's Escape-key handling to work.
+  const result = render(<BaseProvider theme={LightTheme}>{ui}</BaseProvider>)
   await waitFor(() => {
     expect(
       screen.queryByTestId("stDataFrameButtonActionMenu")
@@ -119,4 +122,52 @@ describe("ButtonActionMenu", () => {
     const menuItems = screen.getAllByRole("menuitem")
     expect(menuItems).toHaveLength(3)
   })
+
+  it("closes the menu when the Escape key is pressed", async () => {
+    const onCloseMenu = vi.fn()
+    const onSelectAction = vi.fn()
+
+    await renderAndWaitForPopover(
+      <ButtonActionMenu
+        {...defaultProps}
+        onCloseMenu={onCloseMenu}
+        onSelectAction={onSelectAction}
+      />
+    )
+
+    // Move focus into the menu first (matches a keyboard user's flow and is
+    // required for BaseWeb's popover to route the Escape key to onEsc).
+    const menuItems = screen.getAllByRole("menuitem")
+    menuItems[0].focus()
+    await userEvent.keyboard("{Escape}")
+
+    expect(onCloseMenu).toHaveBeenCalled()
+    // Escape should only dismiss the menu, not select an action:
+    expect(onSelectAction).not.toHaveBeenCalled()
+  })
+
+  it.each(["{Enter}", " "])(
+    "selects the focused action when %s is pressed",
+    async key => {
+      const onSelectAction = vi.fn()
+      const onCloseMenu = vi.fn()
+
+      await renderAndWaitForPopover(
+        <ButtonActionMenu
+          {...defaultProps}
+          onSelectAction={onSelectAction}
+          onCloseMenu={onCloseMenu}
+        />
+      )
+
+      const menuItems = screen.getAllByRole("menuitem")
+      menuItems[1].focus()
+      expect(menuItems[1]).toHaveFocus()
+
+      await userEvent.keyboard(key)
+
+      expect(onSelectAction).toHaveBeenCalledWith("Action 2")
+      expect(onCloseMenu).toHaveBeenCalled()
+    }
+  )
 })
