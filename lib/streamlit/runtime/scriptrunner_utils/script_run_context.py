@@ -14,7 +14,6 @@
 
 from __future__ import annotations
 
-import collections
 import contextlib
 import contextvars
 import dataclasses
@@ -38,7 +37,7 @@ from streamlit.runtime.forward_msg_cache import (
     create_reference_msg,
     populate_hash_if_needed,
 )
-from streamlit.runtime.scriptrunner_utils.thread_safe_set import ThreadSafeSet
+from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 
 if TYPE_CHECKING:
     from collections.abc import Generator
@@ -47,7 +46,6 @@ if TYPE_CHECKING:
     from streamlit.cursor import RunningCursor
     from streamlit.proto.ClientState_pb2 import ContextInfo
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
-    from streamlit.proto.PageProfile_pb2 import Command
     from streamlit.runtime.fragment import FragmentStorage
     from streamlit.runtime.pages_manager import PagesManager
     from streamlit.runtime.parallel_coordinator import ParallelFragmentCoordinator
@@ -208,18 +206,11 @@ class ScriptRunContext:
     context_info: ContextInfo | None = None
     gather_usage_stats: bool = False
     command_tracking_deactivated: bool = False
-    tracked_commands: list[Command] = field(default_factory=list)
-    tracked_commands_counter: collections.Counter[str] = field(
-        default_factory=collections.Counter
-    )
     _has_script_started: bool = False
-    widget_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
-    widget_user_keys_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
-    form_ids_this_run: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
+    shared: SharedRunState = field(default_factory=SharedRunState)
     cursors: dict[int, RunningCursor] = field(default_factory=dict)
     script_requests: ScriptRequests | None = None
     fragment_ids_this_run: list[str] | None = None
-    new_fragment_ids: ThreadSafeSet[str] = field(default_factory=ThreadSafeSet)
     # we allow only one dialog to be open at the same time
     has_dialog_opened: bool = False
     parallel_coordinator: ParallelFragmentCoordinator | None = None
@@ -265,9 +256,7 @@ class ScriptRunContext:
         is_same_page = self.page_script_hash == page_script_hash
 
         self.cursors = {}
-        self.widget_ids_this_run.clear()
-        self.widget_user_keys_this_run.clear()
-        self.form_ids_this_run.clear()
+        self.shared.reset()
         self.query_string = query_string
         self.context_info = context_info
         self.pages_manager.set_current_page_script_hash(page_script_hash)
@@ -285,10 +274,7 @@ class ScriptRunContext:
         )
         self._has_script_started = False
         self.command_tracking_deactivated: bool = False
-        self.tracked_commands = []
-        self.tracked_commands_counter = collections.Counter()
         self.fragment_ids_this_run = fragment_ids_this_run
-        self.new_fragment_ids.clear()
         self.has_dialog_opened = False
         self.cached_message_hashes = cached_message_hashes or set()
 

@@ -397,7 +397,7 @@ def _fragment(
             # we need to add them anyways and for fragment runs we add them
             # in case the to-be-executed fragment id was cleared from the storage
             # by the full app run.
-            ctx.new_fragment_ids.check_and_add(fragment_id)
+            ctx.shared.new_fragment_ids.check_and_add(fragment_id)
             # Pin the active script hash to the value captured at fragment
             # definition (consistent widget IDs across reruns). Computed
             # above ThreadState.scoped() so the comparison isn't coupled
