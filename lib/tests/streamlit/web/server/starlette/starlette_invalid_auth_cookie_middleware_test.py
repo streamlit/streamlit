@@ -365,3 +365,78 @@ class TestInvalidAuthCookieMiddleware:
             "Expected a non-Secure delete directive for the stale cookie on an HTTP "
             f"deployment, but got: {all_set_cookie}"
         )
+
+    def test_non_numeric_chunk_cookies_not_cleared(self) -> None:
+        """Cookies sharing the base name prefix but with non-numeric suffixes
+        are NOT cleared — only _streamlit_user_1, _2 etc. should be deleted,
+        not hypothetical _streamlit_user_prefs or _streamlit_user_settings.
+        """
+        cookies = {
+            USER_COOKIE_NAME: _TORNADO_LIKE_VALUE,
+            f"{USER_COOKIE_NAME}_prefs": "some-value",
+            f"{USER_COOKIE_NAME}_settings": "other-value",
+            f"{USER_COOKIE_NAME}_1": "chunk1",
+        }
+        with patch(
+            "streamlit.web.server.starlette.starlette_invalid_auth_cookie_middleware.get_cookie_secret",
+            return_value=_COOKIE_SECRET,
+        ):
+            result = _cookie_names_to_clear(cookies)
+        assert USER_COOKIE_NAME in result
+        assert f"{USER_COOKIE_NAME}_1" in result
+        assert f"{USER_COOKIE_NAME}_prefs" not in result, (
+            "Non-numeric suffix cookies should not be cleared"
+        )
+        assert f"{USER_COOKIE_NAME}_settings" not in result, (
+            "Non-numeric suffix cookies should not be cleared"
+        )
+
+    def test_domain_attribute_included_when_configured(self) -> None:
+        """Delete directive includes Domain when server.cookieDomain is set."""
+        from streamlit.testing.v1.util import patch_config_options
+
+        client = TestClient(_make_app())
+        with patch(
+            "streamlit.web.server.starlette.starlette_invalid_auth_cookie_middleware.get_cookie_secret",
+            return_value=_COOKIE_SECRET,
+        ), patch_config_options({"server.cookieDomain": ".example.com", "server.sslCertFile": ""}):
+            response = client.get(
+                "/",
+                cookies={USER_COOKIE_NAME: _TORNADO_LIKE_VALUE},
+            )
+
+        assert response.status_code == 200
+        all_set_cookie: list[str] = response.headers.get_list("set-cookie")
+        domain_delete = [
+            h for h in all_set_cookie
+            if USER_COOKIE_NAME in h and "Max-Age=0" in h and "Domain=.example.com" in h
+        ]
+        assert domain_delete, (
+            "Expected delete directive to include Domain=.example.com "
+            f"but got: {all_set_cookie}"
+        )
+
+    def test_no_domain_attribute_when_not_configured(self) -> None:
+        """Delete directive omits Domain when server.cookieDomain is not set."""
+        from streamlit.testing.v1.util import patch_config_options
+
+        client = TestClient(_make_app())
+        with patch(
+            "streamlit.web.server.starlette.starlette_invalid_auth_cookie_middleware.get_cookie_secret",
+            return_value=_COOKIE_SECRET,
+        ), patch_config_options({"server.cookieDomain": "", "server.sslCertFile": ""}):
+            response = client.get(
+                "/",
+                cookies={USER_COOKIE_NAME: _TORNADO_LIKE_VALUE},
+            )
+
+        assert response.status_code == 200
+        all_set_cookie: list[str] = response.headers.get_list("set-cookie")
+        no_domain_delete = [
+            h for h in all_set_cookie
+            if USER_COOKIE_NAME in h and "Max-Age=0" in h and "Domain=" not in h
+        ]
+        assert no_domain_delete, (
+            "Expected delete directive without Domain attribute "
+            f"but got: {all_set_cookie}"
+        )
