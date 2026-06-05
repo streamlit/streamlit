@@ -143,7 +143,7 @@ def _cookie_names_to_clear(cookies: dict[str, str]) -> list[str]:
     return names_to_delete
 
 
-def _build_delete_cookie_header(name: str, path: str) -> bytes:
+def _build_delete_cookie_header(name: str, path: str, secure: bool = False) -> bytes:
     """Build a ``Set-Cookie`` header value that instructs the browser to delete *name*.
 
     Parameters
@@ -153,6 +153,12 @@ def _build_delete_cookie_header(name: str, path: str) -> bytes:
     path
         The cookie path that was used when the cookie was originally set.
         Must match exactly, otherwise the browser will not delete the cookie.
+    secure
+        Whether to include the ``Secure`` flag.  This **must** match the flag
+        that was present when the cookie was originally set — browsers treat
+        ``Secure`` and non-``Secure`` cookies as distinct entries, so omitting
+        it on an HTTPS deployment would leave the stale cookie in place.
+        Pass ``True`` when ``server.sslCertFile`` is configured.
 
     Returns
     -------
@@ -160,9 +166,10 @@ def _build_delete_cookie_header(name: str, path: str) -> bytes:
         The raw header value, ready to be appended to ``headers`` as
         ``(b"set-cookie", value)``.
     """
-    return (
-        f"{name}=; Path={path}; HttpOnly; SameSite=lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
-    ).encode("latin-1")
+    header = f"{name}=; Path={path}; HttpOnly; SameSite=lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
+    if secure:
+        header += "; Secure"
+    return header.encode("latin-1")
 
 
 class InvalidAuthCookieMiddleware:
@@ -223,15 +230,19 @@ class InvalidAuthCookieMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Determine the cookie path from server configuration so that the
-        # delete directive matches the path used when the cookie was set.
+        # Determine the cookie path and Secure flag from server configuration
+        # so that the delete directive exactly matches the attributes used when
+        # the cookie was originally set.  Browsers treat cookies with and
+        # without the Secure flag as distinct entries — omitting Secure on an
+        # HTTPS deployment would silently fail to delete the stale cookie.
         from streamlit import config as st_config
 
         base_path: str | None = st_config.get_option("server.baseUrlPath")
         cookie_path = ("/" + base_path.strip("/")) if base_path else "/"
+        secure = bool(st_config.get_option("server.sslCertFile"))
 
         delete_headers = [
-            (b"set-cookie", _build_delete_cookie_header(name, cookie_path))
+            (b"set-cookie", _build_delete_cookie_header(name, cookie_path, secure=secure))
             for name in names_to_delete
         ]
 

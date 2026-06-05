@@ -451,6 +451,13 @@ def create_websocket_handler(runtime: Runtime) -> Any:
         # WebSocket reconnect then arrives with no auth cookies at all, allowing
         # the login flow to restart cleanly.
         #
+        # The frontend FSM (WebsocketConnection.tsx) guarantees this ordering:
+        # CONNECTED → (error/closed) → PINGING_SERVER → (ping succeeded) → CONNECTING
+        # PINGING_SERVER always fires doInitPings(), which hits /_stcore/health over
+        # HTTP *before* a new WebSocket connection is attempted.  This means
+        # InvalidAuthCookieMiddleware is guaranteed to run and clear the stale
+        # cookies in between the 1012 close and the next WebSocket reconnect.
+        #
         # We use close code 1012 (Service Restart) rather than 1008 (Policy
         # Violation) because this is a transient, self-healing condition — not a
         # permanent access denial.  The frontend treats both codes identically

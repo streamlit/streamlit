@@ -307,3 +307,66 @@ class TestInvalidAuthCookieMiddleware:
             "Expected middleware to clear the stale Tornado-signed tokens cookie. "
             f"Set-Cookie headers seen: {all_set_cookie}"
         )
+
+    def test_secure_flag_present_on_https_deployment(self) -> None:
+        """Delete directives include the Secure flag when sslCertFile is configured.
+
+        On HTTPS deployments the original cookies were set with Secure=True.
+        Browsers treat Secure and non-Secure cookies as distinct entries, so
+        a delete directive without Secure will silently fail to remove the
+        stale cookie.
+        """
+        from streamlit.testing.v1.util import patch_config_options
+
+        client = TestClient(_make_app())
+        with patch(
+            "streamlit.web.server.starlette.starlette_invalid_auth_cookie_middleware.get_cookie_secret",
+            return_value=_COOKIE_SECRET,
+        ), patch_config_options({"server.sslCertFile": "/etc/ssl/server.crt"}):
+            response = client.get(
+                "/",
+                cookies={USER_COOKIE_NAME: _TORNADO_LIKE_VALUE},
+            )
+
+        assert response.status_code == 200
+        all_set_cookie: list[str] = response.headers.get_list("set-cookie")
+
+        secure_delete = [
+            h for h in all_set_cookie
+            if USER_COOKIE_NAME in h and "Max-Age=0" in h and "Secure" in h
+        ]
+        assert secure_delete, (
+            "Expected a Secure delete directive for the stale cookie on an HTTPS "
+            f"deployment, but got: {all_set_cookie}"
+        )
+
+    def test_no_secure_flag_on_http_deployment(self) -> None:
+        """Delete directives omit the Secure flag when no sslCertFile is configured.
+
+        On plain-HTTP deployments the original cookies were set without Secure.
+        Adding Secure to the delete directive would target a different cookie
+        entry and leave the actual stale cookie untouched.
+        """
+        from streamlit.testing.v1.util import patch_config_options
+
+        client = TestClient(_make_app())
+        with patch(
+            "streamlit.web.server.starlette.starlette_invalid_auth_cookie_middleware.get_cookie_secret",
+            return_value=_COOKIE_SECRET,
+        ), patch_config_options({"server.sslCertFile": ""}):
+            response = client.get(
+                "/",
+                cookies={USER_COOKIE_NAME: _TORNADO_LIKE_VALUE},
+            )
+
+        assert response.status_code == 200
+        all_set_cookie: list[str] = response.headers.get_list("set-cookie")
+
+        non_secure_delete = [
+            h for h in all_set_cookie
+            if USER_COOKIE_NAME in h and "Max-Age=0" in h and "Secure" not in h
+        ]
+        assert non_secure_delete, (
+            "Expected a non-Secure delete directive for the stale cookie on an HTTP "
+            f"deployment, but got: {all_set_cookie}"
+        )

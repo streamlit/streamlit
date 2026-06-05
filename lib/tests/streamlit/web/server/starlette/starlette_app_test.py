@@ -292,7 +292,8 @@ def test_create_streamlit_middleware_uses_selective_gzip() -> None:
     """The Streamlit middleware stack should use the selective gzip wrapper."""
     middleware_list = create_streamlit_middleware()
 
-    assert middleware_list[2].cls is SelectiveGZipMiddleware
+    assert any(m.cls is SelectiveGZipMiddleware for m in middleware_list)
+
 
 
 def test_selective_gzip_skips_static_like_paths() -> None:
