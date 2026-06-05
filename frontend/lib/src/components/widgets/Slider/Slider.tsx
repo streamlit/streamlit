@@ -313,6 +313,7 @@ function Slider({
                 {/* Thumbs AFTER track line — higher z-index (later in DOM) */}
                 {state.values.map((_, index) => (
                   <StyledThumb
+                    // eslint-disable-next-line @eslint-react/no-array-index-key
                     key={index}
                     index={index}
                     ref={el => {
