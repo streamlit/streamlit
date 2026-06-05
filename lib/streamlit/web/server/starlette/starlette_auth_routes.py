@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any, Final, cast
 
 from streamlit.auth_util import (
     build_logout_url,
-    clear_cookie_and_chunks,
     decode_provider_token,
     generate_default_provider_section,
     get_cookie_with_chunks,
@@ -60,6 +59,7 @@ _ROUTE_AUTH_LOGIN: Final = "auth/login"
 _ROUTE_AUTH_LOGOUT: Final = "auth/logout"
 _ROUTE_OAUTH_CALLBACK: Final = "oauth2callback"
 _AUTH_COOKIE_SAMESITE: Final = "lax"
+_AUTH_COOKIE_NAMES: Final = (USER_COOKIE_NAME, TOKENS_COOKIE_NAME)
 
 
 def _normalize_nested_config(value: Any) -> Any:
@@ -173,6 +173,8 @@ async def _set_auth_cookie(
     def set_single_cookie(cookie_name: str, value: str) -> None:
         _set_single_cookie(response, cookie_name, value)
 
+    _delete_legacy_root_auth_cookies(response)
+
     cookie_attr_size = _get_auth_cookie_attribute_size()
     set_cookie_with_chunks(
         set_single_cookie,
@@ -247,30 +249,89 @@ def _get_signed_cookie_from_request(request: Request, cookie_name: str) -> bytes
     return decoded
 
 
+def _delete_cookie_at_current_and_legacy_paths(
+    response: Response, cookie_name: str
+) -> None:
+    """Delete a cookie at the current auth path and legacy root path."""
+    cookie_path = _get_cookie_path()
+    response.delete_cookie(cookie_name, path=cookie_path)
+    if cookie_path != "/":
+        response.delete_cookie(cookie_name, path="/")
+
+
+def _delete_legacy_root_auth_cookies(response: Response) -> None:
+    """Delete legacy root-path auth cookies when auth is scoped to a base path."""
+    if _get_cookie_path() == "/":
+        return
+
+    # Legacy Tornado auth cookies were never chunked, so deleting the base
+    # cookie name at the root path is sufficient here.
+    for cookie_name in _AUTH_COOKIE_NAMES:
+        response.delete_cookie(cookie_name, path="/")
+
+
+def _clear_single_auth_cookie_and_chunks(
+    response: Response, request: Request, cookie_name: str
+) -> None:
+    """Clear an auth cookie, including any split cookie chunks.
+
+    A large cookie is split into a main cookie plus ``{cookie_name}_1``,
+    ``{cookie_name}_2``, ... siblings. We discover the chunk siblings from the
+    request cookies rather than by decoding the main cookie, so they are cleared
+    even when the main cookie is invalid (e.g. signed with a rotated secret) and
+    can no longer be decoded to read its chunk count.
+    """
+    _delete_cookie_at_current_and_legacy_paths(response, cookie_name)
+
+    # The `.isdigit()` check matches only numeric chunk siblings, so clearing
+    # `_streamlit_user` does not accidentally delete the separate
+    # `_streamlit_user_tokens` cookie (or its `_streamlit_user_tokens_<n>`
+    # chunks), even though the latter shares the `_streamlit_user_` prefix.
+    chunk_prefix = f"{cookie_name}_"
+    for name in request.cookies:
+        if name.startswith(chunk_prefix) and name[len(chunk_prefix) :].isdigit():
+            _delete_cookie_at_current_and_legacy_paths(response, name)
+
+
 def _clear_auth_cookie(response: Response, request: Request) -> None:
     """Clear the auth cookies, including any split cookie chunks.
 
     The path must match the path used when setting the cookie, otherwise
-    the browser won't delete it.
+    the browser won't delete it. Also delete legacy root-path auth cookies left
+    behind by the pre-Starlette Tornado auth implementation.
     """
-    cookie_path = _get_cookie_path()
+    for cookie_name in _AUTH_COOKIE_NAMES:
+        _clear_single_auth_cookie_and_chunks(response, request, cookie_name)
 
-    def get_single_cookie(cookie_name: str) -> bytes | None:
-        return _get_signed_cookie_from_request(request, cookie_name)
 
-    def clear_single_cookie(cookie_name: str) -> None:
-        response.delete_cookie(cookie_name, path=cookie_path)
-
-    clear_cookie_and_chunks(
-        get_single_cookie,
-        clear_single_cookie,
-        USER_COOKIE_NAME,
+def _is_auth_cookie_present_but_invalid(request: Request, cookie_name: str) -> bool:
+    """Return whether an auth cookie exists but cannot be decoded."""
+    return (
+        request.cookies.get(cookie_name) is not None
+        and _get_signed_cookie_from_request(request, cookie_name) is None
     )
-    clear_cookie_and_chunks(
-        get_single_cookie,
-        clear_single_cookie,
-        TOKENS_COOKIE_NAME,
-    )
+
+
+def _clear_invalid_auth_cookies(response: Response, request: Request) -> None:
+    """Clear auth cookies that are present but fail signature validation."""
+    if _is_auth_cookie_present_but_invalid(request, USER_COOKIE_NAME):
+        # If the identity cookie is invalid, the token cookie is unusable too.
+        _LOGGER.debug("Clearing invalid auth cookies (identity cookie undecodable).")
+        _clear_auth_cookie(response, request)
+        return
+
+    if _is_auth_cookie_present_but_invalid(request, TOKENS_COOKIE_NAME):
+        _LOGGER.debug("Clearing invalid tokens cookie (tokens cookie undecodable).")
+        _clear_single_auth_cookie_and_chunks(response, request, TOKENS_COOKIE_NAME)
+
+
+async def _redirect_to_base_clearing_invalid_cookies(
+    request: Request, base_url: str
+) -> RedirectResponse:
+    """Redirect to the base URL, clearing any invalid auth cookies on the way."""
+    response = await _redirect_to_base(base_url)
+    _clear_invalid_auth_cookies(response, request)
+    return response
 
 
 def _create_oauth_client(provider: str) -> tuple[Any, str]:
@@ -452,12 +513,15 @@ async def _auth_login(request: Request, base_url: str) -> Response:
 
     provider = _parse_provider_token(request.query_params.get("provider"))
     if provider is None:
-        return await _redirect_to_base(base_url)
+        return await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     client, redirect_uri = _create_oauth_client(provider)
     try:
-        response = await client.authorize_redirect(request, redirect_uri)
-        return cast("Response", response)
+        auth_response = cast(
+            "Response", await client.authorize_redirect(request, redirect_uri)
+        )
+        _clear_invalid_auth_cookies(auth_response, request)
+        return auth_response
     except Exception:  # pragma: no cover - error path
         from starlette.responses import Response
 
@@ -495,7 +559,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
         _LOGGER.error(
             "Error, misconfigured origin for `redirect_uri` in secrets.",
         )
-        return await _redirect_to_base(base_url)
+        return await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     error = request.query_params.get("error")
     if error:
@@ -511,7 +575,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
             sanitized_error,
             sanitized_error_description,
         )
-        return await _redirect_to_base(base_url)
+        return await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     if provider is None:
         # See https://github.com/streamlit/streamlit/issues/13101
@@ -520,7 +584,7 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
             "or replayed callback (for example, from browser back/forward "
             "navigation).",
         )
-        return await _redirect_to_base(base_url)
+        return await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     client, _ = _create_oauth_client(provider)
     try:
@@ -537,7 +601,10 @@ async def _auth_callback(request: Request, base_url: str) -> Response:
 
     user = token.get("userinfo") or {}
 
-    response = await _redirect_to_base(base_url)
+    # Clear any invalid/stale auth cookies (e.g. orphaned chunks from an old
+    # cookie format) before writing the fresh cookies below, so leftover state
+    # cannot interfere with the new login.
+    response = await _redirect_to_base_clearing_invalid_cookies(request, base_url)
 
     cookie_value = dict(user, origin=origin, is_logged_in=True, provider=provider)
     tokens = {k: token[k] for k in ["id_token", "access_token"] if k in token}
