@@ -96,9 +96,13 @@ user_session_events_total{type="connect",email="bob@example.com"} 5
 - The family is **filterable** via the existing `?families=user_session_events` query
   param, so a scraper can request only this family.
 - Identity is captured at **connect** time and cached per session so that `disconnect`
-  events can be attributed to the right user. It is refreshed on `reconnect`, so if a
-  session's identity changes across a reconnect, the `disconnect` is attributed to the
-  most recently seen identity.
+  events can be attributed to the right user. While the feature is enabled, the cached
+  identity is refreshed on `reconnect`, so if a session's identity changes across a
+  reconnect the `disconnect` is attributed to the most recently seen identity.
+- `metricsUserAttributes` is read at server **startup** and is not meant to be toggled on a
+  running server (restart to apply a change). Like other `server.*` options, mid-session
+  toggling is unsupported; per-user attribution across such a toggle is best-effort and
+  undefined (e.g. a cached identity may not refresh while disabled). Hosts set this once.
 
 #### Edge cases
 
@@ -128,7 +132,7 @@ at the Streamlit layer — anything reachable on the server port can scrape it. 
 exposes only anonymous aggregate counters; once `metricsUserAttributes` is set, the same
 unauthenticated endpoint also serves the configured PII. Enabling this option is therefore
 **only safe when the host restricts access to the metrics endpoint at the network layer**
-(the model SiS already uses: the port is internal and scraped by the platform, never exposed
+(the model SiS already uses — the port is internal and scraped by the platform, never exposed
 to end users). This must be called out explicitly in the docs as a hard prerequisite.
 Adding authentication to the metrics route itself is a broader change tracked separately and
 is out of scope here (see Out of Scope).

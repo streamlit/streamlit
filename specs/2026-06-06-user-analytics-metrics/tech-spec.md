@@ -173,10 +173,20 @@ operations are the only failure surfaces.
 
 `_user_labels` reads `config.get_option("server.metricsUserAttributes")` on every
 connect/reconnect/disconnect (and `get_stats` reads it per scrape). Config reads are a
-cheap dict lookup, so reading live is fine for the expected throughput and keeps the
-option toggleable at runtime (and trivially toggleable in tests). If profiling later flags
-this as hot, the resolved attribute list can be cached on the instance and invalidated when
-config reloads — deferred until there's evidence it matters.
+cheap dict lookup, so reading live is fine for the expected throughput. If profiling later
+flags this as hot, the resolved attribute list can be cached on the instance — deferred
+until there's evidence it matters.
+
+The option is expected to be set once at **startup** (it has hidden visibility and is
+host-configured); like other `server.*` options, toggling it on a running server is **not a
+supported configuration**. Reading it live keeps the gate simple and trivially toggleable
+in tests, but per-user attribution across a mid-session enable→disable→enable is explicitly
+best-effort and undefined: while disabled, `_user_labels` returns `None`, so the reconnect
+branch does not refresh `_session_user_labels`, and a cached identity can therefore go stale
+across a runtime disable. This edge case is out of scope precisely because runtime toggling
+is unsupported; under the startup-only assumption the gate is constant and no staleness
+arises. (The disconnect branch still re-checks the option only so a runtime disable stops
+*emitting* new per-user events; it does not attempt to keep stale caches correct.)
 
 **Exposing the family** — extend `stats_families` and `get_stats`:
 
