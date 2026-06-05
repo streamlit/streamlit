@@ -130,7 +130,7 @@ def _cookie_names_to_clear(cookies: dict[str, str]) -> list[str]:
 
 
 def _build_delete_cookie_header(
-    name: str, path: str, secure: bool = False, domain: str | None = None
+    name: str, path: str, secure: bool = False
 ) -> bytes:
     """Build a ``Set-Cookie`` header value that instructs the browser to delete *name*.
 
@@ -147,13 +147,6 @@ def _build_delete_cookie_header(
         ``Secure`` and non-``Secure`` cookies as distinct entries, so omitting
         it on an HTTPS deployment would leave the stale cookie in place.
         Pass ``True`` when ``server.sslCertFile`` is configured.
-    domain
-        Optional ``Domain`` attribute.  If the original Tornado cookies were
-        issued with an explicit ``Domain`` (common in reverse-proxy or
-        wildcard-domain deployments), the browser treats them as distinct
-        entries from cookies without ``Domain``.  Omitting it here would cause
-        the delete directive to silently miss those cookies.  Pass the value of
-        ``server.cookieDomain`` when non-empty.
 
     Returns
     -------
@@ -164,8 +157,6 @@ def _build_delete_cookie_header(
     header = f"{name}=; Path={path}; HttpOnly; SameSite=lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT"
     if secure:
         header += "; Secure"
-    if domain:
-        header += f"; Domain={domain}"
     return header.encode("latin-1")
 
 
@@ -227,18 +218,19 @@ class InvalidAuthCookieMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Determine the cookie path, Secure flag, and Domain from server
-        # configuration so that the delete directive exactly matches the
-        # attributes used when the cookie was originally set.
+        # Determine the cookie path and Secure flag from server configuration
+        # so that the delete directive exactly matches the attributes used when
+        # the cookie was originally set.
+        # Note: Domain attribute support requires a registered server.cookieDomain
+        # config option and will be added in a follow-up PR.
         from streamlit import config as st_config
 
         base_path: str | None = st_config.get_option("server.baseUrlPath")
         cookie_path = ("/" + base_path.strip("/")) if base_path else "/"
         secure = bool(st_config.get_option("server.sslCertFile"))
-        domain: str | None = st_config.get_option("server.cookieDomain") or None
 
         delete_headers = [
-            (b"set-cookie", _build_delete_cookie_header(name, cookie_path, secure=secure, domain=domain))
+            (b"set-cookie", _build_delete_cookie_header(name, cookie_path, secure=secure))
             for name in names_to_delete
         ]
 
