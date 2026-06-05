@@ -157,8 +157,12 @@ if labels is not None:
     self._session_user_labels[existing_session.id] = labels
 
 # In disconnect_session / close_session (after self._disconnect_count += 1):
+# Always pop the cached labels (cleanup, even if the feature was disabled at
+# runtime since connect), but only record the disconnect event while the
+# feature is currently enabled — consistent with the "feature disabled = no
+# per-user counters tracked" rule in the product spec.
 labels = self._session_user_labels.pop(session_id, None)
-if labels is not None:
+if labels is not None and config.get_option("server.metricsUserAttributes"):
     self._user_event_counts[labels][_EVENT_TYPE_DISCONNECT] += 1
 ```
 
@@ -244,11 +248,17 @@ enabled, so adoption is observable. This is a one-time/coarse signal, not per-ev
 ### Testing
 
 - **Unit (`lib/tests/streamlit/runtime/websocket_session_manager_test.py`)**:
-  - Disabled (default): no `user_session_events` in `get_stats()`; `stats_families`
-    excludes it; endpoint output unchanged.
+  - Disabled (default): `get_stats()` returns no `user_session_events` series and the
+    endpoint output is unchanged. Note `stats_families` *still* includes the family (it is
+    advertised unconditionally so registration routes it); only emission is gated. The
+    test should assert on the absence of emitted series / unchanged output, **not** on
+    `stats_families` excluding the family.
   - Enabled: connect/reconnect/disconnect increment the right per-user counters with the
     right labels; missing attribute → empty-string label; multiple users tracked
     independently; `?families` filtering returns only the requested family.
+  - Runtime disable: with cached session labels from an earlier (enabled) connect, a
+    subsequent disconnect after the option is cleared records no per-user event (cache is
+    still popped for cleanup).
   - Fail-open: a malformed `user_info` does not raise from `connect_session`.
 - **Unit (`lib/tests/streamlit/runtime/stats_test.py`)**: `CounterStat` with combined
   `type` + identity labels serializes correctly (label ordering is already sorted in

@@ -96,7 +96,9 @@ user_session_events_total{type="connect",email="bob@example.com"} 5
 - The family is **filterable** via the existing `?families=user_session_events` query
   param, so a scraper can request only this family.
 - Identity is captured at **connect** time and cached per session so that `disconnect`
-  events can be attributed to the right user.
+  events can be attributed to the right user. It is refreshed on `reconnect`, so if a
+  session's identity changes across a reconnect, the `disconnect` is attributed to the
+  most recently seen identity.
 
 #### Edge cases
 
