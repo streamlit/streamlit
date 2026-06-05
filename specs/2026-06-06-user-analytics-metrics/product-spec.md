@@ -84,21 +84,27 @@ When `server.metricsUserAttributes` is non-empty, `/_stcore/metrics` gains one n
 user_session_events_total{type="connect",email="alice@example.com"} 3
 user_session_events_total{type="reconnect",email="alice@example.com"} 1
 user_session_events_total{type="disconnect",email="alice@example.com"} 2
+user_session_events_total{type="close",email="alice@example.com"} 2
 user_session_events_total{type="connect",email="bob@example.com"} 5
 ...
 ```
 
 - **Opens / views**: each fresh websocket connect increments the `connect` counter for
   that user. (A page reload that resumes an existing session counts as `reconnect`.)
+- **Event types**: `connect` and `reconnect` mark sessions starting/resuming; `disconnect`
+  marks the websocket dropping (the session may still resume); `close` marks the session
+  being fully torn down. Both `disconnect` and `close` are attributed to the user captured
+  at connect time.
 - **Unique visitors**: derivable downstream by counting distinct label sets over a window.
 - **Engagement**: the existing `session_duration_seconds` and `active_sessions` families
   already cover engagement; this MVP does not add per-user duration.
 - The family is **filterable** via the existing `?families=user_session_events` query
   param, so a scraper can request only this family.
-- Identity is captured at **connect** time and cached per session so that `disconnect`
-  events can be attributed to the right user. While the feature is enabled, the cached
-  identity is refreshed on `reconnect`, so if a session's identity changes across a
-  reconnect the `disconnect` is attributed to the most recently seen identity.
+- Identity is captured at **connect** time and cached per session (until the session is
+  closed) so that `disconnect` and `close` events can be attributed to the right user. While
+  the feature is enabled, the cached identity is refreshed on `reconnect`, so if a session's
+  identity changes across a reconnect the later events are attributed to the most recently
+  seen identity.
 - `metricsUserAttributes` is read at server **startup** and is not meant to be toggled on a
   running server (restart to apply a change). Like other `server.*` options, mid-session
   toggling is unsupported; per-user attribution across such a toggle is best-effort and

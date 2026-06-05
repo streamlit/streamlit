@@ -114,9 +114,23 @@ correctly.
 self._user_event_counts: defaultdict[
     tuple[tuple[str, str], ...], defaultdict[str, int]
 ] = defaultdict(lambda: defaultdict(int))
-# Cache identity by session id so disconnect/close attribute to the right user.
+# Cache identity by session id, retained until close_session so both the
+# disconnect and the terminal close event attribute to the right user.
 self._session_user_labels: dict[str, tuple[tuple[str, str], ...]] = {}
 ```
+
+The session manager today only has `_EVENT_TYPE_{CONNECT,RECONNECT,DISCONNECT}`. Add a
+fourth constant for the terminal event:
+
+```python
+_EVENT_TYPE_CLOSE: Final = "close"
+```
+
+Note the per-user family intentionally distinguishes `disconnect` (websocket dropped — the
+session is saved to storage and may resume) from `close` (the session is fully torn down),
+giving four event types. This is deliberately finer-grained than the existing aggregate
+`session_events` family, where `close_session` folds into the `disconnect` counter — that
+aggregate behavior is unchanged.
 
 Both maps grow with the number of distinct users (and live sessions) seen by the process
 and are never pruned, so they are unbounded over the process lifetime. This is acceptable
@@ -156,15 +170,31 @@ if labels is not None:
     self._user_event_counts[labels][_EVENT_TYPE_RECONNECT] += 1
     self._session_user_labels[existing_session.id] = labels
 
-# In disconnect_session / close_session (after self._disconnect_count += 1):
-# Always pop the cached labels (cleanup, even if the feature was disabled at
-# runtime since connect), but only record the disconnect event while the
-# feature is currently enabled — consistent with the "feature disabled = no
-# per-user counters tracked" rule in the product spec.
+# In disconnect_session (after self._disconnect_count += 1):
+# Keep the cached labels so a later close_session can still attribute the
+# terminal close event to this user. Only record while the feature is
+# currently enabled — consistent with the "feature disabled = no per-user
+# counters tracked" rule in the product spec.
+if config.get_option("server.metricsUserAttributes"):
+    labels = self._session_user_labels.get(session_id)
+    if labels is not None:
+        self._user_event_counts[labels][_EVENT_TYPE_DISCONNECT] += 1
+
+# In close_session (both the active-close and storage-cleanup paths):
+# Pop the cached labels (final cleanup, even if the feature was disabled at
+# runtime since connect) and record the close event while enabled.
 labels = self._session_user_labels.pop(session_id, None)
 if labels is not None and config.get_option("server.metricsUserAttributes"):
-    self._user_event_counts[labels][_EVENT_TYPE_DISCONNECT] += 1
+    self._user_event_counts[labels][_EVENT_TYPE_CLOSE] += 1
 ```
+
+**Identity retention and cleanup.** Unlike `_session_connect_times` (popped at disconnect
+when duration is finalized), `_session_user_labels` is retained from connect until
+`close_session` so the terminal close event stays attributable. In the normal flow
+(connect → disconnect → close) close fires when the session is evicted from storage after
+`server.disconnectedSessionTTL`; a session closed while still active (no prior disconnect)
+records only `close`. The map is therefore bounded by the live-plus-disconnected session
+set, not by all-time connects.
 
 All recording is wrapped so a telemetry error cannot break the connection lifecycle
 (best-effort, per NFR-4). The simplest robust approach is to guard the small recording
@@ -172,7 +202,7 @@ blocks with a `try/except` that logs at debug level, since `config.get_option` a
 operations are the only failure surfaces.
 
 `_user_labels` reads `config.get_option("server.metricsUserAttributes")` on every
-connect/reconnect/disconnect (and `get_stats` reads it per scrape). Config reads are a
+connect/reconnect/disconnect/close (and `get_stats` reads it per scrape). Config reads are a
 cheap dict lookup, so reading live is fine for the expected throughput. If profiling later
 flags this as hot, the resolved attribute list can be cached on the instance — deferred
 until there's evidence it matters.
@@ -263,12 +293,16 @@ enabled, so adoption is observable. This is a one-time/coarse signal, not per-ev
     advertised unconditionally so registration routes it); only emission is gated. The
     test should assert on the absence of emitted series / unchanged output, **not** on
     `stats_families` excluding the family.
-  - Enabled: connect/reconnect/disconnect increment the right per-user counters with the
-    right labels; missing attribute → empty-string label; multiple users tracked
+  - Enabled: connect/reconnect/disconnect/close increment the right per-user counters with
+    the right labels; missing attribute → empty-string label; multiple users tracked
     independently; `?families` filtering returns only the requested family.
+  - Close attribution: connect → disconnect → close records `connect`, `disconnect`, and
+    `close` attributed to the connect-time user, since labels are retained until
+    `close_session`. A session closed while active (no prior disconnect) records `close`
+    but not `disconnect`.
   - Runtime disable: with cached session labels from an earlier (enabled) connect, a
-    subsequent disconnect after the option is cleared records no per-user event (cache is
-    still popped for cleanup).
+    subsequent disconnect/close after the option is cleared records no per-user event (cache
+    is still popped on close for cleanup).
   - Fail-open: a malformed `user_info` does not raise from `connect_session`.
 - **Unit (`lib/tests/streamlit/runtime/stats_test.py`)**: `CounterStat` with combined
   `type` + identity labels serializes correctly (label ordering is already sorted in
@@ -286,7 +320,13 @@ Register a separate provider and wrap `WebsocketSessionManager` lifecycle method
 `Runtime.__init__` at import time. Rejected for upstreaming: brittle, idempotency hazards
 on double-import, and duplicates state that the session manager already owns. The whole
 point of this spec is to remove the need for it. Recording inline where the aggregate
-counters already live is simpler and race-free (shares `_stats_lock`).
+counters already live is simpler and race-free (shares `_stats_lock`). That prototype does,
+however, validate the data model adopted here: the same `user_session_events` family name,
+the connect/reconnect/disconnect/**close** event set, identity captured at connect and
+cached by `session_id` for later attribution, empty-string coercion of missing attributes,
+and per-label-tuple aggregation under a lock. The main improvements upstreamed here are the
+config-driven (rather than hardcoded) label set and the env-var kill switch replaced by the
+`server.metricsUserAttributes` option.
 
 **2. New top-level `StatsProvider` registered in `Runtime` (no patching).**
 Cleaner than patching but still needs its own lifecycle hooks into session connect/disconnect
