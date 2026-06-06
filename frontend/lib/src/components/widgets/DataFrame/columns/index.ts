@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import ButtonColumn from "./ButtonColumn"
+import ButtonCellRenderer from "./cells/ButtonCell"
 import JsonCellRenderer from "./cells/JsonCell"
 import MarkdownCellRenderer from "./cells/MarkdownCell"
 import MediaCellRenderer from "./cells/MediaCell"
@@ -62,6 +64,7 @@ export const ColumnTypes = new Map<string, ColumnCreator>(
     multiselect: MultiselectColumn,
     number: NumberColumn,
     link: LinkColumn,
+    button: ButtonColumn,
     datetime: DateTimeColumn,
     date: DateColumn,
     time: TimeColumn,
@@ -82,6 +85,7 @@ export const CustomCells = [
   MarkdownCellRenderer,
   MediaCellRenderer,
   MultiSelectCellRenderer,
+  ButtonCellRenderer,
 ]
 
 export {

@@ -66,6 +66,7 @@ import { isNullOrUndefined } from "~lib/util/utils"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
 import { getTextCell, ImageCellEditor, toGlideColumn } from "./columns"
+import useButtonColumnInteractions from "./hooks/useButtonColumnInteractions"
 import useColumnFormatting from "./hooks/useColumnFormatting"
 import useColumnLoader from "./hooks/useColumnLoader"
 import useColumnPinning from "./hooks/useColumnPinning"
@@ -85,6 +86,7 @@ import useSelectionHandler from "./hooks/useSelectionHandler"
 import useTableSizer from "./hooks/useTableSizer"
 import useTooltips from "./hooks/useTooltips"
 import useWidgetState, { DEBOUNCE_TIME_MS } from "./hooks/useWidgetState"
+import ButtonActionMenu from "./menus/ButtonActionMenu"
 import ColumnMenu from "./menus/ColumnMenu"
 import ColumnVisibilityMenu from "./menus/ColumnVisibilityMenu"
 import { StyledResizableContainer } from "./styled-components"
@@ -287,6 +289,22 @@ function DataFrame({
 
   const { columns, sortColumn, getOriginalIndex, getCellContent } =
     useColumnSort(originalNumRows, originalColumns, getOriginalCellContent)
+
+  const {
+    buttonActionMenu,
+    clearButtonActionMenu,
+    handleMenuSelectAction,
+    onCellClicked,
+  } = useButtonColumnInteractions({
+    element,
+    widgetMgr,
+    fragmentId,
+    columns,
+    getCellContent,
+    getOriginalIndex,
+    theme: gridTheme.glideTheme,
+    disabled,
+  })
 
   // Ref to access the latest getOriginalIndex in deferred callbacks.
   const getOriginalIndexRef = useRef(getOriginalIndex)
@@ -917,6 +935,7 @@ function DataFrame({
           rowHeight={rowHeight}
           headerHeight={gridTheme.defaultHeaderHeight}
           getCellContent={isEmptyTable ? getEmptyStateContent : getCellContent}
+          onCellClicked={isEmptyTable ? undefined : onCellClicked}
           onColumnResize={canResizeColumns ? onColumnResize : undefined}
           // Configure resize indicator to only show on the header:
           resizeIndicator={"header"}
@@ -1035,6 +1054,7 @@ function DataFrame({
               // Close menus:
               setShowMenu(undefined)
               setShowColumnVisibilityMenu(false)
+              clearButtonActionMenu()
             }
           }}
           theme={gridTheme.glideTheme}
@@ -1266,6 +1286,19 @@ function DataFrame({
           // or anything else that apply a transform (position fixed is influenced
           // by the transform property of the parent element).
           // The portal element is expected to always exist (-> PortalProvider).
+          // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
+          document.querySelector("#portal") as HTMLElement
+        )}
+      {buttonActionMenu &&
+        createPortal(
+          // A dropdown menu for multi-action button cells.
+          <ButtonActionMenu
+            top={buttonActionMenu.screenTop}
+            left={buttonActionMenu.screenLeft}
+            actions={buttonActionMenu.actions}
+            onSelectAction={handleMenuSelectAction}
+            onCloseMenu={clearButtonActionMenu}
+          />,
           // eslint-disable-next-line @eslint-react/purity -- DOM query for createPortal target
           document.querySelector("#portal") as HTMLElement
         )}

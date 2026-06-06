@@ -989,3 +989,28 @@ def test_pydantic_model_unhashable_when_model_dump_json_fails() -> None:
         with pytest.raises(UnhashableTypeError) as exc_info:
             get_hash(instance)
     assert "unhashable members" in str(exc_info.value).lower()
+
+
+def test_PIL_pmode_palette_collision_prevention() -> None:
+    """P-mode PIL images with different palettes produce different hashes.
+
+    Regression test for GitHub issue #14622: tobytes() on palette-indexed (P-mode)
+    PIL images returns only palette indices, not the color table. Two images with
+    identical index arrays but different palettes would collide without this fix.
+    """
+    # Create two P-mode images with identical pixel indices but different palettes
+    im1 = Image.new("P", (10, 10), 0)
+    im2 = Image.new("P", (10, 10), 0)
+
+    # Set different palettes (768 values for 256 RGB colors)
+    palette1 = [i % 256 for i in range(768)]
+    palette2 = [(i + 128) % 256 for i in range(768)]
+
+    im1.putpalette(palette1)
+    im2.putpalette(palette2)
+
+    # Confirm the vulnerability trigger: tobytes() is equal for both images
+    assert im1.tobytes() == im2.tobytes()
+
+    # But the hashes should differ because we now include the palette
+    assert get_hash(im1) != get_hash(im2)

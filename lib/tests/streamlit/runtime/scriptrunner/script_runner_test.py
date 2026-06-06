@@ -49,7 +49,12 @@ from streamlit.runtime.scriptrunner import (
     ScriptRunnerEvent,
     StopException,
 )
+from streamlit.runtime.scriptrunner import script_runner as script_runner_module
 from streamlit.runtime.scriptrunner.script_cache import ScriptCache
+from streamlit.runtime.scriptrunner.script_runner import (
+    _clean_problem_modules,
+    _log_if_error,
+)
 from streamlit.runtime.scriptrunner_utils.script_requests import (
     ScriptRequest,
     ScriptRequests,
@@ -63,6 +68,8 @@ from streamlit.runtime.state.session_state import SessionState
 from tests import testutil
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from streamlit.proto.Delta_pb2 import Delta
     from streamlit.proto.Element_pb2 import Element
     from streamlit.proto.ForwardMsg_pb2 import ForwardMsg
@@ -1580,3 +1587,79 @@ def require_widgets_deltas(
         runner.join()
 
     raise RuntimeError(err_string)
+
+
+def test_scriptrunner_repr_uses_util_repr_format() -> None:
+    """ScriptRunner.__repr__ delegates to util.repr_ and exposes its concrete class name."""
+    runner = TestScriptRunner("not_a_script.py")
+    rendered = repr(runner)
+    # util.repr_ formats instances as "<ClassName(field=value, ...)>".
+    assert rendered.startswith(f"{type(runner).__name__}(")
+
+
+@pytest.mark.parametrize(
+    "invoke",
+    [
+        pytest.param(lambda r: r._get_script_run_ctx(), id="get_script_run_ctx"),
+        # Call the base implementation directly: TestScriptRunner swallows the
+        # exception into script_thread_exceptions, hiding the guard's RuntimeError.
+        pytest.param(
+            lambda r: ScriptRunner._run_script_thread(r), id="run_script_thread"
+        ),
+        pytest.param(lambda r: r._run_script(RerunData()), id="run_script"),
+    ],
+)
+def test_script_thread_methods_raise_when_called_off_thread(
+    invoke: Callable[[TestScriptRunner], object],
+) -> None:
+    """Script-thread-only methods must raise when called from another thread."""
+    runner = TestScriptRunner("not_a_script.py")
+    with pytest.raises(RuntimeError, match="must be called from the script thread"):
+        invoke(runner)
+
+
+def test_set_execing_flag_disallows_nested_calls() -> None:
+    """_set_execing_flag raises when nested while already execing."""
+    runner = TestScriptRunner("not_a_script.py")
+    with runner._set_execing_flag():
+        with pytest.raises(RuntimeError, match="Nested set_execing_flag call"):
+            with runner._set_execing_flag():
+                pass
+
+
+@pytest.mark.parametrize(
+    "side_effect",
+    [
+        pytest.param(None, id="happy_path"),
+        # Failures in optional cleanup must never propagate.
+        pytest.param(RuntimeError("boom"), id="swallows_exceptions"),
+    ],
+)
+def test_clean_problem_modules_handles_keras_and_matplotlib(
+    side_effect: Exception | None,
+) -> None:
+    """_clean_problem_modules clears Keras + closes matplotlib, swallowing errors."""
+    fake_keras = MagicMock()
+    fake_keras.backend.clear_session.side_effect = side_effect
+    fake_plt = MagicMock()
+    fake_plt.close.side_effect = side_effect
+
+    with patch.dict(
+        sys.modules, {"keras": fake_keras, "matplotlib.pyplot": fake_plt}, clear=False
+    ):
+        _clean_problem_modules()
+
+    fake_keras.backend.clear_session.assert_called_once()
+    fake_plt.close.assert_called_once_with("all")
+
+
+def test_log_if_error_logs_exception_and_does_not_raise() -> None:
+    """_log_if_error must catch exceptions and log them instead of propagating."""
+
+    def raises() -> None:
+        raise ValueError("kaboom")
+
+    with patch.object(script_runner_module, "_LOGGER") as mock_logger:
+        _log_if_error(raises)
+
+    mock_logger.warning.assert_called_once()
