@@ -529,11 +529,12 @@ function fixLabelOverflow(
   const thumbValueOverflowsRight =
     thumbMidpoint + thumbValueRect.width / 2 > sliderRect.right
 
-  // React Aria applies `transform: translate(-50%, -50%)` to the thumb div as
-  // an inline style. Any `left`/`right` we set on the label (a child of that
-  // thumb) is in the thumb's pre-transform local coordinate space, so we must
-  // add thumbRadius to compensate for the horizontal shift when pinning the
-  // label to the widget boundary.
+  // React Aria's transform:translate(-50%,-50%) means getBoundingClientRect()
+  // returns visual (post-transform) coords, while CSS left/right on children
+  // use pre-transform space. thumbMidpoint equals the thumb's layout left, so
+  // we add thumbRadius to compensate (visual = layout − thumbRadius).
+  // The right-overflow R can be negative when the thumb is well inside the
+  // track; that's intentional — no ancestor clips overflow.
   if (thumbValueOverflowsLeft) {
     thumbValue.style.left = `${sliderRect.left - thumbMidpoint + thumbRadius}px`
     thumbValue.style.right = ""
