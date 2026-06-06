@@ -366,9 +366,11 @@ def test_mega_tester_app_interactions_validate_behavior(app: Page) -> None:
     click_toggle(app, "Accept new options")
     wait_for_app_run(app)
     select_selectbox_option(app, "Selectbox", "dog")
+    # The selected value lives in the input element's value attribute (not text
+    # content) because we use a ComboBox <input> instead of a display div.
     expect(
-        app.get_by_test_id("stSelectbox").filter(has_text="Selectbox")
-    ).to_contain_text("dog")
+        app.get_by_test_id("stSelectbox").filter(has_text="Selectbox").locator("input")
+    ).to_have_value("dog")
 
     form_text = get_text_input(app, "Form text")
     form_text.locator("input").first.fill("hello")
