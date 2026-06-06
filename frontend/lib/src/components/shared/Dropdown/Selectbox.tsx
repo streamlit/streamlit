@@ -26,6 +26,7 @@ import {
 } from "react"
 
 import { KeyboardArrowDown } from "@emotion-icons/material-outlined"
+import { Cancel } from "@emotion-icons/material-rounded"
 import {
   ComboBox,
   ComboBoxStateContext,
@@ -231,13 +232,20 @@ const Selectbox: FC<Props> = ({
   // onKeyDown/onPaste instead.
   const inputReadOnly = isMobile() && options.length <= 10 && !acceptNewOptions
 
-  /** Commit a selection: update local state, close the dropdown, notify parent. */
+  /**
+   * Commit a selection: update local state and notify the parent.
+   * Does NOT close the dropdown — callers on the manual paths (keydown,
+   * clear button) close explicitly; RAC-triggered paths (option click,
+   * arrow-nav + Enter) let RAC close the dropdown naturally after
+   * onSelectionChange returns. Calling state.close() inside
+   * onSelectionChange causes RAC to fire onInputChange with the old
+   * committed label, overwriting our setInputValue update.
+   */
   const commitSelection = useCallback(
     (newValue: string | null): void => {
       setValue(newValue)
       setInputValue(newValue ?? "")
       setFilterActive(false)
-      closeDropdownRef.current?.()
       if (newValue !== valueRef.current) {
         onChange(newValue)
       }
@@ -380,6 +388,7 @@ const Selectbox: FC<Props> = ({
 
       if (creatableItem) {
         commitSelection(inputValue)
+        closeDropdownRef.current?.()
         return
       }
 
@@ -394,6 +403,7 @@ const Selectbox: FC<Props> = ({
           (!displayOptions[0].isCreatable ? displayOptions[0] : null)
         if (target) {
           commitSelection(target.value)
+          closeDropdownRef.current?.()
         }
       }
     },
@@ -402,6 +412,7 @@ const Selectbox: FC<Props> = ({
 
   const handleClearValue = useCallback((): void => {
     commitSelection(null)
+    closeDropdownRef.current?.()
   }, [commitSelection])
 
   return (
@@ -452,7 +463,7 @@ const Selectbox: FC<Props> = ({
                 slot={null}
                 onPress={handleClearValue}
               >
-                ×
+                <Cancel size={theme.iconSizes.base} aria-hidden="true" />
               </StyledClearButton>
             )}
             <StyledOpenButton aria-label="Open">
