@@ -248,11 +248,25 @@ describe("Slider widget", () => {
       )
     })
 
+    it("sets data-focus-visible on thumb when focused via keyboard", async () => {
+      const props = getProps()
+      render(<Slider {...props} />)
+
+      // Tab-navigate to focus the slider thumb via keyboard.
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      await user.tab()
+
+      // React Aria sets [data-focus-visible] when focus arrives via keyboard.
+      // This attribute activates the --slider-focused CSS variable on StyledSlider
+      // (via :focus-within:has(:focus-visible)), which transitions the tick bar
+      // from opacity:0 to opacity:1. The full visual transition is verified by E2E.
+      const focusedElement = document.querySelector("[data-focus-visible]")
+      expect(focusedElement).toBeInTheDocument()
+    })
+
     // Note: the "becomes visible while dragging via keyboard" test is not applicable
     // with React Aria because RA fires onChange and onChangeEnd synchronously in the
     // same keydown handler, so isDragging is true→false in the same React batch.
-    // Keyboard-focus tick bar visibility is handled by CSS (:focus-visible) and
-    // is covered by E2E tests.
   })
 
   describe("Range value", () => {
@@ -269,6 +283,21 @@ describe("Slider widget", () => {
       render(<Slider {...props} />)
 
       expect(screen.getAllByTestId("stSliderThumbValue")).toHaveLength(2)
+    })
+
+    it("gives each thumb a differentiated aria-label", () => {
+      const props = getProps({ default: [1, 9] })
+      render(<Slider {...props} />)
+
+      const sliders = screen.getAllByRole("slider")
+      expect(sliders[0]).toHaveAttribute(
+        "aria-label",
+        `${props.element.label} — start`
+      )
+      expect(sliders[1]).toHaveAttribute(
+        "aria-label",
+        `${props.element.label} — end`
+      )
     })
 
     it("has the correct value", () => {

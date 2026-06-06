@@ -321,7 +321,11 @@ function Slider({
                     ref={el => {
                       thumbsRef.current[index] = el
                     }}
-                    aria-label={element.label}
+                    aria-label={
+                      state.values.length > 1
+                        ? `${element.label} — ${index === 0 ? "start" : "end"}`
+                        : element.label
+                    }
                   >
                     <StyledThumbValue
                       data-testid="stSliderThumbValue"
