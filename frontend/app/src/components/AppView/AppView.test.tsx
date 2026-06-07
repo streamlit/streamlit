@@ -1443,8 +1443,6 @@ describe("AppView element", () => {
         {
           sidebarConfigContext: {
             initialSidebarState,
-            isSidebarLocked:
-              initialSidebarState === PageConfig.SidebarState.LOCKED,
           },
         }
       )
@@ -1514,7 +1512,6 @@ describe("AppView element", () => {
         {
           sidebarConfigContext: {
             initialSidebarState: PageConfig.SidebarState.LOCKED,
-            isSidebarLocked: true,
           },
         }
       )

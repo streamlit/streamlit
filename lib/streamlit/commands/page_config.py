@@ -191,8 +191,10 @@ def set_page_config(
           otherwise.
         - ``"expanded"``: The sidebar is shown initially.
         - ``"collapsed"``: The sidebar is hidden initially.
-        - ``"locked"``: The sidebar is permanently expanded. All collapse
-          controls are hidden and users cannot close the sidebar.
+        - ``"locked"``: On desktop, the sidebar is expanded with all collapse
+          controls hidden so users cannot close it. On narrow/mobile
+          viewports the lock degrades gracefully: the sidebar starts
+          collapsed and can be toggled to avoid covering the main content.
         - ``int``: The sidebar will use ``"auto"`` behavior but start with the
           specified width in pixels. The width must be between 200 and 600
           pixels, inclusive.

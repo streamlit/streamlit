@@ -142,9 +142,8 @@ def test_with_locked_sidebar(app: Page):
     # Collapse button must not be in the DOM (locked sidebar cannot be closed)
     expect(app.get_by_test_id("stSidebarCollapseButton")).not_to_be_attached()
 
-    # Expand button in the header must also be absent (sidebar is always open)
-    expand_button = app.get_by_test_id("stExpandSidebarButton")
-    expect(expand_button).not_to_be_visible()
+    # Expand button in the header must also not be in the DOM (sidebar is always open)
+    expect(app.get_by_test_id("stExpandSidebarButton")).not_to_be_attached()
 
     expect_no_exception(app)
 

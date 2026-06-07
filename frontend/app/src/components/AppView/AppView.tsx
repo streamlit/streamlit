@@ -30,6 +30,7 @@ import TopNav from "@streamlit/app/src/components/Navigation/TopNav"
 import { shouldShowNavigation } from "@streamlit/app/src/components/Navigation/utils"
 import ThemedSidebar from "@streamlit/app/src/components/Sidebar/ThemedSidebar"
 import {
+  calculateMaxBreakpoint,
   getSavedSidebarState,
   saveSidebarState,
   shouldCollapse,
@@ -177,12 +178,13 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { innerWidth } = useWindowDimensionsContext()
 
-  // On mobile the sidebar overlays content, so the lock degrades gracefully:
-  // users can still collapse it. innerWidth > 0 guards against the unmeasured
-  // initial state where dimensions haven't been read from the DOM yet.
+  // LOCKED is desktop-only: on mobile the sidebar renders as an overlay that
+  // covers the main content, so the lock degrades gracefully — users can still
+  // collapse it to access the page. innerWidth > 0 guards against the
+  // unmeasured initial state before dimensions have been read from the DOM.
   const isMobileViewport =
     innerWidth > 0 &&
-    innerWidth <= parseInt(activeTheme.emotion.breakpoints.md, 10)
+    innerWidth <= calculateMaxBreakpoint(activeTheme.emotion.breakpoints.md)
   const isEffectivelyLocked = isSidebarLocked && !isMobileViewport
 
   const layout = wideMode ? "wide" : "narrow"

@@ -214,7 +214,6 @@ describe("Sidebar Component", () => {
         {
           sidebarConfigContext: {
             initialSidebarState: PageConfig.SidebarState.LOCKED,
-            isSidebarLocked: true,
           },
           navigationContext: { appPages: SAMPLE_PAGES },
         }
@@ -246,7 +245,6 @@ describe("Sidebar Component", () => {
         {
           sidebarConfigContext: {
             initialSidebarState: PageConfig.SidebarState.LOCKED,
-            isSidebarLocked: true,
           },
           navigationContext: { appPages: SAMPLE_PAGES },
         }

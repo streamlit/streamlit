@@ -58,7 +58,11 @@ import {
   StyledSidebarHeaderContainer,
   StyledSidebarUserContent,
 } from "./styled-components"
-import { clampSidebarWidth, DEFAULT_WIDTH } from "./utils"
+import {
+  calculateMaxBreakpoint,
+  clampSidebarWidth,
+  DEFAULT_WIDTH,
+} from "./utils"
 
 export interface SidebarProps {
   endpoints: StreamlitEndpoints
@@ -67,11 +71,6 @@ export interface SidebarProps {
   isCollapsed: boolean
   onToggleCollapse: (collapsed: boolean, shouldPersist?: boolean) => void
   widgetsDisabled: boolean
-}
-
-function calculateMaxBreakpoint(value: string): number {
-  // We subtract a margin of 0.02 to use as a max-width
-  return parseInt(value, 10) - 0.02
 }
 
 const Sidebar: React.FC<SidebarProps> = ({

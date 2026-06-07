@@ -18,6 +18,15 @@ import { localStorageAvailable } from "@streamlit/utils"
 
 export const DEFAULT_WIDTH = "300"
 
+/**
+ * Convert a CSS breakpoint string (e.g. "768px") to the max-width threshold
+ * used for media-query comparisons. Subtracts 0.02px to match the CSS
+ * `max-width` convention (exclusive upper bound).
+ */
+export function calculateMaxBreakpoint(value: string): number {
+  return parseInt(value, 10) - 0.02
+}
+
 export function shouldCollapse(
   initialSidebarState: PageConfig.SidebarState | undefined,
   mediumBreakpointPx: number,

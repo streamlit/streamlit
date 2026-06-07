@@ -85,9 +85,14 @@ export interface SidebarConfigContextProps {
   hideSidebarNav: boolean
 
   /**
-   * Whether the sidebar is locked in the expanded state.
-   * Derived from initialSidebarState === LOCKED. When true, the sidebar
-   * cannot be collapsed and collapse/expand controls are hidden.
+   * Whether the developer requested the sidebar be locked open.
+   * Derived from initialSidebarState === LOCKED.
+   *
+   * On desktop viewports this is fully enforced: the sidebar stays expanded
+   * and collapse/expand controls are hidden. On narrow/mobile viewports the
+   * lock degrades gracefully (isSidebarLocked remains true, but components
+   * derive isEffectivelyLocked = isSidebarLocked && !isMobileViewport and
+   * allow the sidebar to be toggled to avoid covering the main content).
    *
    * Consumed by: Sidebar, AppView
    * @see Sidebar

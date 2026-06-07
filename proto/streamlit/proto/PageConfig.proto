@@ -61,7 +61,10 @@ message PageConfig {
     // set to auto as default. Otherwise, inherit value from previous call
     SIDEBAR_UNSET = 3;
 
-    // Sidebar is permanently expanded; all collapse controls are hidden.
+    // Sidebar is expanded on desktop with collapse controls hidden.
+    // On mobile (narrow viewports), the lock degrades gracefully: the sidebar
+    // starts collapsed and can be toggled, avoiding trapping users behind an
+    // overlay that covers the main content.
     LOCKED = 4;
   }
 

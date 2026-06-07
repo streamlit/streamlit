@@ -197,7 +197,7 @@ export interface RenderWithContextsOptions {
    * provides the ref through context (mirroring App.tsx behavior).
    */
   sidebarConfigContext?: Partial<
-    Omit<SidebarConfigContextProps, "appRootRef">
+    Omit<SidebarConfigContextProps, "appRootRef" | "isSidebarLocked">
   > & {
     appRootRef?: boolean
   }
@@ -269,7 +269,6 @@ export const renderWithContexts = (
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
-    isSidebarLocked: false,
     // Note: appRootRef is handled separately in the Wrapper component
     ...(options.sidebarConfigContext
       ? Object.fromEntries(
@@ -278,6 +277,11 @@ export const renderWithContexts = (
           )
         )
       : {}),
+    // Derive isSidebarLocked from initialSidebarState so tests can't provide
+    // an inconsistent context value.
+    isSidebarLocked:
+      (options.sidebarConfigContext?.initialSidebarState ??
+        PageConfig.SidebarState.AUTO) === PageConfig.SidebarState.LOCKED,
   }
 
   // Track whether we should create an app root wrapper
@@ -410,9 +414,15 @@ export const renderWithContexts = (
             ([key]) => key !== "appRootRef"
           )
         )
+        const newInitialSidebarState =
+          newOptions.sidebarConfigContext.initialSidebarState ??
+          currentSidebarConfigContextProps.initialSidebarState
         currentSidebarConfigContextProps = {
           ...currentSidebarConfigContextProps,
           ...filteredSidebarConfig,
+          // Re-derive so it stays consistent with initialSidebarState.
+          isSidebarLocked:
+            newInitialSidebarState === PageConfig.SidebarState.LOCKED,
         }
       }
       if (newOptions?.themeContext) {
