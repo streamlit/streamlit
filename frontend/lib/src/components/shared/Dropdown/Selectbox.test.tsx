@@ -145,18 +145,18 @@ describe("Selectbox widget", () => {
     expect(screen.getByDisplayValue("c")).toBeVisible()
   })
 
-  it("selects an option via arrow-nav + Enter (racSelectionMadeRef path)", async () => {
-    // Exercises the most complex keyboard path: ArrowDown commits "b" via RAC's
-    // onSelectionChange (setting racSelectionMadeRef), then Enter fires our
-    // bubble-phase handler which must NOT double-commit.
+  it("selects an option via arrow-nav + Enter (racHandledEnterRef path)", async () => {
+    // Exercises the most complex keyboard path: ArrowDown navigates to "b"
+    // which RAC commits via onSelectionChange (setting racHandledEnterRef),
+    // then Enter fires our bubble-phase handler which must NOT double-commit.
     const user = userEvent.setup()
     render(<Selectbox {...props} />)
     const input = screen.getByRole("combobox")
 
     await user.click(input)
     // With initial value "a" (index 0), ArrowDown navigates to "b" (index 1).
-    // RAC fires onSelectionChange("1") which commits "b" and sets racSelectionMadeRef.
-    // Press Enter immediately after — our handler sees racSelectionMadeRef=true
+    // RAC fires onSelectionChange("1") which commits "b" and sets racHandledEnterRef.
+    // Press Enter immediately after — our handler sees racHandledEnterRef=true
     // and skips, so onChange is called exactly once total (not twice).
     await user.keyboard("{ArrowDown}{Enter}")
 

@@ -103,6 +103,10 @@ const DropdownController = memo<{
       openRef.current = () => state.open(null, "manual")
       closeRef.current = () => state.close()
     }
+    return () => {
+      openRef.current = null
+      closeRef.current = null
+    }
   }, [state, openRef, closeRef])
   return null
 })
@@ -230,7 +234,8 @@ const Selectbox: FC<Props> = ({
   // Don't use `readOnly` for FILTER_MODE_NONE: it disables RAC's internal
   // keyboard navigation (Arrow keys, Enter). Block character input via
   // onKeyDown/onPaste instead.
-  const inputReadOnly = isMobile() && options.length <= 10 && !acceptNewOptions
+  const inputReadOnly =
+    isMobile() && options.length <= 10 && !acceptNewOptions && !isFilterNone
 
   /**
    * Commit a selection: update local state and notify the parent.
@@ -436,7 +441,7 @@ const Selectbox: FC<Props> = ({
           allowsEmptyCollection
           onBlur={handleBlur}
           menuTrigger="manual"
-          aria-label={label ?? undefined}
+          aria-label={label ?? "Selectbox"}
         >
           <DropdownController
             openRef={openDropdownRef}
@@ -482,7 +487,7 @@ const Selectbox: FC<Props> = ({
             offset={0}
           >
             <StyledListBox
-              aria-label={label ?? ""}
+              aria-label={label ?? "Selectbox options"}
               renderEmptyState={() => <span>No results</span>}
             >
               {displayOptions.map(opt => (
