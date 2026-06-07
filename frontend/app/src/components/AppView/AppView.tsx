@@ -177,6 +177,14 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { innerWidth } = useWindowDimensionsContext()
 
+  // On mobile the sidebar overlays content, so the lock degrades gracefully:
+  // users can still collapse it. innerWidth > 0 guards against the unmeasured
+  // initial state where dimensions haven't been read from the DOM yet.
+  const isMobileViewport =
+    innerWidth > 0 &&
+    innerWidth <= parseInt(activeTheme.emotion.breakpoints.md, 10)
+  const isEffectivelyLocked = isSidebarLocked && !isMobileViewport
+
   const layout = wideMode ? "wide" : "narrow"
   const hasSidebarElements = !elements.sidebar.isEmpty
   const hasEventElements = !elements.event.isEmpty
@@ -241,8 +249,8 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() => {
-    // Locked sidebar always starts open; ignore any saved user preference.
-    if (isSidebarLocked) {
+    // Locked sidebar (desktop only) always starts open; ignore saved preference.
+    if (isEffectivelyLocked) {
       return false
     }
 
@@ -262,8 +270,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   useExecuteWhenChanged(() => {
     if (innerWidth > 0 && showSidebar) {
-      // Locked sidebar always stays open; skip the saved preference check.
-      if (isSidebarLocked) {
+      // Locked sidebar (desktop only) always stays open; skip saved preference.
+      if (isEffectivelyLocked) {
         setSidebarIsCollapsed(false)
         return
       }
@@ -293,8 +301,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   const setSidebarCollapsedWithOptionalPersistence = useCallback(
     (isCollapsed: boolean, shouldPersist: boolean = true) => {
-      // Locked sidebar cannot be collapsed; also skip localStorage writes.
-      if (isSidebarLocked) {
+      // Locked sidebar (desktop only) cannot be collapsed; skip localStorage writes.
+      if (isEffectivelyLocked) {
         return
       }
       setSidebarIsCollapsed(isCollapsed)
@@ -302,7 +310,7 @@ function AppView(props: AppViewProps): ReactElement {
         saveSidebarState(pageLinkBaseUrl, isCollapsed)
       }
     },
-    [isSidebarLocked, pageLinkBaseUrl]
+    [isEffectivelyLocked, pageLinkBaseUrl]
   )
 
   const toggleSidebar = useCallback(() => {

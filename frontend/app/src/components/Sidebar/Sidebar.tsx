@@ -96,6 +96,8 @@ const Sidebar: React.FC<SidebarProps> = ({
     isSidebarLocked,
   } = useContext(SidebarConfigContext)
 
+  const isMobileViewport = innerWidth > 0 && innerWidth <= mediumBreakpointPx
+
   const scrollbarGutterSize = useScrollbarGutterSize()
 
   const sidebarRef = useRef<HTMLDivElement>(null)
@@ -298,7 +300,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          {!isSidebarLocked && (
+          {(!isSidebarLocked || isMobileViewport) && (
             <StyledCollapseSidebarButton
               showSidebarCollapse={showSidebarCollapse}
               data-testid="stSidebarCollapseButton"

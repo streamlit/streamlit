@@ -1506,8 +1506,9 @@ describe("AppView element", () => {
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
     })
 
-    it("renders locked sidebar open even when viewport is narrow", () => {
-      // Narrow viewport would normally trigger AUTO to collapse
+    it("renders locked sidebar open at desktop viewport width", () => {
+      // Default test viewport is 1024px (desktop). LOCKED keeps sidebar open
+      // and hides the collapse button. On mobile it degrades — see utils.test.ts.
       renderAppView(
         { elements: elementsWithSidebar },
         {
@@ -1520,7 +1521,7 @@ describe("AppView element", () => {
 
       const sidebarDOMElement = screen.getByTestId("stSidebar")
       expect(sidebarDOMElement).toHaveAttribute("aria-expanded", "true")
-      // Collapse button must not exist in the DOM for a locked sidebar
+      // Collapse button must not exist in the DOM for a locked desktop sidebar
       expect(
         screen.queryByTestId("stSidebarCollapseButton")
       ).not.toBeInTheDocument()

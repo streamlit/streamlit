@@ -29,7 +29,9 @@ export function shouldCollapse(
     case PageConfig.SidebarState.COLLAPSED:
       return true
     case PageConfig.SidebarState.LOCKED:
-      return false
+      // On desktop the sidebar is pinned open; on mobile degrade like AUTO
+      // so the overlay sidebar doesn't trap users.
+      return windowInnerWidth <= mediumBreakpointPx
     case PageConfig.SidebarState.AUTO:
     default: {
       // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX

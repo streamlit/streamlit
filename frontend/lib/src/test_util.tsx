@@ -269,6 +269,7 @@ export const renderWithContexts = (
     sidebarChevronDownshift: 0,
     expandSidebarNav: false,
     hideSidebarNav: false,
+    isSidebarLocked: false,
     // Note: appRootRef is handled separately in the Wrapper component
     ...(options.sidebarConfigContext
       ? Object.fromEntries(
