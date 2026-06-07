@@ -389,7 +389,7 @@ describe("st.tabs", () => {
       // so subsequent reruns don't send a stale value and break tab.open (gh issue #15458).
       expect(setStringValueSpy).toHaveBeenCalledWith(
         { id: widgetId, formId: "" },
-        expect.any(String),
+        "Tab 2",
         { fromUi: false },
         undefined
       )
