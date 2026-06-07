@@ -129,6 +129,43 @@ def test_with_expanded_sidebar(app: Page):
     expect_no_exception(app)
 
 
+def test_with_locked_sidebar(app: Page):
+    """Test that initial_sidebar_state="locked" keeps the sidebar permanently
+    expanded with collapse controls hidden.
+    """
+    click_button(app, "Locked Sidebar")
+    expect(app).to_have_title("Locked Sidebar")
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+    # Collapse button must not be in the DOM (locked sidebar cannot be closed)
+    expect(app.get_by_test_id("stSidebarCollapseButton")).not_to_be_attached()
+
+    # Expand button in the header must also be absent (sidebar is always open)
+    expand_button = app.get_by_test_id("stExpandSidebarButton")
+    expect(expand_button).not_to_be_visible()
+
+    expect_no_exception(app)
+
+
+def test_with_locked_sidebar_on_narrow_viewport(app: Page):
+    """Test that a locked sidebar remains open even at a narrow viewport width
+    where AUTO would collapse it.
+    """
+    app.set_viewport_size({"width": 400, "height": 800})
+    click_button(app, "Locked Sidebar")
+    expect(app).to_have_title("Locked Sidebar")
+
+    sidebar = app.get_by_test_id("stSidebar")
+    expect(sidebar).to_have_attribute("aria-expanded", "true")
+
+    # Collapse button must not be in the DOM at narrow viewport
+    expect(app.get_by_test_id("stSidebarCollapseButton")).not_to_be_attached()
+
+    expect_no_exception(app)
+
+
 def test_page_icon_with_emoji_shortcode(app: Page):
     """Test that calling set_page_config with page_icon=":shark:" sets
     the page icon to a shark emoji.

@@ -88,8 +88,13 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const { appPages } = useContext(NavigationContext)
 
-  const { hideSidebarNav, appLogo, initialSidebarWidth, appRootRef } =
-    useContext(SidebarConfigContext)
+  const {
+    hideSidebarNav,
+    appLogo,
+    initialSidebarWidth,
+    appRootRef,
+    isSidebarLocked,
+  } = useContext(SidebarConfigContext)
 
   const scrollbarGutterSize = useScrollbarGutterSize()
 
@@ -293,21 +298,23 @@ const Sidebar: React.FC<SidebarProps> = ({
       >
         <StyledSidebarHeaderContainer data-testid="stSidebarHeader">
           {renderLogoContent()}
-          <StyledCollapseSidebarButton
-            showSidebarCollapse={showSidebarCollapse}
-            data-testid="stSidebarCollapseButton"
-          >
-            <BaseButton
-              kind={BaseButtonKind.HEADER_NO_PADDING}
-              onClick={toggleCollapse}
+          {!isSidebarLocked && (
+            <StyledCollapseSidebarButton
+              showSidebarCollapse={showSidebarCollapse}
+              data-testid="stSidebarCollapseButton"
             >
-              <DynamicIcon
-                size="xl"
-                iconValue=":material/keyboard_double_arrow_left:"
-                color={theme.colors.fadedText60}
-              />
-            </BaseButton>
-          </StyledCollapseSidebarButton>
+              <BaseButton
+                kind={BaseButtonKind.HEADER_NO_PADDING}
+                onClick={toggleCollapse}
+              >
+                <DynamicIcon
+                  size="xl"
+                  iconValue=":material/keyboard_double_arrow_left:"
+                  color={theme.colors.fadedText60}
+                />
+              </BaseButton>
+            </StyledCollapseSidebarButton>
+          )}
         </StyledSidebarHeaderContainer>
         {hasPageNavAbove && (
           <SidebarNav

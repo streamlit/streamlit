@@ -172,9 +172,8 @@ function AppView(props: AppViewProps): ReactElement {
 
   const { appPages, pageLinkBaseUrl } = useContext(NavigationContext)
 
-  const { initialSidebarState, appLogo, hideSidebarNav } = useContext(
-    SidebarConfigContext
-  )
+  const { initialSidebarState, appLogo, hideSidebarNav, isSidebarLocked } =
+    useContext(SidebarConfigContext)
 
   const { innerWidth } = useWindowDimensionsContext()
 
@@ -242,6 +241,11 @@ function AppView(props: AppViewProps): ReactElement {
   )
 
   const [isSidebarCollapsed, setSidebarIsCollapsed] = useState<boolean>(() => {
+    // Locked sidebar always starts open; ignore any saved user preference.
+    if (isSidebarLocked) {
+      return false
+    }
+
     const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
     if (savedSidebarState !== null) {
       // User has adjusted the sidebar, respect it
@@ -258,6 +262,12 @@ function AppView(props: AppViewProps): ReactElement {
 
   useExecuteWhenChanged(() => {
     if (innerWidth > 0 && showSidebar) {
+      // Locked sidebar always stays open; skip the saved preference check.
+      if (isSidebarLocked) {
+        setSidebarIsCollapsed(false)
+        return
+      }
+
       const savedSidebarState = getSavedSidebarState(pageLinkBaseUrl)
 
       if (savedSidebarState !== null) {
@@ -283,12 +293,16 @@ function AppView(props: AppViewProps): ReactElement {
 
   const setSidebarCollapsedWithOptionalPersistence = useCallback(
     (isCollapsed: boolean, shouldPersist: boolean = true) => {
+      // Locked sidebar cannot be collapsed; also skip localStorage writes.
+      if (isSidebarLocked) {
+        return
+      }
       setSidebarIsCollapsed(isCollapsed)
       if (shouldPersist) {
         saveSidebarState(pageLinkBaseUrl, isCollapsed)
       }
     },
-    [pageLinkBaseUrl]
+    [isSidebarLocked, pageLinkBaseUrl]
   )
 
   const toggleSidebar = useCallback(() => {

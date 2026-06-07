@@ -28,6 +28,8 @@ export function shouldCollapse(
       return false
     case PageConfig.SidebarState.COLLAPSED:
       return true
+    case PageConfig.SidebarState.LOCKED:
+      return false
     case PageConfig.SidebarState.AUTO:
     default: {
       // Expand sidebar only if browser width > MEDIUM_BREAKPOINT_PX

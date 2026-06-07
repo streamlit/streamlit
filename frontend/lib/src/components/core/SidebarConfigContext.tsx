@@ -20,7 +20,7 @@ import { Logo, PageConfig } from "@streamlit/protobuf"
 
 export interface SidebarConfigContextProps {
   /**
-   * The initial sidebar state from page config (AUTO, EXPANDED, or COLLAPSED).
+   * The initial sidebar state from page config (AUTO, EXPANDED, COLLAPSED, or LOCKED).
    * Used to determine default sidebar behavior on app load.
    *
    * Consumed by: Sidebar, AppView
@@ -85,6 +85,17 @@ export interface SidebarConfigContextProps {
   hideSidebarNav: boolean
 
   /**
+   * Whether the sidebar is locked in the expanded state.
+   * Derived from initialSidebarState === LOCKED. When true, the sidebar
+   * cannot be collapsed and collapse/expand controls are hidden.
+   *
+   * Consumed by: Sidebar, AppView
+   * @see Sidebar
+   * @see AppView
+   */
+  isSidebarLocked: boolean
+
+  /**
    * Ref to the root app container element.
    * Used to detect if click events are inside the main app container
    * vs. in a portal (dropdowns, modals, etc.) to prevent incorrect
@@ -109,6 +120,7 @@ export const SidebarConfigContext = createContext<SidebarConfigContextProps>({
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,
   hideSidebarNav: false,
+  isSidebarLocked: false,
 })
 
 // Set the context display name for React DevTools

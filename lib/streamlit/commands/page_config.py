@@ -44,7 +44,9 @@ ABOUT_KEY: Final = "about"
 
 PageIcon: TypeAlias = AtomicImage | str
 Layout: TypeAlias = Literal["centered", "wide"]
-InitialSideBarState: TypeAlias = Literal["auto", "expanded", "collapsed"] | int
+InitialSideBarState: TypeAlias = (
+    Literal["auto", "expanded", "collapsed", "locked"] | int
+)
 _GetHelp: TypeAlias = Literal["Get help", "Get Help", "get help"]
 _ReportABug: TypeAlias = Literal["Report a bug", "report a bug"]
 _About: TypeAlias = Literal["About", "about"]
@@ -179,7 +181,7 @@ def set_page_config(
           fixed width.
         - ``"wide"``: Page elements use the entire screen width.
 
-    initial_sidebar_state: "auto", "expanded", "collapsed", int, or None
+    initial_sidebar_state: "auto", "expanded", "collapsed", "locked", int, or None
         Initial state of the sidebar. The following states are supported:
 
         - ``None`` (default): The sidebar state is inherited from the previous
@@ -189,6 +191,8 @@ def set_page_config(
           otherwise.
         - ``"expanded"``: The sidebar is shown initially.
         - ``"collapsed"``: The sidebar is hidden initially.
+        - ``"locked"``: The sidebar is permanently expanded. All collapse
+          controls are hidden and users cannot close the sidebar.
         - ``int``: The sidebar will use ``"auto"`` behavior but start with the
           specified width in pixels. The width must be between 200 and 600
           pixels, inclusive.
@@ -258,6 +262,8 @@ def set_page_config(
         pb_sidebar_state = PageConfigProto.EXPANDED
     elif initial_sidebar_state == "collapsed":
         pb_sidebar_state = PageConfigProto.COLLAPSED
+    elif initial_sidebar_state == "locked":
+        pb_sidebar_state = PageConfigProto.LOCKED
     elif initial_sidebar_state is None:
         # Allows for multiple (additive) calls to set_page_config
         pb_sidebar_state = PageConfigProto.SIDEBAR_UNSET

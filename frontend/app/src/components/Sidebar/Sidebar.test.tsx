@@ -205,6 +205,31 @@ describe("Sidebar Component", () => {
       await user.hover(screen.getByTestId("stSidebarHeader"))
       expect(collapseButton).toHaveStyle("visibility: visible")
     })
+
+    it("removes the collapse button entirely when sidebar is locked", async () => {
+      const user = userEvent.setup()
+      renderSidebar(
+        {},
+        {
+          sidebarConfigContext: {
+            initialSidebarState: PageConfig.SidebarState.LOCKED,
+            isSidebarLocked: true,
+          },
+          navigationContext: { appPages: SAMPLE_PAGES },
+        }
+      )
+
+      // Button must not be in the DOM at all — locked sidebar cannot be collapsed
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+
+      // Confirm it also stays absent after hover (no interaction can reveal it)
+      await user.hover(screen.getByTestId("stSidebarHeader"))
+      expect(
+        screen.queryByTestId("stSidebarCollapseButton")
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("Sidebar Navigation", () => {

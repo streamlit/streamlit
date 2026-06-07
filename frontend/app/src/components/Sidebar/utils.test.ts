@@ -36,6 +36,17 @@ describe("shouldCollapse", () => {
     ).toBeFalsy()
   })
 
+  it("should not collapse given state is locked, regardless of viewport width", () => {
+    // Narrower than breakpoint — normally would collapse, but locked prevents it
+    expect(
+      shouldCollapse(PageConfig.SidebarState.LOCKED, 500, 100)
+    ).toBeFalsy()
+    // Wider than breakpoint — also stays open
+    expect(
+      shouldCollapse(PageConfig.SidebarState.LOCKED, 50, 1200)
+    ).toBeFalsy()
+  })
+
   it("should collapse given state is auto and width is less than breakpoint", () => {
     const windowInnerWidth = 40
     expect(

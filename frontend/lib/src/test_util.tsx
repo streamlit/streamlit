@@ -85,6 +85,7 @@ const defaultSidebarConfigContextValue = {
   sidebarChevronDownshift: 0,
   expandSidebarNav: false,
   hideSidebarNav: false,
+  isSidebarLocked: false,
 }
 
 const defaultThemeContextValue = {
