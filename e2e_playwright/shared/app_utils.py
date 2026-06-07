@@ -258,7 +258,9 @@ def select_selectbox_option(
     # Wait for the React component to be fully initialized before interacting
     selectbox_input.wait_for(state="visible")
     selectbox_input.click()
-    # ArrowDown as a backup to ensure the dropdown opens (focuses and opens reliably)
+    # ArrowDown ensures the dropdown opens reliably (backup for pointer-triggered open).
+    # Note: this shifts focus to the first option, so the initially-selected item
+    # will not be highlighted when the dropdown first opens.
     selectbox_input.press("ArrowDown")
 
     # Wait for dropdown to be visible before typing

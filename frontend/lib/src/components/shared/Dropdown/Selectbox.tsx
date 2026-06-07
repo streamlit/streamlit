@@ -345,7 +345,7 @@ const Selectbox: FC<Props> = ({
     (e: React.KeyboardEvent<HTMLInputElement>): void => {
       if (
         isFilterNone &&
-        e.key.length === 1 &&
+        (e.key.length === 1 || e.key === "Backspace" || e.key === "Delete") &&
         !e.ctrlKey &&
         !e.metaKey &&
         !e.altKey

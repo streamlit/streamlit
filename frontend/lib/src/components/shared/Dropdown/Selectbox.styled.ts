@@ -189,8 +189,7 @@ interface StyledListBoxItemProps {
  * the "Add: …" option from the normal list.
  */
 export const StyledListBoxItem = styled(ListBoxItem, {
-  shouldForwardProp: (prop: string) =>
-    !prop.startsWith("$") && prop !== "$isCreatable",
+  shouldForwardProp: (prop: string) => !prop.startsWith("$"),
 })<StyledListBoxItemProps>(({ theme, $isCreatable }) => ({
   display: "flex",
   alignItems: "center",
