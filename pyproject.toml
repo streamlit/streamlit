@@ -45,7 +45,7 @@ override-dependencies = [
 ]
 
 [tool.uv.sources]
-streamlit = { path = "lib", editable = true }
+streamlit-nightly = { path = "lib", editable = true }
 
 # =============================================================================
 # Dependency Groups (PEP 735)
@@ -55,7 +55,7 @@ streamlit = { path = "lib", editable = true }
 # Development dependencies - includes test group
 dev = [
   { include-group = "test" },
-  "streamlit",
+  "streamlit-nightly",
   "pre-commit",
   # We fix ty to a version since its still in beta and likely breaks our CI on updates:
   "ty==0.0.40",
@@ -88,7 +88,7 @@ dev = [
 
 # Test dependencies
 test = [
-  "streamlit",
+  "streamlit-nightly",
   # Testing infrastructure dependencies:
   "pytest>=8.3.5",
   "pytest-cov",
@@ -136,7 +136,7 @@ test = [
 # Integration test dependencies
 integration = [
   { include-group = "test" },
-  "streamlit",
+  "streamlit-nightly",
   # Snowflake dependencies:
   "snowflake-snowpark-python[modin]>=1.17.0",
   "snowflake-connector-python>=3.3.0",
