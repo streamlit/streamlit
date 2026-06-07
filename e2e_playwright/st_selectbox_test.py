@@ -253,12 +253,8 @@ def test_handles_callback_on_change_correctly(app: Page):
         app.get_by_text("Selectbox widget callback triggered: x=1, y=2, z=3")
     ).to_be_visible()
 
-    # Change different input to trigger delta path change
-    empty_selectbox_input = get_selectbox_input(app, "selectbox 1 (default)")
-
-    # Fill and commit the new option:
-    empty_selectbox_input.fill("female")
-    empty_selectbox_input.press("Enter")
+    # Change a different selectbox to trigger a delta-path change.
+    select_selectbox_option(app, "selectbox 1 (default)", "female")
 
     wait_for_app_run(app)
 
