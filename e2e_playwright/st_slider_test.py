@@ -267,9 +267,7 @@ def test_slider_works_with_fragments(app: Page):
 
 def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFunction):
     slider = get_slider(app, "Slider 11 (formatted float)")
-    slider.hover()
-    app.mouse.down()
-    app.mouse.up()
+    slider.click()
 
     # Move slider once to right
     app.keyboard.press("ArrowRight")
@@ -277,7 +275,7 @@ def test_slider_with_float_formatting(app: Page, assert_snapshot: ImageCompareFu
     reset_hovering(app)
     reset_focus(app)
     expect(app.get_by_text("Slider 11: 0.8")).to_be_visible()
-    # Wait for the tick bar (min/max labels) to fully fade out (300ms 200ms delay)
+    # Wait for the tick bar (min/max labels) to fully fade out (transition: 300ms + 200ms delay)
     # so the snapshot is stable and not captured mid-transition.
     expect(slider.get_by_test_id("stSliderTickBar")).to_have_css("opacity", "0")
     assert_snapshot(slider, name="st_slider-float_formatting")

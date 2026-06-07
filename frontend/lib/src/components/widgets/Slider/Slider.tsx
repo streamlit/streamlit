@@ -524,10 +524,13 @@ function fixLabelOverflow(
   const thumbRadius = thumbRect.width / 2
   const thumbMidpoint = thumbRect.left + thumbRadius
 
+  // Round to integer pixels for the boundary checks.
   const thumbValueOverflowsLeft =
-    thumbMidpoint - thumbValueRect.width / 2 < sliderRect.left
+    Math.round(thumbMidpoint - thumbValueRect.width / 2) <
+    Math.round(sliderRect.left)
   const thumbValueOverflowsRight =
-    thumbMidpoint + thumbValueRect.width / 2 > sliderRect.right
+    Math.round(thumbMidpoint + thumbValueRect.width / 2) >
+    Math.round(sliderRect.right)
 
   // React Aria's transform:translate(-50%,-50%) means getBoundingClientRect()
   // returns visual (post-transform) coords, while CSS left/right on children
