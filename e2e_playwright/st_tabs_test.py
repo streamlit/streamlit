@@ -213,19 +213,16 @@ def test_programmatic_nav_preserves_lazy_loading(app: Page):
 
     # Step 1: interact with a widget while in Alpha (sets widgetMgr to "Alpha")
     click_button(app, "Increment Alpha")
-    wait_for_app_run(app)
     expect(counts_text).to_contain_text("Alpha: 1")
 
     # Step 2: programmatic nav to Beta via session_state
     click_button(app, "Go to Beta")
-    wait_for_app_run(app)
     expect(prog_tabs.get_by_text("Beta tab content")).to_be_visible()
     expect(prog_tabs.get_by_text("Alpha tab content")).not_to_be_visible()
 
     # Step 3: interact with widget inside Beta — before the fix this silently
     # failed because the stale widgetMgr value caused tab.open=False for Beta
     click_button(app, "Increment Beta")
-    wait_for_app_run(app)
     expect(counts_text).to_contain_text("Beta: 1")
     # Alpha must not have re-executed
     expect(counts_text).to_contain_text("Alpha: 1")
