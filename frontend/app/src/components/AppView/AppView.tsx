@@ -299,6 +299,7 @@ function AppView(props: AppViewProps): ReactElement {
     initialSidebarState,
     activeTheme.emotion.breakpoints.md,
     pageLinkBaseUrl,
+    isEffectivelyLocked,
   ])
 
   const setSidebarCollapsedWithOptionalPersistence = useCallback(
