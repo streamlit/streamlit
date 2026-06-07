@@ -44,7 +44,7 @@ class HeadingMixin:
     def header(
         self,
         body: SupportsStr,
-        anchor: Anchor = None,
+        anchor: Anchor = False,
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
@@ -65,10 +65,11 @@ class HeadingMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        anchor : str or False
+        anchor : str, False, or None
             The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-            If False, the anchor is not shown in the UI.
+            in the URL. If ``False`` (default), the anchor is not shown in
+            the UI. If ``None``, an anchor is auto-generated from the body
+            text. If a string, that string is used as the anchor name.
 
         help : str or None
             A tooltip that gets displayed next to the header. If this is
@@ -153,7 +154,7 @@ class HeadingMixin:
     def subheader(
         self,
         body: SupportsStr,
-        anchor: Anchor = None,
+        anchor: Anchor = False,
         *,  # keyword-only arguments:
         help: str | None = None,
         divider: Divider = False,
@@ -174,10 +175,11 @@ class HeadingMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        anchor : str or False
+        anchor : str, False, or None
             The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-            If False, the anchor is not shown in the UI.
+            in the URL. If ``False`` (default), the anchor is not shown in
+            the UI. If ``None``, an anchor is auto-generated from the body
+            text. If a string, that string is used as the anchor name.
 
         help : str or None
             A tooltip that gets displayed next to the subheader. If this is
@@ -262,7 +264,7 @@ class HeadingMixin:
     def title(
         self,
         body: SupportsStr,
-        anchor: Anchor = None,
+        anchor: Anchor = False,
         *,  # keyword-only arguments:
         help: str | None = None,
         width: Width = "stretch",
@@ -285,10 +287,11 @@ class HeadingMixin:
             .. |st.markdown| replace:: ``st.markdown``
             .. _st.markdown: https://docs.streamlit.io/develop/api-reference/text/st.markdown
 
-        anchor : str or False
+        anchor : str, False, or None
             The anchor name of the header that can be accessed with #anchor
-            in the URL. If omitted, it generates an anchor using the body.
-            If False, the anchor is not shown in the UI.
+            in the URL. If ``False`` (default), the anchor is not shown in
+            the UI. If ``None``, an anchor is auto-generated from the body
+            text. If a string, that string is used as the anchor name.
 
         help : str or None
             A tooltip that gets displayed next to the title. If this is
@@ -385,7 +388,7 @@ class HeadingMixin:
     def _create_heading_proto(
         tag: HeadingProtoTag,
         body: SupportsStr,
-        anchor: Anchor = None,
+        anchor: Anchor = False,
         help: str | None = None,
         divider: Divider = False,
     ) -> HeadingProto:

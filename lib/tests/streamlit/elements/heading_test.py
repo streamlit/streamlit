@@ -31,7 +31,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some header"
         assert el.heading.tag == "h2"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert not el.heading.divider
 
     def test_st_header_with_anchor(self):
@@ -56,6 +56,17 @@ class StHeaderTest(DeltaGeneratorTestCase):
         assert el.heading.hide_anchor is True
         assert not el.heading.divider
 
+    def test_st_header_with_auto_anchor(self):
+        """Test st.header with anchor=None (auto-generated anchor)."""
+        st.header("some header", anchor=None)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "some header"
+        assert el.heading.tag == "h2"
+        assert el.heading.anchor == ""
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
+
     def test_st_header_with_invalid_anchor(self):
         """Test st.header with invalid anchor."""
         with pytest.raises(StreamlitAPIException):
@@ -77,7 +88,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some header"
         assert el.heading.tag == "h2"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert el.heading.divider == "auto"
 
     def test_st_header_with_divider_color(self):
@@ -87,7 +98,7 @@ class StHeaderTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some header"
         assert el.heading.tag == "h2"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert el.heading.divider == "blue"
 
     def test_st_header_with_invalid_divider(self):
@@ -166,7 +177,7 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some subheader"
         assert el.heading.tag == "h3"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert not el.heading.divider
 
     def test_st_subheader_with_anchor(self):
@@ -191,6 +202,17 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         assert el.heading.hide_anchor is True
         assert not el.heading.divider
 
+    def test_st_subheader_with_auto_anchor(self):
+        """Test st.subheader with anchor=None (auto-generated anchor)."""
+        st.subheader("some subheader", anchor=None)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "some subheader"
+        assert el.heading.tag == "h3"
+        assert el.heading.anchor == ""
+        assert not el.heading.hide_anchor
+        assert not el.heading.divider
+
     def test_st_subheader_with_invalid_anchor(self):
         """Test st.subheader with invalid anchor."""
         with pytest.raises(StreamlitAPIException):
@@ -212,7 +234,7 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some subheader"
         assert el.heading.tag == "h3"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert el.heading.divider == "auto"
 
     def test_st_subheader_with_divider_color(self):
@@ -222,7 +244,7 @@ class StSubheaderTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some subheader"
         assert el.heading.tag == "h3"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert el.heading.divider == "blue"
 
     def test_st_subheader_with_invalid_divider(self):
@@ -301,7 +323,7 @@ class StTitleTest(DeltaGeneratorTestCase):
         el = self.get_delta_from_queue().new_element
         assert el.heading.body == "some title"
         assert el.heading.tag == "h1"
-        assert not el.heading.hide_anchor
+        assert el.heading.hide_anchor is True
         assert not el.heading.divider
 
     def test_st_title_with_anchor(self):
@@ -324,6 +346,17 @@ class StTitleTest(DeltaGeneratorTestCase):
         assert el.heading.tag == "h1"
         assert el.heading.anchor == ""
         assert el.heading.hide_anchor
+        assert not el.heading.divider
+
+    def test_st_title_with_auto_anchor(self):
+        """Test st.title with anchor=None (auto-generated anchor)."""
+        st.title("some title", anchor=None)
+
+        el = self.get_delta_from_queue().new_element
+        assert el.heading.body == "some title"
+        assert el.heading.tag == "h1"
+        assert el.heading.anchor == ""
+        assert not el.heading.hide_anchor
         assert not el.heading.divider
 
     def test_st_title_with_invalid_anchor(self):
