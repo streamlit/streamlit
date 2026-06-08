@@ -329,6 +329,37 @@ describe("MarkdownCellEditor", () => {
     expect(textarea).not.toHaveValue("a")
   })
 
+  it("re-seeds the editor with the latest cell value when entering edit mode", async () => {
+    const user = userEvent.setup()
+    const initialCell = createMockCellValue("# Original", false)
+
+    const { rerender } = render(
+      <MarkdownCellEditor
+        value={initialCell}
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Simulate the cell value changing externally (e.g. via a rerun) while
+    // the viewer overlay stays mounted.
+    const updatedCell = createMockCellValue("# Updated externally", false)
+    rerender(
+      <MarkdownCellEditor
+        value={updatedCell}
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Entering edit mode should seed the textarea with the latest value.
+    await user.click(screen.getByRole("button", { name: "Edit" }))
+    const textarea = screen.getByRole("textbox")
+    expect(textarea).toHaveValue("# Updated externally")
+    // Negative assertion: the stale initial value must NOT be shown.
+    expect(textarea).not.toHaveValue("# Original")
+  })
+
   it("does not render raw HTML in the markdown viewer", () => {
     const maliciousCell = createMockCellValue(
       '<img src=x onerror="window.__xss=true"><script>window.__xss=true</script>',

@@ -238,6 +238,15 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
     [handleSave, handleCancel]
   )
 
+  const handleEnterEdit = useCallback(() => {
+    // Re-seed the editor with the latest cell value so that, if the cell was
+    // updated externally (e.g. via a rerun) while the viewer overlay stayed
+    // open, the textarea starts from the current content rather than the
+    // value captured when the overlay first mounted.
+    setEditValue(cell.data.value ?? "")
+    setIsEditing(true)
+  }, [cell.data.value])
+
   if (isEditing) {
     return (
       <StyledContainer data-testid="stMarkdownColumnEditor" isEditing>
@@ -280,7 +289,7 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
               <ToolbarAction
                 label="Edit"
                 icon={Edit}
-                onClick={() => setIsEditing(true)}
+                onClick={handleEnterEdit}
               />
             </StyledCellToolbar>
           </StyledToolbarWrapper>
