@@ -27,6 +27,14 @@ import { Quiver } from "~lib/dataframes/Quiver"
 
 const LOG = getLogger("LazyDataframeCache")
 
+/**
+ * Maximum number of times a failing chunk is retried before its error is
+ * surfaced to the user. Without this cap, a persistently failing chunk would
+ * be re-fetched on every render (since the loading cell keeps requesting it),
+ * resulting in an unbounded request loop and a perpetual loading skeleton.
+ */
+const MAX_CHUNK_RETRIES = 3
+
 /** Status of a chunk in the cache. */
 type ChunkStatus = "pending" | "loaded" | "error"
 
@@ -40,6 +48,8 @@ interface CachedChunk {
   promise: Promise<Quiver> | null
   /** Error message if the chunk failed to load. */
   errorMsg?: string
+  /** Number of failed load attempts for this chunk. */
+  retryCount: number
 }
 
 /** Configuration for the lazy dataframe cache. */
@@ -120,6 +130,7 @@ export class LazyDataframeCache {
       quiver,
       status: "loaded",
       promise: Promise.resolve(quiver),
+      retryCount: 0,
     })
     LOG.debug(`Loaded initial chunk at offset ${offset}`)
   }
@@ -138,14 +149,6 @@ export class LazyDataframeCache {
    */
   public getSort(): ISortState | null {
     return this.currentSort
-  }
-
-  /**
-   * Check if a row is loaded for the current sort state.
-   */
-  public isRowLoaded(rowIndex: number): boolean {
-    const chunk = this.getChunkForRow(rowIndex, this.currentSort)
-    return chunk?.status === "loaded" && chunk.quiver !== null
   }
 
   /**
@@ -170,6 +173,19 @@ export class LazyDataframeCache {
   }
 
   /**
+   * Get a terminal error message for the chunk containing the given row.
+   * Returns the error message only once the chunk has exhausted its retries;
+   * otherwise (loading, loaded, or still retryable) returns null.
+   */
+  public getRowError(rowIndex: number): string | null {
+    const chunk = this.getChunkForRow(rowIndex, this.currentSort)
+    if (chunk?.status === "error" && chunk.retryCount >= MAX_CHUNK_RETRIES) {
+      return chunk.errorMsg ?? "Failed to load dataframe chunk"
+    }
+    return null
+  }
+
+  /**
    * Ensure a chunk is loaded for the given row index.
    * If the chunk is not in cache, it will be fetched from the backend.
    * Returns a promise that resolves when the chunk is available.
@@ -190,7 +206,8 @@ export class LazyDataframeCache {
     for (let i = 0; i <= numChunksAhead; i++) {
       const offset = baseOffset + i * this.pageSize
       if (offset < this.rowCount) {
-        void this.ensureChunkLoaded(offset, this.currentSort)
+        // Swallow rejections: errors are surfaced via getRowError on render.
+        void this.ensureChunkLoaded(offset, this.currentSort).catch(() => {})
       }
     }
   }
@@ -208,35 +225,6 @@ export class LazyDataframeCache {
   public clear(): void {
     this.cache.clear()
     LOG.debug("Cleared all chunks")
-  }
-
-  /**
-   * Get cache statistics for debugging.
-   */
-  public getStats(): {
-    totalChunks: number
-    loadedChunks: number
-    pendingChunks: number
-    sortStates: number
-  } {
-    let totalChunks = 0
-    let loadedChunks = 0
-    let pendingChunks = 0
-
-    for (const sortCache of this.cache.values()) {
-      for (const chunk of sortCache.values()) {
-        totalChunks++
-        if (chunk.status === "loaded") loadedChunks++
-        if (chunk.status === "pending") pendingChunks++
-      }
-    }
-
-    return {
-      totalChunks,
-      loadedChunks,
-      pendingChunks,
-      sortStates: this.cache.size,
-    }
   }
 
   private ensureSortCache(sortKey: string): Map<number, CachedChunk> {
@@ -264,6 +252,7 @@ export class LazyDataframeCache {
     const sortKey = makeSortKey(sort)
     const sortCache = this.ensureSortCache(sortKey)
 
+    let previousRetryCount = 0
     const existingChunk = sortCache.get(offset)
     if (existingChunk) {
       if (existingChunk.status === "loaded" && existingChunk.quiver) {
@@ -273,7 +262,16 @@ export class LazyDataframeCache {
         return existingChunk.promise
       }
       if (existingChunk.status === "error") {
-        // Retry failed chunks
+        // Stop retrying once the chunk has exhausted its retry budget to
+        // avoid an unbounded re-fetch loop for a persistently failing chunk.
+        if (existingChunk.retryCount >= MAX_CHUNK_RETRIES) {
+          return Promise.reject(
+            new Error(
+              existingChunk.errorMsg ?? "Failed to load dataframe chunk"
+            )
+          )
+        }
+        previousRetryCount = existingChunk.retryCount
         LOG.debug(`Retrying failed chunk at offset ${offset}`)
       }
     }
@@ -285,6 +283,7 @@ export class LazyDataframeCache {
       quiver: null,
       status: "pending",
       promise,
+      retryCount: previousRetryCount,
     })
 
     promise
@@ -293,6 +292,7 @@ export class LazyDataframeCache {
           quiver,
           status: "loaded",
           promise: null,
+          retryCount: 0,
         })
         this.onUpdate?.()
       })
@@ -303,6 +303,7 @@ export class LazyDataframeCache {
           status: "error",
           promise: null,
           errorMsg: error.message,
+          retryCount: previousRetryCount + 1,
         })
         this.onUpdate?.()
       })

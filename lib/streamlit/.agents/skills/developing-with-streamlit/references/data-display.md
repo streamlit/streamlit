@@ -136,6 +136,24 @@ st.dataframe(
 
 Use `st.dataframe` with `on_select` for row selection — do **not** use `st.data_editor` with a checkbox column for selection-only use cases.
 
+## Large dataframes (lazy loading)
+
+`st.dataframe` supports lazy row loading via the `lazy` parameter, which loads rows on-demand as the user scrolls instead of sending the whole dataset to the browser up front. This reduces the initial payload size and browser memory usage for big datasets.
+
+```python
+# Automatic: Streamlit uses lazy loading for compatible in-memory
+# pandas/Polars DataFrames above ~150,000 rows (the default).
+st.dataframe(big_df)
+
+# Force lazy loading (requires at least ~1,000 rows to take effect).
+st.dataframe(big_df, lazy=True)
+
+# Disable lazy loading and always send everything eagerly.
+st.dataframe(big_df, lazy=False)
+```
+
+**When lazy loading is active, these features are unavailable:** search, CSV export, and row/column/cell selection (`on_select`). Server-side sorting still works for compatible sources. Lazy mode requires a pandas or Polars DataFrame — it is not supported for `pandas.Styler` or PyArrow tables. If you need selection or search on a large dataset, keep `lazy=False` (or pre-filter the data) instead.
+
 ## Pandas Styler: formatting vs coloring
 
 Use `column_config` for **all value formatting** (numbers, dates, percentages). Only use Pandas Styler for **coloring** (background gradients, highlights).

@@ -18,8 +18,8 @@ import pandas as pd
 
 import streamlit as st
 
-# Create a dataframe that exceeds the auto-lazy threshold (150k rows)
-# For testing, we'll use lazy=True with a smaller dataframe
+# Use a dataframe above the lazy=True minimum (1,000 rows) but below the
+# auto-lazy threshold (150k rows), so lazy mode is exercised via lazy=True.
 df = pd.DataFrame(
     {
         "id": range(10000),

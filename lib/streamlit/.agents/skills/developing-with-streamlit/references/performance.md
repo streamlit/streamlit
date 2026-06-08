@@ -222,6 +222,17 @@ Move expensive work outside the main flow:
 - Pre-compute metrics in scheduled jobs
 - Use materialized views for complex queries
 
+## Large dataframes
+
+`st.dataframe` can lazily load rows on-demand as the user scrolls instead of sending the whole dataset to the browser up front, which cuts the initial payload size and browser memory usage for big datasets. This happens automatically for compatible in-memory pandas/Polars DataFrames above ~150,000 rows, and you can force it with `lazy=True`.
+
+```python
+# Automatic for large DataFrames; force it with lazy=True.
+st.dataframe(big_df, lazy=True)
+```
+
+Lazy loading disables search, CSV export, and selection (`on_select`). See `data-display.md` for the full behavior and trade-offs.
+
 ## References
 
 - [st.cache_data](https://docs.streamlit.io/develop/api-reference/caching-and-state/st.cache_data)

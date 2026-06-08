@@ -152,8 +152,17 @@ function useLazyDataLoader({
       const rowData = cache.getRowData(row)
 
       if (!rowData) {
-        // Data not loaded yet - trigger fetch and return loading cell
-        void cache.ensureRowLoaded(row)
+        // If the chunk has exhausted its retries, surface the error instead
+        // of looping forever on a loading cell.
+        const loadError = cache.getRowError(row)
+        if (loadError !== null) {
+          return getErrorCell("Failed to load data", loadError)
+        }
+
+        // Data not loaded yet - trigger fetch and return loading cell.
+        // Errors are surfaced via getRowError on the next render, so swallow
+        // the rejection here to avoid unhandled promise rejections.
+        void cache.ensureRowLoaded(row).catch(() => {})
         // Also prefetch ahead for smoother scrolling
         cache.prefetch(row, 1)
         return getLoadingCell()

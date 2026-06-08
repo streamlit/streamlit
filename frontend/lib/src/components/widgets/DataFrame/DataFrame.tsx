@@ -204,11 +204,9 @@ function DataFrame({
   // Backend operation client for lazy dataframe chunk requests
   const { backendOperationClient } = useContext(BackendOperationContext)
 
-  // Detect lazy mode from element.lazyData
-  const isLazy =
-    !isNullOrUndefined(element.lazyData?.sourceId) &&
-    element.lazyData?.sourceId !== ""
+  // Detect lazy mode from element.lazyData (a non-empty sourceId means lazy).
   const lazyData = element.lazyData
+  const isLazy = Boolean(lazyData?.sourceId)
 
   // Check for missing backend client in lazy mode - will render error below
   // instead of throwing to avoid violating React's Rules of Hooks

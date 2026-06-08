@@ -72,8 +72,6 @@ type LazySortReturn = {
   getOriginalIndex: (index: number) => number
   /** The getCellContent function (unchanged, server handles sort order). */
   getCellContent: DataEditorProps["getCellContent"]
-  /** Current sort state for communicating with cache. */
-  currentSort: ISortState | null
 }
 
 /**
@@ -93,28 +91,6 @@ function useLazyColumnSort(
   onSortChange: (sort: ISortState | null) => void
 ): LazySortReturn {
   const [sortConfig, setSortConfig] = useState<SortConfig>()
-
-  // Convert local sort config to proto sort state
-  // Use the column name (not id) since the backend needs the actual column name
-  const currentSort: ISortState | null = useMemo(() => {
-    if (!sortConfig) {
-      return null
-    }
-    // Find the column to get its name (id is the internal UI identifier)
-    const column = columns.find(c => c.id === sortConfig.column.id)
-    // If the column is not found (e.g., schema changed), return null (no sort)
-    // to avoid sending an invalid column name to the backend
-    if (!column) {
-      return null
-    }
-    return {
-      column: column.name,
-      direction:
-        sortConfig.direction === "desc"
-          ? SortState.SortDirection.DESCENDING
-          : SortState.SortDirection.ASCENDING,
-    }
-  }, [sortConfig, columns])
 
   const updatedColumns = useMemo(
     () => updateSortingHeader(columns, sortConfig),
@@ -184,7 +160,6 @@ function useLazyColumnSort(
     sortColumn,
     getOriginalIndex,
     getCellContent,
-    currentSort,
   }
 }
 
