@@ -589,13 +589,13 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
         mock_report_watchdog,
     ):
         """Test that run_asgi_app calls the expected bootstrap functions."""
-        import uvicorn
-
         with (
             testutil.patch_config_options(
                 {"server.address": "localhost", "server.port": 8501}
             ),
-            patch.object(uvicorn, "run") as mock_uvicorn_run,
+            patch(
+                "streamlit.web.server.starlette.starlette_server.UvicornRunner"
+            ) as mock_uvicorn_runner_cls,
         ):
             bootstrap.run_asgi_app(
                 main_script_path="/path/to/main.py",
@@ -612,10 +612,9 @@ class BootstrapAsgiTest(IsolatedAsyncioTestCase):
         mock_install_watchers.assert_called_once_with({"server_port": 8501})
         mock_report_watchdog.assert_called_once()
 
-        # Verify uvicorn.run was called with the app import string
-        mock_uvicorn_run.assert_called_once()
-        call_kwargs = mock_uvicorn_run.call_args
-        assert call_kwargs[0][0] == "myapp:app"
+        # Verify UvicornRunner was called with the app import string
+        mock_uvicorn_runner_cls.assert_called_once_with("myapp:app")
+        mock_uvicorn_runner_cls.return_value.run.assert_called_once_with()
 
     def test_run_asgi_app_raises_without_uvicorn(self):
         """Test that run_asgi_app raises RuntimeError if uvicorn is not installed."""

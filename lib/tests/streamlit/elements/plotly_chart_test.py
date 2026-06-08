@@ -20,6 +20,12 @@ import pytest
 from parameterized import parameterized
 
 import streamlit as st
+from streamlit.elements.plotly_chart import (
+    PlotlyChartSelectionSerde,
+    PlotlyMixin,
+    _resolve_content_height,
+    _resolve_content_width,
+)
 from streamlit.errors import StreamlitAPIException
 from streamlit.runtime.caching import cached_message_replay
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
@@ -641,3 +647,73 @@ class PlotlyChartHeightTest(DeltaGeneratorTestCase):
                 el.height_config.pixel_height == 450
             )  # Content height defaults to 450px
             assert len(el.plotly_chart.selection_mode) > 0  # Selections are activated
+
+
+def test_resolve_content_width_returns_original_when_not_content() -> None:
+    """Non-`content` widths pass through unchanged."""
+    assert _resolve_content_width("stretch", figure={"layout": {"width": 100}}) == (
+        "stretch"
+    )
+    assert _resolve_content_width(500, figure={"layout": {"width": 100}}) == 500
+
+
+def test_resolve_content_width_handles_invalid_figure() -> None:
+    """If the figure has no layout/width access, fall back to plotly default (700)."""
+
+    class _BadFigure:
+        # Accessing .layout raises AttributeError; the helper should swallow it.
+        @property
+        def layout(self):
+            raise AttributeError("no layout")
+
+    assert _resolve_content_width("content", figure=_BadFigure()) == 700
+
+
+def test_resolve_content_height_returns_original_when_not_content() -> None:
+    """Non-`content` heights pass through unchanged."""
+    assert (
+        _resolve_content_height("stretch", figure={"layout": {"height": 100}})
+        == "stretch"
+    )
+    assert _resolve_content_height(500, figure={"layout": {"height": 100}}) == 500
+
+
+def test_resolve_content_height_handles_invalid_figure() -> None:
+    """If the figure has no layout/height access, fall back to plotly default (450)."""
+
+    class _BadFigure:
+        @property
+        def layout(self):
+            raise TypeError("not subscriptable")
+
+    assert _resolve_content_height("content", figure=_BadFigure()) == 450
+
+
+def test_resolve_content_width_uses_figure_layout_width() -> None:
+    """When width is `content`, an explicit figure layout width is used."""
+    assert _resolve_content_width("content", figure={"layout": {"width": 320}}) == 320
+
+
+def test_resolve_content_height_uses_figure_layout_height() -> None:
+    """When height is `content`, an explicit figure layout height is used."""
+    assert _resolve_content_height("content", figure={"layout": {"height": 240}}) == 240
+
+
+def test_plotly_mixin_dg_returns_self() -> None:
+    """``PlotlyMixin.dg`` returns the mixin instance."""
+
+    class _OnlyPlotly(PlotlyMixin):
+        pass
+
+    plotly_mixin = _OnlyPlotly()
+    assert plotly_mixin.dg is plotly_mixin
+
+
+def test_plotly_serde_serialize_returns_json_string() -> None:
+    """``PlotlyChartSelectionSerde.serialize`` returns a JSON string for selection state."""
+
+    serde = PlotlyChartSelectionSerde()
+    payload = serde.serialize({"selection": {"points": [], "box": [], "lasso": []}})
+
+    assert isinstance(payload, str)
+    assert "selection" in payload

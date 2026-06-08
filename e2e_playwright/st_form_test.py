@@ -58,9 +58,9 @@ def change_widget_values(app: Page):
     form_1.get_by_test_id("stNumberInput").locator("input").fill("42")
 
     # Change the radio value.
-    form_1.get_by_test_id("stRadio").locator('label[data-baseweb="radio"]').nth(
-        1
-    ).click(force=True)
+    form_1.get_by_test_id("stRadio").get_by_test_id("stRadioOption").nth(1).click(
+        force=True
+    )
 
     # Change the selectbox value.
     select_selectbox_option(app, "Selectbox", "bar")

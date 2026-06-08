@@ -34,7 +34,6 @@ import {
   ErrorOutline,
 } from "@emotion-icons/material-rounded"
 import type { AxiosProgressEvent } from "axios"
-import { Textarea as UITextArea } from "baseui/textarea"
 import { useDropzone } from "react-dropzone"
 
 import { useWindowDimensionsContext } from "@streamlit/lib"
@@ -63,7 +62,6 @@ import { FileUploadClient } from "~lib/FileUploadClient"
 import { useCalculatedDimensions } from "~lib/hooks/useCalculatedDimensions"
 import { useEmotionTheme } from "~lib/hooks/useEmotionTheme"
 import { useTextInputAutoExpand } from "~lib/hooks/useTextInputAutoExpand"
-import type { EmotionTheme } from "~lib/theme/types"
 import { convertRemToPx } from "~lib/theme/utils"
 import { FileSize, sizeConverter } from "~lib/util/FileHelper"
 import { isEnterKeyPressed } from "~lib/util/inputUtils"
@@ -82,6 +80,7 @@ import {
   StyledChatAudioWave,
   StyledChatInput,
   StyledChatInputContainer,
+  StyledChatInputTextArea,
   StyledFilesArea,
   StyledInputInstructions,
   StyledInputRow,
@@ -92,67 +91,6 @@ import {
   StyledToolbarRow,
   StyledWaveformContainer,
 } from "./styled-components"
-
-/**
- * Creates the UITextArea overrides configuration for the chat input.
- *
- * @param theme - The Emotion theme for accessing design tokens
- * @param autoExpand - Auto-expand configuration with height and maxHeight
- * @param rootLayoutStyle - Layout-specific style for Root (e.g., flex or width)
- * @param minHeightOverride - Optional minimum height override from heightConfig
- * @param useFixedHeight - When true, use 100% height instead of autoExpand (for stretch/pixel height modes)
- */
-function createTextAreaOverrides(
-  theme: EmotionTheme,
-  autoExpand: { height: string; maxHeight: string; isExtended: boolean },
-  rootLayoutStyle: Record<string, string | number>,
-  minHeightOverride?: string,
-  useFixedHeight?: boolean
-): React.ComponentProps<typeof UITextArea>["overrides"] {
-  return {
-    Root: {
-      style: {
-        minHeight: minHeightOverride ?? theme.sizes.chatInputTextareaMinHeight,
-        outline: "none",
-        borderLeftWidth: "0",
-        borderRightWidth: "0",
-        borderTopWidth: "0",
-        borderBottomWidth: "0",
-        borderTopLeftRadius: "0",
-        borderTopRightRadius: "0",
-        borderBottomRightRadius: "0",
-        borderBottomLeftRadius: "0",
-        ...rootLayoutStyle,
-      },
-    },
-    Input: {
-      props: {
-        "data-testid": "stChatInputTextArea",
-      },
-      style: {
-        fontWeight: theme.fontWeights.normal,
-        lineHeight: theme.lineHeights.inputWidget,
-        "::placeholder": {
-          color: theme.colors.fadedText60,
-        },
-        // When useFixedHeight is true (stretch/pixel height mode), fill the container
-        // Otherwise, use autoExpand values for dynamic expansion
-        height: useFixedHeight
-          ? "100%"
-          : autoExpand.isExtended
-            ? autoExpand.height
-            : "auto",
-        maxHeight: useFixedHeight ? "none" : autoExpand.maxHeight,
-        overflowY: "auto",
-        paddingLeft: theme.spacing.none,
-        paddingRight: theme.spacing.none,
-        paddingBottom: theme.spacing.twoXS,
-        paddingTop: theme.spacing.twoXS,
-        width: "100%",
-      },
-    },
-  }
-}
 
 export interface Props {
   disabled: boolean
@@ -890,8 +828,9 @@ function ChatInput({
               isStacked={isStacked}
               hasExpandedHeight={hasExpandedHeight}
             >
-              <UITextArea
-                inputRef={chatInputRef}
+              <StyledChatInputTextArea
+                data-testid="stChatInputTextArea"
+                ref={chatInputRef}
                 value={value}
                 placeholder={placeholder}
                 onChange={handleChange}
@@ -902,16 +841,19 @@ function ChatInput({
                 aria-describedby={
                   showInstructions ? "stChatInputInstructions" : undefined
                 }
-                overrides={createTextAreaOverrides(
-                  theme,
-                  autoExpand,
-                  {
-                    width: "100%",
-                    ...(hasExpandedHeight ? { flex: 1 } : {}),
-                  },
-                  textareaMinHeight,
+                $minHeight={
+                  textareaMinHeight ?? theme.sizes.chatInputTextareaMinHeight
+                }
+                $height={
                   hasConfiguredHeight
-                )}
+                    ? "100%"
+                    : autoExpand.isExtended
+                      ? autoExpand.height
+                      : "auto"
+                }
+                $maxHeight={
+                  hasConfiguredHeight ? "none" : autoExpand.maxHeight
+                }
               />
             </StyledTextareaWrapper>
           )}

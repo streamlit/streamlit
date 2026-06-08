@@ -242,7 +242,7 @@ class PlotlyChartSelectionSerde:
             else cast("PlotlyState", AttributeDictionary(json.loads(ui_value)))
         )
 
-        if "selection" not in selection_state:
+        if "selection" not in selection_state:  # pragma: no cover - defensive
             selection_state = empty_selection_state  # type: ignore[unreachable]
 
         return cast("PlotlyState", AttributeDictionary(selection_state))

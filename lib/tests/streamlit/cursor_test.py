@@ -19,6 +19,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from streamlit.cursor import (
+    Cursor,
     LockedCursor,
     RunningCursor,
     SparseList,
@@ -184,6 +185,47 @@ class TestRunningCursor:
         # Should be reset
         assert cursor.transient_index == 0
         assert len(cursor.transient_elements) == 0
+
+
+class TestCursorBase:
+    """Tests for the abstract Cursor base class."""
+
+    def test_repr_returns_string(self) -> None:
+        """Test that __repr__ returns a string representation."""
+        cursor = Cursor()
+        result = repr(cursor)
+        assert isinstance(result, str)
+        assert "Cursor" in result
+
+    def test_root_container_raises_not_implemented(self) -> None:
+        """Test that root_container on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.root_container
+
+    def test_parent_path_raises_not_implemented(self) -> None:
+        """Test that parent_path on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.parent_path
+
+    def test_index_raises_not_implemented(self) -> None:
+        """Test that index on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.index
+
+    def test_is_locked_raises_not_implemented(self) -> None:
+        """Test that is_locked on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            _ = cursor.is_locked
+
+    def test_get_locked_cursor_raises_not_implemented(self) -> None:
+        """Test that get_locked_cursor on base Cursor raises NotImplementedError."""
+        cursor = Cursor()
+        with pytest.raises(NotImplementedError):
+            cursor.get_locked_cursor()
 
 
 class TestLockedCursor:

@@ -110,6 +110,7 @@ st.dataframe(
 - `AreaChartColumn` → Area sparklines
 - `AudioColumn` → Audio playback
 - `BarChartColumn` → Bar sparklines
+- `ButtonColumn` → Clickable buttons that trigger callbacks
 - `CheckboxColumn` → Boolean as checkbox
 - `DateColumn` → Date only (no time)
 - `DatetimeColumn` → Dates with formatting
@@ -125,6 +126,39 @@ st.dataframe(
 - `TextColumn` → Text with formatting
 - `TimeColumn` → Time only (no date)
 - `VideoColumn` → Video playback
+
+## Row actions with ButtonColumn
+
+Use `ButtonColumn` for clickable, per-row actions in `st.dataframe` or `st.data_editor`. The cell value is the button label (supports `:material/...:` icons). A cell holding a **list** renders a dropdown menu of multiple actions.
+
+```python
+df = pd.DataFrame({
+    "name": ["Alice", "Bob"],
+    "actions": [
+        [":material/edit: Edit", ":material/delete: Delete"],
+        [":material/edit: Edit"],
+    ],
+})
+
+def handle_action():
+    click = st.session_state.row_action  # {"row": int, "label": str}
+    st.toast(f"{click['label']} on row {click['row']}")
+
+st.dataframe(
+    df,
+    column_config={
+        "actions": st.column_config.ButtonColumn(
+            "Actions", on_click=handle_action, key="row_action"
+        ),
+    },
+)
+```
+
+**Key points:**
+- **`key` is required** to enable clicks/callbacks. Click info lives in `st.session_state[key]` as `{"row", "label"}` — only during the click rerun, then resets to `None`.
+- Use `on_click` (with optional `args`/`kwargs`) for the action; read the clicked row/label inside the callback.
+- Always **read-only** — even in `st.data_editor`, the cell values can't be edited, but clicks still fire.
+- Style with `type="primary" | "secondary" | "tertiary"` and `alignment`.
 
 ## Choosing the right data widget
 
