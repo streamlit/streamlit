@@ -1110,7 +1110,7 @@ function mdLinksInDiv(source: string): string {
     const processedInnerAndClosing = innerAndClosing.replace(
       markdownLinkRegex,
       (_match, label, href) => {
-        return `<a href="${href}">${label}</a>`
+        return `<a href="${href.replace(/"/g, "&quot;")}">${label}</a>`
       }
     )
 
