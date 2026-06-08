@@ -834,8 +834,11 @@ _create_option(
         calculate memory usage statistics for the /_stcore/metrics endpoint.
 
         This can be slow for large session state or cached resource objects. If
-        False, Streamlit reports fast proxy values for those objects, and the
-        memory statistics are likely to be incorrect as byte counts.
+        False (the default), Streamlit reports fast proxy values for those
+        objects: item counts (the number of cached entries or session-state
+        keys) rather than byte sizes. The cache_memory_bytes metric will
+        therefore reflect entry counts, not memory consumption, for those
+        objects.
     """,
     default_val=False,
     type_=bool,
