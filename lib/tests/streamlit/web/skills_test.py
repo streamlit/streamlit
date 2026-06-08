@@ -1503,3 +1503,96 @@ class TestIsStreamlitOwnedSymlinkErrorPaths:
 
         # Should return True based on name check
         assert skills._is_streamlit_owned_symlink(link, {"developing-with-streamlit"})
+
+
+def _evaluate_nudge(
+    tmp_path: Path,
+    *,
+    headless: bool = False,
+    hide_welcome: bool = False,
+    agents: tuple[str, ...] = ("claude",),
+    installed_skills: tuple[str, ...] = (),
+    marker_exists: bool = False,
+) -> bool:
+    """Run ``should_show_skills_nudge`` with the given conditions patched in."""
+    marker = tmp_path / "skills_nudge_dismissed"
+    if marker_exists:
+        marker.touch()
+
+    options = {"server.headless": headless, "logger.hideWelcomeMessage": hide_welcome}
+
+    with (
+        patch("streamlit.config.get_option", side_effect=options.__getitem__),
+        patch.object(skills, "_nudge_dismissed_marker_path", return_value=marker),
+        patch(
+            "streamlit.runtime.metrics_util.detect_installed_agents",
+            return_value=list(agents),
+        ),
+        patch(
+            "streamlit.runtime.metrics_util.detect_installed_skills",
+            return_value=list(installed_skills),
+        ),
+    ):
+        return skills.should_show_skills_nudge()
+
+
+def test_should_show_skills_nudge_when_all_conditions_met(tmp_path: Path) -> None:
+    """The nudge is recommended when an agent is present and skills are absent."""
+    assert _evaluate_nudge(tmp_path) is True
+
+
+def test_should_show_skills_nudge_hidden_when_headless(tmp_path: Path) -> None:
+    """No nudge in headless mode (deployments, CI, SiS)."""
+    assert _evaluate_nudge(tmp_path, headless=True) is False
+
+
+def test_should_show_skills_nudge_hidden_when_welcome_message_hidden(
+    tmp_path: Path,
+) -> None:
+    """No nudge when the welcome message is suppressed via config."""
+    assert _evaluate_nudge(tmp_path, hide_welcome=True) is False
+
+
+def test_should_show_skills_nudge_hidden_when_marker_exists(tmp_path: Path) -> None:
+    """No nudge once the user has permanently dismissed it."""
+    assert _evaluate_nudge(tmp_path, marker_exists=True) is False
+
+
+def test_should_show_skills_nudge_hidden_when_no_agent(tmp_path: Path) -> None:
+    """No nudge when no agent harness is detected on the system."""
+    assert _evaluate_nudge(tmp_path, agents=()) is False
+
+
+def test_should_show_skills_nudge_hidden_when_skills_installed(tmp_path: Path) -> None:
+    """No nudge when the bundled skills are already installed."""
+    assert (
+        _evaluate_nudge(
+            tmp_path,
+            installed_skills=("home:claude:developing-with-streamlit",),
+        )
+        is False
+    )
+
+
+def test_should_show_skills_nudge_returns_false_on_error() -> None:
+    """A detection failure suppresses the nudge rather than raising."""
+    with patch("streamlit.config.get_option", side_effect=RuntimeError("boom")):
+        assert skills.should_show_skills_nudge() is False
+
+
+def test_write_nudge_dismissed_marker_creates_file(tmp_path: Path) -> None:
+    """Writing the marker creates the file (and any missing parent dirs)."""
+    marker = tmp_path / ".streamlit" / "skills_nudge_dismissed"
+    with patch.object(skills, "_nudge_dismissed_marker_path", return_value=marker):
+        skills.write_nudge_dismissed_marker()
+        # A second call must not raise even though the marker already exists.
+        skills.write_nudge_dismissed_marker()
+
+    assert marker.is_file()
+
+
+def test_nudge_dismissed_marker_path_under_streamlit_dir() -> None:
+    """The marker lives under the user's ``.streamlit`` config directory."""
+    path = skills._nudge_dismissed_marker_path()
+    assert path.name == "skills_nudge_dismissed"
+    assert path.parent.name == ".streamlit"

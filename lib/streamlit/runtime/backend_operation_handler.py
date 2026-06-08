@@ -27,6 +27,8 @@ from streamlit.logger import get_logger
 from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
     DeferredFileResponsePayload,
+    DismissSkillsNudgeResponsePayload,
+    InstallSkillsResponsePayload,
 )
 
 if TYPE_CHECKING:
@@ -137,3 +139,75 @@ class DeferredFileHandler(BackendOperationHandler):
                 request_id=request.request_id,
                 error_msg="Failed to generate file for download",
             )
+
+
+class InstallSkillsHandler(BackendOperationHandler):
+    """Handler for one-click "install skills" requests from the in-app nudge."""
+
+    async def handle(
+        self,
+        request: BackendOperationRequest,
+        session_id: str,  # noqa: ARG002
+    ) -> BackendOperationResponse:
+        """Install the bundled Streamlit skills in project mode."""
+        from streamlit import config
+        from streamlit.runtime import metrics_util
+        from streamlit.web import skills
+
+        if config.get_option("server.headless"):
+            # Defensive: the nudge is never shown in headless mode, so this
+            # request should not occur. Refuse rather than install.
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Skills install is not available in headless mode.",
+            )
+
+        try:
+            # Run off the event loop: installing does filesystem I/O (and,
+            # in the global fallback, a network download).
+            await asyncio.to_thread(skills.install_skills, global_mode=False, yes=True)
+        except Exception as ex:
+            _LOGGER.warning("One-click skills install failed", exc_info=ex)
+            # click.ClickException carries a clean, user-facing message.
+            format_message = getattr(ex, "format_message", None)
+            detail = format_message() if callable(format_message) else str(ex)
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg=detail or "Failed to install skills.",
+            )
+
+        # Invalidate the cached "skills installed" detection so a later session
+        # in this same process does not re-show the nudge.
+        metrics_util.clear_installed_skills_cache()
+
+        return BackendOperationResponse(
+            request_id=request.request_id,
+            install_skills=InstallSkillsResponsePayload(detail=""),
+        )
+
+
+class DismissSkillsNudgeHandler(BackendOperationHandler):
+    """Handler that permanently dismisses the in-app "install skills" nudge."""
+
+    async def handle(
+        self,
+        request: BackendOperationRequest,
+        session_id: str,  # noqa: ARG002
+    ) -> BackendOperationResponse:
+        """Write the server-side marker so the nudge is no longer shown."""
+        from streamlit.web import skills
+
+        try:
+            await asyncio.to_thread(skills.write_nudge_dismissed_marker)
+        except Exception as ex:
+            _LOGGER.warning("Failed to persist skills nudge dismissal", exc_info=ex)
+            return BackendOperationResponse(
+                request_id=request.request_id,
+                error_msg="Failed to save your preference.",
+            )
+
+        # The ack payload's presence signals success (error_msg stays empty).
+        return BackendOperationResponse(
+            request_id=request.request_id,
+            dismiss_skills_nudge=DismissSkillsNudgeResponsePayload(),
+        )

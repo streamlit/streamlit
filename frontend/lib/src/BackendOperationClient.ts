@@ -75,7 +75,10 @@ export class BackendOperationClient {
    * Send a backend operation request to the server.
    */
   public request<TResponse>(
-    payloadField: keyof Pick<IBackendOperationRequest, "deferredFile">,
+    payloadField: keyof Pick<
+      IBackendOperationRequest,
+      "deferredFile" | "installSkills" | "dismissSkillsNudge"
+    >,
     payload: IBackendOperationRequest[typeof payloadField],
     timeoutMs?: number
   ): Promise<TResponse> {
@@ -137,6 +140,26 @@ export class BackendOperationClient {
       { fileId },
       timeoutMs ?? DEFERRED_FILE_REQUEST_TIMEOUT_MS
     )
+  }
+
+  /**
+   * Request a one-click install of the bundled Streamlit agent skills.
+   *
+   * @returns A promise that resolves with an optional outcome detail, or
+   * rejects with the server-provided error message on failure.
+   */
+  public requestInstallSkills(): Promise<{ detail?: string | null }> {
+    return this.request<{ detail?: string | null }>("installSkills", {})
+  }
+
+  /**
+   * Permanently dismiss the in-app "install skills" nudge. The server writes
+   * a marker so the nudge is not shown again.
+   *
+   * @returns A promise that resolves once the dismissal has been persisted.
+   */
+  public requestDismissSkillsNudge(): Promise<unknown> {
+    return this.request<unknown>("dismissSkillsNudge", {})
   }
 
   /**
@@ -204,9 +227,10 @@ export class BackendOperationClient {
   private extractResponsePayload(
     response: IBackendOperationResponse
   ): unknown {
-    // Return the first non-null payload field
+    // Return the first recognized non-null payload field
     if (response.deferredFile) return response.deferredFile
-    // Future: Add other payload types here
+    if (response.installSkills) return response.installSkills
+    if (response.dismissSkillsNudge) return response.dismissSkillsNudge
 
     LOG.warn("Response contained no recognized payload", response)
     throw new Error("Response contained no recognized payload")

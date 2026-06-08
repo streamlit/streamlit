@@ -84,6 +84,12 @@ message Initialize {
   // True if the command used to start this app was `streamlit hello`.
   bool is_hello = 7;
 
+  // True when the server wants the frontend to show the "install skills"
+  // nudge. Only set in local development when an agent harness is detected,
+  // the bundled Streamlit skills are not yet installed, and the user has not
+  // dismissed the nudge permanently. Frontend treats an unset value as false.
+  bool recommend_skills_install = 2;
+
   reserved 5;
 }
 

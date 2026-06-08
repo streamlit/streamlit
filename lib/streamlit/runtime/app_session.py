@@ -42,6 +42,8 @@ from streamlit.runtime import caching
 from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
+    DismissSkillsNudgeHandler,
+    InstallSkillsHandler,
 )
 from streamlit.runtime.forward_msg_queue import ForwardMsgQueue
 from streamlit.runtime.fragment import FragmentStorage, MemoryFragmentStorage
@@ -217,6 +219,9 @@ class AppSession:
             "deferred_file",
             DeferredFileHandler(lambda: runtime.get_instance().media_file_mgr),
         )
+
+        dispatcher.register("install_skills", InstallSkillsHandler())
+        dispatcher.register("dismiss_skills_nudge", DismissSkillsNudgeHandler())
 
         return dispatcher
 
@@ -854,6 +859,13 @@ class AppSession:
 
         imsg.is_hello = self._script_data.is_hello
         imsg.session_id = self.id
+
+        # Recommend installing the bundled agent skills when running locally
+        # with an AI agent present but no skills installed yet. Computed here
+        # so the frontend can surface a one-click "install skills" nudge.
+        from streamlit.web import skills
+
+        imsg.recommend_skills_install = skills.should_show_skills_nudge()
 
         return msg
 
