@@ -15,16 +15,21 @@
 from __future__ import annotations
 
 import asyncio
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
+
+import click
 
 from streamlit.proto.BackMsg_pb2 import BackendOperationRequest
 from streamlit.proto.ForwardMsg_pb2 import (
     BackendOperationResponse,
     DeferredFileResponsePayload,
 )
+from streamlit.runtime import metrics_util
 from streamlit.runtime.backend_operation_handler import (
     BackendOperationDispatcher,
     DeferredFileHandler,
+    DismissSkillsNudgeHandler,
+    InstallSkillsHandler,
 )
 
 
@@ -147,3 +152,96 @@ def test_deferred_file_handler_returns_error_response() -> None:
     assert response.request_id == "request-id"
     assert response.error_msg == "Failed to generate file for download"
     assert not response.HasField("deferred_file")
+
+
+def _install_skills_request(
+    *, request_id: str = "request-id", session_id: str = "session-id"
+) -> BackendOperationRequest:
+    request = BackendOperationRequest(request_id=request_id, session_id=session_id)
+    request.install_skills.SetInParent()
+    return request
+
+
+def _dismiss_nudge_request(
+    *, request_id: str = "request-id", session_id: str = "session-id"
+) -> BackendOperationRequest:
+    request = BackendOperationRequest(request_id=request_id, session_id=session_id)
+    request.dismiss_skills_nudge.SetInParent()
+    return request
+
+
+def test_install_skills_handler_installs_in_project_mode() -> None:
+    """A successful install returns a payload and clears the detection cache."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+        patch.object(metrics_util, "clear_installed_skills_cache") as mock_clear,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+        )
+
+    mock_install.assert_called_once_with(global_mode=False, yes=True)
+    # The cache is invalidated so a later session doesn't re-show the nudge.
+    mock_clear.assert_called_once()
+    assert response.request_id == "request-id"
+    assert response.HasField("install_skills")
+    assert response.error_msg == ""
+
+
+def test_install_skills_handler_reports_failure() -> None:
+    """Install failures are returned via the response's error message."""
+    with (
+        patch("streamlit.config.get_option", return_value=False),
+        patch(
+            "streamlit.web.skills.install_skills",
+            side_effect=click.ClickException("No skills found"),
+        ),
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+        )
+
+    assert response.error_msg == "No skills found"
+    assert not response.HasField("install_skills")
+
+
+def test_install_skills_handler_refuses_in_headless_mode() -> None:
+    """The install is refused (and never attempted) in headless mode."""
+    with (
+        patch("streamlit.config.get_option", return_value=True),
+        patch("streamlit.web.skills.install_skills") as mock_install,
+    ):
+        response = asyncio.run(
+            InstallSkillsHandler().handle(_install_skills_request(), "session-id")
+        )
+
+    mock_install.assert_not_called()
+    assert "headless" in response.error_msg
+    assert not response.HasField("install_skills")
+
+
+def test_dismiss_skills_nudge_handler_writes_marker() -> None:
+    """Dismissing the nudge persists the marker and acknowledges success."""
+    with patch("streamlit.web.skills.write_nudge_dismissed_marker") as mock_write:
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    mock_write.assert_called_once_with()
+    assert response.request_id == "request-id"
+    assert response.error_msg == ""
+    assert response.HasField("dismiss_skills_nudge")
+
+
+def test_dismiss_skills_nudge_handler_reports_failure() -> None:
+    """Marker write failures are surfaced as an error response."""
+    with patch(
+        "streamlit.web.skills.write_nudge_dismissed_marker",
+        side_effect=OSError("disk full"),
+    ):
+        response = asyncio.run(
+            DismissSkillsNudgeHandler().handle(_dismiss_nudge_request(), "session-id")
+        )
+
+    assert response.error_msg == "Failed to save your preference."

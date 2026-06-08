@@ -769,3 +769,53 @@ def install_skills(*, global_mode: bool = False, yes: bool = False) -> None:
         _install_global_skills(yes=yes)
     else:
         _install_project_skills(yes=yes)
+
+
+def _nudge_dismissed_marker_path() -> Path:
+    """Return the path to the marker file that suppresses the skills nudge."""
+    return Path.home() / ".streamlit" / "skills_nudge_dismissed"
+
+
+def write_nudge_dismissed_marker() -> None:
+    """Persist the user's "don't ask again" choice for the skills nudge.
+
+    Creates an empty marker file under the user's Streamlit config directory,
+    creating parent directories as needed. ``should_show_skills_nudge`` checks
+    for this file, so once written the in-app nudge is no longer shown.
+    """
+    marker = _nudge_dismissed_marker_path()
+    marker.parent.mkdir(parents=True, exist_ok=True)
+    marker.touch(exist_ok=True)
+
+
+def should_show_skills_nudge() -> bool:
+    """Return whether the in-app "install skills" nudge should be shown.
+
+    The nudge is recommended only for interactive local development where an
+    AI agent harness is present but the bundled Streamlit skills are not yet
+    installed, and the user has not permanently dismissed it. This mirrors the
+    gating of the CLI recommendation printed on app startup.
+
+    Best-effort: returns ``False`` on any error so a detection failure never
+    blocks app startup or surfaces a spurious nudge.
+    """
+    from streamlit import config
+    from streamlit.runtime import metrics_util
+
+    try:
+        if config.get_option("server.headless"):
+            # Don't nudge in headless mode (e.g. deployments, CI, SiS).
+            return False
+        if config.get_option("logger.hideWelcomeMessage"):
+            return False
+        if _nudge_dismissed_marker_path().exists():
+            return False
+        # Reuse the same detection that powers the page-profile telemetry so
+        # the nudge gates on exactly the funnel the adoption dashboard tracks:
+        # an agent must be present, and our skills must not be installed yet.
+        if not metrics_util.detect_installed_agents():
+            return False
+        # An agent is present; recommend installing only if our skills aren't.
+        return not metrics_util.detect_installed_skills(os.getcwd())
+    except Exception:  # pragma: no cover - defensive
+        return False

@@ -6822,3 +6822,118 @@ describe("App.hasReceivedNewSession flag behavior", () => {
     })
   })
 })
+
+describe("Skills install nudge", () => {
+  beforeEach(() => {
+    // Force real timers (earlier describes enable fake timers) and a clean
+    // localhost + storage state so the nudge gating is deterministic.
+    vi.useRealTimers()
+    mockWindowLocation("localhost")
+    window.localStorage.clear()
+    window.sessionStorage.clear()
+  })
+
+  const sendRecommendingNewSession = (recommend = true): void => {
+    sendForwardMessage("newSession", {
+      ...NEW_SESSION_JSON,
+      initialize: {
+        ...NEW_SESSION_JSON.initialize,
+        recommendSkillsInstall: recommend,
+      },
+    })
+  }
+
+  it("shows the nudge and tracks an impression when recommended on localhost", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession()
+
+    expect(screen.getByTestId("stSkillsNudge")).toBeVisible()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
+  it("does not show the nudge when the server does not recommend it", () => {
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+
+    sendRecommendingNewSession(false)
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).not.toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeShown",
+    })
+  })
+
+  it("does not show the nudge when not on localhost", () => {
+    mockWindowLocation("myapp.streamlit.app")
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge once permanently dismissed", () => {
+    window.localStorage.setItem("stSkillsNudgeDismissed", "true")
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("does not show the nudge while snoozed within the last 24h", () => {
+    window.localStorage.setItem("stSkillsNudgeSnoozedAt", String(Date.now()))
+    renderApp(getProps())
+
+    sendRecommendingNewSession()
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+  })
+
+  it("tracks install clicks", async () => {
+    const user = userEvent.setup()
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Install" }))
+
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeInstall",
+    })
+  })
+
+  it("snoozes and tracks the dismiss (✕) control", async () => {
+    const user = userEvent.setup()
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Dismiss" }))
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeSnoozed",
+    })
+    expect(window.localStorage.getItem("stSkillsNudgeSnoozedAt")).toBeTruthy()
+  })
+
+  it("permanently dismisses and tracks Don't show again", async () => {
+    const user = userEvent.setup()
+    renderApp(getProps())
+    const metricsManager = getStoredValue<MetricsManager>(MetricsManager)
+    sendRecommendingNewSession()
+
+    await user.click(screen.getByRole("button", { name: "Don't show again" }))
+
+    expect(screen.queryByTestId("stSkillsNudge")).not.toBeInTheDocument()
+    expect(metricsManager.enqueue).toHaveBeenCalledWith("menuClick", {
+      label: "skillsNudgeDontShowAgain",
+    })
+    expect(window.localStorage.getItem("stSkillsNudgeDismissed")).toBe("true")
+  })
+})

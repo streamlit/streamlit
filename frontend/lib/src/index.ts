@@ -70,6 +70,7 @@ export {
 export {
   default as BaseButton,
   BaseButtonKind,
+  BaseButtonSize,
 } from "./components/shared/BaseButton/BaseButton"
 export { default as BaseColorPicker } from "./components/shared/BaseColorPicker/BaseColorPicker"
 export { default as UISelectbox } from "./components/shared/Dropdown/Selectbox"

@@ -286,7 +286,7 @@ def _find_git_root(start: str) -> str | None:
     return None
 
 
-def _detect_installed_skills(app_dir: str | None) -> list[str]:
+def detect_installed_skills(app_dir: str | None) -> list[str]:
     """Detect Streamlit-shipped agent skills in well-known locations.
 
     Returns a sorted, deduplicated list of ``"<location>:<harness>:<skill>"``
@@ -337,7 +337,7 @@ def _detect_installed_skills_cached(app_dir: str | None) -> tuple[str, ...]:
         return ()
 
 
-def _detect_installed_agents() -> list[str]:
+def detect_installed_agents() -> list[str]:
     """Detect agent harnesses installed under the user's home directory.
 
     Returns a sorted, deduplicated list of harness name tokens (``agents``,
@@ -363,6 +363,16 @@ def _detect_installed_agents_cached() -> tuple[str, ...]:
     except Exception as ex:  # pragma: no cover - defensive
         _LOGGER.debug("Failed to detect installed agents", exc_info=ex)
         return ()
+
+
+def clear_installed_skills_cache() -> None:
+    """Invalidate the cached installed-skills detection.
+
+    Call after installing skills so a subsequent ``detect_installed_skills``
+    in the same process re-scans the filesystem instead of returning the
+    stale (pre-install) result.
+    """
+    _detect_installed_skills_cached.cache_clear()
 
 
 def _get_machine_id_v3() -> str:
@@ -773,7 +783,7 @@ def create_page_profile_message(
         if ctx.main_script_path:
             app_dir = os.path.dirname(ctx.main_script_path)
 
-    page_profile.installed_skills.extend(_detect_installed_skills(app_dir))
-    page_profile.installed_agents.extend(_detect_installed_agents())
+    page_profile.installed_skills.extend(detect_installed_skills(app_dir))
+    page_profile.installed_agents.extend(detect_installed_agents())
 
     return msg
