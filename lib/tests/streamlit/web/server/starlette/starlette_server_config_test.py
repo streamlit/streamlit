@@ -28,6 +28,11 @@ def test_server_cookie_names_match_cloud_allowlist() -> None:
     Community Cloud -- this is exactly what broke ``st.login`` via
     ``_streamlit_session``.
 
+    To catch *added* cookies (not just renamed ones), this discovers every
+    ``*_COOKIE_NAME`` constant in ``starlette_server_config`` rather than listing
+    them by hand. This relies on the convention that all server cookie names are
+    defined there as ``*_COOKIE_NAME`` constants.
+
     If this test fails because you added or renamed a cookie, make sure the new
     cookie is allowlisted by the Community Cloud proxy, then update
     ``expected_cookie_names`` below to match.
@@ -37,10 +42,9 @@ def test_server_cookie_names_match_cloud_allowlist() -> None:
     the base name, so they are intentionally not listed here.
     """
     actual_cookie_names = {
-        starlette_server_config.USER_COOKIE_NAME,
-        starlette_server_config.TOKENS_COOKIE_NAME,
-        starlette_server_config.XSRF_COOKIE_NAME,
-        starlette_server_config.SESSION_COOKIE_NAME,
+        value
+        for name, value in vars(starlette_server_config).items()
+        if name.endswith("_COOKIE_NAME") and isinstance(value, str)
     }
 
     # Keep in sync with the Community Cloud proxy cookie allowlist.
