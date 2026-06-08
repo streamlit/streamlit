@@ -558,10 +558,13 @@ describe("StreamlitMarkdown", () => {
   it("doesn't convert markdown links inside div attributes", async () => {
     const source =
       '<div title="[x](y)">Something [Streamlit](https://streamlit.io/)</div>'
-    render(<StreamlitMarkdown source={source} allowHTML={true} />)
+    const { container } = render(
+      <StreamlitMarkdown source={source} allowHTML={true} />
+    )
+    const div = container.querySelector("div")
+    expect(div).toHaveAttribute("title", "[x](y)")
     const link = await screen.findByText("Streamlit")
     expect(link).toHaveAttribute("href", "https://streamlit.io/")
-    expect(link instanceof HTMLAnchorElement).toBe(true)
   })
 
   it("doesn't render header anchors when isInSidebar is true", () => {
