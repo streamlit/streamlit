@@ -827,6 +827,20 @@ _create_option(
     type_=str,
 )
 
+_create_option(
+    "server.enableExpensiveMemoryStats",
+    description="""
+        If True, Streamlit will use a recursive object graph traversal to
+        calculate memory usage statistics for the /_stcore/metrics endpoint.
+
+        This can be slow for large session state or cached resource objects. If
+        False, Streamlit reports fast proxy values for those objects, and the
+        memory statistics are likely to be incorrect as byte counts.
+    """,
+    default_val=False,
+    type_=bool,
+)
+
 
 @_create_option("server.cookieSecret", type_=str, sensitive=True)
 @util.memoize

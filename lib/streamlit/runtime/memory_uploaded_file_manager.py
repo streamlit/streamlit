@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import threading
 import uuid
 from collections import defaultdict
 from typing import TYPE_CHECKING
@@ -38,6 +39,8 @@ class MemoryUploadedFileManager(UploadedFileManager):
     def __init__(self, upload_endpoint: str) -> None:
         self.file_storage: dict[str, dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
+        self._total_bytes = 0
+        self._lock = threading.Lock()
 
     @property
     def stats_families(self) -> Sequence[str]:
@@ -61,19 +64,25 @@ class MemoryUploadedFileManager(UploadedFileManager):
             A list of URL UploadedFileRec instances, each instance contains information
             about uploaded file.
         """
-        session_storage = self.file_storage[session_id]
-        file_recs = []
+        with self._lock:
+            session_storage = self.file_storage[session_id]
+            file_recs = []
 
-        for file_id in file_ids:
-            file_rec = session_storage.get(file_id, None)
-            if file_rec is not None:
-                file_recs.append(file_rec)
+            for file_id in file_ids:
+                file_rec = session_storage.get(file_id, None)
+                if file_rec is not None:
+                    file_recs.append(file_rec)
 
-        return file_recs
+            return file_recs
 
     def remove_session_files(self, session_id: str) -> None:
         """Remove all files associated with a given session."""
-        self.file_storage.pop(session_id, None)
+        with self._lock:
+            session_storage = self.file_storage.pop(session_id, None)
+            if session_storage is not None:
+                self._total_bytes -= sum(
+                    len(file.data) for file in session_storage.values()
+                )
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -93,13 +102,22 @@ class MemoryUploadedFileManager(UploadedFileManager):
         file
             The file to add.
         """
+        with self._lock:
+            session_storage = self.file_storage[session_id]
+            old_file = session_storage.get(file.file_id)
+            if old_file is not None:
+                self._total_bytes -= len(old_file.data)
 
-        self.file_storage[session_id][file.file_id] = file
+            session_storage[file.file_id] = file
+            self._total_bytes += len(file.data)
 
     def remove_file(self, session_id: str, file_id: str) -> None:
         """Remove file with given file_id associated with a given session."""
-        session_storage = self.file_storage[session_id]
-        session_storage.pop(file_id, None)
+        with self._lock:
+            session_storage = self.file_storage[session_id]
+            file = session_storage.pop(file_id, None)
+            if file is not None:
+                self._total_bytes -= len(file.data)
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
@@ -124,25 +142,19 @@ class MemoryUploadedFileManager(UploadedFileManager):
 
         Safe to call from any thread.
         """
-        # Flatten all files into a single list
-        all_files: list[UploadedFileRec] = []
-        # Make copy of self.file_storage for thread safety, to be sure
-        # that main storage won't be changed form other thread
-        file_storage_copy = self.file_storage.copy()
+        with self._lock:
+            total_bytes = self._total_bytes
 
-        for session_storage in file_storage_copy.values():
-            all_files.extend(session_storage.values())
+        if total_bytes == 0:
+            return {}
 
-        stats: list[CacheStat] = [
+        stats = [
             CacheStat(
                 category_name="UploadedFileManager",
                 cache_name="",
-                byte_length=len(file.data),
+                byte_length=total_bytes,
             )
-            for file in all_files
         ]
-        if not stats:
-            return {}
         # In general, get_stats methods need to be able to return only requested stat
         # families, but this method only returns a single family, and we're guaranteed
         # that it was one of those requested if we make it here.

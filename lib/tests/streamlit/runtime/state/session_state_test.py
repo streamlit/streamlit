@@ -1166,38 +1166,56 @@ class IsStaleWidgetTests(unittest.TestCase):
 
 
 class SessionStateStatProviderTests(DeltaGeneratorTestCase):
+    def test_session_state_stats_use_fast_proxy_by_default(self):
+        state = _raw_session_state()
+
+        with patch(
+            "streamlit.runtime.stats.safe_sizeof",
+            side_effect=AssertionError("safe_sizeof should not be called"),
+        ):
+            stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
+            assert stat.category_name == "st_session_state"
+            assert stat.byte_length == 0
+
+            state["foo"] = 2
+            assert state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length == 1
+
+            st.checkbox("checkbox", key="checkbox")
+            assert state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length == 2
+
     def test_session_state_stats(self):
         # TODO: document the values used here. They're somewhat arbitrary -
         #  we don't care about actual byte values, but rather that our
         #  SessionState isn't getting unexpectedly massive.
-        state = _raw_session_state()
-        stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
-        assert stat.category_name == "st_session_state"
+        with patch_config_options({"server.enableExpensiveMemoryStats": True}):
+            state = _raw_session_state()
+            stat = state.get_stats()[CACHE_MEMORY_FAMILY][0]
+            assert stat.category_name == "st_session_state"
 
-        # The expected size of the session state in bytes.
-        # It composes of the session_state's fields.
-        expected_session_state_size_bytes = 3000
+            # The expected size of the session state in bytes.
+            # It composes of the session_state's fields.
+            expected_session_state_size_bytes = 3000
 
-        init_size = stat.byte_length
-        assert init_size < expected_session_state_size_bytes
+            init_size = stat.byte_length
+            assert init_size < expected_session_state_size_bytes
 
-        state["foo"] = 2
-        new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size > init_size
-        assert new_size < expected_session_state_size_bytes
+            state["foo"] = 2
+            new_size = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size > init_size
+            assert new_size < expected_session_state_size_bytes
 
-        state["foo"] = 1
-        new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size_2 == new_size
+            state["foo"] = 1
+            new_size_2 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size_2 == new_size
 
-        st.checkbox("checkbox", key="checkbox")
-        new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size_3 > new_size_2
-        assert new_size_3 - new_size_2 < expected_session_state_size_bytes
+            st.checkbox("checkbox", key="checkbox")
+            new_size_3 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size_3 > new_size_2
+            assert new_size_3 - new_size_2 < expected_session_state_size_bytes
 
-        state._compact_state()
-        new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
-        assert new_size_4 <= new_size_3
+            state._compact_state()
+            new_size_4 = state.get_stats()[CACHE_MEMORY_FAMILY][0].byte_length
+            assert new_size_4 <= new_size_3
 
 
 def test_session_state_repr_includes_class_and_field_names() -> None:
