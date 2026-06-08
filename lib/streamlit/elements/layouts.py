@@ -62,7 +62,12 @@ if TYPE_CHECKING:
     from streamlit.elements.lib.mutable_popover_container import PopoverContainer
     from streamlit.elements.lib.mutable_status_container import StatusContainer
     from streamlit.elements.lib.mutable_tab_container import TabContainer
-    from streamlit.runtime.state import WidgetArgs, WidgetCallback, WidgetKwargs
+    from streamlit.runtime.state import (
+        BindOption,
+        WidgetArgs,
+        WidgetCallback,
+        WidgetKwargs,
+    )
 
 SpecType: TypeAlias = int | Sequence[int | float]
 
@@ -1132,6 +1137,7 @@ class LayoutsMixin:
         on_change: Literal["ignore", "rerun"] | WidgetCallback = "ignore",
         args: WidgetArgs | None = None,
         kwargs: WidgetKwargs | None = None,
+        bind: BindOption = None,
     ) -> ExpanderContainer:
         r"""Insert a multi-element container that can be expanded/collapsed.
 
@@ -1273,6 +1279,22 @@ class LayoutsMixin:
             An optional dict of kwargs to pass to the ``on_change``
             callback.
 
+        bind : "query-params" or None
+            Binding mode for syncing the expander's expanded state with a URL
+            query parameter. If this is ``None`` (default), the expanded state
+            is not synced to the URL. When this is set to ``"query-params"``,
+            changes to the expander update the URL, and the expander can be
+            initialized or updated through a query parameter in the URL. This
+            requires ``key`` to be set. The key is used as the query parameter
+            name.
+
+            When ``bind="query-params"`` is set, the expander tracks state
+            (equivalent to setting ``on_change="rerun"`` if not already set).
+            When the expander's state equals its default, the query parameter
+            is removed from the URL to keep it clean. A bound query parameter
+            can't be set or deleted through ``st.query_params``; it can only
+            be programmatically changed through ``st.session_state``.
+
         Returns
         -------
         ExpanderContainer
@@ -1395,8 +1417,11 @@ class LayoutsMixin:
                 "type", [repr(name) for name in EXPANDABLE_TYPE_TO_PROTO_MAPPING]
             )
 
+        if bind is not None and bind != "query-params":
+            raise StreamlitValueError("bind", ["'query-params'", "None"])
+
         key = to_key(key)
-        is_stateful = on_change != "ignore"
+        is_stateful = on_change != "ignore" or bind == "query-params"
 
         current_expanded = expanded
         element_id: str | None = None
@@ -1439,6 +1464,8 @@ class LayoutsMixin:
                 on_change_handler=on_change_callback,
                 args=args if is_callback else None,
                 kwargs=kwargs if is_callback else None,
+                bind=bind,
+                clearable=False,
             )
 
             current_expanded = expander_state.value
@@ -1459,6 +1486,10 @@ class LayoutsMixin:
 
         if is_stateful and element_id is not None:
             expandable_proto.id = element_id
+
+        if bind == "query-params" and key is not None:
+            expandable_proto.query_param_key = str(key)
+            expandable_proto.default_expanded = expanded
 
         block_proto = BlockProto()
         block_proto.allow_empty = True
