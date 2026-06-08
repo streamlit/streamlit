@@ -540,6 +540,12 @@ describe("StreamlitMarkdown", () => {
     expect(link).toHaveAttribute("target", "_self")
   })
 
+  it("does not convert markdown links inside div when allowHTML is false", () => {
+    const source = "<div>[Streamlit](https://streamlit.io/)</div>"
+    render(<StreamlitMarkdown source={source} allowHTML={false} />)
+    expect(screen.queryByRole("link")).not.toBeInTheDocument()
+  })
+
   it("renders markdown links inside div when allowHTML is true", async () => {
     const source = "<div>Something1 [Streamlit](https://streamlit.io/)</div>"
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
