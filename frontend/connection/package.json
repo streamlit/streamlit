@@ -43,7 +43,7 @@
     "vite": "^8.0.14",
     "vite-plugin-dts": "^5.0.1",
     "vite-plugin-svgr": "^5.2.0",
-    "vitest": "^4.1.7",
+    "vitest": "^4.1.8",
     "vitest-websocket-mock": "^0.5.0"
   },
   "browserslist": [
