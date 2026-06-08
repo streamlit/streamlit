@@ -403,7 +403,7 @@ def test_localized_date_and_number_formatting(
 
 def test_button_column_click(app: Page):
     """Test that clicking a button in a button column triggers the callback."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(36)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(37)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
@@ -419,7 +419,7 @@ def test_button_column_multi_action_menu(
     app: Page, assert_snapshot: ImageCompareFunction
 ):
     """Test that clicking a multi-action button opens a menu."""
-    dataframe_element = app.get_by_test_id("stDataFrame").nth(36)
+    dataframe_element = app.get_by_test_id("stDataFrame").nth(37)
     expect_canvas_to_be_visible(dataframe_element)
     dataframe_element.scroll_into_view_if_needed()
 
