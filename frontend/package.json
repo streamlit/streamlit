@@ -59,7 +59,7 @@
     "@types/eslint": "^9.6.1",
     "@types/eslint-plugin-jsx-a11y": "~6.10.1",
     "@types/node": ">=24 <25",
-    "@vitest/coverage-v8": "^4.1.7",
+    "@vitest/coverage-v8": "^4.1.8",
     "@vitest/eslint-plugin": "^1.6.19",
     "concurrently": "^10.0.0",
     "eslint": "^10.4.1",
@@ -78,6 +78,6 @@
     "oxlint": "^1.67.0",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.60.1",
-    "vitest": "^4.1.7"
+    "vitest": "^4.1.8"
   }
 }
