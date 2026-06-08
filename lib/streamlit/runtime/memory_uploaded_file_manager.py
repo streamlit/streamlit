@@ -40,6 +40,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
         self.file_storage: dict[str, dict[str, UploadedFileRec]] = defaultdict(dict)
         self.endpoint = upload_endpoint
         self._total_bytes = 0
+        self._file_count = 0
         self._lock = threading.Lock()
 
     @property
@@ -65,15 +66,17 @@ class MemoryUploadedFileManager(UploadedFileManager):
             about uploaded file.
         """
         with self._lock:
-            session_storage = self.file_storage[session_id]
-            file_recs = []
+            # Use `.get` instead of indexing so that reading files for an
+            # unknown session does not create an empty entry in the defaultdict.
+            session_storage = self.file_storage.get(session_id)
+            if session_storage is None:
+                return []
 
-            for file_id in file_ids:
-                file_rec = session_storage.get(file_id, None)
-                if file_rec is not None:
-                    file_recs.append(file_rec)
-
-            return file_recs
+            return [
+                file_rec
+                for file_id in file_ids
+                if (file_rec := session_storage.get(file_id)) is not None
+            ]
 
     def remove_session_files(self, session_id: str) -> None:
         """Remove all files associated with a given session."""
@@ -83,6 +86,7 @@ class MemoryUploadedFileManager(UploadedFileManager):
                 self._total_bytes -= sum(
                     len(file.data) for file in session_storage.values()
                 )
+                self._file_count -= len(session_storage)
 
     def __repr__(self) -> str:
         return util.repr_(self)
@@ -107,6 +111,8 @@ class MemoryUploadedFileManager(UploadedFileManager):
             old_file = session_storage.get(file.file_id)
             if old_file is not None:
                 self._total_bytes -= len(old_file.data)
+            else:
+                self._file_count += 1
 
             session_storage[file.file_id] = file
             self._total_bytes += len(file.data)
@@ -114,10 +120,16 @@ class MemoryUploadedFileManager(UploadedFileManager):
     def remove_file(self, session_id: str, file_id: str) -> None:
         """Remove file with given file_id associated with a given session."""
         with self._lock:
-            session_storage = self.file_storage[session_id]
+            # Use `.get` instead of indexing so that removing a file for an
+            # unknown session does not create an empty entry in the defaultdict.
+            session_storage = self.file_storage.get(session_id)
+            if session_storage is None:
+                return
+
             file = session_storage.pop(file_id, None)
             if file is not None:
                 self._total_bytes -= len(file.data)
+                self._file_count -= 1
 
     def get_upload_urls(
         self, session_id: str, file_names: Sequence[str]
@@ -144,8 +156,12 @@ class MemoryUploadedFileManager(UploadedFileManager):
         """
         with self._lock:
             total_bytes = self._total_bytes
+            file_count = self._file_count
 
-        if total_bytes == 0:
+        # Emit a stat whenever any files are tracked, even if they are all
+        # zero-byte uploads (matching the previous per-file behavior). Gating on
+        # total_bytes alone would drop zero-byte uploads from the metrics.
+        if file_count == 0:
             return {}
 
         stats = [

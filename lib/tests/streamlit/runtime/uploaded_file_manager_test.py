@@ -131,6 +131,23 @@ class UploadedFileManagerTest(unittest.TestCase):
         self.mgr.remove_session_files("session1")
         assert self.mgr.get_stats() == {}
 
+    def test_cache_stats_includes_zero_byte_uploads(self):
+        """Zero-byte uploads still produce a stat (not dropped from metrics)."""
+        empty_file = UploadedFileRec(
+            file_id="empty",
+            name="empty",
+            type="type",
+            data=b"",
+        )
+        self.mgr.add_file("session1", empty_file)
+
+        stats = self.mgr.get_stats()
+        assert stats[CACHE_MEMORY_FAMILY][0].byte_length == 0
+
+        # Removing the only file clears the stats again.
+        self.mgr.remove_file("session1", empty_file.file_id)
+        assert self.mgr.get_stats() == {}
+
 
 class UploadedFileManagerThreadingTest(unittest.TestCase):
     # The number of threads to run our tests on
