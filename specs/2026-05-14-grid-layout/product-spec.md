@@ -37,8 +37,13 @@ Issue #11101 describes two needs:
 
 The first need is more common and is still awkward after flex layout. The second need is
 important, but many dashboards can already be composed with `st.columns`,
-`st.container(horizontal=True)`, and nested containers. The grid MVP should solve the first
-need well and leave a clear path to dashboard spanning APIs.
+`st.container(horizontal=True)`, and nested containers. The grid MVP focuses on the first
+need, and additionally ships a lightweight, cursor-based `grid.span(columns, rows)` helper for
+the most common dashboard case ("make the next chart wider/taller"). Spanning is included on
+day one because it is nearly free on top of CSS Grid (`grid-column/row: span N`), does not
+introduce a new mental model, and avoids a near-term breaking change to the returned container
+type once users depend on it. More advanced explicit-placement and named-region APIs remain a
+clear follow-up path.
 
 ### Current Workarounds
 
@@ -119,18 +124,46 @@ st.grid(
 ) -> GridContainer
 ```
 
+In the signature above, `Gap` is the existing Streamlit gap scale
+(`"xxsmall" | "xsmall" | "small" | "medium" | "large" | "xlarge" | "xxlarge" | None`), reused
+from `st.columns` / `st.container`. `WidthWithoutContent` is the shared width type that accepts
+`"stretch"` or an integer pixel value (the `"content"` width option is intentionally not
+supported for grids, since cells already size to equal tracks).
+
 ### Parameters
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
 | `columns` | `"auto"` or `int` | `"auto"` | Maximum number of equal-width columns. `"auto"` creates as many columns as fit the available container width. An integer caps the grid at that many columns and wraps to fewer columns when cells would become narrower than `min_column_width`. |
-| `min_column_width` | `int` or `None` | `200` | Minimum preferred cell width in pixels before wrapping to fewer columns. If `columns="auto"`, this must be an integer. If `None`, the grid does not apply early min-width-based wrapping. Note: when `border=True`, cell padding reduces effective content width by ~32px. |
-| `gap` | gap size or `(row_gap, column_gap)` | `"small"` | Space between cells. Reuses the existing Streamlit gap scale: `"xxsmall"`, `"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, `"xxlarge"`, or `None`. |
+| `min_column_width` | `int` or `None` | `200` | Minimum preferred cell width in pixels before wrapping to fewer columns. If `columns` is an integer, `None` disables early min-width-based wrapping. If `columns="auto"`, `min_column_width` must be an integer; passing `min_column_width=None` together with `columns="auto"` raises `StreamlitAPIException` (auto mode needs a width to decide how many columns fit). Note: when `border=True`, cell padding reduces effective content width by ~32px, so prefer 250px+ for bordered cells. |
+| `gap` | gap size or `(row_gap, column_gap)` | `"small"` | Space between cells. Reuses the existing Streamlit gap scale: `"xxsmall"`, `"xsmall"`, `"small"`, `"medium"`, `"large"`, `"xlarge"`, `"xxlarge"`, or `None`. A single value sets both row and column gaps (identical to `st.columns` / `st.container`); the optional `(row_gap, column_gap)` tuple is an additive grid-specific extension for asymmetric spacing (see note below). |
 | `vertical_alignment` | `"top"`, `"center"`, or `"bottom"` | `"top"` | Vertical alignment of a direct child inside its grid cell when the cell is taller than the child. Uses CSS "safe" alignment to prevent content overflow when content is larger than the cell. |
 | `border` | `bool` | `False` | Whether to show a border and padding around each grid cell, matching the visual language of `st.columns(border=True)` and `st.container(border=True)`. |
 | `cell_height` | `"content"`, `"equal"`, or `int` | `"content"` | Cell height behavior. `"content"` lets each row size to its tallest cell while cell chrome stretches within that row. `"equal"` makes all grid rows use one shared height based on the tallest row/cell. An integer fixes every cell to that pixel height and enables overflow handling inside the cell. |
 | `width` | `"stretch"` or `int` | `"stretch"` | Width of the grid container, matching `st.columns`. |
 | `dense` | `bool` | `True` | Whether to use dense packing mode. When `True`, the grid fills gaps by reordering smaller cells to fill empty spaces left by spanning cells. When `False`, cells are placed in strict DOM order, which may leave gaps. |
+
+> **Note on `gap` consistency (Principle 10):** In `st.columns` and `st.container`, `gap` is a
+> single shared spacing token. Accepting a `(row_gap, column_gap)` tuple here _extends_ that
+> meaning rather than changing it — a single value still behaves identically to the existing
+> parameter, and the tuple form is purely additive for the asymmetric row/column spacing that
+> grids commonly need. If the tuple form proves confusing, it can be superseded by explicit
+> `row_gap` / `column_gap` parameters in a follow-up without breaking single-value usage.
+
+### GridContainer Methods
+
+`st.grid` returns a `GridContainer`, a thin `DeltaGenerator` subclass. In addition to the
+standard container methods, it exposes a spanning helper:
+
+```python
+grid.span(columns: int = 1, rows: int = 1) -> DeltaGenerator
+```
+
+`span()` creates the next auto-placed cell and asks it to span `columns` column tracks and
+`rows` row tracks. Both default to `1`, so `grid.span()` behaves like a normal single cell.
+Values are clamped to a minimum of `1`, and `columns` is effectively capped at the current
+resolved column count (a cell cannot span more columns than exist after responsive wrapping).
+Like other containers, the returned object works with `with` notation or method chaining.
 
 ### Behavior
 
@@ -189,9 +222,12 @@ Rows can still have different heights.
 
 With `cell_height="equal"`, all rows share the same height, based on the tallest row/cell in
 the grid. This is useful for gallery/card walls where users want the grid to look uniform
-across rows without choosing a fixed pixel height. If a CSS-only implementation is not reliable
-across supported browsers, this should be treated as the first follow-up after the MVP rather
-than requiring a JavaScript measurement system in the initial release.
+across rows without choosing a fixed pixel height. `"equal"` is part of the MVP and is
+implemented with CSS only (equal-height row tracks, e.g. `grid-auto-rows: 1fr` within an
+equal-track context), with no JavaScript measurement in the initial release. The fallback
+contract if a pure-CSS approach proves unreliable on a supported browser is defined in the
+[Risks](#risks) section: `"equal"` stays in the public API and degrades gracefully to
+`"content"` behavior rather than being removed or shipping broken layout.
 
 With `cell_height=160`, all cells have the same fixed height. If content exceeds the fixed
 height, the cell scrolls using the same design constraints as fixed-height containers.
@@ -217,6 +253,28 @@ There is no CSS `subgrid` support in the MVP.
 content just like any other container. The grid itself does not introduce new state; widget and
 fragment behavior should follow existing container semantics.
 
+#### Accessibility
+
+Responsive wrapping changes only the number of columns, not the source/DOM order of cells, so
+keyboard tab order and screen-reader reading order continue to follow the order in which
+elements are written. This keeps the common gallery/repeated-card MVP aligned with WCAG 2.1
+SC 1.3.2 (Meaningful Sequence) and SC 2.4.3 (Focus Order).
+
+`dense=True` is the default because, for the primary use case (uniform, unspanned cells), dense
+packing has no observable effect: every cell is the same size, so there are no gaps to backfill
+and visual order always matches DOM order. The visual-vs-DOM-order divergence that dense packing
+can introduce only occurs once `grid.span()` is used to create differently sized cells. For that
+case, the spec commits to:
+
+- Documenting the tradeoff in the `dense` parameter docs and the layout guide.
+- Recommending `dense=False` (strict order) when source order must match reading order.
+- Adding explicit accessibility acceptance coverage (keyboard navigation and reading order with
+  spanning cells) before the feature ships.
+
+If review during implementation shows the default is surprising for spanned grids, flipping the
+default to `dense=False` remains a low-cost option, since `dense` is a behavioral flag rather
+than a structural one.
+
 ### Examples
 
 #### Metric Cards
@@ -231,7 +289,7 @@ metrics = [
     ("Retention", "96%", "-0.4%", "Monthly"),
 ]
 
-grid = st.grid(4, min_column_width=220, border=True, cell_height="equal")
+grid = st.grid(4, min_column_width=250, border=True, cell_height="equal")
 
 for label, value, delta, caption in metrics:
     with grid.container():
@@ -671,6 +729,22 @@ by CSS Grid from the start.
 - Cell border padding (~32px total) significantly reduces effective content width.
 - CSS Grid doesn't auto-detect content overflow; users must set `min_column_width` appropriately
   for their content (e.g., 250px+ for metrics with borders).
+
+## Risks
+
+- **`cell_height="equal"` cross-browser reliability.** The MVP commits to a CSS-only
+  implementation of equal row heights. If equal-height tracks prove unreliable on a supported
+  browser, the fallback contract is that `cell_height="equal"` degrades gracefully to
+  `cell_height="content"` behavior (rows size to their tallest cell) rather than being removed
+  from the public API or silently shipping broken layout. The value stays in the public
+  `Literal` either way, so apps never need to change to upgrade safely.
+- **Dense packing and reading order.** `dense=True` only diverges visual order from DOM/focus
+  order when `grid.span()` produces differently sized cells (see the Accessibility section).
+  The default is revisitable during implementation, and strict order is always available via
+  `dense=False`.
+- **`columns="auto"` with `min_column_width=None`.** This combination is invalid (auto mode
+  needs a width). It raises `StreamlitAPIException` with an actionable message rather than
+  guessing a column count.
 
 ## Out Of Scope
 
