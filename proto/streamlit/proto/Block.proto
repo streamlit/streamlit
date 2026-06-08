@@ -108,11 +108,16 @@ message Block {
     string label = 1;
     optional bool expanded = 2;
     string icon = 3;
-    // ID for dynamic expanders. Only set when on_change="rerun",
+    // ID for dynamic expanders. Only set when on_change="rerun" or bind="query-params",
     // signaling the frontend to treat this as a stateful widget.
     optional string id = 4;
     // Visual style of the expandable container.
     Type type = 5;
+    // If set, widget value is bound to this query parameter key.
+    optional string query_param_key = 6;
+    // The original default expanded state (the `expanded=` param, not current state).
+    // Used by the frontend for default-collapse URL behavior when query_param_key is set.
+    optional bool default_expanded = 7;
   }
 
   message Dialog {

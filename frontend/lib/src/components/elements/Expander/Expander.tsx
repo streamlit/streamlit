@@ -22,6 +22,7 @@ import { notNullOrUndefined } from "@streamlit/utils"
 import { DynamicIcon } from "~lib/components/shared/Icon/DynamicIcon"
 import StreamlitMarkdown from "~lib/components/shared/StreamlitMarkdown/StreamlitMarkdown"
 import { useExecuteWhenChanged } from "~lib/hooks/useExecuteWhenChanged"
+import { useQueryParamBinding } from "~lib/hooks/useQueryParamBinding"
 import useWidgetManagerElementState from "~lib/hooks/useWidgetManagerElementState"
 import { WidgetStateManager } from "~lib/WidgetStateManager"
 
@@ -90,11 +91,24 @@ const Expander: React.FC<React.PropsWithChildren<ExpanderProps>> = ({
   const [isHovered, setIsHovered] = useState(false)
 
   // element.id is only set when the backend registers the expander as a
-  // stateful widget (on_change="rerun"). block.id may still be set for
-  // CSS key styling without implying widget mode.
+  // stateful widget (on_change="rerun" or bind="query-params"). block.id may
+  // still be set for CSS key styling without implying widget mode.
   const widgetId = element.id || undefined
   const isWidget = Boolean(widgetMgr && widgetId)
   const isPassivelyKeyed = Boolean(blockId) && !isWidget
+
+  // Register URL query param binding when bind="query-params" is set on the expander.
+  // Uses element.defaultExpanded (the original `expanded=` param) — not element.expanded
+  // (which is the current backend state) — so default-collapse works correctly even
+  // when the URL seeds a non-default value on initial load.
+  useQueryParamBinding(
+    widgetMgr,
+    widgetId ?? "",
+    element.queryParamKey ?? null,
+    "bool_value",
+    element.defaultExpanded ?? false,
+    false
+  )
 
   // Persist expanded state across remounts via elementStates.
   // The hook is always called (Rules of Hooks) but only effective when

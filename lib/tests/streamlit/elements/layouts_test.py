@@ -23,6 +23,7 @@ from streamlit.elements.dialog_decorator import dialog_decorator
 from streamlit.errors import (
     FragmentHandledException,
     StreamlitAPIException,
+    StreamlitInvalidBindValueError,
     StreamlitInvalidColumnGapError,
     StreamlitInvalidFormCallbackError,
     StreamlitInvalidHorizontalAlignmentError,
@@ -623,6 +624,76 @@ class ExpanderTest(DeltaGeneratorTestCase):
         """Test that on_change='rerun' inside st.form does not raise (not a callback)."""
         with st.form("form"):
             st.expander("label", on_change="rerun")
+
+    def test_bind_invalid_value_raises(self) -> None:
+        """Test that an invalid bind value raises StreamlitInvalidBindValueError."""
+        with pytest.raises(StreamlitInvalidBindValueError):
+            st.expander("label", key="my_exp", bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_invalid_value_raises_without_key(self) -> None:
+        """Test that an invalid bind value raises even when key is also missing."""
+        with pytest.raises(StreamlitInvalidBindValueError):
+            st.expander("label", bind="invalid")  # type: ignore[arg-type]
+
+    def test_bind_query_params_requires_key(self) -> None:
+        """Test that bind='query-params' without key raises StreamlitAPIException."""
+        with pytest.raises(StreamlitAPIException, match="'key' parameter"):
+            st.expander("label", bind="query-params")
+
+    def test_bind_query_params_sets_proto_fields(self) -> None:
+        """Test that bind='query-params' sets query_param_key and default_expanded on proto."""
+        st.expander("label", key="my_exp", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        expandable = expander_block.add_block.expandable
+        assert expandable.query_param_key == "my_exp"
+        assert expandable.default_expanded is False
+
+    def test_bind_query_params_default_expanded_true(self) -> None:
+        """Test that default_expanded reflects the expanded= param, not URL-seeded state."""
+        st.expander("label", expanded=True, key="my_exp", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        expandable = expander_block.add_block.expandable
+        assert expandable.query_param_key == "my_exp"
+        assert expandable.default_expanded is True
+
+    def test_bind_query_params_activates_widget_registration(self) -> None:
+        """Test that bind='query-params' alone (on_change='ignore') activates widget registration."""
+        expander = st.expander("label", key="my_exp", bind="query-params")
+        expander_block = self.get_delta_from_queue()
+        # Widget ID must be set (widget is registered)
+        assert expander_block.add_block.expandable.HasField("id")
+        assert expander_block.add_block.expandable.id != ""
+        # .open reflects state (not None) because widget is registered
+        assert expander.open is False
+
+    def test_bind_query_params_with_on_change_rerun(self) -> None:
+        """Test that bind='query-params' and on_change='rerun' together work correctly."""
+        expander = st.expander(
+            "label", key="my_exp", bind="query-params", on_change="rerun"
+        )
+        expander_block = self.get_delta_from_queue()
+        expandable = expander_block.add_block.expandable
+        assert expandable.query_param_key == "my_exp"
+        assert expandable.HasField("id")
+        assert expander.open is False
+
+    def test_bind_query_params_session_state_accessible(self) -> None:
+        """Test that bind='query-params' makes expander state accessible via session_state."""
+        st.expander("label", key="my_exp", bind="query-params")
+        assert "my_exp" in st.session_state
+        assert st.session_state.my_exp is False
+
+    def test_bind_query_params_no_query_param_key_without_bind(self) -> None:
+        """Test that query_param_key is NOT set when bind is not specified."""
+        st.expander("label", key="my_exp", on_change="rerun")
+        expander_block = self.get_delta_from_queue()
+        assert not expander_block.add_block.expandable.HasField("query_param_key")
+
+    @patch("streamlit.runtime.Runtime.exists", MagicMock(return_value=True))
+    def test_bind_query_params_inside_form_does_not_raise(self) -> None:
+        """Test that bind='query-params' inside st.form does not raise (no callable on_change)."""
+        with st.form("form"):
+            st.expander("label", key="my_exp", bind="query-params")
 
 
 class ContainerTest(DeltaGeneratorTestCase):
