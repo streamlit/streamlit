@@ -551,7 +551,8 @@ describe("StreamlitMarkdown", () => {
     render(<StreamlitMarkdown source={source} allowHTML={true} />)
     const link = await screen.findByText("Streamlit")
     expect(link).toHaveAttribute("href", "https://streamlit.io/")
-    expect(link instanceof HTMLAnchorElement).toBe(true)
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("rel", "noopener noreferrer")
   })
 
   it("doesn't convert markdown links inside div attributes", async () => {
