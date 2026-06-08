@@ -761,7 +761,7 @@ See the License for the specific language governing permissions and limitations 
 
 -----
 
-The following software may be included in this product: @luma.gl/core, @luma.gl/engine, @luma.gl/gltf, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/gltf), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
+The following software may be included in this product: @luma.gl/core, @luma.gl/engine, @luma.gl/shadertools, @luma.gl/webgl. A copy of the source code may be downloaded from https://github.com/visgl/luma.gl (@luma.gl/core), https://github.com/visgl/luma.gl (@luma.gl/engine), https://github.com/visgl/luma.gl (@luma.gl/shadertools), https://github.com/visgl/luma.gl (@luma.gl/webgl). This software contains the following license and notice below:
 
 luma.gl is provided under the MIT license
 
