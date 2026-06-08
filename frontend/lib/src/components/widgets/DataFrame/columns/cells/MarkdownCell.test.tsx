@@ -292,6 +292,43 @@ describe("MarkdownCellEditor", () => {
     expect(onFinishedEditing.mock.calls[0][0]).toBeUndefined()
   })
 
+  it("seeds the editor with the typed character when editing an empty cell via keyboard", () => {
+    const emptyCell = createMockCellValue(null, false)
+
+    render(
+      <MarkdownCellEditor
+        value={emptyCell}
+        initialValue="a"
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Typing on an empty cell opens directly in edit mode seeded with the char.
+    expect(screen.getByTestId("stMarkdownColumnEditor")).toBeVisible()
+    expect(screen.getByRole("textbox")).toHaveValue("a")
+  })
+
+  it("preserves existing content when a keyboard edit starts on a non-empty cell", () => {
+    const nonEmptyCell = createMockCellValue("# Existing content", false)
+
+    render(
+      <MarkdownCellEditor
+        value={nonEmptyCell}
+        initialValue="a"
+        onChange={vi.fn()}
+        onFinishedEditing={vi.fn()}
+      />
+    )
+
+    // Opens in edit mode but keeps the existing markdown instead of dropping it.
+    expect(screen.getByTestId("stMarkdownColumnEditor")).toBeVisible()
+    const textarea = screen.getByRole("textbox")
+    expect(textarea).toHaveValue("# Existing content")
+    // Negative assertion: the typed character must NOT replace the content.
+    expect(textarea).not.toHaveValue("a")
+  })
+
   it("does not render raw HTML in the markdown viewer", () => {
     const maliciousCell = createMockCellValue(
       '<img src=x onerror="window.__xss=true"><script>window.__xss=true</script>',

@@ -168,14 +168,16 @@ const MarkdownCellEditor: ReturnType<ProvideEditorCallback<MarkdownCell>> = ({
   onFinishedEditing,
 }) => {
   // A non-empty `initialValue` means the edit was started by typing a
-  // character, so we open directly in edit mode seeded with that value
-  // (following glide-data-grid's convention).
-  const startInEditMode = initialValue !== undefined && initialValue !== ""
-  const [isEditing, setIsEditing] = useState(startInEditMode)
+  // character while the cell was selected, so we open directly in edit mode.
+  // To avoid wiping out existing markdown with a single keystroke, we only
+  // seed the editor with the typed character when the cell is currently
+  // empty. For non-empty cells we keep the existing value so the user can
+  // edit it (the triggering keystroke just transitions into edit mode).
+  const existingValue = cell.data.value ?? ""
+  const startedByTyping = initialValue !== undefined && initialValue !== ""
+  const [isEditing, setIsEditing] = useState(startedByTyping)
   const [editValue, setEditValue] = useState(
-    initialValue !== undefined && initialValue !== ""
-      ? initialValue
-      : (cell.data.value ?? "")
+    startedByTyping && existingValue === "" ? initialValue : existingValue
   )
 
   const modifierLabel = isFromMac() ? "⌘" : "Ctrl"
