@@ -3149,11 +3149,6 @@ def MarkdownColumn(
     When used with ``st.data_editor``, editing will be enabled through a text
     editor overlay.
 
-    .. note::
-        For security, raw HTML is not rendered in markdown cells. Links that
-        use potentially dangerous URL schemes (such as ``javascript:`` and
-        ``vbscript:``) are sanitized and not rendered as clickable links.
-
     Parameters
     ----------
     label : str or None
