@@ -109,7 +109,7 @@ const StyledMarkdownViewer = styled.div(({ theme }) => ({
   padding: theme.spacing.lg,
   paddingBottom: theme.spacing.twoXL,
   backgroundColor: "var(--gdg-bg-cell)",
-  color: "var(--gdg-text-dark)",
+  color: theme.colors.bodyText,
 
   // Show toolbar on hover/focus
   "&:hover, &:focus-visible, &:focus-within:has(:focus-visible)": {
@@ -131,7 +131,7 @@ const StyledTextarea = styled.textarea(({ theme }) => ({
   border: "none",
   resize: "none",
   backgroundColor: "var(--gdg-bg-cell)",
-  color: "var(--gdg-text-dark)",
+  color: theme.colors.bodyText,
   fontFamily: theme.genericFonts.codeFont,
   fontSize: theme.fontSizes.sm,
   lineHeight: 1.5,
@@ -141,17 +141,16 @@ const StyledTextarea = styled.textarea(({ theme }) => ({
   },
 
   "&:focus-visible": {
-    outline: "2px solid var(--gdg-accent-color)",
+    outline: `${theme.sizes.borderWidth} solid var(--gdg-accent-color)`,
     outlineOffset: "-2px",
   },
 }))
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
-// eslint-disable-next-line streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables
-const StyledEmptyMessage = styled.div`
-  color: var(--gdg-text-light);
-  font-style: italic;
-`
+const StyledEmptyMessage = styled.div(({ theme }) => ({
+  color: theme.colors.fadedText40,
+  fontStyle: "italic",
+}))
 
 /**
  * Cell overlay editor for markdown cells. Shows rendered markdown by default
