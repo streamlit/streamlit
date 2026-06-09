@@ -1573,7 +1573,8 @@ def test_worker_dg_stack_points_at_pre_allocated_container(
     _dispatch_parallel_fragment(ctx, "test_fragment_id", wrapped_fragment)
 
     call_args = mock_coordinator.submit.call_args[0]
-    dg_stack_snapshot = call_args[3]
+    assert call_args[1] is ctx
+    dg_stack_snapshot = call_args[4]
     assert len(dg_stack_snapshot) == original_len + 1
 
 

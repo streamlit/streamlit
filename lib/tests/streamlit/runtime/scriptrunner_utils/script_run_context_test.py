@@ -463,3 +463,15 @@ class ScriptRunContextTest(unittest.TestCase):
         t.run("test_arg")
 
         assert received_args == ["test_arg"]
+
+
+def test_script_run_context_attr_name_reexported_from_leaf_module() -> None:
+    """SCRIPT_RUN_CONTEXT_ATTR_NAME stays importable from script_run_context,
+    re-exporting the same object defined in the script_run_context_attr leaf
+    module, so existing import paths keep working."""
+    from streamlit.runtime.scriptrunner_utils import script_run_context_attr
+
+    assert (
+        SCRIPT_RUN_CONTEXT_ATTR_NAME
+        is script_run_context_attr.SCRIPT_RUN_CONTEXT_ATTR_NAME
+    )
