@@ -117,33 +117,6 @@ console.error = (...args) => {
       // Suppress act() warnings from BaseUI Popover's async Popper.js updates
       return
     }
-    const isFromReactAriaFocus =
-      stack.includes("react-aria/dist/private/focus") ||
-      stack.includes("react-aria/dist/private/interactions/useFocus") ||
-      stack.includes("react-aria/dist/private/interactions/useFocusWithin")
-    if (isFromReactAriaFocus) {
-      // Suppress act() warnings from React Aria's async focus/focusWithin state
-      // updates (useFocusRing, useFocusWithin). These fire via DOM event listeners
-      // outside of the test's act() boundary — same pattern as BaseUI Popper.js.
-      return
-    }
-    const isFromReactAriaEcosystem =
-      // ComboBox open/close and input state updates (useComboBoxState, useMenuTriggerState)
-      stack.includes("react-stately/dist/exports/index") ||
-      // Overlay / popover show-hide scheduling
-      stack.includes("react-aria-components/dist/exports/Popover") ||
-      // ComboBox trigger and filtering state
-      stack.includes("react-aria-components/dist/exports/ComboBox") ||
-      // ListBox option rendering / selection state
-      stack.includes("react-aria-components/dist/exports/ListBox")
-    if (isFromReactAriaEcosystem) {
-      // Suppress act() warnings from React Aria / React Stately internals that
-      // schedule async state updates (menu open/close, overlay trigger,
-      // collection filtering) via post-render effects and DOM event listeners
-      // outside the test's act() boundary. These are the specific modules used
-      // by Selectbox. Add entries here if new RAC components are adopted.
-      return
-    }
     // Fail tests for act() warnings in our own code
     throw new Error(
       `act() warning detected - wrap state updates in act():\n${message}`
