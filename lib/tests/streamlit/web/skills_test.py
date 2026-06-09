@@ -450,6 +450,35 @@ class TestAreSkillsInstalled:
         ):
             assert skills.are_skills_installed() is True
 
+    def test_still_checks_global_dirs_when_project_root_resolution_errors(
+        self, tmp_path: Path
+    ) -> None:
+        """Uses global dirs even if project root lookup fails."""
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+        (global_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", side_effect=OSError("no cwd")),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+        ):
+            assert skills.are_skills_installed() is True
+
+    def test_still_checks_global_dirs_when_project_target_resolution_errors(
+        self, tmp_path: Path
+    ) -> None:
+        """Uses global dirs even if project target lookup fails."""
+        global_dir = tmp_path / "home" / ".agents" / "skills"
+        (global_dir / skills._GLOBAL_SKILL_NAME).mkdir(parents=True)
+
+        with (
+            patch.object(skills, "_find_project_root", return_value=tmp_path),
+            patch.object(
+                skills, "_get_project_target_dirs", side_effect=OSError("no home")
+            ),
+            patch.object(skills, "_get_global_target_dirs", return_value=[global_dir]),
+        ):
+            assert skills.are_skills_installed() is True
+
 
 class TestInstallSkillSymlink:
     """Tests for _install_skill_symlink."""
