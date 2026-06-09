@@ -96,9 +96,7 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     ts = ThreadState.get()
     if not ts.fragment_id or not ts.delta_path:
         return False
-    if dg._cursor is None:
-        return False
-    cursor_path = tuple(dg._cursor.delta_path)
+    cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
     return not _is_inside_fragment_path(cursor_path, ts.delta_path)
 ```
 
