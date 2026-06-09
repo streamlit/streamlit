@@ -96,11 +96,6 @@ st.mermaid_chart("""
 """, width="stretch")  # "stretch" (default), "content", or a pixel value
 ```
 
-**Notes:**
-- Rendered diagrams have a hover toolbar to copy the source, download a PNG, and view fullscreen, and they adapt to the active light/dark theme.
-- During streaming (e.g. `st.write_stream`), incomplete `mermaid` blocks display as syntax-highlighted code until the full diagram source arrives, then render as a diagram.
-- Use Mermaid `accTitle`/`accDescr` directives to set accessible alt text.
-
 ## Colored text, backgrounds, and badges
 
 ```python
