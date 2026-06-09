@@ -9,11 +9,11 @@ created: 2026-06-03
 
 Enable `@st.fragment` functions to reliably write elements to containers declared outside
 the fragment's scope — for example, a parent-scoped `st.container()` or `st.sidebar`
-entered via `with`. Today this works on the initial app run but crashes on the second
-fragment rerun. The core technical problem is that the outside container's `RunningCursor`
-accumulates across fragment reruns instead of resetting. This spec proposes implicit wrapper
-containers that isolate each fragment's outside writes into a stable, independently-
-resettable block.
+entered via `with`. Today this is blocked to prevent crashes from stale cursor state. The
+core technical problem to address in order to allow this is that the outside container's
+`RunningCursor` accumulates across fragment reruns instead of resetting. This spec proposes
+implicit wrapper containers that isolate each fragment's outside writes into a stable,
+independently-resettable block.
 
 ## Problem
 
@@ -28,7 +28,8 @@ def my_fragment():
     outside.write("Status: ok")
 ```
 
-This works on the initial app run but crashes on the second fragment rerun:
+This is blocked today to prevent crashes from stale `RunningCursor` state. Without the
+block, a fragment rerun would produce:
 
 ```
 Bad delta path index 4 (should be between [0, 2])
@@ -160,33 +161,18 @@ is inherited from the outside container: if the container uses a `LockedCursor` 
 otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path is
 stored on the wrapper for re-emission during reruns.
 
-Crucially, the wrapper is created only once — during the initial full app run — which is
-the only time the outside container's `RunningCursor` is advanced. On subsequent fragment
-reruns the cached wrapper is returned directly, bypassing the outside container's cursor
-entirely. This is what avoids reintroducing the same stale-cursor problem the wrapper is
-designed to solve.
+The wrapper is created whenever the outside container's creating scope executes — on the
+initial full app run, on subsequent full app reruns, or during a parent fragment rerun that
+recreates the container. The outside container's `RunningCursor` is only advanced at
+wrapper creation time. On standalone fragment reruns the cached wrapper is returned
+directly, bypassing the outside container's cursor entirely. This is what avoids
+reintroducing the same stale-cursor problem the wrapper is designed to solve.
 
 **Restriction: no new outside writes during standalone fragment reruns.** If a fragment
-attempts to write to an outside container, no cached wrapper exists for that container, and
-the current fragment is being independently rerun (`ts.fragment_id in
-ctx.fragment_ids_this_run`), we raise `StreamlitAPIException`. This check is scoped to
-standalone reruns — when a parent fragment reruns and re-executes a child, the parent
-recreates containers with fresh cursors, so the child is permitted to create new wrappers
-for those containers. Creating a wrapper during a standalone fragment rerun would advance
-the outside container's stale cursor — exactly the bug this spec fixes. Fragments must
-establish their outside container slots during a run where the container's creating scope
-executes (full app run or parent fragment rerun). To conditionally populate a slot later,
-use a placeholder:
-
-```python
-outside = st.container()
-
-@st.fragment
-def my_fragment():
-    placeholder = outside.empty()       # claims the slot on every run
-    if st.button("Show detail"):
-        placeholder.write("Detail...")  # fills it during fragment rerun
-```
+attempts to write to an outside container during a standalone rerun (`ts.fragment_id in
+ctx.fragment_ids_this_run`) and no cached wrapper exists, we raise
+`StreamlitAPIException`. See the "Dynamic container selection" behavior decision below for
+the full rationale and workaround pattern.
 
 ### Cursor reset on fragment rerun
 
@@ -261,34 +247,38 @@ with fresh cursors.
 
 ### Dynamic container selection
 
-Wrappers are keyed by container identity (`dg._id`). A fragment that conditionally writes
-to different outside containers must write to *all* of them during the initial full app run
-so their wrappers are established. On subsequent standalone reruns, the fragment can choose
-which wrappers to populate — unused wrappers have their stale children cleared by
-`ClearStaleNodeVisitor` and remain invisible via `allow_empty=True`. Attempting to write to
-an outside container whose wrapper was never established will raise
-`StreamlitAPIException` per the restriction above.
+A fragment cannot conditionally start writing to an outside container during a standalone
+fragment rerun. The fragment must write something to the outside container during the
+initial script run (or any run where the container's creating scope executes) so its wrapper
+is established. The content written can vary freely across reruns — only the wrapper
+creation requires the outside container's cursor to be fresh.
+
+Wrappers are keyed by container identity (`dg._id`). On subsequent standalone reruns, the
+fragment can choose which established wrappers to populate — unused wrappers have their
+stale children cleared by `ClearStaleNodeVisitor` and remain invisible via
+`allow_empty=True`. Attempting to write to an outside container whose wrapper was never
+established will raise `StreamlitAPIException`. To conditionally populate a slot, use a
+placeholder:
+
+```python
+outside = st.container()
+
+@st.fragment
+def my_fragment():
+    placeholder = outside.empty()       # claims the slot on every run
+    if st.button("Show detail"):
+        placeholder.write("Detail...")  # fills it during fragment rerun
+```
 
 ### Widget interactions trigger the writing fragment's rerun
 
-When a fragment writes a widget to an outside container, the widget's delta is stamped with
-the writing fragment's `fragment_id` (via `ThreadState.fragment_id` in `enqueue_message`).
-When the user interacts with the widget, the frontend sends this `fragment_id` with the
-rerun request, so **only the writing fragment reruns — not a full app rerun, even though
-the widget visually appears outside the fragment's scope**.
-
-This is consistent with standard fragment behavior: all widgets created inside a fragment
-trigger that fragment's rerun regardless of where they render. The wrapper does not change
-this — `fragment_id` stamping is based on which thread is executing, not on the delta path.
-
-Widget identity is also unaffected by the wrapper. Widget IDs are computed from logical
-inputs (element type, key, label, `active_script_hash`, `form_id`, `root_container`) and
-do not include `delta_path`. The wrapper adds nesting depth to the render tree but does not
-alter any widget ID input. Stale cleanup via `_is_stale_widget` is scoped by
-`WidgetMetadata.fragment_id`, which remains correct.
-
-If an app needs a widget click in an outside container to update main-script content, the
-fragment can call `st.rerun()` to trigger a full app rerun from the callback.
+Widgets written to outside containers from inside a fragment will trigger a fragment rerun
+on interaction — not a full app rerun, even though the widget visually appears outside the
+fragment's scope. This is consistent with standard fragment behavior: `enqueue_message`
+stamps every delta with `ThreadState.fragment_id`, and the frontend sends this ID back with
+the rerun request. The wrapper does not change this; `fragment_id` stamping is based on
+which thread is executing, not on the delta path. Widget identity and stale cleanup are
+also unaffected — widget IDs do not include `delta_path`.
 
 ## Alternatives Considered
 
