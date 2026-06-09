@@ -1261,6 +1261,34 @@ describe("CustomCodeTag Element", () => {
   })
 })
 
+describe("mermaid code blocks", () => {
+  const mermaidSource = "```mermaid\ngraph TD\n  A-->B\n```"
+
+  it("renders a mermaid code block as a diagram when not streaming", async () => {
+    render(<StreamlitMarkdown source={mermaidSource} allowHTML={false} />)
+
+    // The lazy-loaded MermaidChart renders with the stMermaidChart test id.
+    expect(await screen.findByTestId("stMermaidChart")).toBeVisible()
+    // It must not fall back to a syntax-highlighted code block.
+    expect(screen.queryByTestId("stCode")).not.toBeInTheDocument()
+  })
+
+  it("renders a mermaid code block as syntax-highlighted code while streaming", async () => {
+    render(
+      <StreamlitMarkdown
+        source={mermaidSource}
+        allowHTML={false}
+        unterminatedParsing={true}
+      />
+    )
+
+    // While streaming, the (possibly partial) mermaid block is shown as code
+    // to avoid flickering and error states from incomplete diagram source.
+    expect(await screen.findByTestId("stCode")).toBeVisible()
+    expect(screen.queryByTestId("stMermaidChart")).not.toBeInTheDocument()
+  })
+})
+
 describe("CustomPreTag", () => {
   it("should render without crashing", () => {
     const props = getCustomCodeTagProps()

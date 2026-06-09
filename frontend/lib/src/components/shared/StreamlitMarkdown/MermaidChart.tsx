@@ -370,6 +370,11 @@ const MermaidChart = memo(function MermaidChart({
   // cleanup effect from revoking the URL while an async image load is in progress.
   const downloadingBlobUrlRef = useRef<string | null>(null)
 
+  // Ref mirroring the currently displayed blob URL. Used by the download handler
+  // to decide whether a finished download URL is still on screen (keep it) or
+  // stale (revoke it), without relying on a captured-closure value.
+  const currentSvgBlobUrlRef = useRef<string | null>(null)
+
   useEffect(() => {
     let isCancelled = false
     let committedToState = false
@@ -454,6 +459,7 @@ const MermaidChart = memo(function MermaidChart({
   // Clean up blob URL when component unmounts or URL changes.
   // Skips revocation if the URL is currently being used for PNG download.
   useEffect(() => {
+    currentSvgBlobUrlRef.current = svgBlobUrl
     return () => {
       if (svgBlobUrl && svgBlobUrl !== downloadingBlobUrlRef.current) {
         URL.revokeObjectURL(svgBlobUrl)
@@ -479,6 +485,17 @@ const MermaidChart = memo(function MermaidChart({
 
     // Mark this URL as in-use for download to prevent cleanup effect from revoking it.
     downloadingBlobUrlRef.current = svgBlobUrl
+
+    // Clear the download marker and revoke the URL if it's no longer the
+    // currently displayed one (the source/theme may have changed mid-download,
+    // in which case the cleanup effect skipped revoking it).
+    const releaseDownloadUrl = (): void => {
+      const urlToRevoke = downloadingBlobUrlRef.current
+      downloadingBlobUrlRef.current = null
+      if (urlToRevoke && urlToRevoke !== currentSvgBlobUrlRef.current) {
+        URL.revokeObjectURL(urlToRevoke)
+      }
+    }
 
     const img = new Image()
     img.onload = () => {
@@ -507,21 +524,11 @@ const MermaidChart = memo(function MermaidChart({
       link.href = canvas.toDataURL("image/png")
       link.click()
 
-      // Clear the ref and revoke the URL if it's no longer the current one
-      const urlToCheck = downloadingBlobUrlRef.current
-      downloadingBlobUrlRef.current = null
-      if (urlToCheck && urlToCheck !== svgBlobUrl) {
-        URL.revokeObjectURL(urlToCheck)
-      }
+      releaseDownloadUrl()
     }
     img.onerror = () => {
       LOG.error("Failed to load SVG for PNG export")
-      // Clear the ref and revoke the URL if it's no longer the current one
-      const urlToCheck = downloadingBlobUrlRef.current
-      downloadingBlobUrlRef.current = null
-      if (urlToCheck && urlToCheck !== svgBlobUrl) {
-        URL.revokeObjectURL(urlToCheck)
-      }
+      releaseDownloadUrl()
     }
     img.src = svgBlobUrl
   }, [svgBlobUrl, theme.colors.bgColor])
