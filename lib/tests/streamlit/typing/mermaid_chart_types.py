@@ -63,3 +63,12 @@ pie title Pets
 """),
         DeltaGenerator,
     )
+
+    # Mermaid chart with width="stretch"
+    assert_type(mermaid_chart("graph TD\n    A --> B", width="stretch"), DeltaGenerator)
+
+    # Mermaid chart with width="content"
+    assert_type(mermaid_chart("graph TD\n    A --> B", width="content"), DeltaGenerator)
+
+    # Mermaid chart with pixel width
+    assert_type(mermaid_chart("graph TD\n    A --> B", width=100), DeltaGenerator)

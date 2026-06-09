@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import streamlit as st
 from tests.delta_generator_test_case import DeltaGeneratorTestCase
+from tests.streamlit.elements.layout_test_utils import WidthConfigFields
 
 
 class MermaidChartTest(DeltaGeneratorTestCase):
@@ -68,3 +69,32 @@ graph LR
         element = self.get_delta_from_queue().new_element.markdown
         # Should still use 4 backticks since body only has 3 consecutive
         assert element.body == f"````mermaid\n{diagram}\n````"
+
+    def test_mermaid_chart_default_width(self) -> None:
+        """Test that mermaid_chart defaults to stretch width."""
+        st.mermaid_chart("graph TD\n    A --> B")
+
+        el = self.get_delta_from_queue().new_element
+        assert (
+            el.width_config.WhichOneof("width_spec")
+            == WidthConfigFields.USE_STRETCH.value
+        )
+        assert el.width_config.use_stretch is True
+
+    def test_mermaid_chart_with_width(self) -> None:
+        """Test that mermaid_chart passes the width through to the layout config."""
+        test_cases = [
+            (300, WidthConfigFields.PIXEL_WIDTH.value, "pixel_width", 300),
+            ("stretch", WidthConfigFields.USE_STRETCH.value, "use_stretch", True),
+            ("content", WidthConfigFields.USE_CONTENT.value, "use_content", True),
+        ]
+
+        for width_value, expected_width_spec, field_name, field_value in test_cases:
+            with self.subTest(width_value=width_value):
+                st.mermaid_chart("graph TD\n    A --> B", width=width_value)
+
+                el = self.get_delta_from_queue().new_element
+                # Width is wired through to the markdown layout config.
+                assert el.markdown.body == "````mermaid\ngraph TD\n    A --> B\n````"
+                assert el.width_config.WhichOneof("width_spec") == expected_width_spec
+                assert getattr(el.width_config, field_name) == field_value
