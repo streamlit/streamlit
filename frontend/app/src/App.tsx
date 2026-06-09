@@ -1573,7 +1573,7 @@ export class App extends PureComponent<Props, State> {
       )
     }
     this.trackSkillsNudge("skillsNudgeSnoozed")
-    this.setState({ showSkillsNudge: false })
+    this.hideSkillsNudge()
   }
 
   /**
@@ -1588,11 +1588,11 @@ export class App extends PureComponent<Props, State> {
     // localStorage flag already suppresses the nudge in this browser.
     this.backendOperationClient.requestDismissSkillsNudge().catch(() => {})
     this.trackSkillsNudge("skillsNudgeDontShowAgain")
-    this.setState({ showSkillsNudge: false })
+    this.hideSkillsNudge()
   }
 
-  /** Hide the nudge (used to auto-dismiss after a successful install). */
-  private readonly handleSkillsNudgeDismiss = (): void => {
+  /** Hide the nudge (also used to auto-dismiss after a successful install). */
+  private readonly hideSkillsNudge = (): void => {
     this.setState({ showSkillsNudge: false })
   }
 
@@ -2691,7 +2691,7 @@ export class App extends PureComponent<Props, State> {
                 onInstall={this.handleSkillsNudgeInstall}
                 onSnooze={this.handleSkillsNudgeSnooze}
                 onDontShowAgain={this.handleSkillsNudgeDontShowAgain}
-                onDismiss={this.handleSkillsNudgeDismiss}
+                onDismiss={this.hideSkillsNudge}
               />
             )}
           </StyledApp>

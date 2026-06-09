@@ -97,6 +97,7 @@ function SkillsNudgeToast({
 
   const isInstalling = status === "installing"
   const isSuccess = status === "success"
+  const isError = status === "error"
 
   return (
     <StyledSkillsNudgeToast
@@ -128,7 +129,7 @@ function SkillsNudgeToast({
               build and debug your app.
             </StyledSkillsNudgeBody>
 
-            {status === "error" && (
+            {isError && (
               <StyledSkillsNudgeError>{errorMessage}</StyledSkillsNudgeError>
             )}
 

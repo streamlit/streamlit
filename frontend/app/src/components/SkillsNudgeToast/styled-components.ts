@@ -14,10 +14,35 @@
  * limitations under the License.
  */
 
-import { keyframes } from "@emotion/react"
+import { CSSObject, keyframes } from "@emotion/react"
 import styled from "@emotion/styled"
 
-import { hasLightBackgroundColor } from "@streamlit/lib"
+import { EmotionTheme, hasLightBackgroundColor } from "@streamlit/lib"
+
+/**
+ * Shared reset + interaction styles for the toast's borderless buttons (the
+ * close ✕ and the secondary text links), so their hover/focus behavior stays
+ * in sync.
+ */
+const nudgeButtonBase = (theme: EmotionTheme): CSSObject => ({
+  margin: theme.spacing.none,
+  padding: theme.spacing.none,
+  border: "none",
+  boxShadow: "none",
+  backgroundColor: theme.colors.transparent,
+  cursor: "pointer",
+  borderRadius: theme.radii.default,
+  "&:hover, &:active": {
+    boxShadow: "none",
+  },
+  "&:hover": {
+    color: theme.colors.bodyText,
+  },
+  "&:focus-visible": {
+    outline: "none",
+    boxShadow: theme.shadows.focusRingMuted,
+  },
+})
 
 /**
  * Fixed, top-right notification injected by Streamlit (not the app author) to
@@ -76,29 +101,14 @@ export const StyledSkillsNudgeContent = styled.div(({ theme }) => ({
 
 /** Close (✕) button in the top-right corner that snoozes the nudge. */
 export const StyledSkillsNudgeClose = styled.button(({ theme }) => ({
+  ...nudgeButtonBase(theme),
   display: "flex",
   flexShrink: 0,
   alignSelf: "flex-start",
   alignItems: "center",
   justifyContent: "center",
-  margin: theme.spacing.none,
   marginTop: theme.spacing.threeXS,
-  padding: theme.spacing.none,
-  border: "none",
-  backgroundColor: theme.colors.transparent,
   color: theme.colors.fadedText40,
-  cursor: "pointer",
-  borderRadius: theme.radii.default,
-  "&:hover, &:active": {
-    boxShadow: "none",
-  },
-  "&:hover": {
-    color: theme.colors.bodyText,
-  },
-  "&:focus-visible": {
-    outline: "none",
-    boxShadow: theme.shadows.focusRingMuted,
-  },
 }))
 
 export const StyledSkillsNudgeHeading = styled.div(({ theme }) => ({
@@ -126,29 +136,12 @@ export const StyledSkillsNudgeActions = styled.div(({ theme }) => ({
  * again" dismiss actions, matching the native toast "view more" affordance.
  */
 export const StyledSkillsNudgeLink = styled.button(({ theme }) => ({
+  ...nudgeButtonBase(theme),
   fontSize: theme.fontSizes.sm,
   lineHeight: theme.lineHeights.base,
-  color: theme.colors.fadedText60,
-  backgroundColor: theme.colors.transparent,
   fontFamily: "inherit",
-  margin: theme.spacing.none,
-  padding: theme.spacing.none,
-  border: "none",
-  boxShadow: "none",
-  cursor: "pointer",
+  color: theme.colors.fadedText60,
   whiteSpace: "nowrap",
-  borderRadius: theme.radii.default,
-  "&:hover, &:active": {
-    border: "none",
-    boxShadow: "none",
-  },
-  "&:hover": {
-    color: theme.colors.bodyText,
-  },
-  "&:focus-visible": {
-    outline: "none",
-    boxShadow: theme.shadows.focusRingMuted,
-  },
   "&:disabled": {
     color: theme.colors.fadedText40,
     cursor: "not-allowed",
