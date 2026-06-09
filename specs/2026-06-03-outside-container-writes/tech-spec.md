@@ -321,14 +321,3 @@ write during rerun.
 - Cons: Same interleaving problem as Option 2; fragile if the main script changes between
   reruns
 
-## Out of Scope
-
-- **Wrapper styling/CSS**: The wrapper div is intentionally unstyled and layout-transparent.
-- **Garbage collection of unused wrappers**: Empty wrappers persist until full app rerun.
-- **Widgets in outside containers**: The `@st.fragment` docstring warns that "Fragments
-  can't render widgets to externally created containers," but there is no enforcement in
-  the code today — users can and do write widgets to outside containers. The implicit
-  wrapper solves the cursor problem for widgets too. Widget identity and state management
-  are unaffected (see "Behavior Decisions" above). The `check_fragment_path_policy()`
-  function exists in the codebase but is not wired up; if it were ever enforced, it would
-  block all outside-container widgets regardless of the wrapper.
