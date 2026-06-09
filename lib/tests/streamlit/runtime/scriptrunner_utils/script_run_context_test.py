@@ -468,7 +468,7 @@ class ScriptRunContextTest(unittest.TestCase):
         assert "key" not in ctx.shared.widget_user_keys_this_run
         assert "form" not in ctx.shared.form_ids_this_run
         assert "fragment" not in ctx.shared.new_fragment_ids
-        assert ctx.shared.tracked_commands == []
+        assert ctx.shared.tracked_commands == ()
         assert ctx.shared.tracked_commands_count == 0
 
     def test_run_wrapper_accepts_positional_args(self):

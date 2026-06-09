@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import threading
 
+import pytest
+
 from streamlit.proto.PageProfile_pb2 import Command
 from streamlit.runtime.scriptrunner_utils.shared_run_state import SharedRunState
 
@@ -39,7 +41,7 @@ def test_reset_clears_all_fields() -> None:
     assert "key" not in shared.widget_user_keys_this_run
     assert "form" not in shared.form_ids_this_run
     assert "fragment" not in shared.new_fragment_ids
-    assert shared.tracked_commands == []
+    assert shared.tracked_commands == ()
     assert shared.tracked_commands_count == 0
     assert shared.command_count_for("markdown") == 0
 
@@ -97,13 +99,15 @@ def test_concurrent_track_command() -> None:
         assert shared.command_count_for(f"cmd_{i}") == per_thread
 
 
-def test_tracked_commands_returns_copy() -> None:
-    """Mutating the returned list must not affect internal state."""
+def test_tracked_commands_returns_immutable_snapshot() -> None:
+    """The returned tuple cannot be mutated and does not affect internal state."""
     shared = SharedRunState()
     shared.track_command(_make_command("markdown"), max_per_command=5)
 
     snapshot = shared.tracked_commands
-    snapshot.append(_make_command("button"))
+    assert isinstance(snapshot, tuple)
+    with pytest.raises(AttributeError):
+        snapshot.append(_make_command("button"))  # type: ignore[attr-defined]
 
     assert shared.tracked_commands_count == 1
     assert [cmd.name for cmd in shared.tracked_commands] == ["markdown"]

@@ -21,7 +21,7 @@ import sys
 import threading
 import time
 import uuid
-from collections.abc import Callable, Sized
+from collections.abc import Callable, Sequence, Sized
 from functools import lru_cache, wraps
 from typing import Any, Final, TypeVar, cast, overload
 
@@ -720,7 +720,7 @@ def gather_metrics(name: str, func: F | None = None) -> Callable[[F], F] | F:
 
 
 def create_page_profile_message(
-    commands: list[Command],
+    commands: Sequence[Command],
     exec_time: int,
     prep_time: int,
     uncaught_exception: str | None = None,

@@ -738,7 +738,7 @@ def test_gather_metrics_swallows_command_telemetry_errors() -> None:
 
     mock_debug.assert_called_once()
     assert mock_debug.call_args[0][0] == "Failed to collect command telemetry"
-    assert ctx.shared.tracked_commands == []
+    assert ctx.shared.tracked_commands == ()
 
 
 def test_gather_metrics_records_time_when_rerun_exception_raised() -> None:

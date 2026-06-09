@@ -58,10 +58,10 @@ class SharedRunState:
             self._tracked_commands_counter = collections.Counter()
 
     @property
-    def tracked_commands(self) -> list[Command]:
-        """Return a snapshot of tracked commands (for page profile serialization)."""
+    def tracked_commands(self) -> tuple[Command, ...]:
+        """Return an immutable snapshot of tracked commands."""
         with self._telemetry_lock:
-            return list(self._tracked_commands)
+            return tuple(self._tracked_commands)
 
     @property
     def tracked_commands_count(self) -> int:
