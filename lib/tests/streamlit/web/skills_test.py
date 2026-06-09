@@ -424,7 +424,10 @@ class TestAreSkillsInstalled:
         ``RuntimeError`` is included because ``Path.home()`` raises it when the
         home directory cannot be resolved.
         """
-        with patch.object(skills, "_find_project_root", side_effect=error):
+        with (
+            patch.object(skills, "_find_project_root", side_effect=error),
+            patch.object(skills, "_get_global_target_dirs", return_value=[]),
+        ):
             assert skills.are_skills_installed() is False
 
     def test_still_checks_project_dirs_when_global_resolution_errors(
