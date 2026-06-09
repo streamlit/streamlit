@@ -202,16 +202,6 @@ This function is called in `wrapped_fragment()` after the existing snapshot rest
 before the fragment body executes. Re-emitting first ensures the frontend sees the wrapper
 block before any child elements arrive in the same forward message batch.
 
-### Frontend changes
-
-None required. The wrapper is a standard `BlockNode` with the fragment's `fragment_id`
-(stamped by the existing `enqueue_message` logic). `ClearStaleNodeVisitor` handles it
-correctly: children from previous runs are cleared as stale; the wrapper persists because
-it was re-emitted. Delta paths are valid because each wrapper has its own index space
-starting at 0. The `allow_empty` field is an existing proto field on `Block` (already
-handled by `BlockNodeRenderer` on the frontend) — it is set on the wrapper's `Block` proto
-at creation time so that empty wrappers render as invisible rather than being hidden.
-
 ### Interaction with `parallel=True`
 
 Outside container writes are already blocked for parallel workers during the initial page
