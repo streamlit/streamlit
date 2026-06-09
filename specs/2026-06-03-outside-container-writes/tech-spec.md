@@ -151,7 +151,10 @@ is reusable for any future case that needs an invisible grouping node.
 ### Wrapper creation and retrieval
 
 `_get_or_create_outside_wrapper` returns a cached wrapper if one exists, or creates a new
-one by calling `dg._block()` with a `Transparent` block proto. The wrapper's cursor type
+one by emitting a `Transparent` block on the outside container. The creation must bypass
+the outside-write detection path (e.g., call a lower-level block-emission helper or store
+the wrapper in the registry before the call) to avoid re-triggering the check and recursing
+infinitely. The wrapper's cursor type
 is inherited from the outside container: if the container uses a `LockedCursor` (e.g.
 `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve replace semantics;
 otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path is
