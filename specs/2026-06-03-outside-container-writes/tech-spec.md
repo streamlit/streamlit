@@ -321,4 +321,3 @@ write during rerun.
 - Pros: No extra DOM nodes
 - Cons: Same interleaving problem as Option 2; fragile if the main script changes between
   reruns
-
