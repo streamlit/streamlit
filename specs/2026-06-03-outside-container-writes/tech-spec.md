@@ -97,6 +97,14 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     ts = ThreadState.get()
     if not ts.fragment_id or not ts.delta_path:
         return False
+
+    # Root-container DGs (st.sidebar, st._main) have their cursors managed
+    # by ctx.cursors, which is already snapshot/restored by wrapped_fragment().
+    # These must not be wrapped — doing so would conflict with the existing
+    # cursor restore mechanism.
+    if dg._is_top_level:
+        return False
+
     cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
     if _is_inside_fragment_path(cursor_path, ts.delta_path):
         return False
