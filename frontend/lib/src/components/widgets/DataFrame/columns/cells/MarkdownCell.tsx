@@ -32,10 +32,6 @@ import { ToolbarAction } from "~lib/components/shared/Toolbar/Toolbar"
 import { removeLineBreaks } from "~lib/components/widgets/DataFrame/columns/utils"
 import { isFromMac } from "~lib/util/utils"
 
-/** Monospace font stack used for code blocks and the markdown editor textarea. */
-const MONOSPACE_FONT_STACK =
-  '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace'
-
 interface MarkdownCellProps {
   kind: "markdown-cell"
   /** The raw markdown string value. */
@@ -50,19 +46,19 @@ interface StyledContainerProps {
   isEditing?: boolean
 }
 
-/* eslint-disable streamlit-custom/no-hardcoded-theme-values -- Uses glide-data-grid CSS variables */
-const StyledContainer = styled.div<StyledContainerProps>(({ isEditing }) => ({
-  position: "relative",
-  display: "flex",
-  flexDirection: "column",
-  width: "100%",
-  height: "100%",
-  minHeight: isEditing ? "18.75rem" : "12.5rem",
-  maxHeight: isEditing ? "min(31.25rem, 70vh)" : "25rem",
-  fontFamily: "var(--gdg-font-family)",
-  fontSize: "var(--gdg-editor-font-size)",
-}))
-/* eslint-enable streamlit-custom/no-hardcoded-theme-values */
+const StyledContainer = styled.div<StyledContainerProps>(
+  ({ theme, isEditing }) => ({
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    width: "100%",
+    height: "100%",
+    minHeight: isEditing ? "18.75rem" : "12.5rem",
+    maxHeight: isEditing ? "min(31.25rem, 70vh)" : "25rem",
+    fontFamily: theme.genericFonts.bodyFont,
+    fontSize: theme.fontSizes.sm,
+  })
+)
 
 const TOOLBAR_OPACITY_TRANSITION = "opacity 300ms 150ms"
 const TOOLBAR_HIDE_TRANSITION = `${TOOLBAR_OPACITY_TRANSITION}, visibility 0ms linear 450ms`
@@ -136,8 +132,8 @@ const StyledTextarea = styled.textarea(({ theme }) => ({
   resize: "none",
   backgroundColor: "var(--gdg-bg-cell)",
   color: "var(--gdg-text-dark)",
-  fontFamily: MONOSPACE_FONT_STACK,
-  fontSize: "var(--gdg-editor-font-size)",
+  fontFamily: theme.genericFonts.codeFont,
+  fontSize: theme.fontSizes.sm,
   lineHeight: 1.5,
 
   "&:focus": {
