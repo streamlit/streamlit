@@ -321,6 +321,9 @@ function StatisticsContent({
       return (
         <StyledStatisticsContainer data-testid="stDataFrameStatisticsContent">
           <MetricsDisplay rows={getReducedMetricRows(statistics)} />
+          {statistics.isSampled && (
+            <StyledStatisticsNote>Based on sample</StyledStatisticsNote>
+          )}
         </StyledStatisticsContainer>
       )
     }

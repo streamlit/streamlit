@@ -360,6 +360,42 @@ describe("StatisticsMenu", () => {
     expect(
       screen.queryByTestId("stDataFrameStatisticsChart")
     ).not.toBeInTheDocument()
+    // Not sampled, so the sample note must not appear.
+    expect(screen.queryByText("Based on sample")).not.toBeInTheDocument()
+  })
+
+  it("shows a sample note for reduced (all-empty) metrics when sampled", async () => {
+    vi.mocked(computeStatistics).mockReturnValue({
+      ...NUMERIC_STATS,
+      count: 0,
+      nullCount: 5,
+      unique: 0,
+      sum: 0,
+      mean: 0,
+      q25: 0,
+      median: 0,
+      q75: 0,
+      stdDev: 0,
+      variance: 0,
+      min: 0,
+      max: 0,
+      histogram: [],
+      isSampled: true,
+    })
+
+    render(
+      <StatisticsMenu {...defaultProps} isOpen={true}>
+        <div data-testid="trigger">Trigger</div>
+      </StatisticsMenu>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("stDataFrameStatisticsContent")).toBeVisible()
+    })
+
+    // The reduced Empty count comes from a sample, so the note must be shown.
+    expect(screen.getByText("Empty")).toBeVisible()
+    expect(screen.getByText("Based on sample")).toBeVisible()
   })
 
   it("renders children directly for unsupported column kinds", () => {
