@@ -341,7 +341,11 @@ class AppTest:
             MemoryMediaFileStorage("/mock/media")
         )
         mock_runtime.cache_storage_manager = MemoryCacheStorageManager()
-        mock_runtime.bidi_component_registry = BidiComponentManager()
+        bidi_component_manager = BidiComponentManager()
+        bidi_component_manager.discover_and_register_components(
+            start_file_watching=False
+        )
+        mock_runtime.bidi_component_registry = bidi_component_manager
         Runtime._instance = mock_runtime
         script_cache = ScriptCache()
         # Reset to ensure st.navigation works correctly regardless of prior test state.
