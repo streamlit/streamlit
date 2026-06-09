@@ -98,8 +98,27 @@ def _is_outside_container_write(dg: DeltaGenerator) -> bool:
     if not ts.fragment_id or not ts.delta_path:
         return False
     cursor_path = tuple(dg._cursor.delta_path) if dg._cursor else ()
-    return not _is_inside_fragment_path(cursor_path, ts.delta_path)
+    if _is_inside_fragment_path(cursor_path, ts.delta_path):
+        return False
+
+    # The DG is outside the fragment's delta path, but it may already be
+    # inside a wrapper belonging to this fragment (e.g. a nested container
+    # created via outer.container() that was redirected through the wrapper).
+    # Walk the DG's ancestor chain to check.
+    wrapper_ids = {
+        dg_id
+        for (fid, dg_id) in fragment_storage.outside_wrapper_keys_for(ts.fragment_id)
+    }
+    for ancestor in dg._ancestors:
+        if ancestor._id in wrapper_ids:
+            return False  # already inside this fragment's wrapper
+
+    return True
 ```
+
+The ancestor walk is scoped to the **current fragment's** wrapper registry. This is
+important for nested fragments: if frag\_b writes to a container inside frag\_a's wrapper,
+frag\_a's wrapper is not in frag\_b's registry, so frag\_b correctly gets its own wrapper.
 
 When detected, redirect the write through a wrapper:
 
@@ -217,8 +236,10 @@ index. Wrappers are created in execution order during the initial full app run. 
 fragment only resets its own wrapper's cursor.
 
 **Nested containers.** A fragment calling `outer.container()` triggers `_block` on the
-outside container, which is redirected through the wrapper. The nested container is created
-inside the wrapper — no special handling needed.
+outside container, which is redirected through the wrapper. The returned DG is a child of
+the wrapper. Subsequent writes to this nested DG are recognized as already inside the
+current fragment's wrapper via the ancestor walk in `_is_outside_container_write`, so they
+pass through without creating additional wrappers.
 
 **`st.empty()` as outside container.** `st.empty()` uses a `LockedCursor` that always
 points to the same position. The wrapper occupies the empty's single slot. To preserve
