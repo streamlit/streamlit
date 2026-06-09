@@ -636,6 +636,57 @@ describe("ButtonGroup required parameter", () => {
     expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
   })
 
+  it("prevents clearing the last selection when required=true in multi-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["apple"],
+      { fromUi: false },
+      undefined
+    )
+
+    const buttons = getButtonGroupButtons()
+
+    await user.click(buttons[0])
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenCalledTimes(1)
+  })
+
+  it("allows changing selections when required=true in multi-select mode", async () => {
+    const user = userEvent.setup()
+    const props = getProps({
+      clickMode: ButtonGroupProto.ClickMode.MULTI_SELECT,
+      options: simpleOptions,
+      default: [0],
+      required: true,
+    })
+    vi.spyOn(props.widgetMgr, "setStringArrayValue")
+
+    render(<ButtonGroup {...props} />)
+
+    const buttons = getButtonGroupButtons()
+
+    await user.click(buttons[1])
+
+    expect(props.widgetMgr.setStringArrayValue).toHaveBeenLastCalledWith(
+      props.element,
+      ["apple", "banana"],
+      { fromUi: true },
+      undefined
+    )
+  })
+
   it("allows changing selection when required=true in single-select mode", async () => {
     const user = userEvent.setup()
     const props = getProps({

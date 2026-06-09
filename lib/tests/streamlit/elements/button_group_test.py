@@ -1332,15 +1332,13 @@ class RequiredParameterTest(DeltaGeneratorTestCase):
         assert c.default == [1]
 
     @parameterized.expand([(st.pills,), (st.segmented_control,)])
-    def test_required_with_multi_select_raises_exception(
-        self, command: Callable[..., Any]
-    ):
-        """Test that required=True with selection_mode='multi' raises an exception."""
-        with pytest.raises(
-            StreamlitAPIException,
-            match=r"cannot be used with.*selection_mode='multi'",
-        ):
-            command("label", ["a", "b", "c"], selection_mode="multi", required=True)
+    def test_required_with_multi_select_allowed(self, command: Callable[..., Any]):
+        """Test that required=True with selection_mode='multi' is allowed."""
+        command("label", ["a", "b", "c"], selection_mode="multi", required=True)
+
+        c = self.get_delta_from_queue().new_element.button_group
+        assert c.required is True
+        assert c.click_mode == ButtonGroupProto.ClickMode.MULTI_SELECT
 
     @parameterized.expand([(st.pills,), (st.segmented_control,)])
     def test_required_false_with_multi_select_allowed(

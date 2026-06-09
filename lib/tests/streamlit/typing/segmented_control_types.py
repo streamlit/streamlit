@@ -84,7 +84,7 @@ if TYPE_CHECKING:
         int | None,  # Explicitly None default still returns V | None
     )
 
-    # Note: required=True with selection_mode="multi" is invalid and raises
-    # StreamlitAPIException at runtime. This combination cannot be caught at
-    # type-check time because the overload fallback accepts it. The validation
-    # is enforced in _internal_button_group() at runtime.
+    assert_type(
+        segmented_control("foo", options, selection_mode="multi", required=True),
+        list[int],
+    )

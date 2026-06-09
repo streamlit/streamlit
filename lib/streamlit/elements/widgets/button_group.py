@@ -428,12 +428,8 @@ class ButtonGroupMixin:
 
         required : bool
             Whether a selection is required. If this is ``True`` and
-            ``selection_mode="single"``, users cannot deselect an option once
-            one is selected. Clicking an already-selected option does nothing.
-            The default is ``False``.
-
-            If ``required=True`` is used with ``selection_mode="multi"``, an
-            exception is raised.
+            users have selected at least one option, they cannot clear all
+            selections. The default is ``False``.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -752,12 +748,8 @@ class ButtonGroupMixin:
 
         required : bool
             Whether a selection is required. If this is ``True`` and
-            ``selection_mode="single"``, users cannot deselect an option once
-            one is selected. Clicking an already-selected option does nothing.
-            The default is ``False``.
-
-            If ``required=True`` is used with ``selection_mode="multi"``, an
-            exception is raised.
+            users have selected at least one option, they cannot clear all
+            selections. The default is ``False``.
 
         format_func : function
             Function to modify the display of the options. It receives
@@ -946,13 +938,6 @@ class ButtonGroupMixin:
         bind: BindOption = None,
     ) -> list[V] | V | None:
         maybe_raise_label_warnings(label, label_visibility)
-
-        # Validate required with multi-select
-        if required and selection_mode == "multi":
-            raise StreamlitAPIException(
-                "The `required` argument cannot be used with `selection_mode='multi'`. "
-                "The `required` parameter is only supported for single-select mode."
-            )
 
         # Use str as default format_func
         actual_format_func: Callable[[Any], str] = format_func or str

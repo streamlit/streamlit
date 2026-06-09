@@ -278,7 +278,7 @@ function ButtonGroup(props: Readonly<Props>): ReactElement {
         selectedKeys={selectedKeys}
         onSelectionChange={handleSelectionChange}
         isDisabled={disabled}
-        disallowEmptySelection={required && selectionMode === "single"}
+        disallowEmptySelection={required}
         aria-label={element.label}
         $isPills={isPills}
         $containerWidth={containerWidth}
