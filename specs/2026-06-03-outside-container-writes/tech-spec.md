@@ -163,15 +163,17 @@ reruns the cached wrapper is returned directly, bypassing the outside container'
 entirely. This is what avoids reintroducing the same stale-cursor problem the wrapper is
 designed to solve.
 
-**Restriction: no new outside writes during fragment reruns.** If a fragment attempts to
-write to an outside container during a fragment rerun and no cached wrapper exists for that
-container, we raise `StreamlitAPIException`. The check uses the current thread's own
-`ThreadState.fragment_id` (not `ctx.fragment_ids_this_run`) to determine whether we are
-in a fragment rerun — this distinguishes fragment reruns from full app reruns regardless of
-nesting depth. Creating a wrapper during a fragment rerun would advance the outside
-container's stale cursor — exactly the bug this spec fixes. Fragments must establish their
-outside container slots during the initial full app run. To conditionally populate a slot
-later, use a placeholder:
+**Restriction: no new outside writes during standalone fragment reruns.** If a fragment
+attempts to write to an outside container, no cached wrapper exists for that container, and
+the current fragment is being independently rerun (`ts.fragment_id in
+ctx.fragment_ids_this_run`), we raise `StreamlitAPIException`. This check is scoped to
+standalone reruns — when a parent fragment reruns and re-executes a child, the parent
+recreates containers with fresh cursors, so the child is permitted to create new wrappers
+for those containers. Creating a wrapper during a standalone fragment rerun would advance
+the outside container's stale cursor — exactly the bug this spec fixes. Fragments must
+establish their outside container slots during a run where the container's creating scope
+executes (full app run or parent fragment rerun). To conditionally populate a slot later,
+use a placeholder:
 
 ```python
 outside = st.container()
