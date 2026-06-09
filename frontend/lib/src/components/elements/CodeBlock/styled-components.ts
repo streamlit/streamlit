@@ -97,10 +97,18 @@ export const StyledPre = styled.pre<StyledCodeProps>(
     // Don't allow content to break outside
     overflow: "auto",
 
-    // Add padding around the code
+    // Add padding around the code. Right-padding is moved to the inner
+    // <code> element so it remains visible when the user scrolls the
+    // block horizontally — padding on a scrollable container is not
+    // rendered past the scroll-end position by browsers.
     padding: theme.spacing.lg,
+    paddingRight: 0,
 
-    code: { ...codeBlockStyle(theme, wrapLines) },
+    code: {
+      ...codeBlockStyle(theme, wrapLines),
+      display: "block",
+      paddingRight: theme.spacing.lg,
+    },
 
     // The token can consist of many lines, e.g. a triple-quote string, so
     // we need to make sure that the color is not overwritten.
