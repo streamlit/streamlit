@@ -139,11 +139,6 @@ const StyledTextarea = styled.textarea(({ theme }) => ({
   "&:focus": {
     outline: "none",
   },
-
-  "&:focus-visible": {
-    outline: `${theme.sizes.borderWidth} solid var(--gdg-accent-color)`,
-    outlineOffset: "-2px",
-  },
 }))
 /* eslint-enable streamlit-custom/no-hardcoded-theme-values */
 
