@@ -158,8 +158,8 @@ the wrapper in the registry before the call) to avoid re-triggering the check an
 infinitely. The wrapper's cursor type
 is inherited from the outside container: if the container uses a `LockedCursor` (e.g.
 `st.empty()`), the wrapper gets a `LockedCursor(index=0)` to preserve replace semantics;
-otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path is
-stored on the wrapper for re-emission during reruns.
+otherwise it gets a `RunningCursor` for normal append behavior. The creation delta path and
+block proto are stored on the wrapper for re-emission during reruns.
 
 The wrapper is created whenever the outside container's creating scope executes — on the
 initial full app run, on subsequent full app reruns, or during a parent fragment rerun that
