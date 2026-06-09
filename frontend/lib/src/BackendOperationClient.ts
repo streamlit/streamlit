@@ -31,6 +31,18 @@ const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
 /** Timeout for deferred file requests (3 minutes). */
 const DEFERRED_FILE_REQUEST_TIMEOUT_MS = 180_000
 
+/**
+ * Timeout for skills-install requests (3 minutes).
+ *
+ * The default 30s is too short here: a project-mode install is fast (it just
+ * creates symlinks), but `streamlit skills` falls back to downloading the
+ * skills archive from GitHub when symlinks aren't supported (e.g. Windows
+ * without Developer Mode). That download can exceed 30s on a slow network,
+ * which would surface a spurious "install failed" in the toast while the
+ * server keeps installing. We use the same generous budget as deferred files.
+ */
+const INSTALL_SKILLS_REQUEST_TIMEOUT_MS = 180_000
+
 /** Information about a pending request. */
 interface PendingRequest<T> {
   resolver: PromiseWithResolvers<T>
@@ -149,7 +161,11 @@ export class BackendOperationClient {
    * rejects with the server-provided error message on failure.
    */
   public requestInstallSkills(): Promise<{ detail?: string | null }> {
-    return this.request<{ detail?: string | null }>("installSkills", {})
+    return this.request<{ detail?: string | null }>(
+      "installSkills",
+      {},
+      INSTALL_SKILLS_REQUEST_TIMEOUT_MS
+    )
   }
 
   /**

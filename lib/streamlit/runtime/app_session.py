@@ -864,11 +864,15 @@ class AppSession:
         # with an AI agent present but no skills installed yet. Computed here
         # so the frontend can surface a one-click "install skills" nudge. Pass
         # the app dir the page-profile telemetry uses so both share the cached
-        # skill-detection result.
-        from streamlit.web import skills
+        # skill-detection result. Guarded so this non-essential nudge can never
+        # break session creation (defaults to not recommending on any failure).
+        try:
+            from streamlit.web import skills
 
-        app_dir = os.path.dirname(self._script_data.main_script_path)
-        imsg.recommend_skills_install = skills.should_show_skills_nudge(app_dir)
+            app_dir = os.path.dirname(self._script_data.main_script_path)
+            imsg.recommend_skills_install = skills.should_show_skills_nudge(app_dir)
+        except Exception as ex:  # pragma: no cover - defensive
+            _LOGGER.debug("Failed to compute skills nudge recommendation", exc_info=ex)
 
         return msg
 
